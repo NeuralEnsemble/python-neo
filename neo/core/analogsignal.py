@@ -15,5 +15,7 @@ class AnalogSignal(object):
 
     """
     
-    def __init__(self, *arg, **karg):
-        pass
+    def __init__(self, *arg, **karg):        
+        self.signal  = numpy.array(signal, float)
+        self.dt      = float(dt)
+        self.t_start = float(t_start)        

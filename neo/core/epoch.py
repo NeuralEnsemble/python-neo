@@ -21,4 +21,11 @@ class Epoch(object):
     """
     
     def __init__(self, *arg, **karg):
-        pass
+    
+        if 'time' in karg.keys():
+            self.time = karg['time']
+            
+        if 'duration' in karg.keys():
+            self.duration = karg['duration']
+            
+    

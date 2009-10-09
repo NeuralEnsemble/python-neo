@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-
-
-class Segment(object):
-	"""
-	
-	
+class Segment(object):	
+    """
+	Heterogeneous container of several data sharing a common time base
+    
 	**Definition**
-	Container gathering discrete or continous data acquired during the same time lapse.
+	A :class:`Segment` is a container gathering discrete or continous data acquired during the same time lapse.
 	In short, a :class:`Segment` may contain :class:`AnalogSignal`, :class:`SpikeTrain`, :class:`Event` and :class:`Epoch` 
 	that share the same time base.
 	
@@ -16,15 +14,17 @@ class Segment(object):
 	
 	**Example**
 	
-	seg = Segment()
+    >> seg = Segment()
+    
+    **Methods**
 	
-	seg.get_analogsignals()
+	get_analogsignals()
 	
-	seg.get_spiketrains()
+	get_spiketrains()
 	
-	seg.get_events()
+	get_events()
 	
-	seg.get_epochs()
+	get_epochs()
 	
 	"""
 	

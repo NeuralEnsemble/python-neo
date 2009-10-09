@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-class Event(object):
+class Event(Epoch):
      
     """
     Object to represent ponctual time event.
@@ -19,5 +19,6 @@ class Event(object):
 
     """
     
-    def __init__(self, *arg, **karg):
-        pass
+    def __init__(self, *arg, **karg):        
+        Epoch.__init__(self, arg, kwarg)
+        self.duration = 0

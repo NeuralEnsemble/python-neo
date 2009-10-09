@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-class Spike(object):
+class Spike(Epoch):
      
     """
     Object to represent a spike
@@ -21,4 +21,8 @@ class Spike(object):
     """
     
     def __init__(self, *arg, **karg):
+        Epoch.__init__(self, arg, kwarg)
+        self.duration = 0
+    
+    def waveform(self):
         pass
