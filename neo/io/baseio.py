@@ -41,25 +41,39 @@ class BaseIO(object):
 	
 	"""
 	
-	read_possibilty = False
-	write_possibilty = False
+	is_readable = False
+	is_writable = False
 	
-	header_possibility = False
+	is_subelement_readable = False
+	is_subelement_writable = False
+	
+	
+	has_header = False
+	
+	is_streameable = False
 	
 	type = None
 	
 	read_params = { }
 	write_params = { }
 	
+	nfiles = 0
+	
 	def __init__(self , filename = None , **kargs ) :
 		pass
 		
 		
 	
-	def read(self):
+	def read(self, **kargs ):
+		"""
+		read all
+		"""
 		pass
 		
-	def write(self):
+	def write(self, **kargs):
+		"""
+		read all
+		"""
 		pass
 	
 	def read_spike(self):
@@ -80,4 +94,6 @@ class BaseIO(object):
 		
 	def write_header():
 		pass
+	
+	def get_extra_data_of( type )
 	
