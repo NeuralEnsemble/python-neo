@@ -61,21 +61,21 @@ class BaseFile(object):
 	is_streameable     = False
 	read_params        = {}
     write_params       = {}   
+	level              = None
     nfiles             = 0        
-	type               = None
 	
 	def __init__(self , filename = None , **kargs ) :
 		pass
 	
 	def read(self, **kargs ):
 		"""
-		read all
-		"""
+        bulk read the file at the highest level possible
+ 		"""
 		pass
 		
 	def write(self, **kargs):
 		"""
-		write all
+        bulk write the file at the highest level possible
 		"""
 		pass
 	
