@@ -23,7 +23,7 @@ RecordingPoint
 """
 
 
-from block import *
+#from block import Block
 from event import *
 from epoch import *
 from neuron import *

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from epoch import Epoch
+
 class Event(Epoch):
      
     """
