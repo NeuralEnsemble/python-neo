@@ -23,10 +23,11 @@ RecordingPoint
 """
 
 
-#from block import Block
+from block import *
 from event import *
 from epoch import *
 from neuron import *
+from segment import *
 from spiketrain import *
 from spiketrainlist import *
 from analogsignal import *

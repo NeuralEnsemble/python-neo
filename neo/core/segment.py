@@ -27,10 +27,10 @@ class Segment(object):
 	get_epochs()
 	
 	"""
-	
-	def __init__(self, *arg , **karg):
-		pass
-	
+    
+    def __init__(self, *arg, **karg):
+        pass
+        
 	def get_segments(self):
 		"""
 		Return  :calss:`AnalogSignalList`.

@@ -23,6 +23,6 @@ class Block(object):
 	
 	
 	"""
-	
-	def __init__(self, *arg , **karg):
-		pass
+    
+    def __init__(self, *arg, **karg):
+        pass
