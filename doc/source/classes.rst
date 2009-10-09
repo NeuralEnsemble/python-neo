@@ -10,7 +10,7 @@ Introduction
 The neo core consist of a collection of classes that define standards object for manipulating electrophysilogical ( in vivo or simulated) data sets.
 
 .. image:: ./base_schematic.png
-   :height: 400 px
+   :height: 500 px
    :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
    :align: center
 
