@@ -36,6 +36,8 @@ class BaseIO(object):
 	Each IOclass implementation can also add attributs (fields) freely to all object.
 		
 	
+	Each IOclass should come with tipics files exemple.
+	
 	
 	"""
 	
@@ -57,10 +59,22 @@ class BaseIO(object):
 	def read(self):
 		pass
 		
-		
 	def write(self):
 		pass
 	
+	def read_spike(self):
+		pass
+
+	def read_analogsignal(self):
+		pass
+
+	def write_spike(self):
+		pass
+
+	def write_analogsignal(self):
+		pass
+
+
 	def read_header():
 		pass
 		
