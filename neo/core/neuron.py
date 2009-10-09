@@ -21,7 +21,7 @@ class Neuron(object):
     """
     
     def __init__(self, *arg, **karg):
-        pass
+        self.spike_trains = []
     
-    def get_spiketrains(self):
-    
+    def add_spiketrain(self, spiketrain):
+        self.spike_trains += [spiketrain]
