@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 class RecordingPoint(object):     
     """
     Define a particular position for recordings

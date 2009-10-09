@@ -1,0 +1,24 @@
+SON LIBRARY for PYTHON.
+
+For reading data from CED's Spike2 Son files.
+
+Based on SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
+King's College London. See http://www.kcl.ac.uk/depsta/biomedical/
+cfnr/lidierth.html
+
++ Using the library +
+For details read the file __init__.py, or type the following in a Python
+shell (after placing the sonpy directory in your Python search path):
+>>> from sonpy import son
+>>> help(son)
+
+
+--
+Antonio Gonzalez
+Department of Neuroscience
+Karolinska Institutet
+Antonio.Gonzalez@cantab.net
+
+http://www.neuro.ki.se/broberger/
+
+June 2006
