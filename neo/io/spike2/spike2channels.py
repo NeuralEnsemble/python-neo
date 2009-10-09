@@ -1,6 +1,6 @@
 import numpy
-import NeuroTools.signals as signals
-from NeuroTools.spike2.sonpy import son
+from sonpy import son
+from ..io import BaseFile
 
 """
 Jens Kremkow
@@ -8,6 +8,17 @@ INCM-CNRS, Marseille, France
 ALUF, Freiburg, Germany
 2008
 """
+
+
+
+
+class Spike2(BaseFile):
+    pass
+
+
+
+
+
 
 
 def load(filename,channels=None,start=None,stop=None):
@@ -108,11 +119,11 @@ class Channel(numpy.ndarray):
 
 
         
-class Adc(signals.AnalogSignal):
-    """
-    Adc represented as analog signal. See NeuroTools.signal.AnalogSignal for further details.
-    """
-    pass
+#class Adc(signals.AnalogSignal):
+    #"""
+    #Adc represented as analog signal. See NeuroTools.signal.AnalogSignal for further details.
+    #"""
+    #pass
 
 class EventFall(Channel):
     pass

@@ -1,16 +1,12 @@
-all_IOclass = [ ]
+from baseio import *
+from spike2 import *
 
+
+#all_IOclass = [ ]
 #~ from pynn import IOPynn
-
-
-
-#~ all_IOclass = [ IOPynn ,
-			
-			
-			#~ ]
+#~ all_IOclass = [ IOPynn]
 
 
 #~ if sys.platform =='win32':
 	#~ from neurshare import Neuroshare
 	#~ all_IOclass += [ Neuroshare ]
-	

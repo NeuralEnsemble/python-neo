@@ -22,3 +22,6 @@ class Neuron(object):
     
     def __init__(self, *arg, **karg):
         pass
+    
+    def get_spiketrains(self):
+    

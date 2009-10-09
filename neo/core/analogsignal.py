@@ -19,6 +19,7 @@ class AnalogSignal(object):
         self.signal  = numpy.array(signal, float)
         self.dt      = float(dt)
         self.t_start = float(t_start)
+        self.t_stop  = self.t_start + len(self.signal)*self.dt
     
     def __len__(self):
         return len(self.signal)
