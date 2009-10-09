@@ -3,7 +3,6 @@ import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 from neo.core import SpikeTrain
 
-
 class SpikeTrainTest(unittest.TestCase):
     
     def setUp(self):
