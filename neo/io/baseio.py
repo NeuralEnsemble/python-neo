@@ -124,7 +124,16 @@ class BaseFile(object):
 
         """
         return _abstract_method(self)
+
+    def read_sequence(self, params):
+        """
+        Read Sequence object from a file
         
+        Examples:
+
+        """
+        return _abstract_method(self)
+
     def read_epochs(self, params):
         """
         Read Epochs objects from a file
@@ -198,6 +207,15 @@ class BaseFile(object):
         """
         return _abstract_method(self)
         
+    def write_sequence(self, params):
+        """
+        Write Sequence object from a file
+        
+        Examples:
+
+        """
+        return _abstract_method(self)
+    
     def write_epochs(self, params):
         """
         Write Epochs objects from a file
