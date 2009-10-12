@@ -1,22 +1,32 @@
 # -*- coding: utf-8 -*-
 import numpy
+from neuron import Neuron
 
 class SpikeTrain(object):
      
     """
-    A group of :class:`Spike` emitted by the same :class:`Neuron`
+    A group of :class:`Spike` (or spike times) emitted by the same :class:`Neuron`
 
     **Definition**
     A :class:`SpikeTrain` is an array of :class:`Spike` emitted by the same
-    :class:`Neuron`
+    :class:`Neuron`. The spike times of the :class:`SpikeTrain` can be viewed as 
+    an array of :class:`Spike` object, with times and waveforms, or just as an array
+    of times.
 
     with arguments:
     
-    ``spikes``
-        An array/list of :class:`Spike`.
+    ``spikes`` or ``spike_times``
+        - **spikes**       : an array/list of :class:`Spike` 
+        - **spike_times ** : an array/list of times
 
     ``neuron``
         The :class:`Neuron` emitting the :class:`SpikeTrain`
+
+    ``t_start``
+        The absolute beginning (in second) of the :class:`SpikeTrain`
+    
+    ``t_stop``
+        The absolute end (in second) of the :class:`SpikeTrain`    
 
     **Usage**    
     
@@ -27,19 +37,28 @@ class SpikeTrain(object):
     _spike_times = None
     _spikes      = None
     _t_start     = None
-    _t_stop      = None    
+    _t_stop      = None
+    _neuron      = None
     
     def __init__(self, *arg, **karg):
             
-        if 'spike_times' in karg.keys():
-            self._spike_times = karg['spike_times']
+        if karg.has_key('spike_times'):
+            self._spike_times = numpy.array(karg['spike_times']).sort()
             
-            if 't_start' in karg.keys():
-                self.t_start = karg['t_start']
-            if 't_stop' in karg.keys():
-                self.t_stop = karg['t_stop']
-            
-        if 'spikes' in karg.keys():
+            if karg.has_key('t_start'):
+                self._t_start = karg['t_start']
+            if karg.has_key('t_stop'):
+                self._t_stop = karg['t_stop']
+            if karg.has_key('interval'):
+                self._t_start, self._t_stop = karg['interval']
+        
+        if karg.has_key('neuron'):
+            self._neuron = karg['neuron']
+            self._neuron.add_spiketrain(self)
+        else:
+            self._neuron = Neuron()
+        
+        if karg.has_key('spikes'):
             self._spike_times = karg['spikes']                
     
     @property
@@ -55,11 +74,22 @@ class SpikeTrain(object):
     def spikes(self):
         return self._spikes
     
+    @property
+    def neuron(self):
+        return self._neuron
+        
     def __str__(self):
-        return str(self.spike_times)
+        res = "SpikeTrain"
+        if self._neuron:
+            res += " emitted by neuron %s" % str(self._neuron)
+        res += " has %d spikes:\n %s" %(len(self), str(self.spike_times))
+        return res
 
     def __iter__(self):
-        return iter(self.spike_times)
+        if self.spike_times is not None:
+            return iter(self._spike_times)
+        else:
+            return iter(self._spikes)
 
     def __len__(self):
         if self.spike_times is not None:
@@ -71,7 +101,7 @@ class SpikeTrain(object):
         """
         Return the duration of the SpikeTrain
         """
-        return self.t_stop - self.t_start
+        return self._t_stop - self._t_start
     
     
     def merge(self, spiketrain):
@@ -176,10 +206,10 @@ class SpikeTrain(object):
                 34.2
         """
         if t_start is None: 
-            t_start = self.t_start
+            t_start = self._t_start
         if t_stop is None: 
-            t_stop=self.t_stop
-        idx = numpy.where((self.spike_times >= t_start) & (self.spike_times <= t_stop))[0]
+            t_stop=self._t_stop
+        idx = numpy.where((self._spike_times >= t_start) & (self._spike_times <= t_stop))[0]
         return len(idx)/(t_stop-t_start)
 
     def cv_isi(self):
@@ -284,8 +314,35 @@ class SpikeTrain(object):
             >> spk.t_stop
                 100
         """
-        spikes = numpy.extract((self.spike_times >= t_start) & (self.spike_times <= t_stop), self.spike_times)
-        return SpikeTrain(spikes, t_start, t_stop)        
+        idx = numpy.where((self._spike_times >= t_start) & (self._spike_times <= t_stop))[0]
+        if self.spikes:        
+            return SpikeTrain(spikes=self._spikes[idx], t_start=t_start, t_stop=t_stop, neuron=self.neuron)        
+        else:
+            return SpikeTrain(spike_times = self._spike_times[idx], t_start=t_start, t_stop=t_stop, neuron=self.neuron)        
+
+    def set_times(self, t_start, t_stop):
+        """ 
+        Adapt the times (start/stop) of the SpikeTrain obtained by slicing between t_start and t_stop. 
+        The t_start and t_stop values of the SpikeTrain are now the one given as arguments, and 
+        all event out of this time interval are discarded.
+        
+        Inputs:
+            t_start - begining of the SpikeTrain, in ms.
+            t_stop  - end of the SpikeTrain, in ms.
+
+        Examples:
+            >> spk = spktrain.time_slice(0,100)
+            >> spk.t_start
+                0
+            >> spk.t_stop
+                100
+        """
+        idx = numpy.where((self._spike_times >= t_start) & (self._spike_times <= t_stop))[0]
+        self._t_start = t_start
+        self._t_stop  = t_stop
+        if self.spikes:        
+            self._spikes  = self._spikes[idx]
+        self._spike_times = self._spike_times[idx]
 
 
     def time_histogram(self, t_start=None, t_stop=None, bin_size=0.01, normalized=True):
@@ -311,14 +368,15 @@ class SpikeTrain(object):
             time_axis
         """
         ### bins = self.time_axis(time_bin)
+        if t_start is None:
+            t_start = self._t_start
+        if t_stop is None:
+            t_stop = self.t_stop
         bins = arange(t_start, t_stop, bin_size)
-        if newnum:
-            hist, edges = numpy.histogram(self.spike_times, bins, new=newnum)
-        else:
-            hist, edges = numpy.histogram(self.spike_times, bins)
-        if normalized and isinstance(bin_size, int): # what about normalization if time_bin is a sequence?
+        hist, edges = numpy.histogram(self.spike_times, bins)
+        if normalized: # what about normalization if time_bin is a sequence?
             hist *= 1/bin_size
-        return hist
+        return hist, edges
 
 
     def distance_victorpurpura(self, spktrain, cost=0.5):
@@ -351,7 +409,7 @@ class SpikeTrain(object):
         return scr[nspk_1,nspk_2]
 
 
-    def distance_kreuz(self, spktrain, dt=0.1):
+    def distance_kreuz(self, spktrain, dt=0.001):
         """
         Function to calculate the Kreuz/Politi distance between two spike trains
         See  Kreuz, T.; Haas, J.S.; Morelli, A.; Abarbanel, H.D.I. & Politi, A. 
@@ -390,10 +448,10 @@ class SpikeTrain(object):
         result[idx] = -vec_2[idx]/vec_1[idx] + 1
         return numpy.sum(numpy.abs(result))/len(result)
     
-    def cross_correlate(self, spiketrain, time_bin=0.001, t_before=0.05, t_after=0.05):
-        pass
+    def cross_correlate(self, spiketrain, bin_size=0.001, t_before=0.05, t_after=0.05):
+        return self.psth(spiketrain)
     
-    def psth(self, events, time_bin=0.001, t_before=0.05, t_after=0.05):
+    def psth(self, events, bin_size=0.001, t_before=0.05, t_after=0.05):
         """
         Return the psth of the spike times contained in the SpikeTrain according to selected events, 
         on a time window t_spikes - tmin, t_spikes + tmax
@@ -401,13 +459,11 @@ class SpikeTrain(object):
         Inputs:
             events  - List of Even objects (and events can be the spikes) or just a list 
                       of times
-            time_bin- The time bin (in ms) used to gather the spike for the psth
+            bin_size- The bin_size bin (in second) used to gather the spike for the psth
             t_min   - Time (>0) to average the signal before an event, in ms (default 0)
             t_max   - Time (>0) to average the signal after an event, in ms  (default 100)
             
-        Examples:
-            >> spk.psth(spktrain, t_min = 50, t_max = 150)
-            >> spk.psth(spktrain, )
+        Examples: 
             >> spk.psth(range(0,1000,10), display=True)
             
         See also

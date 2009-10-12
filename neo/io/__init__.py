@@ -1,10 +1,19 @@
 from baseio import *
-from spike2 import *
 
+all_format = [ ]
 
-#all_IOclass = [ ]
-#~ from pynn import IOPynn
-#~ all_IOclass = [ IOPynn]
+#try:
+from pynn import TextFile
+all_format += ['PyNN']
+#except ImportError:
+#print "Error while loading pyNN IO module"
+
+#try:
+    #from spike2 import *
+    #all_format += ['PyNN']
+#except ImportError:
+    #pass
+
 
 
 #~ if sys.platform =='win32':

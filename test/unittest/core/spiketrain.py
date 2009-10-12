@@ -11,19 +11,23 @@ class SpikeTrainTest(unittest.TestCase):
     def tearDown(self):
         pass
     
-    def testCreateSpikeTrain(self):
-        spk = SpikeTrain(numpy.arange(0,110,10))
-        assert (spk.t_start == 0) and (spk.t_stop == 100)
-        self.assert_( arrays_are_equal(spk.spike_times, numpy.arange(0,110,10)) )
+    #def testCreateSpikeTrain(self):
+        #spk = SpikeTrain(numpy.arange(0,110,10))
+        #assert (spk.t_start == 0) and (spk.t_stop == 100)
+        #self.assert_( arrays_are_equal(spk.spike_times, numpy.arange(0,110,10)) )
     
-    def testCreateSpikeTrainFromList(self):
-        spk = SpikeTrain(range(0,110,10))
-        assert (spk.t_start == 0) and (spk.t_stop == 100)
-        self.assert_( arrays_are_equal(spk.spike_times, numpy.arange(0,110,10)) )
+    #def testCreateSpikeTrainFromList(self):
+        #spk = SpikeTrain(range(0,110,10))
+        #assert (spk.t_start == 0) and (spk.t_stop == 100)
+        #self.assert_( arrays_are_equal(spk.spike_times, numpy.arange(0,110,10)) )
     
-    def testCreateSpikeTrainFull(self):
-        spk = SpikeTrain(numpy.arange(0,110,10), 0, 100)
-        assert (spk.t_start == 0) and (spk.t_stop == 100)
+    def testCreateSpikeTrainInterval(self):
+        spk = SpikeTrain(numpy.arange(0,110,10), interval=(0, 100))
+        assert (spk._t_start == 0) and (spk._t_stop == 100)
+    
+    def testCreateSpikeTrainTimes(self):
+        spk = SpikeTrain(numpy.arange(0,110,10), t_start=0, t_stop=100)
+        assert (spk._t_start == 0) and (spk._t_stop == 100)
     
     def testCreateWithTStartOnly(self):
         spk = SpikeTrain(numpy.arange(0,110,10), t_start=20)

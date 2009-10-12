@@ -20,12 +20,22 @@ class Epoch(object):
 
     """
     
+    time     = None
+    label    = None 
+    duration = 0
+    
     def __init__(self, *arg, **karg):
     
         if 'time' in karg.keys():
             self.time = karg['time']
+        
+        if 'label' in karg.keys():
+            self.label = karg['label']
             
         if 'duration' in karg.keys():
             self.duration = karg['duration']
-            
+    
+    def __str__(self):
+        res = "Epoch %s at time %g with duration %g" %(self.label, self.time, self.duration)
+        return res
     

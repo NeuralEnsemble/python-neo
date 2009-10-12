@@ -15,9 +15,17 @@ class AnalogSignal(object):
 
     """
     
-    def __init__(self, *arg, **karg):        
-        self.signal  = numpy.array(signal, float)
-        self.dt      = float(dt)
+    label   = None
+    t_start = 0
+    
+    def __init__(self, *arg, **karg):
+        if karg.has_key('signal'):
+            self.signal  = numpy.array(signal, float)
+        if karg.has_key('dt'):
+            self.freq = float(1./dt)
+        if karg.has_key('freq'):
+            self.freq = freq
+        
         self.t_start = float(t_start)
         self.t_stop  = self.t_start + len(self.signal)*self.dt
     
