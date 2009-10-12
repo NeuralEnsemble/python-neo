@@ -14,7 +14,10 @@ BaseFile        - abstract class which should be overriden, managing how a file 
                   its data
 """
 
-from core import *
+import sys, os
+sys.path.append(os.path.abspath('.'))
+sys.path.append(os.path.abspath('../..'))
+from neo.core import *
 
 class BaseFile(object):
     """

@@ -2,11 +2,11 @@ from baseio import *
 
 all_format = [ ]
 
-#try:
-from pynn import TextFile
-all_format += ['PyNN']
-#except ImportError:
-#print "Error while loading pyNN IO module"
+try:
+    from pynn import TextFile
+    all_format += ['PyNN']
+except ImportError:
+    print "Error while loading pyNN IO module"
 
 #try:
     #from spike2 import *
