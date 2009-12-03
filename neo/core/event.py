@@ -21,6 +21,11 @@ class Event(Epoch):
 
     """
     
-    def __init__(self, *arg, **karg):        
-        Epoch.__init__(self, arg, kwarg)
+    def __init__(self, *arg, **karg):
+        Epoch.__init__(self, *arg, **karg)
         self.duration = 0
+        if 'time' in karg.keys():
+            self.time = karg['time']
+
+
+

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import numpy
+
 class AnalogSignal(object):
      
     """
@@ -20,17 +22,24 @@ class AnalogSignal(object):
     
     def __init__(self, *arg, **karg):
         if karg.has_key('signal'):
-            self.signal  = numpy.array(signal, float)
+            self.signal  = numpy.array(karg['signal'], float)
         if karg.has_key('dt'):
-            self.freq = float(1./dt)
+            self.freq = float(1./karg['dt'])
         if karg.has_key('freq'):
-            self.freq = freq
+            self.freq = karg['freq']
         
-        self.t_start = float(t_start)
-        self.t_stop  = self.t_start + len(self.signal)*self.dt
-    
+        if karg.has_key('t_start'):
+            self.t_start = float(karg['t_start'])
+            self.t_stop  = self.t_start + len(self.signal)/self.freq
+        else :
+            self.t_start = 0.
+            self.t_stop = 0.
+        
     def __len__(self):
         return len(self.signal)
+        
+    def t(self) :
+        return numpy.arange(len(self.signal), dtype = 'f')/self.freq + self.t_start
 
     def max(self):
         return self.signal.max()

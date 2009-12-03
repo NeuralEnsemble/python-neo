@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-NeuroTools.io
+baseio
 ==================
 
-A collection of functions to handle all the inputs/outputs of the NeuroTools.signals
-file, used by the loaders.
+
 
 Classes
 -------
 
-BaseFile        - abstract class which should be overriden, managing how a file will load/write
+BaseIO        - abstract class which should be overriden, managing how a file will load/write
                   its data
 """
 
@@ -19,7 +18,7 @@ sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('../..'))
 from neo.core import *
 
-class BaseFile(object):
+class BaseIO(object):
     """
     Generic class to handle all the file read/write methods for the key objects of the
     core class. This template is file reading/writing oriented but it can also handle data 
@@ -63,15 +62,15 @@ class BaseFile(object):
     """
     
     is_readable        = False
-    is_writable        = False	
+    is_writable        = False
     is_object_readable = False
     is_object_writable = False
-    has_header         = False	
+    has_header         = False
     is_streameable     = False
     read_params        = {}
     write_params       = {}   
     level              = None
-    nfiles             = 0        
+    nfiles             = 0
     name               = None
     objects            = []
     supported_types    = []
