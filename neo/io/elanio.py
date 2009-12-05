@@ -81,16 +81,6 @@ class ElanIO(BaseIO):
     
     def read_segment(self, 
                                         filename = '',
-                                        delimiter = '\t',
-                                        usecols = None,
-                                        skiprows =0,
-                                        
-                                        timecolumn = None,
-                                        samplerate = 1000.,
-                                        t_start = 0.,
-                                        
-                                        method = 'genfromtxt',
-                                        
                                         ):
         """
         **Arguments**
@@ -102,7 +92,7 @@ class ElanIO(BaseIO):
         
         seg = Segment()
         
-        f = open(filename+'.ent')
+        f = open(filename+'.ent' , 'rU')
         #version
         version = f.readline()
         if version[:2] != 'V2' :
@@ -161,45 +151,45 @@ class ElanIO(BaseIO):
         
         # nb channel
         l = f.readline()
-        nbchannel = int(l)
+        nbchannel = int(l)-2
 #        print 'nbchannel', nbchannel
         
         #channel label
         labels = [ ]
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             labels.append(f.readline()[:-1])
 #        print labels
         
         # channel type
         types = [ ]
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             types.append(f.readline()[:-1])
 #        print types
         
         # channel unit
         units = [ ]
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             units.append(f.readline()[:-1])
 #        print units
         
         #range
         min_physic = []
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             min_physic.append( float(f.readline()) )
         max_physic = []
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             max_physic.append( float(f.readline()) )
         min_logic = []
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             min_logic.append( float(f.readline()) )
         max_logic = []
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             max_logic.append( float(f.readline()) )
 #        print min_physic,max_physic , min_logic, max_logic
         
         #info filter
         info_filter = []
-        for c in range(nbchannel) :
+        for c in range(nbchannel+2) :
             info_filter.append(f.readline()[:-1])
 #        print info_filter
         
@@ -209,8 +199,7 @@ class ElanIO(BaseIO):
         n = int(round(log(max_logic[0]-min_logic[0])/log(2))/8)
 #        print n
         data = fromfile(filename,dtype = 'i'+str(n) )
-        data = data.byteswap().reshape( (data.size/nbchannel ,nbchannel) ).astype('f4')
-        list_sig = [ ]
+        data = data.byteswap().reshape( (data.size/(nbchannel+2) ,nbchannel+2) ).astype('f4')
         for c in range(nbchannel) :
             sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
                                 (max_physic[c]-min_physic[c])+min_physic[c]
@@ -235,26 +224,125 @@ class ElanIO(BaseIO):
         
     def write(self , *args , **kargs):
         """
-        Write segment in a raw file.
+        Write segment in a file.
         See write_segment for detail.
         """
         self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
-                                filename = '',
-                                delimiter = '\t',
-                                
-                                skiprows =0,
-                                
-                                timecolumn = None,
-                                
-                                ):
+                            filename = '',
+                            ):
         """
         
          **Arguments**
             segment : the segment to write. Only analog signals will be written.
             TODO
         """
+        assert filename.endswith('.eeg')
+        fid_ent = open(filename+'.ent' ,'wt')
+        fid_eeg = open(filename ,'wt')
+        fid_pos = open(filename+'.pos' ,'wt')
         
-        pass
-
+        seg = segment
+        freq = seg.get_analogsignals()[0].freq
+        N = len(seg.get_analogsignals())
+        
+        #
+        # header file
+        #
+        fid_ent.write('V2\n')
+        fid_ent.write('OpenElectrophyImport\n')
+        fid_ent.write('ELAN\n')
+        t =  datetime.datetime.now()
+        fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
+        fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
+        fid_ent.write('-1\n')
+        fid_ent.write('reserved\n')
+        fid_ent.write('-1\n')
+        fid_ent.write('%g\n' %  (1./freq))
+        
+        fid_ent.write( '%d\n' % (N+2) )
+        
+        # channel label
+        for i, anaSig in enumerate(seg.get_analogsignals()) :
+            if hasattr(anaSig , 'label') :
+                fid_ent.write('%s.%d\n' % (anaSig.label, i+1 ))
+            else :
+                fid_ent.write('%s.%d\n' % ('nolabel', i+1 ))
+        fid_ent.write('Num1\n')
+        fid_ent.write('Num2\n')
+        
+        #channel type
+        for i, anaSig in enumerate(seg.get_analogsignals()) :
+            fid_ent.write('Electrode\n')
+        fid_ent.write( 'dateur echantillon\n')
+        fid_ent.write( 'type evenement et byte info\n')
+        
+        #units
+        for i, anaSig in enumerate(seg.get_analogsignals()) :
+            if hasattr(anaSig , 'unit') :
+                fid_ent.write('%s\n' % anaSig.unit)
+            else :
+                fid_ent.write('microV\n')
+        fid_ent.write('sans\n')
+        fid_ent.write('sans\n')
+    
+        #range
+        list_range = []
+        for i, anaSig in enumerate(seg.get_analogsignals()) :
+            list_range.append(abs(anaSig.signal).max())
+        for r in list_range :
+            fid_ent.write('-%.0f\n'% r)
+        fid_ent.write('-1\n')
+        fid_ent.write('-1\n')
+        for r in list_range :
+            fid_ent.write('%.0f\n'% r)
+        fid_ent.write('+1\n')
+        fid_ent.write('+1\n')
+        
+        for i in range(N+2) :
+            fid_ent.write('-32768\n')
+        for i in range(N+2) :
+            fid_ent.write('+32767\n')
+        
+        #info filter
+        for i in range(N+2) :
+            fid_ent.write('passe-haut ? Hz passe-bas ? Hz\n')
+        fid_ent.write('sans\n')
+        fid_ent.write('sans\n')
+        
+        for i in range(N+2) :
+            fid_ent.write('1\n')
+            
+        for i in range(N+2) :
+            fid_ent.write('reserved\n')
+    
+        #
+        # raw file
+        #
+        data = zeros( (seg.get_analogsignals()[0].signal.size , N+2)  , 'i2')
+        for i, anaSig in enumerate(seg.get_analogsignals()) :
+            sig2 = anaSig.signal*65535/(2*list_range[i])
+            data[:,i] = sig2.astype('i2')
+        
+        trigs = array([ ev.time for ev in seg.get_events() ])
+        trigs *= freq
+        trigs = trigs.astype('i')
+        data[trigs,-1] = 1
+        
+        fid_eeg.write(data.byteswap().tostring())
+        
+        #
+        # pos file
+        #
+        for i, ev in enumerate( seg.get_events() ) :
+            if hasattr(ev , 'label') and ev.label is not None:
+                fid_pos.write('%d    %d    %d\n' % (trigs[i] , ev.label,0))
+                label = ev.label
+            else :
+                fid_pos.write('%d    %d    %d\n' % (trigs[i] , 0,0))
+            
+        
+        fid_ent.close()
+        fid_eeg.close()
+        fid_pos.close()

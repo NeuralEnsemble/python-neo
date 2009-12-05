@@ -89,8 +89,13 @@ class RawIOTest(unittest.TestCase):
                                     timecolumn = 1,
                                     method = 'genfromtxt'
                                     )
-        ana2 = seg.get_analogsignals()[0]
-        assert all(ana2.signal == ana.signal)
+        ana2 = seg2.get_analogsignals()[0]
+        # 2% erreur due to i2 convertion
+        #print mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2)
+        assert mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) < .01
+        
+        # not possible
+        #assert all(ana2.signal == ana.signal)
 
 
 

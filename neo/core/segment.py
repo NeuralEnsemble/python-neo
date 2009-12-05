@@ -59,6 +59,3 @@ class Segment(object):
         """
         self._epochs
 
-
-
-

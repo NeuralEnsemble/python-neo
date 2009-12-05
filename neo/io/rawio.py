@@ -165,7 +165,8 @@ class RawIO(BaseIO):
             sig /= numpy.diff(chanrange)
             sig *= 2**(8*file_dtype.itemsize-1)
             sig = sig.astype(dtype)
-        
+        else:
+            sigs = sigs.astype(dtype)
         fid = open(filename , 'wb')
         fid.write( sigs.tostring() )
         fid.close()

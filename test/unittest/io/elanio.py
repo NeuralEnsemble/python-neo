@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath('../../..'))
 from neo.io import elanio
 from neo.core import *
 from numpy import *
+from scipy import rand
 #import pylab
 
 class ElanIOTest(unittest.TestCase):
@@ -27,31 +28,41 @@ class ElanIOTest(unittest.TestCase):
 ##            pylab.axvline(ev.time)
 #        
 #        #pylab.show()
-        
-    def testWriteReadSinus(self):
+    
+    def testWriteReadSinusAndEvent(self):
         
         seg = Segment()
         freq = 10000.
-        t = arange(0,15.,1./freq)
+        totaltime = 15.
+        t = arange(0,totaltime,1./freq)
         sig = 3.6*sin(2*numpy.pi*t*60.)
         ana = AnalogSignal( signal = sig,
                                         freq = freq,
                                         )
         seg._analogsignals = [ ana ]
+        nbevent = 40
+        for i in range(nbevent):
+            seg._events += [ Event(time = rand()*totaltime) ]
+            
         
         
         elan = elanio.ElanIO()
         elan.write_segment(  seg,
-                            filename = 'testNeoElanIO.raw',
+                            filename = 'testNeoElanIO.eeg',
                             )
         elan2 = elanio.ElanIO()
         seg2 = elan2.read_segment(
-                            filename = 'testNeoElanIO.raw',
+                            filename = 'testNeoElanIO.eeg',
                             )
-        ana2 = seg.get_analogsignals()[0]
+        ana2 = seg2.get_analogsignals()[0]
+
         assert len(seg2.get_analogsignals()) == 1
-        assert all(ana2.signal == ana.signal)
         
+        # 2% erreur due to i2 convertion
+        assert mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) < .02
+        
+        for i in range(nbevent):
+            assert seg._events[i].time - seg2._events[i].time < 1./freq
 
 
 

@@ -57,9 +57,15 @@ class RawIOTest(unittest.TestCase):
                                         dtype = 'f4',
                                         chanrange = [-5,5],
                                     )
-        ana2 = seg.get_analogsignals()[0]
+        ana2 = seg2.get_analogsignals()[0]
         assert len(seg2.get_analogsignals()) == 1
-        assert all(ana2.signal == ana.signal)
+        
+        # erreur due dtype
+        assert mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) < .0001
+        
+        # not possible
+        #assert all(ana2.signal == ana.signal)
+        
         
 
 
