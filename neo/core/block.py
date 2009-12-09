@@ -2,27 +2,33 @@
 
 class Block(object):
     """
-	Top level container for data.
+    Top level container for data.
     
-	**Definition**
-	Main container gathering all the data discrete or continous for a given setup.
-	It can be view as a list of :class:`Segment`.
-	
-	A block is not necessary a homogeneous recorging contrary to :class:`Segment`
-	
-	**Usage**
-	
-	
-	**Example**
-	
+    **Definition**
+    Main container gathering all the data discrete or continous for a given setup.
+    It can be view as a list of :class:`Segment`.
+    
+    A block is not necessary a homogeneous recorging contrary to :class:`Segment`
+    
+    **Usage**
+    
+    
+    **Example**
+    
     >> bl = Block( segments = [seg1 , seg2 , seg3] )
     
-	**Methods**
+    **Methods**
 
-	get_segments()
-	
-	
-	"""
+    get_segments()
+    
+    
+    """
     
     def __init__(self, *arg, **karg):
-        pass
+        self._segments = [ ]
+        if 'segments' in karg.keys():
+            self._segments += karg['segments']
+    
+    def get_segments(self):
+        return self._segments
+
