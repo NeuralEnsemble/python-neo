@@ -103,8 +103,7 @@ class ElphyIO(BaseIO):
         print 'headersize' , headersize
         
         #1rst block
-        l_id, = fid.read_f('b' , offset = 20)
-        block_id = unicode(fid.read(l_id))
+        block_id = fid.read_f('16p' , offset = 20)
         block_size, = fid.read_f('i'  , offset = 36)
         
         channelCount, = fid.read_f('b' , offset = 40)
@@ -152,6 +151,7 @@ class ElphyIO(BaseIO):
         
         datas = datas.astype('f')
         datas *= array(Dyu)[newaxis,newaxis,:]
+        datas += array(y0u)[newaxis,newaxis,:]
         
         # block creation
         for s in xrange(datas.shape[0]) :
@@ -190,6 +190,11 @@ class ElphyIO(BaseIO):
         filetype = 'DAC2/GS/2000'
         fid.write_f('16p' , filetype )
         
+        headersize, = fid.read_f('i' , offset = 16)
+        print 'headersize' , headersize
+        
         
         fid.close()
         
+
+
