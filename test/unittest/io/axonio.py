@@ -12,7 +12,8 @@ from numpy import *
 from scipy import rand
 import pylab
 
-
+axon = axonio.AxonIO()
+block = axon.read_block( filename = 'datafiles/File_axon_1.abf',)
 
 class AxonIOTest(unittest.TestCase):
     
@@ -37,5 +38,6 @@ class AxonIOTest(unittest.TestCase):
         pylab.show()
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    pass
 
