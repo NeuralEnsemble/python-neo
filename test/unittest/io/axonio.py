@@ -25,7 +25,7 @@ class AxonIOTest(unittest.TestCase):
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/gap free/Axo05611_0002.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/gap free/Axo05611_0003.abf',)
 #        
-        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/waveform_CClamp/05611001_stim_nerf.abf',)
+#        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/waveform_CClamp/05611001_stim_nerf.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/waveform_CClamp/05611003_creneau.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/waveform_CClamp/05611005_stim_nerf.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon9/waveform_CClamp/05611006_stim_nerf.abf',)
@@ -46,7 +46,7 @@ class AxonIOTest(unittest.TestCase):
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/08407002.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/08407003.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/08407004.abf',)
-#        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/09512005_tag.abf',)
+        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/09512005_tag.abf',)
 #        block = axon.read_block( filename = 'datafiles/ABF/fichiers abf axon10/gap_free_VClamp/09512008_tag.abf',)
         
         

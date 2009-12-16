@@ -108,25 +108,9 @@ class AxonIO(BaseIO):
             TODO
         """
         
-        fid = struct_file(filename,'rb')
-        fFileSignature =  fid.read(4)
-        fid.close()
-        
-        #return self.read_block_V1_2(filename = filename)
-        
-        if fFileSignature == 'ABF ' :
-            return self.read_block_V1(filename = filename)
-        elif fFileSignature == 'ABF2' :
-           return self.read_block_V2(filename = filename)
-        
-        
-
-    
-    def read_block_V1_2(self, filename = '', ):
-        
         def reformat_integer_V1(data, nbchannel , header):
             """
-            reformat when dtype is int16
+            reformat when dtype is int16 for ABF version 1
             """
             for i in range(nbchannel):
                 data[:,i] /= header['fInstrumentScaleFactor'][i]
@@ -141,7 +125,7 @@ class AxonIO(BaseIO):
             
         def reformat_integer_V2(data, nbchannel , header):
             """
-            reformat when dtype is int16
+            reformat when dtype is int16 for ABF version 2
             """
             for i in range(nbchannel):
                 data[:,i] /= header['listADCInfo'][i]['fInstrumentScaleFactor']
@@ -156,6 +140,8 @@ class AxonIO(BaseIO):
                 
         header = self.read_header(filename = filename)
         version = header['fFileVersionNumber']
+        
+        print 'version' , version
         
         # date and time
         if version <2. :
@@ -201,6 +187,7 @@ class AxonIO(BaseIO):
             mode = header['nOperationMode']
         elif version >=2. :
             mode = header['protocol']['nOperationMode']
+        print 'mode' , mode
         if (mode == 1) or (mode == 2) or  (mode == 5):
             # event-driven variable-length mode (mode 1)
             # event-driven fixed-length mode (mode 2 or 5)
@@ -213,11 +200,9 @@ class AxonIO(BaseIO):
             elif version >=2. :
                 nbsweep2 = header['section']['SynchArraySection']['llNumEntries']
                 offsetSweep = header['section']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
-                
             sweepArray = memmap(filename , 'i4'  , 'r',
                                         shape = (nbsweep2, 2),
                                         offset = offsetSweep )            
-            
             
             # read subset of data
             list_data = [ ]
@@ -302,9 +287,6 @@ class AxonIO(BaseIO):
                 anaSig.unit = unit
                 anaSig.num = num
             seg._analogsignals.append( anaSig )
-            block._segments.append(seg)
-            
-            
             for i,tag in enumerate(header['listTag']) :
                 event = Event(  )
                 event.time = tag['lTagTime']/freq
@@ -315,261 +297,6 @@ class AxonIO(BaseIO):
             block._segments.append(seg)
 
         return block
-
-
-
-
-
-    def read_block_V1(self, filename = '', ):
-        """
-        read data ABF  (version 1)
-        info are located in a big unique structure (header)
-        """
-
-        def reformat_integer(data, nbchannel , header):
-            """
-            reformat when dtype is int16
-            """
-            for i in range(nbchannel):
-                data[:,i] /= header['fInstrumentScaleFactor'][i]
-                data[:,i] /= header['fSignalGain'][i]
-                data[:,i] /= header['fADCProgrammableGain'][i]
-                if header['nTelegraphEnable'][i] :
-                    data[:,i] /= header['fTelegraphAdditGain'][i]
-                data[:,i] *= header['fADCRange']
-                data[:,i] /= header['lADCResolution']
-                data[:,i] += header['fInstrumentOffset'][i]
-                data[:,i] -= header['fSignalOffset'][i]
-        
-        header = self.read_header(filename = filename)
-        
-        YY = 1900
-        MM = 01
-        DD = 01
-        hh = int(header['lFileStartTime']/3600.)
-        mm = int((header['lFileStartTime']-hh*3600)/60)
-        ss = header['lFileStartTime']-hh*3600-mm*60
-        ms = int(mod(ss,1)*1e6)
-        ss = int(ss)
-        filedatetime = datetime.datetime(  YY , MM , DD , hh , mm , ss , ms)
-        
-        if header['nDataFormat'] == 0 :
-            dt = dtype('i2')
-        elif header['nDataFormat'] == 1 :
-            dt = dtype('f4')
-        
-        nbchannel = header['nADCNumChannels']
-        headOffset = header['lDataSectionPtr']*BLOCKSIZE+header['nNumPointsIgnored']*dt.itemsize
-        totalsize = header['lActualAcqLength']
-        data = memmap(filename , dt  , 'r', 
-                          shape = (totalsize,) , offset = headOffset)
-        
-        # 3 possible modes
-        mode = header['nOperationMode']
-        if (mode == 1) or (mode == 2) or  (mode == 5):
-            # event-driven variable-length mode (mode 1)
-            # event-driven fixed-length mode (mode 2)
-            
-            # read sweep pos
-            nbsweep = header['lActualEpisodes']
-            
-            nbsweep2 = header['lSynchArraySize']
-            offsetSweep = header['lSynchArrayPtr']*BLOCKSIZE
-            sweepArray = memmap(filename , 'i4'  , 'r',
-                                        shape = (nbsweep2, 2),
-                                        offset = offsetSweep )            
-            
-            
-            # read subset of data
-            list_data = [ ]
-            pos = 0
-            for j in range(nbsweep) :
-                length = sweepArray[j,1]
-
-                if (header['fSynchTimeUnit'] != 0) and (mode == 1) :
-                    length /= header['fSynchTimeUnit']
-                subdata  = data[pos:pos+length]
-                pos += length
-                subdata = subdata.reshape( (subdata.size/nbchannel, nbchannel )).astype('f')
-                if dt == dtype('i2'):
-                    reformat_integer(subdata, nbchannel , header)
-                list_data.append(subdata)
-            
-            # construct block
-            # one sweep = one segment in a block
-            block = Block()
-            block.datetime = filedatetime
-            for j in range(nbsweep) :
-                seg = Segment()
-                seg.num = j
-                for i in range(nbchannel):
-                    anaSig = AnalogSignal( signal = list_data[j][:,i],
-                                            freq = 1./(header['fADCSampleInterval']*nbchannel*1.e-6) ,
-                                            t_start = 0)
-                    anaSig.name = header['sADCChannelName'][i]
-                    anaSig.unit = header['sADCUnits'][i]
-                    anaSig.num = header['nADCPtoLChannelMap'][i]
-                    seg._analogsignals.append( anaSig )
-                block._segments.append(seg)
-        
-        if (mode == 3) :
-            # gap free mode
-            m = data.size%nbchannel
-            if m != 0 : data = data[:-m]
-            data = data.reshape( (data.size/nbchannel, nbchannel)).astype('f')
-            if dt == dtype('i2'):
-                reformat_integer(data, nbchannel , header)
-            
-            # one segment in one block
-            block = Block()
-            seg = Segment()
-            seg.datetime = filedatetime
-            for i in range(nbchannel):
-                anaSig = AnalogSignal( signal = data[:,i],
-                                        freq = 1./(header['fADCSampleInterval']*nbchannel*1.e-6) ,
-                                        t_start = 0)
-                anaSig.name = header['sADCChannelName'][i]
-                anaSig.unit = header['sADCUnits'][i]
-                anaSig.num = header['nADCPtoLChannelMap'][i]
-            seg._analogsignals.append( anaSig )
-            block._segments.append(seg)
-        
-        
-        return block
-
-
-
-
-    def read_block_V2(self, filename = '', ):
-        """
-        read data ABF2
-        info are located in many sub structures
-        """
-        
-        def reformat_integer(data, nbchannel , header):
-            """
-            used in case 2 3 or 5
-            """
-            for i in range(nbchannel):
-                data[:,i] /= header['listADCInfo'][i]['fInstrumentScaleFactor']
-                data[:,i] /= header['listADCInfo'][i]['fSignalGain']
-                data[:,i] /= header['listADCInfo'][i]['fADCProgrammableGain']
-                if header['listADCInfo'][i]['nTelegraphEnable'] :
-                    data[:,i] /= header['listADCInfo'][i]['fTelegraphAdditGain']
-                data[:,i] *= header['protocol']['fADCRange']
-                data[:,i] /= header['protocol']['lADCResolution']
-                data[:,i] += header['listADCInfo'][i]['fInstrumentOffset']
-                data[:,i] -= header['listADCInfo'][i]['fSignalOffset']
-        
-        header = self.read_header(filename = filename)
-        
-
-        YY = int(header['uFileStartDate']/10000)
-        MM = int((header['uFileStartDate']-YY*10000)/100)
-        DD = int(header['uFileStartDate']-YY*10000-MM*100)
-        hh = int(header['uFileStartTimeMS']/1000./3600.)
-        mm = int((header['uFileStartTimeMS']/1000.-hh*3600)/60)
-        ss = header['uFileStartTimeMS']/1000.-hh*3600-mm*60
-        ms = int(mod(ss,1)*1e6)
-        ss = int(ss)
-        filedatetime = datetime.datetime(  YY , MM , DD , hh , mm , ss , ms)
-        
-
-        if header['nDataFormat'] == 0 :
-            dt = dtype('i2')
-        elif header['nDataFormat'] == 1 :
-            dt = dtype('f4')
-        
-        nbchannel = header['sections']['ADCSection']['llNumEntries']
-        headOffset = header['sections']['DataSection']['uBlockIndex']*BLOCKSIZE
-        data = memmap(filename , dt  , 'r', offset = headOffset)
-        totalsize = header['sections']['DataSection']['llNumEntries']
-        data = data[:totalsize]
-        
-        # 3 possible modes : 
-        mode = header['protocol']['nOperationMode']
-        if (mode == 1) or (mode == 2) or  (mode == 5):
-            # event-driven variable-length mode (mode 1)
-            # event-driven fixed-length mode (mode 2)
-            
-            # read sweep pos
-            nbsweep = header['lActualEpisodes']
-            
-            nbsweep2 = header['section']['SynchArraySection']['llNumEntries']
-            offsetSweep = header['section']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
-            sweepArray = memmap(filename , 'i4'  , 'r',
-                                        shape = (nbsweep2, 2),
-                                        offset = offsetSweep )
-            
-            # read subset of data
-            list_data = [ ]
-            pos = 0
-            for j in range(nbsweep) :
-                length = sweepArray[j,1]
-                if (header['protocol']['fSynchTimeUnit'] != 0) and (mode == 1) :
-                    length /= header['protocol']['fSynchTimeUnit']
-                subdata  = data[pos:pos+length]
-                pos += length
-                subdata = subdata.reshape( (subdata.size/nbchannel, nbchannel )).astype('f')
-                if dt == dtype('i2'):
-                    reformat_integer(subdata, nbchannel , header)
-                list_data.append(subdata)
-            
-            # construct block
-            # one sweep = one segment in a block
-            block = Block()
-            block.datetime = filedatetime
-            for j in range(nbsweep) :
-                seg = Segment()
-                seg.num = j
-                for i in range(nbchannel):
-                    anaSig = AnalogSignal( signal = list_data[j][:,i],
-                                            freq = 1.e6/header['protocol']['fADCSequenceInterval'] ,
-                                            t_start = 0)
-                    anaSig.name = header['listADCInfo'][i]['recChNames']
-                    anaSig.unit = header['listADCInfo'][i]['recChUnits']
-                    anaSig.num = header['listADCInfo'][i]['nADCNum']
-                    seg._analogsignals.append( anaSig )
-                block._segments.append(seg)
-
-        if (mode == 3) :
-            # gap free mode : one segment
-            
-            #read data
-            m = data.size%nbchannel
-            if m != 0 : data = data[:-m]
-            data = data.reshape( (data.size/nbchannel, nbchannel)).astype('f')
-            if dt == dtype('i2'):
-                reformat_integer(data, nbchannel , header)
-            
-            # construct block
-            # one segment in one block
-            block = Block()
-            seg = Segment()
-            seg.datetime = filedatetime
-            freq = 1.e6/header['protocol']['fADCSequenceInterval']
-            for i in range(nbchannel):
-                anaSig = AnalogSignal( signal = data[:,i],
-                                        freq = freq,
-                                        t_start = 0)
-                                        #t_start = header['uFileStartTimeMS']*1000.)
-                anaSig.name = header['listADCInfo'][i]['recChNames']
-                anaSig.unit = header['listADCInfo'][i]['recChUnits']
-                anaSig.num = header['listADCInfo'][i]['nADCNum']
-                seg._analogsignals.append( anaSig )
-            
-            for i,tag in enumerate(header['listTag']) :
-                event = Event(  )
-                event.time = tag['lTagTime']/freq
-                event.name = tag['sComment']
-                event.num = i
-                event.type = tag['nTagType']
-                seg._events.append( event )
-            block._segments.append(seg)
-            
-            
-        return block
-
 
 
     def read_header(self, filename = None):
@@ -704,14 +431,6 @@ class AxonIO(BaseIO):
         fid.close()
         
         return header
-        
-        # gerer les tags
-        
-        
-        
-        
-        
-        
 
 
 BLOCKSIZE = 512
