@@ -12,7 +12,7 @@ atf is a text file based from axon that could be read by AsciiIO.
 but this file is less efficient.
 
 This code is a port abfload and abf2load
-written in Matlab by
+written in Matlab (BSD licence) by
 Copyright (c) 2009, Forrest Collman 
                     fcollman@princeton.edu
 Copyright (c) 2004, Harald Hentschke
@@ -137,11 +137,20 @@ class AxonIO(BaseIO):
                 data[:,i] /= header['protocol']['lADCResolution']
                 data[:,i] += header['listADCInfo'][i]['fInstrumentOffset']
                 data[:,i] -= header['listADCInfo'][i]['fSignalOffset']
-                
+        
+        def clean_string(s):
+            while s.endswith('\x00') :
+                s = s[:-1]
+            while s.endswith(' ') :
+                s = s[:-1]
+            return s
+            
+        
+        
         header = self.read_header(filename = filename)
         version = header['fFileVersionNumber']
         
-        print 'version' , version
+        #print 'version' , version
         
         # date and time
         if version <2. :
@@ -187,7 +196,7 @@ class AxonIO(BaseIO):
             mode = header['nOperationMode']
         elif version >=2. :
             mode = header['protocol']['nOperationMode']
-        print 'mode' , mode
+        #print 'mode' , mode
         if (mode == 1) or (mode == 2) or  (mode == 5):
             # event-driven variable-length mode (mode 1)
             # event-driven fixed-length mode (mode 2 or 5)
@@ -254,7 +263,7 @@ class AxonIO(BaseIO):
                     seg._analogsignals.append( anaSig )
                 block._segments.append(seg)
 
-        if (mode == 3) :
+        elif (mode == 3) :
             # gap free mode
             m = data.size%nbchannel
             if m != 0 : data = data[:-m]
@@ -290,7 +299,7 @@ class AxonIO(BaseIO):
             for i,tag in enumerate(header['listTag']) :
                 event = Event(  )
                 event.time = tag['lTagTime']/freq
-                event.name = tag['sComment']
+                event.name = clean_string(tag['sComment'])
                 event.num = i
                 event.type = tag['nTagType']
                 seg._events.append( event )
