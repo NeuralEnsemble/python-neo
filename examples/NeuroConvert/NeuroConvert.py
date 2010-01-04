@@ -46,7 +46,8 @@ class MainWindow(QMainWindow) :
 
         self.setWindowTitle(self.tr('NeuroConvert'))
         self.setWindowIcon(QIcon(':/NeuroConvert.png'))
-
+        self.setMinimumSize( 500,400)
+        
         self.createActions()
         self.createMenus()
         
@@ -67,6 +68,8 @@ class MainWindow(QMainWindow) :
                                                 'State',
                                                 ])
         self.table.resizeColumnsToContents()
+        self.table.setSortingEnabled(False)
+        self.list_convert = [ ]
 
         but = QPushButton(QIcon(':/NeuroConvert.png') , self.tr("Start convertion")) 
         self.connect(but,SIGNAL("clicked()"), self.startConvertion)
@@ -117,22 +120,49 @@ class MainWindow(QMainWindow) :
                 ))
 
     def addNewFile(self):
-        print 'yep'
-        
         dia = AddFileDialog()
         if dia.exec_() :
-            print 'ok'
+            for f in dia.files.get_dict()['fileList'] :
+                self.list_convert.append({
+                                        'filename' : f,
+                                        'inputFormat' : dia.formats.get_dict()['inputFormat'],
+                                        'outputFormat' : dia.formats.get_dict()['outputFormat'],
+                                        'inputOptions' : dia.inputOptions.get_dict() ,
+                                        'outputOptions' : dia.outputOptions.get_dict(),
+                                        'convertOptions' : dia.convertOptions.get_dict(),
+                                        'state' : 'not done',
+                                        })
+            self.refreshTable()
             
+    def refreshTable(self):
+        self.table.setRowCount( len(self.list_convert) )
+        for r,convert in enumerate(self.list_convert) :
+            self.table.setItem(r,0,QTableWidgetItem(os.path.basename(convert['filename']), 0 ))
+            self.table.setItem(r,1,QTableWidgetItem(convert['inputFormat'], 0 ))
+            self.table.setItem(r,2,QTableWidgetItem(convert['outputFormat'], 0 ))
+            self.table.setItem(r,3,QTableWidgetItem(convert['state'], 0 ))
+        self.table.resizeColumnsToContents()
             
     
     def startConvertion(self):
-        pass
+        print 'tsart'
 
 
+class ThreadConvertion(QThread):
+    def __init__(self):
+        QThread.__init__(self)
+        
+    def run(self):
+        print 'yep'
+        
 
-class AddFileDialog(QDialog) :
+
+"""
+class AddFileDialog2(QDialog) :
     def __init__(self, parent = None,) :
         QDialog.__init__(self, parent)
+        
+        self.setMinimumSize( 600,600)
         
         mainlayout = QVBoxLayout()
         self.setLayout(mainlayout)
@@ -162,11 +192,16 @@ class AddFileDialog(QDialog) :
         self.tab.addTab(self.files,'Input files')
         
         
-        self.frameInput = QFrame() # HERE
-        self.tab.addTab(self.frameInput,'Input options')
+        self.widgetInput = QWidget()
+        self.widgetInput.setLayout(QHBoxLayout())
+        self.tab.addTab(self.widgetInput,'Input options')
+        self.inputOptions = None
         
-        self.frameOutput = QFrame() # HERE
-        self.tab.addTab(self.frameOutput,'Output options')
+        self.widgetOutput = QWidget()
+        self.widgetOutput.setLayout(QHBoxLayout())
+        self.tab.addTab(self.widgetOutput,'Output options')
+        self.outputOptions = None
+
         
         # convertions options
         param = [ ('blockToMultipleSegment' ,
@@ -181,18 +216,129 @@ class AddFileDialog(QDialog) :
         self.changeIOFormat('')
         
     def changeIOFormat(self , name) :
-            
+        
+        if self.inputOptions is not None :
+            self.inputOptions.hide()
+            self.widgetInput.layout().removeWidget( self.inputOptions )
         formatname = self.formats['inputFormat']
         cl = dict_format[formatname]['class']
         param = cl.read_params[cl.supported_types[0]]
-        self.inputOption = ParamWidget( param )
-        self.frameInput.setWidget( self.inputOption ) # HERE
-            
+        self.inputOptions = ParamWidget( param )
+        self.widgetInput.layout().addWidget( self.inputOptions )
+
+        if self.outputOptions is not None :
+            self.outputOptions.hide()
+            self.widgetOutput.layout().removeWidget( self.outputOptions )
         formatname = self.formats['outputFormat']
         cl = dict_format[formatname]['class']
         param = cl.read_params[cl.supported_types[0]]
-        self.outputOption = ParamWidget( param )
-        self.frameOutput.setWidget( self.outputOption ) # HERE
+        self.outputOptions = ParamWidget( param )
+        self.widgetOutput.layout().addWidget( self.outputOptions )
+        
+"""
+
+
+class AddFileDialog(QDialog) :
+    def __init__(self, parent = None,) :
+        QDialog.__init__(self, parent)
+        
+        self.setMinimumSize( 600,800)
+        
+        mainlayout = QVBoxLayout()
+        self.setLayout(mainlayout)
+        
+        # input format
+        g = QGroupBox()
+        g.setTitle('Files format')
+        mainlayout.addWidget(g)
+        v = QVBoxLayout()
+        g.setLayout(v)
+        param = [
+                    ('inputFormat' , { 'value' :  possibleInput[0] , 
+                                        'possible' : possibleInput  } ),
+                    ('outputFormat' , { 'value' :  possibleOutput[0] ,
+                                       'possible' : possibleOutput  } ),
+                ]
+        self.formats = ParamWidget(param)
+        v.addWidget( self.formats )
+        self.connect(self.formats , SIGNAL('paramChanged( QString )'), self.changeIOFormat )
+        
+        
+        # files selector
+        g = QGroupBox()
+        g.setTitle('Files format')
+        mainlayout.addWidget(g)
+        v = QVBoxLayout()
+        g.setLayout(v)        
+        param = [('fileList' , { 'value' :  '~' ,  'widgettype' : ChooseFilesWidget }     ), ]
+        self.files = ParamWidget(param)
+        v.addWidget( self.files )
+        
+        
+        #inputOptions
+        g = QGroupBox()
+        g.setTitle('Input options')
+        mainlayout.addWidget(g)
+        v = QVBoxLayout()
+        g.setLayout(v)  
+        self.widgetInput = QWidget()
+        self.widgetInput.setLayout(QHBoxLayout())
+        v.addWidget( self.widgetInput )
+        self.inputOptions = None
+        
+        #output options 
+        g = QGroupBox()
+        g.setTitle('Output options')
+        mainlayout.addWidget(g)
+        v = QVBoxLayout()
+        g.setLayout(v)          
+        self.widgetOutput = QWidget()
+        self.widgetOutput.setLayout(QHBoxLayout())
+        v.addWidget( self.widgetOutput )
+        self.outputOptions = None
+
+        
+        # convertions options
+        g = QGroupBox()
+        g.setTitle('Convertion options')
+        mainlayout.addWidget(g)
+        v = QVBoxLayout()
+        g.setLayout(v)           
+        param = [ ('blockToMultipleSegment' ,
+                       { 'value' :  True ,
+                        'label' : ' If input is block convert to many segment' 
+                        } ),
+                 
+                 ]
+        self.convertOptions = ParamWidget(param)
+        v.addWidget( self.convertOptions )
+
+        but = QPushButton(QIcon(':/dialog-ok-apply.png') , self.tr("OK"))
+        self.connect(but,SIGNAL("clicked()"), self , SLOT('accept()'))
+        mainlayout.addWidget(but)
+
+
+        self.changeIOFormat('')
+        
+    def changeIOFormat(self , name) :
+        
+        if self.inputOptions is not None :
+            self.inputOptions.hide()
+            self.widgetInput.layout().removeWidget( self.inputOptions )
+        formatname = self.formats['inputFormat']
+        cl = dict_format[formatname]['class']
+        param = cl.read_params[cl.supported_types[0]]
+        self.inputOptions = ParamWidget( param )
+        self.widgetInput.layout().addWidget( self.inputOptions )
+
+        if self.outputOptions is not None :
+            self.outputOptions.hide()
+            self.widgetOutput.layout().removeWidget( self.outputOptions )
+        formatname = self.formats['outputFormat']
+        cl = dict_format[formatname]['class']
+        param = cl.read_params[cl.supported_types[0]]
+        self.outputOptions = ParamWidget( param )
+        self.widgetOutput.layout().addWidget( self.outputOptions )
 
 
 if __name__ == '__main__' :
