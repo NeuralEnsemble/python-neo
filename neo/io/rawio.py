@@ -44,18 +44,23 @@ class RawIO(BaseIO):
     is_object_writable = False
     has_header         = False
     is_streameable     = False
-    read_params        = {
-                                    
-                                    'segment' : [   ['filename' , ''],
-                                                            ['samplerate' , 1000.] ,
-                                                            ['nbchannel' , 16] ,
-                                                            ['bytesoffset' , 0],
-                                                            ['t_start' , [0. ] ],
-                                                            ['dtype' , 'f4' ],
-                                                            ['range' , [-10,10] ],
-                                                        ]
-                                    }
-    write_params       = {}   
+    read_params        = { Segment : [
+                                        ('samplerate' , { 'value' : 1000. } ) ,
+                                        ('nbchannel' , { 'value' : 16 } ),
+                                        ('bytesoffset' , { 'value' : 0 } ),
+                                        ('t_start' , { 'value' : 0. } ),
+                                        ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
+                                        ('rangemin' , { 'value' : -10 } ),
+                                        ('rangemax' , { 'value' : -10 } ),
+                                    ]
+                        }
+    write_params       = { Segment : [
+                                        ('bytesoffset' , { 'value' : 0 } ),
+                                        ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
+                                        ('rangemin' , { 'value' : -10 } ),
+                                        ('rangemax' , { 'value' : -10 } ),
+                                    ]
+                        }
     level              = None
     nfiles             = 0        
     name               = None
@@ -87,7 +92,8 @@ class RawIO(BaseIO):
                                         bytesoffset = 0,
                                         t_start = 0.,
                                         dtype = 'f4',
-                                        chanrange = [-10,10],
+                                        rangemin = -10,
+                                        rangemax = 10,
                                     ):
         """
         **Arguments**
@@ -97,7 +103,7 @@ class RawIO(BaseIO):
             bytesoffset : nb of bytes offset at the start of file
             t_start : time of the first sample sample of each channel
             dtype : dtype of the data
-            chanrange : if the dtype is integer, range can give in volt the min and the max of the range
+            rangemin , rangemax : if the dtype is integer, range can give in volt the min and the max of the range
         """
         
         dtype = numpy.dtype(dtype)
@@ -115,7 +121,7 @@ class RawIO(BaseIO):
             sig = sig.astype('f')
             sig /= 2**(8*dtype.itemsize)
             #~ print numpy.max(sig)
-            sig *= numpy.diff(chanrange)
+            sig *= numpy.diff( rangemax-rangemax )
             #~ print numpy.max(sig)
         
         seg = Segment()
@@ -137,18 +143,19 @@ class RawIO(BaseIO):
         self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
-                                            filename = '',
-                                            dtype = 'f4',
-                                            chanrange = [-10,10] ,
-                                            bytesoffset = 0,
-                                        ):
+                                filename = '',
+                                dtype = 'f4',
+                                rangemin = -10,
+                                rangemax = 10,
+                                bytesoffset = 0,
+                            ):
         """
         
          **Arguments**
             segment : the segment to write. Only analog signals will be written.
             
             dtype : dtype of the data
-            chanrange : if the dtype is integer, range can give in volt the min and the max of the range
+            rangemin , rangemax : if the dtype is integer, range can give in volt the min and the max of the range
 
         """
         
@@ -162,7 +169,7 @@ class RawIO(BaseIO):
                 sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 0 )
         
         if dtype.kind == 'i' :
-            sig /= numpy.diff(chanrange)
+            sig /= numpy.diff(rangemax - rangemin)
             sig *= 2**(8*file_dtype.itemsize-1)
             sig = sig.astype(dtype)
         else:

@@ -1,16 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-paramwidget is a class for diplaying a generic param dialog.
-the topic of NeuroConvert is to illustrate neo.io module.
-Do not read this file it is just a copy paste from another project.
-
-@author: sgarcia
-"""
-
-
-
-
-
 
 
 from PyQt4.QtCore import *
@@ -267,8 +255,12 @@ class ParamWidget(QFrame) :
 			elif self.params[key]['widgettype'] == QDoubleSpinBox:
 				return wid.value()
 			
-			elif (self.params[key]['widgettype'] == ChooseDirWidget) or (self.params[key]['widgettype'] == ChooseFileWidget):
+			elif (self.params[key]['widgettype'] == ChooseDirWidget) or \
+					(self.params[key]['widgettype'] == ChooseFileWidget) :
 				return wid.get_choose()
+			
+			elif (self.params[key]['widgettype'] == ChooseFilesWidget) :
+				return wid.get_files()
 				
 			elif self.params[key]['widgettype'] == QTextEdit:
 				return wid.toPlainText()
@@ -764,6 +756,7 @@ class ChooseFileDirWidget(QWidget) :
 	def get_choose(self) :
 		return self.list_file()[0]
 	
+	
 	#------------------------------------------------------------------------------
 	def list_file(self) :
 		l = unicode(self.lineEdit.text()).split(';')
@@ -784,7 +777,7 @@ class ChooseDirWidget(ChooseFileDirWidget) :
 		return self.get_choose()
 
 #------------------------------------------------------------------------------
-# Widget for choosing a directory
+# Widget for choosing one file
 #------------------------------------------------------------------------------
 class ChooseFileWidget(ChooseFileDirWidget) :
 	def __init__( self , parent = None, family = None ) :
@@ -794,6 +787,15 @@ class ChooseFileWidget(ChooseFileDirWidget) :
 	def get_file(self) :
 		return self.get_choose()
 
-
+#------------------------------------------------------------------------------
+# Widget for choosing one file
+#------------------------------------------------------------------------------
+class ChooseFilesWidget(ChooseFileDirWidget) :
+	def __init__( self , parent = None, family = None ) :
+		ChooseFileDirWidget.__init__(self , parent = parent , family = family , type_choose = QFileDialog.ExistingFiles )
+		
+	#------------------------------------------------------------------------------
+	def get_files(self) :
+		return self.list_file()
 
 

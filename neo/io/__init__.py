@@ -20,9 +20,16 @@ all_format = [ ]
 
 try:
     from rawio import RawIO
-    all_format += [ 'raw binary' , { 'class' : RawIO  , 'info' :  'Compact raw binary generic file' } ]
+    all_format += [ [ 'raw binary' , { 'class' : RawIO  , 'info' :  'Compact raw binary generic file' } ] ]
 except ImportError:
     print "Error while loading RawIO module"
+
+
+try:
+    from asciiio import AsciiIO
+    all_format += [ [ 'ascii' , { 'class' : AsciiIO  , 'info' :  'Ascii generic file' } ] ]
+except ImportError:
+    print "Error while loading AsciiIO module"
 
 
 

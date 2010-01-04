@@ -31,6 +31,9 @@ from numpy import *
 
 import csv
 
+
+
+
 class AsciiIO(BaseIO):
     """
     Class for reading/writing data in a text file.
@@ -48,13 +51,28 @@ class AsciiIO(BaseIO):
     is_object_writable = False
     has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}   
+    read_params        = {
+                            Segment : [
+                                        ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
+                                        ('usecols' , { 'value' : None , 'type' : int } ),
+                                        ('skiprows' , { 'value' :0 } ),
+                                        ('timecolumn' , { 'value' : None, 'type' : int } ) ,
+                                        ('samplerate' , { 'value' : 1000., } ),
+                                        ('t_start' , { 'value' : 0., } ),
+                                        ('method' , { 'value' : 'genfromtxt', 'possible' : ['genfromtxt' , 'csv' , 'homemade' ] }) ,
+                                        ]
+                            }
+    write_params       = {
+                            Segment : [
+                                        ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
+                                        ('timecolumn' , { 'value' : None, 'type' : int } ) ,
+                                        ]
+                            }
     level              = None
-    nfiles             = 0        
+    nfiles             = 0
     name               = None
     objects            = []
-    supported_types    = []
+    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """
