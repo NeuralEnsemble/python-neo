@@ -59,7 +59,7 @@ class AsciiIO(BaseIO):
                                         ('timecolumn' , { 'value' : None, 'type' : int } ) ,
                                         ('samplerate' , { 'value' : 1000., } ),
                                         ('t_start' , { 'value' : 0., } ),
-                                        ('method' , { 'value' : 'genfromtxt', 'possible' : ['genfromtxt' , 'csv' , 'homemade' ] }) ,
+                                        ('method' , { 'value' : 'homemade', 'possible' : ['genfromtxt' , 'csv' , 'homemade' ] }) ,
                                         ]
                             }
     write_params       = {

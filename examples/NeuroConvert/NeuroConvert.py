@@ -12,7 +12,7 @@ __version__ = "0.1"
 
 
 
-import sys, os
+import sys, os, time
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
@@ -74,6 +74,8 @@ class MainWindow(QMainWindow) :
         but = QPushButton(QIcon(':/NeuroConvert.png') , self.tr("Start convertion")) 
         self.connect(but,SIGNAL("clicked()"), self.startConvertion)
         mainlayout.addWidget(but)
+        
+        self.convertionStarted = False
 
 
     def createActions(self):
@@ -145,16 +147,47 @@ class MainWindow(QMainWindow) :
             
     
     def startConvertion(self):
-        print 'tsart'
+        if self.convertionStarted : return
+        self.convertionStarted = True
+        self.thread = ThreadConvertion(self)
+        self.thread.start()
+        self.connect(self.thread , SIGNAL('one more') , self.refreshTable)
 
 
 class ThreadConvertion(QThread):
-    def __init__(self):
-        QThread.__init__(self)
+    def __init__(self  , parent):
+        QThread.__init__(self , parent)
         
     def run(self):
-        print 'yep'
         
+        for convert in self.parent().list_convert :
+            if convert['state'] != 'not done' : continue
+            
+            convert['state'] = 'in progress'
+            self.emit(SIGNAL('one more'))
+            print 'start convertion' , convert['filename']
+            
+            # read instance
+            input = dict_format[convert['inputFormat']]['class']()
+            try :
+                readed = input.read(filename = convert['filename'] , 
+                           **convert['inputOptions'] )
+            except :
+                convert['state'] = 'read error : check input options'
+                self.emit(SIGNAL('one more'))
+                continue
+            
+            # write instance
+            output = dict_format[convert['outputFormat']]['class']()
+            if type(readed )== neo.Segment :
+                print 'segment'
+            if type(readed )== neo.Block :
+                print 'block'
+            
+            time.sleep(1)
+            convert['state'] = 'OK'
+            self.emit(SIGNAL('one more'))
+        self.parent().convertionStarted = False
 
 
 """
@@ -266,7 +299,7 @@ class AddFileDialog(QDialog) :
         
         # files selector
         g = QGroupBox()
-        g.setTitle('Files format')
+        g.setTitle('Files selection')
         mainlayout.addWidget(g)
         v = QVBoxLayout()
         g.setLayout(v)        
@@ -308,6 +341,10 @@ class AddFileDialog(QDialog) :
                        { 'value' :  True ,
                         'label' : ' If input is block convert to many segment' 
                         } ),
+                ('overwrite' ,
+                       { 'value' :  True ,
+                        'label' : ' Overwrite if file destination already exsits' 
+                        } ),
                  
                  ]
         self.convertOptions = ParamWidget(param)
@@ -336,7 +373,7 @@ class AddFileDialog(QDialog) :
             self.widgetOutput.layout().removeWidget( self.outputOptions )
         formatname = self.formats['outputFormat']
         cl = dict_format[formatname]['class']
-        param = cl.read_params[cl.supported_types[0]]
+        param = cl.write_params[cl.supported_types[0]]
         self.outputOptions = ParamWidget( param )
         self.widgetOutput.layout().addWidget( self.outputOptions )
 
