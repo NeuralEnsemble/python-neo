@@ -33,11 +33,35 @@ except ImportError:
 
 
 try:
-    from asciiio import AsciiIO
-    all_format += [ [ 'ascii' , { 'class' : AsciiIO  , 'info' :  'Ascii generic file' } ] ]
+    from asciisignalio import AsciiSignalIO
+    all_format += [ [ 'ascii signal' , { 'class' : AsciiSignalIO  , 'info' :  'Ascii Signal generic file' } ] ]
 except ImportError:
-    print "Error while loading AsciiIO module"
+    print "Error while loading AsciiSignalIO module"
 
+
+try:
+    from micromedio import MicromedIO
+    all_format += [ [ 'micromed' , { 'class' : MicromedIO  , 'info' :  'TRC micromed file' } ] ]
+except ImportError:
+    print "Error while loading MicromedIO module"
+
+try:
+    from elphyio import ElphyIO
+    all_format += [ [ 'elphy DAT' , { 'class' : ElphyIO  , 'info' :  'DAT elphy file' } ] ]
+except ImportError:
+    print "Error while loading ElphyIO module"
+
+try:
+    from elanio import ElanIO
+    all_format += [ [ 'elan eeg' , { 'class' : ElanIO  , 'info' :  'eeg elan file' } ] ]
+except ImportError:
+    print "Error while loading ElanIO module"
+
+try:
+    from eeglabio import EegLabIO
+    all_format += [ [ 'eeglab matlab' , { 'class' : EegLabIO  , 'info' :  'eeglab matlab file' } ] ]
+except ImportError:
+    print "Error while loading EegLabIO module"
 
 
 #~ try:

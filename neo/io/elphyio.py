@@ -46,18 +46,22 @@ class ElphyIO(BaseIO):
     """
     
     is_readable        = True
-    is_writable        = True
+    is_writable        = False
     is_object_readable = False
     is_object_writable = False
     has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    read_params        = {
+                            Block : [
+                                        ]
+                            }
+    write_params       = None
     level              = None
     nfiles             = 0
     name               = None
+    extensions          = [ 'DAT' ]
     objects            = []
-    supported_types    = []
+    supported_types    = [ Block ]
     
     def __init__(self ) :
         """
@@ -166,35 +170,5 @@ class ElphyIO(BaseIO):
         return block
         
     
-    def write(self , object, *args , **kargs):
-        """
-        Write block or segment in a elphy file.
-        See write_segment for detail.
-        """
-        if type(object) == Block :
-            return self.write_block(object , *args, **kargs)
-        elif type(object) == Segment :
-            return self.write_segment(object , *args, **kargs)
-            
-
-    def write_block(self, block,
-                            filename = '',
-                            ):
-        """
-        
-         **Arguments**
-            segment : the segment to write. Only analog signals will be written.
-            TODO
-        """
-        fid = struct_file(filename,'wb')
-        filetype = 'DAC2/GS/2000'
-        fid.write_f('16p' , filetype )
-        
-        headersize, = fid.read_f('i' , offset = 16)
-        print 'headersize' , headersize
-        
-        
-        fid.close()
-        
 
 

@@ -39,7 +39,7 @@ class ElanIOTest(unittest.TestCase):
         ana = AnalogSignal( signal = sig,
                                         freq = freq,
                                         )
-        seg._analogsignals = [ ana ]
+        seg._analogsignals = [ ana , ana ]
         nbevent = 40
         for i in range(nbevent):
             seg._events += [ Event(time = rand()*totaltime) ]
@@ -56,9 +56,10 @@ class ElanIOTest(unittest.TestCase):
                             )
         ana2 = seg2.get_analogsignals()[0]
 
-        assert len(seg2.get_analogsignals()) == 1
+        assert len(seg2.get_analogsignals()) == 2
         
         # 2% erreur due to i2 convertion
+        #print mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) 
         assert mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) < .02
         
         for i in range(nbevent):

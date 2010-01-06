@@ -42,7 +42,8 @@ class MicromedIOTest(unittest.TestCase):
                 ts = spiketr.spike_times
                 ax.plot( ts , ones_like(ts)*s ,
                             linestyle = '',
-                            marker = '|' , markersize = 5)
+                            marker = '|' ,
+                            markersize = 5)
             
             #print len (seg.get_events() )
             #assert len (seg.get_events() )==47 

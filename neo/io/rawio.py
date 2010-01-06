@@ -120,7 +120,7 @@ class RawIO(BaseIO):
         
         if dtype.kind == 'i' :
             sig = sig.astype('f')
-            sig /= 2**(8*dtype.itemsize)
+            sig /= 2**(8*dtype.itemsize-1)
             #~ print numpy.max(sig)
             sig *= ( rangemax-rangemin )
             #~ print numpy.max(sig)
@@ -167,12 +167,12 @@ class RawIO(BaseIO):
             if sigs is None :
                 sigs = analogSig.signal[:,newaxis]
             else :
-                sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 0 )
+                sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 1 )
         
         if dtype.kind == 'i' :
-            sig /= (rangemax - rangemin)
-            sig *= 2**(8*file_dtype.itemsize-1)
-            sig = sig.astype(dtype)
+            sigs /= (rangemax - rangemin)
+            sigs *= 2**(8*dtype.itemsize-1)
+            sigs = sigs.astype(dtype)
         else:
             sigs = sigs.astype(dtype)
         fid = open(filename , 'wb')
@@ -180,7 +180,4 @@ class RawIO(BaseIO):
         fid.close()
 
 
-
-        
-            
 

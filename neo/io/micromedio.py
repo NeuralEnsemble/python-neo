@@ -41,18 +41,23 @@ class MicromedIO(BaseIO):
     """
     
     is_readable        = True
-    is_writable        = True
+    is_writable        = False
     is_object_readable = False
     is_object_writable = False
     has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    read_params        = {
+                        Segment : [
+                                    ('averagesamplerate' , {'value' : True, 'label' : 'if samplerate is inexact for signal then average'  }) ,
+                                    ]
+                        }
+    write_params       = None
     level              = None
     nfiles             = 0
     name               = None
-    objects            = []
-    supported_types    = []
+    extensions          = [ 'TRC' ]
+    objects            = [  ]
+    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """
@@ -190,22 +195,5 @@ class MicromedIO(BaseIO):
         return seg
         
     
-    def write(self , *args , **kargs):
-        """
-        Write segment in a trc file.
-        See write_segment for detail.
-        """
-        self.write_segment(*args , **kargs)
 
-    def write_segment(self, segment,
-                            filename = '',
-                            ):
-        """
-        
-         **Arguments**
-            segment : the segment to write. Only analog signals will be written.
-            TODO
-        """
-        assert filename.endswith('.TRC')
-        
         

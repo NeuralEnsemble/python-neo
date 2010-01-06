@@ -40,15 +40,16 @@ class EegLabIO(BaseIO):
     is_writable        = True
     is_object_readable = False
     is_object_writable = False
-    has_header         = True
+    has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    read_params        = { Segment : [ ] }
+    write_params       = { Segment : [ ] }
     level              = None
     nfiles             = 0
     name               = None
+    extensions          = [ 'set' ]
     objects            = []
-    supported_types    = []
+    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """

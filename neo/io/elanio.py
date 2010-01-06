@@ -48,15 +48,16 @@ class ElanIO(BaseIO):
     is_writable        = True
     is_object_readable = False
     is_object_writable = False
-    has_header         = True
+    has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    read_params        = { Segment : [] }
+    write_params       = { Segment : [] }
     level              = None
     nfiles             = 0
     name               = None
+    extensions          = [ 'eeg' ]
     objects            = []
-    supported_types    = []
+    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """
@@ -290,7 +291,26 @@ class ElanIO(BaseIO):
         #range
         list_range = []
         for i, anaSig in enumerate(seg.get_analogsignals()) :
-            list_range.append(abs(anaSig.signal).max())
+            # in elan file unit is supposed to be in microV to have a big range
+            # so auto translate
+            if hasattr(anaSig , 'unit') :
+                if anaSig.unit =='V' :
+                    anaSig.signal *= 1e6
+                elif anaSig.unit =='mV' :
+                    anaSig.signal *= 1e3
+                elif anaSig.unit =='microV' :
+                    anaSig.signal *= 1
+                elif anaSig.unit =='µV' :
+                    anaSig.signal *= 1
+                else :
+                    # automatic range in arbitrry unit
+                    if abs(anaSig.signal).max() < 1.:
+                        anaSig.signal *= 1e6*10**(int(log10(abs(anaSig.signal).max()))+1)
+            else :
+                # automatic range in arbitrry unit
+                if abs(anaSig.signal).max() < 1.:
+                    anaSig.signal *= 1e6*10**(int(log10(abs(anaSig.signal).max()))+1)
+            list_range.append( int(abs(anaSig.signal).max()) +1 )
         for r in list_range :
             fid_ent.write('-%.0f\n'% r)
         fid_ent.write('-1\n')
@@ -328,7 +348,8 @@ class ElanIO(BaseIO):
         trigs = array([ ev.time for ev in seg.get_events() ])
         trigs *= freq
         trigs = trigs.astype('i')
-        data[trigs,-1] = 1
+        trigs2 = trigs[ (trigs>0) & (trigs<data.shape[0]) ]
+        data[trigs2,-1] = 1
         
         fid_eeg.write(data.byteswap().tostring())
         

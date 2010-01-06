@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-
-
 """
 exampleio
 ==================
 
 Classe for fake reading/writing data in a no file.
 It is just a example for guidelines for developers who want to develop a new IO.
+
+
+If you start a new IO class copy/paste and modify.
 
 If you have a problem just mail me or ask the list.
 
@@ -185,9 +186,6 @@ class ExampleIO(BaseIO):
         num_recordingpoint
         num_spiketrainbyrecordingpoint
         
-        
-        
-        
         """
         
         freq = 5000. #Hz
@@ -219,7 +217,7 @@ class ExampleIO(BaseIO):
                 # we choose here the second : 
                 spiketr._spikes = None
                 
-                # So :
+                # So we fill the _spike_times attr :
                 # generated a random distributed time spike
                 spiketr._spike_times = random.rand(num_spike_by_spiketrain)*segmentduration+t_start
                 spiketr.t_start = t_start
@@ -246,12 +244,13 @@ class ExampleIO(BaseIO):
             f1 = random.rand()*80+20.
             # choose a random freq for modulation between .5 and 2
             f2 = random.rand()*1.5+.5
-            anasig.signal = sin(2*pi*t*f1) * sin(2*pi*t*f2)**2
+            anasig.signal = sin(2*pi*t*f1) * sin(pi*t*f2)**2
             
             # add very simple spike waveform to the signal
             for j in range(num_spiketrainbyrecordingpoint):
-                wsize = int(freq*0.005)
-                wave = bartlett(wsize)*((j+1)*0.3)+random.rand(wsize)*0.005
+                wsize = int(freq*0.002)*2
+                wave = bartlett(wsize/2)*((j+1)*0.5)#+random.rand(wsize)*0.005
+                wave = concatenate( (wave,-wave))
                 spiketr = seg.get_spiketrains()[i*num_spiketrainbyrecordingpoint+j]
                 for ts in spiketr :
                     pos = digitize( [ts] , t )
@@ -261,8 +260,6 @@ class ExampleIO(BaseIO):
                     if pos<0 :
                         pos =0
                     anasig.signal[pos:pos+wsize] +=  wave
-                
-                
             
             
             # link this AnalogSignal to its RecordingPoint

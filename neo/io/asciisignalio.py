@@ -6,7 +6,7 @@ import numpy
 from numpy import *
 
 """
-asciiio
+asciisignalio
 ==================
 
 Classe for reading/writing data in a text file.
@@ -16,7 +16,7 @@ Cover many case when part of a file can be view as a CVS format.
 Classes
 -------
 
-AsciiIO          - Classe for reading/writing data in a text file.
+AsciiSignalIO          - Classe for reading/writing data in a text file.
                     Cover many case.
 
 @author : sgarcia
@@ -34,7 +34,7 @@ import csv
 
 
 
-class AsciiIO(BaseIO):
+class AsciiSignalIO(BaseIO):
     """
     Class for reading/writing data in a text file.
     Cover many case when part of a file can be view as a CVS format.

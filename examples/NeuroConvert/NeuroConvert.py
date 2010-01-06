@@ -11,7 +11,6 @@ NeuroConvert is a short GUI to illustrate neo.io module.
 __version__ = "0.1"
 
 
-
 import sys, os, time
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -218,7 +217,8 @@ class ThreadConvertion(QThread):
                                         self.emit(SIGNAL('one more'))
                                         continue
                                 output.write_segment( seg,
-                                    filename = filename , **convert['outputOptions'] )
+                                                    filename = filename , 
+                                                    **convert['outputOptions'] )
                                 convert['state'] = 'OK'
                                 self.emit(SIGNAL('one more'))
                         else :
@@ -240,89 +240,8 @@ class ThreadConvertion(QThread):
                 convert['state'] = 'write error : check input options'
                 self.emit(SIGNAL('one more'))
                 continue
-                
+            
         self.parent().convertionStarted = False
-
-
-"""
-class AddFileDialog2(QDialog) :
-    def __init__(self, parent = None,) :
-        QDialog.__init__(self, parent)
-        
-        self.setMinimumSize( 600,600)
-        
-        mainlayout = QVBoxLayout()
-        self.setLayout(mainlayout)
-        self.tab = QTabWidget(self)
-        mainlayout.addWidget(self.tab)
-        
-        but = QPushButton(QIcon(':/dialog-ok-apply.png') , self.tr("OK"))
-        self.connect(but,SIGNAL("clicked()"), self , SLOT('accept()'))
-        mainlayout.addWidget(but)
-        
-        
-        # input format tab
-        param = [
-                    ('inputFormat' , { 'value' :  possibleInput[0] , 
-                                        'possible' : possibleInput  } ),
-                    ('outputFormat' , { 'value' :  possibleOutput[0] ,
-                                       'possible' : possibleOutput  } ),
-                ]
-        self.formats = ParamWidget(param)
-        self.tab.addTab(self.formats,'Files format')
-        self.connect(self.formats , SIGNAL('paramChanged( QString )'), self.changeIOFormat )
-        
-        
-        # files selector tab
-        param = [('fileList' , { 'value' :  '~' ,  'widgettype' : ChooseFilesWidget }     ), ]
-        self.files = ParamWidget(param)
-        self.tab.addTab(self.files,'Input files')
-        
-        
-        self.widgetInput = QWidget()
-        self.widgetInput.setLayout(QHBoxLayout())
-        self.tab.addTab(self.widgetInput,'Input options')
-        self.inputOptions = None
-        
-        self.widgetOutput = QWidget()
-        self.widgetOutput.setLayout(QHBoxLayout())
-        self.tab.addTab(self.widgetOutput,'Output options')
-        self.outputOptions = None
-
-        
-        # convertions options
-        param = [ ('blockToMultipleSegment' ,
-                       { 'value' :  True ,
-                        'label' : ' If input is block convert to many segment' 
-                        } ),
-                 
-                 ]
-        self.convertOptions = ParamWidget(param)
-        self.tab.addTab(self.convertOptions,'Convertion options')
-        
-        self.changeIOFormat('')
-        
-    def changeIOFormat(self , name) :
-        
-        if self.inputOptions is not None :
-            self.inputOptions.hide()
-            self.widgetInput.layout().removeWidget( self.inputOptions )
-        formatname = self.formats['inputFormat']
-        cl = dict_format[formatname]['class']
-        param = cl.read_params[cl.supported_types[0]]
-        self.inputOptions = ParamWidget( param )
-        self.widgetInput.layout().addWidget( self.inputOptions )
-
-        if self.outputOptions is not None :
-            self.outputOptions.hide()
-            self.widgetOutput.layout().removeWidget( self.outputOptions )
-        formatname = self.formats['outputFormat']
-        cl = dict_format[formatname]['class']
-        param = cl.read_params[cl.supported_types[0]]
-        self.outputOptions = ParamWidget( param )
-        self.widgetOutput.layout().addWidget( self.outputOptions )
-        
-"""
 
 
 class AddFileDialog(QDialog) :

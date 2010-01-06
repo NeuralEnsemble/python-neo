@@ -6,17 +6,16 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import asciiio
+from neo.io import asciisignalio
 from neo.core import *
 from numpy import *
 import pylab
 
 
 
-class RawIOTest(unittest.TestCase):
-    
+class AsciiSignalIOTest(unittest.TestCase):
     def testOpenFile1(self):
-        ascii = asciiio.AsciiIO()
+        ascii = asciisignalio.AsciiSignalIO()
         seg = ascii.read_segment( filename = 'datafiles/File_ascii_1.asc',
                                         delimiter = '  ',
                                         usecols = None,
@@ -35,7 +34,7 @@ class RawIOTest(unittest.TestCase):
 #        pylab.show()
 
     def testOpenFile2(self):
-        ascii = asciiio.AsciiIO()
+        ascii = asciisignalio.AsciiSignalIO()
         seg = ascii.read_segment( filename = 'datafiles/File_ascii_2.txt',
                                         delimiter = '  ',
                                         usecols = None,
@@ -50,7 +49,7 @@ class RawIOTest(unittest.TestCase):
 #        pylab.show()
 
     def testOpenFile3(self):
-        ascii = asciiio.AsciiIO()
+        ascii = asciisignalio.AsciiSignalIO()
         seg = ascii.read_segment( filename = 'datafiles/File_ascii_3.txt',
                                         delimiter = '\t',
                                         usecols = None,
@@ -76,13 +75,13 @@ class RawIOTest(unittest.TestCase):
         seg._analogsignals = [ ana ]
         
         
-        ascii1 = asciiio.AsciiIO()
+        ascii1 = asciisignalio.AsciiSignalIO()
         ascii1.write_segment(  seg,
                                 filename = 'testNeoAsciiIO.txt',
                                 timecolumn = 1,
                                 delimiter = '\t',
                                 )
-        ascii2 = asciiio.AsciiIO()
+        ascii2 = asciisignalio.AsciiSignalIO()
         seg2 = ascii2.read_segment(
                                     filename = 'testNeoAsciiIO.txt',
                                     delimiter = '\t',
