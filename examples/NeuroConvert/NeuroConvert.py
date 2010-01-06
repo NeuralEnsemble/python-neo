@@ -177,16 +177,70 @@ class ThreadConvertion(QThread):
                 self.emit(SIGNAL('one more'))
                 continue
             
-            # write instance
+            # write instance : 4 case supported for the moment
             output = dict_format[convert['outputFormat']]['class']()
-            if type(readed )== neo.Segment :
-                print 'segment'
-            if type(readed )== neo.Block :
-                print 'block'
+            filename = os.path.splitext(convert['filename'])[0]+'.'+output.extensions[0]
+            if not(convert['convertOptions']['overwrite']):
+                if os.path.exists(filename) :
+                    convert['state'] = 'file exits : force overwrite'
+                    self.emit(SIGNAL('one more'))
+                    continue
             
-            time.sleep(1)
-            convert['state'] = 'OK'
-            self.emit(SIGNAL('one more'))
+            print 'out',filename
+            try :
+                if type(readed)== neo.Segment :
+                    if neo.Segment in output.supported_types :
+                        print 'segment to segment'
+                        output.write_segment( readed,
+                            filename = filename , **convert['outputOptions'] )
+                        convert['state'] = 'OK'
+                        self.emit(SIGNAL('one more'))
+                        
+                    elif neo.Block in output.supported_types :
+                        print 'segment to block'
+                        block = Block()
+                        block._segments.append( readed )
+                        output.write_block( block,
+                            filename = filename , **convert['outputOptions'] )
+                        convert['state'] = 'OK'
+                        self.emit(SIGNAL('one more'))
+                    
+                elif type(readed)== neo.Block :
+                    if neo.Segment in output.supported_types :
+                        print 'block to segment'
+                        
+                        if convert['convertOptions']['blockToMultipleSegment'] :
+                            for s,seg in enumerate(readed.get_segments()):
+                                filename = os.path.splitext(convert['filename'])[0]+'%3d'%s+'.'+output.extensions[0]
+                                if not(convert['convertOptions']['overwrite']):
+                                    if os.path.exists(filename) :
+                                        convert['state'] = 'file exits : force overwrite '
+                                        self.emit(SIGNAL('one more'))
+                                        continue
+                                output.write_segment( seg,
+                                    filename = filename , **convert['outputOptions'] )
+                                convert['state'] = 'OK'
+                                self.emit(SIGNAL('one more'))
+                        else :
+                            # write only first segment
+                            output.write_segment( readed.get_segments[0],
+                                    filename = filename , **convert['outputOptions'] )
+                            convert['state'] = 'OK'
+                            self.emit(SIGNAL('one more'))
+                            
+                                
+                    elif neo.Block in output.supported_types :
+                        print 'block to block'
+                        output.write_block( readed,
+                            filename = filename , **convert['outputOptions'] )
+                        convert['state'] = 'OK'
+                        self.emit(SIGNAL('one more'))
+            
+            except :
+                convert['state'] = 'write error : check input options'
+                self.emit(SIGNAL('one more'))
+                continue
+                
         self.parent().convertionStarted = False
 
 
@@ -276,9 +330,11 @@ class AddFileDialog(QDialog) :
         QDialog.__init__(self, parent)
         
         self.setMinimumSize( 600,800)
+        self.setWindowIcon(QIcon(':/NeuroConvert.png'))
         
         mainlayout = QVBoxLayout()
         self.setLayout(mainlayout)
+        
         
         # input format
         g = QGroupBox()
@@ -339,10 +395,10 @@ class AddFileDialog(QDialog) :
         g.setLayout(v)           
         param = [ ('blockToMultipleSegment' ,
                        { 'value' :  True ,
-                        'label' : ' If input is block convert to many segment' 
+                        'label' : ' If input is block convert to many segment (otherwise take first one)' 
                         } ),
                 ('overwrite' ,
-                       { 'value' :  True ,
+                       { 'value' :  False ,
                         'label' : ' Overwrite if file destination already exsits' 
                         } ),
                  

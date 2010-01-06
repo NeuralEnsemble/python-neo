@@ -34,6 +34,7 @@ class Segment(object):
         self._spiketrains = [ ]
         self._epochs = [ ]
         self._events = [ ]
+        self._recordingpoints = []
         
     def get_analogsignals(self):
         """
@@ -43,9 +44,9 @@ class Segment(object):
         
     def get_spiketrains(self):
         """
-        Return :class:`SpikeTrainList`.
+        Return a list of :class:`SpikeTrain`.
         """
-        pass
+        return self._spiketrains
         
     def get_events(self):
         """

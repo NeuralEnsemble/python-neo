@@ -71,6 +71,7 @@ class AsciiIO(BaseIO):
     level              = None
     nfiles             = 0
     name               = None
+    extensions          = [ 'txt' ]
     objects            = []
     supported_types    = [ Segment ]
     
@@ -192,10 +193,11 @@ class AsciiIO(BaseIO):
             if sigs is None :
                 sigs = analogSig.signal[:,newaxis]
             else :
-                sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 0 )
+                sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 1 )
         
         if timecolumn is not None:
             t = segment.get_analogsignals()[0].t()
+            print sigs.shape , t.shape
             sigs = concatenate ((sigs, t[:,newaxis]*nan) , axis = 1 )
             sigs[:,timecolumn+1:] = sigs[:,timecolumn:-1].copy()
             sigs[:,timecolumn] = t

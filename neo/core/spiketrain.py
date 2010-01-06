@@ -34,32 +34,34 @@ class SpikeTrain(object):
 
     """
     
-    _spike_times = None
-    _spikes      = None
-    _t_start     = None
-    _t_stop      = None
-    _neuron      = None
     
     def __init__(self, *arg, **karg):
+            
+            
+        self._spike_times = None
+        self._spikes      = None
+        self.t_start     = None
+        self.t_stop      = None
+        self.neuron      = None
             
         if karg.has_key('spike_times'):
             self._spike_times = numpy.array(karg['spike_times']).sort()
             
             if karg.has_key('t_start'):
-                self._t_start = karg['t_start']
+                self.t_start = karg['t_start']
             if karg.has_key('t_stop'):
                 self._t_stop = karg['t_stop']
             if karg.has_key('interval'):
-                self._t_start, self._t_stop = karg['interval']
+                self.t_start, self._t_stop = karg['interval']
         
         if karg.has_key('neuron'):
-            self._neuron = karg['neuron']
-            self._neuron.add_spiketrain(self)
+            self.neuron = karg['neuron']
+            self.neuron.add_spiketrain(self)
         else:
-            self._neuron = Neuron()
+            self.neuron = Neuron()
         
         if karg.has_key('spikes'):
-            self._spike_times = karg['spikes']                
+            self._spike_times = karg['spikes']
     
     @property
     def spike_times(self):
@@ -74,10 +76,6 @@ class SpikeTrain(object):
     def spikes(self):
         return self._spikes
     
-    @property
-    def neuron(self):
-        return self._neuron
-        
     def __str__(self):
         res = "SpikeTrain"
         if self._neuron:

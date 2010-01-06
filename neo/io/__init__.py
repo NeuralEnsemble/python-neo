@@ -18,6 +18,13 @@ from baseio import *
 
 all_format = [ ]
 
+
+try:
+    from exampleio import ExampleIO
+    all_format += [ [ 'example' , { 'class' : ExampleIO  , 'info' :  'a fake file reader for example' } ] ]
+except ImportError:
+    print "Error while loading ExampleIO module"
+
 try:
     from rawio import RawIO
     all_format += [ [ 'raw binary' , { 'class' : RawIO  , 'info' :  'Compact raw binary generic file' } ] ]

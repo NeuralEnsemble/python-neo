@@ -51,19 +51,20 @@ class RawIO(BaseIO):
                                         ('t_start' , { 'value' : 0. } ),
                                         ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
                                         ('rangemin' , { 'value' : -10 } ),
-                                        ('rangemax' , { 'value' : -10 } ),
+                                        ('rangemax' , { 'value' : 10 } ),
                                     ]
                         }
     write_params       = { Segment : [
                                         ('bytesoffset' , { 'value' : 0 } ),
                                         ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
                                         ('rangemin' , { 'value' : -10 } ),
-                                        ('rangemax' , { 'value' : -10 } ),
+                                        ('rangemax' , { 'value' : 10 } ),
                                     ]
                         }
     level              = None
     nfiles             = 0        
     name               = None
+    extensions          = [ 'raw' ]
     objects            = []
     supported_types    = [Segment]
     
@@ -121,7 +122,7 @@ class RawIO(BaseIO):
             sig = sig.astype('f')
             sig /= 2**(8*dtype.itemsize)
             #~ print numpy.max(sig)
-            sig *= numpy.diff( rangemax-rangemax )
+            sig *= ( rangemax-rangemin )
             #~ print numpy.max(sig)
         
         seg = Segment()
@@ -169,7 +170,7 @@ class RawIO(BaseIO):
                 sigs = concatenate ((sigs, analogSig.signal[:,newaxis]) , axis = 0 )
         
         if dtype.kind == 'i' :
-            sig /= numpy.diff(rangemax - rangemin)
+            sig /= (rangemax - rangemin)
             sig *= 2**(8*file_dtype.itemsize-1)
             sig = sig.astype(dtype)
         else:

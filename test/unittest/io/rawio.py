@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath('../../..'))
 from neo.io import rawio
 from neo.core import *
 from numpy import *
-#~ import pylab
+#import pylab
 
 class RawIOTest(unittest.TestCase):
     
@@ -21,13 +21,14 @@ class RawIOTest(unittest.TestCase):
                                         bytesoffset = 0,
                                         t_start = 0.,
                                         dtype = 'i2',
-                                        chanrange = [-10,10],)
+                                        rangemin = -10,
+                                        rangemax = 10,)
         assert len(seg.get_analogsignals()) ==2
         for sig in seg.get_analogsignals():
             #~ print sig.signal.shape
             assert sig.signal.shape[0] == 200000
-            #~ pylab.plot(sig.signal)
-        #~ pylab.show()
+            #pylab.plot(sig.signal)
+        #pylab.show()
         
     def testWriteReadSinus(self):
         
@@ -45,7 +46,8 @@ class RawIOTest(unittest.TestCase):
         raw.write_segment(  seg,
                                         filename = 'testNeoRawIO.raw',
                                         dtype = 'f4',
-                                        chanrange = [-5,5] ,
+                                        rangemin = -5,
+                                        rangemax = 5,
                                         bytesoffset = 0)
         raw2 = rawio.RawIO()
         seg2 = raw2.read_segment(
@@ -55,7 +57,8 @@ class RawIOTest(unittest.TestCase):
                                         bytesoffset = 0,
                                         t_start = 0.,
                                         dtype = 'f4',
-                                        chanrange = [-5,5],
+                                        rangemin = -5,
+                                        rangemax = 5,
                                     )
         ana2 = seg2.get_analogsignals()[0]
         assert len(seg2.get_analogsignals()) == 1
