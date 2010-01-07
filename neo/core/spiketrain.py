@@ -45,14 +45,15 @@ class SpikeTrain(object):
         self.neuron      = None
             
         if karg.has_key('spike_times'):
-            self._spike_times = numpy.array(karg['spike_times']).sort()
+            self._spike_times = numpy.array(karg['spike_times'])
+            self._spike_times.sort()
             
-            if karg.has_key('t_start'):
-                self.t_start = karg['t_start']
-            if karg.has_key('t_stop'):
-                self._t_stop = karg['t_stop']
-            if karg.has_key('interval'):
-                self.t_start, self._t_stop = karg['interval']
+        if karg.has_key('t_start'):
+            self.t_start = karg['t_start']
+        if karg.has_key('t_stop'):
+            self._t_stop = karg['t_stop']
+        if karg.has_key('interval'):
+            self.t_start, self._t_stop = karg['interval']
         
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']

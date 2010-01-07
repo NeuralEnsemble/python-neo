@@ -12,7 +12,7 @@ from numpy import *
 from scipy import rand
 import pylab
 
-class MicromedIOTest(unittest.TestCase):
+class ExampleIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         

@@ -9,7 +9,7 @@ from numpy import *
 asciisignalio
 ==================
 
-Classe for reading/writing data in a text file.
+Classe for reading/writing analog signal in a text file.
 Cover many case when part of a file can be view as a CVS format.
 
 

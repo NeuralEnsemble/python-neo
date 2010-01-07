@@ -38,6 +38,12 @@ try:
 except ImportError:
     print "Error while loading AsciiSignalIO module"
 
+try:
+    from asciispikeio import AsciiSpikeIO
+    all_format += [ [ 'ascii spike' , { 'class' : AsciiSpikeIO  , 'info' :  'Ascii spike file' } ] ]
+except ImportError:
+    print "Error while loading AsciiSpikeIO module"
+
 
 try:
     from micromedio import MicromedIO

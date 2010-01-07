@@ -188,7 +188,7 @@ class ExampleIO(BaseIO):
         
         """
         
-        freq = 5000. #Hz
+        freq = 10000. #Hz
         t_start = -1.
         num_spike_by_spiketrain = 30
         
@@ -220,6 +220,7 @@ class ExampleIO(BaseIO):
                 # So we fill the _spike_times attr :
                 # generated a random distributed time spike
                 spiketr._spike_times = random.rand(num_spike_by_spiketrain)*segmentduration+t_start
+                spiketr._spike_times.sort()
                 spiketr.t_start = t_start
                 spiketr.t_stop = t_start + segmentduration
                 
@@ -248,7 +249,7 @@ class ExampleIO(BaseIO):
             
             # add very simple spike waveform to the signal
             for j in range(num_spiketrainbyrecordingpoint):
-                wsize = int(freq*0.002)*2
+                wsize = int(freq*0.001)*2
                 wave = bartlett(wsize/2)*((j+1)*0.5)#+random.rand(wsize)*0.005
                 wave = concatenate( (wave,-wave))
                 spiketr = seg.get_spiketrains()[i*num_spiketrainbyrecordingpoint+j]
