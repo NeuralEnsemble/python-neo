@@ -63,6 +63,13 @@ try:
 except ImportError:
     print "Error while loading EegLabIO module"
 
+try:
+    from axonio import AxonIO
+    all_format += [ [ 'axon abf' , { 'class' : AxonIO  , 'info' :  'axon binary file (abf)' } ] ]
+except ImportError:
+    print "Error while loading AxonIO module"
+
+
 
 #~ try:
     #~ from pynn import TextFile

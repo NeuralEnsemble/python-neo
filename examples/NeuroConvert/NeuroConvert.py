@@ -25,7 +25,6 @@ from paramwidget import ParamWidget , ChooseFilesWidget
 # Change this of course if neo is somewhere else
 sys.path.append(os.path.abspath('../..'))
 import neo
-print neo.io.all_format
 
 # constructing possibles input and output
 possibleInput = [ ]

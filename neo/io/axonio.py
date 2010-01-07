@@ -72,13 +72,14 @@ class AxonIO(BaseIO):
     is_object_writable = False
     has_header         = False
     is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    read_params        = { Block : [] }
+    write_params       = None
     level              = None
     nfiles             = 0
     name               = None
-    objects            = []
-    supported_types    = []
+    extensions          = [ 'abf' ]
+    objects            = [ ]
+    supported_types    = [ Block ]
     
     def __init__(self ) :
         """
