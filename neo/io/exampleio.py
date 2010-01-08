@@ -34,8 +34,7 @@ from numpy import *
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
     """
-    Class for reading/writing data in a text file.
-    Cover many case when part of a file can be view as a CVS format.
+    Class for reading/writing data in a fake file.
     
     **Usage**
 
