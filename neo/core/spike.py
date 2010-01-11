@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from epoch import Epoch
 
-class Spike(Epoch):
+class Spike(object):
      
     """
     Object to represent a spike
@@ -23,8 +22,12 @@ class Spike(Epoch):
     """
     
     def __init__(self, *arg, **karg):
-        Epoch.__init__(self, arg, kwarg)
-        self.duration = 0
-    
-    def waveform(self):
-        pass
+        
+        self.time = None
+        self.waveform = None
+        
+        if karg.has_key('time'):
+            self.time = karg['time']
+        
+        if karg.has_key('waveform'):
+            self.waveform = karg['waveform']

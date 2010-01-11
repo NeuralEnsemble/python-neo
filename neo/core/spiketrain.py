@@ -62,7 +62,7 @@ class SpikeTrain(object):
             self.neuron = Neuron()
         
         if karg.has_key('spikes'):
-            self._spike_times = karg['spikes']
+            self._spikes = karg['spikes']
     
     @property
     def spike_times(self):
@@ -75,6 +75,9 @@ class SpikeTrain(object):
     
     @property
     def spikes(self):
+        return self._spikes
+        
+    def get_spikes(self):
         return self._spikes
     
     def __str__(self):
