@@ -29,6 +29,8 @@ from neo.core import *
 from numpy import *
 from copy import deepcopy
 
+import time
+
 class Spike2IO(BaseIO):
     """
     Class for reading data in smr spike2 CED file.
@@ -46,8 +48,6 @@ class Spike2IO(BaseIO):
     has_header         = False
     is_streameable     = False
     read_params        = {
-                        Block : [
-                                ],
                         Segment : [
                                     ],
                         }
@@ -58,7 +58,7 @@ class Spike2IO(BaseIO):
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
     objects            = []
-    supported_types    = [ Block ]
+    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """
@@ -73,23 +73,39 @@ class Spike2IO(BaseIO):
     def read(self , **kargs):
         """
         Read a fake file.
-        Return a neo.Block
+        Return a neo.Segment
         See read_block for detail.
         """
-        return self.read_block( **kargs)
+        return self.read_segment( **kargs)
     
-    def read_block(self , filename = '', ):
+    def read_segment(self , filename = '', 
+                        transform_event_to_spike = [ ],
+                        ):
         """
         Return a fake Block.
         
         **Arguments**
         filename : The filename does not matter.
-        
+        transform_event_to_spike : a list of channel where event have to view as spike
+                    support also a str list separated by a space
         """
+        
+        if type(transform_event_to_spike) == str :
+            trans = transform_event_to_spike.replace(',',' ').replace(';',' ').replace('	',' ').split(' ')
+            transform_event_to_spike = [ ]
+            for t in trans :
+                if t!='' :
+                    try :
+                        transform_event_to_spike.append(int(t))
+                    except:
+                        pass
+        print 'transform_event_to_spike' , transform_event_to_spike
+        
         header = self.read_header(filename = filename)
         print header
         fid = open(filename, 'rb')
-        blck = Block()
+        
+        seg  = Segment()
         
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
@@ -98,33 +114,37 @@ class Spike2IO(BaseIO):
                 print '####'
                 print 'channel' , i, 'kind' , channelHeader.kind , channelHeader.type , channelHeader.phy_chan
                 print channelHeader
+            
             if channelHeader.kind in [1, 9]:
                 print 'analogChanel'
                 anaSigs = self.readOneChannelWaveform( fid, i, header ,)
                 print len(anaSigs)
                 for sig in anaSigs :
                     seg  = Segment()
-                    seg._analogsignals = [ sig ]
-                    blck._segments.append(seg)
+                    seg._analogsignals.append( sig )
                     
-            elif channelHeader.kind in  [2, 3, 4, 5, 8]:
+            elif channelHeader.kind in  [2, 3, 4, 5,6,7, 8]:
                 print 'channel event'
                 events = self.readOneChannelEvent( fid, i, header )
-                seg  = Segment()
-                seg._events +=  events
-                blck._segments.append(seg)
-            elif channelHeader.kind in  [6, 7]:
-                print 'channel spikes'
-                spikes, freq = self.readOneChannelEvent( fid, i, header )
-                spikeTr = SpikeTrain(spikes = spikes)
-                spikeTr.freq = freq
-                seg._spiketrains.append(spikeTr)
                 
+                if i in transform_event_to_spike:
+                    
+                    spikeTr = SpikeTrain(spikes = [])
+                    seg._spiketrains.append(spikeTr)
+                    for event in events :
+                        spike = Spike()
+                        spike.time = event.time
+                        if hasattr(event, 'waveform'):
+                            print 'waveform' , waveform
+                            spike.waveform = event.waveform
+                            spikeTr.freq = ev.freq
+                        spikeTr._spikes.append(spike)
+                else :
+                    seg._events +=  events
+        
         fid.close()
         
-        
-        
-        return blck
+        return seg
         
         
     def read_header(self , filename = ''):
@@ -197,49 +217,56 @@ class Spike2IO(BaseIO):
         freq = 1./sample_interval
         #print 'freq' , freq
         
-        # read blocks header
+        # read blocks header to preallocate memory by jumping block to block
         fid.seek(channelHeader.firstblock)
-        anaSig = AnalogSignal()
-        anaSig.signal = array([ ] , dtype = 'f')
-        anaSig.freq = freq
-        anaSigs = [ ]
+        blocksize = [ 0 ]
+        starttimes = [ ]
         for b in range(channelHeader.blocks) :
             blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            if len(blocksize) > len(starttimes):
+                starttimes.append(blockHeader.start_time)
+            blocksize[-1] += blockHeader.items
             
-            # read data
-            sig = fromstring( fid.read(blockHeader.items*dt.itemsize) , dtype = dt)
-            
-            # convert for int16
-            if dtype.kind == 'i' :
-                sig = sig.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
-            
-            # add to prev block
-            anaSig.signal = concatenate( ( anaSig.signal , sig ))
-            
-            # jump to next block
             if blockHeader.succ_block > 0 :
                 fid.seek(blockHeader.succ_block)
                 nextBlockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
-                
-                # check is there a continuity with next block
                 sample_interval = (blockHeader.end_time-blockHeader.start_time)/(blockHeader.items-1)
-                #print 'sample_interval' , sample_interval, sample_interval*header.us_per_time*header.time_per_adc*1e-6
                 interval_with_next = nextBlockHeader.start_time - blockHeader.end_time
                 if interval_with_next > sample_interval:
-                    # discontinuous :
-                    # create a new anaSig
-                    #print 'rupture' , sample_interval , interval_with_next
-                    anaSigs.append(anaSig)
-                    anaSig = AnalogSignal()
-                    anaSig.signal = array([ ] , dtype = 'f')
-                    anaSig.freq = freq
-                
+                    blocksize.append(0)
                 fid.seek(blockHeader.succ_block)
-        # last one
-        anaSigs.append(anaSig)
+        anaSigs = [ ]
+        for b,bs in enumerate(blocksize ):
+            anaSigs.append( AnalogSignal(signal = empty( blocksize[0] , dtype = 'f4'),
+                                freq = freq,
+                                t_start = starttimes[b]*header.us_per_time * header.dtime_base,
+                                ) )
+        
+        # read data  by jumping block to block
+        fid.seek(channelHeader.firstblock)
+        pos = 0
+        numblock = 0
+        for b in range(channelHeader.blocks) :
+            blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            # read data
+            sig = fromstring( fid.read(blockHeader.items*dt.itemsize) , dtype = dt)
+            anaSigs[numblock].signal[pos:pos+sig.size] = sig.astype('f4')
+            pos += sig.size
+            if pos >= blocksize[numblock] :
+                numblock += 1
+                pos = 0
+            # jump to next block
+            if blockHeader.succ_block > 0 :
+                fid.seek(blockHeader.succ_block)
+            
+        # convert for int16
+        if dtype.kind == 'i' :
+            for anaSig in anaSigs :
+                anaSig.signal = anaSig.signal*channelHeader.scale/ 6553.6 + channelHeader.offset
         
         # TODO gerer heure et freq verifier
         return anaSigs
+        
         
     def readOneChannelEvent(self , fid, channel_num, header ,):
         channelHeader = header.channelHeaders[channel_num]
@@ -249,9 +276,9 @@ class Spike2IO(BaseIO):
             if channelHeader.firstblock >0 :
                 fid.seek(channelHeader.firstblock)
             for b in range(channelHeader.blocks) :
-                print '  block' , b 
+                #print '  block' , b 
                 blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
-                print  '  items in block' , blockHeader.items
+                #print  '  items in block' , blockHeader.items
                 
                 # common for kind 5 6 7 8 9
                 format5 = [('tick' , 'i4') , ('marker' , 'i4') ]
@@ -301,48 +328,40 @@ class Spike2IO(BaseIO):
         
         if alltrigs is None : return [ ]
         
+        print 'nb event : ',alltrigs.size
+        
         #  convert in neo standart class : event or spiketrains
         alltimes = alltrigs['tick'].astype('f')*header.us_per_time * header.dtime_base
         
-        if channelHeader.kind in [2, 3, 4 , 5 ,  8]:
-            # event
-            events = [ ]
-            for t,time in enumerate(alltimes) :
-                event = Event(time = time)
-                if channelHeader.kind >= 5:
-                    #print '        trig: ', alltrigs[t]
-                    event.marker = alltrigs[t]['marker'] # TODO 4 marker u1 ou 1 marker i4
-                if channelHeader.kind == 8:
-                    print 'label' , alltrigs[t]['label']
-                    event.marker = alltrigs[t]['label']
-                events.append(event)
+        events = [ ]
+        for t,time in enumerate(alltimes) :
+            event = Event(time = time)
+            if channelHeader.kind >= 5:
+                #print '        trig: ', alltrigs[t]
+                event.marker = alltrigs[t]['marker'] # TODO 4 marker u1 ou 1 marker i4
+            if channelHeader.kind == 8:
+                print 'label' , alltrigs[t]['label']
+                event.marker = alltrigs[t]['label']
                 
-            return events
-            
-        elif channelHeader.kind in [6 , 7]:
-            # sample rate
-            if header.system_id in [1,2,3,4,5]:
-                print 'calcul freq',channelHeader.divide , header.us_per_time , header.time_per_adc
-                sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
-            else :
-                sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
-            freq = 1./sample_interval
-            print 'freq' , freq
-        
-            spikes =  [ ]
-            for t,time in enumerate(alltimes) :
-                spike = Spike()
-                spike.time = time
-                #print alltrigs[t]
+            if channelHeader.kind in [6 , 7]:
+                # waveform
                 waveform = array(list(alltrigs[t])[2:])
                 if channelHeader.kind == 6 :
                     waveform = waveform.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
-                spike.waveform = waveform
-                spike.marker = alltrigs[t]['marker']
-                spikes.append(spike)
-            return spikes, freq
-
-
+                event.waveform = waveform
+                # sample rate
+                if header.system_id in [1,2,3,4,5]:
+                    sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
+                else :
+                    sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
+                    
+                freq = 1./sample_interval
+                
+                event.freq = freq
+            events.append(event)
+            
+        return events
+            
 
 
 

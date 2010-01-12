@@ -70,6 +70,7 @@ class SpikeTrain(object):
             self._spike_times = numpy.empty(len(self._spikes))
             for count, spike in enumerate(self._spikes):
                 self._spike_times[count] = spike.time
+            return self._spike_times
         else:
             return self._spike_times
     
