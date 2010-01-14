@@ -118,26 +118,25 @@ class Spike2IO(BaseIO):
             if channelHeader.kind in [1, 9]:
                 print 'analogChanel'
                 anaSigs = self.readOneChannelWaveform( fid, i, header ,)
-                print len(anaSigs)
+                print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for sig in anaSigs :
-                    seg  = Segment()
                     seg._analogsignals.append( sig )
+                    print sig.signal.size,
+                print ''
                     
             elif channelHeader.kind in  [2, 3, 4, 5,6,7, 8]:
-                print 'channel event'
+                print 'channel event',
                 events = self.readOneChannelEvent( fid, i, header )
-                
+                print 'nb events : ', len(events)
                 if i in transform_event_to_spike:
-                    
                     spikeTr = SpikeTrain(spikes = [])
                     seg._spiketrains.append(spikeTr)
                     for event in events :
                         spike = Spike()
                         spike.time = event.time
                         if hasattr(event, 'waveform'):
-                            print 'waveform' , waveform
                             spike.waveform = event.waveform
-                            spikeTr.freq = ev.freq
+                            spikeTr.freq = event.freq
                         spikeTr._spikes.append(spike)
                 else :
                     seg._events +=  events
@@ -260,7 +259,7 @@ class Spike2IO(BaseIO):
                 fid.seek(blockHeader.succ_block)
             
         # convert for int16
-        if dtype.kind == 'i' :
+        if dt.kind == 'i' :
             for anaSig in anaSigs :
                 anaSig.signal = anaSig.signal*channelHeader.scale/ 6553.6 + channelHeader.offset
         
@@ -320,28 +319,26 @@ class Spike2IO(BaseIO):
                 else :
                     alltrigs = concatenate( (alltrigs , trigs))
                 
-                        
-                    
                 if blockHeader.succ_block > 0 :
                     fid.seek(blockHeader.succ_block)
                 # TODO verifier time
         
         if alltrigs is None : return [ ]
         
-        print 'nb event : ',alltrigs.size
+        #print 'nb event : ',alltrigs.size
         
         #  convert in neo standart class : event or spiketrains
         alltimes = alltrigs['tick'].astype('f')*header.us_per_time * header.dtime_base
-        
         events = [ ]
         for t,time in enumerate(alltimes) :
             event = Event(time = time)
+            event.type = 'channel %d' % channel_num
             if channelHeader.kind >= 5:
                 #print '        trig: ', alltrigs[t]
                 event.marker = alltrigs[t]['marker'] # TODO 4 marker u1 ou 1 marker i4
             if channelHeader.kind == 8:
-                print 'label' , alltrigs[t]['label']
-                event.marker = alltrigs[t]['label']
+                #print 'label' , alltrigs[t]['label']
+                event.label = alltrigs[t]['label']
                 
             if channelHeader.kind in [6 , 7]:
                 # waveform
