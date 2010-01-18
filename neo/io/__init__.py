@@ -76,6 +76,14 @@ except ImportError:
     print "Error while loading AxonIO module"
 
 
+try :
+    from spike2io import Spike2IO
+    all_format += [ [ 'Spike2 smr' , { 'class' : Spike2IO  , 'info' :  'CED spike2 file (smr)' } ] ]
+except ImportError:
+    print "Error while loading Spike2IO module"
+    
+
+
 
 #~ try:
     #~ from pynn import TextFile

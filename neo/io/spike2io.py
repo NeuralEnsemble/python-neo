@@ -48,7 +48,8 @@ class Spike2IO(BaseIO):
     has_header         = False
     is_streameable     = False
     read_params        = {
-                        Segment : [
+                        Segment : [ ('transform_event_to_spike' , { 'value' : '', 
+                                                'label' : 'Channel event to be convert as spike' } ),
                                     ],
                         }
     write_params       = None
