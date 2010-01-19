@@ -93,12 +93,10 @@ class WinWcpIO(BaseIO):
         fid = open(filename , 'rb')
         
         headertext = fid.read(1024)
-        print headertext
         header = {}
         for line in headertext.split('\r\n'):
-            
             if '=' not in line : continue
-            print '#' , line , '#'
+            #print '#' , line , '#'
             key,val = line.split('=')
             if key in ['NC', 'NR','NBH','NBA','NBD','ADCMAX','NP','NZ', ] :
                 val = int(val)
@@ -107,39 +105,25 @@ class WinWcpIO(BaseIO):
                 val = float(val)
             header[key] = val
         
-        print header
+        #print header
         
         SECTORSIZE = 512
         # loop for record number
         for i in range(header['NR']):
-            print 'record ',i
-            
-            # PAS de NP !!!! dans version 8
-            #offset = 1024 + i*(2*header['NC']*header['NP']+1024)
-            
-            #fid.seek(1024 + i*(SECTORSIZE*header['NBD']+1024) - 1024 )
-            #yep = fid.read(1024)
-            #print yep
+            #print 'record ',i
             offset = 1024 + i*(SECTORSIZE*header['NBD']+1024)
             
-            
-            
-            #fid.seek(offset)
             # read analysis zone
             analysisHeader = HeaderReader(fid , AnalysisDescription ).read_f(offset = offset)
-            print analysisHeader
+            #print analysisHeader
             
+            # read data
             NP = (SECTORSIZE*header['NBD'])/2
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
-            print 'NP', NP
-            samplelength = int(floor(analysisHeader['TimeRecorded']/analysisHeader['SamplingInterval']))
-            print 'samplelength',samplelength
-            
-            # read data
             data = memmap(filename , dtype('i2')  , 'r', 
                           #shape = (header['NC'], header['NP']) ,
-                          shape = (header['NC'], NP) ,
+                          shape = (NP,header['NC'], ) ,
                           offset = offset+header['NBA']*SECTORSIZE)
             
             # create a segment
@@ -154,7 +138,7 @@ class WinWcpIO(BaseIO):
                 VMax = analysisHeader['VMax'][c]
                 anaSig.signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG
                 anaSig.freq = 1./analysisHeader['SamplingInterval']
-                anaSig.t_start = 0
+                anaSig.t_start = analysisHeader['TimeRecorded']
                 anaSig.name = header['YN%d'%c]
                 anaSig.unit = header['YU%d'%c]
         
