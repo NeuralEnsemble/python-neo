@@ -3,20 +3,23 @@
 exampleio
 ==================
 
-Classe for fake reading/writing data in a no file.
-It is just a example for guidelines for developers who want to develop a new IO.
+Classe for fake reading/writing data in CED spike2 files (.smr).
 
+This code is based on:
+sonpy, written by Antonio Gonzalez <jag57@cam.ac.uk>
+http://www.neuro.ki.se/broberger/
 
-If you start a new IO class copy/paste and modify.
+and sonpy come from :
+SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
+King's College London. See http://www.kcl.ac.uk/depsta/biomedical/
+cfnr/lidierth.html
 
-If you have a problem just mail me or ask the list.
 
 
 Classes
 -------
 
-ExampleIO          - Classe for fake reading/writing data in a no file.
-
+Spike2IOIO          - Classe for  reading spike CED (.smr)
 
 @author : sgarcia
 
