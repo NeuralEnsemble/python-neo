@@ -6,7 +6,7 @@ exampleio
 Classe for fake reading/writing data in CED spike2 files (.smr).
 
 This code is based on:
-sonpy, written by Antonio Gonzalez <jag57@cam.ac.uk>
+sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
 http://www.neuro.ki.se/broberger/
 
 and sonpy come from :
