@@ -85,20 +85,15 @@ except ImportError:
 
 
 
-#~ try:
-    #~ from pynn import TextFile
-    #~ all_format += ['PyNN']
-#~ except ImportError:
-    #~ print "Error while loading pyNN IO module"
-
-#try:
-    #from spike2 import *
-    #all_format += ['PyNN']
-#except ImportError:
-    #pass
 
 
 
-#~ if sys.platform =='win32':
-	#~ from neurshare import Neuroshare
-	#~ all_IOclass += [ Neuroshare ]
+if sys.platform =='win32':
+    try :
+        from neuroshare.neuroshare.io import NeuroshareSpike2IO
+        all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareSpike2IO  , 'info' :  'CED spike2 file (smr) neuroshare' } ] ]
+    except ImportError:
+        print "Error while loading NeuroshareSpike2IO module"
+    
+
+	
