@@ -22,9 +22,9 @@ Classes
 
 NeuroshareIO : generic class for wrapping neuroshare dll
 
-NeuroshareSpike2IO : class for readin spike CED files 
-
-
+NeuroshareSpike2IO : class for reading spike2 CED files 
+NeurosharePlexonIO : class for reading plexon nex files 
+NeuroshareAlphaOmegaIO : class for reading alpha omega map files 
 
 
 @author : sgarcia
@@ -259,6 +259,33 @@ class NeuroshareSpike2IO(NeuroshareIO):
         NeuroshareIO.__init__(self, dllname = 'NSCEDSON')
 
 
+class NeurosharePlexonIO(NeuroshareIO):
+    """
+    Classe for reading plexon with neuroshare API.
+    """
+    name               = 'Plexon neuroshare'
+    extensions          = [ 'nex' ]
+    def __init__(self ) :
+        NeuroshareIO.__init__(self, dllname = 'nsPlxLibrary')
+
+
+class NeuroshareAlphaOmegaIO(NeuroshareIO):
+    """
+    Classe for reading alpha omega with neuroshare API.
+    """
+    name               = 'AlphaOmega neuroshare'
+    extensions          = [ 'map' ]
+    def __init__(self ) :
+        NeuroshareIO.__init__(self, dllname = 'nsAOLibrary')
+
+class NeuroshareTdtIO(NeuroshareIO):
+    """
+    Classe for reading  tdt with neuroshare API.
+    """
+    name               = 'TDT neuroshare'
+    extensions          = [ 'tank' ]
+    def __init__(self ) :
+        NeuroshareIO.__init__(self, dllname = 'nsTDTLib')
 
 
 
