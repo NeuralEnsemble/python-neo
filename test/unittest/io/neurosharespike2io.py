@@ -16,18 +16,21 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         spike2 = NeuroshareSpike2IO()
-        #seg = spike2.read_segment( filename = 'datafiles/File_spike2_1.smr',transform_event_to_spike = ' 3 ')
+        #seg = spike2.read_segment( filename = 'datafiles/File_spike2_1.smr' ) #,transform_event_to_spike = ' 3 ')
         #seg = spike2.read_segment( filename = 'datafiles/R05-C05C.SMR',transform_event_to_spike = [3 ])
-#        seg = spike2.read_segment( filename = 'datafiles/R12-C10b.smr',)
-#        seg = spike2.read_segment( filename = 'datafiles/R12-C11f.smr',)
+        #seg = spike2.read_segment( filename = 'datafiles/R12-C10b.smr',)
+        #seg = spike2.read_segment( filename = 'datafiles/R12-C11f.smr',)
 #        seg = spike2.read_segment( filename = 'datafiles/R14-C02C.SMR',)
 #        seg = spike2.read_segment( filename = 'datafiles/R21-C11d.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/R25-C07C.SMR', transform_event_to_spike = [3 ])
 #        seg = spike2.read_segment( filename = 'datafiles/J0_G3S2.SMR',)
-        seg = spike2.read_segment( filename = 'datafiles/example.smr',)
+#        seg = spike2.read_segment( filename = 'datafiles/example.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091007_000.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091103_000.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091104_000.smr',)
+        
+        #seg = spike2.read_segment( filename = 'datafiles/BURST.SMR',)
+        seg = spike2.read_segment( filename = 'datafiles/Cricket Song.smr',)
         
         #seg = spike2.read_segment( filename = 'datafiles/data spike2 4channels 1 hypno 1textmarkchannel 1markerchannel.smr',)
 
@@ -56,7 +59,7 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
                 dict_color[ev.type] = colors[len(dict_color) % 7]
             if hasattr(ev , 'waveform'):
                 tv = arange(ev.waveform.size , dtype = 'f')/ev.freq+ev.time
-                ax2.plot(tv,ev.waveform , color = dict_color[ev.type])
+                ax2.plot(tv,ev.waveform[:,0] , color = dict_color[ev.type])
                 ax2.axvline(ev.time , color = dict_color[ev.type])
             else :
                 ax.axvline(ev.time, color = dict_color[ev.type])
@@ -73,10 +76,11 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
                         color = colors[s%7],
                         )
             
-            for spike in spiketr.get_spikes():
-                if spike.waveform is not None:
-                    tv = arange(spike.waveform.size , dtype = 'f')/spiketr.freq+spike.time
-                    ax4.plot(tv,spike.waveform ,color = colors[s%7],)
+            if spiketr.get_spikes() is not None :
+                for spike in spiketr.get_spikes():
+                    if spike.waveform is not None:
+                        tv = arange(spike.waveform.size , dtype = 'f')/spiketr.freq+spike.time
+                        ax4.plot(tv,spike.waveform ,color = colors[s%7],)
 
                 
         pylab.show()

@@ -16,7 +16,7 @@ class Spike2IOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         spike2 = spike2io.Spike2IO()
-        #seg = spike2.read_segment( filename = 'datafiles/File_spike2_1.smr',transform_event_to_spike = ' 3 ')
+        #seg = spike2.read_segment( filename = 'datafiles/File_spike2_1.smr' )#,transform_event_to_spike = ' 3 ')
         #seg = spike2.read_segment( filename = 'datafiles/R05-C05C.SMR',transform_event_to_spike = [3 ])
 #        seg = spike2.read_segment( filename = 'datafiles/R12-C10b.smr',)
 #        seg = spike2.read_segment( filename = 'datafiles/R12-C11f.smr',)
@@ -24,10 +24,13 @@ class Spike2IOTest(unittest.TestCase):
 #        seg = spike2.read_segment( filename = 'datafiles/R21-C11d.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/R25-C07C.SMR', transform_event_to_spike = [3 ])
 #        seg = spike2.read_segment( filename = 'datafiles/J0_G3S2.SMR',)
-        seg = spike2.read_segment( filename = 'datafiles/example.smr',)
+        #seg = spike2.read_segment( filename = 'datafiles/example.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091007_000.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091103_000.smr',)
         #seg = spike2.read_segment( filename = 'datafiles/20091104_000.smr',)
+        #seg = spike2.read_segment( filename = 'datafiles/BURST.SMR',)
+        
+        seg = spike2.read_segment( filename = 'datafiles/Cricket Song.smr',)
         
         #seg = spike2.read_segment( filename = 'datafiles/data spike2 4channels 1 hypno 1textmarkchannel 1markerchannel.smr',)
 

@@ -89,11 +89,11 @@ except ImportError:
 
 
 if sys.platform =='win32':
-    try :
-        from neuroshare.neuroshare.io import NeuroshareSpike2IO
+    #try :
+        from neuroshare.neuroshareio import NeuroshareSpike2IO
         all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareSpike2IO  , 'info' :  'CED spike2 file (smr) neuroshare' } ] ]
-    except ImportError:
-        print "Error while loading NeuroshareSpike2IO module"
+    #except ImportError:
+        #print "Error while loading NeuroshareSpike2IO module"
     
 
 	

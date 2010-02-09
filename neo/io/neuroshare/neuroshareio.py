@@ -104,21 +104,22 @@ class NeuroshareIO(BaseIO):
         # API version
         info = ns_LIBRARYINFO()
         neuroshare.ns_GetLibraryInfo(byref(info) , ctypes.sizeof(info))
-        #print 'API ver' , info.dwAPIVersionMaj, '.',info.dwAPIVersionMin
+        print 'API ver' , info.dwAPIVersionMaj, '.',info.dwAPIVersionMin
         
         # open file
         hFile = c_uint32(0)
         neuroshare.ns_OpenFile(c_char_p(filename) ,byref(hFile))
         fileinfo = ns_FILEINFO()
         neuroshare.ns_GetFileInfo(hFile, byref(fileinfo) , ctypes.sizeof(fileinfo))
-        
+        print fileinfo.dwEntityCount
         # read all entities
         for dwEntityID in range(fileinfo.dwEntityCount):
-            print 'dwEntityID' , dwEntityID
+            print 'dwEntityID' , dwEntityID 
             entityInfo = ns_ENTITYINFO()
             neuroshare.ns_GetEntityInfo( hFile, dwEntityID,
                                         byref(entityInfo), ctypes.sizeof(entityInfo))
             print 'type', entityInfo.dwEntityType,entity_types[entityInfo.dwEntityType], 'count', entityInfo.dwItemCount
+            print  entityInfo.szEntityLabel 
 
             # EVENT
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_EVENT': 
@@ -144,7 +145,13 @@ class NeuroshareIO(BaseIO):
                                         byref(pdTimeStamp), byref(pData),
                                         ctypes.sizeof(pData), byref(pdwDataRetSize) )
                     #print 'dwIndex' , dwIndex , pdTimeStamp, pData , pdwDataRetSize
-        
+                    event = Event(time = pdTimeStamp.value)
+                    #event.label = 
+                    #event.type = 'channel %d' % channel_num
+                    event.type = entityInfo.szEntityLabel
+                    # TODO event.type
+                    seg._events.append(event)
+                    
             # analog
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_ANALOG': 
                 pAnalogInfo = ns_ANALOGINFO()
@@ -154,23 +161,41 @@ class NeuroshareIO(BaseIO):
                 print 'dSampleRate' , pAnalogInfo.dSampleRate , pAnalogInfo.szUnits
                 dwStartIndex = c_uint32(0)
                 dwIndexCount = entityInfo.dwItemCount
-                dwIndexCount = 999
+                #dwIndexCount = 999
                 # FIXME
                 pdwContCount = c_uint32(0)
-                pData = zeros( (entityInfo.dwItemCount,), dtype = 'f4')
-                neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
+                pData = zeros( (entityInfo.dwItemCount,), dtype = 'f8')
+                ns_RESULT = neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
                                  dwIndexCount, byref( pdwContCount) , pData.ctypes.data)
+                print 'ns_RESULT' , ns_RESULT
+                pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
+                neuroshare.ns_GetLastErrorMsg(byref(pszMsgBuffer), 256)
+                print 'pszMsgBuffer' , pszMsgBuffer.value
+                
                 print 'pdwContCount', pdwContCount, dwIndexCount
-                sig = pData[:pdwContCount.value]
-                print sig.shape
+                #sig = pData[:pdwContCount.value]
+                #print sig.shape
+                dwIndex = 0
+                pdTime = c_double(0)
+                neuroshare.ns_GetTimeByIndex( hFile,  dwEntityID,  dwIndex, byref(pdTime))
+                print 'pdTime' , pdTime.value
+                anaSig = AnalogSignal(freq = pAnalogInfo.dSampleRate,
+                                    signal = pData[:pdwContCount.value],
+                                    t_start = pdTime.value)
+                seg._analogsignals.append( anaSig )
                 
             
             #segment
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_SEGMENT': 
                 
                 pdwSegmentInfo = ns_SEGMENTINFO()
-                neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
+                ns_RESULT = neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
                                                  byref(pdwSegmentInfo), ctypes.sizeof(pdwSegmentInfo) )
+                print 'ns_RESULT' , ns_RESULT
+                pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
+                neuroshare.ns_GetLastErrorMsg(byref(pszMsgBuffer), 256)
+                print 'pszMsgBuffer' , pszMsgBuffer.value
+                
                 print 'pdwSegmentInfo.dwSourceCount' , pdwSegmentInfo.dwSourceCount
                 for dwSourceID in range(pdwSegmentInfo.dwSourceCount) :
                     pSourceInfo = ns_SEGSOURCEINFO()
@@ -178,35 +203,43 @@ class NeuroshareIO(BaseIO):
                                     byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
                 
                 pdTimeStamp  = c_double(0.)
-                pData = zeros( (pdwSegmentInfo.dwMaxSampleCount), dtype = 'f4')
+                pData = zeros( (pdwSegmentInfo.dwMaxSampleCount), dtype = 'f8')
                 dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount
                 pdwSampleCount = c_uint32(0)
                 pdwUnitID= c_uint32(0)
                 for dwIndex in range(entityInfo.dwItemCount ):
-                    neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
+                    ns_RESULT = neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
                             byref(pdTimeStamp), pData.ctypes.data,
                              dwDataBufferSize, byref(pdwSampleCount),
                             byref(pdwUnitID ) )
+                    
                     #print 'dwDataBufferSize' , dwDataBufferSize,pdwSampleCount , pdwUnitID
                     nsample ,nsource = pdwSampleCount.value,pdwSegmentInfo.dwSourceCount
                     waveform = pData[:nsample].reshape(nsample/nsource ,nsource)
-                    #print waveform.shape
+#                    print waveform.shape , pdwSegmentInfo.dSampleRate , waveform
                     
-        
+                    event = Event(time = pdTimeStamp.value)
+                    event.waveform = waveform
+                    event.freq = pdwSegmentInfo.dSampleRate #FIXME
+                    event.type = entityInfo.szEntityLabel
+                    seg._events.append(event)
+                    
+                    
             # neuralevent
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_NEURALEVENT': 
                 
-                pNeuralInfo = ns_SEGSOURCEINFO()
-                
+                pNeuralInfo = ns_NEURALINFO()
                 neuroshare.ns_GetNeuralInfo ( hFile,  dwEntityID,
                                  byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
-                print pNeuralInfo.dwSourceUnitID
-                pData = zeros( (entityInfo.dwItemCount,), dtype = 'f4')
+                print pNeuralInfo.dwSourceUnitID , pNeuralInfo.szProbeInfo
+                pData = zeros( (entityInfo.dwItemCount,), dtype = 'f8')
                 dwStartIndex = 0
                 dwIndexCount = entityInfo.dwItemCount
                 neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
                                                  dwIndexCount,  pData.ctypes.data)
                 print pData.shape
+                spikeTr = SpikeTrain(spike_times = pData)
+                seg._spiketrains.append(spikeTr)
         
         # close
         neuroshare.ns_CloseFile(hFile)
@@ -231,6 +264,14 @@ class NeuroshareSpike2IO(NeuroshareIO):
 
 # neuroshare structures
 
+class ns_FILEDESC(ctypes.Structure):
+    _fields_ = [('szDescription', c_char*32),
+                ('szExtension', c_char*8),
+                ('szMacCodes', c_char*8),
+                ('szMagicCode', c_char*32),
+                ]
+
+
 class ns_LIBRARYINFO(ctypes.Structure):
     _fields_ = [('dwLibVersionMaj', c_uint32),
                 ('dwLibVersionMin', c_uint32),
@@ -244,7 +285,7 @@ class ns_LIBRARYINFO(ctypes.Structure):
                 ('dwFlags',c_uint32),
                 ('dwMaxFiles',c_uint32),
                 ('dwFileDescCount',c_uint32),
-                ('FileDesc',c_uint32*16),
+                ('FileDesc',ns_FILEDESC*16),
                 ]
 
 class ns_FILEINFO(ctypes.Structure):
@@ -334,9 +375,11 @@ class ns_SEGSOURCEINFO(ctypes.Structure):
                 ('szProbeInfo', c_char*128),                
                 ]
 
-class ns_SEGSOURCEINFO(ctypes.Structure):
+class ns_NEURALINFO(ctypes.Structure):
     _fields_ = [
                 ('dwSourceEntityID',c_uint32),
                 ('dwSourceUnitID',c_uint32),
                 ('szProbeInfo',c_char*128),
                 ]
+
+
