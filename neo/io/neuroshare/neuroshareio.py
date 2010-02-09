@@ -25,7 +25,7 @@ NeuroshareIO : generic class for wrapping neuroshare dll
 NeuroshareSpike2IO : class for reading spike2 CED files 
 NeurosharePlexonIO : class for reading plexon nex files 
 NeuroshareAlphaOmegaIO : class for reading alpha omega map files 
-
+NeuroshareTdtIO : class for reading tdt tank
 
 @author : sgarcia
 
@@ -203,8 +203,9 @@ class NeuroshareIO(BaseIO):
                                     byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
                 
                 pdTimeStamp  = c_double(0.)
-                pData = zeros( (pdwSegmentInfo.dwMaxSampleCount), dtype = 'f8')
-                dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount
+                
+                dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount*pdwSegmentInfo.dwSourceCount
+                pData = zeros( (dwDataBufferSize), dtype = 'f8')
                 pdwSampleCount = c_uint32(0)
                 pdwUnitID= c_uint32(0)
                 for dwIndex in range(entityInfo.dwItemCount ):
@@ -215,7 +216,8 @@ class NeuroshareIO(BaseIO):
                     
                     #print 'dwDataBufferSize' , dwDataBufferSize,pdwSampleCount , pdwUnitID
                     nsample ,nsource = pdwSampleCount.value,pdwSegmentInfo.dwSourceCount
-                    waveform = pData[:nsample].reshape(nsample/nsource ,nsource)
+                    print 'nsample ,nsource' , nsample ,nsource
+                    waveform = pData[:nsample*nsource].reshape(nsample ,nsource)
 #                    print waveform.shape , pdwSegmentInfo.dSampleRate , waveform
                     
                     event = Event(time = pdTimeStamp.value)
