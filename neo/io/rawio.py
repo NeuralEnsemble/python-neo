@@ -40,8 +40,11 @@ class RawIO(BaseIO):
     
     is_readable        = True
     is_writable        = True
-    is_object_readable = False
-    is_object_writable = False
+
+    supported_objects  = [Segment , AnalogSignal]
+    readable_objects    = [ Segment]
+    writeable_objects   = [Segment]
+    
     has_header         = False
     is_streameable     = False
     read_params        = { Segment : [
@@ -61,21 +64,21 @@ class RawIO(BaseIO):
                                         ('rangemax' , { 'value' : 10 } ),
                                     ]
                         }
-    level              = None
-    nfiles             = 0        
+                        
     name               = None
     extensions          = [ 'raw' ]
-    objects            = []
-    supported_types    = [Segment]
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a binary file.
         
         **Arguments**
         
-        """
+            filename : the filename to read
         
+        """
         BaseIO.__init__(self)
+        self.filename = filename
         
     
     def read(self , **kargs):
@@ -87,7 +90,6 @@ class RawIO(BaseIO):
         return self.read_segment( **kargs)
     
     def read_segment(self, 
-                                        filename = '',
                                         samplerate = 1000.,
                                         nbchannel = 1,
                                         bytesoffset = 0,
@@ -98,7 +100,6 @@ class RawIO(BaseIO):
                                     ):
         """
         **Arguments**
-            filename : filename
             samplerate :  sample rate
             nbchannel : number of channel
             bytesoffset : nb of bytes offset at the start of file
@@ -109,7 +110,7 @@ class RawIO(BaseIO):
         
         dtype = numpy.dtype(dtype)
         
-        fid = open(filename , 'rb')
+        fid = open(self.filename , 'rb')
         buf = fid.read()
         fid.close()
         sig = numpy.fromstring(buf[bytesoffset:], dtype = dtype )
@@ -144,7 +145,6 @@ class RawIO(BaseIO):
         self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
-                                filename = '',
                                 dtype = 'f4',
                                 rangemin = -10,
                                 rangemax = 10,
@@ -175,7 +175,7 @@ class RawIO(BaseIO):
             sigs = sigs.astype(dtype)
         else:
             sigs = sigs.astype(dtype)
-        fid = open(filename , 'wb')
+        fid = open(self.filename , 'wb')
         fid.write( sigs.tostring() )
         fid.close()
 

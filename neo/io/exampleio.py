@@ -101,14 +101,17 @@ class ExampleIO(BaseIO):
     
 
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a abf file.
         
         **Arguments**
         
-        """
+            filename : the filename to read you can pu what ever it do not read anythings
         
+        """
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
@@ -124,7 +127,7 @@ class ExampleIO(BaseIO):
     
     
     # Block reading is supported so I define this :
-    def read_block(self , filename = '',
+    def read_block(self , 
                                         num_segment = 5,
                                         
                                         segmentduration = 3.,
@@ -136,7 +139,6 @@ class ExampleIO(BaseIO):
         Return a fake Block.
         
         **Arguments**
-        filename : The filename does not matter.
         
         num_segment : the number of segment in the file
         

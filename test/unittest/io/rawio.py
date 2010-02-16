@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import rawio
+from neo.io import RawIO
 from neo.core import *
 from numpy import *
 #import pylab
@@ -14,8 +14,8 @@ from numpy import *
 class RawIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        raw = rawio.RawIO()
-        seg = raw.read_segment( filename = 'datafiles/File_RAW_1_10kHz_2channels.raw',
+        io = RawIO(filename = 'datafiles/File_RAW_1_10kHz_2channels.raw',)
+        seg = io.read_segment( 
                                         samplerate = 10000.,
                                         nbchannel = 2,
                                         bytesoffset = 0,
@@ -42,16 +42,14 @@ class RawIOTest(unittest.TestCase):
         seg._analogsignals = [ ana , ana]
         
         
-        raw = rawio.RawIO()
-        raw.write_segment(  seg,
-                                        filename = 'testNeoRawIO.raw',
+        io = RawIO(filename = 'testNeoRawIO.raw',)
+        io.write_segment(  seg,
                                         dtype = 'f4',
                                         rangemin = -5,
                                         rangemax = 5,
                                         bytesoffset = 0)
-        raw2 = rawio.RawIO()
-        seg2 = raw2.read_segment(
-                                        filename = 'testNeoRawIO.raw',
+        io = RawIO(filename = 'testNeoRawIO.raw',)
+        seg2 = io.read_segment(
                                         samplerate = freq,
                                         nbchannel = 2,
                                         bytesoffset = 0,
@@ -82,16 +80,14 @@ class RawIOTest(unittest.TestCase):
         seg._analogsignals = [ ana , ana]
         
         
-        raw = rawio.RawIO()
-        raw.write_segment(  seg,
-                                        filename = 'testNeoRawIO.raw',
+        io = RawIO(filename = 'testNeoRawIO.raw',)
+        io.write_segment(  seg,
                                         dtype = 'i2',
                                         rangemin = -5,
                                         rangemax = 5,
                                         bytesoffset = 0)
-        raw2 = rawio.RawIO()
-        seg2 = raw2.read_segment(
-                                        filename = 'testNeoRawIO.raw',
+        io = RawIO(filename = 'testNeoRawIO.raw',)
+        seg2 = io.read_segment(
                                         samplerate = freq,
                                         nbchannel = 2,
                                         bytesoffset = 0,

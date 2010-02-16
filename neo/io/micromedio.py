@@ -44,8 +44,11 @@ class MicromedIO(BaseIO):
     
     is_readable        = True
     is_writable        = False
-    is_object_readable = False
-    is_object_writable = False
+    
+    supported_objects            = [ Segment , AnalogSignal , Event]
+    readable_objects    = [Segment]
+    writeable_objects    = []      
+    
     has_header         = False
     is_streameable     = False
     read_params        = {
@@ -54,12 +57,9 @@ class MicromedIO(BaseIO):
                                     ]
                         }
     write_params       = None
-    level              = None
-    nfiles             = 0
+    
     name               = None
     extensions          = [ 'TRC' ]
-    objects            = [  ]
-    supported_types    = [ Segment ]
     
     def __init__(self , filename = None) :
         """

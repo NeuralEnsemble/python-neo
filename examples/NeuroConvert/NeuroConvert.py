@@ -166,10 +166,9 @@ class ThreadConvertion(QThread):
             print 'start convertion' , convert['filename']
             
             # read instance
-            input = dict_format[convert['inputFormat']]['class']()
+            input = dict_format[convert['inputFormat']]['class'](filename = convert['filename']  )
             try :
-                readed = input.read(filename = convert['filename'] , 
-                           **convert['inputOptions'] )
+                readed = input.read( **convert['inputOptions'] )
             except :
                 convert['state'] = 'read error : check input options'
                 self.emit(SIGNAL('one more'))
@@ -183,18 +182,19 @@ class ThreadConvertion(QThread):
                     convert['state'] = 'file exits : force overwrite'
                     self.emit(SIGNAL('one more'))
                     continue
+            output.filename = filename
             
             print 'out',filename
             try :
                 if type(readed)== neo.Segment :
-                    if neo.Segment in output.supported_types :
+                    if neo.Segment in output.writeable_objects :
                         print 'segment to segment'
                         output.write_segment( readed,
                             filename = filename , **convert['outputOptions'] )
                         convert['state'] = 'OK'
                         self.emit(SIGNAL('one more'))
                         
-                    elif neo.Block in output.supported_types :
+                    elif neo.Block in output.writeable_objects :
                         print 'segment to block'
                         block = Block()
                         block._segments.append( readed )
@@ -204,7 +204,7 @@ class ThreadConvertion(QThread):
                         self.emit(SIGNAL('one more'))
                     
                 elif type(readed)== neo.Block :
-                    if neo.Segment in output.supported_types :
+                    if neo.Segment in output.writeable_objects :
                         print 'block to segment'
                         
                         if convert['convertOptions']['blockToMultipleSegment'] :
@@ -216,7 +216,6 @@ class ThreadConvertion(QThread):
                                         self.emit(SIGNAL('one more'))
                                         continue
                                 output.write_segment( seg,
-                                                    filename = filename , 
                                                     **convert['outputOptions'] )
                                 convert['state'] = 'OK'
                                 self.emit(SIGNAL('one more'))
@@ -228,7 +227,7 @@ class ThreadConvertion(QThread):
                             self.emit(SIGNAL('one more'))
                             
                                 
-                    elif neo.Block in output.supported_types :
+                    elif neo.Block in output.writeable_objects :
                         print 'block to block'
                         output.write_block( readed,
                             filename = filename , **convert['outputOptions'] )
@@ -338,7 +337,7 @@ class AddFileDialog(QDialog) :
             self.widgetInput.layout().removeWidget( self.inputOptions )
         formatname = self.formats['inputFormat']
         cl = dict_format[formatname]['class']
-        param = cl.read_params[cl.supported_types[0]]
+        param = cl.read_params[cl.readable_objects[0]]
         self.inputOptions = ParamWidget( param )
         self.widgetInput.layout().addWidget( self.inputOptions )
 
@@ -347,7 +346,7 @@ class AddFileDialog(QDialog) :
             self.widgetOutput.layout().removeWidget( self.outputOptions )
         formatname = self.formats['outputFormat']
         cl = dict_format[formatname]['class']
-        param = cl.write_params[cl.supported_types[0]]
+        param = cl.write_params[cl.writeable_objects[0]]
         self.outputOptions = ParamWidget( param )
         self.widgetOutput.layout().addWidget( self.outputOptions )
 
