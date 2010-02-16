@@ -11,6 +11,8 @@ Classes
 
 BaseIO        - abstract class which should be overriden, managing how a file will load/write
                   its data
+                  
+If you want a model for develloping a new IO just start from exampleIO.
 """
 
 import sys, os
@@ -63,18 +65,17 @@ class BaseIO(object):
     
     is_readable        = False
     is_writable        = False
-    is_object_readable = False
-    is_object_writable = False
+    
+    supported_objects            = []
+    readable_objects    = []
+    writeable_objects    = []
+    
     has_header         = False
     is_streameable     = False
     read_params        = {}
-    write_params       = {}   
-    level              = None
-    nfiles             = 0
+    write_params       = {}
     name               = None
-    objects            = []
-    supported_types    = []
-    
+
     def __init__(self , filename = None , **kargs ) :
         self.filename = filename
         pass

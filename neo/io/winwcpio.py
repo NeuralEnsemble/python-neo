@@ -40,8 +40,11 @@ class WinWcpIO(BaseIO):
     
     is_readable        = True
     is_writable        = False
-    is_object_readable = True
-    is_object_writable = False
+
+    supported_objects            = [Block, Segment , AnalogSignal ]
+    readable_objects    = [Block]
+    writeable_objects    = []  
+
     has_header         = False
     is_streameable     = False
     
@@ -52,13 +55,8 @@ class WinWcpIO(BaseIO):
     
     write_params       = None
     
-    level              = None
-    nfiles             = 0
-    
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
-    objects            = []
-    supported_types    = [ Block]
     
     def __init__(self ) :
         """

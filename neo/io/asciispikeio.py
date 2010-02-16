@@ -45,10 +45,14 @@ class AsciiSpikeIO(BaseIO):
     
     is_readable        = True
     is_writable        = True
-    is_object_readable = False
-    is_object_writable = False
+    
+    supported_objects            = [Segment , SpikeTrain]
+    readable_objects    = [Segment]
+    writeable_objects    = [Segment]    
+    
     has_header         = False
     is_streameable     = False
+    
     read_params        = {
                             Segment : [
                                         ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
@@ -60,12 +64,12 @@ class AsciiSpikeIO(BaseIO):
                                         ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
                                         ]
                             }
-    level              = None
-    nfiles             = 0
+
     name               = None
     extensions          = [ 'txt' ]
-    objects            = []
-    supported_types    = [ Segment ]
+    
+
+
     
     def __init__(self ) :
         """

@@ -47,21 +47,23 @@ class ElphyIO(BaseIO):
     
     is_readable        = True
     is_writable        = False
-    is_object_readable = False
-    is_object_writable = False
+ 
+    supported_objects            = [Block, Segment , AnalogSignal ]
+    readable_objects    = [Block]
+    writeable_objects    = []  
+ 
     has_header         = False
     is_streameable     = False
+    
     read_params        = {
                             Block : [
                                         ]
                             }
     write_params       = None
-    level              = None
-    nfiles             = 0
-    name               = None
+    
+    name               = 'ElphyDac'
     extensions          = [ 'DAT' ]
-    objects            = []
-    supported_types    = [ Block ]
+    
     
     def __init__(self ) :
         """

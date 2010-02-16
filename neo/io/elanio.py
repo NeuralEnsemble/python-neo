@@ -46,18 +46,20 @@ class ElanIO(BaseIO):
     
     is_readable        = True
     is_writable        = True
-    is_object_readable = False
-    is_object_writable = False
+
+    supported_objects            = [ Segment , AnalogSignal , Event]
+    readable_objects    = [Segment]
+    writeable_objects    = [Segment]  
+
     has_header         = False
     is_streameable     = False
+    
     read_params        = { Segment : [] }
     write_params       = { Segment : [] }
-    level              = None
-    nfiles             = 0
+
     name               = None
     extensions          = [ 'eeg' ]
-    objects            = []
-    supported_types    = [ Segment ]
+    
     
     def __init__(self ) :
         """

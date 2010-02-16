@@ -28,6 +28,7 @@ from baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 from neo.core import *
 
+# So bad :
 from numpy import *
 
 
@@ -44,8 +45,14 @@ class ExampleIO(BaseIO):
     
     is_readable        = True # This a only reading class
     is_writable        = False
-    is_object_readable = True # The 2 readable object can be readed imdependently
-    is_object_writable = False
+    #This class is able directly or inderectly this kind of objects
+    supported_objects  = [Block, Segment , RecordingPoint , AnalogSignal, SpikeTrain, Event, Epoch]
+    # This class can return either a Block or a Segment
+    # The first one is the default ( self.read )
+    readable_objects    = [Block, Segment]
+    # This class is not able to write objects
+    writeable_objects   = []
+
     has_header         = False
     is_streameable     = False
     
@@ -74,15 +81,10 @@ class ExampleIO(BaseIO):
     # do not supported write so no GUI stuf
     write_params       = None
     
-    level              = None
-    nfiles             = 0
-    
     name               = 'example'
     extensions          = [ 'fak' ]
-    objects            = []
-    # This class can return either a Block or a Segment
-    # The first one is the default ( self.read )
-    supported_types    = [ Block, Segment ]
+    
+
     
     def __init__(self ) :
         """
