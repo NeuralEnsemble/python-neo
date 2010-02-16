@@ -16,8 +16,10 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         plexon = NeurosharePlexonIO()
+        seg = plexon.read_segment( filename = 'datafiles/test.nex',)
+        
         #seg = plexon.read_segment( filename = 'datafiles/TestDataFile1.nex',)
-        seg = plexon.read_segment( filename = 'datafiles/TestDataFileForNeuroshare.nex',)
+        #seg = plexon.read_segment( filename = 'datafiles/TestDataFileForNeuroshare.nex',)
 
 
         fig = pylab.figure()

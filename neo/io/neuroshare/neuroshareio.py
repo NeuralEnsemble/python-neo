@@ -42,6 +42,7 @@ from neo.io import BaseIO
 from neo.core import *
 from numpy import *
 import re
+import os, sys
 import datetime
 import ctypes
 from ctypes import byref, c_char_p, c_uint32, c_char, c_double, c_int16, c_int32 , c_ulong
@@ -99,7 +100,10 @@ class NeuroshareIO(BaseIO):
         """
         seg = Segment()
         
-        neuroshare = ctypes.windll.LoadLibrary(self.dllname)
+        #neuroshare = ctypes.windll.LoadLibrary(self.dllname)
+        # FIXME : is that coreect or an ugly solution
+        neuroshare = ctypes.windll.LoadLibrary(os.path.join(os.path.dirname(__file__),self.dllname))
+        
         
         # API version
         info = ns_LIBRARYINFO()
