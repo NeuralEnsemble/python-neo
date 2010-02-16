@@ -19,7 +19,7 @@ class WinWcpIOTest(unittest.TestCase):
     def testOpenFile1(self):
         
         winwcp = WinWcpIO()
-        blck = winwcp.read_block(filename = 'datafiles/File_winwcp_2.wcp',)
+        blck = winwcp.read_block(filename = 'datafiles/File_winwcp_1.wcp',)
         
         fig = pylab.figure()
         ax = fig.add_subplot(1,1,1)
