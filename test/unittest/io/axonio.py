@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import axonio
+from neo.io import AxonIO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -16,8 +16,8 @@ import pylab
 class AxonIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        axon = axonio.AxonIO()
-        block = axon.read_block( filename = 'datafiles/File_axon_1.abf',)
+        io = AxonIO(filename = 'datafiles/File_axon_1.abf')
+        block = io.read_block( )
         for seg in block.get_segments() :
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1
@@ -33,8 +33,8 @@ class AxonIOTest(unittest.TestCase):
                 pass
 
     def testOpenFile2(self):
-        axon = axonio.AxonIO()
-        block = axon.read_block( filename = 'datafiles/File_axon_2.abf',)
+        io = AxonIO(filename = 'datafiles/File_axon_2.abf')
+        block = io.read_block( )
         for seg in block.get_segments() :
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1
@@ -51,8 +51,9 @@ class AxonIOTest(unittest.TestCase):
                 pass
 
     def testOpenFile3(self):
-        axon = axonio.AxonIO()
-        block = axon.read_block( filename = 'datafiles/File_axon_3.abf',)
+        io = AxonIO(filename = 'datafiles/File_axon_3.abf')
+        block = io.read_block( )
+        
         for seg in block.get_segments() :
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==2
@@ -70,8 +71,10 @@ class AxonIOTest(unittest.TestCase):
 
 
     def testOpenFile4(self):
-        axon = axonio.AxonIO()
-        block = axon.read_block( filename = 'datafiles/File_axon_4.abf',)
+
+        io = AxonIO(filename = 'datafiles/File_axon_4.abf')
+        block = io.read_block( )
+
         for seg in block.get_segments() :
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1

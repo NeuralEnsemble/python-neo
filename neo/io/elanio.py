@@ -41,6 +41,16 @@ class ElanIO(BaseIO):
     **Usage**
 
     **Example**
+        #read a file
+        io = ElanIO(filename = 'myfile.eeg')
+        seg = io.read() # read the entire file
+        
+        seg is a Segment that contains AnalogSignals and Events
+        
+        # write a file
+        io = ElanIO(filename = 'myfile.eeg')
+        seg = Segment()
+        io.write(seg)    
     
     """
     
@@ -61,17 +71,15 @@ class ElanIO(BaseIO):
     extensions          = [ 'eeg' ]
     
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read/write a elan based file.
         
         **Arguments**
-        
-        filename is optional if the file exist read() is call at __init__
-        
-        
+            filename : the filename to read
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
@@ -82,20 +90,17 @@ class ElanIO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self, 
-                                        filename = '',
-                                        ):
+    def read_segment(self, ):
         """
         **Arguments**
-            filename : filename
-            TODO
+            no arguments
         """
         
         ## Read header file
         
         seg = Segment()
         
-        f = open(filename+'.ent' , 'rU')
+        f = open(self.filename+'.ent' , 'rU')
         #version
         version = f.readline()
         if version[:2] != 'V2' :
@@ -201,7 +206,7 @@ class ElanIO(BaseIO):
         #raw data
         n = int(round(log(max_logic[0]-min_logic[0])/log(2))/8)
 #        print n
-        data = fromfile(filename,dtype = 'i'+str(n) )
+        data = fromfile(self.filename,dtype = 'i'+str(n) )
         data = data.byteswap().reshape( (data.size/(nbchannel+2) ,nbchannel+2) ).astype('f4')
         for c in range(nbchannel) :
             sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
@@ -212,7 +217,7 @@ class ElanIO(BaseIO):
             seg._analogsignals.append( analogSig )
         
         # triggers
-        f = open(filename+'.pos')
+        f = open(self.filename+'.pos')
         for l in f.readlines() :
             r = re.findall(' *(\d+) *(\d+) *(\d+) *',l)
             ev = Event( time = float(r[0][0])/freq )
@@ -227,24 +232,21 @@ class ElanIO(BaseIO):
         
     def write(self , *args , **kargs):
         """
-        Write segment in a file.
+        Write segment in 3 files.
         See write_segment for detail.
         """
         self.write_segment(*args , **kargs)
 
-    def write_segment(self, segment,
-                            filename = '',
-                            ):
+    def write_segment(self, segment, ):
         """
         
          **Arguments**
-            segment : the segment to write. Only analog signals will be written.
-            TODO
+            segment : the segment to write. Only analog signals and events will be written.
         """
-        assert filename.endswith('.eeg')
-        fid_ent = open(filename+'.ent' ,'wt')
-        fid_eeg = open(filename ,'wt')
-        fid_pos = open(filename+'.pos' ,'wt')
+        assert self.filename.endswith('.eeg')
+        fid_ent = open(self.filename+'.ent' ,'wt')
+        fid_eeg = open(self.filename ,'wt')
+        fid_pos = open(self.filename+'.pos' ,'wt')
         
         seg = segment
         freq = seg.get_analogsignals()[0].freq

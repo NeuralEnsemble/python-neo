@@ -33,6 +33,16 @@ class EegLabIO(BaseIO):
     **Usage**
 
     **Example**
+        #read a file
+        io = EegLabIO(filename = 'myfile.set')
+        seg = io.read() # read the entire file
+        
+        seg is a Segment that contains AnalogSignals and Events
+        
+        # write a file
+        io = EegLabIO(filename = 'myfile.set')
+        seg = Segment()
+        io.write(seg)    
     
     """
     
@@ -51,15 +61,15 @@ class EegLabIO(BaseIO):
     name               = None
     extensions          = [ 'set' ]
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read/write a eeglab matlab based file.
         
         **Arguments**
-        
+            filename : the filename to read
         """
-        
         BaseIO.__init__(self)
-
+        self.filename = filename
 
     def read(self , **kargs):
         """
@@ -69,18 +79,18 @@ class EegLabIO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self, 
-                                        filename = '',
-                                        ):
+    def read_segment(self, ):
         """
+        read a segment in a .set file.
+        segment contains AnalogSignal and Event
+        
         **Arguments**
-            filename : filename
-            TODO
+            no arguments
         """
         
         seg = Segment()
         
-        d = io.loadmat(filename,appendmat=False , struct_as_record = True , squeeze_me = False)
+        d = io.loadmat(self.filename,appendmat=False , struct_as_record = True , squeeze_me = False)
         EEG = d['EEG']
         EEG = EEG[0,0]
         
@@ -122,14 +132,11 @@ class EegLabIO(BaseIO):
         """
         self.write_segment(*args , **kargs)
 
-    def write_segment(self, segment,
-                            filename = '',
-                            ):
+    def write_segment(self, segment,):
         """
         
          **Arguments**
-            segment : the segment to write. Only analog signals will be written.
-            TODO
+            segment : the segment to write. Only analog signals and events will be written.
         """
         seg = segment
         
@@ -177,5 +184,5 @@ class EegLabIO(BaseIO):
                                 ('chanlocs' , 'O') ,
                                     ])
         
-        io.savemat(filename , { 'EEG' : EEG }  , appendmat = False)
+        io.savemat(self.filename , { 'EEG' : EEG }  , appendmat = False)
         

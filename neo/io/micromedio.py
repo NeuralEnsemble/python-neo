@@ -37,7 +37,9 @@ class MicromedIO(BaseIO):
     **Usage**
 
     **Example**
-    
+        #read a file
+        io = MicromedIO(filename = 'myfile.TRC')
+        seg = io.read() # read the entire file    
     """
     
     is_readable        = True
@@ -59,14 +61,16 @@ class MicromedIO(BaseIO):
     objects            = [  ]
     supported_types    = [ Segment ]
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a micromed TRC file.
         
         **Arguments**
+            filename : the filename to read
         
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
@@ -77,19 +81,17 @@ class MicromedIO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self, 
-                                        filename = '',
-                                        averagesamplerate = True,
-                                        ):
+    def read_segment(self, averagesamplerate = True,):
         """
         **Arguments**
-            filename : filename
-            TODO
+            averagesamplerate : don't known exactly because this code is reverse ingeneering from another code
+                        I supposed that in some case all samplerate are not exaclty the same due to rounding problem
+                        in that case average all sample rate
         """
         
         seg = Segment()
         
-        f = struct_file(filename, 'rb')
+        f = struct_file(self.filename, 'rb')
         
         #-- Name
         f.seek(64,0)

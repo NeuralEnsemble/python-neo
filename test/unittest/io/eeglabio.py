@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import eeglabio
+from neo.io import EegLabIO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -55,19 +55,15 @@ class ElanIOTest(unittest.TestCase):
             seg._events += [ event ]
             
         
-        eeglab = eeglabio.EegLabIO()
-        eeglab.write_segment(  seg,
-                            filename = 'testNeoEeglabIO.set',
-                            )
-        eeglab2 = eeglabio.EegLabIO()
-        seg2 = eeglab2.read_segment(
-                            filename = 'testNeoEeglabIO.set',
-                            )
+        io = EegLabIO(filename = 'testNeoEeglabIO.set',)
+        io.write_segment(  seg, )
+        io = EegLabIO(filename = 'testNeoEeglabIO.set',)
+        seg2 = io.read_segment()
         ana2 = seg2.get_analogsignals()[0]
         
         assert len(seg2.get_analogsignals()) == nbchannel
         
-        # .1% erreur due to i2 convertion
+        # .1% error due to i2 convertion
         assert mean((ana2.signal - ana.signal)**2)/mean(ana.signal**2) < .001
         
         for i in range(nbevent):

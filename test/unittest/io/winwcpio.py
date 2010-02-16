@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io.winwcpio import WinWcpIO
+from neo.io import WinWcpIO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -18,8 +18,8 @@ class WinWcpIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         
-        winwcp = WinWcpIO()
-        blck = winwcp.read_block(filename = 'datafiles/File_winwcp_1.wcp',)
+        io = WinWcpIO(filename = 'datafiles/File_winwcp_1.wcp',)
+        blck = io.read_block()
         
         fig = pylab.figure()
         ax = fig.add_subplot(1,1,1)
@@ -42,7 +42,7 @@ class WinWcpIOTest(unittest.TestCase):
             for ev in seg.get_events():
                 ax.axvline(ev.time, color = 'b')
                 
-        #pylab.show()
+        pylab.show()
 
 
 if __name__ == "__main__":

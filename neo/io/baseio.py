@@ -27,22 +27,25 @@ class BaseIO(object):
     from/to a database like TDT sytem tanks or SQLite files.
     This is an abstract class that will be implemented for each format
     The key methods of the class are:
-        read(object)                  - Read the whole object structure
-        write(object)                 - Write the whole object structure
-        read_spikes(params)           - Read Spike object from file with some params
-        read_analogs(type, params)    - Read AnalogSignal object from file with some params
-        read_spiketrains(params)      - Read SpikeTrain object from file with some params
-        read_spiketrainlists(params)  - Read SpikeTrainList object from file with some params
-        read_epochs(type, params)     - Read Epoch object from file with some params
-        read_events(params)           - Read Event object from file with some params
-        read_blocks(type, params)     - Read Block object from file with some params
-        write_spikes(params)          - Write Spike object to file with some params
-        write_analogs(type, params)   - Write AnalogSignal object to file with some params
-        write_spiketrains(params)     - Write SpikeTrain object to file with some params
-        write_spiketrainlists(params) - Write SpikeTrainList object to file with some params
-        write_epochs(type, params)    - Write Epoch object to file with some params
-        write_events(params)          - Write Event object to file with some params
-        write_blocks(type, params)    - Write Block object to file with some params
+        read()                  - Read the whole object structure
+        
+        read_spike(params)           - Read Spike object from file with some params
+        read_analogsignal( **params)    - Read AnalogSignal object from file with some params
+        read_spiketrain(**params)      - Read SpikeTrain object from file with some params
+        read_spiketrainlist(**params)  - Read SpikeTrainList object from file with some params
+        read_epoch(**params)     - Read Epoch object from file with some params
+        read_event(**params)           - Read Event object from file with some params
+        read_blocks(** params)     - Read Block object from file with some params
+        
+        write()                 - Write the whole object structure
+        
+        write_spikes(**params)          - Write Spike object to file with some params
+        write_analog(** params)   - Write AnalogSignal object to file with some params
+        write_spiketrain(**params)     - Write SpikeTrain object to file with some params
+        write_spiketrainlist(**params) - Write SpikeTrainList object to file with some params
+        write_epoch(** params)    - Write Epoch object to file with some params
+        write_event(**params)          - Write Event object to file with some params
+        write_block(** params)    - Write Block object to file with some params
         
     Each object is able to declare what can be accessed or written
     The object types can be one of the class defined in neo.core :
@@ -53,14 +56,12 @@ class BaseIO(object):
         AnalogSignal
         AnalogSignalList
         Neuron
-        
-    ** Guidelines **
-        Each IO implementation of BaseFile can also add attributs (fields) freely to all object.
-        Each IO implementation of BaseFile should come with tipics files exemple.
-        Each IO implementation of BaseFile should come with its documentation.
     
+    
+    ** start a new IO **
     If you want to implement your own file format, you just have to create an object that will 
     inherit from this BaseFile class and implement the previous functions.
+    See ExampleIO in exampleio.py
     """
     
     is_readable        = False
@@ -78,9 +79,8 @@ class BaseIO(object):
 
     def __init__(self , filename = None , **kargs ) :
         self.filename = filename
-        pass
-        
-     ######## General read/write methods #######################
+    
+    ######## General read/write methods #######################
     
     def read(self, **kargs ):
         """
@@ -96,54 +96,38 @@ class BaseIO(object):
 
     ######## All individual read methods #######################
     
-    def read_spikes(self, **kargs):
+    def read_spike(self, **kargs):
         """
-        Read Spikes objects from a file
-        
-        Examples:
+        Read Spike object from a file
         """
-        assert(Spike in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Spike in self.readable_objects), "This type is not supported by this file format"
     
-    def read_analogs(self, **kargs):
+    def read_analogsignal(self, **kargs):
         """
-        Read AnalogSignal objects from a file
+        Read AnalogSignal object from a file
+        """
+        assert(AnalogSignal in self.readable_objects), "This type is not supported by this file format"
+    
+    def read_spiketrain(self, **kargs):
+        """
+        Read SpikeTrain object from a file
+        """
+        assert(SpikeTrain in self.readable_objects), "This type is not supported by this file format"
+    
+    def read_event(self, **kargs):
+        """
+        Read Events object from a file
+        """
+        assert(Event in self.readable_objects), "This type is not supported by this file format"
+    
+    def read_block(self, **kargs):
+        """
+        Read Events object from a file
         
         Examples:
 
         """
-        assert(AnalogSignal in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-    
-    def read_spiketrains(self, **kargs):
-        """
-        Read SpikeTrains objects from a file
-        
-        Examples:
-
-        """
-        assert(SpikeTrain in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-    
-    def read_events(self, **kargs):
-        """
-        Read Events objects from a file
-        
-        Examples:
-
-        """
-        assert(Event in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-    
-    def read_blocks(self, **kargs):
-        """
-        Read Events objects from a file
-        
-        Examples:
-
-        """
-        assert(Block in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Block in self.readable_objects), "This type is not supported by this file format"
 
     def read_segment(self, **kargs):
         """
@@ -152,124 +136,72 @@ class BaseIO(object):
         Examples:
 
         """
-        assert(Segment in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Segment in self.readable_objects), "This type is not supported by this file format"
 
-    def read_epochs(self, **kargs):
+    def read_epoch(self, **kargs):
         """
-        Read Epochs objects from a file
+        Read Epochs object from a file
         
         Examples:
 
         """
-        assert(Epoch in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-     
-    def read_spiketrainlists(self, **kargs):
-        """
-        Read SpikeTrainList objects from a file
-        
-        Examples:
-
-        """
-        assert(SpikeTrainList in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-
-    def read_header(self):
-        """
-        Read metadata/header from a file
-        
-        Examples:
-
-        """
-        return _abstract_method(self)
-
-######## All individual write methods #######################
-
-    def write_spikes(self, **kargs):
-        """
-        Write Spikes objects from a file
-        
-        Examples:
-        """
-        assert(Spike in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Epoch in self.readable_objects), "This type is not supported by this file format"
     
-    def write_analogs(self, **kargs):
+    def read_spiketrainlist(self, **kargs):
+        """
+        Read SpikeTrainList object from a file
+        """
+        assert(SpikeTrainList in self.readable_objects), "This type is not supported by this file format"
+
+
+    ######## All individual write methods #######################
+
+    def write_spike(self, **kargs):
+        """
+        Write Spike object from a file
+        """
+        assert(Spike in self.writeable_objects), "This type is not supported by this file format"
+    
+    def write_analogsignal(self, **kargs):
         """
         Write AnalogSignal objects from a file
-        
-        Examples:
-
         """
-        assert(AnalogSignal in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(AnalogSignal in self.writeable_objects), "This type is not supported by this file format"
+
+
+    def write_spiketrain(self, **kargs):
+        """
+        Write SpikeTrain objects from a file
+        """
+        assert(SpikeTrain in self.writeable_objects), "This type is not supported by this file format"
     
-    def write_spiketrains(self, **kargs):
+    def write_event(self, **kargs):
         """
-        Write SpikeTrains objects from a file
-        
-        Examples:
-
+        Write Event objects from a file
         """
-        assert(SpikeTrain in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Event in self.writeable_objects), "This type is not supported by this file format"
     
-    def write_events(self, **kargs):
+    def write_block(self, **kargs):
         """
-        Write Events objects from a file
-        
-        Examples:
-
+        Write Block objects from a file
         """
-        assert(Event in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-    
-    def write_blocks(self, **kargs):
-        """
-        Write Events objects from a file
-        
-        Examples:
-
-        """
-        assert(Block in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Block in self.writeable_objects), "This type is not supported by this file format"
         
     def write_segment(self, **kargs):
         """
-        Write Sequence object from a file
-        
-        Examples:
-
+        Write Segment object from a file
         """
-        assert(Segment in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Segment in self.writeable_objects), "This type is not supported by this file format"
     
-    def write_epochs(self, **kargs):
+    def write_epoch(self, **kargs):
         """
-        Write Epochs objects from a file
-        
-        Examples:
-
+        Write Epoch object from a file
         """
-        assert(Epoch in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
+        assert(Epoch in self.writeable_objects), "This type is not supported by this file format"
      
-    def write_spiketrainlists(self, **kargs):
+    def write_spiketrainlist(self, **kargs):
         """
         Write SpikeTrainList objects from a file
+        """
+        assert(SpikeTrainList in self.writeable_objects), "This type is not supported by this file format"
         
-        Examples:
-
-        """
-        assert(SpikeTrainList in self.supported_types), "This type is not supported by this file format"
-        return _abstract_method(self)
-
-    def write_header(self):
-        """
-        Write metadata/header from a file
-        
-        Examples:
-
-        """
-        return _abstract_method(self)

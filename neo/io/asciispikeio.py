@@ -34,12 +34,21 @@ from numpy import *
 class AsciiSpikeIO(BaseIO):
     """
     Classe for reading/writing SpikeTrain in a text file.
-
-    Cover many case when part of a file can be view as a CVS format.
     
-    **Usage**
 
     **Example**
+    
+    #read a file
+    io = AsciiSpikeIO(filename = 'myfile.txt')
+    seg = io.read() # read the entire file
+    seg.get_spiketrains() # return all spiketrain
+    
+    # write a file
+    io = AsciiSpikeIO(filename = 'myfile.txt')
+    seg = Segment()
+    io.write(seg)
+
+    
     
     """
     
@@ -70,16 +79,18 @@ class AsciiSpikeIO(BaseIO):
     
 
 
-    
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read/write SpikeTrains in a text file.
+        Each row is a spiketrain.
         
         **Arguments**
         
-        """
+        filename : the filename to read/write
         
+        """
         BaseIO.__init__(self)
-
+        self.filename = filename
 
     def read(self , **kargs):
         """
@@ -90,19 +101,17 @@ class AsciiSpikeIO(BaseIO):
         return self.read_segment( **kargs)
     
     def read_segment(self, 
-                            filename = '',
                             delimiter = '\t',
                             t_start = 0.,
                             ):
         """
         **Arguments**
-            filename : filename
-            TODO
-            
+            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
+            t_start : time start of all spiketrain 0 by default
         """
         seg = Segment()
         
-        f = open(filename, 'Ur')
+        f = open(self.filename, 'Ur')
         for line in f :
             all = line[:-1].split(delimiter)
             
@@ -122,28 +131,27 @@ class AsciiSpikeIO(BaseIO):
 
     def write(self , *args , **kargs):
         """
-        Write segment in a raw file.
+        Write SpikeTrain of a Segment in a txt file.
         See write_segment for detail.
         """
         self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
-                                filename = '',
                                 delimiter = '\t',
-                                
-                                skiprows =0,
-                                
-                                timecolumn = None,
-                                
                                 ):
         """
+        Write SpikeTrain of a Segment in a txt file.
+        Each row is a spiketrain.
         
          **Arguments**
             segment : the segment to write. Only analog signals will be written.
-            TODO
+            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'            
+            
+            information of t_start is lost
+            
         """
         
-        f = open(filename, 'w')
+        f = open(self.filename, 'w')
         
         for s,spiketr in enumerate(segment.get_spiketrains()) :
             for ts in spiketr.spike_times :

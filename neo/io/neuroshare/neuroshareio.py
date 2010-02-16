@@ -51,28 +51,23 @@ from numpy import *
 
 class NeuroshareIO(BaseIO):
     """
-    Classe for reading with neuroshare API.
-    
-    **Usage**
-
-    **Example**
-    
+    Base Classe for reading with neuroshare API.
     """
     
     is_readable        = True
     is_writable        = False
-    is_object_readable = False
-    is_object_writable = False
+
+    supported_objects            = [Segment , AnalogSignal, Event, SpikeTrain ]
+    readable_objects    = [Segment]
+    writeable_objects    = []  
+    
     has_header         = False
     is_streameable     = False
+    
     read_params        = { Segment : [] }
     write_params       = { Segment : [] }
-    level              = None
-    nfiles             = 0
-    name               = None
-    extensions          = [  ]
-    objects            = []
-    supported_types    = [ Segment ]
+    
+    name               = 'neurohare'
     
     def __init__(self , dllname = '') :
         """
@@ -92,11 +87,11 @@ class NeuroshareIO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self,filename = '',):
+    def read_segment(self):
         """
         **Arguments**
-            filename : filename
-            TODO
+            
+        
         """
         seg = Segment()
         
@@ -112,7 +107,7 @@ class NeuroshareIO(BaseIO):
         
         # open file
         hFile = c_uint32(0)
-        neuroshare.ns_OpenFile(c_char_p(filename) ,byref(hFile))
+        neuroshare.ns_OpenFile(c_char_p(self.filename) ,byref(hFile))
         fileinfo = ns_FILEINFO()
         neuroshare.ns_GetFileInfo(hFile, byref(fileinfo) , ctypes.sizeof(fileinfo))
         print fileinfo.dwEntityCount
@@ -257,12 +252,21 @@ class NeuroshareIO(BaseIO):
 
 class NeuroshareSpike2IO(NeuroshareIO):
     """
-    Classe for reading CED with neuroshare API.
+    Class for reading CED with neuroshare API.
     """
     name               = 'Spike 2 CED neuroshare'
     extensions          = [ 'smr' ]
-    def __init__(self ) :
+    def __init__(self , filename = None) :
+        """
+        Class for reading CED with neuroshare API.
+        
+        **Arguments**
+            filename : the filename to read
+        """        
         NeuroshareIO.__init__(self, dllname = 'NSCEDSON')
+        self.filename = filename
+
+        
 
 
 class NeurosharePlexonIO(NeuroshareIO):
@@ -271,8 +275,15 @@ class NeurosharePlexonIO(NeuroshareIO):
     """
     name               = 'Plexon neuroshare'
     extensions          = [ 'nex' ]
-    def __init__(self ) :
+    def __init__(self , filename = None) :
+        """
+         Classe for reading plexon with neuroshare API.
+        
+        **Arguments**
+            filename : the filename to read
+        """        
         NeuroshareIO.__init__(self, dllname = 'nsPlxLibrary')
+        self.filename = filename
 
 
 class NeuroshareAlphaOmegaIO(NeuroshareIO):
@@ -281,8 +292,15 @@ class NeuroshareAlphaOmegaIO(NeuroshareIO):
     """
     name               = 'AlphaOmega neuroshare'
     extensions          = [ 'map' ]
-    def __init__(self ) :
+    def __init__(self , filename = None) :
+        """
+        Classe for reading alpha omega with neuroshare API.
+        **Arguments**
+            filename : the filename to read
+        """      
         NeuroshareIO.__init__(self, dllname = 'nsAOLibrary')
+        self.filename = filename
+
 
 class NeuroshareTdtIO(NeuroshareIO):
     """
@@ -290,8 +308,14 @@ class NeuroshareTdtIO(NeuroshareIO):
     """
     name               = 'TDT neuroshare'
     extensions          = [ 'tank' ]
-    def __init__(self ) :
+    def __init__(self , filename = None) :
+        """
+        Classe for reading  tdt with neuroshare API.
+        **Arguments**
+            filename : the filename to read
+        """      
         NeuroshareIO.__init__(self, dllname = 'nsTDTLib')
+        self.filename = filename
 
 
 

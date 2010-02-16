@@ -39,9 +39,17 @@ class AsciiSignalIO(BaseIO):
     Class for reading/writing data in a text file.
     Cover many case when part of a file can be view as a CVS format.
     
-    **Usage**
-
     **Example**
+    
+    #read a file
+    io = AsciiSignalIO(filename = 'myfile.txt')
+    seg = io.read() # read the entire file
+    seg.get_analogsignals() # return all AnalogSignal
+    
+    # write a file
+    io = AsciiSignalIO(filename = 'myfile.txt')
+    seg = Segment()
+    io.write(seg)
     
     """
     
@@ -79,17 +87,19 @@ class AsciiSignalIO(BaseIO):
 
 
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read/write AnalogSignal in a text file.
+        Each signal is a column.
+        One of the column can be the time vector
         
         **Arguments**
         
-        filename is optional if the file exist read() is call at __init__
-        
+        filename : the filename to read/write
         
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
@@ -101,7 +111,7 @@ class AsciiSignalIO(BaseIO):
         return self.read_segment( **kargs)
     
     def read_segment(self, 
-                                        filename = '',
+                                        
                                         delimiter = '\t',
                                         usecols = None,
                                         skiprows =0,
@@ -115,13 +125,24 @@ class AsciiSignalIO(BaseIO):
                                         ):
         """
         **Arguments**
-            filename : filename
-            TODO
+            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
+            usecols : if None take all columns otherwise a list for selected columns
+            skiprows : skip n first lines in case they contains header informations
+            timecolumn :  None or a valid int that point the time vector
+            samplerate : the samplerate of signals if timecolumn is not None this is not take in account
+            t_start : time of the first sample
+            
+            method :  'genfromtxt' or 'csv' or 'homemade'
+                        in case of bugs you can try one of this methods
+                        
+                        'genfromtxt' use numpy.genfromtxt
+                        'csv' use cvs module
+                        'homemade' use a intuitive more robust but slow method
             
         """
         #loadtxt
         if method == 'genfromtxt' :
-            sig = genfromtxt(filename, 
+            sig = genfromtxt(self.filename, 
                              delimiter = delimiter,
                             usecols = usecols ,
                             skiprows = skiprows,
@@ -129,11 +150,11 @@ class AsciiSignalIO(BaseIO):
             if len(sig.shape) ==1:
                 sig = sig[:,newaxis]
         elif method == 'csv' :
-            tab = [l for l in  csv.reader( open(filename,'rU') , delimiter = delimiter ) ]
+            tab = [l for l in  csv.reader( open(self.filename,'rU') , delimiter = delimiter ) ]
             tab = tab[skiprows:]
             sig = array( tab , dtype = 'f4')
         elif method == 'homemade' :
-            fid = open(filename,'rU')
+            fid = open(self.filename,'rU')
             for l in range(skiprows):
                 fid.readline()
             tab = [ ]
@@ -176,7 +197,6 @@ class AsciiSignalIO(BaseIO):
         self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
-                                filename = '',
                                 delimiter = '\t',
                                 
                                 skiprows =0,
@@ -185,10 +205,12 @@ class AsciiSignalIO(BaseIO):
                                 
                                 ):
         """
+        Write a segment and AnalogSignal in a text file.
         
          **Arguments**
-            segment : the segment to write. Only analog signals will be written.
-            TODO
+            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
+            skiprows : skip n first lines in case they contains header informations
+            timecolumn :  None or a valid int that point the time vector
         """
         
         
@@ -206,5 +228,5 @@ class AsciiSignalIO(BaseIO):
             sigs[:,timecolumn+1:] = sigs[:,timecolumn:-1].copy()
             sigs[:,timecolumn] = t
         
-        savetxt(filename , sigs , delimiter = delimiter)
+        savetxt(self.filename , sigs , delimiter = delimiter)
 

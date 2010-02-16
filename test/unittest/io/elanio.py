@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import elanio
+from neo.io import ElanIO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -14,20 +14,20 @@ from scipy import rand
 
 class ElanIOTest(unittest.TestCase):
     
-#    def testOpenFile1(self):
-#        elan = elanio.ElanIO()
-#        seg = elan.read_segment( filename = 'datafiles/File_elan_1.eeg',)
-#        assert len(seg.get_analogsignals()) ==6
-#        for sig in seg.get_analogsignals():
-#            assert sig.signal.shape[0] == 1082785
-##            pylab.plot(sig.t(),sig.signal)
-#        
-#        assert len (seg.get_events() )==47 
-##        for ev in seg.get_events():
-##            print ev.time
-##            pylab.axvline(ev.time)
-#        
-#        #pylab.show()
+    def testOpenFile1(self):
+        io = ElanIO(filename = 'datafiles/File_elan_1.eeg',)
+        seg = io.read_segment( )
+        assert len(seg.get_analogsignals()) ==4
+        for sig in seg.get_analogsignals():
+            assert sig.signal.shape[0] == 1082785
+#            pylab.plot(sig.t(),sig.signal)
+        
+        assert len (seg.get_events() )==47 
+#        for ev in seg.get_events():
+#            print ev.time
+#            pylab.axvline(ev.time)
+        
+        #pylab.show()
     
     def testWriteReadSinusAndEvent(self):
         
@@ -45,15 +45,10 @@ class ElanIOTest(unittest.TestCase):
             seg._events += [ Event(time = rand()*totaltime) ]
             
         
-        
-        elan = elanio.ElanIO()
-        elan.write_segment(  seg,
-                            filename = 'testNeoElanIO.eeg',
-                            )
-        elan2 = elanio.ElanIO()
-        seg2 = elan2.read_segment(
-                            filename = 'testNeoElanIO.eeg',
-                            )
+        io = ElanIO(filename = 'testNeoElanIO.eeg',)
+        io.write_segment(  seg,)
+        io = ElanIO(filename = 'testNeoElanIO.eeg',)
+        seg2 = io.read_segment()
         ana2 = seg2.get_analogsignals()[0]
 
         assert len(seg2.get_analogsignals()) == 2

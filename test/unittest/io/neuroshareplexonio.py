@@ -12,11 +12,11 @@ from numpy import *
 from scipy import rand
 import pylab
 
-class NeuroshareSpike2IOTest(unittest.TestCase):
+class NeurosharePlexonIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        plexon = NeurosharePlexonIO()
-        seg = plexon.read_segment( filename = 'datafiles/test.nex',)
+        io = NeurosharePlexonIO(filename = 'datafiles/test.nex',)
+        seg = io.read_segment( )
         
         #seg = plexon.read_segment( filename = 'datafiles/TestDataFile1.nex',)
         #seg = plexon.read_segment( filename = 'datafiles/TestDataFileForNeuroshare.nex',)

@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import asciispikeio
+from neo.io import AsciiSpikeIO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -16,11 +16,11 @@ class AsciiSpikeIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
         
-        asciispike = asciispikeio.AsciiSpikeIO()
-        seg = asciispike.read_segment( filename = 'datafiles/File_ascii_spiketrain_1.txt',
+        io =AsciiSpikeIO(filename = 'datafiles/File_ascii_spiketrain_1.txt',)
+        seg = io.read_segment( 
                                         delimiter = '\t',
                                         t_start = 0.,
-                                    )
+                                            )
         
         fig = pylab.figure()
         ax = fig.add_subplot(1,1,1)
@@ -43,17 +43,13 @@ class AsciiSpikeIOTest(unittest.TestCase):
         seg._spiketrains = [ spiketr1 , spiketr2 ]
         
         
-        asciispike = asciispikeio.AsciiSpikeIO()
-        asciispike.write_segment( seg,
-                                filename = 'testNeoAsciiSpikelIO.txt',
+        io =AsciiSpikeIO(filename = 'testNeoAsciiSpikelIO.txt',)        
+        io.write_segment( seg,
                                 delimiter = '\t',)
         
-        asciispike2 = asciispikeio.AsciiSpikeIO()
-        seg2 = asciispike2.read_segment(
-                                    filename = 'testNeoAsciiSpikelIO.txt',
-                                    delimiter = '\t',)
+        io =AsciiSpikeIO(filename = 'testNeoAsciiSpikelIO.txt',)        
+        seg2 = io.read_segment( delimiter = '\t',)
 
-        
         assert len(seg2.get_spiketrains() ) == 2
         
         assert all( abs(seg2.get_spiketrains()[0].spike_times - spiketr1.spike_times) < 0.000001 )

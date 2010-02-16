@@ -32,10 +32,10 @@ class WinWcpIO(BaseIO):
     """
     Class for reading/writing from a WinWCP file.
     
-    **Usage**
-
     **Example**
-    
+        #read a file
+        io = WinWcpIO(filename = 'myfile.wcp')
+        blck = io.read() # read the entire file    
     """
     
     is_readable        = True
@@ -58,14 +58,16 @@ class WinWcpIO(BaseIO):
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a WinWCP wcp file.
         
         **Arguments**
+            filename : the filename to read
         
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
@@ -78,17 +80,17 @@ class WinWcpIO(BaseIO):
     
     
     
-    def read_block(self , filename = '',):
+    def read_block(self ):
         """
         Return a Block.
         
         **Arguments**
-        filename : The filename does not matter.
+            no arguments
         
         
         """
         blck = Block()
-        fid = open(filename , 'rb')
+        fid = open(self.filename , 'rb')
         
         headertext = fid.read(1024)
         header = {}
@@ -119,7 +121,7 @@ class WinWcpIO(BaseIO):
             NP = (SECTORSIZE*header['NBD'])/2
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
-            data = memmap(filename , dtype('i2')  , 'r', 
+            data = memmap(self.filename , dtype('i2')  , 'r', 
                           #shape = (header['NC'], header['NP']) ,
                           shape = (NP,header['NC'], ) ,
                           offset = offset+header['NBA']*SECTORSIZE)

@@ -59,11 +59,16 @@ class struct_file(file):
 class AxonIO(BaseIO):
     """
     Classe for reading/writing data from axon binary file(.abf)
+    Read ABF1 (clampfit <=9) and ABF2 (clampfit >10)
     
-    **Usage**
-
     **Example**
+
+    #read a file
+    io = AxonIO(filename = 'myfile.abf')
+    blck = io.read() # read the entire file
     
+    blck contains one or several Segments
+    Segments contains AnaloSignals and/or Events
     """
     
     is_readable        = True
@@ -83,15 +88,17 @@ class AxonIO(BaseIO):
     extensions          = [ 'abf' ]
 
 
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a abf file.
         
         **Arguments**
         
-        """
+            filename : the filename to read
         
+        """
         BaseIO.__init__(self)
-
+        self.filename = filename
 
     def read(self , *args, **kargs):
         """
@@ -99,16 +106,19 @@ class AxonIO(BaseIO):
         Return a neo.Block by default
         See read_block for detail.
         
-        You can also call read_segment if you assume that your file contain only
-        one Segment.
         """
         return self.read_block( *args , **kargs)
     
-    def read_block(self, filename = '', ):
+    def read_block(self, ):
         """
+        Read a abf file.
+        All possible mode are possible :
+            - event-driven variable-length mode (mode 1) -> return several Segment in the Block
+            - event-driven fixed-length mode (mode 2 or 5) -> return several Segment in the Block
+            - gap free mode -> return one Segment in the Block
+        
         **Arguments**
-            filename : filename
-            TODO
+            no argument
         """
         
         def reformat_integer_V1(data, nbchannel , header):
@@ -150,7 +160,7 @@ class AxonIO(BaseIO):
             
         
         
-        header = self.read_header(filename = filename)
+        header = self.read_header()
         version = header['fFileVersionNumber']
         
         #print 'version' , version
@@ -191,7 +201,7 @@ class AxonIO(BaseIO):
             headOffset = header['sections']['DataSection']['uBlockIndex']*BLOCKSIZE
             totalsize = header['sections']['DataSection']['llNumEntries']
         
-        data = memmap(filename , dt  , 'r', 
+        data = memmap(self.filename , dt  , 'r', 
                           shape = (totalsize,) , offset = headOffset)
         
         # 3 possible modes
@@ -212,7 +222,7 @@ class AxonIO(BaseIO):
             elif version >=2. :
                 nbsweep2 = header['section']['SynchArraySection']['llNumEntries']
                 offsetSweep = header['section']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
-            sweepArray = memmap(filename , 'i4'  , 'r',
+            sweepArray = memmap(self.filename , 'i4'  , 'r',
                                         shape = (nbsweep2, 2),
                                         offset = offsetSweep )            
             
@@ -311,7 +321,7 @@ class AxonIO(BaseIO):
         return block
 
 
-    def read_header(self, filename = None):
+    def read_header(self, ):
         """
         read the header of the file
         
@@ -325,7 +335,7 @@ class AxonIO(BaseIO):
             tags
         that contain more information.
         """
-        fid = struct_file(filename,'rb')
+        fid = struct_file(self.filename,'rb')
         
         # version
         fFileSignature =  fid.read(4)

@@ -11,7 +11,7 @@ Elphy is a software for acquisition/computing neural data written at Unic in Ors
 Classes
 -------
 
-ElphyIO          - Classe for reading/writing data for Elphy file.
+ElphyDatIO          - Classe for reading/writing data for Elphy file.
 
 @author : sgarcia
 
@@ -35,13 +35,14 @@ class struct_file(file):
         self.write( struct.pack( format , *args ) )
 
 
-class ElphyIO(BaseIO):
+class ElphyDatIO(BaseIO):
     """
-    Classe for reading/writing data from elphy (.DAT)
+    Classe for reading/writing data from elphy old format (.DAT)
     
-    **Usage**
-
     **Example**
+        #read a file
+        io = ElphyDatIO(filename = 'myfile.DAT')
+        blck = io.read() # read the entire file
     
     """
     
@@ -65,14 +66,16 @@ class ElphyIO(BaseIO):
     extensions          = [ 'DAT' ]
     
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read a elphy DAT file.
         
         **Arguments**
+            filename : the filename to read
         
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , *args, **kargs):
@@ -81,20 +84,18 @@ class ElphyIO(BaseIO):
         Return a neo.Block by default
         See read_block for detail.
         
-        You can also call read_segment if you assume that your file contain only
-        one Segment.
+
         """
         return self.read_block( *args , **kargs)
     
-    def read_block(self, filename = '', ):
+    def read_block(self,  ):
         """
         **Arguments**
-            filename : filename
-            TODO
+            no arguments
         """
         
         block = Block()
-        fid = struct_file(filename,'rb')
+        fid = struct_file(self.filename,'rb')
         
         #'16p' is pascal string first byte for length of string read struct.doc
         filetype,  = fid.read_f('16p')

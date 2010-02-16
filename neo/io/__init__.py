@@ -7,16 +7,21 @@ neo.io
 A collection of classes for reading/writing as many as possible formats for
 electrophysiological dataset.
 
+neo.io.all_format contain a list of all IO classes.
+
+
+
 Classes
 -------
 
-BaseFile        - abstract class which should be overriden, managing how a file will load/write
-                  its data
 """
 
-from baseio import *
-
+#from baseio import *
+import sys
 all_format = [ ]
+
+
+# all IO import are inside try .. except to prevent module bugs because of one IO.
 
 
 try:
@@ -52,10 +57,10 @@ except ImportError:
     print "Error while loading MicromedIO module"
 
 try:
-    from elphyio import ElphyIO
-    all_format += [ [ 'elphy DAT' , { 'class' : ElphyIO  , 'info' :  'DAT elphy file' } ] ]
+    from elphydatio import ElphyDatIO
+    all_format += [ [ 'elphy DAT' , { 'class' : ElphyDatIO  , 'info' :  'DAT elphy file' } ] ]
 except ImportError:
-    print "Error while loading ElphyIO module"
+    print "Error while loading ElphyDatIO module"
 
 try:
     from elanio import ElanIO
@@ -81,38 +86,43 @@ try :
     all_format += [ [ 'Spike2 smr' , { 'class' : Spike2IO  , 'info' :  'CED spike2 file (smr)' } ] ]
 except ImportError:
     print "Error while loading Spike2IO module"
-    
+
+
+try :
+    from winwcpio import WinWcpIO
+    all_format += [ [ 'Spike2 smr' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]
+except ImportError:
+    print "Error while loading WinWcpIO module"
 
 
 
-
-
+# Specific platform IO : neuroshare DLLs
 
 if sys.platform =='win32':
-    #try :
+    try :
         from neuroshare.neuroshareio import NeuroshareSpike2IO
         all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareSpike2IO  , 'info' :  'CED spike2 file (smr) neuroshare' } ] ]
-    #except ImportError:
-        #print "Error while loading NeuroshareSpike2IO module"
+    except ImportError:
+        print "Error while loading NeuroshareSpike2IO module"
     
 
-    #try :
+    try :
         from neuroshare.neuroshareio import NeurosharePlexonIO
         all_format += [ [ 'Spike2 smr' , { 'class' : NeurosharePlexonIO  , 'info' :  'plexon file (nex) neuroshare' } ] ]
-    #except ImportError:
-        #print "Error while loading NeurosharePlexonIO module"
+    except ImportError:
+        print "Error while loading NeurosharePlexonIO module"
 
-    #try :
+    try :
         from neuroshare.neuroshareio import NeuroshareAlphaOmegaIO
         all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareAlphaOmegaIO  , 'info' :  'AlphaOmega file (map) neuroshare' } ] ]
-    #except ImportError:
-        #print "Error while loading NeuroshareAlphaOmegaIO module"
+    except ImportError:
+        print "Error while loading NeuroshareAlphaOmegaIO module"
 
-    #try :
+    try :
         from neuroshare.neuroshareio import NeuroshareTdtIO
         all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareTdtIO  , 'info' :  'TDT tank  neuroshare' } ] ]
-    #except ImportError:
-        #print "Error while loading NeuroshareTdtIO module"
+    except ImportError:
+        print "Error while loading NeuroshareTdtIO module"
 
 
 

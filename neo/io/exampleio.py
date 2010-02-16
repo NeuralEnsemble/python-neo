@@ -7,9 +7,24 @@ Classe for fake reading/writing data in a no file.
 It is just a example for guidelines for developers who want to develop a new IO.
 
 
-If you start a new IO class copy/paste and modify.
+If you start a new IO class :
+1 - copy/paste and modify this class.
+2 - Think what objects my IO support
+3 - Think what objects my IO can read or write.
+4 - Implement all read_XXX and write_XXX methods
 
 If you have a problem just mail me or ask the list.
+
+
+
+    ** Guidelines **
+        Each IO implementation of BaseFile can also add attributs (fields) freely to all object.
+        Each IO implementation of BaseFile should come with tipics files exemple in neo/test/unitest/io/datafiles.
+        Each IO implementation of BaseFile should come with its documentation.
+        Each IO implementation of BaseFile should come with its unitest neo/test/unitest/io.
+    
+
+
 
 
 Classes

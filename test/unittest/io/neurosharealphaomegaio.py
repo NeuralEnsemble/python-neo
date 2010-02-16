@@ -12,12 +12,11 @@ from numpy import *
 from scipy import rand
 import pylab
 
-class NeuroshareSpike2IOTest(unittest.TestCase):
+class NeuroshareAlphaOmegaIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        alphaomega = NeuroshareAlphaOmegaIO()
-        seg = alphaomega.read_segment( filename = 'datafiles/File_AlphaOmega_1.map',)
-        #seg = alphaomega.read_segment( filename = 'datafiles/File_AlphaOmega_2.map',)
+        io = NeuroshareAlphaOmegaIO(filename = 'datafiles/File_AlphaOmega_1.map')
+        seg = alphaomega.read_segment( )
 
 
         fig = pylab.figure()
