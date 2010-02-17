@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-elanio
-==================
 
 Classe for reading/writing data from Elan.
-Elan is software for studying time frequency map of EEG data
+
+Elan is software for studying time frequency map of EEG data.
+
 Elan is develloped in France,lyon, inserm U821
 
+Elan file is separated in 3 files :
+ - .eeg          raw data file
+ - .eeg.ent      hearder file
+ - .eeg.pos      event file
 
-Classes
--------
-
-ElanIO          - Classe for reading/writing data in elan file.
-                    Elan file is separated in 3 files :
-                        .eeg          raw data file
-                        .eeg.ent      hearder file
-                        .eeg.pos      event file
+Supported : Read/Write
 
 @author : sgarcia
 

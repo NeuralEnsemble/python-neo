@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-winwcpio
-==================
 
 Classe for fake reading/writing data from WinWCP a software written written by
 John Dempster.
@@ -10,12 +8,7 @@ WinWCP is free:
 http://spider.science.strath.ac.uk/sipbs/software.htm
 
 
-
-Classes
--------
-
-WinWcpIO          - Classe for fake reading/writing data in a no file.
-
+Supported : Read
 
 @author : sgarcia
 

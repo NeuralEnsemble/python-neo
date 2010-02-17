@@ -25,9 +25,13 @@ class Spike(object):
         
         self.time = None
         self.waveform = None
+        self.freq = None
         
         if karg.has_key('time'):
             self.time = karg['time']
         
         if karg.has_key('waveform'):
             self.waveform = karg['waveform']
+
+        if karg.has_key('freq'):
+            self.freq = karg['freq']

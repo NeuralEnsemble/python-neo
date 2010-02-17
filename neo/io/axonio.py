@@ -1,32 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-axonio
-==================
 
 Classe for reading data from pCLAMP and AxoScope 
 files (.abf version 1 and 2), develloped by Molecular device/Axon technologies.
 
-abf = Axon binary file
+- abf = Axon binary file
+- atf is a text file based from axon that could be read by AsciiIO (but this file is less efficient.)
 
-atf is a text file based from axon that could be read by AsciiIO.
-but this file is less efficient.
 
 This code is a port abfload and abf2load
-written in Matlab (BSD licence) by
-Copyright (c) 2009, Forrest Collman 
-                    fcollman@princeton.edu
-Copyright (c) 2004, Harald Hentschke
-and disponible here :
-http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
+written in Matlab (BSD licence) by :
+ - Copyright (c) 2009, Forrest Collman ,fcollman@princeton.edu
+ - Copyright (c) 2004, Harald Hentschke
+and disponible here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
 
-information on abf 1 and 2 format are disponible here:
-http://www.moleculardevices.com/pages/software/developer_info.html
+information on abf 1 and 2 format are disponible here : http://www.moleculardevices.com/pages/software/developer_info.html
 
+This file support old (ABF1) and new (ABF2) format.
 
-Classes
--------
+Supported : Read
 
-AxonIO          - Classe for reading/writing data in abf axon files.
 
 @author : sgarcia
 

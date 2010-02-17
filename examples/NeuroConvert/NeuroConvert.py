@@ -235,7 +235,7 @@ class ThreadConvertion(QThread):
                         self.emit(SIGNAL('one more'))
             
             except :
-                convert['state'] = 'write error : check input options'
+                convert['state'] = 'write error : check output options'
                 self.emit(SIGNAL('one more'))
                 continue
             

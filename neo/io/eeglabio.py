@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-elanio
-==================
 
 Classe for reading/writing data from EEGLAB.
 EEGLAB is a software written in Matlab for analysing EEG datasets.
+The format is based on Matlab files.
 
-Classes
--------
-
-EegLabIO          - Classe for reading/writing data in eeglab (matlab) file.
+Supported : Read/Write
 
 @author : sgarcia
 

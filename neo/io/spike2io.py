@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-exampleio
-==================
-
 Classe for fake reading/writing data in CED spike2 files (.smr).
 
 This code is based on:
-sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
-http://www.neuro.ki.se/broberger/
+ - sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
+    Disponible here ::
+    http://www.neuro.ki.se/broberger/
 
 and sonpy come from :
-SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
-King's College London. See http://www.kcl.ac.uk/depsta/biomedical/
-cfnr/lidierth.html
+ - SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
+    King's College London. See http://www.kcl.ac.uk/depsta/biomedical/cfnr/lidierth.html
+
+This IO support old (<v6) and new files (>)v7) of spike2
 
 
+Supported : Read
 
-Classes
--------
 
-Spike2IOIO          - Classe for  reading spike CED (.smr)
 
 @author : sgarcia
 

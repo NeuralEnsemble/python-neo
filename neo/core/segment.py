@@ -59,5 +59,5 @@ class Segment(object):
         """
         Return a list of :class:`Epoch`.
         """
-        self._epochs
+        return self._epochs
 

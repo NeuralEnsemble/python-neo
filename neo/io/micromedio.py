@@ -1,17 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-micromedio
-==================
 
 Classe for reading/writing data from micromed (.trc).
 
 Inspired from the Matlab code for EEGLAB from Rami K. Niazy.
 
-
-Classes
--------
-
-MicromedIO          - Classe for reading/writing data in trc micromed file.
+Supported : Read
 
 @author : sgarcia
 

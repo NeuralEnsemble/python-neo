@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
+"""
+
+Classe for reading/writing SpikeTrain in a text file.
+It is the simple case where different spiketrain are written line by line.
+
+Supported : Read/Write
+
+
+
+@author : sgarcia
+
+"""
+
 
 from baseio import BaseIO
 from neo.core import *
 import numpy
 from numpy import *
 
-"""
-asciisignalio
-==================
-
-Classe for reading/writing SpikeTrain in a text file.
-It is the simple case where different spiketrain are written line by line.
-
-
-Classes
--------
-
-AsciiSignalIO          - Classe for reading/writing spiketrain in a text file.
-
-@author : sgarcia
-
-"""
 
 
 

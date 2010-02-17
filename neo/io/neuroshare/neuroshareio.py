@@ -17,16 +17,6 @@ readers, you should prefer them.
 
 
 
-Classes
--------
-
-NeuroshareIO : generic class for wrapping neuroshare dll
-
-NeuroshareSpike2IO : class for reading spike2 CED files 
-NeurosharePlexonIO : class for reading plexon nex files 
-NeuroshareAlphaOmegaIO : class for reading alpha omega map files 
-NeuroshareTdtIO : class for reading tdt tank
-
 @author : sgarcia
 
 """

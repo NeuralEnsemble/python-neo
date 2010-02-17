@@ -92,6 +92,12 @@ except ImportError:
     print "Error while loading WinWcpIO module"
 
 try :
+    from nexio import NexIO
+    all_format += [ [ 'NexIO' , { 'class' : NexIO  , 'info' :  'NeuroExplorer file (nex)' } ] ]
+except ImportError:
+    print "Error while loading NexIO module"
+    
+try :
     from pynnio import PyNNIO
     all_format += [ [ 'PyNN Text' , { 'class' : PyNNIO  , 'info' :  'PyNN Text file (pynn)' } ] ]
 except ImportError:
@@ -102,7 +108,6 @@ try :
     all_format += [ [ 'PyNN Numpy Binary' , { 'class' : PyNNBinaryIO  , 'info' :  'PyNN Numpy Binary file (pynn)' } ] ]
 except ImportError:
     print "Error while loading PyNNBinaryIO module"
-
 
 
 # Specific platform IO : neuroshare DLLs

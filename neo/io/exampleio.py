@@ -1,11 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-exampleio
-==================
 
-Classe for fake reading/writing data in a no file.
-It is just a example for guidelines for developers who want to develop a new IO.
+Classe for fake reading data in a no file.
 
+For the user, it generate a `Segment` or a `Block` with `AnalogSignal` sinusoidale + `SpikeTrain` + `Event`
+
+For a developper, it is just a example for guidelines who want to develop a new IO.
+
+Supported : Read
+
+@author : sgarcia
+
+
+"""
+
+
+
+
+"""
+
+For developpers :
 
 If you start a new IO class :
 1 - copy/paste and modify this class.
@@ -27,13 +41,8 @@ If you have a problem just mail me or ask the list.
 
 
 
-Classes
--------
-
-ExampleIO          - Classe for fake reading/writing data in a no file.
 
 
-@author : sgarcia
 
 """
 

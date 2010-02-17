@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-asciiio
-==================
-
 Classe for reading/writing data in a raw binary compact file.
+All channel are interleaved.
+
+You must known externaly to the file : the sample rate, the dtype of file (int16, float32, float64), the number of channel, ...
+
+This neutral format is quite widly used in old acquisition system.
 
 
-
-Classes
--------
-
-RawIO          - Classe for reading/writing data in a raw binary compact file.
+Supported : Read/Write
 
 @author : sgarcia
 

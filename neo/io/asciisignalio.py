@@ -1,27 +1,24 @@
 # -*- coding: utf-8 -*-
+"""
+Class for reading/writing analog signal in a text file.
+Cover many case when part of a file can be view as a CVS format.
+
+Supported : Read/Write
+
+
+
+
+@author : sgarcia
+
+"""
+
 
 from baseio import BaseIO
 from neo.core import *
 import numpy
 from numpy import *
 
-"""
-asciisignalio
-==================
 
-Classe for reading/writing analog signal in a text file.
-Cover many case when part of a file can be view as a CVS format.
-
-
-Classes
--------
-
-AsciiSignalIO          - Classe for reading/writing data in a text file.
-                    Cover many case.
-
-@author : sgarcia
-
-"""
 
 
 

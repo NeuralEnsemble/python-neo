@@ -23,11 +23,58 @@ The neo.io API is simple :
 .. autoclass:: neo.io.baseio.BaseIO
 
 
+Examples of use
+================
+
 
 List of implemented formats
 =================================
 
-.. automodule::neo.io.asciisignal
+ - :class:`AsciiSignalIO`
+    .. automodule:: neo.io.asciisignalio
+
+ - :class:`AsciiSpikeIO`
+    .. automodule:: neo.io.asciispikeio
+
+ - :class:`AxonIO`
+    .. automodule:: neo.io.axonio
+
+ - :class:`EegLabIO`
+    .. automodule:: neo.io.eeglabio
+
+ - :class:`ElanIO`
+    .. automodule:: neo.io.elanio
+
+ - :class:`ExampleIO`
+    .. automodule:: neo.io.exampleio
+
+ - :class:`MicromedIO`
+    .. automodule:: neo.io.micromedio
+
+ - :class:`RawIO`
+    .. automodule:: neo.io.rawio
+
+ - :class:`Spike2IO`
+    .. automodule:: neo.io.spike2io
+
+ - :class:`WinWcpIO`
+    .. automodule:: neo.io.winwcpio
+    
+ - :class:`NeuroshareSpike2IO`
+ - :class:`NeurosharePlexonIO`
+ - :class:`NeuroshareAlphaOmegaIO`
+    .. automodule:: neo.io.neuroshare.neuroshareio
+
+
+
+
+
+
+
+
+
+
+
 
 
 
