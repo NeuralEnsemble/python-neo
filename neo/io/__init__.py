@@ -90,7 +90,7 @@ except ImportError:
 
 try :
     from winwcpio import WinWcpIO
-    all_format += [ [ 'Spike2 smr' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]
+    all_format += [ [ 'WinWcp' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]
 except ImportError:
     print "Error while loading WinWcpIO module"
 

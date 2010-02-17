@@ -27,35 +27,36 @@ class BaseIO(object):
     from/to a database like TDT sytem tanks or SQLite files.
     This is an abstract class that will be implemented for each format
     The key methods of the class are:
-        read()                  - Read the whole object structure
+        - read()- Read the whole object structure, generaly point to th highest Object level
+        - read_block(** params)     - Read Block object from file with some params
+        - read_segment(** params)     - Read Segment object from file with some params
+        - read_spiketrainlist(**params)  - Read SpikeTrainList object from file with some params
+        - write() - Write  the whole object structure, generaly point to th highest Object level
+        - write_block(** params)    - Write Block object to file with some params
+        - write_segment(** params)    - Write Segment object to file with some params
+        - write_spiketrainlist(**params) - Write SpikeTrainList object to file with some params
         
-        read_spike(params)           - Read Spike object from file with some params
-        read_analogsignal( **params)    - Read AnalogSignal object from file with some params
-        read_spiketrain(**params)      - Read SpikeTrain object from file with some params
-        read_spiketrainlist(**params)  - Read SpikeTrainList object from file with some params
-        read_epoch(**params)     - Read Epoch object from file with some params
-        read_event(**params)           - Read Event object from file with some params
-        read_blocks(** params)     - Read Block object from file with some params
+    But the classe can also implement this methods :
+        - read_spike(params)           - Read Spike object from file with some params
+        - read_analogsignal( **params)    - Read AnalogSignal object from file with some params
+        - read_spiketrain(**params)      - Read SpikeTrain object from file with some params
+        - read_epoch(**params)     - Read Epoch object from file with some params
+        - read_event(**params)           - Read Event object from file with some params
+        - write_spikes(**params)          - Write Spike object to file with some params
+        - write_analog(** params)   - Write AnalogSignal object to file with some params
+        - write_spiketrain(**params)     - Write SpikeTrain object to file with some params
+        - write_epoch(** params)    - Write Epoch object to file with some params
+        - write_event(**params)          - Write Event object to file with some params
         
-        write()                 - Write the whole object structure
-        
-        write_spikes(**params)          - Write Spike object to file with some params
-        write_analog(** params)   - Write AnalogSignal object to file with some params
-        write_spiketrain(**params)     - Write SpikeTrain object to file with some params
-        write_spiketrainlist(**params) - Write SpikeTrainList object to file with some params
-        write_epoch(** params)    - Write Epoch object to file with some params
-        write_event(**params)          - Write Event object to file with some params
-        write_block(** params)    - Write Block object to file with some params
         
     Each object is able to declare what can be accessed or written
     The object types can be one of the class defined in neo.core :
-        Block (with all segments, AnalogSignals, SpikeTrains, ...)
-        Segment (with all  AnalogSignals, SpikeTrains, Events, Epoch, ...)
-        SpikeTrain
-        SpikeTrainList
-        AnalogSignal
-        AnalogSignalList
-        Neuron
+       - Block (with all segments, AnalogSignals, SpikeTrains, ...)
+       - Segment (with all  AnalogSignals, SpikeTrains, Events, Epoch, ...)
+       - SpikeTrainList ( with all SpikeTrains )
+       - Neuron ( with all SpikeTrains )
+       - SpikeTrain
+       - AnalogSignal
     
     
     ** start a new IO **
