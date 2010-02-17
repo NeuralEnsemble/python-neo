@@ -6,15 +6,18 @@ class PyNNBinaryIO(BaseIO):
     is_readable        = True
     is_writable        = False  
     has_header         = True
-    nfiles             = 1
     name               = "pyNN Numpy Binary File"
     supported_objects  = [Block, Segment]
     readable_objects   = [Segment, SpikeTrain, SpikeTrainList, AnalogSignal, AnalogSignalList]
-    writeable_objects  = []  
+    writeable_objects  = []
+    
+    read_params        = { Segment : [] }
+    write_params       = None    
+    
     has_header         = True
     is_streameable     = False
     extensions         = ['pynn']
-            
+    
     def __init__(self , filename=None , **kargs ) :
         BaseIO.__init__(self)
         self.filename = filename

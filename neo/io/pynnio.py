@@ -25,11 +25,14 @@ class PyNNIO(BaseIO):
     is_readable        = True
     is_writable        = False  
     has_header         = True
-    nfiles             = 1
     name               = "pyNN Text File"
     supported_objects  = [Segment, SpikeTrain, SpikeTrainList, AnalogSignal, AnalogSignalList]
     readable_objects   = [Segment, SpikeTrain, SpikeTrainList, AnalogSignal, AnalogSignalList]
     writeable_objects  = [SpikeTrainList, AnalogSignalList]
+    
+    read_params        = { Segment : [] }
+    write_params       = None    
+    
     has_header         = True
     is_streameable     = False
     extensions         = ['pynn']
