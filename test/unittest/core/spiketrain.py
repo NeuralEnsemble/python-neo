@@ -31,7 +31,7 @@ class SpikeTrainTest(unittest.TestCase):
     
     def testCreateWithTStartOnly(self):
         spk = SpikeTrain(numpy.arange(0,110,10), t_start=20)
-        assert (spk.t_start == 20) and (spk.t_stop == 100)
+        assert (spk._t_start == 20) and (spk._t_stop == 100)
         assert arrays_are_equal( spk.spike_times, numpy.arange(20, 110, 10) )
         
     def testCreateWithTStopOnly(self):
@@ -48,8 +48,8 @@ class SpikeTrainTest(unittest.TestCase):
     def testCreateSpikeTrainNegativeSpikeTime(self):
         self.assertRaises(ValueError, SpikeTrain, numpy.arange(-100,110,10))
     
-    def testCreateWithInvalidValuesInList(self):
-        self.assertRaises(ValueError, SpikeTrain, [0.0, "elephant", 0.3, -0.6, 0.15])
+    #def testCreateWithInvalidValuesInList(self):
+        #self.assertRaises(ValueError, SpikeTrain, [0.0, "elephant", 0.3, -0.6, 0.15])
     
     def testCopy(self):
         spk = SpikeTrain(numpy.arange(0,110,10), 0, 100)

@@ -40,26 +40,26 @@ class SpikeTrain(object):
             
         self._spike_times = None
         self._spikes      = None
-        self.t_start     = None
-        self.t_stop      = None
-        self.neuron      = None
+        self._t_start     = None
+        self._t_stop      = None
+        self.neuron       = None
             
         if karg.has_key('spike_times'):
             self._spike_times = numpy.array(karg['spike_times'])
             self._spike_times.sort()
             
         if karg.has_key('t_start'):
-            self.t_start = karg['t_start']
+            self._t_start = karg['t_start']
         if karg.has_key('t_stop'):
             self._t_stop = karg['t_stop']
         if karg.has_key('interval'):
-            self.t_start, self._t_stop = karg['interval']
+            self._t_start, self._t_stop = karg['interval']
         
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']
-            self.neuron.add_spiketrain(self)
         else:
             self.neuron = Neuron()
+        self.neuron.add_spiketrain(self)
         
         if karg.has_key('spikes'):
             self._spikes = karg['spikes']
@@ -83,8 +83,8 @@ class SpikeTrain(object):
     
     def __str__(self):
         res = "SpikeTrain"
-        if self._neuron:
-            res += " emitted by neuron %s" % str(self._neuron)
+        if self.neuron:
+            res += " emitted by neuron %s" % str(self.neuron)
         res += " has %d spikes:\n %s" %(len(self), str(self.spike_times))
         return res
 
@@ -127,8 +127,8 @@ class SpikeTrain(object):
         """
         self.spike_times = numpy.insert(self.spike_times, self.spike_times.searchsorted(spiketrain.spike_times), \
                                         spiketrain.spike_times)
-        self.t_start     = min(self.t_start, spiketrain.t_start)
-        self.t_stop      = max(self.t_stop, spiketrain.t_stop)
+        self._t_start     = min(self._t_start, spiketrain._t_start)
+        self._t_stop      = max(self._t_stop, spiketrain._t_stop)
 
 
 #################### INTERNAL STRUCTURE SHOULD BE CHANGED#######################
@@ -148,8 +148,8 @@ class SpikeTrain(object):
                 [  50.,   60.,   70.,   80.,   90.,  100.,  110.,  
                 120.,  130.,  140.]
         """
-        self.t_start += offset
-        self.t_stop  += offset
+        self._t_start += offset
+        self._t_stop  += offset
         if self._spikes is not None:
             for spike in self._spikes:
                 spike.time += offset
@@ -484,8 +484,8 @@ class SpikeTrain(object):
         t_min_l  = numpy.floor(t_min/time_bin)
         t_max_l  = numpy.floor(t_max/time_bin)
         result   = numpy.zeros((t_min_l+t_max_l), numpy.float32)
-        t_start  = numpy.floor(self.t_start/time_bin)
-        t_stop   = numpy.floor(self.t_stop/time_bin)
+        t_start  = numpy.floor(self._t_start/time_bin)
+        t_stop   = numpy.floor(self._t_stop/time_bin)
         for ev in events:
            ev = numpy.floor(ev/time_bin)
            if ((ev - t_min_l )> t_start) and (ev + t_max_l ) < t_stop:

@@ -55,9 +55,9 @@ class AsciiSpikeIO(BaseIO):
     is_readable        = True
     is_writable        = True
     
-    supported_objects            = [Segment , SpikeTrain]
-    readable_objects    = [Segment]
-    writeable_objects    = [Segment]    
+    supported_objects  = [Segment , SpikeTrain]
+    readable_objects   = [Segment]
+    writeable_objects  = [Segment]    
     
     has_header         = False
     is_streameable     = False
@@ -126,9 +126,6 @@ class AsciiSpikeIO(BaseIO):
         
         return seg
         
-    
-
-
     def write(self , *args , **kargs):
         """
         Write SpikeTrain of a Segment in a txt file.

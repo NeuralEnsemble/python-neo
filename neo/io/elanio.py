@@ -21,18 +21,11 @@ ElanIO          - Classe for reading/writing data in elan file.
 
 """
 
-
-
-
-
-
-
 from baseio import BaseIO
 from neo.core import *
 from numpy import *
 import re
 import datetime
-
 
 class ElanIO(BaseIO):
     """
@@ -57,9 +50,9 @@ class ElanIO(BaseIO):
     is_readable        = True
     is_writable        = True
 
-    supported_objects            = [ Segment , AnalogSignal , Event]
-    readable_objects    = [Segment]
-    writeable_objects    = [Segment]  
+    supported_objects  = [Segment, AnalogSignal, Event]
+    readable_objects   = [Segment]
+    writeable_objects  = [Segment]  
 
     has_header         = False
     is_streameable     = False
@@ -68,7 +61,7 @@ class ElanIO(BaseIO):
     write_params       = { Segment : [] }
 
     name               = None
-    extensions          = [ 'eeg' ]
+    extensions         = ['eeg']
     
     
     def __init__(self , filename = None) :

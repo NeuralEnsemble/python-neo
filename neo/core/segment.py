@@ -30,11 +30,12 @@ class Segment(object):
     
     
     def __init__(self, *arg, **karg):
-        self._analogsignals = [ ]
-        self._spiketrains = [ ]
-        self._epochs = [ ]
-        self._events = [ ]
+        self._analogsignals   = []
+        self._spiketrains     = []
+        self._epochs          = []
+        self._events          = []
         self._recordingpoints = []
+        self._neurons         = []
         
     def get_analogsignals(self):
         """

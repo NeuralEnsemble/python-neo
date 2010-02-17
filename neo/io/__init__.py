@@ -49,7 +49,6 @@ try:
 except ImportError:
     print "Error while loading AsciiSpikeIO module"
 
-
 try:
     from micromedio import MicromedIO
     all_format += [ [ 'micromed' , { 'class' : MicromedIO  , 'info' :  'TRC micromed file' } ] ]
@@ -80,19 +79,29 @@ try:
 except ImportError:
     print "Error while loading AxonIO module"
 
-
 try :
     from spike2io import Spike2IO
     all_format += [ [ 'Spike2 smr' , { 'class' : Spike2IO  , 'info' :  'CED spike2 file (smr)' } ] ]
 except ImportError:
     print "Error while loading Spike2IO module"
 
-
 try :
     from winwcpio import WinWcpIO
     all_format += [ [ 'WinWcp' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]
 except ImportError:
     print "Error while loading WinWcpIO module"
+
+try :
+    from pynnio import PyNNIO
+    all_format += [ [ 'PyNN Text' , { 'class' : PyNNIO  , 'info' :  'PyNN Text file (pynn)' } ] ]
+except ImportError:
+    print "Error while loading PyNNIO module"
+
+try :
+    from pynnbinaryio import PyNNBinaryIO
+    all_format += [ [ 'PyNN Numpy Binary' , { 'class' : PyNNBinaryIO  , 'info' :  'PyNN Numpy Binary file (pynn)' } ] ]
+except ImportError:
+    print "Error while loading PyNNBinaryIO module"
 
 
 

@@ -74,9 +74,9 @@ class AxonIO(BaseIO):
     is_readable        = True
     is_writable        = False
     
-    supported_objects            = [Block , Segment , AnalogSignal , Event]
-    readable_objects    = [Block]
-    writeable_objects    = []  
+    supported_objects  = [Block , Segment , AnalogSignal , Event]
+    readable_objects   = [Block]
+    writeable_objects  = []  
 
     has_header         = False
     is_streameable     = False
@@ -85,7 +85,7 @@ class AxonIO(BaseIO):
     write_params       = None
 
     name               = None
-    extensions          = [ 'abf' ]
+    extensions         = [ 'abf' ]
 
 
     def __init__(self , filename = None) :

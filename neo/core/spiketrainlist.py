@@ -51,8 +51,8 @@ class SpikeTrainList(object):
             id = train.neuron.id             
             self.spiketrains[id] = train
             if self._t_start or self._t_stop:
-                self.spiketrains[id].set_times(self._t_start, self._t_stop) 
-                
+                self.spiketrains[id].set_times(self._t_start, self._t_stop)
+        
     @property
     def id_list(self):
         """ 
@@ -385,7 +385,7 @@ class SpikeTrainList(object):
         if t_start is None:
             t_start = self._t_start
         if t_stop is None:
-            t_stop = self.t_stop
+            t_stop = self._t_stop
         bins       = arange(t_start, t_stop, bin_size)
         N          = len(self)
         M          = len(nbins)

@@ -26,9 +26,7 @@ AsciiSignalIO          - Classe for reading/writing data in a text file.
 
 
 from baseio import BaseIO
-
 from numpy import *
-
 import csv
 
 
@@ -56,9 +54,9 @@ class AsciiSignalIO(BaseIO):
     is_readable        = True
     is_writable        = True
     
-    supported_objects            = [Segment , AnalogSignal]
-    readable_objects    = [Segment]
-    writeable_objects    = [Segment]
+    supported_objects  = [Segment , AnalogSignal]
+    readable_objects   = [Segment]
+    writeable_objects  = [Segment]
 
     has_header         = False
     is_streameable     = False

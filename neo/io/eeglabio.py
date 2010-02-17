@@ -49,9 +49,9 @@ class EegLabIO(BaseIO):
     is_readable        = True
     is_writable        = True
 
-    supported_objects            = [ Segment , AnalogSignal , Event]
-    readable_objects    = [Segment]
-    writeable_objects    = [Segment]  
+    supported_objects  = [ Segment , AnalogSignal , Event]
+    readable_objects   = [Segment]
+    writeable_objects  = [Segment]  
 
     has_header         = False
     is_streameable     = False
@@ -59,7 +59,7 @@ class EegLabIO(BaseIO):
     write_params       = { Segment : [ ] }
     
     name               = None
-    extensions          = [ 'set' ]
+    extensions         = [ 'set' ]
     
     def __init__(self , filename = None) :
         """

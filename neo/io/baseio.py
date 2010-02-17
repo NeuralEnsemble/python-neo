@@ -154,7 +154,6 @@ class BaseIO(object):
         """
         assert(SpikeTrainList in self.readable_objects), "This type is not supported by this file format"
 
-
     ######## All individual write methods #######################
 
     def write_spike(self, **kargs):
@@ -205,4 +204,3 @@ class BaseIO(object):
         Write SpikeTrainList objects from a file
         """
         assert(SpikeTrainList in self.writeable_objects), "This type is not supported by this file format"
-        
