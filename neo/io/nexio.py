@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for fake reading data from NeuroExplorer (.nex)
+Classe for reading data from NeuroExplorer (.nex)
 
 
 Supported : Read

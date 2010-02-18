@@ -34,63 +34,93 @@ Examples of use
 The basic syntax is as follow. If you want to load a file format which is implemented in a MyFormatIO class
 
 
->> from neo.io.myformat import MyFormatIO
-
->> file = MyFormatIO("myfile.dat")
+>>> from neo.io import MyFormatIO
+>>> file = MyFormatIO("myfile.dat")
 
 To know what types of objects are supported by this io interface:
 
->> file.supported_objects
+>>> file.supported_objects
+[Segment , AnalogSignal , SpikeTrain, Event, Spike ]
 
-And then for example to read a segment in this file format (if :class:`Segment` is supported)
+Supported objects, do not meens objects that you can read directly. For instance, many formats supports AnalogSignal
+but you can't acces them directly : you must read a Segment and acces your AnalogSignal like that :
 
->> file.read_segment()
+>>> seg = file.read_segment()
+>>> seg.get_analogsignals()
+
+To have the list of directly readeable objects :
+
+>>> file.readable_objects
+[Segment]
+
+The first element of the previous list is the highest level for reading the file.
+
+To read all the file :
+
+>>> result = file.read()
+>>> type(result)
+neo.core.Segment
+
+In this case, this is equivalent to :
+>>> seg = file.read_segment()
+
 
 
 List of implemented formats
 =================================
 
- - :class:`AsciiSignalIO`
-    .. automodule:: neo.io.asciisignalio
+ - :class:`PlexonIO`
+    .. automodule:: neo.io.plexonio
+    
+ - :class:`Spike2IO`
+    .. automodule:: neo.io.spike2io
 
- - :class:`AsciiSpikeIO`
-    .. automodule:: neo.io.asciispikeio
+ - :class:`NexIO`
+    .. automodule:: neo.io.nexio
 
  - :class:`AxonIO`
     .. automodule:: neo.io.axonio
 
- - :class:`EegLabIO`
-    .. automodule:: neo.io.eeglabio
-
- - :class:`ElanIO`
-    .. automodule:: neo.io.elanio
-
- - :class:`ExampleIO`
-    .. automodule:: neo.io.exampleio
-
  - :class:`MicromedIO`
     .. automodule:: neo.io.micromedio
 
- - :class:`RawIO`
-    .. automodule:: neo.io.rawio
+ - :class:`AsciiSignalIO`
+    .. automodule:: neo.io.asciisignalio
 
- - :class:`Spike2IO`
-    .. automodule:: neo.io.spike2io
-
- - :class:`WinWcpIO`
-    .. automodule:: neo.io.winwcpio
-    
  - :class:`NeuroshareSpike2IO`
  - :class:`NeurosharePlexonIO`
  - :class:`NeuroshareAlphaOmegaIO`
     .. automodule:: neo.io.neuroshare.neuroshareio
+
+ - :class:`EegLabIO`
+    .. automodule:: neo.io.eeglabio
+
+
+ - :class:`ExampleIO`
+    .. automodule:: neo.io.exampleio
+
+ - :class:`RawIO`
+    .. automodule:: neo.io.rawio
+
+ - :class:`WinWcpIO`
+    .. automodule:: neo.io.winwcpio
+
+ - :class:`ElanIO`
+    .. automodule:: neo.io.elanio
+
  
  - :class:`PyNNIO`
     .. automodule:: neo.io.pynnio
  
  - :class:`PyNNBinaryIO`
     .. automodule:: neo.io.pynnbinaryio
- 
+
+ - :class:`AsciiSpikeIO`
+    .. automodule:: neo.io.asciispikeio
+
+    
+
+
 Impletation of a new IO
 ===========================
 

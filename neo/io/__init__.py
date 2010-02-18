@@ -96,7 +96,15 @@ try :
     all_format += [ [ 'NexIO' , { 'class' : NexIO  , 'info' :  'NeuroExplorer file (nex)' } ] ]
 except ImportError:
     print "Error while loading NexIO module"
-    
+
+
+try :
+    from plexonio import PlexonIO
+    all_format += [ [ 'PlexonIO' , { 'class' : PlexonIO  , 'info' :  'Plexon file (plx)' } ] ]
+except ImportError:
+    print "Error while loading PlexonIO module"
+
+
 try :
     from pynnio import PyNNIO
     all_format += [ [ 'PyNN Text' , { 'class' : PyNNIO  , 'info' :  'PyNN Text file (pynn)' } ] ]

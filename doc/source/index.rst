@@ -8,9 +8,10 @@ Welcome to neo's documentation!
 
 .. module:: neo
 
-neo (Neural Ensemble Object) is a project to provide a common architecture for other projects
+neo (Neural Ensemble Object) is a project to provide a common architecture for projects
 in the field of analysing in vivo or simulated electrophysiological signals.
 For moment, it is a base for unification between OpenElectrophy and NeuroTools.
+We hope that it could also a base for other projects.
 
 neo provide in particular :
  - a set a classes with precise definiitions
