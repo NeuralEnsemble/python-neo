@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-
 Classe for fake reading data in a no file.
 
 For the user, it generate a `Segment` or a `Block` with `AnalogSignal` sinusoidale + `SpikeTrain` + `Event`
@@ -13,39 +12,6 @@ Supported : Read
 
 
 """
-
-
-
-
-"""
-
-For developpers :
-
-If you start a new IO class :
-1 - copy/paste and modify this class.
-2 - Think what objects my IO support
-3 - Think what objects my IO can read or write.
-4 - Implement all read_XXX and write_XXX methods
-
-If you have a problem just mail me or ask the list.
-
-
-
-    ** Guidelines **
-        Each IO implementation of BaseFile can also add attributs (fields) freely to all object.
-        Each IO implementation of BaseFile should come with tipics files exemple in neo/test/unitest/io/datafiles.
-        Each IO implementation of BaseFile should come with its documentation.
-        Each IO implementation of BaseFile should come with its unitest neo/test/unitest/io.
-    
-
-
-
-
-
-
-
-"""
-
 
 # I need to subclass BaseIO
 from baseio import BaseIO
@@ -61,8 +27,24 @@ class ExampleIO(BaseIO):
     """
     Class for reading/writing data in a fake file.
     
-    **Usage**
+    **For developpers**
+    
+    If you start a new IO class :
+        - Copy/paste and modify this class.
+        - Think what objects your IO will support
+        - Think what objects your IO will read or write.
+        - Implement all read_XXX and write_XXX methods
 
+    If you have a problem just mail me or ask the list.
+
+    **Guidelines**
+        - Each IO implementation of BaseFile can also add attributs (fields) freely to all object.
+        - Each IO implementation of BaseFile should come with tipics files exemple in neo/test/unitest/io/datafiles.
+        - Each IO implementation of BaseFile should come with its documentation.
+        - Each IO implementation of BaseFile should come with its unitest neo/test/unitest/io.
+        
+    **Usage**
+     
     **Example**
     
     """

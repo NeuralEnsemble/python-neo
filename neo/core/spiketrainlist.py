@@ -52,7 +52,10 @@ class SpikeTrainList(object):
             self.spiketrains[id] = train
             if self._t_start or self._t_stop:
                 self.spiketrains[id].set_times(self._t_start, self._t_stop)
-        
+            else:
+                
+                
+                
     @property
     def id_list(self):
         """ 
@@ -240,6 +243,7 @@ class SpikeTrainList(object):
             if len(spk) > 0:
                 if spk.spike_times[-1] > spike:
                     spike = spk.spike_times[-1]
+                    id    = spk.neuron.id  
         if id is None:
             raise Exception("No spikes can be found in the SpikeList object !")
         else:
@@ -386,7 +390,7 @@ class SpikeTrainList(object):
             t_start = self._t_start
         if t_stop is None:
             t_stop = self._t_stop
-        bins       = arange(t_start, t_stop, bin_size)
+        bins       = numpy.arange(t_start, t_stop, bin_size)
         N          = len(self)
         M          = len(nbins)
         spike_hist = numpy.zeros((N, M), numpy.float32)
@@ -475,7 +479,7 @@ class SpikeTrainList(object):
         # Then we select the pairs of cells
         pairs_generator.get_pairs(nb_pairs)
         N      = len(pairs)
-        bins   = arange(t_start, t_stop, bin_size)
+        bins   = numpy.arange(t_start, t_stop, bin_size)
         M      = len(nbins)
         length = 2*(M-1)
         if not average:

@@ -50,10 +50,18 @@ class SpikeTrain(object):
             
         if karg.has_key('t_start'):
             self._t_start = karg['t_start']
+        else:
+            self._t_start = self._spike_times.min()
         if karg.has_key('t_stop'):
             self._t_stop = karg['t_stop']
+        else:
+            self._t_stop = self._spike_times.max()
         if karg.has_key('interval'):
             self._t_start, self._t_stop = karg['interval']
+        
+        if self._t_start > self._t_stop:
+            raise Exception("t_start should be less than t_stop !")
+        
         
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']
@@ -78,7 +86,15 @@ class SpikeTrain(object):
     @property
     def spikes(self):
         return self._spikes
-        
+    
+    @property
+    def t_start(self):
+        return self._t_start
+    
+    @property
+    def t_stop(self):
+        return self._t_stop
+    
     def get_spikes(self):
         return self._spikes
     
@@ -107,6 +123,32 @@ class SpikeTrain(object):
         """
         return self._t_stop - self._t_start
     
+    def time_parameters(self):
+        """
+        Return the time parameters of the SpikeTrain (t_start, t_stop)
+        """
+        return (self.t_start, self.t_stop)
+    
+    def is_equal(self, spktrain):
+        """
+        Return True if the SpikeTrain object is equal to one other SpikeTrain, i.e
+        if they have same time parameters and same spikes_times
+        
+        Inputs:
+            spktrain - A SpikeTrain object
+        
+        See also:
+            time_parameters()
+        """
+        test = (self.time_parameters() == spktrain.time_parameters())
+        return numpy.all(self.spike_times == spktrain.spike_times) and test
+    
+    def copy(self):
+        """
+        Return a copy of the SpikeTrain object
+        """
+        return SpikeTrain(spike_times=self.spike_times, t_start=self._t_start, t_stop=self._t_stop)
+
     
     def merge(self, spiketrain):
         """
@@ -126,7 +168,7 @@ class SpikeTrain(object):
             >> a.t_stop
                 500
         """
-        self.spike_times = numpy.insert(self.spike_times, self.spike_times.searchsorted(spiketrain.spike_times), \
+        self._spike_times = numpy.insert(self.spike_times, self.spike_times.searchsorted(spiketrain.spike_times), \
                                         spiketrain.spike_times)
         self._t_start     = min(self._t_start, spiketrain._t_start)
         self._t_stop      = max(self._t_stop, spiketrain._t_stop)
@@ -270,17 +312,13 @@ class SpikeTrain(object):
             logging.debug("Warning, a CV can't be computed because there are not enough spikes")
             return numpy.nan
         else:
-            if newnum:
-                proba_isi, xaxis = numpy.histogram(isi, bins=bins, normed=True, new=True)
-                xaxis = xaxis[:-1]
-            else:
-                proba_isi, xaxis = numpy.histogram(isi, bins=bins, normed=True)
+            proba_isi, xaxis = numpy.histogram(isi, bins=bins, normed=True, new=True)
             proba_isi /= numpy.sum(proba_isi)
-            bin_size = xaxis[1]-xaxis[0]
+            bin_size   = xaxis[1]-xaxis[0]
             # differential entropy: http://en.wikipedia.org/wiki/Differential_entropy
-            KL = - numpy.sum(proba_isi * numpy.log(proba_isi+1e-16)) + numpy.log(bin_size)
-            KL -= -numpy.log(self.mean_rate()) + 1.
-            CVkl=numpy.exp(-KL)
+            KL   = - numpy.sum(proba_isi * numpy.log(proba_isi+1e-16)) + numpy.log(bin_size)
+            KL  -= -numpy.log(self.mean_rate()) + 1.
+            CVkl =  numpy.exp(-KL)
             return CVkl
     
 
@@ -376,13 +414,13 @@ class SpikeTrain(object):
             t_start = self._t_start
         if t_stop is None:
             t_stop = self.t_stop
-        bins = arange(t_start, t_stop, bin_size)
+        bins = numpy.arange(t_start, t_stop, bin_size)
         hist, edges = numpy.histogram(self.spike_times, bins)
         if normalized: # what about normalization if time_bin is a sequence?
             hist *= 1/bin_size
         return hist, edges
 
-
+    
     def distance_victorpurpura(self, spktrain, cost=0.5):
         """
         Function to calculate the Victor-Purpura distance between two spike trains.
