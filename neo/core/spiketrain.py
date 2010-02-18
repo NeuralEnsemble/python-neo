@@ -36,8 +36,7 @@ class SpikeTrain(object):
     
     
     def __init__(self, *arg, **karg):
-            
-            
+                        
         self._spike_times = None
         self._spikes      = None
         self._t_start     = None
@@ -50,19 +49,15 @@ class SpikeTrain(object):
             
         if karg.has_key('t_start'):
             self._t_start = karg['t_start']
-        else:
-            self._t_start = self._spike_times.min()
         if karg.has_key('t_stop'):
             self._t_stop = karg['t_stop']
-        else:
-            self._t_stop = self._spike_times.max()
         if karg.has_key('interval'):
             self._t_start, self._t_stop = karg['interval']
-        
-        if self._t_start > self._t_stop:
-            raise Exception("t_start should be less than t_stop !")
-        
-        
+
+        # May be useful to check the times. But should be adapted for spike object instead
+        # of spike times in self.spike_times
+        self.__calc_startstop()
+
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']
         else:
@@ -71,7 +66,7 @@ class SpikeTrain(object):
         
         if karg.has_key('spikes'):
             self._spikes = karg['spikes']
-    
+            
     @property
     def spike_times(self):
         if self._spike_times is None:
@@ -97,6 +92,32 @@ class SpikeTrain(object):
     
     def get_spikes(self):
         return self._spikes
+        
+    def __calc_startstop(self):
+        size = len(self)
+        if size == 0:
+            if self._t_start is None: 
+                self._t_start = 0
+            if self._t_stop is None:
+                self._t_stop  = 0.1
+        elif size == 1: # spike list may be empty
+            if self._t_start is None:
+                self._t_start = self.spike_times[0]
+            if self._t_stop is None:
+                self._t_stop = self.spike_times[0] + 0.1
+        elif size > 1:
+            if self._t_start is None:
+                self._t_start = self.spike_times.min()
+            if self._t_stop is None:
+                self._t_stop = self.spike_times.max()
+            
+        if self._t_start >= self._t_stop :
+            raise Exception("Incompatible time interval : t_start = %s, t_stop = %s" % (self._t_start, self._t_stop))
+        if self._t_start < 0:
+            raise ValueError("t_start must not be negative")
+        if numpy.any(self.spike_times < 0):
+            raise ValueError("Spike times must not be negative")
+    
     
     def __str__(self):
         res = "SpikeTrain"
@@ -409,7 +430,7 @@ class SpikeTrain(object):
         See also
             time_axis
         """
-        ### bins = self.time_axis(time_bin)
+        ### bins = self.time_axis(bin_size)
         if t_start is None:
             t_start = self._t_start
         if t_stop is None:
@@ -439,7 +460,7 @@ class SpikeTrain(object):
             return abs(nspk_1-nspk_2)
         elif cost > 1e9 :
             return nspk_1+nspk_2
-        scr = numpy.zeros((nspk_1+1,nspk_2+1))
+        scr      = numpy.zeros((nspk_1+1,nspk_2+1))
         scr[:,0] = numpy.arange(0,nspk_1+1)
         scr[0,:] = numpy.arange(0,nspk_2+1)
             
@@ -517,16 +538,16 @@ class SpikeTrain(object):
         #assert (t_min >= 0) and (t_max >= 0), "t_min and t_max should be greater than 0"
         #assert len(events) > 0, "events should not be empty and should contained at least one element"
 
-        spk_hist = self.time_histogram(time_bin)
+        spk_hist = self.time_histogram(bin_size)
         subplot  = get_display(display)
         count    = 0
-        t_min_l  = numpy.floor(t_min/time_bin)
-        t_max_l  = numpy.floor(t_max/time_bin)
+        t_min_l  = numpy.floor(t_min/bin_size)
+        t_max_l  = numpy.floor(t_max/bin_size)
         result   = numpy.zeros((t_min_l+t_max_l), numpy.float32)
-        t_start  = numpy.floor(self._t_start/time_bin)
-        t_stop   = numpy.floor(self._t_stop/time_bin)
+        t_start  = numpy.floor(self._t_start/bin_size)
+        t_stop   = numpy.floor(self._t_stop/bin_size)
         for ev in events:
-           ev = numpy.floor(ev/time_bin)
+           ev = numpy.floor(ev/bin_size)
            if ((ev - t_min_l )> t_start) and (ev + t_max_l ) < t_stop:
                count  += 1
                result += spk_hist[(ev-t_min_l):ev+t_max_l]

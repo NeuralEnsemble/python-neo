@@ -2,6 +2,7 @@
 import numpy
 from spiketrain import SpikeTrain
 from neuron import Neuron
+from pairgenerator import *
 
 class SpikeTrainList(object):
      
@@ -52,9 +53,29 @@ class SpikeTrainList(object):
             self.spiketrains[id] = train
             if self._t_start or self._t_stop:
                 self.spiketrains[id].set_times(self._t_start, self._t_stop)
-            else:
-                
-                
+        
+        if len(self) > 0 and (self._t_start is None or self._t_stop is None):
+            self.__calc_startstop()    
+    
+    def __calc_startstop(self):
+        """
+        t_start and t_stop are shared for all neurons, so we take min and max values respectively.
+        TO DO : check the t_start and t_stop parameters for a SpikeList. Is it commun to
+        all the spikeTrains within the spikelist or each spikelistes do need its own.
+        """
+        if len(self) > 0:
+            if self._t_start is None:
+                start_times   = numpy.array([spk._t_start for spk in self], numpy.float32)
+                self._t_start = start_times.min()
+                for spk in self:
+                    spk._t_start = self._t_start
+            if self._t_stop is None:
+                stop_times   = numpy.array([spk._t_stop for spk in self], numpy.float32)
+                self._t_stop = stop_times.max()
+                for spk in self:
+                    spk._t_stop = self._t_stop
+        else:
+            raise Exception("No SpikeTrains")
                 
     @property
     def id_list(self):
@@ -80,11 +101,24 @@ class SpikeTrainList(object):
         """
         return [spk.neuron for spk in self]
     
+    @property
+    def t_stop(self):
+        return self._t_stop
+    
+    @property
+    def t_start(self):
+        return self._t_start
+    
     def __getitem__(self, id):
         if id in self.id_list:
             return self.spiketrains[id]
         else:
             raise Exception("Neuron with id %d is not present in this SpikeTrainList" %id)
+    
+    #def __setitem__(self, spktrain):
+        #assert isinstance(spktrain, SpikeTrain), "A SpikeList object can only contain SpikeTrain objects"
+        #self.spiketrains[spktrain.neuron.id] = spktrain
+        #self.__calc_startstop()
     
     def __getslice__(self, i, j):
         """
@@ -117,11 +151,47 @@ class SpikeTrainList(object):
         else:
             return sublist
 
+    def __select_with_pairs__(self, nb_pairs, pairs_generator):
+        """
+        Internal function used to slice two SpikeList according to a list
+        of pairs.  Return a list of pairs
+        
+        Inputs:
+            nb_pairs        - an int specifying the number of cells desired
+            pairs_generator - a pairs generator
+        
+        Examples:
+            >> self.__select_with_pairs__(50, RandomPairs(spk1, spk2))
+        
+        See also
+            RandomPairs, AutoPairs, CustomPairs
+        """
+        pairs  = pairs_generator.get_pairs(nb_pairs)
+        spk1   = pairs_generator.spk1.id_slice(pairs[:,0])
+        spk2   = pairs_generator.spk2.id_slice(pairs[:,1])
+        return spk1, spk2, pairs
+    
+    def copy(self):
+        """
+        Return a copy of the SpikeList object
+        """
+        res = []
+        for spk in self:
+            res.append(spk)
+        return SpikeTrainList(spiketrains=res, t_start=self._t_start, t_stop=self._t_stop)
+
+
     def duration(self):
         """
         Return the duration of the SpikeTrain
         """
         return self._t_stop - self._t_start
+    
+    def time_parameters(self):
+        """
+        Return the time parameters of the SpikeList (t_start, t_stop)
+        """
+        return (self.t_start, self.t_stop)
     
     def append(self, spktrain):
         """
@@ -195,6 +265,22 @@ class SpikeTrainList(object):
             data.append(self[id])
         return SpikeTrainList(spiketrains=data, interval=(self._t_start, self._t_stop))
 
+    def time_slice(self, t_start, t_stop):
+        """
+        Return a new SpikeList obtained by slicing between t_start and t_stop
+        
+        Inputs:
+            t_start - begining of the new SpikeTrain, in ms.
+            t_stop  - end of the new SpikeTrain, in ms.
+        
+        See also
+            id_slice, interval_slice
+        """
+        data = []
+        for spk in self:
+            data.append(spk)
+        return SpikeTrainList(spiketrains=data, interval=(t_start, t_stop))
+
     def time_offset(self, offset):
         """
         Add an offset to the whole SpikeTrainList object. t_start and t_stop are
@@ -265,7 +351,8 @@ class SpikeTrainList(object):
             >> spklist.select_ids("mean(cell.isi()) < 1")
         """
         selected_ids = []
-        for cell in self:
+        for id in self.id_list:
+            cell = self[id]
             if eval(criteria):
                 selected_ids.append(id)
         return selected_ids
@@ -374,7 +461,7 @@ class SpikeTrainList(object):
         return rates
 
 
-    def spike_histogram(self, t_start=None, t_stop=None, bin_size=0.01, normalized=True):
+    def spike_histogram(self, t_start=None, t_stop=None, bin_size=0.01, normalized=True, average=False):
         """
         Generate an array with all the spike_histograms of all the SpikeTrains
         objects within the SpikeTrainList.
@@ -383,6 +470,8 @@ class SpikeTrainList(object):
             bin_size   - the time bin used to gather the data
             normalized - if True, the histogram are in Hz (spikes/second), otherwise they are
                          in spikes/bin        
+            average    - If True, return a single vector of the average spike histogram over the whole SpikeList
+        
         See also
             firing_rate, time_axis
         """
@@ -392,10 +481,17 @@ class SpikeTrainList(object):
             t_stop = self._t_stop
         bins       = numpy.arange(t_start, t_stop, bin_size)
         N          = len(self)
-        M          = len(nbins)
-        spike_hist = numpy.zeros((N, M), numpy.float32)
-        for idx, spk in enumerate(self):
-            spike_hist[idx,:], edges = spk.time_histogram(t_start, t_stop, time_bin, normalized)
+        M          = len(bins)
+        if not average:
+            spike_hist = numpy.zeros((N, M-1), numpy.float32)
+            for idx, spk in enumerate(self):
+                spike_hist[idx,:], edges = spk.time_histogram(t_start, t_stop, bin_size, normalized)        
+        else:
+            spike_hist = numpy.zeros(M-1, numpy.float32)
+            for idx, spk in enumerate(self):
+                tmp, edges  = spk.time_histogram(t_start, t_stop, bin_size, normalized)
+                spike_hist += tmp
+            spike_hist /= N 
         return spike_hist, edges
 
 
@@ -412,11 +508,8 @@ class SpikeTrainList(object):
         See also
             spike_histogram, time_axis
         """
-        result = self.spike_histogram(bin_size, normalized=True, display=display, kwargs=kwargs)
-        if average:
-            return numpy.mean(result, axis=0)
-        else:
-            return result
+        fr, edges = self.spike_histogram(bin_size, normalized=True, display=display, kwargs=kwargs, average=average)
+        return fr
 
     def rates_histogram(self, nbins=25, normalize=True):
         """
@@ -429,7 +522,7 @@ class SpikeTrainList(object):
         See also
             mean_rate, mean_rates
         """
-        rates   = self.mean_rates()
+        rates         = self.mean_rates()
         values, xaxis = numpy.histogram(rates, nbins, normed=True)
         return values, edges
     
@@ -447,9 +540,68 @@ class SpikeTrainList(object):
         See also
             spike_histogram, firing_rate
         """
-        firing_rate = self.spike_histogram(bin_size, average=True)
-        fano        = numpy.var(firing_rate)/numpy.mean(firing_rate)
+        firing_rate, edges = self.spike_histogram(bin_size, average=True)
+        fano               = numpy.var(firing_rate)/numpy.mean(firing_rate)
         return fano
+    
+    def distance_victorpurpura(self, nb_pairs, pairs_generator=None, cost=0.5):
+        """
+        Function to calculate the Victor-Purpura distance averaged over N pairs in the SpikeList
+        See J. D. Victor and K. P. Purpura,
+            Nature and precision of temporal coding in visual cortex: a metric-space
+            analysis.,
+            J Neurophysiol,76(2):1310-1326, 1996
+        
+        Inputs:
+            nb_pairs        - int specifying the number of pairs
+            pairs_generator - The generator that will be used to draw the pairs. If None, a default one is
+                              created as RandomPairs(spk, spk, no_silent=False, no_auto=True)
+            cost            - The cost parameter. See the paper for more informations. BY default, set to 0.5
+        
+        See also
+            RandomPairs, AutoPairs, CustomPairs
+        """
+        if pairs_generator is None:
+            pairs_generator = RandomPairs(self, self, False, True)
+
+        pairs = pairs_generator.get_pairs(nb_pairs)
+        N     = len(pairs)
+        distance   = 0.
+        for idx in xrange(N):
+            idx_1 = pairs[idx,0]
+            idx_2 = pairs[idx,1]
+            distance += pairs_generator.spk1[idx_1].distance_victorpurpura(pairs_generator.spk2[idx_2], cost)
+        return distance/N
+    
+    
+    def distance_kreuz(self, nb_pairs, pairs_generator=None, dt=0.1e-3):
+        """
+        Function to calculate the Kreuz/Politi distance between two spike trains
+        See Kreuz, T.; Haas, J.S.; Morelli, A.; Abarbanel, H.D.I. & Politi, 
+        A. Measuring spike train synchrony. 
+        J Neurosci Methods, 2007, 165, 151-161
+
+        Inputs:
+            nb_pairs        - int specifying the number of pairs
+            pairs_generator - The generator that will be used to draw the pairs. If None, a default one is
+                              created as RandomPairs(spk, spk, no_silent=False, no_auto=True)
+            dt              - The time bin used to discretized the spike times
+        
+        See also
+            RandomPairs, AutoPairs, CustomPairs
+        """
+        if pairs_generator is None:
+            pairs_generator = RandomPairs(self, self, False, True)
+
+        pairs = pairs_generator.get_pairs(nb_pairs)
+        N     = len(pairs)
+        
+        distance   = 0.
+        for idx in xrange(N):
+            idx_1 = pairs[idx,0]
+            idx_2 = pairs[idx,1]
+            distance += pairs_generator.spk1[idx_1].distance_kreuz(pairs_generator.spk2[idx_2], dt)
+        return distance/N
     
     def pairwise_cc(self, nb_pairs, pairs_generator=None, bin_size=0.001, average=True):
         """
@@ -464,9 +616,9 @@ class SpikeTrainList(object):
             average         - If true, only the averaged CC among all the pairs is returned (less memory needed)
         
         Examples
-            >> a.pairwise_cc(500, time_bin=1, averaged=True)
-            >> a.pairwise_cc(500, time_bin=1, averaged=True, display=subplot(221), kwargs={'color':'r'})
-            >> a.pairwise_cc(100, CustomPairs(a,a,[(i,i+1) for i in xrange(100)]), time_bin=5)
+            >> a.pairwise_cc(500, bin_size=1, averaged=True)
+            >> a.pairwise_cc(500, bin_size=1, averaged=True, display=subplot(221), kwargs={'color':'r'})
+            >> a.pairwise_cc(100, CustomPairs(a,a,[(i,i+1) for i in xrange(100)]), bin_size=5)
         
         See also
             pairwise_pearson_corrcoeff, pairwise_cc_zero, RandomPairs, AutoPairs, CustomPairs
@@ -499,3 +651,85 @@ class SpikeTrainList(object):
             return results
         else:
             return results/N
+            
+    def pairwise_cc_zero(self, nb_pairs, pairs_generator=None, bin_size=5e-3, time_window=None):
+        """
+        Function to return the normalized cross correlation coefficient at zero time
+        lag according to the method given in:
+        See A. Aertsen et al, 
+            Dynamics of neuronal firing correlation: modulation of effective connectivity
+            J Neurophysiol, 61:900-917, 1989
+        
+        The coefficient is averaged over N pairs of cells. If time window is specified, compute
+        the corr coeff on a sliding window, and therefore returns not a value but a vector.
+        
+        Inputs:
+            nb_pairs        - int specifying the number of pairs
+            pairs_generator - The generator that will be used to draw the pairs. If None, a default one is
+                              created as RandomPairs(spk, spk, no_silent=False, no_auto=True)
+            bin_size        - The time bin used to gather the spikes
+            time_window     - None by default, and then a single number, the normalized CC is returned.
+                              If this is a float, then size (in ms) of the sliding window used to 
+                              compute the normalized cc. A Vector is then returned
+            display         - if True, a new figure is created. Could also be a subplot. The averaged
+                              spike_histogram over the whole population is then plotted
+            kwargs          - dictionary contening extra parameters that will be sent to the plot 
+                              function
+        
+        Examples:
+            >> a.pairwise_cc_zero(100, bin_size=1)
+                1.0
+            >> a.pairwise_cc_zero(100, CustomPairs(a, a, [(i,i+1) for i in xrange(100)]), bin_size=1)
+                0.45
+            >> a.pairwise_cc_zero(100, RandomPairs(a, a, no_silent=True), bin_size=5, time_window=10, display=True)
+        
+        See also:
+            pairwise_cc, pairwise_pearson_corrcoeff, RandomPairs, AutoPairs, CustomPairs
+        """
+        
+        if pairs_generator is None:
+            pairs_generator = RandomPairs(self, self, False, True)
+        
+        spk1, spk2, pairs = self.__select_with_pairs__(nb_pairs, pairs_generator)
+        N = len(pairs)
+        
+        if spk1.time_parameters() != spk2.time_parameters():
+            raise Exception("The two SpikeList must have common time axis !")
+        
+        num_bins     = int(numpy.round((self.t_stop-self.t_start)/bin_size)+1)
+        mat_neur1    = numpy.zeros((num_bins,N),int)
+        mat_neur2    = numpy.zeros((num_bins,N),int)
+        times1, ids1 = spk1.convert("times, ids")
+        times2, ids2 = spk2.convert("times, ids")
+        
+        cells_id     = spk1.id_list()
+        for idx in xrange(len(cells_id)):
+            ids1[numpy.where(ids1 == cells_id[idx])[0]] = idx
+        cells_id     = spk2.id_list()
+        for idx in xrange(len(cells_id)):
+            ids2[numpy.where(ids2 == cells_id[idx])[0]] = idx
+        times1  = numpy.array(((times1 - self.t_start)/bin_size),int)
+        times2  = numpy.array(((times2 - self.t_start)/bin_size),int)
+        mat_neur1[times1,ids1] = 1
+        mat_neur2[times2,ids2] = 1
+        if time_window:
+            nb_pts   = int(time_window/bin_size)
+            mat_prod = mat_neur1*mat_neur2
+            cc_time  = numpy.zeros((num_bins-nb_pts),float)
+            xaxis    = numpy.zeros((num_bins-nb_pts))
+            M        = float(nb_pts*N)
+            bound    = int(numpy.ceil(nb_pts/2))
+            for idx in xrange(bound,num_bins-bound):
+                s_min = idx-bound
+                s_max = idx+bound
+                Z = numpy.sum(numpy.sum(mat_prod[s_min:s_max]))/M
+                X = numpy.sum(numpy.sum(mat_neur1[s_min:s_max]))/M
+                Y = numpy.sum(numpy.sum(mat_neur2[s_min:s_max]))/M
+                cc_time[s_min] = (Z-X*Y)/numpy.sqrt((X*(1-X))*(Y*(1-Y)))
+                xaxis[s_min]   = bin_size*idx
+        else:
+            M = float(num_bins*N)
+            X = len(times1)/M
+            Y = len(times2)/M
+            Z = numpy.sum(numpy.sum(mat_neur1*mat_neur2))/M
+            return (Z-X*Y)/numpy.sqrt((X*(1-X))*(Y*(1-Y)))
