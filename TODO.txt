@@ -1,0 +1,13 @@
+ 
+
+- good read of sphinx doc to make a good looking doc
+
+- install trac sphinx plugin to plush easyly doc changes
+
+- ElphyIO
+
+- classes diagram
+
+
+
+
