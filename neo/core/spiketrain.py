@@ -56,7 +56,7 @@ class SpikeTrain(object):
 
         # May be useful to check the times. But should be adapted for spike object instead
         # of spike times in self.spike_times
-        self.__calc_startstop()
+        #~ self.__calc_startstop()
 
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']

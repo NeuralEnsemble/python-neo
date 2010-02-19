@@ -91,7 +91,11 @@ class PlexonIO(BaseIO):
         globalHeader = HeaderReader(fid , GlobalHeader ).read_f(offset = 0)
         globalHeader['TSCounts'] = array(globalHeader['TSCounts']).reshape((130,5))
         globalHeader['WFCounts'] = array(globalHeader['WFCounts']).reshape((130,5))
-        for k,v in globalHeader.iteritems(): print k,v
+        TSCounts = globalHeader['TSCounts']
+        WFCounts = globalHeader['WFCounts']
+        for k,v in globalHeader.iteritems():
+            #~ if type(v) != numpy.ndarray : print k,v
+            print k,v
         
         seg.filedatetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
@@ -101,16 +105,16 @@ class PlexonIO(BaseIO):
         channelHeaders = { }
         # dsp channels header
         for i in xrange(globalHeader['NumDSPChannels']):
-            print 'i',i
+            #~ print 'i',i
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
             channelHeader['Template'] = array(channelHeader['Template']).reshape((5,64))
             channelHeader['Boxes'] = array(channelHeader['Boxes']).reshape((5,2,4))
             channelHeaders[channelHeader['Channel']]=channelHeader
             
             #~ for k,v in channelHeader.iteritems(): print k,v
-        print 'channelHeaders' , len(channelHeaders)
-        print ''
-        for k,v in channelHeaders.iteritems(): print k,v
+        #~ print ''
+        #~ print 'channelHeaders' , len(channelHeaders)
+        #~ for k,v in channelHeaders.iteritems(): print k,v
         
         
         
@@ -118,17 +122,15 @@ class PlexonIO(BaseIO):
         # event channel header
         eventHeaders = { }
         for i in xrange(globalHeader['NumEventChannels']):
-            print ''
-            print 'channel events',i
+            #~ print ''
+            #~ print 'channel events',i
             eventHeader = HeaderReader(fid , EventHeader ).read_f(offset = None)
-            for k,v in eventHeader.iteritems(): print k,v
-            print 'ici' , eventHeader['Channel']
-            eventHeaders[eventHeader['Channel']] = eventHeader
-        print 'eventHeaders' , len(eventHeaders)
-        print ''
-        for k,v in eventHeaders.iteritems(): print k,v
-
             #~ for k,v in eventHeader.iteritems(): print k,v
+            eventHeaders[eventHeader['Channel']] = eventHeader
+        #~ print ''
+        #~ print 'eventHeaders' , len(eventHeaders)
+        #~ for k,v in eventHeaders.iteritems(): print k,v
+
         
         slowChannelHeaders = { }
         # slow channel header
@@ -137,13 +139,29 @@ class PlexonIO(BaseIO):
             slowChannelHeader = HeaderReader(fid , SlowChannelHeader ).read_f(offset = None)
             slowChannelHeaders[slowChannelHeader['Channel']] = slowChannelHeader
             #~ for k,v in slowChannelHeader.iteritems(): print k,v
-        print 'slowChannelHeaders' , len(slowChannelHeaders)
-        print ''
-        for k,v in slowChannelHeaders.iteritems(): print k,v
+        #~ print ''
+        #~ print 'slowChannelHeaders' , len(slowChannelHeaders)
+        #~ for k,v in slowChannelHeaders.iteritems(): print k,v
         
-        
+        # for post allocating continuous signal
         ncontinuoussamples = zeros(len(slowChannelHeaders))
         sampleposition = zeros(len(slowChannelHeaders))
+        
+        # allocate spike and waveform
+        spiketrains = [ ]
+        for i in xrange(TSCounts.shape[0]):
+            spiketrains.append([])
+            for j in xrange(5):
+                if load_spike_waveform and WFCounts[i,j] != 0:
+                    spiketrains[-1].append( SpikeTrain(spikes = [ ]) )
+                elif TSCounts[i,j] !=0:
+                    spiketrains[-1].append( SpikeTrain(spike_times = zeros((TSCounts[i,j]) , dtype='f4')) )
+                    nspikecounts = zeros(TSCounts.shape ,dtype='i')
+                else :
+                    spiketrains[-1].append(None)
+            else :
+                spiketrains[-1].append(None)
+                    
         
         # data block header
         start = fid.tell()
@@ -151,45 +169,59 @@ class PlexonIO(BaseIO):
             dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
             if dataBlockHeader is None : break
             chan = dataBlockHeader['Channel']
+            unit = dataBlockHeader['Unit']
             time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2**32 + dataBlockHeader['TimeStamp']
             time/=globalHeader['ADFrequency'] 
             
-            
             if dataBlockHeader['Type'] == 1:
                 #spike
+                print ''
                 for k,v in dataBlockHeader.iteritems(): print k,v
                 n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
-                #~ print 'n&,n2', n1,n2
-                data = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
-                #range
-                if globalHeader['Version'] <103:
-                    data = data*3000./(2048*channelHeaders[chan]['Gain']*1000.)
-                elif globalHeader['Version'] >=103 and globalHeader['Version'] <105:
-                    data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*1000.)
-                elif globalHeader['Version'] >105:
-                    data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
-            
-            if dataBlockHeader['Type'] ==4:
+                if load_spike_waveform and n1*n2 != 0 :
+                    data = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
+                    #range
+                    if globalHeader['Version'] <103:
+                        data = data*3000./(2048*channelHeaders[chan]['Gain']*1000.)
+                    elif globalHeader['Version'] >=103 and globalHeader['Version'] <105:
+                        data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*1000.)
+                    elif globalHeader['Version'] >105:
+                        data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
+                    sp = Spike(time = time,
+                                freq = channelHeaders[chan]['WFRate'],
+                                waveform = data)
+                    spiketrains[chan][unit]._spikes.append(sp)
+                else :
+                    pos = nspikecounts[chan,unit]
+                    print 'pos', pos
+                    spiketrains[chan][unit]._spike_times[pos] = time
+                    nspikecounts[chan,unit] +=1
+                    fid.seek(n1*n2*2,1)
+                    
+            elif dataBlockHeader['Type'] ==4:
                 #event
-                #~ print ''
+                print ''
                 for k,v in dataBlockHeader.iteritems(): print k,v
                 ev = Event(time = time)
                 ev.name = eventHeaders[chan]['Name']
                 seg._events.append(ev)
 
 
-            if dataBlockHeader['Type'] == 5:
-                #continuous
+            elif dataBlockHeader['Type'] == 5:
+                #continuous : not read here just counting n samples
+                
                 #~ print ''
                 #~ for k,v in dataBlockHeader.iteritems(): print k,v
                 #~ data = fromstring( fid.read(dataBlockHeader['NumberOfWordsInWaveform']*2) , dtype = 'i2').astype('f')
                 fid.seek(fid.tell()+dataBlockHeader['NumberOfWordsInWaveform']*2)
                 ncontinuoussamples[chan] += dataBlockHeader['NumberOfWordsInWaveform']
+            else :
+                print 'unkonwn type',dataBlockHeader['Type']
         
-        # continuous
+        # continuous : allcating mem
         anaSigs = [ ]
         for i in range(ncontinuoussamples.size):
-            if ncontinuoussamples[i] is None:
+            if ncontinuoussamples[i] is None or ncontinuoussamples[i] ==0:
                 anaSigs.append(None)
             else :
                 anaSig = AnalogSignal(signal = zeros((ncontinuoussamples[i]) , dtype = 'f4'),
@@ -198,7 +230,8 @@ class PlexonIO(BaseIO):
                                                     )
                 anaSig.name = slowChannelHeaders[i]['Name']
                 anaSigs.append(anaSig)
-                
+        
+        # continuous : copy data chunks
         fid.seek(start)
         while fid.tell() !=-1 :
             dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
@@ -224,7 +257,6 @@ class PlexonIO(BaseIO):
                     data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
                                                         slowChannelHeaders[chan]['Gain']**slowChannelHeaders[chan]['PreampGain'])
                 
-                
                 anaSigs[chan].signal[sampleposition[chan] : sampleposition[chan]+data.size] = data
                 sampleposition[chan] += data.size
                 if sampleposition[chan] ==0:
@@ -233,13 +265,20 @@ class PlexonIO(BaseIO):
                     anaSigs[chan].t_start = time
                 
                 
-                ncontinuoussamples[chan] += dataBlockHeader['NumberOfWordsInWaveform']
-                
-                #~ print data.shape
-        
+        # add AnalogSignal to sgement
         for anaSig in anaSigs :
             if anaSig is not None:
                 seg._analogsignals.append(anaSig)
+                
+        # add SpikeTrain to sgement
+        for i in xrange(TSCounts.shape[0]):
+            for j in xrange(5):
+                spikeTr = spiketrains[i][j]
+                if spikeTr is not None:
+                    spikeTr.channel = i
+                    spikeTr.unit = j
+                    seg._spiketrains.append(spikeTr)
+
         
         return seg
 
