@@ -20,6 +20,8 @@ from baseio import BaseIO
 from neo.core import *
 
 from numpy import *
+import numpy as np
+from scipy.io.numpyio import fread
 import struct
 
 
@@ -89,10 +91,8 @@ class NexIO(BaseIO):
         seg = Segment()
         offset = 544
         for i in range(globalHeader['nvar']):
-            print 'i' ,i,'/', globalHeader['nvar']
             entityHeader = HeaderReader(fid , EntityHeader ).read_f(offset = offset+i*208)
             entityHeader['name'] = entityHeader['name'].replace('\x00','')
-            print entityHeader['type'] , entityHeader['name'] , entityHeader['WFrequency']
             
             if entityHeader['type'] == 0:
                 # neuron
@@ -148,9 +148,9 @@ class NexIO(BaseIO):
                                                 )
                 spike_times = spike_times.astype('f')/globalHeader['freq']
                 waveforms = memmap(self.filename , dtype('i2') ,'r' ,
-                                                shape = (entityHeader['n'] ,  entityHeader['NPointsWave']),
-                                                offset = entityHeader['offset']+entityHeader['n'] *4,
-                                                )
+                                            shape = (entityHeader['n'] ,  entityHeader['NPointsWave']),
+                                            offset = entityHeader['offset']+entityHeader['n'] *4,
+                                            )
                 if load_spike_waveform :
                     spikeTr = SpikeTrain(spikes = [ ],
                                                     t_start = globalHeader['tbeg']/globalHeader['freq'],
@@ -194,7 +194,14 @@ class NexIO(BaseIO):
                                                         shape = (entityHeader['NPointsWave'] ),
                                                         offset = entityHeader['offset'],
                                                         )
-                signal = signal.astype('f')*entityHeader['ADtoMV'] + entityHeader['MVOffset']
+                signal = signal.astype('float32')
+                signal *= entityHeader['ADtoMV']
+                signal += entityHeader['MVOffset']
+                # now, delete the timestamps vector : takes load of space !
+                timestamps = 0
+                #signal = np.fromstring(fid.read(entityHeader['NPointsWave']*2), np.int16)*entityHeader['ADtoMV'] + entityHeader['offset']
+                #signal = fread(fid, entityHeader['NPointsWave'], 'i')
+
                 anaSig = AnalogSignal(signal = signal , t_start =t_start , freq  = entityHeader['WFrequency'])
                 seg._analogsignals.append( anaSig )
                 

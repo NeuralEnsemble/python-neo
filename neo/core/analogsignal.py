@@ -22,7 +22,10 @@ class AnalogSignal(object):
     
     def __init__(self, *arg, **karg):
         if karg.has_key('signal'):
-            self.signal  = numpy.array(karg['signal'], float)
+            if karg['signal'].__class__ == numpy.array([]).__class__  or numpy.memmap('/tmp/mmp', mode='w+', shape=(3), dtype='float32').__class__ :  
+                self.signal  = karg['signal']
+            else : 
+                numpy.array(karg['signal'], dtype='float32')
         if karg.has_key('dt'):
             self.freq = float(1./karg['dt'])
         if karg.has_key('freq'):
