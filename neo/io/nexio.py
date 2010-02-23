@@ -71,7 +71,6 @@ class NexIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
     def read(self , **kargs):
         """
         Read a fake file.
@@ -82,9 +81,12 @@ class NexIO(BaseIO):
 
 
 
-    def read_segment(self, load_spike_waveform = False):
+    def read_segment(self, load_spike_waveform = False, analogtype='float32'):
         """
         """
+        self.analogtype = analogtype
+ 
+
         fid = open(self.filename, 'rb')
         globalHeader = HeaderReader(fid , GlobalHeader ).read_f(offset = 0)
         
@@ -194,7 +196,7 @@ class NexIO(BaseIO):
                                                         shape = (entityHeader['NPointsWave'] ),
                                                         offset = entityHeader['offset'],
                                                         )
-                signal = signal.astype('float32')
+                signal = signal.astype(analogtype)
                 signal *= entityHeader['ADtoMV']
                 signal += entityHeader['MVOffset']
                 # now, delete the timestamps vector : takes load of space !
