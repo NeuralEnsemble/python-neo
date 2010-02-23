@@ -71,7 +71,7 @@ class SpikeTrain(object):
     def spike_times(self):
         if self._spike_times is None:
             self._spike_times = numpy.empty(len(self._spikes))
-            print len(self._spikes), self._spikes[0]
+            #~ print len(self._spikes), self._spikes[0]
             for count, sp in enumerate(self._spikes):
                 self._spike_times[count] = sp.time
             return self._spike_times

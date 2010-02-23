@@ -3,8 +3,11 @@
 
 Classe for reading data from Plexion acquisition system (.plx)
 
-Compatible from version 100 to 105.
-Other versions are incontroled.
+Compatible from version 100 to 106.
+Other versions are not controled.
+
+This IO is develloped thanks to the header file downloadable here:
+http://www.plexon.com/downloads.html
 
 
 Supported : Read
@@ -101,16 +104,17 @@ class PlexonIO(BaseIO):
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
         
         print 'version' , globalHeader['Version']
+        print 
         
         channelHeaders = { }
         # dsp channels header
         for i in xrange(globalHeader['NumDSPChannels']):
-            #~ print 'i',i
+            
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
             channelHeader['Template'] = array(channelHeader['Template']).reshape((5,64))
             channelHeader['Boxes'] = array(channelHeader['Boxes']).reshape((5,2,4))
             channelHeaders[channelHeader['Channel']]=channelHeader
-            
+            #~ print 'i',i
             #~ for k,v in channelHeader.iteritems(): print k,v
         #~ print ''
         #~ print 'channelHeaders' , len(channelHeaders)
@@ -124,6 +128,7 @@ class PlexonIO(BaseIO):
         for i in xrange(globalHeader['NumEventChannels']):
             #~ print ''
             #~ print 'channel events',i
+            #~ print 'tell' , fid.tell()
             eventHeader = HeaderReader(fid , EventHeader ).read_f(offset = None)
             #~ for k,v in eventHeader.iteritems(): print k,v
             eventHeaders[eventHeader['Channel']] = eventHeader
@@ -147,7 +152,7 @@ class PlexonIO(BaseIO):
         ncontinuoussamples = zeros(len(slowChannelHeaders))
         sampleposition = zeros(len(slowChannelHeaders))
         
-        # allocate spike and waveform
+        # allocate spiketimes and waveform
         spiketrains = [ ]
         for i in xrange(TSCounts.shape[0]):
             spiketrains.append([])
@@ -161,23 +166,28 @@ class PlexonIO(BaseIO):
                     spiketrains[-1].append(None)
             else :
                 spiketrains[-1].append(None)
-                    
         
         # data block header
+        # loop on the data blocks  : first parts for spike and events
+        # a second loop next for continuous data after allocated memory
         start = fid.tell()
         while fid.tell() !=-1 :
             dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
+            #~ print ''
+            #~ for k,v in dataBlockHeader.iteritems(): print k,v
+            
             if dataBlockHeader is None : break
             chan = dataBlockHeader['Channel']
             unit = dataBlockHeader['Unit']
-            time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2**32 + dataBlockHeader['TimeStamp']
+            time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 + dataBlockHeader['TimeStamp']
             time/=globalHeader['ADFrequency'] 
+            n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
             
             if dataBlockHeader['Type'] == 1:
                 #spike
-                print ''
-                for k,v in dataBlockHeader.iteritems(): print k,v
-                n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
+                #~ print ''
+                #~ for k,v in dataBlockHeader.iteritems(): print k,v
+                
                 if load_spike_waveform and n1*n2 != 0 :
                     data = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
                     #range
@@ -193,61 +203,79 @@ class PlexonIO(BaseIO):
                     spiketrains[chan][unit]._spikes.append(sp)
                 else :
                     pos = nspikecounts[chan,unit]
-                    print 'pos', pos
+                    #~ print 'pos', pos
                     spiketrains[chan][unit]._spike_times[pos] = time
                     nspikecounts[chan,unit] +=1
                     fid.seek(n1*n2*2,1)
                     
             elif dataBlockHeader['Type'] ==4:
                 #event
-                print ''
-                for k,v in dataBlockHeader.iteritems(): print k,v
+                #~ print ''
+                #~ for k,v in dataBlockHeader.iteritems(): print k,v
                 ev = Event(time = time)
                 ev.name = eventHeaders[chan]['Name']
                 seg._events.append(ev)
-
-
+            
             elif dataBlockHeader['Type'] == 5:
                 #continuous : not read here just counting n samples
                 
                 #~ print ''
                 #~ for k,v in dataBlockHeader.iteritems(): print k,v
                 #~ data = fromstring( fid.read(dataBlockHeader['NumberOfWordsInWaveform']*2) , dtype = 'i2').astype('f')
-                fid.seek(fid.tell()+dataBlockHeader['NumberOfWordsInWaveform']*2)
-                ncontinuoussamples[chan] += dataBlockHeader['NumberOfWordsInWaveform']
+                
+                #fid.seek(fid.tell()+dataBlockHeader['NumberOfWordsInWaveform']*2)
+                fid.seek(n2*2, 1)
+                if n2> 0:
+                    ncontinuoussamples[chan] += n2
+                else :
+                    print 'probable bug because NumberOfWordsInWaveform = ',n2, 'at fid.tell()', fid.tell()
             else :
-                print 'unkonwn type',dataBlockHeader['Type']
-        
+                print 'probable bug because unkonwn type = ',dataBlockHeader['Type'], 'at fid.tell()', fid.tell()
+                pass
+                #~ print 'unkonwn type',dataBlockHeader['Type']
+                #~ print '# tell #', fid.tell()
+                break
+             #~ print ''
+                #~ for k,v in dataBlockHeader.iteritems(): print k,v
+                
         # continuous : allcating mem
-        anaSigs = [ ]
+        anaSigs = { }
         for i in range(ncontinuoussamples.size):
             if ncontinuoussamples[i] is None or ncontinuoussamples[i] ==0:
-                anaSigs.append(None)
+                pass
+                #~ anaSigs.append(None)
             else :
+                print 'i', i , ncontinuoussamples[i]
                 anaSig = AnalogSignal(signal = zeros((ncontinuoussamples[i]) , dtype = 'f4'),
                                                     freq = float(slowChannelHeaders[i]['ADFreq']),
-                                                    t_start = 0,
+                                                    t_start = 0.,
                                                     )
                 anaSig.name = slowChannelHeaders[i]['Name']
-                anaSigs.append(anaSig)
-        
+                
+                #~ anaSigs.append(anaSig)
+                anaSigs[i] = anaSig
+                
         # continuous : copy data chunks
         fid.seek(start)
         while fid.tell() !=-1 :
             dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
             if dataBlockHeader is None : break
             chan = dataBlockHeader['Channel']
+            n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
+            if n2 <0: break
             if dataBlockHeader['Type'] == 1:
-                n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
-                fid.seek(fid.tell()+n1*n2*2)
+                fid.seek(n1*n2*2 , 1)
                 
-            if dataBlockHeader['Type'] == 4:
+            elif dataBlockHeader['Type'] == 4:
                 pass
             
-            if dataBlockHeader['Type'] == 5:
+            elif dataBlockHeader['Type'] == 5:
                 #~ print ''
                 #~ for k,v in dataBlockHeader.iteritems(): print k,v
-                data = fromstring( fid.read(dataBlockHeader['NumberOfWordsInWaveform']*2) , dtype = 'i2').astype('f4')
+                if n2<= 0: 
+                    print 'probable bug because NumberOfWordsInWaveform = ',n2, 'at fid.tell()', fid.tell()
+                    continue
+                data = fromstring( fid.read(n2*2) , dtype = 'i2').astype('f4')
                 #range
                 if globalHeader['Version'] ==100 or globalHeader['Version'] ==101 :
                     data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*1000.)
@@ -256,17 +284,22 @@ class PlexonIO(BaseIO):
                 elif globalHeader['Version'] >= 103:
                     data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
                                                         slowChannelHeaders[chan]['Gain']**slowChannelHeaders[chan]['PreampGain'])
-                
                 anaSigs[chan].signal[sampleposition[chan] : sampleposition[chan]+data.size] = data
                 sampleposition[chan] += data.size
                 if sampleposition[chan] ==0:
                     time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2**32 + dataBlockHeader['TimeStamp']
                     time/=globalHeader['ADFrequency'] 
                     anaSigs[chan].t_start = time
-                
+            
+            else :
+                print 'probable bug because unkonwn type = ',dataBlockHeader['Type'], 'at fid.tell()', fid.tell()
+                pass
+                #~ print 'unkonwn type',dataBlockHeader['Type']
+                #~ print '# tell 2#', fid.tell()
+                break
                 
         # add AnalogSignal to sgement
-        for anaSig in anaSigs :
+        for k,anaSig in anaSigs.iteritems() :
             if anaSig is not None:
                 seg._analogsignals.append(anaSig)
                 
@@ -315,11 +348,17 @@ GlobalHeader = [
     #version 105
     ('SpikePreAmpGain' , 'H'),
     
+    #version 106
+    ('AcquiringSoftware','18s'),
+    ('ProcessingSoftware','18s'),
+
+    ('Padding','10s'),
+    
     # all version
-    ('Padding','46s'),
     ('TSCounts','650i'),
     ('WFCounts','650i'),
     ('EVCounts','512i'),
+    
     ]
 
 
@@ -340,15 +379,27 @@ ChannelHeader = [
     ('SortWidth','i'),
     ('Boxes','40h'),
     ('SortBeg','i'),
+    #version 105
     ('Comment','128s'),
-    ('Padding','11i'),
+    #version 106
+    ('SrcId','b'),
+    ('reserved','b'),
+    ('ChanId','H'),
+    
+    ('Padding','10i'),
     ]
 
 EventHeader = [
     ('Name' , '32s'),
     ('Channel','i'),
+    #version 105
     ('Comment' , '128s'),
-    ('Padding','33i'),
+    #version 106
+    ('SrcId','b'),
+    ('reserved','b'),
+    ('ChanId','H'),
+    
+    ('Padding','32i'),
     ]
 
 
@@ -358,11 +409,17 @@ SlowChannelHeader = [
     ('ADFreq','i'),
     ('Gain','i'),
     ('Enabled','i'),
-    ('PreamGain','i'),
+    ('PreampGain','i'),
     #version 104
     ('SpikeChannel','i'),
+    #version 105
     ('Comment','128s'),
-    ('Padding','28i'),
+    #version 106
+    ('SrcId','b'),
+    ('reserved','b'),
+    ('ChanId','H'),
+    
+    ('Padding','27i'),
     ]
 
 DataBlockHeader = [
@@ -373,7 +430,7 @@ DataBlockHeader = [
     ('Unit','h'),
     ('NumberOfWaveforms','h'),
     ('NumberOfWordsInWaveform','h'),
-    ]
+    ]# 16 bytes
 
 
 class HeaderReader():

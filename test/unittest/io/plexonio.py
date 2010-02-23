@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-
 import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
@@ -14,16 +13,14 @@ import pylab
 
 
 class PlexonIOTest(unittest.TestCase):
-    
     def testOpenFile1(self):
         #~ io = PlexonIO(filename = 'datafiles/File_plexon_1.plx')
-        io = PlexonIO(filename = 'datafiles/File_plexon_2.plx' )
-        #~ io = PlexonIO(filename = 'datafiles/File_plexon_3.plx')
+        #~ io = PlexonIO(filename = 'datafiles/File_plexon_2.plx' )
+        io = PlexonIO(filename = 'datafiles/File_plexon_3.plx')
         
         seg = io.read_segment(  load_spike_waveform = True)
         #~ seg = io.read_segment(  load_spike_waveform = False)
-
-
+        
         fig = pylab.figure()
         ax = fig.add_subplot(4,1,1)
         ax2 = fig.add_subplot(4,1,2, sharex =ax)
@@ -33,7 +30,7 @@ class PlexonIOTest(unittest.TestCase):
         #assert len(seg.get_analogsignals()) ==1
         colors = [  'b' , 'r' ,'g' , 'y' , 'k' , 'm' , 'c']
         for s,sig in enumerate(seg.get_analogsignals()):
-            print sig.signal.shape[0], sig.freq
+            #~ print sig.signal.shape[0], sig.freq
             #assert sig.name == 'ImRK01G20'
             #assert sig.unit == 'pA'
             #assert sig.signal.shape[0] == 1912832
@@ -68,9 +65,9 @@ class PlexonIOTest(unittest.TestCase):
         ax5 = fig.add_subplot(1,1,1)
         
         for s,spiketr in enumerate(seg.get_spiketrains()) :
-            print 'spiketrain' , s
+            #~ print 'spiketrain' , s
             ts = spiketr.spike_times
-            print ts.shape
+            #~ print ts.shape
             ax3.plot( ts , ones_like(ts)*s ,
                         linestyle = '',
                         marker = '|' ,
@@ -82,8 +79,7 @@ class PlexonIOTest(unittest.TestCase):
                     vect_t  = arange(sp.waveform.size , dtype = 'f')/sp.freq
                     for w in range(sp.waveform.shape[0]) :
                         ax5.plot(vect_t , sp.waveform[w,:] , color = colors[s % 7] )
-        
-        
+                        
         
         pylab.show()
 
