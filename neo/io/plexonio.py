@@ -225,6 +225,8 @@ class PlexonIO(BaseIO):
                 
                 #fid.seek(fid.tell()+dataBlockHeader['NumberOfWordsInWaveform']*2)
                 fid.seek(n2*2, 1)
+                if n1 !=1 :
+                    print 'probable bug because NumberOfWaveforms = ',n1, ' should be 1 at fid.tell()', fid.tell()
                 if n2> 0:
                     ncontinuoussamples[chan] += n2
                 else :
