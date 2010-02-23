@@ -22,7 +22,7 @@ class AnalogSignal(object):
     
     def __init__(self, *arg, **karg):
         if karg.has_key('signal'):
-            if karg['signal'].__class__ == numpy.array([]).__class__  or numpy.memmap('/tmp/mmp', mode='w+', shape=(3), dtype='float32').__class__ :  
+            if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :
                 self.signal  = karg['signal']
             else : 
                 numpy.array(karg['signal'], dtype='float32')
