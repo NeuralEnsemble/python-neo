@@ -23,7 +23,6 @@ all_format = [ ]
 
 # all IO import are inside try .. except to prevent module bugs because of one IO.
 
-
 try:
     from exampleio import ExampleIO
     all_format += [ [ 'example' , { 'class' : ExampleIO  , 'info' :  'a fake file reader for example' } ] ]

@@ -39,7 +39,10 @@ class AnalogSignal(object):
             self.t_stop = 0.
         
     def __len__(self):
-        return len(self.signal)
+        if self.signal is not None :
+            return len(self.signal)
+        else :
+            return 0
         
     def t(self) :
         return numpy.arange(len(self.signal), dtype = 'f')/self.freq + self.t_start

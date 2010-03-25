@@ -16,7 +16,11 @@ Supported : Read
 # I need to subclass BaseIO
 from baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-from neo.core import *
+#from neo.core import *
+
+from ..core import *
+
+import datetime
 
 # So bad :
 from numpy import *
@@ -143,7 +147,8 @@ class ExampleIO(BaseIO):
         """
         
         blck = Block()
-        
+        blck.name = 'example block'
+        blck.datetime = datetime.datetime.now()
         for i in range(num_segment) :
             # read a segment in the fake file
             # id_segment is just a example it is not taken in account
@@ -152,7 +157,8 @@ class ExampleIO(BaseIO):
                                         num_recordingpoint = num_recordingpoint,
                                         num_spiketrainbyrecordingpoint = num_spiketrainbyrecordingpoint,
                                         )
-            
+            seg.name = 'example segment %d' % i 
+            seg.datetime = datetime.datetime.now()
             # Add seg to blck instance
             blck._segments.append( seg )
         

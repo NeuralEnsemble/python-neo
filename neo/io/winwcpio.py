@@ -16,7 +16,9 @@ Supported : Read
 
 
 from baseio import BaseIO
-from neo.core import *
+#from neo.core import *
+from ..core import *
+
 import struct
 from numpy import *
 

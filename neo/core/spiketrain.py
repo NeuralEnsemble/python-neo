@@ -47,12 +47,12 @@ class SpikeTrain(object):
             self._spike_times = numpy.array(karg['spike_times'])
             self._spike_times.sort()
             
-        if karg.has_key('t_start'):
-            self._t_start = karg['t_start']
-        if karg.has_key('t_stop'):
-            self._t_stop = karg['t_stop']
-        if karg.has_key('interval'):
-            self._t_start, self._t_stop = karg['interval']
+        #~ if karg.has_key('t_start'):
+            #~ self._t_start = karg['t_start']
+        #~ if karg.has_key('t_stop'):
+            #~ self._t_stop = karg['t_stop']
+        #~ if karg.has_key('interval'):
+            #~ self._t_start, self._t_stop = karg['interval']
 
         # May be useful to check the times. But should be adapted for spike object instead
         # of spike times in self.spike_times
@@ -82,13 +82,13 @@ class SpikeTrain(object):
     def spikes(self):
         return self._spikes
     
-    @property
-    def t_start(self):
-        return self._t_start
+    #~ @property
+    #~ def t_start(self):
+        #~ return self._t_start
     
-    @property
-    def t_stop(self):
-        return self._t_stop
+    #~ @property
+    #~ def t_stop(self):
+        #~ return self._t_stop
     
     def get_spikes(self):
         return self._spikes

@@ -23,14 +23,17 @@ RecordingPoint
 """
 
 
-from block import *
-from event import *
-from epoch import *
-from neuron import *
-from segment import *
-from spiketrain import *
-from spiketrainlist import *
-from analogsignal import *
-from analogsignallist import *
-from spike import *
-from recordingpoint import *
+from block import Block
+from segment import Segment
+from event import Event
+from epoch import Epoch
+from neuron import Neuron
+from spiketrain import SpikeTrain
+from spiketrainlist import SpikeTrainList
+from analogsignal import AnalogSignal
+from analogsignallist import AnalogSignalList
+from spike import Spike
+from recordingpoint import RecordingPoint
+
+
+neotypes = [ Block , Segment , AnalogSignal, Event, Epoch, Neuron, SpikeTrain, SpikeTrainList , Spike , RecordingPoint ]
