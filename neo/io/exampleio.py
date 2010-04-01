@@ -161,6 +161,14 @@ class ExampleIO(BaseIO):
             seg.datetime = datetime.datetime.now()
             # Add seg to blck instance
             blck._segments.append( seg )
+        # group all recording point
+        blck._recordingpoints = [ RecordingPoint() for i in range(num_recordingpoint)]
+        
+        for i in range(num_recordingpoint):
+            for j in range(num_segment) :
+                blck._recordingpoints[i]._analogsignals += blck._segments[j]._recordingpoints[i]._analogsignals
+                
+        seg._recordingpoints
         
         return blck
         

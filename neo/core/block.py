@@ -23,11 +23,17 @@ class Block(object):
     
     
     """
-    
-    def __init__(self, segments = [ ] , recordingpoints = [],*arg, **karg):
-        self._segments =segments
-        self._recordingpoints =recordingpoints
+    def __init__(self, *arg, **karg):
+        self._segments = [ ]
+        self._recordingpoints = [ ]
+        if 'segments' in karg:
+            self._segments = karg['segments']
+        if 'recordingpoints' in karg:
+            self._recordingpoints = karg['recordingpoints']
+            
     
     def get_segments(self):
         return self._segments
 
+    def get_recordingpoints(self):
+        return self._recordingpoints

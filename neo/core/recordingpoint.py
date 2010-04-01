@@ -19,4 +19,6 @@ class RecordingPoint(object):
     """
     
     def __init__(self, *arg, **karg):
-        pass
+        self._analogsignals = [ ]
+        if 'analogsignals' in karg :
+            self._analogsignals = analogsignals
