@@ -24,10 +24,9 @@ class Block(object):
     
     """
     
-    def __init__(self, *arg, **karg):
-        self._segments = [ ]
-        if 'segments' in karg.keys():
-            self._segments += karg['segments']
+    def __init__(self, segments = [ ] , recordingpoints = [],*arg, **karg):
+        self._segments =segments
+        self._recordingpoints =recordingpoints
     
     def get_segments(self):
         return self._segments
