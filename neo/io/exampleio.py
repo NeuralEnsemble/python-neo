@@ -73,7 +73,7 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Segment size (s.)' } ),
                                 ('num_segment' , { 'value' : 5,
                                               'label' : 'Segment number' } ),
-                                ('num_recordingpoint' , { 'value' : 4,
+                                ('num_recordingpoint' , { 'value' : 3,
                                                 'label' : 'Number of recording points' } ),
                                 ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
                                                 'label' : 'Num of spiketrain by recording points' } ),                        
@@ -127,7 +127,7 @@ class ExampleIO(BaseIO):
                                         
                                         segmentduration = 3.,
                                         
-                                        num_recordingpoint = 4,
+                                        num_recordingpoint = 3,
                                         num_spiketrainbyrecordingpoint = 2,                        
                         ) :
         """
@@ -165,6 +165,7 @@ class ExampleIO(BaseIO):
         blck._recordingpoints = [ RecordingPoint() for i in range(num_recordingpoint)]
         
         for i in range(num_recordingpoint):
+            blck._recordingpoints[i].name = 'point %i' % i
             for j in range(num_segment) :
                 blck._recordingpoints[i]._analogsignals += blck._segments[j]._recordingpoints[i]._analogsignals
                 
@@ -269,6 +270,8 @@ class ExampleIO(BaseIO):
             # choose a random freq for modulation between .5 and 2
             f2 = random.rand()*1.5+.5
             anasig.signal = sin(2*pi*t*f1) * sin(pi*t*f2)**2
+            anasig.num = i
+            anasig.name = 'signal on channel %d'%i
             
             # add very simple spike waveform to the signal
             for j in range(num_spiketrainbyrecordingpoint):
@@ -287,7 +290,8 @@ class ExampleIO(BaseIO):
             
             
             # link this AnalogSignal to its RecordingPoint
-            anasig.recordingpoint = seg._recordingpoints[i]
+            #~ anasig.recordingpoint = seg._recordingpoints[i]
+            seg._recordingpoints[i]._analogsignals += [ anasig ]
             
             # theses 2 following fields are optionals and specifics from my IO :
             anasig.unit = 'mV'
