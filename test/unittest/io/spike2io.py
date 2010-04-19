@@ -6,7 +6,7 @@ import unittest
 import os, sys, numpy
 sys.path.append(os.path.abspath('../../..'))
 
-from neo.io import spike2io
+from neo.io import Spike2IO
 from neo.core import *
 from numpy import *
 from scipy import rand
@@ -15,22 +15,20 @@ import pylab
 class Spike2IOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        spike2 = spike2io.Spike2IO()
-        #seg = spike2.read_segment( filename = 'datafiles/File_spike2_1.smr' )#,transform_event_to_spike = ' 3 ')
-        #seg = spike2.read_segment( filename = 'datafiles/R05-C05C.SMR',transform_event_to_spike = [3 ])
-#        seg = spike2.read_segment( filename = 'datafiles/R12-C10b.smr',)
-#        seg = spike2.read_segment( filename = 'datafiles/R12-C11f.smr',)
-#        seg = spike2.read_segment( filename = 'datafiles/R14-C02C.SMR',)
-#        seg = spike2.read_segment( filename = 'datafiles/R21-C11d.smr',)
-        #seg = spike2.read_segment( filename = 'datafiles/R25-C07C.SMR', transform_event_to_spike = [3 ])
-#        seg = spike2.read_segment( filename = 'datafiles/J0_G3S2.SMR',)
-        #seg = spike2.read_segment( filename = 'datafiles/example.smr',)
-        #seg = spike2.read_segment( filename = 'datafiles/20091007_000.smr',)
-        #seg = spike2.read_segment( filename = 'datafiles/20091103_000.smr',)
-        #seg = spike2.read_segment( filename = 'datafiles/20091104_000.smr',)
-        #seg = spike2.read_segment( filename = 'datafiles/BURST.SMR',)
+        #~ spike2 = Spike2IO(filename = 'datafiles/R05-C05C.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/B12-C11f.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/R21-C11d.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/C07C.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/example.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/20091007_000.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/20091103_000.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/20091104_000.SMR')
+        #~ spike2 = Spike2IO(filename = 'datafiles/BURST.SMR')
+        spike2 = Spike2IO(filename = 'datafiles/File_spike2_1.smr')
         
-        seg = spike2.read_segment( filename = 'datafiles/Cricket Song.smr',)
+
+        
+        seg = spike2.read_segment( )
         
         #seg = spike2.read_segment( filename = 'datafiles/data spike2 4channels 1 hypno 1textmarkchannel 1markerchannel.smr',)
 
