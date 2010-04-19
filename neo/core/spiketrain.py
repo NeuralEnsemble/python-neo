@@ -38,7 +38,7 @@ class SpikeTrain(object):
     def __init__(self, *arg, **karg):
                         
         self._spike_times = None
-        self._spikes      = None
+        self._spikes      = [ ]
         self._t_start     = None
         self._t_stop      = None
         self.neuron       = None
@@ -119,24 +119,25 @@ class SpikeTrain(object):
             raise ValueError("Spike times must not be negative")
     
     
-    def __str__(self):
-        res = "SpikeTrain"
-        if self.neuron:
-            res += " emitted by neuron %s" % str(self.neuron)
-        res += " has %d spikes:\n %s" %(len(self), str(self.spike_times))
-        return res
+    #~ def __str__(self):
+        #~ res = "SpikeTrain"
+        #~ if self.neuron:
+            #~ res += " emitted by neuron %s" % str(self.neuron)
+        #~ res += " has %d spikes:\n %s" %(len(self), str(self.spike_times))
+        #~ return res
 
     def __iter__(self):
-        if self.spike_times is not None:
+        if self._spike_times is not None:
             return iter(self._spike_times)
         else:
             return iter(self._spikes)
 
-    def __len__(self):
-        if self.spike_times is not None:
-            return len(self._spike_times)
-        else:
-            return len(self._spikes)   
+    #~ def __len__(self):
+        #~ print self._spike_times
+        #~ if self._spike_times is not None:
+            #~ return len(self._spike_times)
+        #~ else:
+            #~ return len(self._spikes)   
 
     def duration(self):
         """

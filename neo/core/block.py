@@ -26,10 +26,13 @@ class Block(object):
     def __init__(self, *arg, **karg):
         self._segments = [ ]
         self._recordingpoints = [ ]
+        self._neurons = [ ]
         if 'segments' in karg:
             self._segments = karg['segments']
         if 'recordingpoints' in karg:
             self._recordingpoints = karg['recordingpoints']
+        if 'neurons' in karg:
+            self._neurons = karg['neurons']
             
     
     def get_segments(self):

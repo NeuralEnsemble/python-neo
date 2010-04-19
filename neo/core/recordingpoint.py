@@ -20,5 +20,9 @@ class RecordingPoint(object):
     
     def __init__(self, *arg, **karg):
         self._analogsignals = [ ]
+        self._spiketrains = [ ]
         if 'analogsignals' in karg :
             self._analogsignals = analogsignals
+        
+        if 'spiketrains' in karg :
+            self._spiketrains = spiketrains
