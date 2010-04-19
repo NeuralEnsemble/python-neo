@@ -44,23 +44,22 @@ class Spike2IO(BaseIO):
     
     is_readable        = True
     is_writable        = False
-    is_object_readable = True
-    is_object_writable = False
+    
+    supported_objects  = [ Segment , AnalogSignal , Event, SpikeTrain]
+    readable_objects   = [Segment]
+    writeable_objects  = []      
+
+
     has_header         = False
     is_streameable     = False
-    read_params        = {
-                        Segment : [ ('transform_event_to_spike' , { 'value' : '', 
+    read_params        = {   Segment : [ ('transform_event_to_spike' , { 'value' : '', 
                                                 'label' : 'Channel event to be convert as spike' } ),
-                                    ],
-                        }
+                                            ],
+                                    }
     write_params       = None
-    level              = None
-    nfiles             = 0
-    
+
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
-    objects            = []
-    supported_types    = [ Segment ]
     
     def __init__(self ) :
         """
