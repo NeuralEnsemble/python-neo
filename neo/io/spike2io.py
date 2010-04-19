@@ -61,32 +61,29 @@ class Spike2IO(BaseIO):
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
     
-    def __init__(self ) :
+    def __init__(self , filename = None) :
         """
+        This class read/write a eeglab matlab based file.
         
         **Arguments**
-        
+            filename : the filename to read
         """
-        
         BaseIO.__init__(self)
+        self.filename = filename
 
 
     def read(self , **kargs):
         """
         Read a fake file.
-        Return a neo.Segment
-        See read_block for detail.
+        Return a neo.Block
+        See read_segment for detail.
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self , filename = '', 
-                        transform_event_to_spike = [ ],
-                        ):
+    def read_segment(self , transform_event_to_spike = [ ],):
         """
-        Return a fake Block.
         
         **Arguments**
-        filename : The filename does not matter.
         transform_event_to_spike : a list of channel where event have to view as spike
                     support also a str list separated by a space
         """
@@ -102,9 +99,9 @@ class Spike2IO(BaseIO):
                         pass
         print 'transform_event_to_spike' , transform_event_to_spike
         
-        header = self.read_header(filename = filename)
+        header = self.read_header(filename = self.filename)
         print header
-        fid = open(filename, 'rb')
+        fid = open(self.filename, 'rb')
         
         seg  = Segment()
         
