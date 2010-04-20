@@ -265,6 +265,7 @@ class ExampleIO(BaseIO):
             anasig = AnalogSignal()
             anasig.sampling_rate = sampling_rate
             anasig.t_start = t_start
+            anasig.t_stop = t_start + segmentduration
             # choose random freq between 20 and 100 for my sinus signal :
             f1 = random.rand()*80+20.
             # choose a random freq for modulation between .5 and 2
