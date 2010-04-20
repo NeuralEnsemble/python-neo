@@ -17,8 +17,7 @@ class ExampleIOTest(unittest.TestCase):
     def testOpenFile1(self):
         
         example = exampleio.ExampleIO()
-        block = example.read_block( filename = 'nofile.fak',
-                                    num_segment = 2,
+        block = example.read_block( num_segment = 2,
                                     
                                     segmentduration = 3.,
                                     
@@ -33,7 +32,7 @@ class ExampleIOTest(unittest.TestCase):
             #assert len(seg.get_analogsignals()) ==64
             for sig in seg.get_analogsignals():
                 #print sig.signal.shape[0]
-                assert sig.signal.shape[0] == 15000
+                assert sig.signal.shape[0] == 30000
                 ax.plot(sig.t(),sig.signal)
                 #print sig.num, sig.label , sig.ground
             

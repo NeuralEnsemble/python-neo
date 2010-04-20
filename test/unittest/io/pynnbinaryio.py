@@ -40,11 +40,11 @@ class PyNNBinaryIOTest(unittest.TestCase):
     #def testWriteReadSinusFloat(self):
         
         #seg = Segment()
-        #freq = 10000.
-        #t = arange(0,15.,1./freq)
+        #sampling_rate = 10000.
+        #t = arange(0,15.,1./sampling_rate)
         #sig = 3.6*sin(2*numpy.pi*t*60.)
         #ana = AnalogSignal( signal = sig,
-                                        #freq = freq,
+                                        #sampling_rate = sampling_rate,
                                         #)
         #seg._analogsignals = [ ana , ana]
         
@@ -57,7 +57,7 @@ class PyNNBinaryIOTest(unittest.TestCase):
                                         #bytesoffset = 0)
         #io = RawIO(filename = 'testNeoRawIO.raw',)
         #seg2 = io.read_segment(
-                                        #samplerate = freq,
+                                        #samplerate = sampling_rate,
                                         #nbchannel = 2,
                                         #bytesoffset = 0,
                                         #t_start = 0.,
@@ -78,11 +78,11 @@ class PyNNBinaryIOTest(unittest.TestCase):
     #def testWriteReadSinusint(self):
         
         #seg = Segment()
-        #freq = 10000.
-        #t = arange(0,15.,1./freq)
+        #sampling_rate = 10000.
+        #t = arange(0,15.,1./sampling_rate)
         #sig = 3.6*sin(2*numpy.pi*t*60.)
         #ana = AnalogSignal( signal = sig,
-                                        #freq = freq,
+                                        #sampling_rate = sampling_rate,
                                         #)
         #seg._analogsignals = [ ana , ana]
         
@@ -95,7 +95,7 @@ class PyNNBinaryIOTest(unittest.TestCase):
                                         #bytesoffset = 0)
         #io = RawIO(filename = 'testNeoRawIO.raw',)
         #seg2 = io.read_segment(
-                                        #samplerate = freq,
+                                        #samplerate = sampling_rate,
                                         #nbchannel = 2,
                                         #bytesoffset = 0,
                                         #t_start = 0.,

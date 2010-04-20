@@ -22,7 +22,7 @@ class AxonIOTest(unittest.TestCase):
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1
             for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.freq
+                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
                 assert sig.name == 'ImRK01G20'
                 assert sig.unit == 'pA'
                 assert sig.signal.shape[0] == 1912832
@@ -39,10 +39,10 @@ class AxonIOTest(unittest.TestCase):
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1
             for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.freq
+                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
                 #assert sig.name == 'ImRK01G20'
                 #assert sig.unit == 'pA'
-                assert sig.freq == 1000.0
+                assert sig.sampling_rate == 1000.0
                 assert sig.signal.shape[0] == 1200000
             
             #print len (seg.get_events() )
@@ -58,10 +58,10 @@ class AxonIOTest(unittest.TestCase):
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==2
             for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.freq
+                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
                 #assert sig.name == 'ImRK01G20'
                 #assert sig.unit == 'pA'
-                assert sig.freq == 20000.0
+                assert sig.sampling_rate == 20000.0
                 assert sig.signal.shape[0] == 20644
             
             #print len (seg.get_events() )
@@ -79,10 +79,10 @@ class AxonIOTest(unittest.TestCase):
             #print len(seg.get_analogsignals())
             assert len(seg.get_analogsignals()) ==1
             for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.freq
+                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
                 assert sig.name == 'ImRK01G20'
                 assert sig.unit == 'pA'
-                assert sig.freq == 10000.0
+                assert sig.sampling_rate == 10000.0
                 assert sig.signal.shape[0] == 2176512
             
             #print len (seg.get_events() )

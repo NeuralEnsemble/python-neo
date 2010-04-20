@@ -18,25 +18,22 @@ class AnalogSignal(object):
     """
     
     label   = None
-    t_start = 0
-    
+    t_start = 0.
+    sampling_rate = 1.
+    signal = numpy.ndarray([], dtype='float32')
+    _t = None
+
     def __init__(self, *arg, **karg):
         if karg.has_key('signal'):
             if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :
                 self.signal  = karg['signal']
-            else : 
-                numpy.array(karg['signal'], dtype='float32')
         if karg.has_key('dt'):
-            self.freq = float(1./karg['dt'])
-        if karg.has_key('freq'):
-            self.freq = karg['freq']
-        
+            self.sampling_rate = float(1./karg['dt'])
+        if karg.has_key('sampling_rate'):
+            self.sampling_rate = karg['sampling_rate']
         if karg.has_key('t_start'):
             self.t_start = float(karg['t_start'])
-            self.t_stop  = self.t_start + len(self.signal)/self.freq
-        else :
-            self.t_start = 0.
-            self.t_stop = 0.
+        self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
         
     def __len__(self):
         if self.signal is not None :
@@ -44,8 +41,13 @@ class AnalogSignal(object):
         else :
             return 0
         
-    def t(self) :
-        return numpy.arange(len(self.signal), dtype = 'f')/self.freq + self.t_start
+    def compute_time_vector(self) :
+        return numpy.arange(len(self.signal), dtype = 'f')/self.sampling_rate + self.t_start
+
+    def t(self):
+        if self._t==None:
+            self._t=self.compute_time_vector()
+        return self._t
 
     def max(self):
         return self.signal.max()
@@ -61,8 +63,8 @@ class AnalogSignal(object):
         Return a new AnalogSignal obtained by slicing between t_start and t_stop
         
         Inputs:
-            t_start - begining of the new SpikeTrain, in ms.
-            t_stop  - end of the new SpikeTrain, in ms.
+            t_start - begining of the new AnalogSignal, in ms.
+            t_stop  - end of the new AnalogSignal, in ms.
         
         See also:
             interval_slice

@@ -132,7 +132,7 @@ class WinWcpIO(BaseIO):
                 ADCMAX = header['ADCMAX']
                 VMax = analysisHeader['VMax'][c]
                 anaSig.signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG
-                anaSig.freq = 1./analysisHeader['SamplingInterval']
+                anaSig.sampling_rate = 1./analysisHeader['SamplingInterval']
                 anaSig.t_start = analysisHeader['TimeRecorded']
                 anaSig.name = header['YN%d'%c]
                 anaSig.unit = header['YU%d'%c]

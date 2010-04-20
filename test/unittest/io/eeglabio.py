@@ -36,12 +36,12 @@ class ElanIOTest(unittest.TestCase):
     def testWriteReadSinusAndEvent(self):
         
         seg = Segment()
-        freq = 10000.
+        sampling_rate = 10000.
         totaltime = 15.
-        t = arange(0,totaltime,1./freq)
+        t = arange(0,totaltime,1./sampling_rate)
         sig = 3.6*sin(2*numpy.pi*t*60.)
         ana = AnalogSignal( signal = sig,
-                                        freq = freq,
+                                        sampling_rate = sampling_rate,
                                         )
         ana.label = 'therese'
         nbchannel = 32
@@ -69,7 +69,7 @@ class ElanIOTest(unittest.TestCase):
         for i in range(nbevent):
 #            print seg._events[i].time
 #            print seg2._events[i].time
-            assert seg._events[i].time - seg2._events[i].time < 1./freq
+            assert seg._events[i].time - seg2._events[i].time < 1./sampling_rate
 
 
 

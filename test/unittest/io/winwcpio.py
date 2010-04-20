@@ -29,7 +29,7 @@ class WinWcpIOTest(unittest.TestCase):
             assert len(seg.get_analogsignals()) ==2
             
             for s,sig in enumerate(seg.get_analogsignals()):
-                #print sig.signal.shape[0], sig.freq
+                #print sig.signal.shape[0], sig.sampling_rate
                 #assert sig.name == 'ImRK01G20'
                 #assert sig.unit == 'pA'
                 assert sig.signal.shape[0] == 49920

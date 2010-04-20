@@ -127,7 +127,7 @@ class RawIO(BaseIO):
         
         for i in xrange(nbchannel) :
             analogSig = AnalogSignal( signal = sig[:,i] ,
-                                                    freq = samplerate,
+                                                    sampling_rate = samplerate,
                                                     t_start = t_start)
             seg._analogsignals.append( analogSig )
         

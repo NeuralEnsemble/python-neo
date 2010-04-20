@@ -27,7 +27,7 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
         #assert len(seg.get_analogsignals()) ==1
         colors = [  'b' , 'r' ,'g' , 'y' , 'k' , 'm' , 'c']
         for s,sig in enumerate(seg.get_analogsignals()):
-            #print sig.signal.shape[0], sig.freq
+            #print sig.signal.shape[0], sig.sampling_rate
             #assert sig.name == 'ImRK01G20'
             #assert sig.unit == 'pA'
             #assert sig.signal.shape[0] == 1912832
@@ -41,7 +41,7 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
             if ev.type not in dict_color.keys():
                 dict_color[ev.type] = colors[len(dict_color) % 7]
             if hasattr(ev , 'waveform'):
-                tv = arange(ev.waveform.size , dtype = 'f')/ev.freq+ev.time
+                tv = arange(ev.waveform.size , dtype = 'f')/ev.sampling_rate+ev.time
                 ax2.plot(tv,ev.waveform[:,0] , color = dict_color[ev.type])
                 ax2.axvline(ev.time , color = dict_color[ev.type])
             else :
@@ -62,7 +62,7 @@ class NeuroshareSpike2IOTest(unittest.TestCase):
             if spiketr.get_spikes() is not None :
                 for spike in spiketr.get_spikes():
                     if spike.waveform is not None:
-                        tv = arange(spike.waveform.size , dtype = 'f')/spiketr.freq+spike.time
+                        tv = arange(spike.waveform.size , dtype = 'f')/spiketr.sampling_rate+spike.time
                         ax4.plot(tv,spike.waveform ,color = colors[s%7],)
 
                 

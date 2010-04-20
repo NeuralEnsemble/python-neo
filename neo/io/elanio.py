@@ -143,10 +143,10 @@ class ElanIO(BaseIO):
         l = f.readline()
         l = f.readline()
         
-        # frequencie sample
+        # sampling rate sample
         l = f.readline()
-        freq = 1./float(l)
-#        print 'freq',freq
+        sampling_rate = 1./float(l)
+#        print 'sampling_rate',sampling_rate
         
         # nb channel
         l = f.readline()
@@ -203,7 +203,7 @@ class ElanIO(BaseIO):
             sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
                                 (max_physic[c]-min_physic[c])+min_physic[c]
             analogSig = AnalogSignal(signal = sig,
-                                freq = freq,
+                                sampling_rate = sampling_rate,
                                 t_start=0)
             seg._analogsignals.append( analogSig )
         
@@ -211,7 +211,7 @@ class ElanIO(BaseIO):
         f = open(self.filename+'.pos')
         for l in f.readlines() :
             r = re.findall(' *(\d+) *(\d+) *(\d+) *',l)
-            ev = Event( time = float(r[0][0])/freq )
+            ev = Event( time = float(r[0][0])/sampling_rate )
             ev.label = str(r[0][1])
             ev.reject = str(r[0][2])
             seg._events.append( ev )
@@ -240,7 +240,7 @@ class ElanIO(BaseIO):
         fid_pos = open(self.filename+'.pos' ,'wt')
         
         seg = segment
-        freq = seg.get_analogsignals()[0].freq
+        sampling_rate = seg.get_analogsignals()[0].sampling_rate
         N = len(seg.get_analogsignals())
         
         #
@@ -255,7 +255,7 @@ class ElanIO(BaseIO):
         fid_ent.write('-1\n')
         fid_ent.write('reserved\n')
         fid_ent.write('-1\n')
-        fid_ent.write('%g\n' %  (1./freq))
+        fid_ent.write('%g\n' %  (1./sampling_rate))
         
         fid_ent.write( '%d\n' % (N+2) )
         
@@ -341,7 +341,7 @@ class ElanIO(BaseIO):
             data[:,i] = sig2.astype('i2')
         
         trigs = array([ ev.time for ev in seg.get_events() ])
-        trigs *= freq
+        trigs *= sampling_rate
         trigs = trigs.astype('i')
         trigs2 = trigs[ (trigs>0) & (trigs<data.shape[0]) ]
         data[trigs2,-1] = 1

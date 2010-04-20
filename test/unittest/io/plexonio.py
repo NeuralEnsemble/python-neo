@@ -30,7 +30,7 @@ class PlexonIOTest(unittest.TestCase):
         #assert len(seg.get_analogsignals()) ==1
         colors = [  'b' , 'r' ,'g' , 'y' , 'k' , 'm' , 'c']
         for s,sig in enumerate(seg.get_analogsignals()):
-            #~ print sig.signal.shape[0], sig.freq
+            #~ print sig.signal.shape[0], sig.sampling_rate
             #assert sig.name == 'ImRK01G20'
             #assert sig.unit == 'pA'
             #assert sig.signal.shape[0] == 1912832
@@ -45,7 +45,7 @@ class PlexonIOTest(unittest.TestCase):
                 if ev.type not in dict_color.keys():
                     dict_color[ev.type] = colors[len(dict_color) % 7]
                 if hasattr(ev , 'waveform'):
-                    tv = arange(ev.waveform.size , dtype = 'f')/ev.freq+ev.time
+                    tv = arange(ev.waveform.size , dtype = 'f')/ev.sampling_rate+ev.time
                     ax2.plot(tv,ev.waveform , color = dict_color[ev.type])
                     ax2.axvline(ev.time , color = dict_color[ev.type])
                 else :
@@ -76,7 +76,7 @@ class PlexonIOTest(unittest.TestCase):
                         )
             if spiketr._spikes is not None :
                 for sp in  spiketr.get_spikes()[:200]:
-                    vect_t  = arange(sp.waveform.size , dtype = 'f')/sp.freq
+                    vect_t  = arange(sp.waveform.size , dtype = 'f')/sp.sampling_rate
                     for w in range(sp.waveform.shape[0]) :
                         ax5.plot(vect_t , sp.waveform[w,:] , color = colors[s % 7] )
                         

@@ -134,7 +134,7 @@ class Spike2IO(BaseIO):
                         spike.time = event.time
                         if hasattr(event, 'waveform'):
                             spike.waveform = event.waveform
-                            spikeTr.freq = event.freq
+                            spike.sampling_rate = event.sampling_rate
                         spikeTr._spikes.append(spike)
                 else :
                     seg._events +=  events
@@ -211,8 +211,8 @@ class Spike2IO(BaseIO):
         else :
             sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
         #print 'sample_interval' , sample_interval
-        freq = 1./sample_interval
-        #print 'freq' , freq
+        sampling_rate = 1./sample_interval
+        #print 'sampling_rate' , sampling_rate
         
         # read blocks header to preallocate memory by jumping block to block
         fid.seek(channelHeader.firstblock)
@@ -235,7 +235,7 @@ class Spike2IO(BaseIO):
         anaSigs = [ ]
         for b,bs in enumerate(blocksize ):
             anaSigs.append( AnalogSignal(signal = empty( blocksize[0] , dtype = 'f4'),
-                                freq = freq,
+                                sampling_rate = sampling_rate,
                                 t_start = starttimes[b]*header.us_per_time * header.dtime_base,
                                 ) )
         
@@ -350,9 +350,9 @@ class Spike2IO(BaseIO):
                 else :
                     sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
                     
-                freq = 1./sample_interval
+                sampling_rate = 1./sample_interval
                 
-                event.freq = freq
+                event.sampling_rate = sampling_rate
             events.append(event)
             
         return events

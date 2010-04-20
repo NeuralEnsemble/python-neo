@@ -107,7 +107,7 @@ class EegLabIO(BaseIO):
         for e in xrange( data.shape[0] ) :
             anaSig = AnalogSignal()
             anaSig.label = chanlocs['labels'][e]
-            anaSig.freq = srate
+            anaSig.sampling_rate = srate
             anaSig.signal = data[e,:]
             anaSig.unit = 'microV'
             seg._analogsignals.append( anaSig )
@@ -143,7 +143,7 @@ class EegLabIO(BaseIO):
             data[i,:] = anaSig.signal
         
         #srate
-        srate = array( [[seg.get_analogsignals()[0].freq ]])
+        srate = array( [[seg.get_analogsignals()[0].sampling_rate ]])
         
         #event
         event = zeros( (1, len(seg.get_events())) , 

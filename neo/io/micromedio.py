@@ -155,25 +155,25 @@ class MicromedIO(BaseIO):
                 unit = 10e-6
             #-- rate
             f.seek(8,1)
-            freq, = f.read_f('H')
-            #print 'freq' , freq,
-            freq *= Rate_Min
-            #print freq
+            sampling_rate, = f.read_f('H')
+            #print 'sampling_rate' , sampling_rate,
+            sampling_rate *= Rate_Min
+            #print sampling_rate
             # signal
             factor = float(physical_max - physical_min) / float(logical_max-logical_min+1)
             if type(unit) != str :
                 factor *= unit
             signal = ( rawdata[:,c].astype('f') - logical_ground )* factor
-            anaSig = AnalogSignal(freq = freq , signal = signal, t_start =0.)
+            anaSig = AnalogSignal(sampling_rate = sampling_rate , signal = signal, t_start =0.)
             anaSig.label = label
             anaSig.ground = ground
             anaSig.num = c
             seg._analogsignals.append( anaSig )
             
-        freq = mean([ anaSig.freq for anaSig in seg._analogsignals ])
+        sampling_rate = mean([ anaSig.sampling_rate for anaSig in seg._analogsignals ])
         if averagesamplerate :
             for anaSig in seg._analogsignals :
-                anaSig.freq = freq
+                anaSig.sampling_rate = sampling_rate
         
         # Read trigger
         if True :
@@ -185,7 +185,7 @@ class MicromedIO(BaseIO):
                 if ( i == 0 )  :
                     first_trig = pos
                 if ( pos >= first_trig ) and (pos <= rawdata.shape[0]) :
-                    ev = Event( time = pos/freq )
+                    ev = Event( time = pos/sampling_rate )
                     ev.label = label
                     seg._events.append( ev )
         

@@ -8,7 +8,7 @@ neuroshare is C API for reading neural data.
 Neuroshare provide also a Matlab and a python API on top of that.
 The python API has been completly rewritten using ctypes here.
 
-Neurohare is a open source API but each dll is provides directly by the vendor.
+Neurohare is a open source API but each dll is provided directly by the vendor.
 We provide here some of them that downlable in vendors web site.
 
 This io run only on win32 platforms.
@@ -168,7 +168,7 @@ class NeuroshareIO(BaseIO):
                 pdTime = c_double(0)
                 neuroshare.ns_GetTimeByIndex( hFile,  dwEntityID,  dwIndex, byref(pdTime))
                 print 'pdTime' , pdTime.value
-                anaSig = AnalogSignal(freq = pAnalogInfo.dSampleRate,
+                anaSig = AnalogSignal(sampling_rate = pAnalogInfo.dSampleRate,
                                     signal = pData[:pdwContCount.value],
                                     t_start = pdTime.value)
                 seg._analogsignals.append( anaSig )
@@ -211,7 +211,7 @@ class NeuroshareIO(BaseIO):
                     
                     event = Event(time = pdTimeStamp.value)
                     event.waveform = waveform
-                    event.freq = pdwSegmentInfo.dSampleRate #FIXME
+                    event.sampling_rate = pdwSegmentInfo.dSampleRate #FIXME
                     event.type = entityInfo.szEntityLabel
                     seg._events.append(event)
                     

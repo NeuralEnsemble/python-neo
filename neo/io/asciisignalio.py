@@ -178,7 +178,7 @@ class AsciiSignalIO(BaseIO):
                     continue
             #print 'lkjjlkj', len(sig[:,i])
             analogSig = AnalogSignal( signal = sig[:,i] ,
-                                                    freq = samplerate,
+                                                    sampling_rate = samplerate,
                                                     t_start = t_start)
             seg._analogsignals.append( analogSig )
         

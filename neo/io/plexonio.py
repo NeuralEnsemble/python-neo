@@ -199,7 +199,7 @@ class PlexonIO(BaseIO):
                     elif globalHeader['Version'] >105:
                         data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
                     sp = Spike(time = time,
-                                freq = channelHeaders[chan]['WFRate'],
+                                sampling_rate = channelHeaders[chan]['WFRate'],
                                 waveform = data)
                     spiketrains[chan][unit]._spikes.append(sp)
                 else :
@@ -250,7 +250,7 @@ class PlexonIO(BaseIO):
             else :
                 print 'i', i , ncontinuoussamples[i]
                 anaSig = AnalogSignal(signal = zeros((ncontinuoussamples[i]) , dtype = 'f4'),
-                                                    freq = float(slowChannelHeaders[i]['ADFreq']),
+                                                    sampling_rate = float(slowChannelHeaders[i]['ADFreq']),
                                                     t_start = 0.,
                                                     )
                 anaSig.name = slowChannelHeaders[i]['Name']

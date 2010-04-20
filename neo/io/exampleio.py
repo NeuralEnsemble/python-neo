@@ -212,12 +212,12 @@ class ExampleIO(BaseIO):
         
         """
         
-        freq = 10000. #Hz
+        sampling_rate = 10000. #Hz
         t_start = -1.
         num_spike_by_spiketrain = 30
         
         #time vector for generated signal
-        t = arange(t_start, t_start+ segmentduration , 1./freq)
+        t = arange(t_start, t_start+ segmentduration , 1./sampling_rate)
         
         # create an empty segment
         seg = Segment()
@@ -263,7 +263,7 @@ class ExampleIO(BaseIO):
         # create some AnalogSignal :
         for i in range(num_recordingpoint):
             anasig = AnalogSignal()
-            anasig.freq = freq
+            anasig.sampling_rate = sampling_rate
             anasig.t_start = t_start
             # choose random freq between 20 and 100 for my sinus signal :
             f1 = random.rand()*80+20.
@@ -275,7 +275,7 @@ class ExampleIO(BaseIO):
             
             # add very simple spike waveform to the signal
             for j in range(num_spiketrainbyrecordingpoint):
-                wsize = int(freq*0.001)*2
+                wsize = int(sampling_rate*0.001)*2
                 wave = bartlett(wsize/2)*((j+1)*0.5)#+random.rand(wsize)*0.005
                 wave = concatenate( (wave,-wave))
                 spiketr = seg.get_spiketrains()[i*num_spiketrainbyrecordingpoint+j]

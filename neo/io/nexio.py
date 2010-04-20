@@ -163,7 +163,7 @@ class NexIO(BaseIO):
                     for j in xrange(spike_times.size):
                         sp = Spike(time = spike_times[j],
                                         waveform = waveforms[j,:].astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset'],
-                                        freq = entityHeader['WFrequency'],
+                                        sampling_rate = entityHeader['WFrequency'],
                                         )
                         spikeTr._spikes.append(sp)
                 else : 
@@ -205,7 +205,7 @@ class NexIO(BaseIO):
                 #signal = np.fromstring(fid.read(entityHeader['NPointsWave']*2), np.int16)*entityHeader['ADtoMV'] + entityHeader['offset']
                 #signal = fread(fid, entityHeader['NPointsWave'], 'i')
 
-                anaSig = AnalogSignal(signal = signal , t_start =t_start , freq  = entityHeader['WFrequency'])
+                anaSig = AnalogSignal(signal = signal , t_start =t_start , sampling_rate  = entityHeader['WFrequency'])
                 seg._analogsignals.append( anaSig )
                 
             if entityHeader['type'] == 6:

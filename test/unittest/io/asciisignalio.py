@@ -64,11 +64,11 @@ class AsciiSignalIOTest(unittest.TestCase):
     def testWriteReadSinus(self):
 
         seg = Segment()
-        freq = 10000.
-        t = arange(0,15.,1./freq)
+        sampling_rate = 10000.
+        t = arange(0,15.,1./sampling_rate)
         sig = 3.6*sin(2*numpy.pi*t*60.)
         ana = AnalogSignal( signal = sig,
-                                        freq = freq,
+                                        sampling_rate = sampling_rate,
                                         )
         seg._analogsignals = [ ana ]
         

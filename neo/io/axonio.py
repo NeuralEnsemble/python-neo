@@ -252,17 +252,17 @@ class AxonIO(BaseIO):
                 seg.num = j
                 for i in range(nbchannel):
                     if version <2. :
-                        freq = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
+                        sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
                         name = header['sADCChannelName'][i]
                         unit = header['sADCUnits'][i]
                         num = header['nADCPtoLChannelMap'][i]
                     elif version >=2. :
-                        freq = 1.e6/header['protocol']['fADCSequenceInterval']
+                        sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval']
                         name = header['listADCInfo'][i]['recChNames']
                         unit = header['listADCInfo'][i]['recChUnits']
                         num = header['listADCInfo'][i]['nADCNum']
                     anaSig = AnalogSignal( signal = list_data[j][:,i],
-                                            freq = freq ,
+                                            sampling_rate = sampling_rate ,
                                             t_start = 0)
                     anaSig.name = name
                     anaSig.unit = unit
@@ -287,17 +287,17 @@ class AxonIO(BaseIO):
             seg.datetime = filedatetime
             for i in range(nbchannel):
                 if version <2. :
-                    freq = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
+                    sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
                     name = header['sADCChannelName'][i]
                     unit = header['sADCUnits'][i]
                     num = header['nADCPtoLChannelMap'][i]
                 elif version >=2. :
-                    freq = 1.e6/header['protocol']['fADCSequenceInterval']
+                    sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval']
                     name = header['listADCInfo'][i]['recChNames']
                     unit = header['listADCInfo'][i]['recChUnits']
                     num = header['listADCInfo'][i]['nADCNum']
                 anaSig = AnalogSignal( signal = data[:,i],
-                                        freq = freq ,
+                                        sampling_rate = sampling_rate ,
                                         t_start = 0)
                 anaSig.name = name
                 anaSig.unit = unit
@@ -305,7 +305,7 @@ class AxonIO(BaseIO):
             seg._analogsignals.append( anaSig )
             for i,tag in enumerate(header['listTag']) :
                 event = Event(  )
-                event.time = tag['lTagTime']/freq
+                event.time = tag['lTagTime']/sampling_rate
                 event.name = clean_string(tag['sComment'])
                 event.num = i
                 event.type = tag['nTagType']

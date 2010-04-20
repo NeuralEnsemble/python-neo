@@ -134,7 +134,7 @@ class ElphyDatIO(BaseIO):
             f = 0.001
         else :
             f = 1.
-        freq = 1./(Dxu*f)
+        sampling_rate = 1./(Dxu*f)
         t_start = -x0u
         
         preseqI , postseqI , continuous, VariablEepLength , WithTags , = fid.read_f('ii???' , offset = 505)
@@ -166,7 +166,7 @@ class ElphyDatIO(BaseIO):
             seg = Segment()
             for a in xrange(channelCount) :
                 anaSig = AnalogSignal(signal = datas[s,:,a] ,
-                                        freq = freq,
+                                        sampling_rate = sampling_rate,
                                         t_start = t_start)
                 seg._analogsignals.append( anaSig )
             block._segments.append(seg)

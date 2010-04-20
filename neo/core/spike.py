@@ -7,13 +7,15 @@ class Spike(object):
     Object to represent a spike
 
     **Definition**
-    An :class:`Spike` is an evenement at time t. It can be just
+    An :class:`Spike` is an evenement at time t with a waveform.
 
     with arguments:
     
-    ``time`` The starting time of the epoch
+    ``time`` The spike time
     
-    ``duration`` The duration of the epoch
+    ``waveform`` An 1D array of the waveform
+    
+    ``sampling_rate`` The waveform sampling rate
     
     **Usage**
 
@@ -25,7 +27,7 @@ class Spike(object):
         
         self.time = None
         self.waveform = None
-        self.freq = None
+        self.sampling_rate = None
         
         if karg.has_key('time'):
             self.time = karg['time']
@@ -33,5 +35,5 @@ class Spike(object):
         if karg.has_key('waveform'):
             self.waveform = karg['waveform']
 
-        if karg.has_key('freq'):
-            self.freq = karg['freq']
+        if karg.has_key('sampling_rate'):
+            self.sampling_rate = karg['sampling_rate']

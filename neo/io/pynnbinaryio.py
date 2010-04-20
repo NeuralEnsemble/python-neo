@@ -13,6 +13,7 @@ Supported : Read/Write
 from baseio import BaseIO
 #from neo.core import *
 from ..core import *
+import numpy
 
 class PyNNBinaryIO(BaseIO):
     
