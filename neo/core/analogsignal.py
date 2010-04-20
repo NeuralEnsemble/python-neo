@@ -20,7 +20,7 @@ class AnalogSignal(object):
     label   = None
     t_start = 0.
     sampling_rate = 1.
-    signal = numpy.ndarray([], dtype='float32')
+    signal = numpy.array([], dtype='float32')
     _t = None
 
     def __init__(self, *arg, **karg):
