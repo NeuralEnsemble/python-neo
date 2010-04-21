@@ -42,7 +42,7 @@ class SpikeTrain(object):
         self._t_start     = None
         self._t_stop      = None
         self.neuron       = None
-            
+        
         if karg.has_key('spike_times'):
             self._spike_times = numpy.array(karg['spike_times'])
             self._spike_times.sort()

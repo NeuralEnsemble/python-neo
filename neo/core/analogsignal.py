@@ -17,13 +17,15 @@ class AnalogSignal(object):
 
     """
     
-    label   = None
-    t_start = 0.
-    sampling_rate = 1.
-    signal = numpy.array([], dtype='float32')
-    _t = None
+
 
     def __init__(self, *arg, **karg):
+        self.label   = None
+        self.t_start = 0.
+        self.sampling_rate = 1.
+        self.signal = numpy.array([], dtype='float32')
+        self._t = None
+    
         if karg.has_key('signal'):
             if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :
                 self.signal  = karg['signal']
@@ -35,11 +37,11 @@ class AnalogSignal(object):
             self.t_start = float(karg['t_start'])
         self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
         
-    def __len__(self):
-        if self.signal is not None :
-            return len(self.signal)
-        else :
-            return 0
+    #~ def __len__(self):
+        #~ if self.signal is not None :
+            #~ return len(self.signal)
+        #~ else :
+            #~ return 0
         
     def compute_time_vector(self) :
         return numpy.arange(len(self.signal), dtype = 'f')/self.sampling_rate + self.t_start
