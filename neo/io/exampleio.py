@@ -276,7 +276,7 @@ class ExampleIO(BaseIO):
                 
                 #f2 = random.rand()*1.5+.5
                 f2 = linspace(random.rand()*1.+.1 , random.rand()*1.+.1, t.size)
-                sig1 = sin(2*pi*t*f1) * sin(pi*t*f2)**2
+                sig1 = sin(2*pi*t*f1) * sin(pi*t*f2+random.rand()*pi)**2
                 sig1[t<0] = 0.
                 sig += sig1
                 
