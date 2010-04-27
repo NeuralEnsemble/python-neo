@@ -213,7 +213,7 @@ class ExampleIO(BaseIO):
         """
         
         sampling_rate = 10000. #Hz
-        t_start = -1.
+        t_start = -4.
         num_spike_by_spiketrain = 30
         
         #time vector for generated signal
@@ -266,11 +266,21 @@ class ExampleIO(BaseIO):
             anasig.sampling_rate = sampling_rate
             anasig.t_start = t_start
             anasig.t_stop = t_start + segmentduration
-            # choose random freq between 20 and 100 for my sinus signal :
-            f1 = random.rand()*80+20.
-            # choose a random freq for modulation between .5 and 2
-            f2 = random.rand()*1.5+.5
-            anasig.signal = sin(2*pi*t*f1) * sin(pi*t*f2)**2
+            
+            sig = zeros(t.shape, 'f')
+            for s in range(2):
+                # choose random freq between 20 and 80 for my sinus signal :
+                #f1 = random.rand()*80+20.
+                f1 = linspace(random.rand()*60+20. , random.rand()*60+20., t.size)
+                # choose a random freq for modulation between .5 and 2
+                
+                #f2 = random.rand()*1.5+.5
+                f2 = linspace(random.rand()*1.+.1 , random.rand()*1.+.1, t.size)
+                sig1 = sin(2*pi*t*f1) * sin(pi*t*f2)**2
+                sig1[t<0] = 0.
+                sig += sig1
+                
+            anasig.signal = random.rand(t.size)*7 + sig
             anasig.num = i
             anasig.name = 'signal on channel %d'%i
             
