@@ -24,6 +24,11 @@ import datetime
 
 # So bad :
 from numpy import *
+from scipy import stats
+from scipy import randn, rand
+from scipy.signal import resample
+
+
 
 
 # I need to subclass BaseIO
@@ -127,8 +132,12 @@ class ExampleIO(BaseIO):
                                         
                                         segmentduration = 3.,
                                         
-                                        num_recordingpoint = 3,
-                                        num_spiketrainbyrecordingpoint = 2,                        
+                                        num_recordingpoint = 8,
+                                        num_spiketrainbyrecordingpoint = 2,
+                                        
+                                        trodness = 4,
+                                        num_spike_by_spiketrain = 30,
+                                        
                         ) :
         """
         Return a fake Block.
@@ -156,6 +165,8 @@ class ExampleIO(BaseIO):
                                         segmentduration = segmentduration,
                                         num_recordingpoint = num_recordingpoint,
                                         num_spiketrainbyrecordingpoint = num_spiketrainbyrecordingpoint,
+                                        trodness = trodness,
+                                        num_spike_by_spiketrain = num_spike_by_spiketrain,                              
                                         )
             seg.name = 'example segment %d' % i 
             seg.datetime = datetime.datetime.now()
@@ -187,6 +198,8 @@ class ExampleIO(BaseIO):
                                         num_recordingpoint = 4,
                                         num_spiketrainbyrecordingpoint = 2,
                                         
+                                        trodness = 4,
+                                        num_spike_by_spiketrain = 30,
                                         ):
         """
         Return a fake Segment.
@@ -209,12 +222,17 @@ class ExampleIO(BaseIO):
         This is controled by :
         num_recordingpoint
         num_spiketrainbyrecordingpoint
+        trodness ( 4 = tetrode groups, 1 = monoelectrode groups )
         
         """
         
         sampling_rate = 10000. #Hz
         t_start = -4.
-        num_spike_by_spiketrain = 30
+        
+        spike_amplitude = 1
+        sinus_amplitude = 1
+        randnoise_amplitude = 0.6
+        
         
         #time vector for generated signal
         t = arange(t_start, t_start+ segmentduration , 1./sampling_rate)
@@ -230,29 +248,46 @@ class ExampleIO(BaseIO):
             # Add record to seg instance
             seg._recordingpoints.append( record )
         
+        #generate a fake spike shape (2d array if trodness >1)
+        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/2.
+        sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
+        sig = r_[ sig1 , sig2 ]
+        basicshape = -sig/max(sig)
+        basicshape = resample( basicshape , int(basicshape.size * sampling_rate / 10000. ) )
+        wsize = basicshape.size
+        
         # create some SpikeTrain :
-        for i in range(num_recordingpoint):
+        for i in range(num_recordingpoint/trodness):
+                
+            # basic shape duplicate on each trodness electrode with a random factor
+            props = rand(num_spiketrainbyrecordingpoint, trodness)
+            
             for j in range(num_spiketrainbyrecordingpoint):
-
+                
+                spikeshape = empty( ( basicshape.size, 0))
+                for j in range(trodness):
+                    spikeshape = concatenate( (spikeshape, basicshape[:,newaxis]*props[i,j]) , axis = 1)
+                
                 spiketr = SpikeTrain()
                 
                 # There are 2 possibles behaviour for a SpikeTrain
                 # holding many Spike instance or directly holding spike times
-                # we choose here the second : 
-                spiketr._spikes = None
+                # we choose here the first : 
                 
-                # So we fill the _spike_times attr :
-                # generated a random distributed time spike
-                spiketr._spike_times = random.rand(num_spike_by_spiketrain)*segmentduration+t_start
-                spiketr._spike_times.sort()
-                spiketr.t_start = t_start
-                spiketr.t_stop = t_start + segmentduration
-                
+                spiketr._spikes = [ ]
+                for k in range( num_spike_by_spiketrain ):
+                        sp = Spike()
+                        sp.time = random.rand()*segmentduration+t_start
+                        sp.sampling_rate = sampling_rate
+                        factor = randn()/6+1 # nose factor in amplitude
+                        sp.waveform = spikeshape * factor * spike_amplitude
+                        spiketr._spikes.append(sp)
+
                 # for simplification spiketrain is not linked to a neuron instance but it could be
                 spiketr.neuron = None
                 
                 # link this SpikeTrain to its RecordingPoint
-                spiketr.recordingpoint = seg._recordingpoints[i]
+                spiketr.recordingpoint = seg._recordingpoints[i*trodness]
                 
                 # this ollowing field is optional and specific from my IO :
                 spiketr.ID = 'SpikeTrain %d %d' % (i,j)
@@ -278,27 +313,24 @@ class ExampleIO(BaseIO):
                 f2 = linspace(random.rand()*1.+.1 , random.rand()*1.+.1, t.size)
                 sig1 = sin(2*pi*t*f1) * sin(pi*t*f2+random.rand()*pi)**2
                 sig1[t<0] = 0.
-                sig += sig1
+                sig += sig1*sinus_amplitude
                 
-            anasig.signal = random.rand(t.size)*7 + sig
+            anasig.signal = (random.rand(t.size)-.5)*randnoise_amplitude + sig
             anasig.num = i
             anasig.name = 'signal on channel %d'%i
             
-            # add very simple spike waveform to the signal
             for j in range(num_spiketrainbyrecordingpoint):
-                wsize = int(sampling_rate*0.001)*2
-                wave = bartlett(wsize/2)*((j+1)*0.5)#+random.rand(wsize)*0.005
-                wave = concatenate( (wave,-wave))
-                spiketr = seg.get_spiketrains()[i*num_spiketrainbyrecordingpoint+j]
-                for ts in spiketr :
-                    pos = digitize( [ts] , t )
+                sptr = seg._spiketrains[ int(num_recordingpoint/trodness)+j]
+                for sp in sptr._spikes:
+                    waveform = sp.waveform[ :, i % trodness  ]
+                    pos = digitize( [sp.time] , t )
                     pos = pos[0]-wsize/2
                     if pos>=anasig.signal.size-wsize :
                         pos = anasig.signal.size-wsize-1
                     if pos<0 :
                         pos =0
-                    anasig.signal[pos:pos+wsize] +=  wave
-            
+                    anasig.signal[pos:pos+wsize] +=  waveform
+                        
             
             # link this AnalogSignal to its RecordingPoint
             #~ anasig.recordingpoint = seg._recordingpoints[i]
