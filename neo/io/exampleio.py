@@ -230,8 +230,10 @@ class ExampleIO(BaseIO):
         t_start = -4.
         
         spike_amplitude = 1
-        sinus_amplitude = 1
-        randnoise_amplitude = 0.6
+        sinus_amplitude = 0
+        randnoise_amplitude = 0.2
+        #randnoise_amplitude = 0.
+        
         
         
         #time vector for generated signal
@@ -249,7 +251,7 @@ class ExampleIO(BaseIO):
             seg._recordingpoints.append( record )
         
         #generate a fake spike shape (2d array if trodness >1)
-        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/2.
+        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/3.
         sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
         sig = r_[ sig1 , sig2 ]
         basicshape = -sig/max(sig)
@@ -257,12 +259,16 @@ class ExampleIO(BaseIO):
         wsize = basicshape.size
         
         # create some SpikeTrain :
-        for i in range(num_recordingpoint/trodness):
-                
-            # basic shape duplicate on each trodness electrode with a random factor
-            props = rand(num_spiketrainbyrecordingpoint, trodness)
             
-            for j in range(num_spiketrainbyrecordingpoint):
+        for j in range(num_spiketrainbyrecordingpoint):
+            
+            # basic shape duplicate on each trodness electrode with a random factor
+            
+            
+            for i in range(num_recordingpoint/trodness):
+                props = rand(num_spiketrainbyrecordingpoint, trodness)
+                
+                
                 
                 spikeshape = empty( ( basicshape.size, 0))
                 for j in range(trodness):
@@ -294,6 +300,7 @@ class ExampleIO(BaseIO):
                 
                 # Add spiketr to seg instance
                 seg._spiketrains.append( spiketr )
+        
         
         # create some AnalogSignal :
         for i in range(num_recordingpoint):
