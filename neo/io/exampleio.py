@@ -158,6 +158,7 @@ class ExampleIO(BaseIO):
         blck = Block()
         blck.name = 'example block'
         blck.datetime = datetime.datetime.now()
+        self.props = rand(num_spiketrainbyrecordingpoint, trodness)# this is for spikes
         for i in range(num_segment) :
             # read a segment in the fake file
             # id_segment is just a example it is not taken in account
@@ -266,8 +267,8 @@ class ExampleIO(BaseIO):
             
             
             for i in range(num_recordingpoint/trodness):
-                props = rand(num_spiketrainbyrecordingpoint, trodness)
-                
+                #~ props = rand(num_spiketrainbyrecordingpoint, trodness)
+                props = self.props
                 
                 
                 spikeshape = empty( ( basicshape.size, 0))
