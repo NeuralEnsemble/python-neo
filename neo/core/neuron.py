@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-global id
-id = 0
+global neoid
+neoid = 0
 
 class Neuron(object):
      
@@ -15,7 +15,7 @@ class Neuron(object):
 
     with arguments:
     
-    ``id``
+    ``neoid``
         A number identifying the neuron. A default number is created if none are given
     
     ``label``
@@ -26,23 +26,21 @@ class Neuron(object):
     **Example**
     
     """
-    label = None
-    id    = None
     
     def __init__(self, *arg, **karg):
-        global id
+        global neoid
         self.spiketrains = []
         
-        if karg.has_key('id'):
-            self.id = karg['id']            
+        if karg.has_key('neoid'):
+            self.neoid = karg['neoid']            
         else:
-            self.id = id
-            id += 1
+            self.neoid = neoid
+            neoid += 1
                 
-        if karg.has_key('label'):
-            self.label = karg['label']
+        if karg.has_key('name'):
+            self.name = karg['name']
         else:
-            self.label = "Neuron %d" %self.id
+            self.name = "Neuron %d" %self.neoid
         
     def __str__(self):
         return str(self.label) 
