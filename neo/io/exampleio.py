@@ -78,10 +78,12 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Segment size (s.)' } ),
                                 ('num_segment' , { 'value' : 5,
                                               'label' : 'Segment number' } ),
-                                ('num_recordingpoint' , { 'value' : 3,
+                                ('num_recordingpoint' , { 'value' : 4,
                                                 'label' : 'Number of recording points' } ),
                                 ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
-                                                'label' : 'Num of spiketrain by recording points' } ),                        
+                                                'label' : 'Num of spiketrain by recording points' } ),
+                                ('trodness' , { 'value' : 4,
+                                                'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
                                 ],
                         Segment : [
                                 ('segmentduration' , { 'value' : 3., 
@@ -90,6 +92,8 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Number of recording points' } ),
                                 ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
                                                 'label' : 'Num of spiketrain by recording points' } ),
+                                ('trodness' , { 'value' : 4,
+                                                'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
                                     ],
                         }
     
@@ -155,6 +159,9 @@ class ExampleIO(BaseIO):
         
         """
         
+        if num_recordingpoint%trodness != 0:
+            num_recordingpoint = (num_recordingpoint/trodness) * trodness
+        
         blck = Block()
         blck.name = 'example block'
         blck.datetime = datetime.datetime.now()
@@ -178,6 +185,8 @@ class ExampleIO(BaseIO):
         
         for i in range(num_recordingpoint):
             blck._recordingpoints[i].name = 'point %i' % i
+            blck._recordingpoints[i].group = int(i/trodness)+1
+            blck._recordingpoints[i].trodness = trodness
             for j in range(num_segment) :
                 blck._recordingpoints[i]._analogsignals += blck._segments[j]._recordingpoints[i]._analogsignals
                 
@@ -328,7 +337,8 @@ class ExampleIO(BaseIO):
             anasig.name = 'signal on channel %d'%i
             
             for j in range(num_spiketrainbyrecordingpoint):
-                sptr = seg._spiketrains[ int(num_recordingpoint/trodness)+j]
+                #~ sptr = seg._spiketrains[ int(num_recordingpoint/trodness)+j]
+                sptr = seg._spiketrains[ j ]
                 for sp in sptr._spikes:
                     waveform = sp.waveform[ :, i % trodness  ]
                     pos = digitize( [sp.time] , t )
