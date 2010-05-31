@@ -59,14 +59,14 @@ class PlexonIO(BaseIO):
                         }
     write_params       = None
     
-    name               = 'NeuroExplorer'
-    extensions          = [ 'nex' ]
+    name               = 'Plexon'
+    extensions          = [ 'plx' ]
     
 
     
     def __init__(self , filename = None) :
         """
-        This class read a abf file.
+        This class read a plx file.
         
         **Arguments**
         
