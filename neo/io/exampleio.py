@@ -84,6 +84,14 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Num of spiketrain by recording points' } ),
                                 ('trodness' , { 'value' : 4,
                                                 'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
+                                
+                                ('spike_amplitude' , { 'value' : 1,
+                                                'label' : 'Amplitude of spikes' } ),
+                                ('sinus_amplitude' , { 'value' : .2,
+                                                'label' : 'Amplitude of sinus' } ),
+                                ('randnoise_amplitude' , { 'value' : .2,
+                                                'label' : 'Rand noise' } ),
+                                                
                                 ],
                         Segment : [
                                 ('segmentduration' , { 'value' : 3., 
@@ -94,6 +102,13 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Num of spiketrain by recording points' } ),
                                 ('trodness' , { 'value' : 4,
                                                 'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
+
+                                ('spike_amplitude' , { 'value' : 1,
+                                                'label' : 'Amplitude of spikes' } ),
+                                ('sinus_amplitude' , { 'value' : .2,
+                                                'label' : 'Amplitude of sinus' } ),
+                                ('randnoise_amplitude' , { 'value' : .2,
+                                                'label' : 'Rand noise' } ),
                                     ],
                         }
     
@@ -142,6 +157,10 @@ class ExampleIO(BaseIO):
                                         trodness = 4,
                                         num_spike_by_spiketrain = 30,
                                         
+                                        spike_amplitude = 1,
+                                        sinus_amplitude = 0.2,
+                                        randnoise_amplitude = 0.2,                                        
+                                        
                         ) :
         """
         Return a fake Block.
@@ -174,7 +193,11 @@ class ExampleIO(BaseIO):
                                         num_recordingpoint = num_recordingpoint,
                                         num_spiketrainbyrecordingpoint = num_spiketrainbyrecordingpoint,
                                         trodness = trodness,
-                                        num_spike_by_spiketrain = num_spike_by_spiketrain,                              
+                                        num_spike_by_spiketrain = num_spike_by_spiketrain, 
+                                        
+                                        spike_amplitude = spike_amplitude,
+                                        sinus_amplitude = sinus_amplitude,
+                                        randnoise_amplitude = randnoise_amplitude,                                               
                                         )
             seg.name = 'example segment %d' % i 
             seg.datetime = datetime.datetime.now()
@@ -210,6 +233,11 @@ class ExampleIO(BaseIO):
                                         
                                         trodness = 4,
                                         num_spike_by_spiketrain = 30,
+                                        
+                                        spike_amplitude = 1,
+                                        sinus_amplitude = 0.2,
+                                        randnoise_amplitude = 0.2,
+                                        
                                         ):
         """
         Return a fake Segment.
@@ -239,9 +267,9 @@ class ExampleIO(BaseIO):
         sampling_rate = 10000. #Hz
         t_start = -4.
         
-        spike_amplitude = 1
-        sinus_amplitude = 0
-        randnoise_amplitude = 0.2
+        #~ spike_amplitude = 1
+        #~ sinus_amplitude = 0
+        #~ randnoise_amplitude = 0.2
         #randnoise_amplitude = 0.
         
         
