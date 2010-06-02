@@ -182,6 +182,7 @@ class AsciiSignalIO(BaseIO):
             analogSig = AnalogSignal( signal = sig[:,i] ,
                                                     sampling_rate = samplerate,
                                                     t_start = t_start)
+            analogSig.channel = i
             seg._analogsignals.append( analogSig )
         
         return seg

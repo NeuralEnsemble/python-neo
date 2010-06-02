@@ -169,7 +169,7 @@ class MicromedIO(BaseIO):
             anaSig = AnalogSignal(sampling_rate = sampling_rate , signal = signal, t_start =0.)
             anaSig.label = label
             anaSig.ground = ground
-            anaSig.num = c
+            anaSig.channel = c
             seg._analogsignals.append( anaSig )
             
         sampling_rate = mean([ anaSig.sampling_rate for anaSig in seg._analogsignals ])

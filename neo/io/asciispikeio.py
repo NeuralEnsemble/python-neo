@@ -112,7 +112,9 @@ class AsciiSpikeIO(BaseIO):
         seg = Segment()
         
         f = open(self.filename, 'Ur')
+        i = 0
         for line in f :
+            
             all = line[:-1].split(delimiter)
             
             if all[-1] == '': all = all[:-1]
@@ -121,7 +123,9 @@ class AsciiSpikeIO(BaseIO):
             
             spiketr = SpikeTrain(spike_times = spike_times,
                                     t_start = t_start)
+            spiketr.channel = i
             seg._spiketrains.append(spiketr)
+            i+=1
         f.close()
         
         return seg

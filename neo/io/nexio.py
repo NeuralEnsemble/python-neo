@@ -111,6 +111,7 @@ class NexIO(BaseIO):
                                                     t_stop = globalHeader['tend']/globalHeader['freq'],
                                                     )
                 spikeTr.name = entityHeader['name']
+                spikeTr.channel = entityHeader['WireNumber']
                 seg._spiketrains.append(spikeTr)
 
             if entityHeader['type'] == 1:
@@ -174,6 +175,7 @@ class NexIO(BaseIO):
                                                     t_stop = globalHeader['tend']/globalHeader['freq'],
                                                     )
                 spikeTr.name = entityHeader['name']
+                spikeTr.channel = entityHeader['WireNumber']
                 seg._spiketrains.append(spikeTr)
 
 
@@ -208,6 +210,7 @@ class NexIO(BaseIO):
                 #signal = fread(fid, entityHeader['NPointsWave'], 'i')
 
                 anaSig = AnalogSignal(signal = signal , t_start =t_start , sampling_rate  = entityHeader['WFrequency'])
+                anaSig.channel = entityHeader['WireNumber']
                 seg._analogsignals.append( anaSig )
                 
             if entityHeader['type'] == 6:

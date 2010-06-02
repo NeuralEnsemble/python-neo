@@ -268,7 +268,7 @@ class AxonIO(BaseIO):
                                             t_start = 0)
                     anaSig.name = name
                     anaSig.unit = unit
-                    anaSig.num = num
+                    anaSig.channel = num
                     seg._analogsignals.append( anaSig )
                 block._segments.append(seg)
 
@@ -303,7 +303,7 @@ class AxonIO(BaseIO):
                                         t_start = 0)
                 anaSig.name = name
                 anaSig.unit = unit
-                anaSig.num = num
+                anaSig.channel = num
             seg._analogsignals.append( anaSig )
             for i,tag in enumerate(header['listTag']) :
                 event = Event(  )

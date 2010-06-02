@@ -112,6 +112,7 @@ class EegLabIO(BaseIO):
             anaSig.sampling_rate = srate
             anaSig.signal = data[e,:]
             anaSig.unit = 'microV'
+            anaSig.channel = e
             seg._analogsignals.append( anaSig )
             
         for e in xrange(events.size) :

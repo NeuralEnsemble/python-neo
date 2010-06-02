@@ -170,6 +170,7 @@ class ElphyDatIO(BaseIO):
                 anaSig = AnalogSignal(signal = datas[s,:,a] ,
                                         sampling_rate = sampling_rate,
                                         t_start = t_start)
+                anaSig.channel = s
                 seg._analogsignals.append( anaSig )
             block._segments.append(seg)
             

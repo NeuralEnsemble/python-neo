@@ -207,6 +207,7 @@ class ElanIO(BaseIO):
             analogSig = AnalogSignal(signal = sig,
                                 sampling_rate = sampling_rate,
                                 t_start=0)
+            analogSig.channel = c
             seg._analogsignals.append( analogSig )
         
         # triggers
