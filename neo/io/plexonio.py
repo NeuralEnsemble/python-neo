@@ -161,10 +161,13 @@ class PlexonIO(BaseIO):
             spiketrains.append([])
             for j in xrange(5):
                 if load_spike_waveform and WFCounts[i,j] != 0:
-                    spiketrains[-1].append( SpikeTrain(spikes = [ ]) )
+                    sptr = SpikeTrain(spikes = [ ])
+                    sptr.sampling_rate = globalHeader['ADFrequency']
+                    spiketrains[-1].append(sptr  )
                 elif TSCounts[i,j] !=0:
                     sptr = SpikeTrain(spike_times = zeros((TSCounts[i,j]) , dtype='f4'))
                     sptr.channel = i
+                    sptr.sampling_rate = globalHeader['ADFrequency']
                     spiketrains[-1].append( sptr )
                     nspikecounts = zeros(TSCounts.shape ,dtype='i')
                 else :
@@ -185,7 +188,7 @@ class PlexonIO(BaseIO):
             chan = dataBlockHeader['Channel']
             unit = dataBlockHeader['Unit']
             time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 + dataBlockHeader['TimeStamp']
-            time/=globalHeader['ADFrequency'] 
+            time/= globalHeader['ADFrequency'] 
             n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
             
             if dataBlockHeader['Type'] == 1:

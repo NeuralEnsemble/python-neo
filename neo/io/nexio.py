@@ -162,13 +162,14 @@ class NexIO(BaseIO):
                                                     t_start = globalHeader['tbeg']/globalHeader['freq'],
                                                     t_stop = globalHeader['tend']/globalHeader['freq'],
                                                     )
-
+                    spikeTr.sampling_rate = entityHeader['WFrequency']
                     for j in xrange(spike_times.size):
                         sp = Spike(time = spike_times[j],
-                                        waveform = waveforms[j,:].astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset'],
+                                        waveform = waveforms[j:j+1,:].astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset'],
                                         sampling_rate = entityHeader['WFrequency'],
                                         )
                         spikeTr._spikes.append(sp)
+                        
                 else : 
                     spikeTr = SpikeTrain( spike_times= spike_times, 
                                                     t_start = globalHeader['tbeg']/globalHeader['freq'],
