@@ -80,6 +80,8 @@ class AxonIO(BaseIO):
 
     name               = None
     extensions         = [ 'abf' ]
+    
+    filemode = True
 
 
     def __init__(self , filename = None) :

@@ -75,6 +75,8 @@ class AsciiSpikeIO(BaseIO):
     name               = None
     extensions          = [ 'txt' ]
     
+    filemode = True
+    
 
 
     def __init__(self , filename = None) :

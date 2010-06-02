@@ -61,6 +61,8 @@ class Spike2IO(BaseIO):
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
     
+    filemode = True
+    
     def __init__(self , filename = None) :
         """
         This class read/write a eeglab matlab based file.
@@ -118,6 +120,7 @@ class Spike2IO(BaseIO):
                 anaSigs = self.readOneChannelWaveform( fid, i, header ,)
                 print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for sig in anaSigs :
+                    sig.channel = channelHeader.phy_chan
                     seg._analogsignals.append( sig )
                     print sig.signal.size,
                 print ''
@@ -128,6 +131,7 @@ class Spike2IO(BaseIO):
                 print 'nb events : ', len(events)
                 if i in transform_event_to_spike:
                     spikeTr = SpikeTrain(spikes = [])
+                    spikeTr.channel = channelHeader.phy_chan
                     seg._spiketrains.append(spikeTr)
                     for event in events :
                         spike = Spike()

@@ -56,6 +56,8 @@ class MicromedIO(BaseIO):
     name               = None
     extensions          = [ 'TRC' ]
     
+    filemode = True
+    
     def __init__(self , filename = None) :
         """
         This class read a micromed TRC file.

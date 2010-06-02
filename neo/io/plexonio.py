@@ -62,6 +62,8 @@ class PlexonIO(BaseIO):
     name               = 'Plexon'
     extensions          = [ 'plx' ]
     
+    filemode = True
+    
 
     
     def __init__(self , filename = None) :
@@ -161,7 +163,9 @@ class PlexonIO(BaseIO):
                 if load_spike_waveform and WFCounts[i,j] != 0:
                     spiketrains[-1].append( SpikeTrain(spikes = [ ]) )
                 elif TSCounts[i,j] !=0:
-                    spiketrains[-1].append( SpikeTrain(spike_times = zeros((TSCounts[i,j]) , dtype='f4')) )
+                    sptr = SpikeTrain(spike_times = zeros((TSCounts[i,j]) , dtype='f4'))
+                    sptr.channel = i
+                    spiketrains[-1].append( sptr )
                     nspikecounts = zeros(TSCounts.shape ,dtype='i')
                 else :
                     spiketrains[-1].append(None)
@@ -254,6 +258,8 @@ class PlexonIO(BaseIO):
                                                     t_start = 0.,
                                                     )
                 anaSig.name = slowChannelHeaders[i]['Name']
+                anaSig.channel = slowChannelHeaders[i]['Channel']
+                
                 
                 #~ anaSigs.append(anaSig)
                 anaSigs[i] = anaSig

@@ -29,7 +29,7 @@ class Neuron(object):
     
     def __init__(self, *arg, **karg):
         global neoid
-        self.spiketrains = []
+        self._spiketrains = []
         
         if karg.has_key('neoid'):
             self.neoid = karg['neoid']            
@@ -46,4 +46,4 @@ class Neuron(object):
         return str(self.label) 
     
     def add_spiketrain(self, spiketrain):
-        self.spiketrains += [spiketrain]
+        self._spiketrains += [spiketrain]

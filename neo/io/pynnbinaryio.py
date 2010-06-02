@@ -32,6 +32,8 @@ class PyNNBinaryIO(BaseIO):
     is_streameable     = False
     extensions         = ['pynn']
     
+    filemode = True
+    
     def __init__(self , filename=None , **kargs ) :
         BaseIO.__init__(self)
         self.filename = filename

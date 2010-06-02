@@ -21,8 +21,20 @@ class RecordingPoint(object):
     def __init__(self, *arg, **karg):
         self._analogsignals = [ ]
         self._spiketrains = [ ]
+        #~ self._neurons = [ ]
+        self.channel = None
+        
+        
         if 'analogsignals' in karg :
-            self._analogsignals = analogsignals
+            self._analogsignals = karg['analogsignals']
         
         if 'spiketrains' in karg :
-            self._spiketrains = spiketrains
+            self._spiketrains = karg['spiketrains']
+            
+        if 'neurons' in karg :
+            self._neurons = karg['neurons']
+        
+        if 'channel' in karg :
+            self.channel = karg['channel']
+
+

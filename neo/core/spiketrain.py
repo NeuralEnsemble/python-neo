@@ -61,8 +61,7 @@ class SpikeTrain(object):
         if karg.has_key('neuron'):
             self.neuron = karg['neuron']
         else:
-            self.neuron = Neuron()
-        self.neuron.add_spiketrain(self)
+            self.neuron = None
         
         if karg.has_key('spikes'):
             self._spikes = karg['spikes']
@@ -514,7 +513,20 @@ class SpikeTrain(object):
     
     def cross_correlate(self, spiketrain, bin_size=0.001, t_before=0.05, t_after=0.05):
         return self.psth(spiketrain)
-    
+
+
+    def all_diff_combinate(self, events):
+        """
+        Return  a vector that combinate all diff between spike times and a list of event.
+        """
+        t1 = events
+        t2 = self.spike_times
+        m1 = numpy.tile(t1[:,numpy.newaxis] , (1,t2.size) )
+        m2 = numpy.tile(t2[numpy.newaxis,:] , (t1.size,1) )
+        m = m2-m1
+        m = m.reshape(m.size)        
+        return m
+
     def psth(self, events, bin_size=0.001, t_before=0.05, t_after=0.05):
         """
         Return the psth of the spike times contained in the SpikeTrain according to selected events, 
@@ -539,20 +551,29 @@ class SpikeTrain(object):
         #assert (t_min >= 0) and (t_max >= 0), "t_min and t_max should be greater than 0"
         #assert len(events) > 0, "events should not be empty and should contained at least one element"
 
-        spk_hist = self.time_histogram(bin_size)
-        subplot  = get_display(display)
-        count    = 0
-        t_min_l  = numpy.floor(t_min/bin_size)
-        t_max_l  = numpy.floor(t_max/bin_size)
-        result   = numpy.zeros((t_min_l+t_max_l), numpy.float32)
-        t_start  = numpy.floor(self._t_start/bin_size)
-        t_stop   = numpy.floor(self._t_stop/bin_size)
-        for ev in events:
-           ev = numpy.floor(ev/bin_size)
-           if ((ev - t_min_l )> t_start) and (ev + t_max_l ) < t_stop:
-               count  += 1
-               result += spk_hist[(ev-t_min_l):ev+t_max_l]
-        result /= count
+        # patch by S garcia to be discuss
+        
+        m = self.all_diff_combinate(events)
+        y,x = numpy.histogram( m , bins = numpy.arange(-t_before, t_after, bin_size))
+        return y.astype('f')/y.size
 
-        return result
+
+        # pierre yger:
+        
+        #~ spk_hist = self.time_histogram(bin_size)
+        #~ subplot  = get_display(display)
+        #~ count    = 0
+        #~ t_min_l  = numpy.floor(t_min/bin_size)
+        #~ t_max_l  = numpy.floor(t_max/bin_size)
+        #~ result   = numpy.zeros((t_min_l+t_max_l), numpy.float32)
+        #~ t_start  = numpy.floor(self._t_start/bin_size)
+        #~ t_stop   = numpy.floor(self._t_stop/bin_size)
+        #~ for ev in events:
+           #~ ev = numpy.floor(ev/bin_size)
+           #~ if ((ev - t_min_l )> t_start) and (ev + t_max_l ) < t_stop:
+               #~ count  += 1
+               #~ result += spk_hist[(ev-t_min_l):ev+t_max_l]
+        #~ result /= count
+
+        #~ return result
     

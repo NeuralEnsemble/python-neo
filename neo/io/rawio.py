@@ -65,6 +65,8 @@ class RawIO(BaseIO):
     name               = None
     extensions          = [ 'raw' ]
     
+    filemode = True
+    
     def __init__(self , filename = None) :
         """
         This class read a binary file.
@@ -127,8 +129,10 @@ class RawIO(BaseIO):
         
         for i in xrange(nbchannel) :
             analogSig = AnalogSignal( signal = sig[:,i] ,
-                                                    sampling_rate = samplerate,
-                                                    t_start = t_start)
+                                      sampling_rate = samplerate,
+                                      t_start = t_start,
+                                      channel = i,
+                                      )
             seg._analogsignals.append( analogSig )
         
         return seg

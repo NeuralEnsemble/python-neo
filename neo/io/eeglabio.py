@@ -58,6 +58,8 @@ class EegLabIO(BaseIO):
     name               = None
     extensions         = [ 'set' ]
     
+    filemode = True
+    
     def __init__(self , filename = None) :
         """
         This class read/write a eeglab matlab based file.

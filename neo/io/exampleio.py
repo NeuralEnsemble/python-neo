@@ -78,36 +78,36 @@ class ExampleIO(BaseIO):
                                                 'label' : 'Segment size (s.)' } ),
                                 ('num_segment' , { 'value' : 5,
                                               'label' : 'Segment number' } ),
-                                ('num_recordingpoint' , { 'value' : 4,
+                                ('num_recordingpoint' , { 'value' : 8,
                                                 'label' : 'Number of recording points' } ),
                                 ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
                                                 'label' : 'Num of spiketrain by recording points' } ),
                                 ('trodness' , { 'value' : 4,
                                                 'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
                                 
-                                ('spike_amplitude' , { 'value' : 1,
+                                ('spike_amplitude' , { 'value' : .8,
                                                 'label' : 'Amplitude of spikes' } ),
-                                ('sinus_amplitude' , { 'value' : .2,
+                                ('sinus_amplitude' , { 'value' : 1.,
                                                 'label' : 'Amplitude of sinus' } ),
-                                ('randnoise_amplitude' , { 'value' : .2,
+                                ('randnoise_amplitude' , { 'value' : .4,
                                                 'label' : 'Rand noise' } ),
-                                                
+                                
                                 ],
                         Segment : [
                                 ('segmentduration' , { 'value' : 3., 
                                                 'label' : 'Segment size (s.)' } ),
-                                ('num_recordingpoint' , { 'value' : 4,
+                                ('num_recordingpoint' , { 'value' : 8,
                                                 'label' : 'Number of recording points' } ),
                                 ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
                                                 'label' : 'Num of spiketrain by recording points' } ),
                                 ('trodness' , { 'value' : 4,
                                                 'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
 
-                                ('spike_amplitude' , { 'value' : 1,
+                                ('spike_amplitude' , { 'value' : .8,
                                                 'label' : 'Amplitude of spikes' } ),
-                                ('sinus_amplitude' , { 'value' : .2,
+                                ('sinus_amplitude' , { 'value' : 1.,
                                                 'label' : 'Amplitude of sinus' } ),
-                                ('randnoise_amplitude' , { 'value' : .2,
+                                ('randnoise_amplitude' , { 'value' : .4,
                                                 'label' : 'Rand noise' } ),
                                     ],
                         }
@@ -117,6 +117,8 @@ class ExampleIO(BaseIO):
     
     name               = 'example'
     extensions          = [ 'fak' ]
+    
+    filemode = False
     
 
     
@@ -152,14 +154,14 @@ class ExampleIO(BaseIO):
                                         segmentduration = 3.,
                                         
                                         num_recordingpoint = 8,
-                                        num_spiketrainbyrecordingpoint = 2,
+                                        num_spiketrainbyrecordingpoint = 3,
                                         
                                         trodness = 4,
                                         num_spike_by_spiketrain = 30,
                                         
-                                        spike_amplitude = 1,
-                                        sinus_amplitude = 0.2,
-                                        randnoise_amplitude = 0.2,                                        
+                                        spike_amplitude = .8,
+                                        sinus_amplitude = 1.,
+                                        randnoise_amplitude = 0.4,                             
                                         
                         ) :
         """
@@ -199,21 +201,38 @@ class ExampleIO(BaseIO):
                                         sinus_amplitude = sinus_amplitude,
                                         randnoise_amplitude = randnoise_amplitude,                                               
                                         )
-            seg.name = 'example segment %d' % i 
+            seg.name = 'segment %d' % i 
             seg.datetime = datetime.datetime.now()
             # Add seg to blck instance
             blck._segments.append( seg )
-        # group all recording point
-        blck._recordingpoints = [ RecordingPoint() for i in range(num_recordingpoint)]
+            
         
+        # create recording point
         for i in range(num_recordingpoint):
-            blck._recordingpoints[i].name = 'point %i' % i
-            blck._recordingpoints[i].group = int(i/trodness)+1
-            blck._recordingpoints[i].trodness = trodness
-            for j in range(num_segment) :
-                blck._recordingpoints[i]._analogsignals += blck._segments[j]._recordingpoints[i]._analogsignals
-                
-        seg._recordingpoints
+            rp = RecordingPoint()
+            rp.name = 'electrode %i' % i
+            rp.group = int(i/trodness)+1
+            rp.trodness = trodness
+            rp.channel = i
+            blck._recordingpoints.append(rp)
+            
+        # associate analogsignal of same recording point
+        for i in range(num_recordingpoint):
+            for seg in blck._segments:
+                for ana in seg._analogsignals:
+                    if ana.channel == blck._recordingpoints[i].channel:
+                        blck._recordingpoints[i]._analogsignals.append( ana)
+        
+        # associate spiketrain of same recording point : neuron
+        for i in range(num_recordingpoint/trodness):
+            for j in range(num_spiketrainbyrecordingpoint):
+                neu = Neuron(name = 'Neuron %d of recPoint %d' %( j , i*trodness) )
+                blck._neurons.append( neu )
+                for seg in blck._segments:
+                    for sptr in seg._spiketrains :
+                        if sptr.name == neu.name :
+                            neu._spiketrains.append( sptr)
+                            blck._recordingpoints[sptr.channel]._spiketrains.append( sptr )
         
         return blck
         
@@ -229,14 +248,14 @@ class ExampleIO(BaseIO):
                                         segmentduration = 3.,
                                         
                                         num_recordingpoint = 4,
-                                        num_spiketrainbyrecordingpoint = 2,
+                                        num_spiketrainbyrecordingpoint = 3,
                                         
                                         trodness = 4,
                                         num_spike_by_spiketrain = 30,
                                         
-                                        spike_amplitude = 1,
-                                        sinus_amplitude = 0.2,
-                                        randnoise_amplitude = 0.2,
+                                        spike_amplitude = .8,
+                                        sinus_amplitude = 1.,
+                                        randnoise_amplitude = 0.4,
                                         
                                         ):
         """
@@ -265,7 +284,7 @@ class ExampleIO(BaseIO):
         """
         
         sampling_rate = 10000. #Hz
-        t_start = -4.
+        t_start = -1.
         
         #~ spike_amplitude = 1
         #~ sinus_amplitude = 0
@@ -280,14 +299,10 @@ class ExampleIO(BaseIO):
         # create an empty segment
         seg = Segment()
         
-        # create some RecordingPoint :
-        for i in range(num_recordingpoint):
-            record = RecordingPoint()
-            record.name = 'point %i' % i
-            
-            # Add record to seg instance
-            seg._recordingpoints.append( record )
+
         
+        # create some SpikeTrain :
+
         #generate a fake spike shape (2d array if trodness >1)
         sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/3.
         sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
@@ -295,9 +310,7 @@ class ExampleIO(BaseIO):
         basicshape = -sig/max(sig)
         basicshape = resample( basicshape , int(basicshape.size * sampling_rate / 10000. ) )
         wsize = basicshape.size
-        
-        # create some SpikeTrain :
-            
+
         for j in range(num_spiketrainbyrecordingpoint):
             
             # basic shape duplicate on each trodness electrode with a random factor
@@ -308,17 +321,20 @@ class ExampleIO(BaseIO):
                 props = self.props
                 
                 
-                spikeshape = empty( ( basicshape.size, 0))
-                for j in range(trodness):
-                    spikeshape = concatenate( (spikeshape, basicshape[:,newaxis]*props[i,j]) , axis = 1)
+                spikeshape = empty( (0, basicshape.size, ))
+                for k in range(trodness):
+                    spikeshape = concatenate( (spikeshape, basicshape[newaxis,:]*props[i,k]) , axis = 0)
                 
                 spiketr = SpikeTrain()
+                spiketr.sampling_rate = sampling_rate
                 
                 # There are 2 possibles behaviour for a SpikeTrain
                 # holding many Spike instance or directly holding spike times
                 # we choose here the first : 
                 
                 spiketr._spikes = [ ]
+                spiketr.name = 'Neuron %d of recPoint %d' %( j , i*trodness)
+                spiketr.channel = i*trodness
                 for k in range( num_spike_by_spiketrain ):
                         sp = Spike()
                         sp.time = random.rand()*segmentduration+t_start
@@ -326,15 +342,6 @@ class ExampleIO(BaseIO):
                         factor = randn()/6+1 # nose factor in amplitude
                         sp.waveform = spikeshape * factor * spike_amplitude
                         spiketr._spikes.append(sp)
-
-                # for simplification spiketrain is not linked to a neuron instance but it could be
-                spiketr.neuron = None
-                
-                # link this SpikeTrain to its RecordingPoint
-                spiketr.recordingpoint = seg._recordingpoints[i*trodness]
-                
-                # this ollowing field is optional and specific from my IO :
-                spiketr.ID = 'SpikeTrain %d %d' % (i,j)
                 
                 # Add spiketr to seg instance
                 seg._spiketrains.append( spiketr )
@@ -361,14 +368,14 @@ class ExampleIO(BaseIO):
                 sig += sig1*sinus_amplitude
                 
             anasig.signal = (random.rand(t.size)-.5)*randnoise_amplitude + sig
-            anasig.num = i
+            anasig.channel = i
             anasig.name = 'signal on channel %d'%i
             
             for j in range(num_spiketrainbyrecordingpoint):
                 #~ sptr = seg._spiketrains[ int(num_recordingpoint/trodness)+j]
                 sptr = seg._spiketrains[ j ]
                 for sp in sptr._spikes:
-                    waveform = sp.waveform[ :, i % trodness  ]
+                    waveform = sp.waveform[  i % trodness,:  ]
                     pos = digitize( [sp.time] , t )
                     pos = pos[0]-wsize/2
                     if pos>=anasig.signal.size-wsize :
@@ -378,10 +385,6 @@ class ExampleIO(BaseIO):
                     anasig.signal[pos:pos+wsize] +=  waveform
                         
             
-            # link this AnalogSignal to its RecordingPoint
-            #~ anasig.recordingpoint = seg._recordingpoints[i]
-            seg._recordingpoints[i]._analogsignals += [ anasig ]
-            
             # theses 2 following fields are optionals and specifics from my IO :
             anasig.unit = 'mV'
             anasig.label = 'fantastic signal %i' % i
@@ -389,6 +392,19 @@ class ExampleIO(BaseIO):
             # Add anasig to seg instance
             seg._analogsignals.append( anasig )
         
+        # create event and epoch
+        n_event = 3
+        n_epoch = 1
+        for i in range(n_event):
+            ev = Event( time = t[int(random.rand()*t.size)] )
+            seg._events.append(ev)
+        
+        for i in range(n_epoch):
+            time = t[int(random.rand()*t.size/2)] 
+            ep = Epoch( time = time,
+                                duration= time+1.,
+                                )
+            seg._epochs.append(ep)
         
         return seg
 

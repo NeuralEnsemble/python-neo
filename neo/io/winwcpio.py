@@ -53,6 +53,8 @@ class WinWcpIO(BaseIO):
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
     
+    filemode = True
+    
     def __init__(self , filename = None) :
         """
         This class read a WinWCP wcp file.
@@ -136,10 +138,12 @@ class WinWcpIO(BaseIO):
                 anaSig.t_start = analysisHeader['TimeRecorded']
                 anaSig.name = header['YN%d'%c]
                 anaSig.unit = header['YU%d'%c]
+                anaSig.channel = c
         
         fid.close()
         return blck
         
+
 
 
 AnalysisDescription = [

@@ -80,6 +80,8 @@ class BaseIO(object):
     read_params        = {}
     write_params       = {}
     name               = None
+    
+    filemode = True
 
     def __init__(self , filename = None , **kargs ) :
         self.filename = filename

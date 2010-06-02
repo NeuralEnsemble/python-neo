@@ -58,6 +58,8 @@ class NexIO(BaseIO):
     name               = 'NeuroExplorer'
     extensions          = [ 'nex' ]
     
+    filemode = True
+    
 
     
     def __init__(self , filename = None) :
