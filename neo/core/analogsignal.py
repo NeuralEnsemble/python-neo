@@ -39,7 +39,7 @@ class AnalogSignal(object):
         self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
 
         if 'channel' in karg :
-            self.channel = channel
+            self.channel = karg['hannel']
 
     #~ def __len__(self):
         #~ if self.signal is not None :
