@@ -65,6 +65,12 @@ class SpikeTrain(object):
         
         if karg.has_key('spikes'):
             self._spikes = karg['spikes']
+
+        if 'channel' in karg :
+            self.channel = karg['channel']
+
+
+            
             
     @property
     def spike_times(self):
