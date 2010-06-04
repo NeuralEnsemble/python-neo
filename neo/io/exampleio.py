@@ -74,7 +74,7 @@ class ExampleIO(BaseIO):
     # This is for GUI stuf : a definition for parameters when reading.
     read_params        = {
                         Block : [
-                                ('segmentduration' , { 'value' : 3., 
+                                ('segmentduration' , { 'value' : 15., 
                                                 'label' : 'Segment size (s.)' } ),
                                 ('num_segment' , { 'value' : 5,
                                               'label' : 'Segment number' } ),
@@ -94,7 +94,7 @@ class ExampleIO(BaseIO):
                                 
                                 ],
                         Segment : [
-                                ('segmentduration' , { 'value' : 3., 
+                                ('segmentduration' , { 'value' : 15., 
                                                 'label' : 'Segment size (s.)' } ),
                                 ('num_recordingpoint' , { 'value' : 8,
                                                 'label' : 'Number of recording points' } ),
@@ -151,7 +151,7 @@ class ExampleIO(BaseIO):
     def read_block(self , 
                                         num_segment = 5,
                                         
-                                        segmentduration = 3.,
+                                        segmentduration = 15.,
                                         
                                         num_recordingpoint = 8,
                                         num_spiketrainbyrecordingpoint = 3,
@@ -245,7 +245,7 @@ class ExampleIO(BaseIO):
                                         id_segment = 0,
                                         name_segment = 'test',
                                         
-                                        segmentduration = 3.,
+                                        segmentduration = 15.,
                                         
                                         num_recordingpoint = 4,
                                         num_spiketrainbyrecordingpoint = 3,
@@ -355,7 +355,7 @@ class ExampleIO(BaseIO):
             anasig.t_stop = t_start + segmentduration
             
             sig = zeros(t.shape, 'f')
-            for s in range(2):
+            for s in range(1):
                 # choose random freq between 20 and 80 for my sinus signal :
                 #f1 = random.rand()*80+20.
                 f1 = linspace(random.rand()*60+20. , random.rand()*60+20., t.size)

@@ -23,7 +23,7 @@ class AnalogSignal(object):
         self.label   = None
         self.t_start = 0.
         self.sampling_rate = 1.
-        self.signal = numpy.array([], dtype='float32')
+        self.signal = numpy.array([], )
         self._t = None
         self.channel = None
     
@@ -48,7 +48,7 @@ class AnalogSignal(object):
             #~ return 0
         
     def compute_time_vector(self) :
-        return numpy.arange(len(self.signal), dtype = 'f')/self.sampling_rate + self.t_start
+        return numpy.arange(len(self.signal), dtype = 'f8')/self.sampling_rate + self.t_start
 
     def t(self):
         if self._t==None:
