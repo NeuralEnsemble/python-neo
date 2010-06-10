@@ -323,7 +323,7 @@ class ExampleIO(BaseIO):
                 
                 spikeshape = empty( (0, basicshape.size, ))
                 for k in range(trodness):
-                    spikeshape = concatenate( (spikeshape, basicshape[newaxis,:]*props[i,k]) , axis = 0)
+                    spikeshape = concatenate( (spikeshape, basicshape[newaxis,:]*props[j,k]) , axis = 0)
                 
                 spiketr = SpikeTrain()
                 spiketr.sampling_rate = sampling_rate
@@ -355,7 +355,7 @@ class ExampleIO(BaseIO):
             anasig.t_stop = t_start + segmentduration
             
             sig = zeros(t.shape, 'f')
-            for s in range(1):
+            for s in range(2):
                 # choose random freq between 20 and 80 for my sinus signal :
                 #f1 = random.rand()*80+20.
                 f1 = linspace(random.rand()*60+20. , random.rand()*60+20., t.size)

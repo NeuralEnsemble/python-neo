@@ -54,6 +54,7 @@ class Spike2IO(BaseIO):
     is_streameable     = False
     read_params        = {   Segment : [ 
                                                 ('transform_event_to_spike' , { 'value' : '', 'label' : 'Channel event to be convert as spike' } ),
+                                                ('import_event' , { 'value' : False, 'label' : 'Do not import event' } ),
                                             ],
                                     }
     write_params       = None
@@ -82,7 +83,9 @@ class Spike2IO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self , transform_event_to_spike = [ ],):
+    def read_segment(self , transform_event_to_spike = [ ],
+                                                import_event = False,
+                                                ):
         """
         
         **Arguments**
@@ -99,10 +102,10 @@ class Spike2IO(BaseIO):
                         transform_event_to_spike.append(int(t))
                     except:
                         pass
-        print 'transform_event_to_spike' , transform_event_to_spike
+        #~ print 'transform_event_to_spike' , transform_event_to_spike
         
         header = self.read_header(filename = self.filename)
-        print header
+        #~ print header
         fid = open(self.filename, 'rb')
         
         seg  = Segment()
@@ -111,24 +114,25 @@ class Spike2IO(BaseIO):
             channelHeader = header.channelHeaders[i]
             
             if channelHeader.kind !=0:
-                print '####'
-                print 'channel' , i, 'kind' , channelHeader.kind , channelHeader.type , channelHeader.phy_chan
-                print channelHeader
+                #~ print '####'
+                #~ print 'channel' , i, 'kind' , channelHeader.kind , channelHeader.type , channelHeader.phy_chan
+                #~ print channelHeader
+                pass
             
             if channelHeader.kind in [1, 9]:
-                print 'analogChanel'
+                #~ print 'analogChanel'
                 anaSigs = self.readOneChannelWaveform( fid, i, header ,)
-                print 'nb sigs', len(anaSigs) , ' sizes : ',
+                #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for sig in anaSigs :
                     sig.channel = channelHeader.phy_chan
                     seg._analogsignals.append( sig )
-                    print sig.signal.size,
-                print ''
+                    #~ print sig.signal.size,
+                #~ print ''
                     
-            elif channelHeader.kind in  [2, 3, 4, 5,6,7, 8]:
-                print 'channel event',
+            elif channelHeader.kind in  [2, 3, 4, 5,6,7, 8] and import_event:
+                #~ print 'channel event',
                 events = self.readOneChannelEvent( fid, i, header )
-                print 'nb events : ', len(events)
+                #~ print 'nb events : ', len(events)
                 if i in transform_event_to_spike:
                     spikeTr = SpikeTrain(spikes = [])
                     spikeTr.channel = channelHeader.phy_chan
