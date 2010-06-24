@@ -63,7 +63,7 @@ class TryItIO(BaseIO):
     readable_objects    = [Block, Segment]
     # This class is not able to write objects
     writeable_objects   = []
-
+    
     has_header         = False
     is_streameable     = False
     

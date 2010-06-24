@@ -124,9 +124,11 @@ List of implemented formats
 Impletation of a new IO
 ===========================
 
-ExampleIO is a fake IO just for illustrating how to implement a IO. For developpers that would like to write their own file format, they should have a look to better catch the structure. One can also refer to the :class:`BaseIO` generic file.
+ExampleIO is a fake IO just for illustrating how to implement a IO. For developpers that would like to write their own file format,
+they should have a look to better catch the structure. One can also refer to the :class:`BaseIO` generic file.
 
-As already said, the default read/write methods should return the highest object in the hierarchy, which is often a :class:`Block` or a :class:`Segment`. Individuals read/write methods should be implemented as much as possible.
+As already said, the default read/write methods should return the highest object in the hierarchy, 
+which is often a :class:`Block` or a :class:`Segment`. Individuals read/write methods should be implemented as much as possible.
 
 .. autoclass:: neo.io.ExampleIO
 
