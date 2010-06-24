@@ -61,10 +61,10 @@ class ExampleIO(BaseIO):
     is_readable        = True # This a only reading class
     is_writable        = False
     #This class is able directly or inderectly this kind of objects
-    supported_objects  = [Block, Segment , RecordingPoint , AnalogSignal, SpikeTrain, Event, Epoch]
+    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, Event, Epoch]
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
-    readable_objects    = [Block, Segment]
+    readable_objects    = [ Segment , AnalogSignal , SpikeTrain] 
     # This class is not able to write objects
     writeable_objects   = []
 
@@ -73,42 +73,14 @@ class ExampleIO(BaseIO):
     
     # This is for GUI stuf : a definition for parameters when reading.
     read_params        = {
-                        Block : [
-                                ('segmentduration' , { 'value' : 15., 
-                                                'label' : 'Segment size (s.)' } ),
-                                ('num_segment' , { 'value' : 5,
-                                              'label' : 'Segment number' } ),
-                                ('num_recordingpoint' , { 'value' : 8,
-                                                'label' : 'Number of recording points' } ),
-                                ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
-                                                'label' : 'Num of spiketrain by recording points' } ),
-                                ('trodness' , { 'value' : 4,
-                                                'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
-                                
-                                ('spike_amplitude' , { 'value' : .8,
-                                                'label' : 'Amplitude of spikes' } ),
-                                ('sinus_amplitude' , { 'value' : 1.,
-                                                'label' : 'Amplitude of sinus' } ),
-                                ('randnoise_amplitude' , { 'value' : .4,
-                                                'label' : 'Rand noise' } ),
-                                
-                                ],
                         Segment : [
-                                ('segmentduration' , { 'value' : 15., 
+                                ('segment_duration' , { 'value' : 15., 
                                                 'label' : 'Segment size (s.)' } ),
-                                ('num_recordingpoint' , { 'value' : 8,
+                                ('num_analogsignal' , { 'value' : 8,
                                                 'label' : 'Number of recording points' } ),
-                                ('num_spiketrainbyrecordingpoint' , { 'value' : 3,
-                                                'label' : 'Num of spiketrain by recording points' } ),
-                                ('trodness' , { 'value' : 4,
-                                                'label' : 'trdness (1= normal 2=stereotrode   4=tetrode)' } ),
+                                ('num_spiketrain' , { 'value' : 3,
+                                                'label' : 'Num of spiketrains' } ),
 
-                                ('spike_amplitude' , { 'value' : .8,
-                                                'label' : 'Amplitude of spikes' } ),
-                                ('sinus_amplitude' , { 'value' : 1.,
-                                                'label' : 'Amplitude of sinus' } ),
-                                ('randnoise_amplitude' , { 'value' : .4,
-                                                'label' : 'Rand noise' } ),
                                     ],
                         }
     
@@ -138,261 +110,65 @@ class ExampleIO(BaseIO):
     def read(self , **kargs):
         """
         Read a fake file.
-        Return a neo.Block
-        See read_block for detail.
+        Return a neo.Segment
+        See read_segment for detail.
         """
-        return self.read_block( **kargs)
+        # the higher level of my IO is Segment so:
+        return self.read_segment( **kargs)
+
     
     # write is not supported so I do not over class write from BaseIO
 
     
-    
-    # Block reading is supported so I define this :
-    def read_block(self , 
-                                        num_segment = 5,
-                                        
-                                        segmentduration = 15.,
-                                        
-                                        num_recordingpoint = 8,
-                                        num_spiketrainbyrecordingpoint = 3,
-                                        
-                                        trodness = 4,
-                                        num_spike_by_spiketrain = 30,
-                                        
-                                        spike_amplitude = .8,
-                                        sinus_amplitude = 1.,
-                                        randnoise_amplitude = 0.4,                             
-                                        
-                        ) :
-        """
-        Return a fake Block.
-        
-        **Arguments**
-        
-        num_segment : the number of segment in the file
-        
-        segmentduration : duration in second for each segment
-        
-        num_recordingpoint : number of recording point in one segment
-                                one AnalogSignal is return for one RecordingPoint
-                                
-        num_spiketrainbyrecordingpoint : number of SpikeTrain for one RecordingPoint
-        
-        """
-        
-        if num_recordingpoint%trodness != 0:
-            num_recordingpoint = (num_recordingpoint/trodness) * trodness
-        
-        blck = Block()
-        blck.name = 'example block'
-        blck.datetime = datetime.datetime.now()
-        self.props = rand(num_spiketrainbyrecordingpoint, trodness)# this is for spikes
-        for i in range(num_segment) :
-            # read a segment in the fake file
-            # id_segment is just a example it is not taken in account
-            seg = self.read_segment(id_segment = i,
-                                        segmentduration = segmentduration,
-                                        num_recordingpoint = num_recordingpoint,
-                                        num_spiketrainbyrecordingpoint = num_spiketrainbyrecordingpoint,
-                                        trodness = trodness,
-                                        num_spike_by_spiketrain = num_spike_by_spiketrain, 
-                                        
-                                        spike_amplitude = spike_amplitude,
-                                        sinus_amplitude = sinus_amplitude,
-                                        randnoise_amplitude = randnoise_amplitude,                                               
-                                        )
-            seg.name = 'segment %d' % i 
-            seg.datetime = datetime.datetime.now()
-            # Add seg to blck instance
-            blck._segments.append( seg )
-            
-        
-        # create recording point
-        for i in range(num_recordingpoint):
-            rp = RecordingPoint()
-            rp.name = 'electrode %i' % i
-            rp.group = int(i/trodness)+1
-            rp.trodness = trodness
-            rp.channel = i
-            blck._recordingpoints.append(rp)
-            
-        # associate analogsignal of same recording point
-        for i in range(num_recordingpoint):
-            for seg in blck._segments:
-                for ana in seg._analogsignals:
-                    if ana.channel == blck._recordingpoints[i].channel:
-                        blck._recordingpoints[i]._analogsignals.append( ana)
-        
-        # associate spiketrain of same recording point : neuron
-        for i in range(num_recordingpoint/trodness):
-            for j in range(num_spiketrainbyrecordingpoint):
-                neu = Neuron(name = 'Neuron %d of recPoint %d' %( j , i*trodness) )
-                blck._neurons.append( neu )
-                for seg in blck._segments:
-                    for sptr in seg._spiketrains :
-                        if sptr.name == neu.name :
-                            neu._spiketrains.append( sptr)
-                            blck._recordingpoints[sptr.channel]._spiketrains.append( sptr )
-        
-        return blck
-        
-    
     # Segment reading is supported so I define this :
     def read_segment(self, 
-                                        filename = '',
+                                        segment_duration = 15.,
                                         
-                                        num_segment = 12,
-                                        id_segment = 0,
-                                        name_segment = 'test',
-                                        
-                                        segmentduration = 15.,
-                                        
-                                        num_recordingpoint = 4,
-                                        num_spiketrainbyrecordingpoint = 3,
-                                        
-                                        trodness = 4,
-                                        num_spike_by_spiketrain = 30,
-                                        
-                                        spike_amplitude = .8,
-                                        sinus_amplitude = 1.,
-                                        randnoise_amplitude = 0.4,
+                                        num_analogsignal = 4,
+                                        num_spiketrain_by_channel = 3,
                                         
                                         ):
         """
         Return a fake Segment.
         
-        The filename does not matter.
+        The self.filename does not matter.
         
-        In this IO read by default a Block.
-        Segment is readable so it is a nested read.
-        So we need to define a num_segment, or a id_segment or a name_segment.
+        In this IO read by default a Segment.
         
         This is just a example to be adapted to each ClassIO.
-        In this case these 3 paramters are not taken in account because this function
+        In this case these 3 paramters are  taken in account because this function
         return a generated segment with fake AnalogSignal and fake SpikeTrain.
         
-        segmentduration is the size in secend of the segment.
-        
-        In this example the segment is supposed to return one AnalogSignal for
-        one RecordingPoint and some SpikeTrain for one RecordingPoint.
-        This is a typical example for an extra cellular recording.
-        This is controled by :
-        num_recordingpoint
-        num_spiketrainbyrecordingpoint
-        trodness ( 4 = tetrode groups, 1 = monoelectrode groups )
+        segment_duration is the size in secend of the segment.
+        num_analogsignal number of AnalogSignal in this segment
+        num_spiketrain number of SpikeTrain in this segment
         
         """
         
         sampling_rate = 10000. #Hz
         t_start = -1.
         
-        #~ spike_amplitude = 1
-        #~ sinus_amplitude = 0
-        #~ randnoise_amplitude = 0.2
-        #randnoise_amplitude = 0.
-        
-        
         
         #time vector for generated signal
-        t = arange(t_start, t_start+ segmentduration , 1./sampling_rate)
+        t = arange(t_start, t_start+ segment_duration , 1./sampling_rate)
         
         # create an empty segment
         seg = Segment()
         
-
+        # read nested analosignal
+        for i in range(num_analogsignal):
+            ana = self.read_analogsignal( channel = i ,segment_duration = segment_duration, t_start = t_start)
+            seg._analogsignals += [ ana ]
         
-        # create some SpikeTrain :
-
-        #generate a fake spike shape (2d array if trodness >1)
-        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/3.
-        sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
-        sig = r_[ sig1 , sig2 ]
-        basicshape = -sig/max(sig)
-        basicshape = resample( basicshape , int(basicshape.size * sampling_rate / 10000. ) )
-        wsize = basicshape.size
-
-        for j in range(num_spiketrainbyrecordingpoint):
-            
-            # basic shape duplicate on each trodness electrode with a random factor
-            
-            
-            for i in range(num_recordingpoint/trodness):
-                #~ props = rand(num_spiketrainbyrecordingpoint, trodness)
-                props = self.props
-                
-                
-                spikeshape = empty( (0, basicshape.size, ))
-                for k in range(trodness):
-                    spikeshape = concatenate( (spikeshape, basicshape[newaxis,:]*props[j,k]) , axis = 0)
-                
-                spiketr = SpikeTrain()
-                spiketr.sampling_rate = sampling_rate
-                
-                # There are 2 possibles behaviour for a SpikeTrain
-                # holding many Spike instance or directly holding spike times
-                # we choose here the first : 
-                
-                spiketr._spikes = [ ]
-                spiketr.name = 'Neuron %d of recPoint %d' %( j , i*trodness)
-                spiketr.channel = i*trodness
-                for k in range( num_spike_by_spiketrain ):
-                        sp = Spike()
-                        sp.time = random.rand()*segmentduration+t_start
-                        sp.sampling_rate = sampling_rate
-                        factor = randn()/6+1 # nose factor in amplitude
-                        sp.waveform = spikeshape * factor * spike_amplitude
-                        spiketr._spikes.append(sp)
-                
-                # Add spiketr to seg instance
-                seg._spiketrains.append( spiketr )
+        # read nested spiketrain
+        for i in range(num_analogsignal):
+            for j in range(num_spiketrain_by_channel):
+                sptr = self.read_spiketrain(segment_duration = segment_duration, t_start = t_start , channel = i)
+                seg._spiketrains += [ sptr ]
         
-        
-        # create some AnalogSignal :
-        for i in range(num_recordingpoint):
-            anasig = AnalogSignal()
-            anasig.sampling_rate = sampling_rate
-            anasig.t_start = t_start
-            anasig.t_stop = t_start + segmentduration
-            
-            sig = zeros(t.shape, 'f')
-            for s in range(2):
-                # choose random freq between 20 and 80 for my sinus signal :
-                #f1 = random.rand()*80+20.
-                f1 = linspace(random.rand()*60+20. , random.rand()*60+20., t.size)
-                # choose a random freq for modulation between .5 and 2
-                
-                #f2 = random.rand()*1.5+.5
-                f2 = linspace(random.rand()*1.+.1 , random.rand()*1.+.1, t.size)
-                sig1 = sin(2*pi*t*f1) * sin(pi*t*f2+random.rand()*pi)**2
-                sig1[t<0] = 0.
-                sig += sig1*sinus_amplitude
-                
-            anasig.signal = (random.rand(t.size)-.5)*randnoise_amplitude + sig
-            anasig.channel = i
-            anasig.name = 'signal on channel %d'%i
-            
-            for j in range(num_spiketrainbyrecordingpoint):
-                #~ sptr = seg._spiketrains[ int(num_recordingpoint/trodness)+j]
-                sptr = seg._spiketrains[ j ]
-                for sp in sptr._spikes:
-                    waveform = sp.waveform[  i % trodness,:  ]
-                    pos = digitize( [sp.time] , t )
-                    pos = pos[0]-wsize/2
-                    if pos>=anasig.signal.size-wsize :
-                        pos = anasig.signal.size-wsize-1
-                    if pos<0 :
-                        pos =0
-                    anasig.signal[pos:pos+wsize] +=  waveform
-                        
-            
-            # theses 2 following fields are optionals and specifics from my IO :
-            anasig.unit = 'mV'
-            anasig.label = 'fantastic signal %i' % i
-            
-            # Add anasig to seg instance
-            seg._analogsignals.append( anasig )
         
         # create event and epoch
+        # note that they are not accessible directly
         n_event = 3
         n_epoch = 1
         for i in range(n_event):
@@ -406,6 +182,80 @@ class ExampleIO(BaseIO):
                                 )
             seg._epochs.append(ep)
         
+        
         return seg
+        
+    
+    def read_analogsignal(self , channel = 0,
+                                                segment_duration = 15.,
+                                                t_start = -1,
+                                                ):
+        """
+        With this IO AnalogSignal can e acces directly with its channel number
+        
+        """
+        sampling_rate = 10000.
+        
+        #time vector for generated signal
+        t = arange(t_start, t_start+ segment_duration , 1./sampling_rate)
+        
+        # create analogsignal
+        anasig = AnalogSignal()
+        anasig.sampling_rate = sampling_rate
+        anasig.t_start = t_start
+        anasig.t_stop = t_start + segment_duration
+        f1 = 3. # Hz
+        anasig.signal = sin(2*pi*t*f1 + channel/5.*2*pi)+rand(t.size)
+        anasig.channel = channel
+        
+        return anasig
+        
+        
+        
+        
+        
+    def read_spiketrain(self ,
+                                                segment_duration = 15.,
+                                                t_start = -1,
+                                                channel = 0,
+                                                ):
+        """
+        With this IO SpikeTrain can e acces directly with its channel number
+        """
+        # There are 2 possibles behaviour for a SpikeTrain
+        # holding many Spike instance or directly holding spike times
+        # we choose here the first : 
+
+        num_spike_by_spiketrain = 40
+        sampling_rate = 10000.
+        
+        #generate a fake spike shape (2d array if trodness >1)
+        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/3.
+        sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
+        sig = r_[ sig1 , sig2 ]
+        
+        
+        basicshape = -sig/max(sig)
+        basicshape = resample( basicshape , int(basicshape.size * sampling_rate / 10000. ) )
+        wsize = basicshape.size
+        
+        # create a spiketrain
+        spiketr = SpikeTrain()
+        spiketr.sampling_rate = sampling_rate
+        spiketr.t_start = t_start
+        
+        spiketr._spikes = [ ]
+        spiketr.name = 'Neuron'
+        spiketr.channel = channel
+        for k in range( num_spike_by_spiketrain ):
+                sp = Spike()
+                sp.time = random.rand()*segment_duration+t_start
+                sp.sampling_rate = sampling_rate
+                factor = randn()/6+1 # nose factor in amplitude
+                sp.waveform = basicshape * factor
+                spiketr._spikes.append(sp)
+        
+        return spiketr
+
 
 

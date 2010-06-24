@@ -24,10 +24,20 @@ all_format = [ ]
 # all IO import are inside try .. except to prevent module bugs because of one IO.
 
 try:
+    from tryitio import TryItIO
+    all_format += [ [ 'tryit' , { 'class' : TryItIO  , 'info' :  'a fake file reader for trying OpenElectrophy' } ] ]
+except ImportError:
+    print "Error while loading ExampleIO module"
+
+
+try:
     from exampleio import ExampleIO
     all_format += [ [ 'example' , { 'class' : ExampleIO  , 'info' :  'a fake file reader for example' } ] ]
 except ImportError:
     print "Error while loading ExampleIO module"
+
+
+
 
 try:
     from rawio import RawIO

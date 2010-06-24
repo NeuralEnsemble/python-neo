@@ -17,38 +17,36 @@ class ExampleIOTest(unittest.TestCase):
     def testOpenFile1(self):
         
         example = exampleio.ExampleIO()
-        block = example.read_block( num_segment = 2,
-                                    
-                                    segmentduration = 3.,
-                                    
-                                    num_recordingpoint = 4,
-                                    num_spiketrainbyrecordingpoint = 2,
-                                    )
+        seg  = example.read_segment(  segment_duration = 15.,
+                                        
+                                        num_analogsignal = 4,
+                                        num_spiketrain_by_channel = 3,
+                                        )
         
-        for seg in block.get_segments() :
-            fig = pylab.figure()
-            ax = fig.add_subplot(2,1,1)
-            #print len(seg.get_analogsignals())
-            #assert len(seg.get_analogsignals()) ==64
-            for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0]
-                assert sig.signal.shape[0] == 30000
-                ax.plot(sig.t(),sig.signal)
-                #print sig.num, sig.label , sig.ground
-            
-            ax = fig.add_subplot(2,1,2 , sharex = ax)
-            for s,spiketr in enumerate(seg.get_spiketrains()) :
-                ts = spiketr.spike_times
-                ax.plot( ts , ones_like(ts)*s ,
-                            linestyle = '',
-                            marker = '|' ,
-                            markersize = 5)
-            
-            #print len (seg.get_events() )
-            #assert len (seg.get_events() )==47 
-            for ev in seg.get_events():
-                #print ev.time
-                axa.axvline(ev.time)
+        
+        fig = pylab.figure()
+        ax = fig.add_subplot(2,1,1)
+        #print len(seg.get_analogsignals())
+        #assert len(seg.get_analogsignals()) ==64
+        for sig in seg.get_analogsignals():
+            #print sig.signal.shape[0]
+            #~ assert sig.signal.shape[0] == 30000
+            ax.plot(sig.t(),sig.signal)
+            #print sig.num, sig.label , sig.ground
+        
+        ax = fig.add_subplot(2,1,2 , sharex = ax)
+        for s,spiketr in enumerate(seg.get_spiketrains()) :
+            ts = spiketr.spike_times
+            ax.plot( ts , ones_like(ts)*s ,
+                        linestyle = '',
+                        marker = '|' ,
+                        markersize = 5)
+        
+        #print len (seg.get_events() )
+        #assert len (seg.get_events() )==47 
+        for ev in seg.get_events():
+            #print ev.time
+            ax.axvline(ev.time)
                 
         pylab.show()
 
