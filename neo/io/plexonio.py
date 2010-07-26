@@ -295,7 +295,7 @@ class PlexonIO(BaseIO):
                     data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
                 elif globalHeader['Version'] >= 103:
                     data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
-                                                        slowChannelHeaders[chan]['Gain']**slowChannelHeaders[chan]['PreampGain'])
+                                                        slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
                 anaSigs[chan].signal[sampleposition[chan] : sampleposition[chan]+data.size] = data
                 sampleposition[chan] += data.size
                 if sampleposition[chan] ==0:
