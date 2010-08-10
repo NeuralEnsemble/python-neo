@@ -9,11 +9,23 @@ class SpikeTrain(object):
 
     **Definition**
     A :class:`SpikeTrain` is an array of :class:`Spike` emitted by the same
-    :class:`Neuron`. The spike times of the :class:`SpikeTrain` can be viewed as 
-    an array of :class:`Spike` object, with times and waveforms, or just as an array
-    of times.
-
-    with arguments:
+    :class:`Neuron`.
+    
+    The spike times of the :class:`SpikeTrain` can hold spike_times and/or waveforms.
+    
+    It has 2 possible behavior:
+      * It is a containers of :class:`Spike`. In this case the property spikes return list a :class:`Spike`.
+        The property spike_times and waveforms construct appropriate numpy.ndarray.
+      * It directly hold spikes_times and waveforms for memory reasons.
+    
+    spike_times is 1d numpy.array with times in seconds.
+    
+    waveforms is a 3d numpy.ndarray with this shape:
+        * dim 0 : spikes dimension equal to spike_times
+        * dim 1 : used for trodalness purpose. This size is ommunly 1. But can also be 2 for stereotrod. 4 for tetrod. Or N for arbitrary trodaness.
+        * dim 2 : waveform for each spike
+    
+    
     
     ``spikes`` or ``spike_times``
         - **spikes**       : an array/list of :class:`Spike` 
@@ -38,14 +50,30 @@ class SpikeTrain(object):
     def __init__(self, *arg, **karg):
                         
         self._spike_times = None
+        
+        self._waveforms = None
+        self.sampling_rate = None
+        self.left_sweep = None
+        self.right_sweep = None 
+        
         self._spikes      = [ ]
+        
         self._t_start     = None
         self._t_stop      = None
         self.neuron       = None
         
+        
+        indsort = None
         if karg.has_key('spike_times'):
             self._spike_times = numpy.array(karg['spike_times'])
             self._spike_times.sort()
+            indsort = numpy.argsort(self._spike_times)
+            self._spike_times = self._spike_times[indsort]
+
+        if karg.has_key('waveforms'):
+            self._waveforms = numpy.array(karg['waveforms'])
+            if indsort is not None:
+                self._waveforms = self._waveforms[indsort]
             
         #~ if karg.has_key('t_start'):
             #~ self._t_start = karg['t_start']
@@ -68,24 +96,37 @@ class SpikeTrain(object):
 
         if 'channel' in karg :
             self.channel = karg['channel']
-
-
-            
-            
+    
+    
     @property
     def spike_times(self):
         if self._spike_times is None:
             self._spike_times = numpy.empty(len(self._spikes))
             #~ print len(self._spikes), self._spikes[0]
-            for count, sp in enumerate(self._spikes):
-                self._spike_times[count] = sp.time
+            for i, sp in enumerate(self._spikes):
+                self._spike_times[i] = sp.time
             return self._spike_times
         else:
             return self._spike_times
-    
+
+    @property
+    def waveforms(self):
+        if self._waveforms is None:
+            waveforms = None
+            for i, sp in enumerate(self._spikes):
+                if waveforms is None:
+                    waveforms = sp.waveform[numpy.newaxis,:,:,]
+                else:
+                    waveforms = numpy.concatenate((waveforms, sp.waveform[numpy.newaxis,:,:,] ) , axis = 0)
+            return waveforms
+        else:
+            return self._waveforms
+
     @property
     def spikes(self):
         return self._spikes
+    
+    
     
     #~ @property
     #~ def t_start(self):

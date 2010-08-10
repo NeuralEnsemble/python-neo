@@ -153,34 +153,25 @@ class NexIO(BaseIO):
                                                 offset = entityHeader['offset'],
                                                 )
                 spike_times = spike_times.astype('f')/globalHeader['freq']
-                waveforms = memmap(self.filename , dtype('i2') ,'r' ,
-                                            shape = (entityHeader['n'] ,  entityHeader['NPointsWave']),
-                                            offset = entityHeader['offset']+entityHeader['n'] *4,
-                                            )
                 if load_spike_waveform :
-                    spikeTr = SpikeTrain(spikes = [ ],
-                                                    t_start = globalHeader['tbeg']/globalHeader['freq'],
-                                                    t_stop = globalHeader['tend']/globalHeader['freq'],
-                                                    )
-                    spikeTr.sampling_rate = entityHeader['WFrequency']
-                    for j in xrange(spike_times.size):
-                        sp = Spike(time = spike_times[j],
-                                        waveform = waveforms[j:j+1,:].astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset'],
-                                        sampling_rate = entityHeader['WFrequency'],
-                                        )
-                        spikeTr._spikes.append(sp)
-                        
-                else : 
-                    spikeTr = SpikeTrain( spike_times= spike_times, 
-                                                    t_start = globalHeader['tbeg']/globalHeader['freq'],
-                                                    t_stop = globalHeader['tend']/globalHeader['freq'],
-                                                    )
-                spikeTr.name = entityHeader['name']
-                spikeTr.channel = entityHeader['WireNumber']
+                    waveforms = memmap(self.filename , dtype('i2') ,'r' ,
+                                                shape = (entityHeader['n'] ,  1,entityHeader['NPointsWave']),
+                                                offset = entityHeader['offset']+entityHeader['n'] *4,
+                                                )
+                    waveforms = waveforms.astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset']
+                else:
+                    waveforms = None
+                spikeTr = SpikeTrain(  
+                                                name = entityHeader['name'],
+                                                channel = entityHeader['WireNumber'],
+                                                sampling_rate = entityHeader['WFrequency'],
+                                                spike_times = spike_times,
+                                                waveforms = waveforms,
+                                                t_start = globalHeader['tbeg']/globalHeader['freq'],
+                                                t_stop = globalHeader['tend']/globalHeader['freq'],
+                                                )
                 seg._spiketrains.append(spikeTr)
-
-
-
+            
             if entityHeader['type'] == 4:
                 # popvectors
                 pass

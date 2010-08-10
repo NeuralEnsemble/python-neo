@@ -99,15 +99,23 @@ class PlexonIO(BaseIO):
         globalHeader['WFCounts'] = array(globalHeader['WFCounts']).reshape((130,5))
         TSCounts = globalHeader['TSCounts']
         WFCounts = globalHeader['WFCounts']
-        for k,v in globalHeader.iteritems():
+        
+        #~ for k,v in globalHeader.iteritems():
             #~ if type(v) != numpy.ndarray : print k,v
-            print k,v
+            #~ print k,v
         
         seg.filedatetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
         
         print 'version' , globalHeader['Version']
-        print 
+        
+        if globalHeader['Version'] >= 103:
+            trodalness = globalHeader['Trodalness']
+        else:
+            trodalness = 1
+        print 'Trodalness' , trodalness
+        
+        #~ print 
         
         channelHeaders = { }
         # dsp channels header
@@ -187,6 +195,10 @@ class PlexonIO(BaseIO):
             if dataBlockHeader is None : break
             chan = dataBlockHeader['Channel']
             unit = dataBlockHeader['Unit']
+            
+            while unit>=nspikecounts.shape[1]:
+                nspikecounts = concatenate( (nspikecounts, zeros((nspikecounts.shape[0],1) dtype='i')) , axis = 1)
+                
             time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 + dataBlockHeader['TimeStamp']
             time/= globalHeader['ADFrequency'] 
             n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
@@ -205,6 +217,10 @@ class PlexonIO(BaseIO):
                         data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*1000.)
                     elif globalHeader['Version'] >105:
                         data = data*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
+                    
+                    # fixme : take in account trodalness
+                    data = data[:,newaxis, :]
+                    
                     sp = Spike(time = time,
                                 sampling_rate = channelHeaders[chan]['WFRate'],
                                 waveform = data)
