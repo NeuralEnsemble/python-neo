@@ -36,4 +36,5 @@ from spike import Spike
 from recordingpoint import RecordingPoint
 
 
+# this is for OpenElectrophy
 neotypes = [ Block , Segment , AnalogSignal, Event, Epoch, Neuron, SpikeTrain, SpikeTrainList , Spike , RecordingPoint ]

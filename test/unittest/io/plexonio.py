@@ -74,11 +74,11 @@ class PlexonIOTest(unittest.TestCase):
                         markersize = 5,
                         color = colors[s%7],
                         )
-            if spiketr._spikes is not None :
-                for sp in  spiketr.get_spikes()[:200]:
-                    vect_t  = arange(sp.waveform.size , dtype = 'f')/sp.sampling_rate
-                    for w in range(sp.waveform.shape[0]) :
-                        ax5.plot(vect_t , sp.waveform[w,:] , color = colors[s % 7] )
+        #~ for w in range(spiketr.waveforms.shape[0]) :
+        for w in range(40) :
+                vect_t  = arange(spiketr.waveforms.shape[2] , dtype = 'f')/spiketr.sampling_rate
+                ax5.plot(vect_t , spiketr.waveforms[w,0,:] , color = colors[s % 7] )
+            
                         
         
         pylab.show()

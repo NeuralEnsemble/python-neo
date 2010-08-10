@@ -50,17 +50,11 @@ class SpikeTrain(object):
     def __init__(self, *arg, **karg):
                         
         self._spike_times = None
-        
         self._waveforms = None
-        self.sampling_rate = None
-        self.left_sweep = None
-        self.right_sweep = None 
-        
         self._spikes      = [ ]
         
         self._t_start     = None
         self._t_stop      = None
-        self.neuron       = None
         
         
         indsort = None
@@ -85,18 +79,12 @@ class SpikeTrain(object):
         # May be useful to check the times. But should be adapted for spike object instead
         # of spike times in self.spike_times
         #~ self.__calc_startstop()
-
-        if karg.has_key('neuron'):
-            self.neuron = karg['neuron']
-        else:
-            self.neuron = None
         
-        if karg.has_key('spikes'):
-            self._spikes = karg['spikes']
-
-        if 'channel' in karg :
-            self.channel = karg['channel']
-    
+        for attr in [  'channel' , 'name', 'sampling_rate', 'right_sweep', 'right_sweep' , 'neuron' ]:
+            if attr in karg:
+                setattr(self, attr, karg[attr])
+            else:
+                setattr(self, attr, None)
     
     @property
     def spike_times(self):
