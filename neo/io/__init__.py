@@ -101,6 +101,13 @@ except ImportError:
     print "Error while loading WinWcpIO module"
 
 try :
+    from winedrio import WinEdrIO
+    all_format += [ [ 'WinEdr' , { 'class' : WinEdrIO  , 'info' :  'WinEDR file (EDR)' } ] ]
+except ImportError:
+    print "Error while loading WinEdrIO module"
+
+
+try :
     from nexio import NexIO
     all_format += [ [ 'NexIO' , { 'class' : NexIO  , 'info' :  'NeuroExplorer file (nex)' } ] ]
 except ImportError:
