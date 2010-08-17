@@ -20,26 +20,31 @@ class AnalogSignal(object):
 
 
     def __init__(self, *arg, **karg):
-        self.label   = None
-        self.t_start = 0.
-        self.sampling_rate = 1.
         self.signal = numpy.array([], )
-        self._t = None
-        self.channel = None
-    
         if karg.has_key('signal'):
             if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :
                 self.signal  = karg['signal']
-        if karg.has_key('dt'):
-            self.sampling_rate = float(1./karg['dt'])
-        if karg.has_key('sampling_rate'):
-            self.sampling_rate = karg['sampling_rate']
-        if karg.has_key('t_start'):
-            self.t_start = float(karg['t_start'])
-        self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
+        
 
-        if 'channel' in karg :
-            self.channel = karg['channel']
+        for attr in [  'channel' , 'name', 'sampling_rate' , 't_start', 't_stop']:
+            if attr in karg:
+                setattr(self, attr, karg[attr])
+            else:
+                setattr(self, attr, None)
+        
+        if self.t_start is None:self.t_start = 0.
+        if self.sampling_rate is None:self.sampling_rate = 1.
+            
+        
+        if 'dt' in karg:
+            self.sampling_rate = float(1./karg['dt'])
+
+        if self.t_stop is None and self.sampling_rate !=0.:
+            self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
+
+        self._t = None
+
+
 
     #~ def __len__(self):
         #~ if self.signal is not None :

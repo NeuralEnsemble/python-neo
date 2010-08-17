@@ -94,6 +94,15 @@ try :
 except ImportError:
     print "Error while loading Spike2IO module"
 
+
+try :
+    from tdtio import TdtIO
+    all_format += [ [ 'Tdt' , { 'class' : TdtIO  , 'info' :  'Tdt TTank' } ] ]
+except ImportError:
+    print "Error while loading TdtIO module"
+
+
+
 try :
     from winwcpio import WinWcpIO
     all_format += [ [ 'WinWcp' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]

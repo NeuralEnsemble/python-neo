@@ -102,15 +102,10 @@ class WinEdrIO(BaseIO):
                 val = float(val)
             header[key] = val
         
-        print header
-        
-        
         data = memmap(self.filename , dtype('i2')  , 'r', 
               #shape = (header['NC'], header['NP']) ,
               shape = (header['NP']/header['NC'],header['NC'], ) ,
               offset = header['NBH'])
-        print data.shape
-        
 
         for c in range(header['NC']):
             anaSig = AnalogSignal()
@@ -138,44 +133,6 @@ class WinEdrIO(BaseIO):
         return seg
         
         
-        
-        # loop for record number
-        for i in range(header['NR']):
-            #print 'record ',i
-            offset = 1024 + i*(SECTORSIZE*header['NBD']+1024)
-            
-            # read analysis zone
-            analysisHeader = HeaderReader(fid , AnalysisDescription ).read_f(offset = offset)
-            #print analysisHeader
-            
-            # read data
-            NP = (SECTORSIZE*header['NBD'])/2
-            NP = NP - NP%header['NC']
-            NP = NP/header['NC']
-            data = memmap(self.filename , dtype('i2')  , 'r', 
-                          #shape = (header['NC'], header['NP']) ,
-                          shape = (NP,header['NC'], ) ,
-                          offset = offset+header['NBA']*SECTORSIZE)
-            
-            # create a segment
-            seg = Segment()
-            blck._segments.append(seg)
-            
-            for c in range(header['NC']):
-                anaSig = AnalogSignal()
-                seg._analogsignals.append(anaSig)
-                YG = float(header['YG%d'%c].replace(',','.'))
-                ADCMAX = header['ADCMAX']
-                VMax = analysisHeader['VMax'][c]
-                anaSig.signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG
-                anaSig.sampling_rate = 1./analysisHeader['SamplingInterval']
-                anaSig.t_start = analysisHeader['TimeRecorded']
-                anaSig.name = header['YN%d'%c]
-                anaSig.unit = header['YU%d'%c]
-                anaSig.channel = c
-        
-        fid.close()
-        return blck
         
 
 
