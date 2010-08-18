@@ -145,7 +145,7 @@ class ExampleIO(BaseIO):
         num_analogsignal number of AnalogSignal in this segment
         num_spiketrain number of SpikeTrain in this segment
         
-        ""
+        """
         
         sampling_rate = 10000. #Hz
         t_start = -1.

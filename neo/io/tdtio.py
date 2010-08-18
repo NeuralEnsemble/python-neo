@@ -83,7 +83,8 @@ class TdtIO(BaseIO):
         
         """
         blck = Block()
-        
+        if self.dirname.endswith('/'):
+            self.dirname = self.dirname[:-1]
         tankname = os.path.basename(self.dirname)
         for blockname in os.listdir(self.dirname):
             subdir = os.path.join(self.dirname,blockname)
