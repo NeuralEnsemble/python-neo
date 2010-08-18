@@ -90,7 +90,9 @@ class ExampleIO(BaseIO):
     name               = 'example'
     extensions          = [ 'fak' ]
     
-    filemode = False
+    # mode can be 'file' or 'dir' or 'fake' or 'database'
+    # the main case is 'file' but some reader are base on a directory or a db
+    mode = 'fake' 
     
 
     
@@ -143,7 +145,7 @@ class ExampleIO(BaseIO):
         num_analogsignal number of AnalogSignal in this segment
         num_spiketrain number of SpikeTrain in this segment
         
-        """
+        ""
         
         sampling_rate = 10000. #Hz
         t_start = -1.

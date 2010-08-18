@@ -56,7 +56,7 @@ class MicromedIO(BaseIO):
     name               = None
     extensions          = [ 'TRC' ]
     
-    filemode = True
+    mode = 'file'
     
     def __init__(self , filename = None) :
         """

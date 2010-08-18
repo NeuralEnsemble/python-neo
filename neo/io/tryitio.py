@@ -114,7 +114,7 @@ class TryItIO(BaseIO):
     name               = 'tryit'
     extensions          = [ 'fak' ]
     
-    filemode = False
+    mode = 'fake'
     
 
     

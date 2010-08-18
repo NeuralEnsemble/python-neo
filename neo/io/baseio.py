@@ -81,7 +81,7 @@ class BaseIO(object):
     write_params       = {}
     name               = None
     
-    filemode = True
+    mode = 'file'
 
     def __init__(self , filename = None , **kargs ) :
         self.filename = filename

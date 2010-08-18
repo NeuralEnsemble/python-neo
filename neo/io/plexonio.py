@@ -62,9 +62,8 @@ class PlexonIO(BaseIO):
     name               = 'Plexon'
     extensions          = [ 'plx' ]
     
-    filemode = True
+    mode = 'file'
     
-
     
     def __init__(self , filename = None) :
         """

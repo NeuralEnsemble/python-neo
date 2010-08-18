@@ -65,7 +65,8 @@ class RawIO(BaseIO):
     name               = None
     extensions          = [ 'raw' ]
     
-    filemode = True
+    
+    mode = 'file'
     
     def __init__(self , filename = None) :
         """

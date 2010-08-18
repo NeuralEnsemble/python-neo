@@ -62,7 +62,7 @@ class Spike2IO(BaseIO):
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
     
-    filemode = True
+    mode = 'file'
     
     def __init__(self , filename = None) :
         """

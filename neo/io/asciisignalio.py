@@ -80,7 +80,7 @@ class AsciiSignalIO(BaseIO):
     name               = None
     extensions          = [ 'txt' ]
     
-    filemode = True
+    mode = 'file'
 
 
 

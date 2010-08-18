@@ -53,7 +53,9 @@ class WinWcpIO(BaseIO):
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
     
-    filemode = True
+    
+    mode = 'file'
+    
     
     def __init__(self , filename = None) :
         """

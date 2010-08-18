@@ -58,7 +58,7 @@ class EegLabIO(BaseIO):
     name               = None
     extensions         = [ 'set' ]
     
-    filemode = True
+    mode = 'file'
     
     def __init__(self , filename = None) :
         """

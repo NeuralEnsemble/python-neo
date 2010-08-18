@@ -75,7 +75,7 @@ class AsciiSpikeIO(BaseIO):
     name               = None
     extensions          = [ 'txt' ]
     
-    filemode = True
+    mode = 'file'
     
 
 

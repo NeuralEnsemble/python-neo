@@ -50,7 +50,7 @@ class PyNNIO(BaseIO):
     is_streameable     = False
     extensions         = ['pynn']
     
-    filemode = True
+    mode = 'file'
     
             
     def __init__(self , filename=None , **kargs ) :

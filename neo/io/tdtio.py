@@ -46,10 +46,10 @@ class TdtIO(BaseIO):
     
     write_params       = None
     
-    name               = 'WinEDR'
-    extensions          = [ 'EDR' ]
+    name               = 'TDT'
+    extensions          = [ ]
     
-    filemode = True
+    mode = 'dir'
     
     def __init__(self , dirname = None) :
         """

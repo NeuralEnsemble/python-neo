@@ -81,9 +81,9 @@ class AxonIO(BaseIO):
     name               = None
     extensions         = [ 'abf' ]
     
-    filemode = True
-
-
+    mode = 'file'
+    
+    
     def __init__(self , filename = None) :
         """
         This class read a abf file.

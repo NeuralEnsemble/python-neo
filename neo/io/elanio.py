@@ -61,7 +61,7 @@ class ElanIO(BaseIO):
     name               = None
     extensions         = ['eeg']
     
-    filemode = True
+    mode = 'file'
     
     
     def __init__(self , filename = None) :

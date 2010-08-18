@@ -66,7 +66,7 @@ class ElphyDatIO(BaseIO):
     name               = 'ElphyDac'
     extensions         = [ 'DAT' ]
     
-    filemode = True
+    mode = 'file'
     
     
     def __init__(self , filename = None) :

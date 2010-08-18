@@ -53,7 +53,8 @@ class WinEdrIO(BaseIO):
     name               = 'WinEDR'
     extensions          = [ 'EDR' ]
     
-    filemode = True
+    
+    mode = 'file'
     
     def __init__(self , filename = None) :
         """
