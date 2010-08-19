@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy
 from neuron import Neuron
+from spike import Spike
 
 class SpikeTrain(object):
      
@@ -13,10 +14,11 @@ class SpikeTrain(object):
     
     The spike times of the :class:`SpikeTrain` can hold spike_times and/or waveforms.
     
-    It has 2 possible behavior:
-      * It is a containers of :class:`Spike`. In this case the property spikes return list a :class:`Spike`.
+    It has 2 possible modes (behaviors):
+      * 'container' : It is a containers of :class:`Spike`. In this case the property spikes return list a :class:`Spike`.
         The property spike_times and waveforms construct appropriate numpy.ndarray.
-      * It directly hold spikes_times and waveforms for memory reasons.
+        And _spikes_times and _waveforms attributes are both None in this case.
+      * 'standalone' : It directly hold spikes_times and waveforms for memory reasons.
     
     spike_times is 1d numpy.array with times in seconds.
     
@@ -47,6 +49,7 @@ class SpikeTrain(object):
     """
     
     
+    
     def __init__(self, *arg, **karg):
                         
         self._spike_times = None
@@ -65,9 +68,15 @@ class SpikeTrain(object):
             self._spike_times = self._spike_times[indsort]
 
         if karg.has_key('waveforms'):
-            self._waveforms = numpy.array(karg['waveforms'])
-            if indsort is not None:
-                self._waveforms = self._waveforms[indsort]
+            if karg['waveforms'] is None:
+                self._waveforms = None
+            else:
+                self._waveforms = numpy.array(karg['waveforms'])
+                if indsort is not None:
+                    self._waveforms = self._waveforms[indsort]
+        
+        if karg.has_key('spikes'):
+            self._spikes += karg['spikes']
             
         #~ if karg.has_key('t_start'):
             #~ self._t_start = karg['t_start']
@@ -80,7 +89,7 @@ class SpikeTrain(object):
         # of spike times in self.spike_times
         #~ self.__calc_startstop()
         
-        for attr in [  'channel' , 'name', 'sampling_rate', 'right_sweep', 'right_sweep' , 'neuron' ]:
+        for attr in [  'channel' , 'name', 'sampling_rate', 'right_sweep', 'left_sweep' , 'neuron' ]:
             if attr in karg:
                 setattr(self, attr, karg[attr])
             else:
@@ -89,11 +98,11 @@ class SpikeTrain(object):
     @property
     def spike_times(self):
         if self._spike_times is None:
-            self._spike_times = numpy.empty(len(self._spikes))
+            _spike_times = numpy.empty(len(self._spikes))
             #~ print len(self._spikes), self._spikes[0]
             for i, sp in enumerate(self._spikes):
-                self._spike_times[i] = sp.time
-            return self._spike_times
+                _spike_times[i] = sp.time
+            return _spike_times
         else:
             return self._spike_times
 
@@ -114,6 +123,67 @@ class SpikeTrain(object):
     def spikes(self):
         return self._spikes
     
+    
+    def mode(self):
+        """
+        return the actual mode
+        
+        In standart use case the user should not care about mode.
+        The best use is 'standalone' for memory and efficient.
+        
+        'container'  mode is just for rare flexible cases where we want to deal with individual spikes with different sampling_rate and sweeps.
+        
+        """
+        if self._spike_times is None and self._waveforms is None:
+            return 'container'
+        else:
+            return 'standalone'
+    
+    
+    # this is for  change_mode wrapping OpenElectrophy:
+    Spike = Spike 
+    
+    def change_mode(self , newmode):
+        """
+        Change actual mode to new one.
+        
+        newmode : 'container' or 'standalone'
+        
+        """
+        
+        if newmode == self.mode(): return
+        
+        if newmode == 'container':
+            for i in range(self._spike_times.size):
+                if self._waveforms is None :
+                    waveform = None
+                else:
+                    waveform = self._waveforms[i,:,:]
+                sp = self.Spike( time = self.spike_times[i],
+                                    waveform =waveform,
+                                    sampling_rate = self.sampling_rate,
+                                    left_sweep = self.left_sweep,
+                                    right_sweep = self.right_sweep,
+                                )
+                self._spikes.append(sp)
+            
+            self._spike_times = None
+            self._waveforms = None
+            
+        elif newmode == 'standalone':
+            self._spike_times= numpy.ones(len(self._spikes))*numpy.nan
+            for i, sp in enumerate(self._spikes):
+                self._spike_times[i] = sp.time
+                if sp.waveform is not None:
+                    
+                    if self._waveforms is None:
+                        sh = sp.waveform.shape
+                        self._waveforms = numpy.ones(( len(self._spikes), sh[0] , sh[1]   ))*numpy.nan
+                    self._waveforms[i,:,:] = sp.waveform
+            self._spikes = [ ]
+
+
+
     
     
     #~ @property

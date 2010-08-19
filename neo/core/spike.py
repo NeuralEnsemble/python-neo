@@ -13,7 +13,9 @@ class Spike(object):
     
     ``time`` The spike time
     
-    ``waveform`` An 1D array of the waveform
+    ``waveform`` An 2D array of the waveform 
+                        dim 0 = trodnes (1 = normal, 2 = stereotrod, 4 = tetrod)
+                        dim 1 = form for each one
     
     ``sampling_rate`` The waveform sampling rate
     
@@ -25,15 +27,9 @@ class Spike(object):
     
     def __init__(self, *arg, **karg):
         
-        self.time = None
-        self.waveform = None
-        self.sampling_rate = None
-        
-        if karg.has_key('time'):
-            self.time = karg['time']
-        
-        if karg.has_key('waveform'):
-            self.waveform = karg['waveform']
+        for attr in [  'time' , 'waveform', 'sampling_rate', 'right_sweep', 'left_sweep' ]:
+            if attr in karg:
+                setattr(self, attr, karg[attr])
+            else:
+                setattr(self, attr, None)
 
-        if karg.has_key('sampling_rate'):
-            self.sampling_rate = karg['sampling_rate']

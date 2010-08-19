@@ -42,8 +42,6 @@ class Neuron(object):
         else:
             self.name = "Neuron %d" %self.neoid
         
-    def __str__(self):
-        return str(self.label) 
     
     def add_spiketrain(self, spiketrain):
         self._spiketrains += [spiketrain]

@@ -35,7 +35,7 @@ class Epoch(object):
         if 'duration' in karg.keys():
             self.duration = karg['duration']
     
-    def __str__(self):
-        res = "Epoch %s at time %g with duration %g" %(self.label, self.time, self.duration)
-        return res
+    #~ def __str__(self):
+        #~ res = "Epoch %s at time %g with duration %g" %(self.label, self.time, self.duration)
+        #~ return res
     
