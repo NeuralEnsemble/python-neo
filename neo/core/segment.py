@@ -1,13 +1,23 @@
 # -*- coding: utf-8 -*-
 
 class Segment(object):
+    
+    definition = """A :class:`Segment` is a heterogeneous container for discrete
+    or continous data data sharing a common clock (time basis) but not necessary
+    the same sampling rate, t_start and t_stop. In short, a :class:`Segment` is a 
+    recording may contain AnalogSignal, SpikeTrain, Event or Epoch that share 
+    the same logical clock.
     """
+    
+    
+    
+
+    
+    __doc__ = """
     Heterogeneous container of several data sharing a common time base
 
     **Definition**
-    A :class:`Segment` is a container gathering discrete or continous data acquired during the same time lapse.
-    In short, a :class:`Segment` may contain :class:`AnalogSignal`, :class:`SpikeTrain`, :class:`Event` and :class:`Epoch` 
-    that share the same time base.
+    """+definition+"""
 
     **Usage**
 

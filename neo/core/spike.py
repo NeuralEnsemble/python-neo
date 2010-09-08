@@ -2,12 +2,17 @@
 
 
 class Spike(object):
-     
+    definition = """An :class:`Spike` is an evenement at time t with a waveform.
+    Note that the use of :class:`Spike` is optional. :class:`SpikeTrain` is normally
+    suffisent to manage spike_times and waveforms. :class:`Spike` is an alternative and more 
+    flexible way to manage spikes.
     """
+    
+     
+    __doc__ = """
     Object to represent a spike
 
-    **Definition**
-    An :class:`Spike` is an evenement at time t with a waveform.
+    **Definition**"""+definition+"""
 
     with arguments:
     

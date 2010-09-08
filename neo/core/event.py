@@ -2,14 +2,19 @@
 
 from epoch import Epoch
 
+definition = """
+
+"""
+
 class Event(Epoch):
-     
-    """
+    definition = """An :class:`Event` is an object to represent ponctual time event.
+    Useful for managing trigger, stimulus, ..."""
+    
+    __doc__ = """
     Object to represent ponctual time event.
 
-    **Definition**
-    An :class:`Event` is a discrete evenement arriving at time t. It inherits from the
-    :class:`Epoch` object, and can be viewed as an :class:`Epoch` without any duration
+    **Definition**"""+definition+"""
+    
 
     with arguments:
     

@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 
+
+
+
 class Block(object):
-    """
+    
+    definition = """Main container gathering all the data discrete or continous for a given setup.
+    It can be view as a list of :class:`Segment`.
+
+    A block is not necessary a homogeneous recorging contrary to :class:`Segment`"""
+    
+    __doc__ = """
     Top level container for data.
     
-    **Definition**
-    Main container gathering all the data discrete or continous for a given setup.
-    It can be view as a list of :class:`Segment`.
-    
-    A block is not necessary a homogeneous recorging contrary to :class:`Segment`
-    
+    **Definition**"""+ definition+"""
     **Usage**
     
     

@@ -5,14 +5,15 @@ from neuron import Neuron
 from pairgenerator import *
 
 class SpikeTrainList(object):
-     
-    """
-    Object to represent a list of SpikeTrains
-
-    **Definition**
-    An :class:`SpikeTrainList` is a list of SpikeTrains. Those :class:`SpikeTrain` can be 
+    definition = """An :class:`SpikeTrainList` is a list of SpikeTrains. Those :class:`SpikeTrain` can be 
     from different :class:`Neuron` within the same :class:`Segment`, or from the same 
     :class:`Neuron` across several :class:`Segment`
+    """
+     
+    __doc__ = """
+    Object to represent a list of SpikeTrains
+
+    **Definition**"""+definition+"""
 
     with arguments:
     

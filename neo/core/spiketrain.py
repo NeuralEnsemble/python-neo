@@ -4,28 +4,29 @@ from neuron import Neuron
 from spike import Spike
 
 class SpikeTrain(object):
-     
-    """
-    A group of :class:`Spike` (or spike times) emitted by the same :class:`Neuron`
-
-    **Definition**
-    A :class:`SpikeTrain` is an array of :class:`Spike` emitted by the same
-    :class:`Neuron`.
-    
-    The spike times of the :class:`SpikeTrain` can hold spike_times and/or waveforms.
+    definition = """An easemble of action potential emitted by the same Neuron in a time lapse.
+    It is define by its spike_times and/or waveforms.
     
     It has 2 possible modes (behaviors):
+      * 'standalone' : It directly hold spikes_times and waveforms for memory reasons.
+        This mode is more usual.
       * 'container' : It is a containers of :class:`Spike`. In this case the property spikes return list a :class:`Spike`.
         The property spike_times and waveforms construct appropriate numpy.ndarray.
         And _spikes_times and _waveforms attributes are both None in this case.
-      * 'standalone' : It directly hold spikes_times and waveforms for memory reasons.
-    
+    """
+     
+    __doc__ = """
+    A group of :class:`Spike` (or spike times) emitted by the same :class:`Neuron`
+
+    **Definition**"""+definition+"""
+
     spike_times is 1d numpy.array with times in seconds.
     
     waveforms is a 3d numpy.ndarray with this shape:
         * dim 0 : spikes dimension equal to spike_times
         * dim 1 : used for trodalness purpose. This size is ommunly 1. But can also be 2 for stereotrod. 4 for tetrod. Or N for arbitrary trodaness.
         * dim 2 : waveform for each spike
+
     
     
     

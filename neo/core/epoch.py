@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
+
 class Epoch(object):
+    definition = """Similar as Event but with a duration. Useful for describing a period, the state of a subject, ..."""
      
-    """
+    __doc__ = """
     Object to represent an epoch, or discrete time events
 
-    **Definition**
-    An :class:`Epoch` is an evenement at time t, lasting for a certain duration
+    **Definition**"""+definition+"""
+
 
     with arguments:
     
