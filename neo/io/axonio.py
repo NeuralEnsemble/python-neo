@@ -216,8 +216,8 @@ class AxonIO(BaseIO):
                 nbsweep2 = header['lSynchArraySize']
                 offsetSweep = header['lSynchArrayPtr']*BLOCKSIZE
             elif version >=2. :
-                nbsweep2 = header['section']['SynchArraySection']['llNumEntries']
-                offsetSweep = header['section']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
+                nbsweep2 = header['sections']['SynchArraySection']['llNumEntries']
+                offsetSweep = header['sections']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
             sweepArray = memmap(self.filename , 'i4'  , 'r',
                                         shape = (nbsweep2, 2),
                                         offset = offsetSweep )            
