@@ -36,12 +36,13 @@ class AnalogSignal(object):
             else:
                 setattr(self, attr, None)
         
+        if 'dt' in karg:
+            self.sampling_rate = float(1./karg['dt'])
+        
         if self.t_start is None:self.t_start = 0.
         if self.sampling_rate is None:self.sampling_rate = 1.
             
         
-        if 'dt' in karg:
-            self.sampling_rate = float(1./karg['dt'])
 
         if self.t_stop is None and self.sampling_rate !=0.:
             self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
