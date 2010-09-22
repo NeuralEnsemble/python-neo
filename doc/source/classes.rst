@@ -9,7 +9,7 @@ Introduction
 
 The neo core consist of a collection of classes that define standards object for manipulating electrophysilogical ( in vivo or simulated) data sets.
 
-.. image:: ./base_schematic.png
+.. image:: images/base_schematic.png
    :height: 500 px
    :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
    :align: center
@@ -17,6 +17,13 @@ The neo core consist of a collection of classes that define standards object for
 This structure attempts to encapsulate the essence of the base data structures previously used
 in `Neurotools <http://neuralensemble.org/trac/NeuroTools>`_ and in `OpenElectrophy <http://neuralensemble.org/trac/OpenElectrophy>`_. 
 We also attempt to keep a model similar to the one described by the `Neuroshare <http://neuroshare.sourceforge.net/index.shtml standard>`_ IO API.
+
+The hierachical respresentation can help to understand the links between objects :
+
+.. image:: images/simple_and_spike_diagram.png
+   :height: 500 px
+   :align: center
+
 
 
 Features
