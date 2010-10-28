@@ -1,0 +1,15 @@
+Brain Vision Data Exchange Marker File, Version 1.0
+; Data created from history path: Stim_allmir_all_A/Grand Average
+; The channel numbers are related to the channels in the exported file.
+
+[Common Infos]
+DataFile=Stim_allmir_all_A.dat
+
+[Marker Infos]
+; Each entry: Mk<Marker number>=<Type>,<Description>,<Position in data points>,
+; <Size in data points>, <Channel number (0 = marker is related to all channels)>,
+; <Date (YYYYMMDDhhmmssuuuuuu)>
+; Fields are delimited by commas, some fields might be omited (empty).
+; Commas in type or description text are coded as "\1".
+Mk1=New Segment,,1,1,0,00000000000000000000
+Mk2=Time 0,,206,1,0
