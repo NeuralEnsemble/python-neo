@@ -94,6 +94,12 @@ try :
 except ImportError:
     print "Error while loading Spike2IO module"
 
+try :
+    from alphaio import AlphaIO
+    all_format += [ [ 'AlphaOmega Map' , { 'class' : AlphaIO  , 'info' :  'AlphaOmega (map)' } ] ]
+except ImportError:
+    print "Error while loading AlphaIO module"
+
 
 try :
     from tdtio import TdtIO

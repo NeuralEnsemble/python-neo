@@ -81,6 +81,12 @@ List of implemented formats
  - :class:`AxonIO`
     .. automodule:: neo.io.axonio
 
+ - :class:`AlphaIO`
+    .. automodule:: neo.io.alphaio
+
+ - :class:`TdtIO`
+    .. automodule:: neo.io.tdtio
+
  - :class:`MicromedIO`
     .. automodule:: neo.io.micromedio
 
@@ -105,9 +111,11 @@ List of implemented formats
  - :class:`WinWcpIO`
     .. automodule:: neo.io.winwcpio
 
+ - :class:`WinEdrIO`
+    .. automodule:: neo.io.winedrio
+
  - :class:`ElanIO`
     .. automodule:: neo.io.elanio
-
  
  - :class:`PyNNIO`
     .. automodule:: neo.io.pynnio

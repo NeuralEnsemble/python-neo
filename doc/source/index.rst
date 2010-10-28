@@ -14,7 +14,7 @@ neo provide in particular :
  - a documentation.
  - a set of examples like a format convertor.
 
-So for python users, neo can taken as a remplacement of neuroshare API.
+So for python users, neo can be taken as a remplacement of neuroshare API.
 
 People behind the project are very open to discussion. Any feedback is gladly welcome and highly appreciated!
 
