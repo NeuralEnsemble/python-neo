@@ -59,16 +59,24 @@ except ImportError:
     print "Error while loading AsciiSpikeIO module"
 
 try:
+    from elphydatio import ElphyDatIO
+    all_format += [ [ 'elphy DAT' , { 'class' : ElphyDatIO  , 'info' :  'DAT elphy file' } ] ]
+except ImportError:
+    print "Error while loading ElphyDatIO module"
+
+
+try:
+    from brainvisionio import BrainVisionIO
+    all_format += [ [ 'brainvision' , { 'class' : BrainVisionIO  , 'info' :  'vhdr brain vision file' } ] ]
+except ImportError:
+    print "Error while loading BrainVisionIO module"
+
+try:
     from micromedio import MicromedIO
     all_format += [ [ 'micromed' , { 'class' : MicromedIO  , 'info' :  'TRC micromed file' } ] ]
 except ImportError:
     print "Error while loading MicromedIO module"
 
-try:
-    from elphydatio import ElphyDatIO
-    all_format += [ [ 'elphy DAT' , { 'class' : ElphyDatIO  , 'info' :  'DAT elphy file' } ] ]
-except ImportError:
-    print "Error while loading ElphyDatIO module"
 
 try:
     from elanio import ElanIO
