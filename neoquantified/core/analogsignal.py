@@ -24,6 +24,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     """
     def __new__(subtype, signal, dtype=None, copy=True, t_start=0., sampling_rate=None, sampling_period=None):
         # maybe some parameters are useless for the AnalogSignal use case (dtype, copy ?)
+        # add recording point
         if sampling_period is None:
             if sampling_rate is None:
                 sampling_rate = 1.

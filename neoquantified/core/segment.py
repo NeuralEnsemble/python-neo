@@ -3,7 +3,7 @@
 class Segment(object):
     
     definition = """A :class:`Segment` is a heterogeneous container for discrete
-    or continous data data sharing a common clock (time basis) but not necessary
+    or continous data sharing a common clock (time basis) but not necessary
     the same sampling rate, t_start and t_stop. In short, a :class:`Segment` is a 
     recording may contain AnalogSignal, SpikeTrain, Event or Epoch that share 
     the same logical clock.
@@ -49,7 +49,7 @@ class Segment(object):
         
     def get_analogsignals(self):
         """
-        Return  a list of :calss:`AnalogSignal`.
+        Return a list of :class:`AnalogSignal`.
         """
         return self._analogsignals
         
