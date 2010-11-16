@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from baseneo import BaseNeo
 
 
-
-class Block(object):
+class Block(BaseNeo):
     
     definition = """Main container gathering all the data discrete or continous for a given setup.
     It can be view as a list of :class:`Segment`.

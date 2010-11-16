@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-class AnalogSignalList(object):
+from baseneo import BaseNeo
+
+class AnalogSignalList(BaseNeo):
      
     """
     Object to represent a list of analog signals

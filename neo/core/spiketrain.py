@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+
+from baseneo import BaseNeo
 import numpy
 from neuron import Neuron
 from spike import Spike
 
-class SpikeTrain(object):
+class SpikeTrain(BaseNeo):
     definition = """An easemble of action potential emitted by the same Neuron in a time lapse.
     It is define by its spike_times and/or waveforms.
     

@@ -1,2 +1,2 @@
-from core import *
-from io import *
+from neo.core import *
+from neo.io import *

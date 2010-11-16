@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from baseneo import BaseNeo
 
-class Spike(object):
+class Spike(BaseNeo):
     definition = """An :class:`Spike` is an evenement at time t with a waveform.
     Note that the use of :class:`Spike` is optional. :class:`SpikeTrain` is normally
     suffisent to manage spike_times and waveforms. :class:`Spike` is an alternative and more 

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+
+from baseneo import BaseNeo
 import numpy
 from spiketrain import SpikeTrain
 from neuron import Neuron
 from pairgenerator import *
 
-class SpikeTrainList(object):
+class SpikeTrainList(BaseNeo):
     definition = """An :class:`SpikeTrainList` is a list of SpikeTrains. Those :class:`SpikeTrain` can be 
     from different :class:`Neuron` within the same :class:`Segment`, or from the same 
     :class:`Neuron` across several :class:`Segment`

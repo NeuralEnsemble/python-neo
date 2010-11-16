@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from baseneo import BaseNeo
 import numpy
 
 
-
-class AnalogSignal(object):
+class AnalogSignal(BaseNeo):
      
     definition = """An :class:`AnalogSignal` is a continuous data signal acquired
     at time t_start at a certain sampling rate.

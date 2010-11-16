@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-class RecordingPoint(object):
+from baseneo import BaseNeo
+
+class RecordingPoint(BaseNeo):
     
     definition = """
     A :class:`RecordingPoint` is a physical location identifying the recorded data. It can

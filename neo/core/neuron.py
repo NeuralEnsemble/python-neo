@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from baseneo import BaseNeo
+
 global neoid
 neoid = 0
 

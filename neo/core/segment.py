@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-class Segment(object):
+
+from baseneo import BaseNeo
+
+class Segment(BaseNeo):
     
     definition = """A :class:`Segment` is a heterogeneous container for discrete
     or continous data data sharing a common clock (time basis) but not necessary

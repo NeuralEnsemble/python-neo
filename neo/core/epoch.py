@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from baseneo import BaseNeo
 
-class Epoch(object):
+class Epoch(BaseNeo):
     definition = """Similar as Event but with a duration. Useful for describing a period, the state of a subject, ..."""
      
     __doc__ = """

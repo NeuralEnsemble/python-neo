@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+from baseneo import BaseNeo
 import numpy
 
 # Function to calculate the euclidian distance between two positions
@@ -17,7 +20,7 @@ def distance(pos_1, pos_2, N=None):
     return numpy.sqrt(dx*dx + dy*dy)
 
 
-class PairsGenerator(object):
+class PairsGenerator(BaseNeo):
     """
     PairsGenerator(SpikeList, SpikeList, no_silent)
     This class defines the concept of PairsGenerator, that will be used by all
