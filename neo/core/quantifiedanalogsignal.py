@@ -1,11 +1,12 @@
 import numpy as np
 import quantities as pq
 from baseneo import BaseNeo
-
+from analogsignal import AnalogSignal
 
 # maybe it has to be inherited from Neo.AnalogSignal ?
 class QuantifiedAnalogSignal(BaseNeo, pq.Quantity):
     """
+    This class is usable only if you have installed the Quantities Python package
     BaseNeo should be the parent of every Neo class
     Quantities inherits from numpy.ndarray
     
@@ -25,7 +26,7 @@ class QuantifiedAnalogSignal(BaseNeo, pq.Quantity):
     """
     def __new__(subtype, signal, dtype=None, copy=True, t_start=0., sampling_rate=None, sampling_period=None):
         # maybe some parameters are useless for the AnalogSignal use case (dtype, copy ?)
-        # add recording point
+        # add recording point
         if sampling_period is None:
             if sampling_rate is None:
                 sampling_rate = 1.
@@ -37,7 +38,7 @@ class QuantifiedAnalogSignal(BaseNeo, pq.Quantity):
                 if sampling_period != 1./sampling_rate:
                     raise ValueError('The sampling_rate has to be 1./sampling_period')
 
-        if isinstance(signal, AnalogSignal):
+        if isinstance(signal, (AnalogSignal, QuantifiedAnalogSignal)):
             return signal
 
         if isinstance(signal, np.ndarray):
