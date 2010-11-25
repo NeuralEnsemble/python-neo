@@ -53,8 +53,8 @@ class Spike2IO(BaseIO):
     has_header         = False
     is_streameable     = False
     read_params        = {   Segment : [ 
-                                                ('transform_event_to_spike' , { 'value' : '', 'label' : 'Channel event to be convert as spike' } ),
-                                                ('import_event' , { 'value' : False, 'label' : 'Do not import event' } ),
+                                                #~ ('transform_event_to_spike' , { 'value' : '', 'label' : 'Channel event to be convert as spike' } ),
+                                                ('import_event' , { 'value' : False, 'label' : 'Do import event' } ),
                                             ],
                                     }
     write_params       = None
@@ -83,7 +83,8 @@ class Spike2IO(BaseIO):
         """
         return self.read_segment( **kargs)
     
-    def read_segment(self , transform_event_to_spike = [ ],
+    def read_segment(self ,
+                                                #~ transform_event_to_spike = [ ],
                                                 import_event = False,
                                                 ):
         """
@@ -93,18 +94,21 @@ class Spike2IO(BaseIO):
                     support also a str list separated by a space
         """
         
-        if type(transform_event_to_spike) == str :
-            trans = transform_event_to_spike.replace(',',' ').replace(';',' ').replace('	',' ').split(' ')
-            transform_event_to_spike = [ ]
-            for t in trans :
-                if t!='' :
-                    try :
-                        transform_event_to_spike.append(int(t))
-                    except:
-                        pass
+        #~ if type(transform_event_to_spike) == str :
+            #~ trans = transform_event_to_spike.replace(',',' ').replace(';',' ').replace('	',' ').split(' ')
+            #~ transform_event_to_spike = [ ]
+            #~ for t in trans :
+                #~ if t!='' :
+                    #~ try :
+                        #~ transform_event_to_spike.append(int(t))
+                    #~ except:
+                        #~ pass
+                    
+        
         #~ print 'transform_event_to_spike' , transform_event_to_spike
         
         header = self.read_header(filename = self.filename)
+        
         #~ print header
         fid = open(self.filename, 'rb')
         
@@ -129,23 +133,41 @@ class Spike2IO(BaseIO):
                     #~ print sig.signal.size,
                 #~ print ''
                     
-            elif channelHeader.kind in  [2, 3, 4, 5,6,7, 8] and import_event:
+            elif channelHeader.kind in  [2, 3, 4, 5, 8] and import_event:
                 #~ print 'channel event',
                 events = self.readOneChannelEvent( fid, i, header )
+                seg._events +=  events
+                
                 #~ print 'nb events : ', len(events)
-                if i in transform_event_to_spike:
-                    spikeTr = SpikeTrain(spikes = [])
-                    spikeTr.channel = int(channelHeader.phy_chan)
-                    seg._spiketrains.append(spikeTr)
-                    for event in events :
-                        spike = Spike()
-                        spike.time = event.time
-                        if hasattr(event, 'waveform'):
-                            spike.waveform = event.waveform
-                            spike.sampling_rate = event.sampling_rate
-                        spikeTr._spikes.append(spike)
-                else :
-                    seg._events +=  events
+                #~ if i in transform_event_to_spike:
+                    #~ spikeTr = SpikeTrain(spikes = [])
+                    #~ spikeTr.channel = int(channelHeader.phy_chan)
+                    #~ seg._spiketrains.append(spikeTr)
+                    #~ for event in events :
+                        #~ spike = Spike()
+                        #~ spike.time = event.time
+                        #~ if hasattr(event, 'waveform'):
+                            #~ spike.waveform = event.waveform
+                            #~ spike.sampling_rate = event.sampling_rate
+                        #~ spikeTr._spikes.append(spike)
+                #~ else :
+                    #~ seg._events +=  events
+                
+                
+            elif channelHeader.kind in  [6,7] :
+                events = self.readOneChannelEvent( fid, i, header )
+                spikeTr = SpikeTrain(spikes = [])
+                spikeTr.channel = int(channelHeader.phy_chan)
+                seg._spiketrains.append(spikeTr)
+                for event in events :
+                    spike = Spike()
+                    spike.time = event.time
+                    if hasattr(event, 'waveform'):
+                        spike.waveform = event.waveform
+                        spike.sampling_rate = event.sampling_rate
+                    spikeTr._spikes.append(spike)
+            
+            
         
         fid.close()
         
@@ -156,6 +178,8 @@ class Spike2IO(BaseIO):
         
         fid = open(filename, 'rb')
         header = HeaderReader(fid,   dtype(headerDescription))
+        #~ print 'chan_size' , header.chan_size
+        
         
         if header.system_id < 6:
             header.dtime_base = 1e-6
@@ -271,10 +295,12 @@ class Spike2IO(BaseIO):
         
         # TODO gerer heure et freq verifier
         return anaSigs
-        
-        
+    
+    
     def readOneChannelEvent(self , fid, channel_num, header ,):
         channelHeader = header.channelHeaders[channel_num]
+        print channelHeader
+        #~ print channelHeader.free0, channel_num, channelHeader.kind
         
         alltrigs = None
         if channelHeader.kind in [2, 3, 4 , 5 , 6 ,7, 8]:
@@ -345,12 +371,16 @@ class Spike2IO(BaseIO):
             if channelHeader.kind == 8:
                 #print 'label' , alltrigs[t]['label']
                 event.label = alltrigs[t]['label']
-                
-            if channelHeader.kind in [6 , 7]:
+            
+            if channelHeader.kind in [6 ]:
                 # waveform
                 waveform = array(list(alltrigs[t])[2:])
                 if channelHeader.kind == 6 :
                     waveform = waveform.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
+                
+                if channelHeader.interleave>1:
+                    waveform = waveform.reshape((-1,channelHeader.interleave))
+                    waveform = waveform.swapaxes(0,1)
                 event.waveform = waveform
                 # sample rate
                 if header.system_id in [1,2,3,4,5]:
@@ -361,6 +391,8 @@ class Spike2IO(BaseIO):
                 sampling_rate = 1./sample_interval
                 
                 event.sampling_rate = sampling_rate
+            if channelHeader.kind in [ 7]:
+                pass
             events.append(event)
             
         return events
