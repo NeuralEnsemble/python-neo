@@ -24,7 +24,19 @@ class Spike2IOTest(unittest.TestCase):
         #~ spike2 = Spike2IO(filename = 'datafiles/20091103_000.SMR')
         #~ spike2 = Spike2IO(filename = 'datafiles/20091104_000.SMR')
         #~ spike2 = Spike2IO(filename = 'datafiles/BURST.SMR')
-        spike2 = Spike2IO(filename = 'datafiles/File_spike2_1.smr')
+        
+        #spike2 = Spike2IO(filename = 'datafiles/File_spike2_1.smr')
+        
+        
+        #~ spike2 = Spike2IO(filename = '/home/sgarcia/FormationOpenElectrophy/Vos datas/Copy of noya_0907_t24n4_fixgrid.smr')
+        #~ spike2 = Spike2IO(filename = '/home/sgarcia/FormationOpenElectrophy/Vos datas/noya_0907_t24n4_fixgrid_sorted_filtered.smr')
+        spike2 = Spike2IO(filename = '/home/sgarcia/FormationOpenElectrophy/Vos datas/Karim/387s24.t0.smr')
+        #~ spike2 = Spike2IO(filename = '/home/sgarcia/FormationOpenElectrophy/Vos datas/Karim/test.smr')
+        
+        
+        
+        
+        
         
 
         
@@ -76,8 +88,10 @@ class Spike2IOTest(unittest.TestCase):
             
             for spike in spiketr.get_spikes():
                 if spike.waveform is not None:
-                    tv = arange(spike.waveform.size , dtype = 'f')/spike.sampling_rate+spike.time
-                    ax4.plot(tv,spike.waveform ,color = colors[s%7],)
+                    #~ print spike.waveform.shape
+                    tv = arange(spike.waveform.shape[1] , dtype = 'f')/spike.sampling_rate+spike.time
+                    for tn in range(spike.waveform.shape[0]):
+                        ax4.plot(tv,spike.waveform[tn,:,] ,color = colors[s%7],)
 
                 
         pylab.show()
