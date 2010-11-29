@@ -3,18 +3,17 @@
 neuroshareio
 ==================
 
-Classe for wrapping neuroshare dlls.
-neuroshare is C API for reading neural data.
-Neuroshare provide also a Matlab and a python API on top of that.
-The python API has been completly rewritten using ctypes here.
+Class for wrapping the Neuroshare dlls.
+Neuroshare is a C API for reading neural data.
+Neuroshare also provides a Matlab and a Python API on top of that.
+The Python API has been completly rewritten using ctypes here.
 
-Neurohare is a open source API but each dll is provided directly by the vendor.
-We provide here some of them that downlable in vendors web site.
+Neuroshare is an open source API but each dll is provided directly by the vendor.
+We provide here some of them that are downloadable from vendors' web sites.
 
-This io run only on win32 platforms.
-For some vendors (Spike2/CED , Clampfit/Abf) , neo.io provide also a pure python
+This io runs only on win32 platforms.
+For some vendors (Spike2/CED , Clampfit/Abf), neo.io also provides pure Python
 readers, you should prefer them.
-
 
 
 @author : sgarcia

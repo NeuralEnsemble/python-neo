@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for fake reading/writing data from WinEdr a software written written by
+Classe for fake reading/writing data from WinEdr, a software tool written by
 John Dempster.
 
 WinEdr is free:
@@ -17,7 +17,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 
 import struct
 from numpy import *

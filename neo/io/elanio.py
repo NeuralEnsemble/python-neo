@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading/writing data from Elan.
+Class for reading/writing data from Elan.
 
-Elan is software for studying time frequency map of EEG data.
+Elan is software for studying time-frequency maps of EEG data.
 
-Elan is develloped in France,lyon, inserm U821
+Elan is developed in Lyon, France, at INSERM U821
 
-Elan file is separated in 3 files :
+An Elan dataset is separated into 3 files :
  - .eeg          raw data file
  - .eeg.ent      hearder file
  - .eeg.pos      event file
@@ -20,7 +20,7 @@ Supported : Read/Write
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 from numpy import *
 import re
 import datetime

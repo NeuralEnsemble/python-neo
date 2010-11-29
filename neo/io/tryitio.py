@@ -12,9 +12,8 @@ Supported : Read
 # I need to subclass BaseIO
 from baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-#from neo.core import *
 
-from ..core import *
+from neo.core import *
 
 import datetime
 

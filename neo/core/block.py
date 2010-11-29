@@ -5,15 +5,17 @@
 
 class Block(object):
     
-    definition = """Main container gathering all the data discrete or continous for a given setup.
-    It can be view as a list of :class:`Segment`.
+    definition = """Main container gathering all the data, whether discrete or continuous, for a given setup.
+    It can be viewed as a list of :class:`Segment` objects.
 
-    A block is not necessary a homogeneous recorging contrary to :class:`Segment`"""
+    A block is not necessarily a homogeneous recording, in contrast to :class:`Segment`"""
     
     __doc__ = """
     Top level container for data.
     
-    **Definition**"""+ definition+"""
+    **Definition**
+    %s
+    
     **Usage**
     
     
@@ -26,7 +28,7 @@ class Block(object):
     get_segments()
     
     
-    """
+    """ % definition
     def __init__(self, *arg, **karg):
         self._segments = [ ]
         self._recordingpoints = [ ]

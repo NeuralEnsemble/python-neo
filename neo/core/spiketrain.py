@@ -4,35 +4,33 @@ from neuron import Neuron
 from spike import Spike
 
 class SpikeTrain(object):
-    definition = """An easemble of action potential emitted by the same Neuron in a time lapse.
-    It is define by its spike_times and/or waveforms.
+    definition = """An ensemble of action potentials emitted by the same Neuron in a period of time.
+    It is defined by its spike times and/or waveforms.
     
-    It has 2 possible modes (behaviors):
-      * 'standalone' : It directly hold spikes_times and waveforms for memory reasons.
+    It has two possible modes (behaviors):
+      * 'standalone' : It directly holds spike_times and waveforms for memory reasons.
         This mode is more usual.
-      * 'container' : It is a containers of :class:`Spike`. In this case the property spikes return list a :class:`Spike`.
-        The property spike_times and waveforms construct appropriate numpy.ndarray.
-        And _spikes_times and _waveforms attributes are both None in this case.
+      * 'container' : It is a container for :class:`Spike` objects. In this case the property ``spikes`` returns a list of :class:`Spike` objects.
+        The properties ``spike_times`` and ``waveforms`` construct appropriate ``numpy.ndarray`` objects.
+        ``_spikes_times`` and ``_waveforms`` attributes are both ``None`` in this case.
     """
      
     __doc__ = """
-    A group of :class:`Spike` (or spike times) emitted by the same :class:`Neuron`
+    A group of :class:`Spike` objects, or an array of spike times, emitted by the same :class:`Neuron`
 
-    **Definition**"""+definition+"""
+    **Definition**
+    %s
 
-    spike_times is 1d numpy.array with times in seconds.
+    ``spike_times`` is a 1d numpy.array with times in seconds.
     
-    waveforms is a 3d numpy.ndarray with this shape:
+    ``waveforms`` is a 3d numpy.ndarray with this shape:
         * dim 0 : spikes dimension equal to spike_times
-        * dim 1 : used for trodalness purpose. This size is ommunly 1. But can also be 2 for stereotrod. 4 for tetrod. Or N for arbitrary trodaness.
+        * dim 1 : used for trodalness purpose. This size is commonly 1. But can also be 2 for stereotrod. 4 for tetrod. Or N for arbitrary trodaness.
         * dim 2 : waveform for each spike
 
-    
-    
-    
     ``spikes`` or ``spike_times``
         - **spikes**       : an array/list of :class:`Spike` 
-        - **spike_times ** : an array/list of times
+        - **spike_times**  : an array/list of times
 
     ``neuron``
         The :class:`Neuron` emitting the :class:`SpikeTrain`
@@ -47,7 +45,7 @@ class SpikeTrain(object):
     
     **Example**
 
-    """
+    """ % definition
     
     
     

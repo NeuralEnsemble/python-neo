@@ -5,34 +5,35 @@ from neuron import Neuron
 from pairgenerator import *
 
 class SpikeTrainList(object):
-    definition = """An :class:`SpikeTrainList` is a list of SpikeTrains. Those :class:`SpikeTrain` can be 
-    from different :class:`Neuron` within the same :class:`Segment`, or from the same 
-    :class:`Neuron` across several :class:`Segment`
+    definition = """A :class:`SpikeTrainList` is a list of SpikeTrains. The :class:`SpikeTrain` objects can be 
+    from different :class:`Neuron` objects within the same :class:`Segment`, or from the same 
+    :class:`Neuron` across several :class:`Segment` objects.
     """
      
     __doc__ = """
     Object to represent a list of SpikeTrains
 
-    **Definition**"""+definition+"""
+    **Definition**
+    %s
 
     with arguments:
     
     ``spiketrains`` 
-        The list of :class:`SpikeTrain` contained in the :class:`SpikeTrainList`. The :class:`Neuron`
-        objects belonging to all those :class:`SpikeTrain` will be used to create a dictionnary of
-        :class:`SpikeTrain`.
+        The list of :class:`SpikeTrain` objects contained in the :class:`SpikeTrainList`. The :class:`Neuron`
+        objects belonging to all these :class:`SpikeTrain` will be used to create a dictionary of
+        :class:`SpikeTrain` objects.
 
     ``t_start``
-        The absolute beginning (in second) of the :class:`SpikeTrain`
+        The absolute beginning (in seconds) of the :class:`SpikeTrain`
     
     ``t_stop``
-        The absolute end (in second) of the :class:`SpikeTrain`
+        The absolute end (in seconds) of the :class:`SpikeTrain`
 
     **Usage**
 
     **Example**
 
-    """
+    """ % definition
     
     _t_start     = None
     _t_stop      = None    

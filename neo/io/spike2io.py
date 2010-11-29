@@ -4,14 +4,14 @@ Classe for fake reading/writing data in CED spike2 files (.smr).
 
 This code is based on:
  - sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
-    Disponible here ::
+    Available here ::
     http://www.neuro.ki.se/broberger/
 
-and sonpy come from :
+and sonpy comes from :
  - SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
     King's College London. See http://www.kcl.ac.uk/depsta/biomedical/cfnr/lidierth.html
 
-This IO support old (<v6) and new files (>)v7) of spike2
+This IO supports old (<v6) and new files (>)v7) of spike2
 
 
 Supported : Read
@@ -25,7 +25,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 
 from numpy import *
 from copy import deepcopy

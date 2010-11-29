@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading/writing pyNN output files saved in numpy binary format.
+Class for reading/writing PyNN output files saved in numpy binary format.
 
-pyNN is available at http://neuralensemble.org/trac/PyNN
+PyNN is available at http://neuralensemble.org/PyNN
 
 Supported : Read/Write
 
@@ -12,7 +12,7 @@ Supported : Read/Write
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 import numpy
 
 class PyNNBinaryIO(BaseIO):

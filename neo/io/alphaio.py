@@ -3,7 +3,7 @@
 
 Class for reading data from AlphaOmega system files (map)
 
-This code is written from file specificaion downloaded here:
+This code is written from the file specification downloaded here:
 TODO
 
 Supported : Read
@@ -14,7 +14,7 @@ Supported : Read
 """
 
 from baseio import BaseIO
-from ..core import *
+from neo.core import *
 
 import datetime
 

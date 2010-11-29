@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading data from Plexion acquisition system (.plx)
+Class for reading data from Plexion acquisition system (.plx)
 
-Compatible from version 100 to 106.
-Other versions are not controled.
+Compatible with versions 100 to 106.
+Other versions have not been tested.
 
-This IO is develloped thanks to the header file downloadable here:
+This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/downloads.html
 
 
 Supported : Read
 
-@author :  luc estebanez ,sgarcia
+@author :  luc estebanez, sgarcia
 
 
 """
@@ -24,7 +24,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 
 from numpy import *
 import struct

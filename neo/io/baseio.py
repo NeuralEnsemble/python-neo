@@ -9,62 +9,60 @@ baseio
 Classes
 -------
 
-BaseIO        - abstract class which should be overriden, managing how a file will load/write
+BaseIO        - abstract class which should be overridden, managing how a file will load/write
                   its data
                   
-If you want a model for develloping a new IO just start from exampleIO.
+If you want a model for developing a new IO start from exampleIO.
 """
 
 import sys, os
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('../..'))
 
-#from neo.core import *
-from ..core import *
-
+from neo.core import *
 
 class BaseIO(object):
     """
     Generic class to handle all the file read/write methods for the key objects of the
-    core class. This template is file reading/writing oriented but it can also handle data 
-    from/to a database like TDT sytem tanks or SQLite files.
-    This is an abstract class that will be implemented for each format
+    core class. This template is file-reading/writing oriented but it can also handle data 
+    read from/written to a database such as TDT sytem tanks or SQLite files.
+    This is an abstract class that will be subclassed for each format
     The key methods of the class are:
-        - read()- Read the whole object structure, generaly point to th highest Object level
-        - read_block(** params)     - Read Block object from file with some params
-        - read_segment(** params)     - Read Segment object from file with some params
-        - read_spiketrainlist(**params)  - Read SpikeTrainList object from file with some params
-        - write() - Write  the whole object structure, generaly point to th highest Object level
-        - write_block(** params)    - Write Block object to file with some params
-        - write_segment(** params)    - Write Segment object to file with some params
-        - write_spiketrainlist(**params) - Write SpikeTrainList object to file with some params
+        - ``read()`` - Read the whole object structure, return the object at the highest level in the hierarchy
+        - ``read_block(**params)``     - Read Block object from file with some parameters
+        - ``read_segment(**params)``     - Read Segment object from file with some parameters
+        - ``read_spiketrainlist(**params)`` - Read SpikeTrainList object from file with some parameters
+        - ``write()`` - Write the whole object structure
+        - ``write_block(**params)``    - Write Block object to file with some parameters
+        - ``write_segment(**params)``    - Write Segment object to file with some parameters
+        - ``write_spiketrainlist(**params)`` - Write SpikeTrainList object to file with some parameters
         
-    But the classe can also implement this methods :
-        - read_spike(params)           - Read Spike object from file with some params
-        - read_analogsignal( **params)    - Read AnalogSignal object from file with some params
-        - read_spiketrain(**params)      - Read SpikeTrain object from file with some params
-        - read_epoch(**params)     - Read Epoch object from file with some params
-        - read_event(**params)           - Read Event object from file with some params
-        - write_spikes(**params)          - Write Spike object to file with some params
-        - write_analog(** params)   - Write AnalogSignal object to file with some params
-        - write_spiketrain(**params)     - Write SpikeTrain object to file with some params
-        - write_epoch(** params)    - Write Epoch object to file with some params
-        - write_event(**params)          - Write Event object to file with some params
+    The class can also implement these methods:
+        - ``read_spike(**params)``           - Read Spike object from file with some parameters
+        - ``read_analogsignal(**params)``    - Read AnalogSignal object from file with some parameters
+        - ``read_spiketrain(**params)``      - Read SpikeTrain object from file with some parameters
+        - ``read_epoch(**params)``     - Read Epoch object from file with some parameters
+        - ``read_event(**params)``           - Read Event object from file with some parameters
+        - ``write_spikes(**params)``          - Write Spike object to file with some parameters
+        - ``write_analog(** params)``   - Write AnalogSignal object to file with some parameters
+        - ``write_spiketrain(**params)``     - Write SpikeTrain object to file with some parameters
+        - ``write_epoch(**params)``    - Write Epoch object to file with some parameters
+        - ``write_event(**params)``          - Write Event object to file with some parameters
         
         
-    Each object is able to declare what can be accessed or written
-    The object types can be one of the class defined in neo.core :
+    Each class is able to declare what can be accessed or written.
+    The object types can be one of the classes defined in neo.core:
        - Block (with all segments, AnalogSignals, SpikeTrains, ...)
        - Segment (with all  AnalogSignals, SpikeTrains, Events, Epoch, ...)
-       - SpikeTrainList ( with all SpikeTrains )
-       - Neuron ( with all SpikeTrains )
+       - SpikeTrainList (with all SpikeTrains)
+       - Neuron (with all SpikeTrains)
        - SpikeTrain
        - AnalogSignal
     
     
     ** start a new IO **
-    If you want to implement your own file format, you just have to create an object that will 
-    inherit from this BaseFile class and implement the previous functions.
+    If you want to implement your own file format, you should create a class that will 
+    inherit from this BaseFile class and implement the previous methods.
     See ExampleIO in exampleio.py
     """
     

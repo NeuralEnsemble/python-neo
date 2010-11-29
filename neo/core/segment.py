@@ -3,21 +3,17 @@
 class Segment(object):
     
     definition = """A :class:`Segment` is a heterogeneous container for discrete
-    or continous data data sharing a common clock (time basis) but not necessary
+    or continous data data sharing a common clock (time base) but not necessarily
     the same sampling rate, t_start and t_stop. In short, a :class:`Segment` is a 
-    recording may contain AnalogSignal, SpikeTrain, Event or Epoch that share 
+    recording that may contain AnalogSignal, SpikeTrain, Event or Epoch objects that share 
     the same logical clock.
     """
     
-    
-    
-
-    
     __doc__ = """
-    Heterogeneous container of several data sharing a common time base
+    Heterogeneous container for data objects sharing a common time base
 
     **Definition**
-    """+definition+"""
+    %s
 
     **Usage**
 
@@ -36,7 +32,7 @@ class Segment(object):
 
     get_epochs()
 
-    """
+    """ % definition
     
     
     def __init__(self, *arg, **karg):

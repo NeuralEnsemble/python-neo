@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading data from NeuroExplorer (.nex)
+Class for reading data from NeuroExplorer (.nex)
 
 
 Supported : Read
 
-@author :  luc estebanez ,sgarcia
+@author :  luc estebanez, sgarcia
 
 
 """
@@ -18,7 +18,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 
 from numpy import *
 import numpy as np

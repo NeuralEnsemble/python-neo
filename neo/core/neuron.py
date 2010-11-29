@@ -4,16 +4,17 @@ global neoid
 neoid = 0
 
 class Neuron(object):
-    definition = """A :class:`Neuron` regroups all the :class:`SpikeTrain` objects within a common
-    :class:`Block`, gathered accross several :class:`Segment`, that has been emitted
+    definition = """A :class:`Neuron` groups all the :class:`SpikeTrain` objects within a common
+    :class:`Block`, gathered accross several :class:`Segment` objects, that were emitted
     by the same cell.
 
     """
      
     __doc__ = """
-    Stores properties that define a neuron
+    Stores properties that define a neuron.
 
-    **Definition**"""+definition+"""
+    **Definition**
+    %s
 
     with arguments:
     
@@ -27,7 +28,7 @@ class Neuron(object):
 
     **Example**
     
-    """
+    """ % definition
     
     def __init__(self, *arg, **karg):
         global neoid

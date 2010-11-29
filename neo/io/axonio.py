@@ -2,21 +2,21 @@
 """
 
 Classe for reading data from pCLAMP and AxoScope 
-files (.abf version 1 and 2), develloped by Molecular device/Axon technologies.
+files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 - abf = Axon binary file
-- atf is a text file based from axon that could be read by AsciiIO (but this file is less efficient.)
+- atf is a text file based format from axon that could be read by AsciiIO (but this file is less efficient.)
 
 
-This code is a port abfload and abf2load
+This code is a port of abfload and abf2load
 written in Matlab (BSD licence) by :
- - Copyright (c) 2009, Forrest Collman ,fcollman@princeton.edu
+ - Copyright (c) 2009, Forrest Collman, fcollman@princeton.edu
  - Copyright (c) 2004, Harald Hentschke
-and disponible here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
+and available here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
 
-information on abf 1 and 2 format are disponible here : http://www.moleculardevices.com/pages/software/developer_info.html
+Information on abf 1 and 2 formats is available here : http://www.moleculardevices.com/pages/software/developer_info.html
 
-This file support old (ABF1) and new (ABF2) format.
+This file supports the old (ABF1) and new (ABF2) format.
 
 Supported : Read
 
@@ -27,8 +27,7 @@ Supported : Read
 
 import struct
 from baseio import BaseIO
-#from neo.core import *
-from ..core import *
+from neo.core import *
 from numpy import *
 from numpy import memmap
 import re

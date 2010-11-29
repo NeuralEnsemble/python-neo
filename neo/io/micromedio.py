@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading/writing data from micromed (.trc).
+Class for reading/writing data from micromed (.trc).
 
-Inspired from the Matlab code for EEGLAB from Rami K. Niazy.
+Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
 
 Supported : Read
 
@@ -14,7 +14,7 @@ Supported : Read
 import struct
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 from numpy import *
 import re
 import datetime

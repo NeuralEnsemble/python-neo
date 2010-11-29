@@ -13,7 +13,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 
 import struct
 from numpy import *

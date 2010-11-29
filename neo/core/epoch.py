@@ -2,13 +2,13 @@
 
 
 class Epoch(object):
-    definition = """Similar as Event but with a duration. Useful for describing a period, the state of a subject, ..."""
+    definition = """Similar to Event but with a duration. Useful for describing a period, the state of a subject, ..."""
      
     __doc__ = """
-    Object to represent an epoch, or discrete time events
+    Object to represent an epoch, or discrete time events.
 
-    **Definition**"""+definition+"""
-
+    **Definition**
+    %s
 
     with arguments:
     
@@ -20,7 +20,7 @@ class Epoch(object):
 
     **Example**
 
-    """
+    """ % definition
     
     time     = None
     label    = None 

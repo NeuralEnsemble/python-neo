@@ -4,10 +4,10 @@
 neo.io
 ==================
 
-A collection of classes for reading/writing as many as possible formats for
-electrophysiological dataset.
+A collection of classes for reading/writing as many formats for
+electrophysiological datasets as possible.
 
-neo.io.all_format contain a list of all IO classes.
+neo.io.all_format contains a list of all IO classes.
 
 
 

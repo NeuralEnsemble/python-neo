@@ -3,15 +3,16 @@
 elphyio
 ==================
 
-Classe for reading/writing data from Elphy
+Class for reading/writing data from Elphy
 
-Elphy is a software for acquisition/computing neural data written at Unic in Orsay.
+Elphy is software for acquisition and analysis of neural data,
+written by Gérard Sadoc at UNIC, CNRS UPR 3293 in Gif sur Yvette, France.
 
 
 Classes
 -------
 
-ElphyDatIO          - Classe for reading/writing data for Elphy file.
+ElphyDatIO          - Class for reading/writing data in an  Elphy file.
 
 @author : sgarcia
 
@@ -20,7 +21,7 @@ ElphyDatIO          - Classe for reading/writing data for Elphy file.
 import struct
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 from numpy import *
 
 

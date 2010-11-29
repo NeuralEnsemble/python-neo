@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading/writing data from EEGLAB.
-EEGLAB is a software written in Matlab for analysing EEG datasets.
+Class for reading/writing data from EEGLAB.
+EEGLAB is a toolkit written in Matlab for analysing EEG datasets.
 The format is based on Matlab files.
 
 Supported : Read/Write
@@ -14,7 +14,7 @@ Supported : Read/Write
 
 from baseio import BaseIO
 #from neo.core import *
-from ..core import *
+from neo.core import *
 from numpy import *
 import numpy
 import datetime

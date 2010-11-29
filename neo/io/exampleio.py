@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Classe for fake reading data in a no file.
+Class for fake reading data in a no file.
 
-For the user, it generate a `Segment` or a `Block` with `AnalogSignal` sinusoidale + `SpikeTrain` + `Event`
+For the user, it generates a `Segment` or a `Block` with a sinusoidal `AnalogSignal` + `SpikeTrain` + `Event`
 
-For a developper, it is just a example for guidelines who want to develop a new IO.
+For a developer, it is just an example showing guidelines for someone who wants to develop a new IO.
 
 Supported : Read
 
@@ -16,10 +16,8 @@ Supported : Read
 # I need to subclass BaseIO
 from baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-#from neo.core import *
 
-from ..core import *
-
+from neo.core import *
 import datetime
 
 # So bad :

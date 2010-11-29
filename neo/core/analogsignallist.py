@@ -6,8 +6,8 @@ class AnalogSignalList(object):
     Object to represent a list of analog signals
 
     **Definition**
-    An :class:`AnalogSignalList` is a container for a list of continuous data acquired
-    at time t_start at a certain sampling rate.
+    An :class:`AnalogSignalList` is a container for a list of continuous analog signals acquired
+    at time ``t_start`` at a certain sampling rate.
 
     **Usage**
 

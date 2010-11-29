@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading/writing analog signal in a text file.
-Cover many case when part of a file can be view as a CVS format.
+Class for reading/writing analog signals in a text file.
+Covers many case when part of a file can be viewed as a CSV format.
 
 Supported : Read/Write
 
@@ -14,8 +14,7 @@ Supported : Read/Write
 
 
 from baseio import BaseIO
-#from neo.core import *
-from ..core import *
+from neo.core import *
 import numpy
 from numpy import *
 
@@ -33,14 +32,14 @@ import csv
 class AsciiSignalIO(BaseIO):
     """
     Class for reading/writing data in a text file.
-    Cover many case when part of a file can be view as a CVS format.
+    Covers many cases when part of a file can be viewed as a CSV format.
     
     **Example**
     
-    #read a file
+    # read a file
     io = AsciiSignalIO(filename = 'myfile.txt')
     seg = io.read() # read the entire file
-    seg.get_analogsignals() # return all AnalogSignal
+    seg.get_analogsignals() # return all AnalogSignals
     
     # write a file
     io = AsciiSignalIO(filename = 'myfile.txt')

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Classe for reading/writing data in a raw binary compact file.
+Class for reading/writing data in a raw binary compact file.
 All channel are interleaved.
 
-You must known externaly to the file : the sample rate, the dtype of file (int16, float32, float64), the number of channel, ...
+You must know, external to the file, the sample rate, the dtype of file (int16, float32, float64), the number of channels, ...
 
-This neutral format is quite widly used in old acquisition system.
+This neutral format is quite widely used in old acquisition systems.
 
 
 Supported : Read/Write
@@ -19,8 +19,7 @@ Supported : Read/Write
 
 
 from baseio import BaseIO
-#from neo.core import *
-from ..core import *
+from neo.core import *
 
 import numpy
 from numpy import *

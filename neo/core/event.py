@@ -7,13 +7,14 @@ definition = """
 """
 
 class Event(Epoch):
-    definition = """An :class:`Event` is an object to represent ponctual time event.
-    Useful for managing trigger, stimulus, ..."""
+    definition = """An :class:`Event` is an object to represent a point in time.
+    Useful for managing triggers, stimuli, ..."""
     
     __doc__ = """
-    Object to represent ponctual time event.
+    Object to represent an event.
 
-    **Definition**"""+definition+"""
+    **Definition**
+    %s
     
 
     with arguments:
@@ -24,7 +25,7 @@ class Event(Epoch):
 
     **Example**
 
-    """
+    """ % definition
     
     def __init__(self, *arg, **karg):
         Epoch.__init__(self, *arg, **karg)

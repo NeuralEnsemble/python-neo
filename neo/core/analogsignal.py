@@ -7,19 +7,20 @@ import numpy
 class AnalogSignal(object):
      
     definition = """An :class:`AnalogSignal` is a continuous data signal acquired
-    at time t_start at a certain sampling rate.
+    at time ``t_start`` at a certain sampling rate.
     """
     
     __doc__ = """
-    Object to represent an analog signal
+    Object to represent a continuous, analog signal
 
-    **Definition**"""+definition+"""
+    **Definition**
+    %s
 
     **Usage**
 
     **Example**
 
-    """
+    """ % definition
     
 
 
