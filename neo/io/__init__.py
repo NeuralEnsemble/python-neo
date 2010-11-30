@@ -27,7 +27,7 @@ try:
     from tryitio import TryItIO
     all_format += [ [ 'tryit' , { 'class' : TryItIO  , 'info' :  'a fake file reader for trying OpenElectrophy' } ] ]
 except ImportError:
-    print "Error while loading ExampleIO module"
+    print "Error while loading TryItIO module"
 
 
 try:
