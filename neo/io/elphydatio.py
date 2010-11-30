@@ -21,7 +21,8 @@ ElphyDatIO          - Class for reading/writing data in an  Elphy file.
 import struct
 from baseio import BaseIO
 #from neo.core import *
-from neo.core import *
+from ..core import *
+
 from numpy import *
 
 

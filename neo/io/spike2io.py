@@ -27,6 +27,7 @@ from baseio import BaseIO
 #from neo.core import *
 from ..core import *
 
+
 from numpy import *
 from copy import deepcopy
 

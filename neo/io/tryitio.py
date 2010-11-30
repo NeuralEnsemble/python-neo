@@ -13,7 +13,9 @@ Supported : Read
 from baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 
-from neo.core import *
+#from neo.core import *
+from ..core import *
+
 
 import datetime
 

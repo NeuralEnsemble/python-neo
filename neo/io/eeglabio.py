@@ -14,7 +14,9 @@ Supported : Read/Write
 
 from baseio import BaseIO
 #from neo.core import *
-from neo.core import *
+#from neo.core import *
+from ..core import *
+
 from numpy import *
 import numpy
 import datetime

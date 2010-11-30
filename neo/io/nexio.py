@@ -18,7 +18,8 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from neo.core import *
+from ..core import *
+
 
 from numpy import *
 import numpy as np
@@ -91,12 +92,15 @@ class NexIO(BaseIO):
 
         fid = open(self.filename, 'rb')
         globalHeader = HeaderReader(fid , GlobalHeader ).read_f(offset = 0)
-        
+        #~ print globalHeader
+        print 'version' , globalHeader['version']
         seg = Segment()
         offset = 544
         for i in range(globalHeader['nvar']):
             entityHeader = HeaderReader(fid , EntityHeader ).read_f(offset = offset+i*208)
             entityHeader['name'] = entityHeader['name'].replace('\x00','')
+            
+            print 'i',i, entityHeader['type']
             
             if entityHeader['type'] == 0:
                 # neuron
@@ -177,6 +181,7 @@ class NexIO(BaseIO):
 
             if entityHeader['type'] == 5:
                 # analog
+                print 'NPointsWave' , (entityHeader['NPointsWave'] )
                 timestamps= memmap(self.filename , dtype('i4') ,'r' ,
                                                         shape = (entityHeader['n'] ),
                                                         offset = entityHeader['offset'],

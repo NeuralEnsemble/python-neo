@@ -12,7 +12,8 @@ Supported : Read/Write
 
 from baseio import BaseIO
 #from neo.core import *
-from neo.core import *
+from ..core import *
+
 
 try:
     import TableIO
