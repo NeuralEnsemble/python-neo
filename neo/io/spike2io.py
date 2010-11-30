@@ -4,14 +4,14 @@ Classe for fake reading/writing data in CED spike2 files (.smr).
 
 This code is based on:
  - sonpy, written by Antonio Gonzalez <Antonio.Gonzalez@cantab.net>
-    Available here ::
+    Disponible here ::
     http://www.neuro.ki.se/broberger/
 
-and sonpy comes from :
+and sonpy come from :
  - SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
     King's College London. See http://www.kcl.ac.uk/depsta/biomedical/cfnr/lidierth.html
 
-This IO supports old (<v6) and new files (>)v7) of spike2
+This IO support old (<v6) and new files (>v7) of spike2
 
 
 Supported : Read
@@ -25,7 +25,7 @@ Supported : Read
 
 from baseio import BaseIO
 #from neo.core import *
-from neo.core import *
+from ..core import *
 
 from numpy import *
 from copy import deepcopy
@@ -54,7 +54,7 @@ class Spike2IO(BaseIO):
     is_streameable     = False
     read_params        = {   Segment : [ 
                                                 #~ ('transform_event_to_spike' , { 'value' : '', 'label' : 'Channel event to be convert as spike' } ),
-                                                ('import_event' , { 'value' : False, 'label' : 'Do import event' } ),
+                                                ('import_event' , { 'value' : True, 'label' : 'Do import event' } ),
                                             ],
                                     }
     write_params       = None
@@ -85,7 +85,7 @@ class Spike2IO(BaseIO):
     
     def read_segment(self ,
                                                 #~ transform_event_to_spike = [ ],
-                                                import_event = False,
+                                                import_event = True,
                                                 ):
         """
         
@@ -117,6 +117,8 @@ class Spike2IO(BaseIO):
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
             
+            print 'channel' , i , 'kind' ,  channelHeader.kind
+            
             if channelHeader.kind !=0:
                 #~ print '####'
                 #~ print 'channel' , i, 'kind' , channelHeader.kind , channelHeader.type , channelHeader.phy_chan
@@ -125,7 +127,7 @@ class Spike2IO(BaseIO):
             
             if channelHeader.kind in [1, 9]:
                 #~ print 'analogChanel'
-                anaSigs = self.readOneChannelWaveform( fid, i, header ,)
+                anaSigs = self.readOneChannelContinuous( fid, i, header ,)
                 #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for sig in anaSigs :
                     sig.channel = int(channelHeader.phy_chan)
@@ -134,41 +136,15 @@ class Spike2IO(BaseIO):
                 #~ print ''
                     
             elif channelHeader.kind in  [2, 3, 4, 5, 8] and import_event:
-                #~ print 'channel event',
                 events = self.readOneChannelEvent( fid, i, header )
-                seg._events +=  events
-                
-                #~ print 'nb events : ', len(events)
-                #~ if i in transform_event_to_spike:
-                    #~ spikeTr = SpikeTrain(spikes = [])
-                    #~ spikeTr.channel = int(channelHeader.phy_chan)
-                    #~ seg._spiketrains.append(spikeTr)
-                    #~ for event in events :
-                        #~ spike = Spike()
-                        #~ spike.time = event.time
-                        #~ if hasattr(event, 'waveform'):
-                            #~ spike.waveform = event.waveform
-                            #~ spike.sampling_rate = event.sampling_rate
-                        #~ spikeTr._spikes.append(spike)
-                #~ else :
-                    #~ seg._events +=  events
-                
+                if events is not None:
+                    seg._events +=  events
                 
             elif channelHeader.kind in  [6,7] :
-                events = self.readOneChannelEvent( fid, i, header )
-                spikeTr = SpikeTrain(spikes = [])
-                spikeTr.channel = int(channelHeader.phy_chan)
-                seg._spiketrains.append(spikeTr)
-                for event in events :
-                    spike = Spike()
-                    spike.time = event.time
-                    if hasattr(event, 'waveform'):
-                        spike.waveform = event.waveform
-                        spike.sampling_rate = event.sampling_rate
-                    spikeTr._spikes.append(spike)
+                spikeTr = self.readOneChannelEvent( fid, i, header )
+                if spikeTr is not None:
+                    seg._spiketrains.append(spikeTr)
             
-            
-        
         fid.close()
         
         return seg
@@ -222,8 +198,8 @@ class Spike2IO(BaseIO):
         fid.close()
         return header
 
-            
-    def readOneChannelWaveform(self , fid, channel_num, header ,):
+    
+    def readOneChannelContinuous(self , fid, channel_num, header ,):
         """
         """
         channelHeader = header.channelHeaders[channel_num]
@@ -267,9 +243,11 @@ class Spike2IO(BaseIO):
         anaSigs = [ ]
         for b,bs in enumerate(blocksize ):
             anaSigs.append( AnalogSignal(signal = empty( blocksize[0] , dtype = 'f4'),
-                                sampling_rate = sampling_rate,
-                                t_start = starttimes[b]*header.us_per_time * header.dtime_base,
-                                ) )
+                                                            sampling_rate = sampling_rate,
+                                                            t_start = starttimes[b]*header.us_per_time * header.dtime_base,
+                                                            channel = channel_num,
+                                                            ) 
+                                            )
         
         # read data  by jumping block to block
         fid.seek(channelHeader.firstblock)
@@ -299,103 +277,102 @@ class Spike2IO(BaseIO):
     
     def readOneChannelEvent(self , fid, channel_num, header ,):
         channelHeader = header.channelHeaders[channel_num]
-        print channelHeader
+        #~ print channelHeader
         #~ print channelHeader.free0, channel_num, channelHeader.kind
+        if channelHeader.firstblock <0: return
+        if channelHeader.kind not in [2, 3, 4 , 5 , 6 ,7, 8]: return
         
-        alltrigs = None
-        if channelHeader.kind in [2, 3, 4 , 5 , 6 ,7, 8]:
-            if channelHeader.firstblock >0 :
-                fid.seek(channelHeader.firstblock)
-            for b in range(channelHeader.blocks) :
-                #print '  block' , b 
-                blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
-                #print  '  items in block' , blockHeader.items
-                
-                # common for kind 5 6 7 8 9
-                format5 = [('tick' , 'i4') , ('marker' , 'i4') ]
-#                               ('markers0' , 'u1'),
-#                               ('markers1' , 'u1'),
-#                               ('markers2' , 'u1'),
-#                               ('markers3' , 'u1')]
-                
-                if channelHeader.kind in [2, 3, 4]:
-                    # Event data
-                    format = [('tick' , 'i4') ]
-                elif channelHeader.kind in [5]:
-                    # Marker data
-                    format = format5
-                elif channelHeader.kind in [6]:
-                    # AdcMark data
-                    n_extra = channelHeader.n_extra/2 # 2 bytes
-                    format = deepcopy(format5)
-                    for n in range(n_extra) :
-                        format += [ ('adc%d'%n , 'i2')]
-                elif channelHeader.kind in [7]:
-                    #  RealMark data
-                    n_extra = channelHeader.n_extra/4 # 4 bytes
-                    format = deepcopy(format5)
-                    for n in range(n_extra) :
-                        format += [ ('real%d'%n , 'f4')]
-                elif channelHeader.kind in [8]:
-                    # TextMark data
-                    n_extra = channelHeader.n_extra # 1 bytes
-                    format = deepcopy(format5)
-                    format += [ ('label' , 'S%d'%n_extra)]
-                
-                # read all events in block
-                dt = dtype(format)
-                trigs = fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)
-                
-                if alltrigs is None :
-                    alltrigs = trigs
-                else :
-                    alltrigs = concatenate( (alltrigs , trigs))
-                
-                if blockHeader.succ_block > 0 :
-                    fid.seek(blockHeader.succ_block)
-                # TODO verifier time
+        ## Step 1 : type of blocks
+        if channelHeader.kind in [2, 3, 4]:
+            # Event data
+            format = [('tick' , 'i4') ]
+        elif channelHeader.kind in [5]:
+            # Marker data
+            format = [('tick' , 'i4') , ('marker' , 'i4') ]
+        elif channelHeader.kind in [6]:
+            # AdcMark data
+            format = [('tick' , 'i4') , ('marker' , 'i4')  , ('adc' , 'S%d' %channelHeader.n_extra   )]
+        elif channelHeader.kind in [7]:
+            #  RealMark data
+            format = [('tick' , 'i4') , ('marker' , 'i4')  , ('real' , 'S%d' %channelHeader.n_extra   )]
+        elif channelHeader.kind in [8]:
+            # TextMark data
+            format = [('tick' , 'i4') , ('marker' , 'i4')  ,  ('label' , 'S%d'%channelHeader.n_extra)]
+        dt = dtype(format)
         
-        if alltrigs is None : return [ ]
+            
+        ## Step 2 : first read for allocating mem
+        fid.seek(channelHeader.firstblock)
+        totalitems = 0
+        for b in range(channelHeader.blocks) :
+            blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            totalitems += blockHeader.items
+            if blockHeader.succ_block > 0 :
+                fid.seek(blockHeader.succ_block)
+        #~ print 'totalitems' , totalitems
+        alltrigs = zeros( totalitems , dtype = dt)
         
-        #print 'nb event : ',alltrigs.size
         
-        #  convert in neo standart class : event or spiketrains
+        ## Step 3 : read
+        fid.seek(channelHeader.firstblock)
+        pos = 0
+        for b in range(channelHeader.blocks) :
+            blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            # read all events in block
+            trigs = fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)
+            alltrigs[pos:pos+trigs.size] = trigs
+            pos += trigs.size
+            if blockHeader.succ_block > 0 :
+                fid.seek(blockHeader.succ_block)
+        
+        ## Step 3 convert in neo standart class : event or spiketrains
         alltimes = alltrigs['tick'].astype('f')*header.us_per_time * header.dtime_base
-        events = [ ]
-        for t,time in enumerate(alltimes) :
-            event = Event(time = time)
-            event.type = 'channel %d' % channel_num
-            if channelHeader.kind >= 5:
-                #print '        trig: ', alltrigs[t]
-                event.marker = alltrigs[t]['marker'] # TODO 4 marker u1 ou 1 marker i4
-            if channelHeader.kind == 8:
-                #print 'label' , alltrigs[t]['label']
-                event.label = alltrigs[t]['label']
+        
+        if channelHeader.kind in [2, 3, 4 , 5 , 8]:
+            #events
+            events = [ ]
+            for t,time in enumerate(alltimes) :
+                event = Event(time = time)
+                event.type = 'channel %d' % channel_num
+                if channelHeader.kind >= 5:
+                    event.marker = alltrigs[t]['marker']
+                if channelHeader.kind == 8:
+                    event.label = alltrigs[t]['label']
+                events.append(event)
+            return events
             
-            if channelHeader.kind in [6 ]:
-                # waveform
-                waveform = array(list(alltrigs[t])[2:])
-                if channelHeader.kind == 6 :
-                    waveform = waveform.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
-                
-                if channelHeader.interleave>1:
-                    waveform = waveform.reshape((-1,channelHeader.interleave))
-                    waveform = waveform.swapaxes(0,1)
-                event.waveform = waveform
-                # sample rate
-                if header.system_id in [1,2,3,4,5]:
-                    sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
-                else :
-                    sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
-                    
-                sampling_rate = 1./sample_interval
-                
-                event.sampling_rate = sampling_rate
-            if channelHeader.kind in [ 7]:
-                pass
-            events.append(event)
+        elif channelHeader.kind in [6 ,7]:
+            # spiketrains
             
-        return events
+            # waveforms
+            if channelHeader.kind == 6 :
+                waveforms = fromstring(alltrigs['adc'].tostring() , dtype = 'i2')
+                waveforms = waveforms.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
+            elif channelHeader.kind == 7 :
+                waveforms = fromstring(alltrigs['real'].tostring() , dtype = 'f4')
+            
+            
+            if header.system_id>=6 and channelHeader.interleave>1:
+                waveforms = waveforms.reshape((alltimes.size,-1,channelHeader.interleave))
+                waveforms = waveforms.swapaxes(1,2)
+            else:
+                waveforms = waveforms.reshape(( alltimes.size,1, -1))
+            
+            
+            if header.system_id in [1,2,3,4,5]:
+                sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
+            else :
+                sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
+            
+            sptr = SpikeTrain(spike_times = alltimes,
+                                        waveforms = waveforms,
+                                        sampling_rate = 1./sample_interval,
+                                        channel = channel_num,
+                                        #~ name = channelHeader.title,
+                                        )
+            
+            return sptr
+            
             
 
 
