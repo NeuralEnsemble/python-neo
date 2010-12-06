@@ -90,39 +90,94 @@ class TdtIO(BaseIO):
             subdir = os.path.join(self.dirname,blockname)
             if not os.path.isdir(subdir): continue
             
+            seg = Segment()
+            blck._segments.append( seg)
+            
+            
+            global_t_start = None
             # Step 1 : first loop for counting - tsq file
             tsq = open(os.path.join(subdir, tankname+'_'+blockname+'.tsq'), 'rb')
             hr = HeaderReader(tsq, TsqDescription)
             allsig = { }
+            allspiketr = { }
             while 1:
                 h= hr.read_f()
                 if h==None:break
                 
                 
-                if Types[h['type']] != 'EVTYPE_STREAM':
-                    # TODO
-                    continue
+                if Types[h['type']] == 'EVTYPE_UNKNOWN':
+                    pass
+                    
+                elif Types[h['type']] == 'EVTYPE_MARK' :
+                    if global_t_start is None:
+                        global_t_start = h['timestamp']
                 
-                if h['code'] not in allsig:
-                    allsig[h['code']] = { }
-                if h['channel'] not in allsig[h['code']]:
-                    anaSig = AnalogSignal( 
-                                                        channel = h['channel'],
-                                                        name =  h['code'],
-                                                        signal = None,
-                                                        sampling_rate = h['frequency'],
-                                                        t_start = h['timestamp'],
-                                                        )
-                    anaSig.dtype =  dtype(DataFormats[h['dataformat']])
-                    anaSig.totalsize = 0
-                    anaSig.pos = 0
-                    allsig[h['code']][h['channel']] = anaSig
-                allsig[h['code']][h['channel']].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
+                elif Types[h['type']] == 'EVTYPE_SCALER' :
+                    # TODO
+                    pass
+                
+                elif Types[h['type']] == 'EVTYPE_STRON' or \
+                     Types[h['type']] == 'EVTYPE_STROFF':
+                     
+                    ev = Event()
+                    ev.time = h['timestamp'] - global_t_start
+                    ev.name = h['code']
+                     # it the strobe attribute masked with eventoffset
+                    strobe, = struct.unpack('d' , struct.pack('q' , h['eventoffset']))
+                    ev.label = str(strobe)
+                    seg._events.append( ev )
+
+                elif Types[h['type']] == 'EVTYPE_SNIP' :
+                    # TODO
+                    if h['code'] not in allspiketr:
+                        allspiketr[h['code']] = { }
+                    if h['channel'] not in allspiketr[h['code']]:
+                        allspiketr[h['code']][h['channel']] = { }
+                    if h['sortcode'] not in allspiketr[h['code']][h['channel']]:
+                        sptr = SpikeTrain()
+                        sptr.channel = h['channel']
+                        sptr.name = str(h['sortcode'])
+                        sptr.t_start = global_t_start
+                        sptr.sampling_rate = h['frequency']
+                        sptr.left_sweep = (h['size']-10.)/2./h['frequency']
+                        sptr.right_sweep = (h['size']-10.)/2./h['frequency']
+                        sptr.nbspike = 0
+                        sptr.pos = 0
+                        sptr.waveformsize = h['size']-10
+                        
+                        allspiketr[h['code']][h['channel']][h['sortcode']] = sptr
+                    
+                    allspiketr[h['code']][h['channel']][h['sortcode']].nbspike += 1
+                
+                elif Types[h['type']] == 'EVTYPE_STREAM':
+                    if h['code'] not in allsig:
+                        allsig[h['code']] = { }
+                    if h['channel'] not in allsig[h['code']]:
+                        anaSig = AnalogSignal( 
+                                                            channel = h['channel'],
+                                                            name =  h['code'],
+                                                            signal = None,
+                                                            sampling_rate = h['frequency'],
+                                                            t_start = h['timestamp'] - global_t_start,
+                                                            )
+                        anaSig.dtype =  dtype(DataFormats[h['dataformat']])
+                        anaSig.totalsize = 0
+                        anaSig.pos = 0
+                        allsig[h['code']][h['channel']] = anaSig
+                    allsig[h['code']][h['channel']].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
             
             # Step 2 : allocate memory
             for code, v in allsig.iteritems():
                 for channel, anaSig in v.iteritems():
-                    anaSig.signal = zeros( anaSig.totalsize , dtype = anaSig.dtype )
+                    # debug
+                    #~ anaSig.signal = zeros( anaSig.totalsize , dtype = anaSig.dtype )
+                    pass
+            
+            for code, v in allspiketr.iteritems():
+                for channel, allsorted in v.iteritems():
+                    for sortcode, sptr in allsorted.iteritems():
+                        sptr._spike_times = zeros( (sptr.nbspike), dtype ='f')
+                        sptr._waveforms = zeros( (sptr.nbspike, 1 , sptr.waveformsize), dtype = 'f')
             
             # Step 3 : searh sev (individual data files) or tev (common data file)
             # sev is for version > 70
@@ -137,25 +192,36 @@ class TdtIO(BaseIO):
                         anaSig.fid = open(filename, 'rb')
                     else:
                         anaSig.fid = tev
-            
+            for code, v in allspiketr.iteritems():
+                for channel, allsorted in v.iteritems():
+                    for sortcode, sptr in allsorted.iteritems():
+                        sptr.fid = tev
+
+
+
             # Step 4 : second loop for copyin chunk of data
             tsq.seek(0)
             while 1:
                 h= hr.read_f()
                 if h==None:break
                 
-                if Types[h['type']] != 'EVTYPE_STREAM': continue
+                if Types[h['type']] == 'EVTYPE_STREAM': 
+                    a = allsig[h['code']][h['channel']]
+                    dt = a.dtype
+                    s = (h['size']*4-40)/dt.itemsize
+                    a.fid.seek(h['eventoffset'])
+                    # debug
+                    #~ a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
+                    a.pos += s
+                    
+                elif Types[h['type']] == 'EVTYPE_SNIP': 
+                    sptr = allspiketr[h['code']][h['channel']][h['sortcode']]
+                    sptr._spike_times[sptr.pos] = h['timestamp']
+                    sptr._waveforms[sptr.pos, 0, :] = fromstring( sptr.fid.read( sptr.waveformsize*4 ), dtype = 'f4')
+                    sptr.pos += 1
                 
-                a = allsig[h['code']][h['channel']]
-                dt = a.dtype
-                s = (h['size']*4-40)/dt.itemsize
-                a.fid.seek(h['eventoffset'])
-                a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
-                a.pos += s
             
             # Step 5 : populating segment
-            seg = Segment()
-            blck._segments.append( seg)
             
             for code, v in allsig.iteritems():
                 for channel, anaSig in v.iteritems():
@@ -163,6 +229,19 @@ class TdtIO(BaseIO):
                     del anaSig.pos
                     del anaSig.fid
                     seg._analogsignals.append( anaSig )
+
+            for code, v in allspiketr.iteritems():
+                for channel, allsorted in v.iteritems():
+                    for sortcode, sptr in allsorted.iteritems():
+                        del sptr.nbspike
+                        del sptr.waveformsize
+                        del sptr.pos
+                        del sptr.fid
+                        seg._spiketrains.append( sptr )
+                    
+
+
+            
         
         return blck
 
