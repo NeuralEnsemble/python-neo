@@ -170,7 +170,7 @@ class TdtIO(BaseIO):
             for code, v in allsig.iteritems():
                 for channel, anaSig in v.iteritems():
                     # debug
-                    #~ anaSig.signal = zeros( anaSig.totalsize , dtype = anaSig.dtype )
+                    anaSig.signal = zeros( anaSig.totalsize , dtype = anaSig.dtype )
                     pass
             
             for code, v in allspiketr.iteritems():
@@ -211,7 +211,7 @@ class TdtIO(BaseIO):
                     s = (h['size']*4-40)/dt.itemsize
                     a.fid.seek(h['eventoffset'])
                     # debug
-                    #~ a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
+                    a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                     a.pos += s
                     
                 elif Types[h['type']] == 'EVTYPE_SNIP': 
