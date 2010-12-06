@@ -118,7 +118,7 @@ class Spike2IO(BaseIO):
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
             
-            print 'channel' , i , 'kind' ,  channelHeader.kind
+            #~ print 'channel' , i , 'kind' ,  channelHeader.kind
             
             if channelHeader.kind !=0:
                 #~ print '####'
