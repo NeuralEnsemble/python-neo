@@ -169,7 +169,6 @@ class TdtIO(BaseIO):
             # Step 2 : allocate memory
             for code, v in allsig.iteritems():
                 for channel, anaSig in v.iteritems():
-                    # debug
                     anaSig.signal = zeros( anaSig.totalsize , dtype = anaSig.dtype )
                     pass
             
@@ -210,7 +209,6 @@ class TdtIO(BaseIO):
                     dt = a.dtype
                     s = (h['size']*4-40)/dt.itemsize
                     a.fid.seek(h['eventoffset'])
-                    # debug
                     a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                     a.pos += s
                     
