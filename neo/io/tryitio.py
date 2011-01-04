@@ -393,11 +393,11 @@ class TryItIO(BaseIO):
         n_event = 3
         n_epoch = 1
         for i in range(n_event):
-            ev = Event( time = t[int(random.rand()*t.size)] )
+            ev = Event( time = float(t[int(random.rand()*t.size)]) )
             seg._events.append(ev)
         
         for i in range(n_epoch):
-            time = t[int(random.rand()*t.size/2)] 
+            time = float(t[int(random.rand()*t.size/2)])
             ep = Epoch( time = time,
                                 duration= time+1.,
                                 )
