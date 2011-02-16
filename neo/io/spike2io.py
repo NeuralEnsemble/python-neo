@@ -334,11 +334,11 @@ class Spike2IO(BaseIO):
             events = [ ]
             for t,time in enumerate(alltimes) :
                 event = Event(time = time)
-                event.type = 'channel %d' % channel_num
+                event.label = 'channel %d' % channel_num
                 if channelHeader.kind >= 5:
-                    event.marker = alltrigs[t]['marker']
+                    event.name = alltrigs[t]['marker']
                 if channelHeader.kind == 8:
-                    event.label = alltrigs[t]['label']
+                    event.name = alltrigs[t]['label']
                 events.append(event)
             return events
             
