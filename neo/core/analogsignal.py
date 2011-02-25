@@ -25,8 +25,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     a.metadata : a dictionary of the attributes, updated with __setattr__ and __delattr__ in BaseNeo
     """
     def __new__(subtype, signal, dtype=None, copy=True, t_start=0., sampling_rate=None, sampling_period=None, unit='ms', name=''):
-        BaseNeo.__new__(subtype)
         # maybe some parameters are useless for the QuantifiedAnalogSignal use case (dtype, copy ?)
+
         # add recording point
         if sampling_period is None:
             if sampling_rate is None:
@@ -58,25 +58,35 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         arr = pq.Quantity(signal, unit, dtype=dtype, copy=copy)
 
         # added _dimensionality from quantities before the __new__ because it needs it
+        subtype._anotations = {} # to do the work of the BaseNeo.__init__
         subtype._dimensionality = arr._dimensionality
-        subtype.t_start = t_start
-        subtype.sampling_rate = float(sampling_rate)
+        #subtype.t_start = t_start
+        #subtype.sampling_rate = float(sampling_rate)
         #subtype.sampling_period = sampling_period no redundancy, thanks
 
         #ret = np.ndarray.__new__(subtype, shape, arr.dtype, buffer=arr, order=order)
-        ret = pq.Quantity.__new__(subtype, arr)
-        ret.signal = ret.view(np.ndarray) #, dtype=arr.dtype)
-        ret.t_start = t_start
-        ret.sampling_rate = sampling_rate
-        ret.name = name
-
-        return ret
+        subtype = super(AnalogSignal, subtype).__new__(subtype, arr)
+        #subtype = pq.Quantity.__new__(subtype, arr)
+        subtype.signal = subtype.view(np.ndarray) #, dtype=arr.dtype)
+        subtype.t_start = t_start
+        subtype.sampling_rate = sampling_rate
+        subtype.name = name
+        subtype._anotations = {} 
+        return subtype
 
     def __repr__(self):
         return '<QuantifiedAnalogSignal(\n %s,\n %s, [%s, %s], sampling rate: %s)>' %(self.signal, self.unit, self.t_start, self.t_stop, self.sampling_rate)
 
 
-    sampling_period = property(lambda self: 1./self.sampling_rate, lambda self, value: setattr(self, 'sampling_rate', 1./value))
+    def get_sampling_period(self):
+        return 1./self.sampling_rate
+
+    def set_sampling_period(self, period):
+        setattr(self, 'sampling_rate', 1./period)
+
+    sampling_period = property(fget=get_sampling_period, fset=set_sampling_period)
+
+    #    ret.sampling_period = property(fget=lambda self: 1./self.sampling_rate, fset=lambda self, value: setattr(self, 'sampling_rate', 1./value))
 
     def t_stop(self):
         # do it in both senses
@@ -86,7 +96,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         if obj is None: return
         self.signal = getattr(obj, 'signal', None)
         self.t_start = getattr(obj, 't_start', None)
-        self.sampling_period = getattr(obj, 'sampling_period', None)
+        #self.sampling_period = getattr(obj, 'sampling_period', None)
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
 
 
