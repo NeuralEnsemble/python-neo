@@ -21,11 +21,10 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     a.t_stop : t_start + len(signal) 
     a.sampling_rate : time rate between 2 values
     a.sampling_period : 1./sampling_rate
-    a.units : the units of the attributes
 
     a.metadata : a dictionary of the attributes, updated with __setattr__ and __delattr__ in BaseNeo
     """
-    def __new__(subtype, signal, dtype=None, copy=True, t_start=0., sampling_rate=None, sampling_period=None, unit='ms'):
+    def __new__(subtype, signal, dtype=None, copy=True, t_start=0., sampling_rate=None, sampling_period=None, unit='ms', name=''):
         BaseNeo.__new__(subtype)
         # maybe some parameters are useless for the QuantifiedAnalogSignal use case (dtype, copy ?)
         # add recording point
@@ -41,7 +40,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                     raise ValueError('The sampling_rate has to be 1./sampling_period')
 
         t_start = t_start * pq.__dict__[unit]
-        sampling_rate = sampling_rate * pq.__dict__[unit]
+        sampling_rate = sampling_rate * 1./pq.__dict__[unit]
 
         if isinstance(signal, AnalogSignal):
             return signal
@@ -69,8 +68,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         ret.signal = ret.view(np.ndarray) #, dtype=arr.dtype)
         ret.t_start = t_start
         ret.sampling_rate = sampling_rate
-        ret.unit = ret.dimensionality.string # for BaseNeo._anotations
-        #ret.sampling_period = sampling_period
+        ret.name = name
 
         return ret
 
