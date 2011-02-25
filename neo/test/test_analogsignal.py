@@ -3,11 +3,12 @@
 Tests of the AnalogSignal class
 """
 
+from __future__ import division
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from __future__ import division
 
 from neo.core.analogsignal import AnalogSignal
 import numpy
@@ -57,7 +58,7 @@ class TestProperties(unittest.TestCase):
     
     def test__t_stop(self):
         for i in range(3):
-            self.assertEqual(self.signals[i].tstop,
+            self.assertEqual(self.signals[i].t_stop,
                              self.t_start[i] + self.data[i].size/self.rates[i])
             
     def test__duration(self):
