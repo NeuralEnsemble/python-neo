@@ -14,11 +14,13 @@ class BaseNeo(object):
 
     def __setattr__(self, k, v):
         if not k in self.__dict__.keys():
+            # raise Exception / Warning ?
             self._anotations[k] = v
         self.__dict__[k] = v
 
     def __delattr__(self, k):
         if k in self._anotations.keys():
+            # raise Exception / Warning ? 
             del self._anotations[k]
         del self.__dict__[k]
 
