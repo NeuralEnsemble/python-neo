@@ -6,7 +6,7 @@ Welcome to neo's documentation!
 
 NEO stands for Neural Ensemble Objects and is a project to provide common class names and concepts
 for dealing with electrophysiological (real and/or simulated) data, with the aim of
-providing a common basis for OpenElectrophy_, NeuroTools_, G-node_ and other projects with similar goals.
+providing a common basis for OpenElectrophy_, NeuroTools_, G-node_, _Helmholty and other projects with similar goals.
 
 neo provides in particular :
  - a set of classes with precise definitions
@@ -41,4 +41,5 @@ Indices and tables
 .. _NeuroTools: http://neuralensemble.org/NeuroTools
 .. _G-node: http://www.g-node.org/
 .. _Neuroshare: http://neuroshare.org/
+.. _Helmholty: https://www.dbunic.cnrs-gif.fr/documentation/helmholtz/
 

@@ -20,7 +20,7 @@ The neo.io API is designed to be simple and intuitive:
  - each class inherits from the BaseIO class
  - each io class can read or write directly one or several neo objects (for example Segment, SpikeTrainList, Block, ...)
  - each io class support part of the neo.core hierachy not necessary all part.
- - each io is able to to a *easy* load and or a *cascade* load
+ - each io is able to do a *lazy* load and or a *cascade* load
 
 There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy.
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
