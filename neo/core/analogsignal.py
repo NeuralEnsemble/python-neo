@@ -58,7 +58,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         arr = pq.Quantity(signal, unit, dtype=dtype, copy=copy)
 
         # added _dimensionality from quantities before the __new__ because it needs it
-        subtype._anotations = {} # to do the work of the BaseNeo.__init__
+        subtype._annotations = {} # to do the work of the BaseNeo.__init__
         subtype._dimensionality = arr._dimensionality
         #subtype.t_start = t_start
         #subtype.sampling_rate = float(sampling_rate)
@@ -71,7 +71,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         subtype.t_start = t_start
         subtype.sampling_rate = sampling_rate
         subtype.name = name
-        subtype._anotations = {} 
+        subtype._annotations = {} 
         return subtype
 
     def __repr__(self):
