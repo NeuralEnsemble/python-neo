@@ -1,6 +1,6 @@
 import numpy as np
 import quantities as pq
-from baseneo import BaseNeo
+from .baseneo import BaseNeo
 
 
 class AnalogSignal(BaseNeo, pq.Quantity):
