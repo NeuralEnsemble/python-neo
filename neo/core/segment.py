@@ -1,7 +1,8 @@
 from neo.core.baseneo import BaseNeo
 
 class Segment(BaseNeo):
-    def __new__(self, name='', filedatetime=None, index=None, analogsignals=[], analogsignalsarrays=[], events=[], eventarrays=[], epoch=[], epocharrays=[]):
+    def __init__(self, name='', filedatetime=None, index=None, analogsignals=[], analogsignalsarrays=[], events=[], eventarrays=[], epoch=[], epocharrays=[]):
+        BaseNeo.__init__(self)
         self.name = name
         self.filedatetime = filedatetime
         self.index = index

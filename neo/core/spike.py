@@ -7,7 +7,8 @@ class Spike(BaseNeo):
     waveforms is a 2D quantified array with dimensions: left_sweep, trodeness
    
     """
-    def __new__(self, time, waveforms=None, sampling_rate=[])
+    def __init__(self, time, waveforms=None, sampling_rate=[])
+        BaseNeo.__init__(self)
         self.time = time
         self.waveforms = waveforms
         self.sampling_rate = sampling_rate
