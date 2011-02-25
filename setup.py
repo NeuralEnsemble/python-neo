@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-version = '0.2.0'
+
 
 long_description='''
 NEO stands for Neural Ensemble Objects and is a project to provide a common set of base classes to be used
@@ -18,13 +18,15 @@ and an IO module to read/write as many as possible file format.
 
 import os
 
+from neo import version as neov
+
 if __name__=="__main__":
     
-
+    
     
     setup(
         name = "neo",
-        version = version,
+        version = neov.version,
         packages = find_packages(),
 
         
