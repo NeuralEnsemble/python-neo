@@ -77,20 +77,25 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     def __repr__(self):
         return '<QuantifiedAnalogSignal(\n %s,\n %s, [%s, %s], sampling rate: %s)>' %(self.signal, self.unit, self.t_start, self.t_stop, self.sampling_rate)
 
+    @property
+    def unit(self):
+        return self.dimensionality.string
 
     def get_sampling_period(self):
         return 1./self.sampling_rate
 
     def set_sampling_period(self, period):
-        setattr(self, 'sampling_rate', 1./period)
+        self.sampling_rate = 1./period
 
     sampling_period = property(fget=get_sampling_period, fset=set_sampling_period)
 
-    #    ret.sampling_period = property(fget=lambda self: 1./self.sampling_rate, fset=lambda self, value: setattr(self, 'sampling_rate', 1./value))
-
+    @property
+    def duration(self):
+        return len(self.signal)/self.sampling_rate
+        
+    @property
     def t_stop(self):
-        # do it in both senses
-        return self.t_start + (len(self.signal) * self.sampling_rate)
+        return self.t_start + self.duration
 
     def __array_finalize__(self, obj):
         if obj is None: return
