@@ -18,4 +18,4 @@ class BaseNeo(object):
                 return self._annotations[k]
         return self.__dict__[k]
 
-    # The __setattr__ method does problems with properties of the inherited objects
+    # The __setattr__ method does problems with properties of the inherited objects

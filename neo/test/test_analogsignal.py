@@ -13,6 +13,7 @@ except ImportError:
 from neo.core.analogsignal import AnalogSignal
 import numpy
 import quantities as pq
+from neo.test.tools import assert_arrays_almost_equal
 
 mV = pq.mV
 uV = pq.uV
@@ -26,30 +27,33 @@ class TestConstructor(unittest.TestCase):
     def test__create_from_list(self):
         data = range(10)
         rate = 1000*Hz
-        a = AnalogSignal(data, sampling_rate=rate, unit="mV")
+        a = AnalogSignal(data, sampling_rate=rate, units="mV")
+        self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, len(data)/rate)
         
     def test__create_from_numpy_array(self):
         data = numpy.arange(10.0)
         rate = 1*kHz
-        a = AnalogSignal(data, sampling_rate=rate, unit="uV")
+        a = AnalogSignal(data, sampling_rate=rate, units="uV")
+        self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
         
     def test__create_from_quantities_array(self):
         data = numpy.arange(10.0) * mV
         rate = 5000*Hz
         a = AnalogSignal(data, sampling_rate=rate)
+        self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
         
     def test__create_from_quantities_array_with_inconsistent_units_should_raise_ValueError(self):
         data = numpy.arange(10.0) * mV
-        self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1*kHz, unit="nA")
+        self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1*kHz, units="nA")
         
 
 class TestProperties(unittest.TestCase):
     
     def setUp(self):
-        self.t_start = [0.0, 100*ms, -200*ms]
+        self.t_start = [0.0*ms, 100*ms, -200*ms]
         self.rates = [1*kHz, 420*Hz, 999*Hz]
         self.data = [numpy.arange(10.0)*nA, numpy.arange(-100.0, 100.0, 10.0)*mV,
                      numpy.random.uniform(size=100)*uV]
@@ -63,16 +67,19 @@ class TestProperties(unittest.TestCase):
             
     def test__duration(self):
         for signal in self.signals:
-            self.assertEqual(signal.duration, signal.t_stop - signal.t_start)
+            self.assertAlmostEqual(signal.duration,
+                                   signal.t_stop - signal.t_start,
+                                   delta=1e-15)
             
     def test__sampling_period(self):
         for signal, rate in zip(self.signals, self.rates):
-            self.assertEqual(signals.sampling_period, 1/rate)
+            self.assertEqual(signal.sampling_period, 1/rate)
             
     def test__times(self):
         for i in range(3):
-            self.assertEqual(self.signals[i].times,
-                             numpy.arange(self.data[i].size)/self.rates[i] + self.t_start)
+            assert_arrays_almost_equal(self.signals[i].times,
+                                       numpy.arange(self.data[i].size)/self.rates[i] + self.t_start[i],
+                                       1e-12*ms)
 
 
 class TestArrayMethods(unittest.TestCase):
@@ -84,11 +91,11 @@ class TestArrayMethods(unittest.TestCase):
         sub = self.signal[3:8]
         self.assertIsInstance(sub, AnalogSignal)
         self.assertEqual(sub.size, 5)
-        self.assertEqual(sub.sampling_interval, self.signal.sampling_interval)
+        self.assertEqual(sub.sampling_period, self.signal.sampling_period)
         self.assertEqual(sub.t_start,
-                         self.signal.t_start+3*sub.sampling_interval)
+                         self.signal.t_start+3*sub.sampling_period)
         self.assertEqual(sub.t_stop,
-                         sub.t_start + 5*sub.sampling_interval)
+                         sub.t_start + 5*sub.sampling_period)
 
     
 
