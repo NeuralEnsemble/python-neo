@@ -34,7 +34,8 @@ if __name__=="__main__":
         
         install_requires=[
                         'numpy>=1.3.0',
-                        'scipy>=0.7.0',
+                        #'scipy>=0.7.0',
+                        'quantities>=0.9.0',
                         ],
                         
         requires = [
