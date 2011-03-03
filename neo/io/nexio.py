@@ -207,6 +207,7 @@ class NexIO(BaseIO):
 
                 anaSig = AnalogSignal(signal = signal , t_start =t_start , sampling_rate  = entityHeader['WFrequency'])
                 anaSig.channel = entityHeader['WireNumber']
+                anaSig.name = entityHeader['name']
                 seg._analogsignals.append( anaSig )
                 
             if entityHeader['type'] == 6:
