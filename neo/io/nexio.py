@@ -23,7 +23,7 @@ from ..core import *
 
 from numpy import *
 import numpy as np
-from scipy.io.numpyio import fread
+#from scipy.io.numpyio import fread
 import struct
 
 
