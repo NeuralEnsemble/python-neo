@@ -16,81 +16,86 @@ import pylab
 class AxonIOTest(unittest.TestCase):
     
     def testOpenFile1(self):
-        io = AxonIO(filename = 'datafiles/File_axon_1.abf')
-        block = io.read_block( )
-        for seg in block.get_segments() :
-            #print len(seg.get_analogsignals())
-            assert len(seg.get_analogsignals()) ==1
-            for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
-                assert sig.name == 'ImRK01G20'
-                assert sig.unit == 'pA'
-                assert sig.signal.shape[0] == 1912832
-            
-            #print len (seg.get_events() )
-            assert len (seg.get_events() )==0
-            for ev in seg.get_events():
-                pass
-
-    def testOpenFile2(self):
-        io = AxonIO(filename = 'datafiles/File_axon_2.abf')
-        block = io.read_block( )
-        for seg in block.get_segments() :
-            #print len(seg.get_analogsignals())
-            assert len(seg.get_analogsignals()) ==1
-            for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
-                #assert sig.name == 'ImRK01G20'
-                #assert sig.unit == 'pA'
-                assert sig.sampling_rate == 1000.0
-                assert sig.signal.shape[0] == 1200000
-            
-            #print len (seg.get_events() )
-            assert len (seg.get_events() )==4
-            for ev in seg.get_events():
-                pass
-
-    def testOpenFile3(self):
-        io = AxonIO(filename = 'datafiles/File_axon_3.abf')
-        block = io.read_block( )
+        #~ f = 'datafiles/File_axon_4.abf'
+        #f = "/home/sgarcia/mnt/NEURO009/eq-11/DATA_manip/Duchamp200301_insuline_mitrale_agnes/MC_insuline/2011/fevrier 2011/4fev/M1/11204003.abf"
+        f = "/home/sgarcia/FormationOpenElectrophy/Vos datas/greg/test long ABF.abf"
+        io = AxonIO(filename =  f)
         
+        block = io.read_block( )
         for seg in block.get_segments() :
             #print len(seg.get_analogsignals())
-            assert len(seg.get_analogsignals()) ==2
+            #~ assert len(seg.get_analogsignals()) ==1
             for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
-                #assert sig.name == 'ImRK01G20'
-                #assert sig.unit == 'pA'
-                assert sig.sampling_rate == 20000.0
-                assert sig.signal.shape[0] == 20644
+                print sig.signal.shape[0], sig.name, sig.unit, sig.sampling_rate
+                #~ assert sig.name == 'ImRK01G20'
+                #~ assert sig.unit == 'pA'
+                #~ assert sig.signal.shape[0] == 1912832
             
-            #print len (seg.get_events() )
-            assert len (seg.get_events() )==0
+            print 'nb event', len (seg.get_events() )
+            #~ assert len (seg.get_events() )==0
+            
             for ev in seg.get_events():
                 pass
 
-
-    def testOpenFile4(self):
-
-        io = AxonIO(filename = 'datafiles/File_axon_4.abf')
-        block = io.read_block( )
-
-        for seg in block.get_segments() :
-            #print len(seg.get_analogsignals())
-            assert len(seg.get_analogsignals()) ==1
-            for sig in seg.get_analogsignals():
-                #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
-                assert sig.name == 'ImRK01G20'
-                assert sig.unit == 'pA'
-                assert sig.sampling_rate == 10000.0
-                assert sig.signal.shape[0] == 2176512
+    #~ def testOpenFile2(self):
+        #~ io = AxonIO(filename = 'datafiles/File_axon_2.abf')
+        #~ block = io.read_block( )
+        #~ for seg in block.get_segments() :
+            #~ #print len(seg.get_analogsignals())
+            #~ assert len(seg.get_analogsignals()) ==1
+            #~ for sig in seg.get_analogsignals():
+                #~ #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
+                #~ #assert sig.name == 'ImRK01G20'
+                #~ #assert sig.unit == 'pA'
+                #~ assert sig.sampling_rate == 1000.0
+                #~ assert sig.signal.shape[0] == 1200000
             
-            #print len (seg.get_events() )
-            assert len (seg.get_events() )==1
-            for ev in seg.get_events():
-                #print ev.time
-                #print ev.name
-                assert ev.name == 'drogue on'
+            #~ #print len (seg.get_events() )
+            #~ assert len (seg.get_events() )==4
+            #~ for ev in seg.get_events():
+                #~ pass
+
+    #~ def testOpenFile3(self):
+        #~ io = AxonIO(filename = 'datafiles/File_axon_3.abf')
+        #~ block = io.read_block( )
+        
+        #~ for seg in block.get_segments() :
+            #~ #print len(seg.get_analogsignals())
+            #~ assert len(seg.get_analogsignals()) ==2
+            #~ for sig in seg.get_analogsignals():
+                #~ #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
+                #~ #assert sig.name == 'ImRK01G20'
+                #~ #assert sig.unit == 'pA'
+                #~ assert sig.sampling_rate == 20000.0
+                #~ assert sig.signal.shape[0] == 20644
+            
+            #~ #print len (seg.get_events() )
+            #~ assert len (seg.get_events() )==0
+            #~ for ev in seg.get_events():
+                #~ pass
+
+
+    #~ def testOpenFile4(self):
+
+        #~ io = AxonIO(filename = 'datafiles/File_axon_4.abf')
+        #~ block = io.read_block( )
+
+        #~ for seg in block.get_segments() :
+            #~ #print len(seg.get_analogsignals())
+            #~ assert len(seg.get_analogsignals()) ==1
+            #~ for sig in seg.get_analogsignals():
+                #~ #print sig.signal.shape[0], sig.name, sig.num, sig.unit, sig.sampling_rate
+                #~ assert sig.name == 'ImRK01G20'
+                #~ assert sig.unit == 'pA'
+                #~ assert sig.sampling_rate == 10000.0
+                #~ assert sig.signal.shape[0] == 2176512
+            
+            #~ #print len (seg.get_events() )
+            #~ assert len (seg.get_events() )==1
+            #~ for ev in seg.get_events():
+                #~ #print ev.time
+                #~ #print ev.name
+                #~ assert ev.name == 'drogue on'
 
 
 

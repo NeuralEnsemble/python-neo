@@ -160,7 +160,7 @@ class AxonIO(BaseIO):
         header = self.read_header()
         version = header['fFileVersionNumber']
         
-        #print 'version' , version
+        #~ print 'version' , version
         
         # date and time
         if version <2. :
@@ -207,29 +207,34 @@ class AxonIO(BaseIO):
         elif version >=2. :
             mode = header['protocol']['nOperationMode']
         
-        #print 'mode' , mode
+        #~ print 'mode' , mode
         if (mode == 1) or (mode == 2) or  (mode == 5) or (mode == 3):
             # event-driven variable-length mode (mode 1)
             # event-driven fixed-length mode (mode 2 or 5)
             # gap free mode (mode 3) can be in several episod (?)
             
             # read sweep pos
-            nbsweep = header['lActualEpisodes']
             if version <2. :
-                nbsweep2 = header['lSynchArraySize']
-                offsetSweep = header['lSynchArrayPtr']*BLOCKSIZE
+                nbepisod = header['lSynchArraySize']
+                offsetEpisod = header['lSynchArrayPtr']*BLOCKSIZE
             elif version >=2. :
-                nbsweep2 = header['sections']['SynchArraySection']['llNumEntries']
-                offsetSweep = header['sections']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
-            sweepArray = memmap(self.filename , 'i4'  , 'r',
-                                        shape = (nbsweep2, 2),
-                                        offset = offsetSweep )            
-            
+                nbepisod = header['sections']['SynchArraySection']['llNumEntries']
+                offsetEpisod = header['sections']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
+            if nbepisod>0:
+                episodArray = memmap(self.filename , [('offset','i4'), ('len', 'i4') ] , 'r',
+                                            shape = (nbepisod),
+                                            offset = offsetEpisod )
+            else:
+                episodArray = empty ( (1) , [('offset','i4'), ('len', 'i4') ] ,)
+                episodArray[0]['len'] = data.size
+                episodArray[0]['offset'] = 0
+                
             # read subset of data
             list_data = [ ]
             pos = 0
-            for j in range(nbsweep) :
-                length = sweepArray[j,1]
+            
+            for j in range(episodArray.size):
+                length = episodArray[j]['len']
                 
                 if version <2. :
                     fSynchTimeUnit = header['fSynchTimeUnit']
@@ -252,8 +257,7 @@ class AxonIO(BaseIO):
             # one sweep = one segment in a block
             block = Block()
             block.datetime = filedatetime
-            for j in range(nbsweep) :
-                
+            for j in range(episodArray.size):
                 seg = Segment()
                 seg.num = j
                 for i in range(nbchannel):
@@ -270,7 +274,7 @@ class AxonIO(BaseIO):
                     
                     anaSig = AnalogSignal( signal = list_data[j][:,i],
                                             sampling_rate = sampling_rate ,
-                                            t_start = float(sweepArray[j,0])/sampling_rate,
+                                            t_start = float(episodArray[j]['offset'])/sampling_rate,
                                             )
                                             
                     anaSig.name = name
@@ -281,6 +285,11 @@ class AxonIO(BaseIO):
             
             if mode == 3:
                 # check if tags exits in other mode
+                if version <2. :
+                    sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
+                elif version >=2. :
+                    sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval']
+                
                 for i,tag in enumerate(header['listTag']) :
                     event = Event(  )
                     event.time = tag['lTagTime']/sampling_rate
@@ -289,56 +298,13 @@ class AxonIO(BaseIO):
                     event.label = str(tag['nTagType'])
                     #find in wich seg it belong
                     for seg in block._segments:
+                        if len(seg._analogsignals) ==0: continue
                         ana = seg._analogsignals[0]
                         if (event.time >= ana.t_start)  and (event.time <= ana.t_stop):
                             seg._events.append( event )
-
-
-            
-
-        #~ elif (mode == 3) :
-                        
-            #~ # gap free mode
-            #~ m = data.size%nbchannel
-            #~ if m != 0 : data = data[:-m]
-            #~ data = data.reshape( (data.size/nbchannel, nbchannel)).astype('f')
-            #~ if dt == dtype('i2'):
-                #~ if version <2. :
-                    #~ reformat_integer_V1(data, nbchannel , header)
-                #~ elif version >=2. :
-                    #~ reformat_integer_V2(data, nbchannel , header)                
-            
-            #~ # one segment in one block
-            #~ block = Block()
-            #~ seg = Segment()
-            #~ seg.datetime = filedatetime
-            #~ for i in range(nbchannel):
-                #~ if version <2. :
-                    #~ sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6)
-                    #~ name = header['sADCChannelName'][i]
-                    #~ unit = header['sADCUnits'][i]
-                    #~ num = header['nADCPtoLChannelMap'][i]
-                #~ elif version >=2. :
-                    #~ sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval']
-                    #~ name = header['listADCInfo'][i]['recChNames']
-                    #~ unit = header['listADCInfo'][i]['recChUnits']
-                    #~ num = header['listADCInfo'][i]['nADCNum']
-                #~ anaSig = AnalogSignal( signal = data[:,i],
-                                        #~ sampling_rate = sampling_rate ,
-                                        #~ t_start = 0)
-                #~ anaSig.name = name
-                #~ anaSig.unit = unit
-                #~ anaSig.channel = num
-            #~ seg._analogsignals.append( anaSig )
-            #~ for i,tag in enumerate(header['listTag']) :
-                #~ event = Event(  )
-                #~ event.time = tag['lTagTime']/sampling_rate
-                #~ event.name = clean_string(tag['sComment'])
-                #~ event.num = i
-                #~ event.label = str(tag['nTagType'])
-                #~ seg._events.append( event )
-            #~ block._segments.append(seg)
-
+                            seg_found = True
+                            break
+        
         return block
 
 
