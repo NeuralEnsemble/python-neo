@@ -13,7 +13,7 @@ except ImportError:
 from neo.core.analogsignal import AnalogSignal
 import numpy
 import quantities as pq
-from neo.test.tools import assert_arrays_almost_equal
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
 mV = pq.mV
 uV = pq.uV
@@ -21,6 +21,8 @@ Hz = pq.Hz
 kHz = pq.kHz
 ms = pq.ms
 nA = pq.nA
+pA = pq.pA
+
 
 class TestConstructor(unittest.TestCase):
     
@@ -30,6 +32,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate, units="mV")
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, len(data)/rate)
+        self.assertEqual(a[9], 9*mV)
         
     def test__create_from_numpy_array(self):
         data = numpy.arange(10.0)
@@ -37,6 +40,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate, units="uV")
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
+        self.assertEqual(a[9], 9*uV)
         
     def test__create_from_quantities_array(self):
         data = numpy.arange(10.0) * mV
@@ -44,11 +48,28 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate)
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
+        self.assertEqual(a[9], 9*mV)
         
     def test__create_from_quantities_array_with_inconsistent_units_should_raise_ValueError(self):
         data = numpy.arange(10.0) * mV
         self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1*kHz, units="nA")
-        
+    
+    def test__create_with_copy_true_should_return_copy(self):
+        data = numpy.arange(10.0) * mV
+        rate = 5000*Hz
+        a = AnalogSignal(data, copy=True, sampling_rate=rate)
+        data[3] = 99*mV
+        self.assertNotEqual(a[3], 99*mV)
+    
+    def test__create_with_copy_false_should_return_view(self):
+        data = numpy.arange(10.0) * mV
+        rate = 5000*Hz
+        a = AnalogSignal(data, copy=False, sampling_rate=rate)
+        data[3] = 99*mV
+        self.assertEqual(a[3], 99*mV)
+
+    # signal must be 1D - should raise Exception if not 1D
+    
 
 class TestProperties(unittest.TestCase):
     
@@ -85,7 +106,7 @@ class TestProperties(unittest.TestCase):
 class TestArrayMethods(unittest.TestCase):
     
     def setUp(self):
-        self.signal = AnalogSignal(numpy.arange(10.0), sampling_rate=1*kHz)
+        self.signal = AnalogSignal(numpy.arange(10.0), units="nA", sampling_rate=1*kHz)
     
     def test__slice_should_return_AnalogSignal(self):
         sub = self.signal[3:8]
@@ -97,7 +118,85 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.t_stop,
                          sub.t_start + 5*sub.sampling_period)
 
+    def test_comparison_operators(self):
+        assert_arrays_equal(self.signal >= 5*nA,
+                            numpy.array([False, False, False, False, False, True, True, True, True, True]))
+        assert_arrays_equal(self.signal >= 5*pA,
+                            numpy.array([False, True, True, True, True, True, True, True, True, True]))
+
+    def test__comparison_with_inconsistent_units_should_raise_Exception(self):
+        self.assertRaises(ValueError, self.signal.__gt__, 5*mV)
+        
+    def test_simple_statistics(self):
+        self.assertEqual(self.signal.max(), 9*nA)
+        self.assertEqual(self.signal.min(), 0*nA)
+        self.assertEqual(self.signal.mean(), 4.5*nA)
+
+class TestEquality(unittest.TestCase):
     
+    def test__signals_with_different_data_complement_should_be_non_equal(self):
+            signal1 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz)
+            signal2 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=2*kHz)
+            self.assertNotEqual(signal1, signal2)
+
+
+class TestCombination(unittest.TestCase):
+    
+    def test__adding_a_constant_to_a_signal_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+        signal_with_offset = signal + 65*mV
+        self.assertEqual(signal[9], 9*mV)
+        self.assertEqual(signal_with_offset[9], 74*mV)
+        for attr in "t_start", "sampling_rate":
+            self.assertEqual(getattr(signal, attr),
+                             getattr(signal_with_offset, attr))
+
+    def test__adding_two_consistent_signals_should_preserve_data_complement(self):
+        signal1 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz)
+        signal2 = AnalogSignal(numpy.arange(10.0, 20.0), units="mV", sampling_rate=1*kHz)
+        sum = signal1 + signal2
+        assert_arrays_equal(sum, AnalogSignal(numpy.arange(10.0, 30.0, 2.0), units="mV", sampling_rate=1*kHz))
+
+    def test__adding_signals_with_inconsistent_data_complement_should_raise_Exception(self):
+        signal1 = AnalogSignal(numpy.arange(10.0), units="mV", t_start=0.0*ms, sampling_rate=1*kHz)
+        signal2 = AnalogSignal(numpy.arange(10.0), units="mV", t_start=100.0*ms, sampling_rate=0.5*kHz)
+        self.assertRaises(Exception, signal1.__add__, signal2)
+
+    def test__subtracting_a_constant_from_a_signal_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+        signal_with_offset = signal - 65*mV
+        self.assertEqual(signal[9], 9*mV)
+        self.assertEqual(signal_with_offset[9], -56*mV)
+        for attr in "t_start", "sampling_rate":
+            self.assertEqual(getattr(signal, attr),
+                             getattr(signal_with_offset, attr))
+            
+    def test__subtracting_a_signal_from_a_constant_should_return_a_signal(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+        signal_with_offset = 10*mV - signal
+        self.assertEqual(signal[9], 9*mV)
+        self.assertEqual(signal_with_offset[9], 1*mV)
+        for attr in "t_start", "sampling_rate":
+            self.assertEqual(getattr(signal, attr),
+                             getattr(signal_with_offset, attr))
+
+    def test__multiplying_a_signal_by_a_constant_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+        amplified_signal = signal * 2
+        self.assertEqual(signal[9], 9*mV)
+        self.assertEqual(amplified_signal[9], 18*mV)
+        for attr in "t_start", "sampling_rate":
+            self.assertEqual(getattr(signal, attr),
+                             getattr(amplified_signal, attr))
+            
+    def test__dividing_a_signal_by_a_constant_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+        amplified_signal = signal/0.5
+        self.assertEqual(signal[9], 9*mV)
+        self.assertEqual(amplified_signal[9], 18*mV)
+        for attr in "t_start", "sampling_rate":
+            self.assertEqual(getattr(signal, attr),
+                             getattr(amplified_signal, attr))
 
 if __name__ == "__main__":
     unittest.main()
