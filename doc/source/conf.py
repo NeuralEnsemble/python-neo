@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'neo'
-copyright = u'2011, S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger'
+copyright = u'2011, S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger, Yury V. Zaytsev'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -173,7 +173,7 @@ htmlhelp_basename = 'neodoc'
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
   ('index', 'neo.tex', u'neo Documentation',
-   u'S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger', 'manual'),
+   u'S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger, Yury V. Zaytsev', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

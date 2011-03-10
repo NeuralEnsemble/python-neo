@@ -42,7 +42,7 @@ if __name__=="__main__":
                           ],
         
         # metadata for upload to PyPI
-        author = "S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger",
+        author = "S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger, Yury V. Zaytsev",
         author_email = "sgarcia at olfac.univ-lyon1.fr",
         long_description = long_description,
         license = "BSD",

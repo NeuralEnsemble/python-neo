@@ -19,6 +19,7 @@ Contributors
 * Samuel Garcia
 * Florent Jaillet
 * Yann Mahnoun
+* Thomas Wachtler
 * Philipp Rautenberg
 * Andrey Sobolev
 * Pierre Yger
