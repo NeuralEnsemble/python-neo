@@ -17,37 +17,40 @@ def _get_sampling_rate(sampling_rate, sampling_period):
     return sampling_rate
 
 
-class AnalogSignal(BaseNeo, pq.Quantity):
+class AnalogSignalArray(BaseNeo, pq.Quantity):
     """
-    A representation of continuous, analog signal acquired at time ``t_start``
-    at a certain sampling rate.
+    A representation of sseveral continuous, analog signal that
+    have the same duration, sampling rate and t_start.
+    Basically, it is a 2D array like AnalogSignal.
+      Dim 0 is time
+      Dim 1 is channel index
     
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
     ``numpy.ndarray``.
     
     Usage:
-      >>> from quantities import ms, kHz
-      >>> a = AnalogSignal([1,2,3])
-      >>> b = AnalogSignal([4,5,6], sampling_period=42*ms)
-      >>> c = AnalogSignal([1,2,3], t_start=42*ms)
-      >>> d = AnalogSignal([1,2,3], t_start=42*ms, sampling_rate=0.42*kHz])
-      >>> e = AnalogSignal([1,2,3], units='mV')
 
     Necessary Attributes/properties:
-      t_start :         time when signal begins
-      sampling_rate :   number of samples per unit time
-      sampling_period : interval between two samples (1/sampling_rate)
-      duration :        signal duration (size * sampling_period)
-      t_stop :          time when signal ends (t_start + duration)
+        t_start :         time when signal begins
+        sampling_rate :   number of samples per unit time
+      
       
     Recommanded Attributes/properties:
-        channel_name : 
-        channel_index :
-    
+        channel_names : 
+        channel_indexes :
+
+    Properties:
+        sampling_period : interval between two samples (1/sampling_rate)
+        duration :        signal duration (size * sampling_period)
+        t_stop :          time when signal ends (t_start + duration)
+
+
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, name='',
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None):
+    def __new__(cls, signal, units='', dtype=None, copy=True, 
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                channel_names= None, channel_indexes = None,
+                ):
         """
         Create a new :class:`AnalogSignal` instance from a list or numpy array
         of numerical values, or from a Quantity array.
@@ -61,6 +64,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
         obj.name = name
         obj._annotations = {}
+        obj._annotations['channel_names'] = channel_names
+        obj._annotations['channel_indexes'] = channel_indexes
         return obj
 
     def __array_finalize__(self, obj):
@@ -92,7 +97,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
     @property
     def duration(self):
-        return self.size/self.sampling_rate
+        return self.shape[0]/self.sampling_rate
         
     @property
     def t_stop(self):
@@ -100,7 +105,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
     @property
     def times(self):
-        return self.t_start + np.arange(self.size)/self.sampling_rate
+        return self.t_start + np.arange(self.shape[0])/self.sampling_rate
 
     def __eq__(self, other):
         if self.t_start != other.t_start or self.sampling_rate != other.sampling_rate:

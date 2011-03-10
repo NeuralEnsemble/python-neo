@@ -1,8 +1,32 @@
 from neo.core.baseneo import BaseNeo
 
 class RecordingChannel(BaseNeo):
-    def __init__(self, index, name, analogsignals=[])
-        BaseNeo.__init__(self)
-        self.name = name
-        self.analogsignals = analogsignals
-        return self
+    """
+    A RecordingChannel is a container of AnalogSIgnal or SpikeTrain or Unit that come
+    from the same logical and/or physical channel inside a Block.
+    
+
+    Usage:
+    
+    
+    Necessary Attributes/properties:
+        index (int):
+    
+    Recommanded Attributes/properties:
+        name (str):
+        coordinate x,y,z (quantitite array):
+    
+    
+    Container of:
+        AnalogSignal
+        AnalogSignalArray
+    
+    Container of (many to many relationship):
+        Unit
+        
+    """
+    def __init__(self, **kargs):
+        BaseNeo.__init__(self, **kargs)
+        self._analogsignals = [ ]
+        self._irregularysampledsignals = [ ]
+

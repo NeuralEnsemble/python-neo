@@ -7,10 +7,18 @@ class BaseNeo(object):
     Have to work in the future:
       myneoobject._annotations['hi'] = 3
       >>>myneoobject.hi = 3
+    
+    # I (SAM) like the idea of creating an instance with any keyword:
+    myneoobject( mywife = 'therese')
+    
+      
+      
     """
 
     def __init__(self, *args, **kwargs):
-        self.__dict__['_annotations'] = {}
+        
+        self.__dict__['_annotations'] = kwargs
+        #self.__dict__['_annotations'] = { }
 
     def __getattr__(self, k):
         if hasattr(self, '_annotations'):
