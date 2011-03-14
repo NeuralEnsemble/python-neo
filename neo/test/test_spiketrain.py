@@ -19,6 +19,10 @@ class TestFunctions(unittest.TestCase):
         
 
 class TestConstructor(unittest.TestCase):
+    def test__create_empty(self):
+        t_start = 0.0
+        t_stop = 10.0
+        st = SpikeTrain([ ], t_start, t_stop, units = 's')
     
     def test__create_from_list(self):
         times = range(10)

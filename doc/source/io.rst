@@ -16,11 +16,14 @@ Details of API
 ================
 
 The neo.io API is designed to be simple and intuitive:
- - each file format has its IO classes (for example for Spike2 files you have a Spike2IO class)
- - each class inherits from the BaseIO class
- - each io class can read or write directly one or several neo objects (for example Segment, SpikeTrainList, Block, ...)
- - each io class support part of the neo.core hierachy not necessary all part.
- - each io is able to do a *lazy* load and or a *cascade* load
+    - each file format has its IO classes (for example for Spike2 files you have a Spike2IO class)
+    - each class inherits from the BaseIO class
+    - each io class can read or write directly one or several neo objects (for example Segment, Block, ...)
+    - each io class support part of the neo.core hierachy not necessary all part.
+    - each io is able to do a *lazy* load = all attribute are read execpet numpy.array (if lazy=True) _data_description attrbute is added.
+    - each io is able to do a *cascade* load = if True all children object are also loaded
+    - each io render object (and subojects) with all there necessary attributes 
+    - each io can freely had remcommended attributs (and more) in _annotations dict of object.
 
 There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy.
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
@@ -80,10 +83,17 @@ In this case, this is equivalent to ::
 In some case you may not want to load everything in memory because it could be to big, in this case you could use the **lazy** flag set
 to True or Fasle::
     
-    >>>> seg = reader.read_segment(lazy = Fasle, cascade=True)
+    >>> seg = reader.read_segment(lazy = False, cascade=True)
+    >>> print seg._analogsignals[0].shape
+    >>> seg = reader.read_segment(lazy = True, cascade=True)
+    >>> print seg._analogsignals[0].shape
+    >>> seg._analogsignals[0]._data_description
 
-In later case segment and subhierachy is read but analogsignal are empty.
-
+In the first case segment and subhierachy is read and all analosignal are loaded.
+In later case segment and subhierachy is read but analogsignal are empty (size 0) but
+_data_description give information of the signal if loaded.
+This simple mecanism is similar to readin a header (lazy =True) because everything is readed
+execpt what is heavy.
 
 
 List of implemented formats
@@ -104,4 +114,4 @@ which is often a :class:`Block` or a :class:`Segment`. Individual read/write met
 
 .. autoclass:: neo.io.ExampleIO
 
-For advice or comments on the coding guidelines, developers can send e-mail to sgarcia@olfac.univ-lyon1.fr, yger@unic.cnrs-gif.fr or estebanez@unic.cnrs-gif.fr.
+For advice or comments on the coding guidelines, developers can send e-mail to sgarcia@olfac.univ-lyon1.fr.

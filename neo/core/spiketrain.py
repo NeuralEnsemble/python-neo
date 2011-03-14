@@ -81,8 +81,13 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __array_finalize__(self, obj):
         super(SpikeTrain, self).__array_finalize__(obj)
-        self.t_start = getattr(obj, 't_start', obj.min())
-        self.t_stop = getattr(obj, 't_stop', obj.max())
+        # FIXME bug when empty
+        #~ self.t_start = getattr(obj, 't_start', obj.min())
+        #~ self.t_stop = getattr(obj, 't_stop', obj.max())
+        self.t_start = getattr(obj, 't_start', -numpy.inf*pq.s)
+        self.t_stop = getattr(obj, 't_stop', numpy.inf*pq.s)
+
+
         self.waveforms = getattr(obj, 'waveforms', None)
         self.left_sweep = getattr(obj, 'left_sweep', None)
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
