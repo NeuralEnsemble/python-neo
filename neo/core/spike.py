@@ -1,5 +1,5 @@
 from neo.core.baseneo import BaseNeo
-
+import quantities as pq
 
 class Spike(BaseNeo):
     """
@@ -24,7 +24,7 @@ class Spike(BaseNeo):
         duration
     
     """
-    def __init__(self, time,
+    def __init__(self, time = 0*pq.s,
                     waveform=None,
                     sampling_rate= None,
                     left_sweep = None,

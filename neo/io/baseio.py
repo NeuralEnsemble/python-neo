@@ -18,8 +18,8 @@ import sys, os
 sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('../..'))
 
-#from neo.core import *
-from ..core import *
+from neo.core import *
+#from ..core import *
 
 
 

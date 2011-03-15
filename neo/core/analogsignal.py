@@ -46,8 +46,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, name='',
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None):
+    def __new__(cls, signal=np.array([ ]) * pq.millivolt, units='', dtype=None, 
+            copy=True, name='', t_start=0*pq.s, sampling_rate=None, sampling_period=None):
         """
         Create a new :class:`AnalogSignal` instance from a list or numpy array
         of numerical values, or from a Quantity array.

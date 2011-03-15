@@ -25,9 +25,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     ``numpy.ndarray``.
     """
     
-    def __new__(cls, times, t_start, t_stop, units='', dtype=None, copy=True,
-                waveforms=None, left_sweep = None, sampling_rate = None,
-                name='', sort=True):
+    def __new__(cls, times = numpy.array([ ]) * pq.s, t_start = 0*pq.s, 
+                t_stop = 0*pq.s, units='', dtype=None, copy=True, waveforms=None, 
+                left_sweep = None, sampling_rate = None, name='', sort=True):
         """
         Create a new :class:`SpikeTrain` instance from a list or numpy array
         of numerical values, or from a Quantity array with dimensions of time.
@@ -62,7 +62,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             times = numpy.array(times)
             sort_indices = numpy.argsort(times)
             times = times[sort_indices]
-            if waveforms:
+            if waveforms.any():
                 waveforms = waveforms[sort_indices]
         else:
             sorted = False

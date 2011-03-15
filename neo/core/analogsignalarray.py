@@ -47,8 +47,8 @@ class AnalogSignalArray(BaseNeo, pq.Quantity):
 
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, 
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+    def __new__(cls, signal=np.array([ ]) * pq.millivolt, units='', dtype=None, 
+                copy=True, t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                 channel_names= None, channel_indexes = None,
                 ):
         """
