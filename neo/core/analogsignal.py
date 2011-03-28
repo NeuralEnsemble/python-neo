@@ -78,11 +78,11 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         obj.t_start = self.t_start + i*self.sampling_period
         return obj
     
-    def __getitem__(self, i):
-        obj = super(AnalogSignal, self).__getitem__(i)
-        if isinstance(obj, AnalogSignal):
-            obj.t_start = self.t_start + i.start*self.sampling_period
-        return obj
+#    def __getitem__(self, i):
+#        obj = super(AnalogSignal, self).__getitem__(i)
+#        if isinstance(obj, AnalogSignal):
+#            obj.t_start = self.t_start + i.start*self.sampling_period
+#        return obj
 
     def _get_sampling_period(self):
         return 1./self.sampling_rate
