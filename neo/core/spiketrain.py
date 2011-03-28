@@ -62,7 +62,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             times = numpy.array(times)
             sort_indices = numpy.argsort(times)
             times = times[sort_indices]
-            if waveforms.any():
+            if waveforms and waveforms.any():
                 waveforms = waveforms[sort_indices]
         else:
             sorted = False
