@@ -26,6 +26,17 @@ except ImportError:
     warnings.warn("ExampleIO not  available", ImportWarning)
 
 
+try:
+    from plexonio import PlexonIO
+    iolist.append( PlexonIO )
+except ImportError:
+    warnings.warn("PlexonIO not  available", ImportWarning)
 
+
+try:
+    from neuroexplorerio import NeuroExplorerIO
+    iolist.append( NeuroExplorerIO )
+except ImportError:
+    warnings.warn("NeuroExplorerIO not  available", ImportWarning)
 
     

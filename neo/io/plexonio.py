@@ -17,16 +17,14 @@ Author: sgarcia
 
 """
 
-# I need to subclass BaseIO
 from baseio import BaseIO
-
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 from ..core import *
-
-# note neo.core need only numpy and quantitie
 import numpy as np
 import quantities as pq
 
+import struct
+import datetime
+import os
 
 
 
@@ -41,7 +39,6 @@ class PlexonIO(BaseIO):
         >>> print seg._analogsignals
         >>> print seg._spiketrains
         >>> print seg._eventarrays
-        >>> print seg._epocharrays
     
     """
     
@@ -74,8 +71,7 @@ class PlexonIO(BaseIO):
         """
         This class read a plx file.
         
-        **Arguments**
-        
+        Arguments:
             filename : the filename to read you can pu what ever it do not read anythings
         
         """
@@ -124,8 +120,8 @@ class PlexonIO(BaseIO):
         for i in xrange(globalHeader['NumDSPChannels']):
             # channel is 1 based
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
-            channelHeader['Template'] = array(channelHeader['Template']).reshape((5,64))
-            channelHeader['Boxes'] = array(channelHeader['Boxes']).reshape((5,2,4))
+            channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
+            channelHeader['Boxes'] = np.array(channelHeader['Boxes']).reshape((5,2,4))
             dspChannelHeaders[channelHeader['Channel']]=channelHeader
             maxunit = max(channelHeader['NUnits'],maxunit)
             maxchan = max(channelHeader['Channel'],maxchan)
@@ -144,13 +140,13 @@ class PlexonIO(BaseIO):
         
         ## Step 2 : prepare allocating
         # for allocating continuous signal
-        ncontinuoussamples = zeros(len(slowChannelHeaders))
-        sampleposition = zeros(len(slowChannelHeaders))
+        ncontinuoussamples = np.zeros(len(slowChannelHeaders))
+        sampleposition = np.zeros(len(slowChannelHeaders))
         anaSigs = { }
         
         # for allocating spiketimes and waveform
         spiketrains = { }
-        nspikecounts = zeros((maxchan+1, maxunit+1) ,dtype='i')
+        nspikecounts = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
         for i,channelHeader in dspChannelHeaders.iteritems():
             spiketrains[i] = { }
         
@@ -158,7 +154,7 @@ class PlexonIO(BaseIO):
         eventarrays = { }
         neventsperchannel = { }
         #maxstrsizeperchannel = { }
-        for chan, h in eventHeader.iteritems():
+        for chan, h in eventHeaders.iteritems():
             neventsperchannel[chan] = 0
             #maxstrsizeperchannel[chan] = 0
         
@@ -193,7 +189,7 @@ class PlexonIO(BaseIO):
                 #event
                 neventsperchannel[chan] += 1
                 if chan not in eventarrays:
-                    ea = eventArray()
+                    ea = EventArray()
                     ea._annotations['channel_name'] = eventHeaders[chan]['Name']
                     ea._annotations['channel_index'] = chan
                     eventarrays[chan] = ea
@@ -218,23 +214,23 @@ class PlexonIO(BaseIO):
             ## Step 4: allocating memory if not lazy
             # continuous signal
             for chan, anaSig in anaSigs.iteritems():
-                anaSigs[chan] = anaSig.copy_except_signal(zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
+                anaSigs[chan] = anaSig.copy_except_signal(np.zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
             
             # allocating mem for SpikeTrain
             for chan, sptrs in spiketrains.iteritems():
                 for unit, sptr in sptrs.iteritems():
-                        new = Spiketrain( zeros( (nspikecounts[chan][unit]) , dtype = 'f' ) )*pq.S
-                        new._annotaions.update(sptr._annotations)
+                        new = SpikeTrain( np.zeros( (nspikecounts[chan][unit]) , dtype = 'f' )*pq.s )
+                        new._annotations.update(sptr._annotations)
                         if load_spike_waveform:
                             n1, n2 = spiketrains[chan][unit].sizeOfWaveform
-                            new.waveforms = zeros( (nspikecounts[chan][unit], n1, n2 ) , dtype = 'f' ) * pq.V
+                            new.waveforms = np.zeros( (nspikecounts[chan][unit], n1, n2 )*pq.V , dtype = 'f' ) * pq.V
                         spiketrains[chan][unit] = new
             nspikecounts[:] = 0
             
             # event
             eventpositions = { }
             for chan, ea in eventarrays.iteritems():
-                ea.times = zeros( neventsperchannel[chan] )*pq.s
+                ea.times = np.zeros( neventsperchannel[chan] )*pq.s
                 #ea.labels = zeros( neventsperchannel[chan] , dtype = 'S'+str(neventsperchannel[chan]) )
                 eventpositions[chan]=0
             
@@ -280,12 +276,12 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    eventarrays[chan].time[pos] = time
+                    eventarrays[chan].times[pos] = time
                     eventpositions[chan]+= 1
                 
                 elif dataBlockHeader['Type'] == 5:
                     #signal
-                    data = fromstring( fid.read(n2*2) , dtype = 'i2').astype('f4')
+                    data = np.fromstring( fid.read(n2*2) , dtype = 'i2').astype('f4')
                     #range
                     if globalHeader['Version'] ==100 or globalHeader['Version'] ==101 :
                         data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*1000.)
@@ -316,7 +312,7 @@ class PlexonIO(BaseIO):
         
         # add eventarray to segment
         for chan,ea in  eventarrays.iteritems():
-            seg._eventarrays.append(seg)
+            seg._eventarrays.append(ea)
 
         
         return seg
