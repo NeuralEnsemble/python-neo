@@ -39,4 +39,9 @@ try:
 except ImportError:
     warnings.warn("NeuroExplorerIO not  available", ImportWarning)
 
-    
+
+try:
+    from axonio import AxonIO
+    iolist.append( AxonIO )
+except ImportError:
+    warnings.warn("AxonIO not  available", ImportWarning)

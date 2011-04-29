@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-Tests of io.NeuroExplorerIO
+Tests of io.axonio
 """
 
 from __future__ import division
@@ -10,10 +10,10 @@ try:
 except ImportError:
     import unittest
 
-from neo.io import NeuroExplorerIO
+from neo.io import AxonIO
 import numpy
 
-class TestNeuroExplorerIO(unittest.TestCase):
+class TestAxonIO(unittest.TestCase):
     pass
 
 
