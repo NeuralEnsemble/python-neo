@@ -93,6 +93,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
         
 
+    def __repr__(self):
+        return '<SpikeTrain(%s, [%s, %s], )>' % (
+             super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop, )
+
+
     @property
     def duration(self):
         return self.t_stop - self.t_start
