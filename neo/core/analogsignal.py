@@ -101,6 +101,13 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     @property
     def times(self):
         return self.t_start + np.arange(self.size)/self.sampling_rate
+    
+    def copy_except_signal(self, signal):
+        #signal is the new signal
+        new = AnalogSignal(signal = signal, units= self.units)
+        new._copy_data_complement(self)
+        new._annotations.update(self._annotations)
+        return new
 
     def __eq__(self, other):
         if self.t_start != other.t_start or self.sampling_rate != other.sampling_rate:
