@@ -9,7 +9,7 @@ This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/downloads.html
 
 
-Depend on: scipy
+Depend on: 
 
 Supported : Read
 

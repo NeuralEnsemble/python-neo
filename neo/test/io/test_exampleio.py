@@ -44,9 +44,7 @@ class TestExampleIO(unittest.TestCase):
         r = ExampleIO( filename = None)
         ana = r.read_analogsignal( lazy = False,segment_duration = 15., t_start = -1)
         
-
-        
-    
+   
 
     def read_spiketrain(self):
         r = ExampleIO( filename = None)
