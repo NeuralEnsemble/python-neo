@@ -45,3 +45,10 @@ try:
     iolist.append( AxonIO )
 except ImportError:
     warnings.warn("AxonIO not  available", ImportWarning)
+
+try:
+    from tdtio import TdtIO
+    iolist.append( TdtIO )
+except ImportError:
+    warnings.warn("TdtIO not  available", ImportWarning)
+

@@ -16,7 +16,6 @@ class BaseNeo(object):
     """
 
     def __init__(self, *args, **kwargs):
-        
         self.__dict__['_annotations'] = kwargs
         #self.__dict__['_annotations'] = { }
 
