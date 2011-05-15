@@ -72,7 +72,7 @@ class PlexonIO(BaseIO):
         This class read a plx file.
         
         Arguments:
-            filename : the filename to read you can pu what ever it do not read anythings
+            filename : the filename
         
         """
         BaseIO.__init__(self)
