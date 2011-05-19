@@ -30,6 +30,14 @@ import os
 import datetime
 import re
 
+class VersionError(Exception):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
 class ElanIO(BaseIO):
     """
     Classe for reading/writing data from Elan.
@@ -89,13 +97,14 @@ class ElanIO(BaseIO):
         
         ## Read header file
         
-        
-        
         f = open(self.filename+'.ent' , 'rU')
         #version
         version = f.readline()
+        
         if version[:2] != 'V2' :
-            raise('read only V2 .eeg.ent files')
+            # raise('read only V2 .eeg.ent files')
+            raise VersionError('Read only V2 .eeg.ent files. %s given' %
+                               version[:2]) 
             return
         
         #info

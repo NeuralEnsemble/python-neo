@@ -1,9 +1,7 @@
 # encoding: utf-8
 """
 baseio
-==================
-
-
+======
 
 Classes
 -------
@@ -19,9 +17,6 @@ sys.path.append(os.path.abspath('.'))
 sys.path.append(os.path.abspath('../..'))
 
 from neo.core import *
-#from ..core import *
-
-
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -61,30 +56,30 @@ class BaseIO(object):
     See ExampleIO in exampleio.py
     """
     
-    is_readable        = False
-    is_writable        = False
+    is_readable = False
+    is_writable = False
     
-    supported_objects            = []
-    readable_objects    = [ ]
-    writeable_objects    = [ ]
+    supported_objects = []
+    readable_objects = [ ]
+    writeable_objects = [ ]
     
-    has_header         = False
-    is_streameable     = False
-    read_params        = {}
-    write_params       = {}
+    has_header = False
+    is_streameable = False
+    read_params = {}
+    write_params = {}
     
-    name         = 'BaseIO'
+    name = 'BaseIO'
     description = 'This IO do not read and write anything'
     extentions = [ ]
     
     mode = 'file' # or 'fake' or 'dir' or 'database'
 
-    def __init__(self , filename = None , **kargs ) :
+    def __init__(self, filename=None, **kargs):
         self.filename = filename
     
     ######## General read/write methods #######################
     
-    def read(self, **kargs ):
+    def read(self, **kargs):
         pass
 
     def write(self, **kargs):
@@ -175,7 +170,3 @@ class BaseIO(object):
 
     def write_epocharray(self, **kargs):
         assert(EpochArray in self.writeable_objects), write_error
-
-
-
-
