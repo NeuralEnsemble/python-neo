@@ -70,5 +70,10 @@ try:
 except ImportError:
     warnings.warn("WinWcpIO not available, check dependencies", ImportWarning)
 
+try:
+    from elanio import ElanIO
+    iolist.append( ElanIO )
+except ImportError:
+    warnings.warn("ElanIO not available, check dependencies", ImportWarning)
 
 
