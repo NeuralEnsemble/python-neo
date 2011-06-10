@@ -1,16 +1,21 @@
 # add performance testing!!
 
-import tables as tb
 import numpy as np
 import quantities as pq
-import unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 import datetime
+import os
 
-import sys, os
-sys.path.append(os.path.abspath('../..'))
-sys.path.append(os.path.abspath('../../..'))
 from neo.core import *
-from neo.io.hdf5io import IOManager
+try:
+    from neo.io.hdf5io import IOManager
+    have_hdf5 = True
+except ImportError:
+    have_hdf5 = False
+
 #===============================================================================
 
 def checks():
@@ -48,7 +53,7 @@ def checks():
                 signal=np.random.rand(500) * pq.millivolt))
     segment._irsaanalogsignals = []
     for i in range(50):
-        segment._irsaanalogsignals.append(IrregularySampledSignal(name="IRSA-TEST" + str(i), \
+        segment._irsaanalogsignals.append(IrregularlySampledSignal(name="IRSA-TEST" + str(i), \
             t_start=260.0 * pq.millisecond, channel_name="2", \
             signal=np.random.rand(500) * pq.millivolt, \
             times=np.random.rand(20) * pq.millisecond))
@@ -83,17 +88,26 @@ class hdf5ioTest(unittest.TestCase):
     """
     Tests for the hdf5 library.
     """
+    
+    @unittest.skipUnless(have_hdf5, "requires PyTables")
+    def setUp(self):
+        self.test_file = "test.h5"
+    
+    def tearDown(self):
+        if os.path.exists(self.test_file):
+            os.remove(self.test_file)
+    
     def test_create(self):
         """
         Create test file with signals, segments, blocks etc.
         """
-        iom = IOManager(filename="test.h5")
+        iom = IOManager(filename=self.test_file)
         # creating a structure
         block = checks()
         # saving & testing
         iom.save(block)
         iom.close()
-        iom.connect(filename="test.h5")
+        iom.connect(filename=self.test_file)
         self.assertEqual(len(iom._data.listNodes("/")), 1)
         self.assertEqual(len(iom._data.listNodes("/block_0/_segments")), 4)
         self.assertEqual(len(iom._data.listNodes("/block_0/_recordingchannelgroups")), 1)
@@ -110,17 +124,17 @@ class hdf5ioTest(unittest.TestCase):
         self.assertEqual(len(iom._data.listNodes("/block_0/_segments/segment_0/_spikes")), 97)
 
 
-    def test_relations(self):
-        pass
+    #def test_relations(self):
+    #    pass
 
-    def test_property_change(self):
-        pass
+    #def test_property_change(self):
+    #    pass
 
-    def test_get_objects(self):
-        pass
+    #def test_get_objects(self):
+    #    pass
         
-    def test_data_change(self):
-        pass
+    #def test_data_change(self):
+    #    pass
 
 if __name__ == '__main__':
     unittest.main()

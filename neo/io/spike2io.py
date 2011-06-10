@@ -237,7 +237,7 @@ class Spike2IO(BaseIO):
         if channelHeader.unit in unit_convert:
             unit = pq.Quantity(1, unit_convert[channelHeader.unit] )
         else:
-            print channelHeader.unit
+            #print channelHeader.unit
             try:
                 unit = pq.Quantity(1, channelHeader.unit )
             except:
@@ -428,13 +428,11 @@ class HeaderReader(object):
         return self.array.dtype.names
     
     def __repr__(self):
-        print 'HEADER'
+        s = 'HEADER'
         for name in self.dtype.names :
-            #~ if self.dtype[name].kind != 'S' :
-                
-                print name , self.__getattr__(name)
-        print ''
-        return ''
+            #~ if self.dtype[name].kind != 'S' :    
+                s += name + self.__getattr__(name)
+        return s
     
                 
     

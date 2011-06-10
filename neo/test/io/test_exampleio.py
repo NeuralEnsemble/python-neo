@@ -14,8 +14,16 @@ from neo.core import objectlist
 from neo.io.exampleio import ExampleIO
 
 import numpy
+try:
+    import scipy
+    have_scipy = True
+except ImportError:
+    have_scipy = False
+
 
 class TestExampleIO(unittest.TestCase):
+    
+    @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_lazy(self):
         r = ExampleIO( filename = None)
         seg = r.read_segment(cascade = True, lazy = True)
@@ -31,7 +39,8 @@ class TestExampleIO(unittest.TestCase):
             self.assertNotEqual(ana.size, 0)
         for st in seg._spiketrains:
             self.assertNotEqual(st.size, 0)
-        
+    
+    @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_cascade(self):
         r = ExampleIO( filename = None)
         seg = r.read_segment(cascade = False)
@@ -39,13 +48,12 @@ class TestExampleIO(unittest.TestCase):
         seg = r.read_segment(cascade = True , num_analogsignal = 4)
         self.assertEqual( len(seg._analogsignals), 4)
 
-    
+    @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_analogsignal(self):
         r = ExampleIO( filename = None)
         ana = r.read_analogsignal( lazy = False,segment_duration = 15., t_start = -1)
-        
-   
 
+    @unittest.skipUnless(have_scipy, "requires scipy")
     def read_spiketrain(self):
         r = ExampleIO( filename = None)
         st = r.read_spiketrain( lazy = False,)

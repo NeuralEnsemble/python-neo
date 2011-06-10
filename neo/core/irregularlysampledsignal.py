@@ -3,7 +3,7 @@ from neo.core.baseneo import BaseNeo
 import numpy as np
 import quantities as pq
 
-class IrregularySampledSignal(BaseNeo):
+class IrregularlySampledSignal(BaseNeo):
     """
     Object to manage signal when the sampling is not regular.
     In short this object manage both the signal values and its times vector.

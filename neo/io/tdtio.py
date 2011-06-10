@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-Class for reading data from from Tunker Davis TTank format.
+Class for reading data from from Tucker Davis TTank format.
 Terminology: 
 TDT hold data with tanks (actually a directory). And tanks hold sub block (sub directories).
 Tanks correspond to neo.Block and tdt block correspond to neo.Segment.
@@ -16,7 +16,7 @@ Author: sgarcia
 
 """
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 from numpy import dtype
@@ -27,7 +27,7 @@ import os
 
 class TdtIO(BaseIO):
     """
-    Class for reading data from from Tunker Davis TTank format.
+    Class for reading data from from Tucker Davis TTank format.
     
     Usage:
         >>> from neo import io

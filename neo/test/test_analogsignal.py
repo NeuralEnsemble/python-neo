@@ -118,6 +118,11 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.t_stop,
                          sub.t_start + 5*sub.sampling_period)
 
+    def test__getitem_should_return_single_quantity(self):
+        self.assertEqual(self.signal[0], 0*nA)
+        self.assertEqual(self.signal[9], 9*nA)
+        self.assertRaises(IndexError, self.signal.__getitem__, 10)
+
     def test_comparison_operators(self):
         assert_arrays_equal(self.signal >= 5*nA,
                             numpy.array([False, False, False, False, False, True, True, True, True, True]))

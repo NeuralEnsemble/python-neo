@@ -16,7 +16,7 @@ Author: sgarcia,luc estebanez
 """
 
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 import quantities as pq
@@ -110,7 +110,7 @@ class NeuroExplorerIO(BaseIO):
             entityHeader = HeaderReader(fid , EntityHeader ).read_f(offset = offset+i*208)
             entityHeader['name'] = entityHeader['name'].replace('\x00','')
             
-            print 'i',i, entityHeader['type']
+            #print 'i',i, entityHeader['type']
             
             if entityHeader['type'] == 0:
                 # neuron

@@ -1,8 +1,12 @@
-import unittest
+from __future__ import absolute_import
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 from neo.core.spiketrain import check_has_dimensions_time, SpikeTrain
 import quantities as pq
 import numpy
-from tools import assert_arrays_equal
+from neo.test.tools import assert_arrays_equal
 
 class TestFunctions(unittest.TestCase):
 

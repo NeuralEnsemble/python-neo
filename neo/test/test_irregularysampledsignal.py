@@ -7,9 +7,9 @@ try:
 except ImportError:
     import unittest
     
-from neo.core.irregularysampledsignal import IrregularySampledSignal
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
-class TestIrregularySampledSignal(unittest.TestCase):
+class TestIrregularlySampledSignal(unittest.TestCase):
     pass 
 
 

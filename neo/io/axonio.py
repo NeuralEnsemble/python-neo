@@ -30,7 +30,7 @@ Author: sgarcia
 
 """
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 import quantities as pq
@@ -42,8 +42,12 @@ import os
 
 from numpy import memmap, dtype
 
-
-
+# file no longer exists in Python3
+try:
+    file
+except NameError:
+    import io
+    file = io.BufferedReader
 
 
 class struct_file(file):
@@ -56,6 +60,7 @@ class struct_file(file):
         if offset is not None:
             self.seek(offset)
         self.write( struct.pack( format , *args ) )
+
 
 def reformat_integer_V1(data, nbchannel , header):
     """
@@ -160,8 +165,8 @@ class AxonIO(BaseIO):
         # date and time
         if version <2. :
             YY = 1900
-            MM = 01
-            DD = 01
+            MM = 1
+            DD = 1
             hh = int(header['lFileStartTime']/3600.)
             mm = int((header['lFileStartTime']-hh*3600)/60)
             ss = header['lFileStartTime']-hh*3600-mm*60

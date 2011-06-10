@@ -12,7 +12,7 @@ Author : sgarcia
 
 """
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 from numpy import dtype, zeros, fromstring, empty

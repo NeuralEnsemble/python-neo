@@ -210,15 +210,15 @@ objects, containing quantities.
 Author: asobolev
 """
 
-import sys, os
-sys.path.append(os.path.abspath('../..'))
-from neo.core import *
-from baseio import BaseIO
+from __future__ import absolute_import
+from ..core import *
+from .baseio import BaseIO
 import types
 import warnings
 import tables as tb
 import numpy as np
 import quantities as pq
+import logging
 
 """
 SETTINGS:
@@ -243,7 +243,7 @@ meta_classnames = {
     "spiketrain": SpikeTrain,
     "analogsignal": AnalogSignal,
     "analogsignalarray": AnalogSignalArray,
-    "irsaanalogsignal": IrregularySampledSignal,
+    "irsaanalogsignal": IrregularlySampledSignal,
     "spike": Spike,
     "recordingchannelgroup": RecordingChannelGroup,
     "recordingchannel": RecordingChannel}
@@ -392,7 +392,7 @@ class IOManager(BaseIO):
             except:
                 raise NameError("Incorrect file path, couldn't find or create a file.")
         else:
-            print "Already connected."
+            logging.info("Already connected.")
 
     def close(self):
         """
@@ -647,7 +647,7 @@ class IOManager(BaseIO):
         """
         Returns a quantitative information about the contents of the file.
         """
-        print "This is a neo.HDF5 file. it contains:"
+        logging.info("This is a neo.HDF5 file. it contains:")
         info = {}
         info = info.fromkeys(meta_objects, 0)
         for node in self._data.walkNodes():

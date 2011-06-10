@@ -12,11 +12,7 @@ BaseIO        - abstract class which should be overridden, managing how a file w
 If you want a model for developing a new IO start from exampleIO.
 """
 
-import sys, os
-sys.path.append(os.path.abspath('.'))
-sys.path.append(os.path.abspath('../..'))
-
-from neo.core import *
+from ..core import *
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -60,8 +56,8 @@ class BaseIO(object):
     is_writable = False
     
     supported_objects = []
-    readable_objects = [ ]
-    writeable_objects = [ ]
+    readable_objects  = []
+    writeable_objects = []
     
     has_header = False
     is_streameable = False
@@ -69,7 +65,7 @@ class BaseIO(object):
     write_params = {}
     
     name = 'BaseIO'
-    description = 'This IO do not read and write anything'
+    description = 'This IO does not read or write anything'
     extentions = [ ]
     
     mode = 'file' # or 'fake' or 'dir' or 'database'
@@ -80,10 +76,10 @@ class BaseIO(object):
     ######## General read/write methods #######################
     
     def read(self, **kargs):
-        pass
+        raise NotImplementedError
 
     def write(self, **kargs):
-        pass
+        raise NotImplementedError
 
     ######## All individual read methods #######################
     def read_block(self, **kargs):
@@ -104,8 +100,8 @@ class BaseIO(object):
     def read_analogsignal(self, **kargs):
         assert(AnalogSignal in self.readable_objects), read_error
 
-    def read_irregularysampledsignal(self, **kargs):
-        assert(IrregularySampledSignal in self.readable_objects), read_error
+    def read_irregularlysampledsignal(self, **kargs):
+        assert(IrregularlySampledSignal in self.readable_objects), read_error
 
     def read_analogsignalarray(self, **kargs):
         assert(AnalogSignalArray in self.readable_objects), read_error
@@ -147,8 +143,8 @@ class BaseIO(object):
     def write_analogsignal(self, **kargs):
         assert(AnalogSignal in self.writeable_objects), write_error
 
-    def write_irregularysampledsignal(self, **kargs):
-        assert(IrregularySampledSignal in self.writeable_objects), write_error
+    def write_irregularlysampledsignal(self, **kargs):
+        assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
     def write_analogsignalarray(self, **kargs):
         assert(AnalogSignalArray in self.writeable_objects), write_error

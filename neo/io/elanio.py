@@ -178,7 +178,7 @@ class ElanIO(BaseIO):
         units = [ ]
         for c in range(nbchannel+2) :
             units.append(f.readline()[:-1])
-        print units
+        #print units
         
         #range
         min_physic = []

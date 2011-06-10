@@ -12,11 +12,11 @@ Supported : Read
 
 Author : sgarcia
 
-
 """
+from __future__ import absolute_import
 
 # I need to subclass BaseIO
-from baseio import BaseIO
+from .baseio import BaseIO
 
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 from ..core import *
@@ -28,10 +28,13 @@ import quantities as pq
 # but my specific IO can depend on many other packages
 from numpy import pi, newaxis
 import datetime
-from scipy import stats
-from scipy import randn, rand
-from scipy.signal import resample
-
+try:
+    have_scipy = True
+    from scipy import stats
+    from scipy import randn, rand
+    from scipy.signal import resample
+except ImportError:
+    have_scipy = False
 
 
 
@@ -40,7 +43,7 @@ class ExampleIO(BaseIO):
     """
     Class for reading/writing data in a fake file.
     
-    **For developpers**
+    **For developers**
     
     If you start a new IO class :
         - Copy/paste and modify this class.
@@ -95,7 +98,7 @@ class ExampleIO(BaseIO):
     has_header         = False
     is_streameable     = False
     
-    # This is for GUI stuf : a definition for parameters when reading.
+    # This is for GUI stuff : a definition for parameters when reading.
     read_params        = {
                         Segment : [
                                 ('segment_duration' , { 'value' : 15., 
@@ -108,7 +111,7 @@ class ExampleIO(BaseIO):
                                     ],
                         }
     
-    # do not supported write so no GUI stuf
+    # do not supported write so no GUI stuff
     write_params       = None
     
     name               = 'example'
@@ -132,8 +135,6 @@ class ExampleIO(BaseIO):
         Note:
             - filename is here just for exampe because it will not be take in account
             - if mode=='dir' the argument should be dirname (See TdtIO)
-
-
 
         """
         BaseIO.__init__(self)
@@ -160,16 +161,14 @@ class ExampleIO(BaseIO):
     
     # Segment reading is supported so I define this :
     def read_segment(self, 
-                                        # the 2 first key arguments are imposed by neo.io API
-                                        lazy = False,
-                                        cascade = True,
-                                        
-                                        # all following arguments are decied by this IO and are free
-                                        segment_duration = 15.,
-                                        num_analogsignal = 4,
-                                        num_spiketrain_by_channel = 3,
-                                        
-                                        ):
+                     # the 2 first keyword arguments are imposed by neo.io API
+                     lazy = False,
+                     cascade = True,                   
+                     # all following arguments are decied by this IO and are free
+                     segment_duration = 15.,
+                     num_analogsignal = 4,
+                     num_spiketrain_by_channel = 3,                   
+                    ):
         """
         Return a fake Segment.
         
@@ -243,15 +242,13 @@ class ExampleIO(BaseIO):
         
     
     def read_analogsignal(self ,
-                                            # the 2 first key arguments are imposed by neo.io API
-                                            lazy = False,
-                                            cascade = True,
-        
-        
-                                                channel_index = 0,
-                                                segment_duration = 15.,
-                                                t_start = -1,
-                                                ):
+                          # the 2 first key arguments are imposed by neo.io API
+                          lazy = False,
+                          cascade = True,
+                          channel_index = 0,
+                          segment_duration = 15.,
+                          t_start = -1,
+                          ):
         """
         With this IO AnalogSignal can e acces directly with its channel number
         
@@ -261,18 +258,14 @@ class ExampleIO(BaseIO):
         tvect = np.arange(t_start, t_start+ segment_duration , 1./sr)
         
         if lazy:
-            anasig = AnalogSignal([ ] ,units = 'V' , sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
-            anasig._data_description = {
-                                                        'shape' : tvect.shape,
-                                                        }
+            anasig = AnalogSignal([ ], units = 'V', sampling_rate=sr*pq.Hz, t_start=t_start*pq.s)
+            anasig._data_description = {'shape' : tvect.shape}
         else:
-        
             #time vector for generated signal
-            
-        
+
             # create analogsignal (sinus of 3 Hz)
             sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
-            anasig = AnalogSignal(sig , units = 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
+            anasig = AnalogSignal(sig, units= 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
         
         anasig._annotations['channel_index'] = channel_index
         anasig._annotations['info'] = 'it is a sinus of %f Hz' %sinus_freq

@@ -17,7 +17,7 @@ Author: sgarcia
 
 """
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 import quantities as pq
