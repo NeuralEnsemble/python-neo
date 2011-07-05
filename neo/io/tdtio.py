@@ -109,6 +109,10 @@ class TdtIO(BaseIO):
                     pass
                     
                 elif Types[h['type']] == 'EVTYPE_MARK' :
+                    # This event marks the beginning of the recording session
+                    # in Unix time (seconds since 1970). Spike times
+                    # are stored in the same format, so we will subtract
+                    # global_t_start from them.
                     if global_t_start is None:
                         global_t_start = h['timestamp']
                 
@@ -137,7 +141,10 @@ class TdtIO(BaseIO):
                         sptr = SpikeTrain()
                         sptr.channel = h['channel']
                         sptr.name = str(h['sortcode'])
-                        sptr.t_start = global_t_start
+                        # We start the SpikeTrain at time zero
+                        # But is this right, or should we get the start
+                        # time of the AnalogSignal?
+                        sptr.t_start = 0. #global_t_start
                         sptr.sampling_rate = h['frequency']
                         sptr.left_sweep = (h['size']-10.)/2./h['frequency']
                         sptr.right_sweep = (h['size']-10.)/2./h['frequency']
@@ -164,7 +171,9 @@ class TdtIO(BaseIO):
                         anaSig.totalsize = 0
                         anaSig.pos = 0
                         allsig[h['code']][h['channel']] = anaSig
-                    allsig[h['code']][h['channel']].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
+                    #allsig[h['code']][h['channel']].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
+                    allsig[h['code']][h['channel']].totalsize += \
+                        (h['size']*4-40)/allsig[h['code']][h['channel']].dtype.itemsize
             
             # Step 2 : allocate memory
             for code, v in allsig.iteritems():
@@ -203,19 +212,47 @@ class TdtIO(BaseIO):
             while 1:
                 h= hr.read_f()
                 if h==None:break
-                
+                    
                 if Types[h['type']] == 'EVTYPE_STREAM': 
+                    # The signal to put the data into
                     a = allsig[h['code']][h['channel']]
                     dt = a.dtype
+                    
+                    # The number of samples
                     s = (h['size']*4-40)/dt.itemsize
+                    
+                    # Read the data from position given in h from file in a
                     a.fid.seek(h['eventoffset'])
+                    
+                    # We read `number of samples` * `sample width` bytes
+                    # And store it in signal `a`
                     a.signal[ a.pos:a.pos+s ]  = fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
+                    
+                    # Update our position in signal `a`
                     a.pos += s
                     
                 elif Types[h['type']] == 'EVTYPE_SNIP': 
+                    # Get the spiketrain for this neuron
                     sptr = allspiketr[h['code']][h['channel']][h['sortcode']]
-                    sptr._spike_times[sptr.pos] = h['timestamp']
-                    sptr._waveforms[sptr.pos, 0, :] = fromstring( sptr.fid.read( sptr.waveformsize*4 ), dtype = 'f4')
+                    
+                    # The spike time is the timestamp (Unix time) minus
+                    # the start of the session.
+                    sptr._spike_times[sptr.pos] = h['timestamp'] - global_t_start
+                    
+                    # Read the spike waveform from the next chunk of data
+                    # in the format specified in the header
+                    if h['dataformat'] == 0:
+                        # 32 bit
+                        sptr._waveforms[sptr.pos, 0, :] = \
+                            fromstring( sptr.fid.read( \
+                            sptr.waveformsize*4 ), 
+                            dtype = DataFormats[h['dataformat']])
+                    elif h['dataformat'] == 4:
+                        # 64 bit
+                        sptr._waveforms[sptr.pos, 0, :] = \
+                            fromstring( sptr.fid.read( \
+                            sptr.waveformsize*8 ), 
+                            dtype = DataFormats[h['dataformat']])
                     sptr.pos += 1
                 
             
@@ -244,6 +281,8 @@ class TdtIO(BaseIO):
         return blck
 
 
+# From the tank format specification, the size of each of the data
+# in each header
 TsqDescription = [
     ('size','i'),
     ('type','i'),
@@ -256,6 +295,7 @@ TsqDescription = [
     ('frequency','f'),
     ]
 
+# Types of events
 Types =    {
                 0x0 : 'EVTYPE_UNKNOWN',
                 0x101:'EVTYPE_STRON',
@@ -265,6 +305,8 @@ Types =    {
                 0x8201:'EVTYPE_SNIP',
                 0x8801: 'EVTYPE_MARK',
                 }
+
+# Keys for each data format
 DataFormats = {
                         0 : float32,
                         1 : int32,
@@ -277,9 +319,11 @@ DataFormats = {
 
 
 
-
+# Reads the header and returns a dict with the values in it,
+# one value for each of the entries in TsqDescription
 class HeaderReader():
     def __init__(self,fid ,description ):
+        # description is just TsqDescription from above
         self.fid = fid
         self.description = description
     def read_f(self, offset =None):
