@@ -6,8 +6,8 @@ import numpy
 
 class AnalogSignal(object):
      
-    definition = """An :class:`AnalogSignal` is a continuous data signal acquired
-    at time ``t_start`` at a certain sampling rate.
+    definition = """An :class:`AnalogSignal` is a continuous data signal 
+    acquired at time ``t_start`` at a certain sampling rate.
     """
     
     __doc__ = """
@@ -16,15 +16,24 @@ class AnalogSignal(object):
     **Definition**
     %s
 
-    **Usage**
-
-    **Example**
-
+    **Methods**
+    compute_time_vector() : Returns time values
+    t() : Returns time values
+    max() : Maximum of signal
+    min() : Minimum of signal
+    timeslice() : A new AnalogSignal sliced from this one.
     """ % definition
     
 
 
     def __init__(self, *arg, **karg):
+        """Initialize a new AnalogSignal.
+        
+        Parameters
+        ----------
+        signal : ndarray to put in object
+        channel, name, sampling_rate, t_start, t_stop
+        """
         self.signal = numpy.array([], )
         if karg.has_key('signal'):
             if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :

@@ -2,11 +2,11 @@
 
 class Segment(object):
     
-    definition = """A :class:`Segment` is a heterogeneous container for discrete
-    or continous data data sharing a common clock (time base) but not necessarily
-    the same sampling rate, t_start and t_stop. In short, a :class:`Segment` is a 
-    recording that may contain AnalogSignal, SpikeTrain, Event or Epoch objects that share 
-    the same logical clock.
+    definition = """A :class:`Segment` is a heterogeneous container for 
+    discrete or continous data data sharing a common clock (time base)
+    but not necessarily the same sampling rate, t_start and t_stop. 
+    In short, a :class:`Segment` is a recording that may contain AnalogSignal,
+    SpikeTrain, Event or Epoch objects that share the same logical clock.
     """
     
     __doc__ = """
@@ -15,21 +15,16 @@ class Segment(object):
     **Definition**
     %s
 
-    **Usage**
-
-
     **Example**
-
-    >> seg = Segment()
+    seg = Segment()
+    seg._analogsignals.append(AnalogSignal())
+    print seg.get_analogsignals()[0]
 
     **Methods**
-
+    Each returns the child objects of the Segment.
     get_analogsignals()
-
     get_spiketrains()
-
     get_events()
-
     get_epochs()
 
     """ % definition
@@ -45,7 +40,7 @@ class Segment(object):
         
     def get_analogsignals(self):
         """
-        Return  a list of :calss:`AnalogSignal`.
+        Return  a list of :class:`AnalogSignal`.
         """
         return self._analogsignals
         
