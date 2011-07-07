@@ -2,24 +2,25 @@
 
 
 class Epoch(object):
-    definition = """Similar to Event but with a duration. Useful for describing a period, the state of a subject, ..."""
+    definition = """Similar to Event but with a duration. Useful for 
+    describing a period, the state of a subject, ..."""
      
     __doc__ = """
-    Object to represent an epoch, or discrete time events.
+    Object to represent a period of time.
 
     **Definition**
     %s
-
-    with arguments:
     
-    ``time`` The starting time of the epoch
-    
-    ``duration`` The duration of the epoch
+    with arguments:    
+        ``time`` The starting time of the epoch    
+        ``duration`` The duration of the epoch    
+        ``label``
     
     **Usage**
-
-    **Example**
-
+    # Create an Epoch, add to Segment
+    e = Epoch(time=3.3, duration=1.0, label='Explosion')
+    seg._events.append(e)
+    print seg.get_events()[0].label    
     """ % definition
     
     time     = None
@@ -27,6 +28,11 @@ class Epoch(object):
     duration = 0
     
     def __init__(self, *arg, **karg):
+        """Initialize an Epoch and store the following parameters:
+            time
+            label
+            duration
+        """
     
         if 'time' in karg.keys():
             self.time = karg['time']
