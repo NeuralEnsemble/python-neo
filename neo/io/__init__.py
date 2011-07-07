@@ -157,6 +157,13 @@ except ImportError:
     print "Error while loading PyNNBinaryIO module"
 
 
+try :
+    from blackrockio import BlackrockIO
+    all_format += [ [ 'Blackrock Binary' , { 'class' : BlackrockIO  , 'info' :  'Blackrock Binary file' } ] ]
+except ImportError:
+    print "Error while loading BlackRock Binary module"
+
+
 # Specific platform IO : neuroshare DLLs
 
 if sys.platform =='win32':
