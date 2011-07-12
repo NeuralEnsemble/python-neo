@@ -536,7 +536,7 @@ class SpikeTrain(object):
         """
         ### bins = self.time_axis(bin_size)
         if t_start is None:
-            t_start = self._t_start
+            t_start = self.t_start
         if t_stop is None:
             t_stop = self.t_stop
         bins = numpy.arange(t_start, t_stop, bin_size)
