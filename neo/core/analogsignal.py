@@ -33,47 +33,57 @@ class AnalogSignal(object):
     
 
 
-    def __init__(self, *arg, **karg):
+    def __init__(self, signal=None, channel=None, name=None, 
+        sampling_rate=1., t_start=0., t_stop=None, dt=None, **kargs):
         """Initialize a new AnalogSignal.
         
-        Parameters
+        It's best to specify all arguments in keyword format. 
+        All other keyword arguments besides those below will be ignored, so
+        that they may be used by other objects that inherit from this class.        
+        
+        Parameters (all optional)
         ----------
-        signal : ndarray to put in object
-        channel, name, sampling_rate, t_start, t_stop
+        signal : numpy array of raw data trace, default is empty array
+        channel : channel number
+        name : name of this trace
+        sampling_rate : in Hz, default 1.0, will be converted to float
+        t_start : beginning of signal, will be converted to flaot
+        t_stop : end of signal. If not provided, it will be calculated
+            from t_start and sampling_rate. Specifically t_stop will be
+            the time of the sample after the last one in `signal`.
+        dt : If provided, then sampling rate will be 1/dt. Do not specify
+            both dt and sampling_rate.
+        
+        Usage
+        -----
+        sig = AnalogSignal(name='My signal', sampling_rate=1000.,
+            signal=numpy.array([-1, 0, ..., .1]),
+            ignored_keyword='something else')
         """
-        self.signal = numpy.array([], )
-        if karg.has_key('signal'):
-            if type(karg['signal']) == numpy.ndarray or type(karg['signal']) == numpy.memmap :
-                self.signal  = karg['signal']
+        self.signal = signal
+        self.channel = channel
+        self.name = name
+        self.sampling_rate = float(sampling_rate)
+        self.t_start = float(t_start)
+        self.t_stop = t_stop
         
+        # Default for signal is empty array
+        if self.signal is None:
+            self.signal = numpy.array([])
+        
+        # Override sampling rate if dt is specified
+        if dt is not None:            
+            self.sampling_rate = 1. / dt        
+        if self.sampling_rate == 0.:
+            raise(ValueError("sampling rate cannot be zero"))
+        
+        # Calculate self.t_stop
+        if self.t_stop is None:
+            self.t_stop = self.t_start + len(self.signal)/self.sampling_rate
 
-        for attr in [  'channel' , 'name', 'sampling_rate' , 't_start', 't_stop']:
-            if attr in karg:
-                setattr(self, attr, karg[attr])
-            else:
-                setattr(self, attr, None)
-        
-        if 'dt' in karg:
-            self.sampling_rate = float(1./karg['dt'])
-        
-        if self.t_start is None:self.t_start = 0.
-        if self.sampling_rate is None:self.sampling_rate = 1.
-            
-        
-
-        if self.t_stop is None and self.sampling_rate !=0.:
-            self.t_stop  = self.t_start + len(self.signal)/self.sampling_rate
-
+        # Initialize variable for time array, to be calculated later
         self._t = None
 
-
-
-    #~ def __len__(self):
-        #~ if self.signal is not None :
-            #~ return len(self.signal)
-        #~ else :
-            #~ return 0
-        
     def compute_time_vector(self) :
         return numpy.arange(len(self.signal), dtype = 'f8')/self.sampling_rate + self.t_start
 
