@@ -61,6 +61,7 @@ class AsciiSignalIO(BaseIO):
                                         ('usecols' , { 'value' : None , 'type' : int } ),
                                         ('skiprows' , { 'value' :0 } ),
                                         ('timecolumn' , { 'value' : None, 'type' : int } ) ,
+                                        ('unit' , { 'value' : 'V', } ),
                                         ('sampling_rate' , { 'value' : 1000., } ),
                                         ('t_start' , { 'value' : 0., } ),
                                         ('method' , { 'value' : 'homemade', 'possible' : ['genfromtxt' , 'csv' , 'homemade' ] }) ,
