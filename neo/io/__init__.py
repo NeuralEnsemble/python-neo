@@ -26,11 +26,11 @@ try:
 except ImportError:
     warnings.warn("PlexonIO not available, check dependencies", ImportWarning)
 
-#try:
-from .neuroexplorerio import NeuroExplorerIO
-iolist.append( NeuroExplorerIO )
-#except ImportError:
-#    warnings.warn("NeuroExplorerIO not available, check dependencies", ImportWarning)
+try:
+    from .neuroexplorerio import NeuroExplorerIO
+    iolist.append( NeuroExplorerIO )
+except ImportError:
+    warnings.warn("NeuroExplorerIO not available, check dependencies", ImportWarning)
 
 try:
     from .axonio import AxonIO
@@ -67,5 +67,11 @@ try:
     iolist.append( ElanIO )
 except ImportError:
     warnings.warn("ElanIO not available, check dependencies", ImportWarning)
+
+try:
+    from .asciisignalio import AsciiSignalIO
+    iolist.append( AsciiSignalIO )
+except ImportError:
+    warnings.warn("AsciiSignalIO not available, check dependencies", ImportWarning)
 
 
