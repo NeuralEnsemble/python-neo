@@ -74,4 +74,9 @@ try:
 except ImportError:
     warnings.warn("AsciiSignalIO not available, check dependencies", ImportWarning)
 
+try:
+    from .asciispiketrainio import AsciiSpikeTrainIO
+    iolist.append( AsciiSpikeTrainIO )
+except ImportError:
+    warnings.warn("AsciiSpikeTrainIO not available, check dependencies", ImportWarning)
 
