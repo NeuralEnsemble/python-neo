@@ -101,9 +101,9 @@ class ElanIO(BaseIO):
         #version
         version = f.readline()
         
-        if version[:2] != 'V2' :
+        if version[:2] != 'V2' or version[:2] != 'V3':
             # raise('read only V2 .eeg.ent files')
-            raise VersionError('Read only V2 .eeg.ent files. %s given' %
+            raise VersionError('Read only V2 or V3 .eeg.ent files. %s given' %
                                version[:2]) 
             return
         
@@ -239,6 +239,9 @@ class ElanIO(BaseIO):
                                     labels  = np.array(labels),
                                     reject_codes = np.array(reject_codes) 
                                     )
+        
+        seg._eventarrays.append(ea)
+    
         
         f.close()
         
