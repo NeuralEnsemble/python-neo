@@ -86,4 +86,10 @@ try:
 except ImportError:
     warnings.warn("RawBinarySignalIO not available, check dependencies", ImportWarning)
 
+try:
+    from .micromedio import MicromedIO
+    iolist.append( MicromedIO )
+except ImportError:
+    warnings.warn("MicromedIO not available, check dependencies", ImportWarning)
+
 
