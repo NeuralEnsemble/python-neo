@@ -138,6 +138,18 @@ class AsciiSignalIO(BaseIO):
         if not cascade:
             return seg
         
+        if type(sampling_rate) == float or type(sampling_rate)==int:
+            # if not quantitities Hz by default
+            sampling_rate = sampling_rate*pq.Hz
+        
+        if type(t_start) == float or type(t_start)==int:
+            # if not quantitities s by default
+            t_start = t_start*pq.s
+        
+        unit = pq.Quantity(1, unit)
+        
+            
+        
         #loadtxt
         if method == 'genfromtxt' :
             sig = np.genfromtxt(self.filename, 
@@ -169,7 +181,7 @@ class AsciiSignalIO(BaseIO):
             sampling_rate = 1./np.mean(np.diff(sig[:,timecolumn])) * pq.Hz
             t_start = sig[0,timecolumn] * pq.s
         
-        unit = pq.Quantity(1, unit)
+        
         
         for i in range(sig.shape[1]) :
             if timecolumn == i : continue

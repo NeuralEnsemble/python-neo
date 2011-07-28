@@ -80,3 +80,10 @@ try:
 except ImportError:
     warnings.warn("AsciiSpikeTrainIO not available, check dependencies", ImportWarning)
 
+try:
+    from .rawbinarysignalio import RawBinarySignalIO
+    iolist.append( RawBinarySignalIO )
+except ImportError:
+    warnings.warn("RawBinarySignalIO not available, check dependencies", ImportWarning)
+
+
