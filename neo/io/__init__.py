@@ -92,4 +92,13 @@ try:
 except ImportError:
     warnings.warn("MicromedIO not available, check dependencies", ImportWarning)
 
+try:
+    from .neuroshareio import NeuroshareIO
+    iolist.append( NeuroshareIO )
+except ImportError:
+    warnings.warn("NeuroshareIO not available, check dependencies", ImportWarning)
+
+
+
+
 
