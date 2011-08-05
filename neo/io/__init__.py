@@ -98,7 +98,11 @@ try:
 except ImportError:
     warnings.warn("NeuroshareIO not available, check dependencies", ImportWarning)
 
-
+try:
+    from .neomatlabio import NeoMatlabIO
+    iolist.append( NeoMatlabIO )
+except ImportError:
+    warnings.warn("NeoMatlabIO not available, check dependencies", ImportWarning)
 
 
 
