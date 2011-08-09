@@ -2,7 +2,12 @@
 """
 This generate diagram in .png and .svg from neo.description
 
+TODO:
+many_to_many_relationship in matplotlib style annotation.
+
+Author: sgarcia
 """
+
 from matplotlib import pyplot
 from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
@@ -14,8 +19,8 @@ import quantities as pq
 from datetime import datetime
 import numpy as np
 
-line_heigth = .2
-fontsize = 10
+line_heigth = .22
+fontsize = 11
 left_text_shift = .1
 
 
@@ -34,49 +39,35 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         if name in many_to_many_reslationship: htotal += len(many_to_many_reslationship[name])*line_heigth
         all_h[name] = htotal
             
-    
-    #~ # draw connections
-    #~ for name,OEclass in allclasses.iteritems():
-        #~ if name in rect_pos:
-            #~ pos = rect_pos[name]
-            #~ htotal = all_h[name]
-            
-            #~ for i,parentname in enumerate(OEclass.parents):
-                #~ if parentname in rect_pos:
-                    
-                    #~ x = rect_pos[parentname][0] + rect_width
-                    #~ y = rect_pos[parentname][1] + all_h[parentname] - line_heigth*2.
-                    #~ x2 = rect_pos[name][0]
-                    #~ y2 = rect_pos[name][1] + htotal - line_heigth*3 - line_heigth*i 
-                    #~ dx = x2- x
-                    #~ dy = y2 - y
-                    
-                    
-                    #~ arrow = FancyArrowPatch(
-                                                #~ posA = (x2,y2) , posB =(x, y) ,
-                                                
-                                                #~ facecolor = 'w',
-                                                #~ linewidth = 2,
-                                                
-                                                #~ arrowstyle = 'wedge, tail_width=0.3,shrink_factor=0.3',
-                                                #~ #arrowstyle = "Fancy, head_length=.4, head_width=.4, tail_width=.4",
-                                                #~ #arrowstyle = '-[',
-                                                
-                                                
-                                                #~ connectionstyle='arc3, rad=-.1',
-                                                
-                                                #~ mutation_scale=25,
-                                                #~ )
-                                                
-                    #~ ax.add_patch(arrow)
-                    
-                    #~ #ax.arrow(x,y,dx,dy,
-                    #~ #                zorder = -4,
-                    #~ #                shape = 'full',
-                    #~ #                length_includes_head = True,
-                    #~ #                )
 
-
+    # draw connections
+    for name in rect_pos.keys():
+        #~ pos = rect_pos[name]
+        #~ htotal = all_h[name]
+        #~ if name not in one_to_many_reslationship.keys(): continue
+        relationship = [ ]
+        if name in one_to_many_reslationship: relationship += one_to_many_reslationship[name]
+        #~ if name in many_to_many_reslationship: relationship += many_to_many_reslationship[name]
+        for c,children in enumerate(relationship):
+            if children not in rect_pos.keys(): continue
+            x = rect_pos[children][0] 
+            y = rect_pos[children][1] + all_h[children] - line_heigth*.5
+            x2 = rect_pos[name][0] + rect_width
+            y2 = rect_pos[name][1] + all_h[name] - line_heigth*1.5 - line_heigth*c
+            a = ax.annotate('', (x, y),
+                                        (x2,y2),
+                                        #xycoords="figure fraction", textcoords="figure fraction",
+                                        ha="right", va="center",
+                                        size=fontsize,
+                                        arrowprops=dict(arrowstyle='fancy',
+                                                        #~ patchB=p,
+                                                        shrinkA=.3,
+                                                        shrinkB=.3,
+                                                        fc="w", ec="k",
+                                                        connectionstyle="arc3,rad=-0.05",
+                                                        ),
+                                        bbox=dict(boxstyle="square", fc="w"))
+            a.set_zorder(-4)
 
     
     # draw boxes
@@ -95,31 +86,35 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
                                     )
         ax.add_patch(rect)
         
+        # title green
         pos2 = pos[0] , pos[1]+htotal - line_heigth*1.5
         rect = Rectangle(pos2,rect_width ,line_heigth*1.5,
                                     facecolor = 'g',
                                     edgecolor = 'k',
-                                    alpha = .3,
+                                    alpha = .5,
                                     linewidth = 2.,
                                     )
         ax.add_patch(rect)
         
+        #relationship
         pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship))
         rect = Rectangle(pos2,rect_width ,line_heigth*len(relationship),
-                                    facecolor = 'y',
+                                    facecolor = 'c',
                                     edgecolor = 'k',
-                                    alpha = .1,
+                                    alpha = .5,
                                     )
         ax.add_patch(rect)
+        
+        # necessary attr
+        pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship)+len(classes_necessary_attributes[name]))
+        rect = Rectangle(pos2,rect_width ,line_heigth*len(classes_necessary_attributes[name]),
+                                    facecolor = 'r',
+                                    edgecolor = 'k',
+                                    alpha = .5,
+                                    )
+        ax.add_patch(rect)
+        
 
-        #~ pos2 = pos[0] , pos[1]+htotal - line_heigth*(2.5+len(OEclass.parents))
-        #~ h = line_heigth*len(OEclass.parents)
-        #~ rect = Rectangle(pos2,rect_width ,h,
-                                    #~ facecolor = 'm',
-                                    #~ edgecolor = 'k',
-                                    #~ alpha = .1,
-                                    #~ )
-        #~ ax.add_patch(rect)
         
         # name
         ax.text( pos[0]+rect_width/2. , pos[1]+htotal - line_heigth*1.5/2. , name,
@@ -150,7 +145,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
             elif attrtype == np.array: t2 = "np.array %dD dt='%s'"%(attr[3], attr[2].kind)
             elif attrtype == datetime: t2 = 'datetime'
             else:t2 = str(attrtype)
-                
+            
             t  = t1+' :  '+t2
             ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+len(relationship)+2), 
                                 t,
@@ -171,9 +166,8 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
 
 
 def generate_diagram_simple():
-    filename = 'simple_diagram.svg'
     figsize = (18, 12)
-    rw = rect_width = 2.8
+    rw = rect_width = 3.
     bf = blank_fact = 1.2
     rect_pos = {
                     'block' : (.5+rw*bf*0,4),
@@ -199,7 +193,9 @@ def generate_diagram_simple():
                     
                     
                     }
-    generate_diagram(filename, rect_pos, rect_width, figsize)
+    generate_diagram('simple_generated_diagram.svg', rect_pos, rect_width, figsize)
+    generate_diagram('simple_generated_diagram.png', rect_pos, rect_width, figsize)
+    
 
 
 if __name__ == '__main__':
