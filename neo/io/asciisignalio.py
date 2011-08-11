@@ -226,7 +226,7 @@ class AsciiSignalIO(BaseIO):
         for anaSig in segment._analogsignals:
             l.append(anaSig.magnitude[:,newaxis])
         sigs = np.concatenate(l, axis=1)
-        print sigs.shape
+        #print sigs.shape
         np.savetxt(self.filename , sigs , delimiter = delimiter)
 
 

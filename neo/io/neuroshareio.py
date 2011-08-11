@@ -257,7 +257,7 @@ class NeuroshareIO(BaseIO):
                 pNeuralInfo = ns_NEURALINFO()
                 neuroshare.ns_GetNeuralInfo ( hFile,  dwEntityID,
                                  byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
-                print pNeuralInfo.dwSourceUnitID , pNeuralInfo.szProbeInfo
+                #print pNeuralInfo.dwSourceUnitID , pNeuralInfo.szProbeInfo
                 if lazy:
                     times = [ ]*pq.s
                 else:
