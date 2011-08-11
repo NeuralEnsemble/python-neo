@@ -26,3 +26,15 @@ class BaseNeo(object):
         return self.__dict__[k]
 
     # The __setattr__ method does problems with properties of the inherited objects
+
+    def annotate(self, **annotations):
+        """
+        Add annotations (non-standardized metadata) to a Neo object.
+        
+        Example:
+        
+        >>> obj.annotate(key1=value1, key2=value2)
+        >>> obj.key2
+        value2
+        """
+        self._annotations.update(annotations)

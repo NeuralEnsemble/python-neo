@@ -27,7 +27,7 @@ class Segment(BaseNeo):
         EventArray
         AnalogSignal
         AnalogSignalArray
-        IrregularySampledSignal
+        IrregularlySampledSignal
         Spike
         SpikeTrain
         
