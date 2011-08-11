@@ -4,7 +4,11 @@ Module for reading/writing data from/to PyNN NumpyBinaryFile format.
 
 PyNN is available at http://neuralensemble.org/PyNN
 
-Supported : Read/Write
+Classes:
+    PyNNNumpyIO
+    PyNNTextIO
+
+Supported: Read/Write
 
 Authors: Andrew Davison, Pierre Yger
 """
@@ -21,9 +25,10 @@ UNITS_MAP = {
     'gsyn': pq.UnitQuantity('microsiemens', 1e-9*pq.S, 'uS', 'µS'), # check
 }
 
-class PyNNBinaryIO(BaseIO):
+
+class BasePyNNIO(BaseIO):
     """
-    Reads/writes data from/to PyNN NumpyBinaryFile format
+    Base class for PyNN IO classes
     """
     is_readable = True 
     is_writable = True
@@ -32,28 +37,10 @@ class PyNNBinaryIO(BaseIO):
     supported_objects = [Segment, AnalogSignal, AnalogSignalArray, SpikeTrain]
     readable_objects = supported_objects
     writeable_objects = supported_objects
-    name = "PyNN NumpyBinaryFile"
-    extensions = ['npz']
     mode = 'file'
     
-    def read(self, **kwargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment(**kwargs)
-    
-    def _read_arrays(self):
-        contents = numpy.load(self.filename)
-        data = contents["data"]
-        metadata = {}
-        for name,value in contents['metadata']:
-            try:
-                metadata[name] = eval(value)
-            except Exception:
-                metadata[name] = value
-        return data, metadata
+    def _read_file_contents(self):
+        raise NotImplementedError
     
     def _extract_array(self, data, channel_index):
         idx = numpy.where(data[:, 1] == channel_index)[0]
@@ -79,8 +66,19 @@ class PyNNBinaryIO(BaseIO):
                                 dt=metadata["dt"])
             return spiketrain
     
+    def _write_file_contents(self, data, metadata):
+        raise NotImplementedError
+    
+    def read(self, **kwargs):
+        """
+        Read the file.
+        Return a neo.Segment
+        See read_segment for detail.
+        """
+        return self.read_segment(**kwargs)
+    
     def read_segment(self, lazy=False, cascade=True):
-        data, metadata = self._read_arrays()
+        data, metadata = self._read_file_contents()
         annotations = dict((k, metadata[k]) for k in ("label", "variable", "first_id", "last_id"))
         seg = Segment(**annotations)
         if metadata['variable'] == 'spikes':
@@ -113,11 +111,10 @@ class PyNNBinaryIO(BaseIO):
         for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
             data[i*s0.size:(i+1)*s0.size, 0] = numpy.array(signal.rescale(UNITS_MAP[segment.variable]))
             data[i*s0.size:(i+1)*s0.size, 1] = i*numpy.ones((s0.size,), dtype=float) # index
-        metadata_array = numpy.array(sorted(metadata.items()))
-        numpy.savez(self.filename, data=data, metadata=metadata_array)
+        self._write_file_contents(data, metadata)
 
     def read_analogsignal(self, lazy=False, channel_index=0): # channel_index should be positional arg, no?
-        data, metadata = self._read_arrays()
+        data, metadata = self._read_file_contents()
         if metadata['variable'] == 'spikes':
             raise TypeError("File contains spike data, not analog signals")
         else:
@@ -131,7 +128,7 @@ class PyNNBinaryIO(BaseIO):
         raise NotImplementedError
     
     def read_spiketrain(self, lazy=False, channel_index=0):
-        data, metadata = self._read_arrays()
+        data, metadata = self._read_file_contents()
         if metadata['variable'] != 'spikes':
             raise TypeError("File contains analog signals, not spike data")
         else:
@@ -140,3 +137,60 @@ class PyNNBinaryIO(BaseIO):
                 raise IndexError("File does not contain any spikes with channel index %d" % channel_index)
             else:
                 return spiketrain
+
+
+class PyNNNumpyIO(BasePyNNIO):
+    """
+    Reads/writes data from/to PyNN NumpyBinaryFile format
+    """
+    name = "PyNN NumpyBinaryFile"
+    extensions = ['npz']
+
+    def _read_file_contents(self):
+        contents = numpy.load(self.filename)
+        data = contents["data"]
+        metadata = {}
+        for name,value in contents['metadata']:
+            try:
+                metadata[name] = eval(value)
+            except Exception:
+                metadata[name] = value
+        return data, metadata
+
+    def _write_file_contents(self, data, metadata):
+        metadata_array = numpy.array(sorted(metadata.items()))
+        numpy.savez(self.filename, data=data, metadata=metadata_array)
+
+
+class PyNNTextIO(BasePyNNIO):
+    """
+    Reads/writes data from/to PyNN StandardTextFile format
+    """
+    name = "PyNN StandardTextFile"
+    extensions = ['txt', 'v', 'ras']
+
+    def _read_metadata(self):
+        metadata = {}
+        with open(self.filename) as f:
+            for line in f:
+                if line[0] == "#":
+                    name, value = line[1:].strip().split("=")
+                    name = name.strip()
+                    try:
+                        metadata[name] = eval(value)
+                    except Exception:
+                        metadata[name] = value.strip()
+                else:
+                    break
+        return metadata
+
+    def _read_file_contents(self):
+        data = numpy.loadtxt(self.filename)
+        metadata = self._read_metadata()
+        return data, metadata
+
+    def _write_file_contents(self, data, metadata):
+        with open(self.filename, 'wb') as f:
+            for item in sorted(metadata.items()):
+                f.write(("# %s = %s\n" % item).encode('utf8'))
+            numpy.savetxt(f, data)
