@@ -105,13 +105,13 @@ except ImportError:
     warnings.warn("NeoMatlabIO not available, check dependencies", ImportWarning)
 
 try:
-    from .pynnbinaryio import PyNNNumpyIO
+    from .pynnio import PyNNNumpyIO
     iolist.append( PyNNNumpyIO )
 except ImportError:
     warnings.warn("PyNNNumpyIO not available, check dependencies", ImportWarning)
 
 try:
-    from .pynnbinaryio import PyNNTextIO
+    from .pynnio import PyNNTextIO
     iolist.append( PyNNTextIO )
 except ImportError:
     warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
