@@ -1,6 +1,10 @@
 # encoding: utf-8
 """
-Module for reading data from PyNN NumpyBinaryFile format.
+Module for reading/writing data from/to PyNN NumpyBinaryFile format.
+
+PyNN is available at http://neuralensemble.org/PyNN
+
+Supported : Read/Write
 
 Authors: Andrew Davison, Pierre Yger
 """
@@ -19,7 +23,7 @@ UNITS_MAP = {
 
 class PyNNBinaryIO(BaseIO):
     """
-    
+    Reads/writes data from/to PyNN NumpyBinaryFile format
     """
     is_readable = True 
     is_writable = True
@@ -56,28 +60,61 @@ class PyNNBinaryIO(BaseIO):
         return data[idx, 0]
     
     def _extract_signal(self, data, metadata, channel_index):
-        signal = self._extract_array(data, channel_index)
-        if len(signal) > 0:
-            return  AnalogSignal(signal,
-                                 units=UNITS_MAP[metadata['variable']],
-                                 sampling_period=metadata['dt']*pq.ms)
+        arr = self._extract_array(data, channel_index)
+        if len(arr) > 0:
+            signal = AnalogSignal(arr,
+                                  units=UNITS_MAP[metadata['variable']],
+                                  sampling_period=metadata['dt']*pq.ms)
+            signal.annotate(label=metadata["label"],
+                            variable=metadata["variable"],
+                            channel_index=channel_index)
+            return signal
     
     def _extract_spikes(self, data, metadata, channel_index):
         spike_times = self._extract_array(data, channel_index)
         if len(spike_times) > 0:
-            return SpikeTrain(spike_times, units=pq.ms)
+            spiketrain = SpikeTrain(spike_times, units=pq.ms)
+            spiketrain.annotate(label=metadata["label"],
+                                channel_index=channel_index,
+                                dt=metadata["dt"])
+            return spiketrain
     
     def read_segment(self, lazy=False, cascade=True):
         data, metadata = self._read_arrays()
+        annotations = dict((k, metadata[k]) for k in ("label", "variable", "first_id", "last_id"))
+        seg = Segment(**annotations)
         if metadata['variable'] == 'spikes':
-            raise NotImplementedError
-        else:
-            seg = Segment()
             for i in range(metadata['first_index'], metadata['last_index']):
+                spiketrain = self._extract_spikes(data, metadata, i)
+                if spiketrain is not None:
+                    seg._spiketrains.append(spiketrain)
+                seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
+        else:
+            for i in range(metadata['first_index'], metadata['last_index']):
+                # probably slow. Replace with numpy-based version from 0.1
                 signal = self._extract_signal(data, metadata, i)
                 if signal is not None:
                     seg._analogsignals.append(signal)
-            return seg
+        return seg
+
+    def write_segment(self, segment):
+        source = segment._analogsignals or segment._spiketrains
+        assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
+        metadata = segment._annotations.copy()
+        metadata['size'] = len(source)
+        metadata['first_index'] = 0
+        metadata['last_index'] = metadata['size']
+        s0 = source[0]
+        if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
+            metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
+        n = sum(s.size for s in source)
+        metadata['n'] = n
+        data = numpy.empty((n, 2))
+        for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
+            data[i*s0.size:(i+1)*s0.size, 0] = numpy.array(signal.rescale(UNITS_MAP[segment.variable]))
+            data[i*s0.size:(i+1)*s0.size, 1] = i*numpy.ones((s0.size,), dtype=float) # index
+        metadata_array = numpy.array(sorted(metadata.items()))
+        numpy.savez(self.filename, data=data, metadata=metadata_array)
 
     def read_analogsignal(self, lazy=False, channel_index=0): # channel_index should be positional arg, no?
         data, metadata = self._read_arrays()
