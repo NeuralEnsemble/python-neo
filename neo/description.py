@@ -43,7 +43,7 @@ import quantities as pq
 from datetime import datetime
 import numpy as np
 
-classnames = {
+class_by_name = {
     'block': Block,
     'segment': Segment,
     'event': Event,
@@ -59,6 +59,13 @@ classnames = {
     'recordingchannelgroup': RecordingChannelGroup,
     'recordingchannel': RecordingChannel,
     }
+
+name_by_class = { }
+for k,v in class_by_name.iteritems():
+    name_by_class[v] = k
+
+classnames = class_by_name
+
 
 
 one_to_many_reslationship = {
