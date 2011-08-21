@@ -18,6 +18,11 @@ from ..core import *
 import numpy as np
 import quantities as pq
 from .. import description
+classname_lower_to_upper = { }
+for k in description.class_by_name.keys():
+    classname_lower_to_upper[k.lower()] = k
+
+
 
 from datetime import datetime
 import os
@@ -189,7 +194,7 @@ class NeoMatlabIO(BaseIO):
         d = sio.loadmat(self.filename, struct_as_record=False, squeeze_me=True)
         assert'block' in d, 'no block in'+self.filename
         bl_struct = d['block']
-        bl =  self.create_ob_from_struct(bl_struct, 'block')
+        bl =  self.create_ob_from_struct(bl_struct, 'Block')
         return bl
     
     
@@ -205,50 +210,53 @@ class NeoMatlabIO(BaseIO):
             bl: the block to b saved
         """
         
-        bl_struct = self.create_struct_from_obj(bl, 'block')
+        bl_struct = self.create_struct_from_obj(bl)
         
         for seg in bl._segments:
-            seg_struct = self.create_struct_from_obj(seg, 'segment')
+            seg_struct = self.create_struct_from_obj(seg)
             bl_struct['segments'].append(seg_struct)
             
             for anasig in seg._analogsignals:
-                anasig_struct = self.create_struct_from_obj(anasig, 'analogsignal')
+                anasig_struct = self.create_struct_from_obj(anasig)
                 seg_struct['analogsignals'].append(anasig_struct)
             
             for ea in seg._eventarrays:
-                ea_struct = self.create_struct_from_obj(ea, 'eventarray')
+                ea_struct = self.create_struct_from_obj(ea)
                 seg_struct['eventarrays'].append(ea_struct)
             
             for sptr in seg._spiketrains:
-                sptr_struct = self.create_struct_from_obj(sptr, 'spiketrain')
+                sptr_struct = self.create_struct_from_obj(sptr)
                 seg_struct['spiketrains'].append(sptr_struct)
             
         sio.savemat(self.filename, {'block':bl_struct}, oned_as = 'row')
 
 
 
-    def create_struct_from_obj(self, ob, classname):
+    def create_struct_from_obj(self, ob, ):
+        classname = ob.__class__.__name__
         struct = { }
         
         # relationship
         rel = description.one_to_many_reslationship
         if classname in rel:
             for childname in rel[classname]:
-                if description.classnames[childname] in self.supported_objects:
-                    struct[childname+'s'] = [ ]
-        
+                if description.class_by_name[childname] in self.supported_objects:
+                    struct[childname.lower()+'s'] = [ ]
         # attributes
         necess = description.classes_necessary_attributes[classname]
         recomm = description.classes_recommended_attributes[classname]
         attributes = necess + recomm
         for i, attr in enumerate(attributes):
+            
             attrname, attrtype = attr[0], attr[1]
+            
             if attrname =='': 
                 struct['array'] = ob.magnitude
                 struct['units'] = ob.dimensionality.string
                 continue
             
-            if attrname not in ob._annotations: continue
+            if not(attrname in ob._annotations or hasattr(ob, attrname)): continue
+            if ob.__getattr__(attrname) is None: continue
             
             if attrtype == pq.Quantity:
                 #ndim = attr[2]
@@ -261,7 +269,7 @@ class NeoMatlabIO(BaseIO):
         return struct
 
     def create_ob_from_struct(self, struct, classname):
-        cl = description.classnames[classname]
+        cl = description.class_by_name[classname]
         # check if hinerits Quantity
         is_quantity = False
         for attr in description.classes_necessary_attributes[classname]:
@@ -277,10 +285,10 @@ class NeoMatlabIO(BaseIO):
         for attrname in struct._fieldnames:
             # check children
             rel = description.one_to_many_reslationship
-            if classname in rel and attrname[:-1] in rel[classname]:
+            if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
                 for c in range(len(struct.__getattribute__(attrname))):
-                    child = self.create_ob_from_struct(struct.__getattribute__(attrname)[c]  , attrname[:-1])
-                    ob.__getattr__('_'+attrname).append(child)
+                    child = self.create_ob_from_struct(struct.__getattribute__(attrname)[c]  , classname_lower_to_upper[attrname[:-1]])
+                    ob.__getattr__('_'+attrname.lower()).append(child)
                 continue
             
             # attributes
@@ -298,18 +306,22 @@ class NeoMatlabIO(BaseIO):
                 necess = description.classes_necessary_attributes[classname]
                 recomm = description.classes_recommended_attributes[classname]
                 attributes = necess + recomm
-                attr_types = dict( [ (a[0], a[1]) for a in attributes])
-                if attrname in attr_types:
-                    _type = attr_types[attrname]
-                    if _type == datetime:
+                #~ attr_types = dict( [ (a[0], a[1]) for a in attributes])
+                dict_attributes = dict( [ (a[0], a[1:]) for a in attributes])
+                if attrname in dict_attributes:
+                    #~ _type = attr_types[attrname]
+                    attrtype = dict_attributes[attrname][0]
+                    if attrtype == datetime:
                         m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
                         r = re.findall(m, str(item))
                         if len(r)==1:
                             item = datetime( *[ int(e) for e in r[0] ] )
                         else:
                             item = None
+                    elif attrtype == np.ndarray:
+                        item = item.astype( dict_attributes[attrname][1] )
                     else:
-                        item = _type(item)
+                        item = attrtype(item)
             
             if attrname in [ a[0] for a in description.classes_necessary_attributes[classname]]:
                 # attr is necessary
