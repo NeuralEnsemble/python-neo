@@ -12,7 +12,7 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.description import classnames, one_to_many_reslationship, many_to_many_reslationship, \
+from neo.description import class_by_name, one_to_many_reslationship, many_to_many_reslationship, \
         classes_necessary_attributes, classes_recommended_attributes
 
 import quantities as pq
@@ -20,7 +20,7 @@ from datetime import datetime
 import numpy as np
 
 line_heigth = .22
-fontsize = 11
+fontsize = 10.5
 left_text_shift = .1
 
 
@@ -127,7 +127,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         #relationship
         for i,relat in enumerate(relationship):
             ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+2),
-                                '_'+relat+'s',
+                                '_'+relat.lower()+'s: list',
                                 horizontalalignment = 'left',
                                 verticalalignment = 'center',
                                 fontsize = fontsize,
@@ -142,9 +142,9 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
             if attrtype == pq.Quantity:
                 if attr[2] == 0: t2 = 'Quantity scalar'
                 else: t2 = 'Quantity %dD'%attr[2]
-            elif attrtype == np.array: t2 = "np.array %dD dt='%s'"%(attr[3], attr[2].kind)
+            elif attrtype == np.ndarray: t2 = "np.ndarray %dD dt='%s'"%(attr[3], attr[2].kind)
             elif attrtype == datetime: t2 = 'datetime'
-            else:t2 = str(attrtype)
+            else:t2 = attrtype.__name__
             
             t  = t1+' :  '+t2
             ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+len(relationship)+2), 
@@ -170,26 +170,26 @@ def generate_diagram_simple():
     rw = rect_width = 3.
     bf = blank_fact = 1.2
     rect_pos = {
-                    'block' : (.5+rw*bf*0,4),
+                    'Block' : (.5+rw*bf*0,4),
                     
-                    'segment' : ( .5+rw*bf*1, 3),
+                    'Segment' : ( .5+rw*bf*1, 3),
 
-                    'event': ( .5+rw*bf*4, 6),
-                    'eventarray': ( .5+rw*bf*4, 4),
-                    'epoch': ( .5+rw*bf*4, 2),
-                    'epocharray': ( .5+rw*bf*4, .5),
+                    'Event': ( .5+rw*bf*4, 6),
+                    'EventArray': ( .5+rw*bf*4, 4),
+                    'Epoch': ( .5+rw*bf*4, 2),
+                    'EpochArray': ( .5+rw*bf*4, .2),
 
-                    'recordingchannelgroup': ( .5+rw*bf*1, .5 ),
-                    'recordingchannel': ( .5+rw*bf*2, 4 ),
+                    'RecordingChannelGroup': ( .5+rw*bf*1, .5 ),
+                    'RecordingChannel': ( .5+rw*bf*2, 4 ),
 
-                    'unit': ( .5+rw*bf*2, 7),
+                    'Unit': ( .5+rw*bf*2, 7),
                     
-                    'spiketrain': ( .5+rw*bf*3, 9.3),
-                    'spike': ( .5+rw*bf*3, 7.5),
+                    'SpikeTrain': ( .5+rw*bf*3, 9.5),
+                    'Spike': ( .5+rw*bf*3, 7.5),
                     
-                    'irsaanalogsignal': ( .5+rw*bf*3, 4.9),
-                    'analogsignal': ( .5+rw*bf*3, 2.7),
-                    'analogsignalarray': ( .5+rw*bf*3, .5),
+                    'IrregularlySampledSignal': ( .5+rw*bf*3, 4.9),
+                    'AnalogSignal': ( .5+rw*bf*3, 2.7),
+                    'AnalogSignalArray': ( .5+rw*bf*3, .5),
                     
                     
                     }

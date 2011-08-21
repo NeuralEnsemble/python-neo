@@ -14,7 +14,7 @@ This dict descibe attributes that are necessary.
 It a dict of list of tuples.
 Each attributes is describe by a tuple:
  * for standard type, the tuple is: (name + python type )
- * for np.array type, the tuple is : (name + np.array+ dtype+ndim)
+ * for np.ndarray type, the tuple is : (name + np.ndarray+ dtype+ndim)
  * for pq.Quantities, the tuple is : (name+pq.Quantity+ndim)
 ndim is the dimentionaly of the array 1=vector, 2=matrix, 3 = cube, ...
 Special case ndim = 0, this mean that neo expect  a scalar so Quantity.shape=(1,)
@@ -37,146 +37,131 @@ TO BE DISCUSSED Proposal:
  * SpikeTrain.waveforms_features for compatibility with KlustaquikIO in classes_recommended_attributes
 """
 
-from .core import *
+from .core import objectlist
  
 import quantities as pq
 from datetime import datetime
 import numpy as np
 
-class_by_name = {
-    'block': Block,
-    'segment': Segment,
-    'event': Event,
-    'eventarray': EventArray,
-    'epoch': Epoch,
-    'epocharray': EpochArray,
-    'unit': Unit,
-    'spiketrain': SpikeTrain,
-    'analogsignal': AnalogSignal,
-    'analogsignalarray': AnalogSignalArray,
-    'irsaanalogsignal': IrregularlySampledSignal,
-    'spike': Spike,
-    'recordingchannelgroup': RecordingChannelGroup,
-    'recordingchannel': RecordingChannel,
-    }
 
+class_by_name = { }
 name_by_class = { }
-for k,v in class_by_name.iteritems():
-    name_by_class[v] = k
 
-classnames = class_by_name
+for ob in objectlist:
+    class_by_name[ob.__name__] = ob
+    name_by_class[ob] = ob.__name__
 
 
 
 one_to_many_reslationship = {
-    'block' : [ 'segment', 'recordingchannelgroup', ],
-    'segment' : [ 'analogsignal', 'analogsignalarray', 'irsaanalogsignal', 
-                         'event', 'eventarray', 'epoch', 'epocharray',
-                        'spiketrain', 'spike', ],
-    'recordingchannel' : [ ],
-    'recordingchannelgroup' : [ 'recordingchannel',  'analogsignalarray'],
-    'unit' : ['spiketrain', 'spike', ]
+    'Block' : [ 'Segment','RecordingChannelGroup', ],
+    'Segment' : [ 'AnalogSignal', 'AnalogSignalArray', 'IrregularlySampledSignal', 
+                         'Event', 'EventArray', 'Epoch', 'EpochArray',
+                        'SpikeTrain', 'Spike', ],
+    'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
+   'RecordingChannelGroup' : [ 'RecordingChannel',  'AnalogSignalArray'],
+    'Unit' : ['SpikeTrain', 'Spike', ]
     }
 
 many_to_many_reslationship = {
-    'recordingchannel' : ['unit', ],
-    'unit' : ['recordingchannel', ],
+    'RecordingChannel' : ['Unit', ],
+    'Unit' : ['RecordingChannel', ],
     }
 
 
 
 classes_necessary_attributes = {
-    'block': [
+    'Block': [
                     ],
                     
-    'segment': [
+    'Segment': [
                     ],
     
-    'event': [( 'time', pq.Quantity, 0 ),
+    'Event': [( 'time', pq.Quantity, 0 ),
                     ( 'label', str ),
                     ],
     
-    'eventarray': [( 'times', pq.Quantity, 1 ),
-                            ( 'labels',  np.array, np.dtype('S'), 1) 
+    'EventArray': [( 'times', pq.Quantity, 1 ),
+                            ( 'labels',  np.ndarray, np.dtype('S'), 1) 
                             ],
     
-    'epoch': [ ( 'time', pq.Quantity, 0 ),
+    'Epoch': [ ( 'time', pq.Quantity, 0 ),
                     ( 'duration', pq.Quantity, 0 ),
                     ( 'label', str ),
                     ],
     
-    'epocharray': [( 'times', pq.Quantity, 1 ),
+    'EpochArray': [( 'times', pq.Quantity, 1 ),
                             ( 'durations', pq.Quantity, 1 ),
-                            ( 'labels',  np.array, np.dtype('S'), 1) 
+                            ( 'labels',  np.ndarray, np.dtype('S'), 1) 
                             ],
     
-    'unit': [ ],
+    'Unit': [ ],
     
-    'spiketrain': [('', pq.Quantity, 1 ),
+    'SpikeTrain': [('', pq.Quantity, 1 ),
                             ('t_start', pq.Quantity, 0 ),
                             ('t_stop', pq.Quantity, 0 ),
                             ],
-    'spike': [('time', pq.Quantity, 0),
+    'Spike': [('time', pq.Quantity, 0),
                     ],
     
-    'analogsignal': [('', pq.Quantity, 1 ),
+    'AnalogSignal': [('', pq.Quantity, 1 ),
                                 ('sampling_rate', pq.Quantity, 0 ),
                                 ('t_start', pq.Quantity, 0 ),
                                 ],
-    'analogsignalarray': [('', pq.Quantity, 2 ),
+    'AnalogSignalArray': [('', pq.Quantity, 2 ),
                                         ('sampling_rate', pq.Quantity, 0 ),
                                         ('t_start', pq.Quantity, 0 ),
                                         ],
     
-    'irsaanalogsignal': [('samples',pq.Quantity,1),
+    'IrregularlySampledSignal': [('samples',pq.Quantity,1),
                                         ('times',pq.Quantity,1),
                                     ],
     
-    'recordingchannelgroup': [ ],
-    'recordingchannel': [('index', int),
+   'RecordingChannelGroup': [ ],
+    'RecordingChannel': [('index', int),
                                         ],
     }
 
 classes_recommended_attributes= { 
-    'block': [( 'file_datetime', datetime ),
+    'Block': [( 'file_datetime', datetime ),
                     ( 'rec_datetime', datetime ),
                     ( 'index', int ), ],
     
-    'segment': [( 'file_datetime', datetime ),
+    'Segment': [( 'file_datetime', datetime ),
                     ( 'rec_datetime', datetime ),
                     ( 'index', int ), ],
     
-    'event': [ ],
-    'eventarray': [ ],
-    'epoch': [ ],
-    'epocharray': [ ],
-    'unit': [ ],
-    'spiketrain': [('waveforms', pq.Quantity, 3),
+    'Event': [ ],
+    'EventArray': [ ],
+    'Epoch': [ ],
+    'EpochArray': [ ],
+    'Unit': [ ],
+    'SpikeTrain': [('waveforms', pq.Quantity, 3),
                             ('left_sweep', pq.Quantity, 0 ),
                             ('sampling_rate', pq.Quantity, 0 ),
                             ],
-    'spike': [('waveform', pq.Quantity, 2),
+    'Spike': [('waveform', pq.Quantity, 2),
                     ('left_sweep', pq.Quantity, 0 ),
                     ('sampling_rate', pq.Quantity, 0 ), ],
-    'analogsignal': [('channel_name', str),
+    'AnalogSignal': [('channel_name', str),
                                 ('channel_index', int),
                                 ],
     
-    'analogsignalarray': [('channel_names', np.array, np.dtype('S'), 1),
-                                        ('channel_indexes', np.array, np.dtype('i'),1),
+    'AnalogSignalArray': [('channel_names', np.ndarray, np.dtype('S'), 1),
+                                        ('channel_indexes', np.ndarray, np.dtype('i'),1),
                                         ],
     
-    'irsaanalogsignal': [('channel_name', str),
+    'IrregularlySampledSignal': [('channel_name', str),
                                         ('channel_index', int),
                                         ],
-    'recordingchannelgroup': [ ],
-    'recordingchannel': [('coordinate',pq.Quantity,1),],
+   'RecordingChannelGroup': [ ],
+    'RecordingChannel': [('coordinate',pq.Quantity,1),],
     
     }
 
 # main classes can have name, description, file_origin
 for k in classes_recommended_attributes.keys():
-    classes_recommended_attributes[k] += [ ('name', str ), ('description', str ) ]
-for k in ['block', 'segment', 'spiketrain', 'analogsignal','analogsignalarray' ]:
-    classes_recommended_attributes[k] += [  ('file_origin', str ), ]
+    classes_recommended_attributes[k] += [ ('name', str ), ('description', str ), ('file_origin', str ),]
+
+
 
