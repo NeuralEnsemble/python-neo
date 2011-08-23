@@ -13,8 +13,16 @@ except ImportError:
 from neo.io import AsciiSpikeTrainIO
 import numpy
 
+from neo.test.io.common_io_test import *
+
+files_to_test = [ 'File_ascii_spiketrain_1.txt',
+                        ]
+
 class TestAsciiSpikeTrainIO(unittest.TestCase):
-    pass
+    def test_on_files(self):
+        localdir = download_test_files_if_not_present(AsciiSpikeTrainIO,files_to_test )
+
+
 
 
 

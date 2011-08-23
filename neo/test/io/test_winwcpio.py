@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-Tests of io.NeuroExplorerIO
+Tests of io.winwcp
 """
 
 from __future__ import division
@@ -10,19 +10,19 @@ try:
 except ImportError:
     import unittest
 
-from neo.io import NeuroExplorerIO
+from neo.io import WinWcpIO
 import numpy
+
 
 from neo.test.io.common_io_test import *
 
-files_to_test = [ 'File_neuroexplorer_1.nex',
-                        'File_neuroexplorer_2.nex',
+files_to_test = [   'File_winwcp_1.wcp',
                         ]
 
 
-class TestNeuroExplorerIO(unittest.TestCase):
+class TestRawBinarySignalIO(unittest.TestCase):
     def test_on_files(self):
-        localdir = download_test_files_if_not_present(NeuroExplorerIO,files_to_test )
+        localdir = download_test_files_if_not_present(WinWcpIO,files_to_test )
 
 
 

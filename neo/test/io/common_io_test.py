@@ -7,7 +7,11 @@ Common tests for IOs:
 
 
 """
+url_for_tests =  "https://portal.g-node.org/neo/"
+
+
 import os
+import urllib
 
 import neo
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema
@@ -16,7 +20,7 @@ from neo.test.io.generate_datasets import generate_from_supported_objects
 
 
 
-def test_write_them_read(ioclass):
+def test_write_then_read(ioclass):
     """
     Test for IO that are able to write and read:
       1 - Generate a full schema with supported objects.
@@ -49,40 +53,38 @@ def test_write_them_read(ioclass):
     
     assert_same_sub_schema(ob, ob2)
 
+def test_read_then_write(ioclass):
+    """
+    Test for IO that are able to read and write:
+     1 - Read a file
+     2 Write object set in another file
+     3 Compare the 2 files hash
+     
+    """
+    pass
+    
 
 
-#~ def test_the_same_schema(ob1, ob2):
-    #~ """
-    #~ Test if ob1 and ob2 has the same sub schema.
-    #~ Explore all one_to_many_relationship
-    #~ """
-    #~ if type(ob1) != type(ob2):
-        #~ return False
-    #~ _type = type(ob1)
-    #~ classname =description.name_by_class[_type]
+def download_test_files_if_not_present(ioclass, filenames ):
+    shortname = ioclass.__name__.lower().strip('io')
+    localdir = os.path.dirname(__file__)+'/files_for_tests'
+    if not os.path.exists(localdir):
+        os.mkdir(localdir)
+    localdir = localdir +'/'+ shortname
+    if not os.path.exists(localdir):
+        os.mkdir(localdir)
     
-    #~ if classname not in description.one_to_many_reslationship:
-        #~ return
-    #~ for child in description.one_to_many_reslationship[classname]:
-        #~ if not hasattr(ob1, '_'+child+'s'):
-            #~ assert not hasattr(ob2, '_'+child+'s'), '%s 2 do have %s but not %s 1'%(classname, child, classname)
-            #~ continue
-        #~ else:
-            #~ assert hasattr(ob2, '_'+child+'s'), '%s 1 have %s but not %s 2'%(classname, child, classname)
-        
-        #~ sub1 = getattr(ob1, '_'+child+'s')
-        #~ sub2 = getattr(ob2, '_'+child+'s')
-        #~ assert len(sub1) == len(sub2), 'theses two %s have not the same %s number'%(classname, child)
-        #~ for i in range(len(getattr(ob1, '_'+child+'s'))):
-            #~ test_the_same_schema(sub1[i], sub2[i])
-            
+    url = url_for_tests+shortname
+    for filename in filenames:
+        localfile =  localdir+'/'+filename
+        distantfile = url+'/'+filename
+        if not os.path.exists(localfile):
+            print 'Downloading ', distantfile, 'here ', localfile
+            urllib.urlretrieve(distantfile, localfile)
     
-    #~ # many_to_many_reslationship is not tested because of infinite recursive loops
+    return localdir
     
-    
-    
-    
-    
+
 
 
 

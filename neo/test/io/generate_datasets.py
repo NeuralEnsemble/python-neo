@@ -65,7 +65,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
-            sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration)
+            sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration, name = 'spiketrain %d'%s)
             seg._spiketrains.append(sptr)
     
     if EventArray in supported_objects:
