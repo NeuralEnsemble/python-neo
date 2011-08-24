@@ -111,6 +111,12 @@ except ImportError:
     warnings.warn("PyNNNumpyIO not available, check dependencies", ImportWarning)
 
 try:
+    from .KlustaKwikIO import KlustaKwikIO
+    iolist.append( KlustaKwikIO )
+except ImportError:
+    warnings.warn("KlustaKwikIO not available, check dependencies", ImportWarning)
+
+try:
     from .pynnio import PyNNTextIO
     iolist.append( PyNNTextIO )
 except ImportError:

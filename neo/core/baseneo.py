@@ -16,6 +16,11 @@ class BaseNeo(object):
     """
 
     def __init__(self, *args, **kwargs):
+        """This is the base constructor for all neo objects.
+        
+        For definitions of keyword arguments, see the class documentation
+        for the specific object, ie `neo.AnalogSignal`.
+        """
         self.__dict__['_annotations'] = kwargs
         #self.__dict__['_annotations'] = { }
 

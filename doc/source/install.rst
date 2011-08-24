@@ -19,15 +19,20 @@ For testing you also need:
     * Python scipy
     * Pyhton matplotlib
 
-For IO, there are several depencies that are not imposed but that fail th IO to be  loaded.
+For IO, there are several additional dependencies. If these are not satisfied, neo will still install but the IO module that use them will fail on loading.
 
 
 
 Install neo
 =======================
 
+First install the dependencies:
+    sudo apt-get install python-numpy python-scipy python-matplotlib python-pip
+    mkdir quantities-src
+    cd quantities-src
+    sudo pip install quantities
 
-2 Possibilities:
+Next install neo. You have two choices: the stable release, and the real-time release which is updated more frequently with bugfixes and feature additions.
     
     From pypi (last stable release)::
         

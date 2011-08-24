@@ -1,3 +1,11 @@
+"""This module defines objects relating to analog signals.
+
+For documentation on these objects, which are imported into the base
+neo namespace, see:
+    neo.AnalogSignal
+    neo.AnalogSignalArray
+"""
+
 from __future__ import division
 import numpy as np
 import quantities as pq

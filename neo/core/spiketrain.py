@@ -43,7 +43,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             ``units``      - if ``times`` is not a quantity array, the units of time
                             must be specified.
         
-        Recommanded Attributes/properties:
+        Recommended Attributes/properties:
         ``waveforms``  - a 3D quantities array (spike_index, channel_index, time)
         sampling_rate = sampling rate of waveforms
         left_sweep = sometimes the sweep window of each is asymetricly centered (left_sweep need to be define and right_sweep is a propertiy)
@@ -51,11 +51,16 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         """
         # check units
         if isinstance(times, pq.Quantity) and units:
+            # It was a quantity array but units were not already specified
             times = times.rescale(units)
         if not units and hasattr(times, "units"):
+            # It was a quantity array already containing units info
             units = times.units
+
+        # Convert start and stop times to Quantity
         t_start = pq.Quantity(t_start, units)
         t_stop = pq.Quantity(t_stop, units)
+
         # sort the times and waveforms
         if sort:
             sorted = True
