@@ -111,7 +111,7 @@ except ImportError:
     warnings.warn("PyNNNumpyIO not available, check dependencies", ImportWarning)
 
 try:
-    from .KlustaKwikIO import KlustaKwikIO
+    from .klustakwikio import KlustaKwikIO
     iolist.append( KlustaKwikIO )
 except ImportError:
     warnings.warn("KlustaKwikIO not available, check dependencies", ImportWarning)

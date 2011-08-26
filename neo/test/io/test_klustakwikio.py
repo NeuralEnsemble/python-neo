@@ -1,5 +1,5 @@
 import unittest
-import neo.io.KlustaKwikIO
+import neo.io.klustakwikio
 import os.path
 import numpy as np
 import quantities as pq
