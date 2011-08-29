@@ -9,7 +9,7 @@ Generate datasets for testing
 from ...core import *
 import numpy as np
 import quantities as pq
-from scipy import rand
+from numpy.random import rand
 from datetime import datetime
 
 mV = pq.mV

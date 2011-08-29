@@ -56,6 +56,7 @@ import glob
 import matplotlib.mlab as mlab
 import os.path
 import shutil
+import logging
 
 
 class KlustaKwikIO(BaseIO):
@@ -219,8 +220,8 @@ class KlustaKwikIO(BaseIO):
         # convert to numpy array and error check
         cluster_ids = np.array(cluster_ids, dtype=np.int32)
         if len(np.unique(cluster_ids)) != nbClusters:
-            print "warning: I got %d clusters instead of %d in %s" % (
-                len(np.unique(cluster_ids)), nbClusters, clufilename)
+            logging.warning("warning: I got %d clusters instead of %d in %s" % (
+                len(np.unique(cluster_ids)), nbClusters, clufilename))
         
         return cluster_ids
     
@@ -252,7 +253,7 @@ class KlustaKwikIO(BaseIO):
         """
         # set basename
         if self.basename is None:
-            print "warning: no basename provided, using `basename`"
+            logging.warning("warning: no basename provided, using `basename`")
             self.basename = 'basename'
         
         # First create file handles for each group which will be stored

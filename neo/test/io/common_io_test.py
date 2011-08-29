@@ -13,6 +13,7 @@ url_for_tests =  "https://portal.g-node.org/neo/"
 
 import os
 import urllib
+import logging
 
 import neo
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema
@@ -82,7 +83,7 @@ def download_test_files_if_not_present(ioclass, filenames ):
         localfile =  localdir+'/'+filename
         distantfile = url+'/'+filename
         if not os.path.exists(localfile):
-            print 'Downloading ', distantfile, 'here ', localfile
+            logging.info('Downloading %s here %s' % (distantfile, localfile))
             urllib.urlretrieve(distantfile, localfile)
     
     return localdir
