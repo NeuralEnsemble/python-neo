@@ -334,6 +334,8 @@ class IOManager(BaseIO):
     connection with the HDF5 file, and uses PyTables for data operations. Use
     this class to get (load), insert or delete NEO objects to HDF5 file.
     """
+    supported_objects = list(meta_classnames.values())
+    
     def __init__(self, connect=True, path=settings['path'], \
             filename=settings['filename']):
         self._init_base_io()

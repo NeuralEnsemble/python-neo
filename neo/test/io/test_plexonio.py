@@ -13,7 +13,7 @@ except ImportError:
 from neo.io import PlexonIO
 import numpy
 
-from neo.test.io.common_io_test import download_test_files_if_not_present
+from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
 
 
 files_to_test = [   'File_plexon_1.plx',
@@ -22,9 +22,11 @@ files_to_test = [   'File_plexon_1.plx',
                         ]
                         
 
-class TestPlexonIO(unittest.TestCase):
+class TestPlexonIO(unittest.TestCase, BaseTestIO):
+    ioclass = PlexonIO
+    
     def test_on_files(self):
-        localdir = download_test_files_if_not_present(PlexonIO,files_to_test )
+        localdir = download_test_files_if_not_present(PlexonIO, files_to_test)
         
 
 

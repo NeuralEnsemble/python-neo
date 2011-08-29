@@ -14,7 +14,7 @@ from neo.io import AxonIO
 import numpy
 
 
-from neo.test.io.common_io_test import *
+from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
 
 
 
@@ -25,8 +25,9 @@ files_to_test = [ 'File_axon_1.abf',
                         ]
 
 
-class TestAxonIO(unittest.TestCase):
-
+class TestAxonIO(unittest.TestCase, BaseTestIO):
+    ioclass = AxonIO
+    
     def test_on_files(self):
         localdir = download_test_files_if_not_present(AxonIO,files_to_test )
 

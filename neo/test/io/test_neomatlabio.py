@@ -13,18 +13,10 @@ except ImportError:
 from neo.io import NeoMatlabIO
 import numpy
 
-from neo.test.io.common_io_test import test_write_then_read, test_read_then_write
+from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
 
-class TestNeoMatlabIO(unittest.TestCase):
-    def test__write_then_read(self):
-            test_write_then_read(NeoMatlabIO)
-    
-    def test__write_them_read(self):
-            test_read_then_write(NeoMatlabIO)
-        
-    
-
-
+class TestNeoMatlabIO(unittest.TestCase, BaseTestIO):
+    ioclass = NeoMatlabIO
 
 
 

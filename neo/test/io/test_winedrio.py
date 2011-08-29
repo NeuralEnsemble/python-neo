@@ -14,7 +14,7 @@ from neo.io import WinEdrIO
 import numpy
 
 
-from neo.test.io.common_io_test import *
+from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
 
 files_to_test = [   'File_WinEDR_1.EDR',
                             'File_WinEDR_2.EDR',
@@ -22,10 +22,11 @@ files_to_test = [   'File_WinEDR_1.EDR',
                         ]
 
 
-class TestRawBinarySignalIO(unittest.TestCase):
+class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
+    ioclass = WinEdrIO
 
     def test_on_files(self):
-        localdir = download_test_files_if_not_present(WinEdrIO,files_to_test )
+        localdir = download_test_files_if_not_present(WinEdrIO, files_to_test)
 
 
 

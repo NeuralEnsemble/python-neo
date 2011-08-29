@@ -5,6 +5,9 @@ import numpy as np
 import quantities as pq
 import glob
 
+from neo.test.io.common_io_test import BaseTestIO
+
+
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
     
@@ -190,6 +193,10 @@ class testWrite(unittest.TestCase):
         data = file(os.path.join(dirname, 'base1.clu.2')).readlines()
         data = [int(d) for d in data]
         self.assertTrue(data == [1, 0, 0])
+
+
+class CommonTests(unittest.TestCase, BaseTestIO):
+    ioclass = neo.io.KlustaKwikIO
 
 
 def delete_test_session():

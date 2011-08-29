@@ -16,6 +16,8 @@ try:
 except ImportError:
     have_hdf5 = False
 
+from neo.test.io.common_io_test import BaseTestIO
+
 #===============================================================================
 
 def checks():
@@ -84,10 +86,11 @@ def checks():
     return block
 
 
-class hdf5ioTest(unittest.TestCase):
+class hdf5ioTest(unittest.TestCase, BaseTestIO):
     """
     Tests for the hdf5 library.
     """
+    ioclass = IOManager
     
     @unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):
