@@ -41,12 +41,23 @@ class BaseTestIO(object):
         if not(higher == neo.Block or higher == neo.Segment):
             return
         
-        filename = 'test_io_'+self.ioclass.name
-        if len(self.ioclass.extensions)>=1:
-            filename += '.'+self.ioclass.extensions[0]
-        writer = self.ioclass(filename = filename)
-        reader = self.ioclass(filename = filename)
-    
+        # when io need external knowldge for writting or read such as sampling_rate
+        # the test is too much complex too design genericaly
+        if len(self.ioclass.read_params[higher]) != 0 : return
+        
+        if self.ioclass.mode == 'file':
+            filename = 'test_io_'+self.ioclass.__name__
+            if len(self.ioclass.extensions)>=1:
+                filename += '.'+self.ioclass.extensions[0]
+            writer = self.ioclass(filename = filename)
+            reader = self.ioclass(filename = filename)
+        elif self.ioclass.mode == 'dir':
+            dirname = 'test_io_'+self.ioclass.__name__
+            writer = self.ioclass(dirname = dirname)
+            reader = self.ioclass(dirname = dirname)
+        else:
+            return
+        
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
         if higher == neo.Block:
             writer.write_block(ob)
@@ -67,31 +78,35 @@ class BaseTestIO(object):
         """
         pass
     
+    def test_download_test_files_if_not_present(self ):
+        """
+        Download file at G-node for testing
+        url_for_tests is global at beginning of this file.
+        
+        """
+        if not hasattr(self,'files_to_download'):
+            self.files_to_download = self.files_to_test
+        
+        shortname = self.ioclass.__name__.lower().strip('io')
+        localdir = os.path.dirname(__file__)+'/files_for_tests'
+        if not os.path.exists(localdir):
+            os.mkdir(localdir)
+        localdir = localdir +'/'+ shortname
+        if not os.path.exists(localdir):
+            os.mkdir(localdir)
+        
+        url = url_for_tests+shortname
+        for filename in self.files_to_download:
+            localfile =  localdir+'/'+filename
+            distantfile = url+'/'+filename
+            if not os.path.exists(localfile):
+                logging.info('Downloading %s here %s' % (distantfile, localfile))
+                urllib.urlretrieve(distantfile, localfile)
+        
+        self.local_test_dir = localdir
 
 
-def download_test_files_if_not_present(ioclass, filenames ):
-    shortname = ioclass.__name__.lower().strip('io')
-    localdir = os.path.dirname(__file__)+'/files_for_tests'
-    if not os.path.exists(localdir):
-        os.mkdir(localdir)
-    localdir = localdir +'/'+ shortname
-    if not os.path.exists(localdir):
-        os.mkdir(localdir)
-    
-    url = url_for_tests+shortname
-    for filename in filenames:
-        localfile =  localdir+'/'+filename
-        distantfile = url+'/'+filename
-        if not os.path.exists(localfile):
-            logging.info('Downloading %s here %s' % (distantfile, localfile))
-            urllib.urlretrieve(distantfile, localfile)
-    
-    return localdir
-download_test_files_if_not_present.__test__ = False
-    
 
 
 
-
-    
     

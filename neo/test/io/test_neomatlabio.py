@@ -13,10 +13,11 @@ except ImportError:
 from neo.io import NeoMatlabIO
 import numpy
 
-from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
+from neo.test.io.common_io_test import BaseTestIO
 
 class TestNeoMatlabIO(unittest.TestCase, BaseTestIO):
     ioclass = NeoMatlabIO
+    files_to_test = [ ]
 
 
 

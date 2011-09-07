@@ -56,11 +56,11 @@ class ElanIO(BaseIO):
     """
     
     is_readable        = True
-    is_writable        = True
+    is_writable        = False
 
     supported_objects  = [Segment, AnalogSignal, EventArray]
     readable_objects   = [Segment]
-    writeable_objects  = [Segment]
+    writeable_objects  = [ ]
 
     has_header         = False
     is_streameable     = False
@@ -100,8 +100,8 @@ class ElanIO(BaseIO):
         f = open(self.filename+'.ent' , 'rU')
         #version
         version = f.readline()
-        
-        if version[:2] != 'V2' or version[:2] != 'V3':
+        print '#%s#'%version[:2]
+        if version[:2] != 'V2' and version[:2] != 'V3':
             # raise('read only V2 .eeg.ent files')
             raise VersionError('Read only V2 or V3 .eeg.ent files. %s given' %
                                version[:2]) 
@@ -248,137 +248,137 @@ class ElanIO(BaseIO):
         return seg
         
         
-    def write(self , *args , **kargs):
-        """
-        Write segment in 3 files.
-        See write_segment for detail.
-        """
-        self.write_segment(*args , **kargs)
+    #~ def write(self , *args , **kargs):
+        #~ """
+        #~ Write segment in 3 files.
+        #~ See write_segment for detail.
+        #~ """
+        #~ self.write_segment(*args , **kargs)
 
-    def write_segment(self, segment, ):
-        """
+    #~ def write_segment(self, segment, ):
+        #~ """
         
-         Arguments:
-            segment : the segment to write. Only analog signals and events will be written.
-        """
-        assert self.filename.endswith('.eeg')
-        fid_ent = open(self.filename+'.ent' ,'wt')
-        fid_eeg = open(self.filename ,'wt')
-        fid_pos = open(self.filename+'.pos' ,'wt')
+         #~ Arguments:
+            #~ segment : the segment to write. Only analog signals and events will be written.
+        #~ """
+        #~ assert self.filename.endswith('.eeg')
+        #~ fid_ent = open(self.filename+'.ent' ,'wt')
+        #~ fid_eeg = open(self.filename ,'wt')
+        #~ fid_pos = open(self.filename+'.pos' ,'wt')
         
-        seg = segment
-        sampling_rate = seg.get_analogsignals()[0].sampling_rate
-        N = len(seg.get_analogsignals())
+        #~ seg = segment
+        #~ sampling_rate = seg._analogsignals[0].sampling_rate
+        #~ N = len(seg._analogsignals)
         
-        #
-        # header file
-        #
-        fid_ent.write('V2\n')
-        fid_ent.write('OpenElectrophyImport\n')
-        fid_ent.write('ELAN\n')
-        t =  datetime.datetime.now()
-        fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
-        fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
-        fid_ent.write('-1\n')
-        fid_ent.write('reserved\n')
-        fid_ent.write('-1\n')
-        fid_ent.write('%g\n' %  (1./sampling_rate))
+        #~ #
+        #~ # header file
+        #~ #
+        #~ fid_ent.write('V2\n')
+        #~ fid_ent.write('OpenElectrophyImport\n')
+        #~ fid_ent.write('ELAN\n')
+        #~ t =  datetime.datetime.now()
+        #~ fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
+        #~ fid_ent.write(t.strftime('%d-%m-%Y %H:%M:%S')+'\n')
+        #~ fid_ent.write('-1\n')
+        #~ fid_ent.write('reserved\n')
+        #~ fid_ent.write('-1\n')
+        #~ fid_ent.write('%g\n' %  (1./sampling_rate))
         
-        fid_ent.write( '%d\n' % (N+2) )
+        #~ fid_ent.write( '%d\n' % (N+2) )
         
-        # channel label
-        for i, anaSig in enumerate(seg.get_analogsignals()) :
-            try :
-                fid_ent.write('%s.%d\n' % (anaSig.label, i+1 ))
-            except :
-                fid_ent.write('%s.%d\n' % ('nolabel', i+1 ))
-        fid_ent.write('Num1\n')
-        fid_ent.write('Num2\n')
+        #~ # channel label
+        #~ for i, anaSig in enumerate(seg._analogsignals) :
+            #~ try :
+                #~ fid_ent.write('%s.%d\n' % (anaSig.label, i+1 ))
+            #~ except :
+                #~ fid_ent.write('%s.%d\n' % ('nolabel', i+1 ))
+        #~ fid_ent.write('Num1\n')
+        #~ fid_ent.write('Num2\n')
         
-        #channel type
-        for i, anaSig in enumerate(seg.get_analogsignals()) :
-            fid_ent.write('Electrode\n')
-        fid_ent.write( 'dateur echantillon\n')
-        fid_ent.write( 'type evenement et byte info\n')
+        #~ #channel type
+        #~ for i, anaSig in enumerate(seg._analogsignals) :
+            #~ fid_ent.write('Electrode\n')
+        #~ fid_ent.write( 'dateur echantillon\n')
+        #~ fid_ent.write( 'type evenement et byte info\n')
         
-        #units
-        for i, anaSig in enumerate(seg.get_analogsignals()) :
-            unit_txt = str(anaSig.units).split(' ')[1]
-            fid_ent.write('%s\n' % unit_txt)
-        fid_ent.write('sans\n')
-        fid_ent.write('sans\n')
+        #~ #units
+        #~ for i, anaSig in enumerate(seg._analogsignals) :
+            #~ unit_txt = str(anaSig.units).split(' ')[1]
+            #~ fid_ent.write('%s\n' % unit_txt)
+        #~ fid_ent.write('sans\n')
+        #~ fid_ent.write('sans\n')
     
-        #range and data
-        list_range = []
-        data = np.zeros( (seg._analogsignals()[0].size , N+2)  , 'i2')
-        for i, anaSig in enumerate(seg.get_analogsignals()) :
-            # in elan file unit is supposed to be in microV to have a big range
-            # so auto translate
-            if anaSig.units == pq.V or anaSig.units == pq.mV:
-                s = anaSig.rescale('uV').magnitude
-            elif anaSig.units == pq.uV:
-                s = anaSig.magnitude
-            else:
-                # automatic range in arbitrry unit
-                s = anaSig.magnitude
-                s*= 10**(int(np.log10(abs(s).max()))+1)
+        #~ #range and data
+        #~ list_range = []
+        #~ data = np.zeros( (seg._analogsignals[0].size , N+2)  , 'i2')
+        #~ for i, anaSig in enumerate(seg._analogsignals) :
+            #~ # in elan file unit is supposed to be in microV to have a big range
+            #~ # so auto translate
+            #~ if anaSig.units == pq.V or anaSig.units == pq.mV:
+                #~ s = anaSig.rescale('uV').magnitude
+            #~ elif anaSig.units == pq.uV:
+                #~ s = anaSig.magnitude
+            #~ else:
+                #~ # automatic range in arbitrry unit
+                #~ s = anaSig.magnitude
+                #~ s*= 10**(int(np.log10(abs(s).max()))+1)
             
-            list_range.append( int(abs(s).max()) +1 )
+            #~ list_range.append( int(abs(s).max()) +1 )
             
-            s2 = s*65535/(2*list_range[i])
-            data[:,i] = s2.astype('i2')
+            #~ s2 = s*65535/(2*list_range[i])
+            #~ data[:,i] = s2.astype('i2')
             
-        for r in list_range :
-            fid_ent.write('-%.0f\n'% r)
-        fid_ent.write('-1\n')
-        fid_ent.write('-1\n')
-        for r in list_range :
-            fid_ent.write('%.0f\n'% r)
-        fid_ent.write('+1\n')
-        fid_ent.write('+1\n')
+        #~ for r in list_range :
+            #~ fid_ent.write('-%.0f\n'% r)
+        #~ fid_ent.write('-1\n')
+        #~ fid_ent.write('-1\n')
+        #~ for r in list_range :
+            #~ fid_ent.write('%.0f\n'% r)
+        #~ fid_ent.write('+1\n')
+        #~ fid_ent.write('+1\n')
         
-        for i in range(N+2) :
-            fid_ent.write('-32768\n')
-        for i in range(N+2) :
-            fid_ent.write('+32767\n')
+        #~ for i in range(N+2) :
+            #~ fid_ent.write('-32768\n')
+        #~ for i in range(N+2) :
+            #~ fid_ent.write('+32767\n')
         
-        #info filter
-        for i in range(N+2) :
-            fid_ent.write('passe-haut ? Hz passe-bas ? Hz\n')
-        fid_ent.write('sans\n')
-        fid_ent.write('sans\n')
+        #~ #info filter
+        #~ for i in range(N+2) :
+            #~ fid_ent.write('passe-haut ? Hz passe-bas ? Hz\n')
+        #~ fid_ent.write('sans\n')
+        #~ fid_ent.write('sans\n')
         
-        for i in range(N+2) :
-            fid_ent.write('1\n')
+        #~ for i in range(N+2) :
+            #~ fid_ent.write('1\n')
             
-        for i in range(N+2) :
-            fid_ent.write('reserved\n')
+        #~ for i in range(N+2) :
+            #~ fid_ent.write('reserved\n')
     
-        # raw file .eeg
-        if len(seg._eventarray) == 1:
-            ea = seg._eventarray[0]
-            trigs = (ea.times*sampling_rate).magnitude
-            trigs = trigs.astype('i')
-            trigs2 = trigs[ (trigs>0) & (trigs<data.shape[0]) ]
-            data[trigs2,-1] = 1
-        fid_eeg.write(data.byteswap().tostring())
+        #~ # raw file .eeg
+        #~ if len(seg._eventarrays) == 1:
+            #~ ea = seg._eventarrays[0]
+            #~ trigs = (ea.times*sampling_rate).magnitude
+            #~ trigs = trigs.astype('i')
+            #~ trigs2 = trigs[ (trigs>0) & (trigs<data.shape[0]) ]
+            #~ data[trigs2,-1] = 1
+        #~ fid_eeg.write(data.byteswap().tostring())
         
         
-        # pos file  eeg.pos
-        if len(seg._eventarray) == 1:
-            ea = seg._eventarray[0]
-            if 'reject_codes' in ea._annotations and len(ea.reject_codes) == len(ea.times):
-                rcs = ea.reject_codes
-            else:
-                rcs = np.array(  [ '' ]*ea.times.size)
-            if len(ea.labels) == len(ea.times):
-                labels = ea.labels
-            else:
-                labels = np.array(  [ '' ]*ea.times.size)
+        #~ # pos file  eeg.pos
+        #~ if len(seg._eventarrays) == 1:
+            #~ ea = seg._eventarray[0]
+            #~ if 'reject_codes' in ea._annotations and len(ea.reject_codes) == len(ea.times):
+                #~ rcs = ea.reject_codes
+            #~ else:
+                #~ rcs = np.array(  [ '' ]*ea.times.size)
+            #~ if len(ea.labels) == len(ea.times):
+                #~ labels = ea.labels
+            #~ else:
+                #~ labels = np.array(  [ '' ]*ea.times.size)
             
-            for t, label, rc in zip(ea.times, labels, rcs):
-                fid_pos.write('%d    %s    %s\n' % (trigs[i] , ev.label,0))
+            #~ for t, label, rc in zip(ea.times, labels, rcs):
+                #~ fid_pos.write('%d    %s    %s\n' % (trigs[i] , ev.label,0))
         
-        fid_ent.close()
-        fid_eeg.close()
-        fid_pos.close()
+        #~ fid_ent.close()
+        #~ fid_eeg.close()
+        #~ fid_pos.close()

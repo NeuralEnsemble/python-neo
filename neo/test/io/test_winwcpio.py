@@ -14,18 +14,15 @@ from neo.io import WinWcpIO
 import numpy
 
 
-from neo.test.io.common_io_test import BaseTestIO, download_test_files_if_not_present
+from neo.test.io.common_io_test import BaseTestIO
 
-files_to_test = [   'File_winwcp_1.wcp',
-                        ]
 
 
 class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
     ioclass =  WinWcpIO
+    files_to_test = [   'File_winwcp_1.wcp',
+                            ]
     
-    def test_on_files(self):
-        localdir = download_test_files_if_not_present(WinWcpIO, files_to_test)
-
 
 
 

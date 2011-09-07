@@ -10,18 +10,20 @@ try:
 except ImportError:
     import unittest
 
-from neo.io import RawBinarySignalIO
+from neo.io import Spike2IO
 import numpy
-
 
 from neo.test.io.common_io_test import BaseTestIO
 
 
-
-class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
-    ioclass = RawBinarySignalIO
-    files_to_test = [ 'File_rawbinary_10kHz_2channels_16bit.raw',
+class TestSpike2IO(unittest.TestCase, BaseTestIO):
+    ioclass = Spike2IO
+    files_to_test = [ 'File_spike2_1.smr',
+                            'File_spike2_2.smr',
+                            'File_spike2_3.smr',
                             ]
+
+
 
 
 

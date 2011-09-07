@@ -159,8 +159,8 @@ class NeoMatlabIO(BaseIO):
     
     has_header         = False
     is_streameable     = False
-    read_params        = { Segment : [ ] }
-    write_params       = None
+    read_params        = { Block : [ ] }
+    write_params       = { Block : [ ] }
     
     name               = 'neomatlab'
     extensions          = [ 'mat' ]
