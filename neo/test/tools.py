@@ -51,7 +51,8 @@ def assert_neo_object_is_compliant(ob):
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
         if attrname != '' and hasattr(ob, attrname):
-            assert type(getattr(ob, attrname)) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(getattr(ob, attrname)), attrtype )
+            if getattr(ob, attrname) is not None:
+                assert type(getattr(ob, attrname)) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(getattr(ob, attrname)), attrtype )
     
     # recursive on one to many rel
     if classname in description.one_to_many_reslationship:

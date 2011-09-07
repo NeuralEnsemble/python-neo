@@ -50,6 +50,7 @@ class ExampleIO(BaseIO):
         - Think what objects your IO will support
         - Think what objects your IO will read or write.
         - Implement all read_XXX and write_XXX methods
+        - Write a a least a simple test to check neo compliance see neo.test.io.test_exampleio
 
     If you have a problem just mail me or ask the list.
 

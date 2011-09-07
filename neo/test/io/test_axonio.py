@@ -24,7 +24,6 @@ class TestAxonIO(unittest.TestCase, BaseTestIO):
                             'File_axon_3.abf',
                             'File_axon_4.abf',
                             ]
-
     ioclass = AxonIO
 
 

@@ -110,8 +110,8 @@ class BaseTestIO(object):
         self.test_download_test_files_if_not_present()
         
         for filename in self.files_to_test:
+            
             filename = os.path.join(self.local_test_dir, filename)
-            print filename
             if self.ioclass.mode == 'file':
                 r = self.ioclass(filename = filename)
             elif self.ioclass.mode == 'dir':

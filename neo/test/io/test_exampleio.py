@@ -10,8 +10,7 @@ try:
 except ImportError:
     import unittest
 
-from neo.core import objectlist
-from neo.io.exampleio import ExampleIO
+from neo.io import ExampleIO
 
 import numpy
 try:
@@ -21,7 +20,19 @@ except ImportError:
     have_scipy = False
 
 
-class TestExampleIO(unittest.TestCase):
+from neo.test.io.common_io_test import BaseTestIO
+class TestExampleIO(unittest.TestCase, BaseTestIO):
+    ioclass = ExampleIO
+    files_to_test = [ 'fake1',
+                            'fake2',
+                            ]
+    files_to_download = [ ]
+
+
+
+
+
+class TestExample2IO(unittest.TestCase):
     
     @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_lazy(self):
