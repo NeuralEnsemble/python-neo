@@ -10,14 +10,14 @@ def assert_arrays_equal(a, b):
     assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
     assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a,b)
-    assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
+    #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
     assert (a.flatten()==b.flatten()).all(), "%s != %s" % (a, b)
 
 def assert_arrays_almost_equal(a, b, threshold):
     assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
     assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a,b)
-    assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a,b,a.dtype, b.dtype)
+    #assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a,b,a.dtype, b.dtype)
     if a.dtype.kind in ['f', 'c', 'i']:
         assert (abs(a - b) < threshold).all(), "max(|a - b|) = %s" % (abs(a - b)).max()
 
@@ -70,12 +70,16 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     
     # check if all attributes are equal
     if equal_almost:
-        assert_eg = assert_arrays_equal
+        def assert_arrays_equal_and_dtype(a,b):
+            assert_arrays_equal(a,b)
+            assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
+        assert_eg = assert_arrays_equal_and_dtype
     else:
-        def assert_arrays_almost_equal_bis(a,b):
+        def assert_arrays_almost_and_dtype(a,b):
             assert_arrays_almost_equal(a,b,threshold)
-        assert_eg = assert_arrays_almost_equal_bis
-        
+            assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
+        assert_eg = assert_arrays_almost_and_dtype
+    
     #~ classname = description.name_by_class[_type]
     necess = description.classes_necessary_attributes[classname]
     recomm = description.classes_recommended_attributes[classname]
