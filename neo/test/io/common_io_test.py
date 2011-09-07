@@ -16,8 +16,8 @@ import urllib
 import logging
 
 import neo
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema
-#~ from neo import description
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema, assert_neo_object_is_compliant
+
 from neo.test.io.generate_datasets import generate_from_supported_objects
 
 
@@ -77,6 +77,7 @@ class BaseTestIO(object):
          
         """
         pass
+        #TODO
     
     def test_download_test_files_if_not_present(self ):
         """
@@ -104,6 +105,23 @@ class BaseTestIO(object):
                 urllib.urlretrieve(distantfile, localfile)
         
         self.local_test_dir = localdir
+        
+    def test_assert_readed_neo_object_is_compliant(self):
+        self.test_download_test_files_if_not_present()
+        
+        for filename in self.files_to_test:
+            filename = os.path.join(self.local_test_dir, filename)
+            print filename
+            if self.ioclass.mode == 'file':
+                r = self.ioclass(filename = filename)
+            elif self.ioclass.mode == 'dir':
+                # TODO in TDT
+                r = self.ioclass(dirname = filename)
+            else:
+                continue
+            
+            ob = r.read()
+            assert_neo_object_is_compliant(ob)
 
 
 

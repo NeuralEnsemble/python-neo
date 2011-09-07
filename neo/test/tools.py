@@ -37,6 +37,34 @@ def assert_file_contents_equal(a, b):
     assert file_digest(a) == file_digest(b), generate_error_message(a, b)
 
 
+def assert_neo_object_is_compliant(ob):
+    assert type(ob) in description.objectlist, '%s is not a neo object' % (type(ob))
+    classname =ob.__class__.__name__
+    necess = description.classes_necessary_attributes[classname]
+    recomm = description.classes_recommended_attributes[classname]
+    attributes = necess
+    for i, attr in enumerate(attributes):
+        attrname, attrtype = attr[0], attr[1]
+        if attrname != '':
+            assert hasattr(ob, attrname), '%s neo obect have not %s' %( classname, attrname)
+    attributes = necess + recomm
+    for i, attr in enumerate(attributes):
+        attrname, attrtype = attr[0], attr[1]
+        if attrname != '' and hasattr(ob, attrname):
+            assert type(getattr(ob, attrname)) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(getattr(ob, attrname)), attrtype )
+    
+    # recursive on one to many rel
+    if classname in description.one_to_many_reslationship:
+        for childname in description.one_to_many_reslationship[classname]:
+            if not hasattr(ob, '_'+childname.lower()+'s'): continue
+            sub = getattr(ob, '_'+childname.lower()+'s')
+            for child in sub:
+                assert_neo_object_is_compliant(child)
+
+    
+    
+
+
 def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     """
     Test if ob1 and ob2 has the same sub schema.
