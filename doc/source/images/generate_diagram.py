@@ -142,7 +142,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
             if attrtype == pq.Quantity:
                 if attr[2] == 0: t2 = 'Quantity scalar'
                 else: t2 = 'Quantity %dD'%attr[2]
-            elif attrtype == np.ndarray: t2 = "np.ndarray %dD dt='%s'"%(attr[3], attr[2].kind)
+            elif attrtype == np.ndarray: t2 = "np.ndarray %dD dt='%s'"%(attr[2], attr[3].kind)
             elif attrtype == datetime: t2 = 'datetime'
             else:t2 = attrtype.__name__
             

@@ -14,7 +14,7 @@ This dict descibe attributes that are necessary.
 It a dict of list of tuples.
 Each attributes is describe by a tuple:
  * for standard type, the tuple is: (name + python type )
- * for np.ndarray type, the tuple is : (name + np.ndarray+ dtype+ndim)
+ * for np.ndarray type, the tuple is : (name + np.ndarray+ndim+dtype)
  * for pq.Quantities, the tuple is : (name+pq.Quantity+ndim)
 ndim is the dimentionaly of the array 1=vector, 2=matrix, 3 = cube, ...
 Special case ndim = 0, this mean that neo expect  a scalar so Quantity.shape=(1,)
@@ -82,7 +82,7 @@ classes_necessary_attributes = {
                     ],
     
     'EventArray': [( 'times', pq.Quantity, 1 ),
-                            ( 'labels',  np.ndarray, np.dtype('S'), 1) 
+                            ( 'labels',  np.ndarray,1 ,  np.dtype('S')) 
                             ],
     
     'Epoch': [ ( 'time', pq.Quantity, 0 ),
@@ -92,7 +92,7 @@ classes_necessary_attributes = {
     
     'EpochArray': [( 'times', pq.Quantity, 1 ),
                             ( 'durations', pq.Quantity, 1 ),
-                            ( 'labels',  np.ndarray, np.dtype('S'), 1) 
+                            ( 'labels',  np.ndarray,1,  np.dtype('S')) 
                             ],
     
     'Unit': [ ],
@@ -147,8 +147,8 @@ classes_recommended_attributes= {
                                 ('channel_index', int),
                                 ],
     
-    'AnalogSignalArray': [('channel_names', np.ndarray, np.dtype('S'), 1),
-                                        ('channel_indexes', np.ndarray, np.dtype('i'),1),
+    'AnalogSignalArray': [('channel_names', np.ndarray,1,  np.dtype('S')),
+                                        ('channel_indexes', np.ndarray,1,  np.dtype('i')),
                                         ],
     
     'IrregularlySampledSignal': [('channel_name', str),

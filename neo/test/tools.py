@@ -1,5 +1,6 @@
 from __future__ import with_statement
-import numpy
+import numpy as np
+
 import hashlib
 import os
 import quantities as pq
@@ -7,15 +8,15 @@ import quantities as pq
 from neo import description
 
 def assert_arrays_equal(a, b):
-    assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
-    assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
+    assert isinstance(a, np.ndarray), "a is a %s" % type(a)
+    assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a,b)
     #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
     assert (a.flatten()==b.flatten()).all(), "%s != %s" % (a, b)
 
 def assert_arrays_almost_equal(a, b, threshold):
-    assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
-    assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
+    assert isinstance(a, np.ndarray), "a is a %s" % type(a)
+    assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a,b)
     #assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a,b,a.dtype, b.dtype)
     if a.dtype.kind in ['f', 'c', 'i']:
@@ -47,13 +48,32 @@ def assert_neo_object_is_compliant(ob):
         attrname, attrtype = attr[0], attr[1]
         if attrname != '':
             assert hasattr(ob, attrname), '%s neo obect have not %s' %( classname, attrname)
+    
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
         if attrname != '' and hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
-                assert type(getattr(ob, attrname)) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(getattr(ob, attrname)), attrtype )
-    
+                at = getattr(ob, attrname)
+                assert type(at) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(at), attrtype )
+                if attrtype == pq.Quantity or attrtype == np.ndarray:
+                    ndim = attr[2]
+                    assert at.ndim == ndim,  '%s.%s  dimension is %d should be %d' % (classname, attrname, at.ndim, ndim)
+                if attrtype == np.ndarray:
+                    dt = attr[3]
+                    assert at.dtype.kind == dt.kind, '%s.%s dtype.kind is %s should be %s' % (classname, attrname, at.dtype.kind, dt.kind)
+                    
+        elif attrname == '' and attrtype == pq.Quantity or attrtype == np.ndarray:
+            ndim = attr[2]
+            assert ob.ndim == ndim, '%s is %d dimension should be %d' %(classname, ob.ndim, ndim)
+            if attrtype == np.ndarray:
+                dt = attr[3]
+                assert ob.dtype.kind == dt.kind, '%s dtype.kind is %s should be %s' % (classname, ob.dtype.kind, dt.kind)
+            
+
+                
+
+
     # recursive on one to many rel
     if classname in description.one_to_many_reslationship:
         for childname in description.one_to_many_reslationship[classname]:
@@ -135,7 +155,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
         elif attrtype == pq.Quantity:
             assert_eg(ob1.__getattr__(attrname).magnitude, ob2.__getattr__(attrname).magnitude)
             assert ob1.__getattr__(attrname).dimensionality.string == ob2.__getattr__(attrname).dimensionality.string, 'Attribute %s of %s are not the same' % (attrname, classname)
-        elif attrtype == numpy.ndarray:
+        elif attrtype == np.ndarray:
             assert_eg(ob1.__getattr__(attrname), ob2.__getattr__(attrname))
         else:
             assert ob1.__getattr__(attrname) == ob2.__getattr__(attrname), 'Attribute %s.%s are not the same %s %s' % (classname,attrname, type(ob1.__getattr__(attrname)),  type(ob2.__getattr__(attrname)))

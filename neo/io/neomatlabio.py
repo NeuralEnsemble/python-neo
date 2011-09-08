@@ -319,7 +319,7 @@ class NeoMatlabIO(BaseIO):
                         else:
                             item = None
                     elif attrtype == np.ndarray:
-                        item = item.astype( dict_attributes[attrname][1] )
+                        item = item.astype( dict_attributes[attrname][2] )
                     else:
                         item = attrtype(item)
             
