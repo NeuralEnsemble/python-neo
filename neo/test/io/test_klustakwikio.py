@@ -197,6 +197,20 @@ class testWrite(unittest.TestCase):
 
 class CommonTests(unittest.TestCase, BaseTestIO):
     ioclass = neo.io.KlustaKwikIO
+    files_to_test = [ 'test1/basename',
+                            'test1/basename',
+                            ]
+    files_to_download = [ 
+                                        'test1/basename.clu.0',
+                                        'test1/basename.fet.-1',
+                                        'test1/basename.fet.0',
+                                        'test1/basename.fet.1',
+                                        'test1/basename.fet.1a',
+                                        'test1/basename.fet.a1',
+                                        'test1/basename2.clu.1',
+                                        'test1/basename2.fet.1',
+                                        'test1/basename2.fet.1a',
+                                    ]
 
 
 def delete_test_session():

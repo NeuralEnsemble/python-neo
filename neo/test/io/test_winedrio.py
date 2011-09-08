@@ -24,6 +24,7 @@ class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
                                 'File_WinEDR_2.EDR',
                                 'File_WinEDR_3.EDR',
                             ]
+    files_to_download = files_to_test
 
 
 

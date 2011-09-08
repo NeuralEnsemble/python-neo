@@ -100,7 +100,6 @@ class ElanIO(BaseIO):
         f = open(self.filename+'.ent' , 'rU')
         #version
         version = f.readline()
-        print '#%s#'%version[:2]
         if version[:2] != 'V2' and version[:2] != 'V3':
             # raise('read only V2 .eeg.ent files')
             raise VersionError('Read only V2 or V3 .eeg.ent files. %s given' %

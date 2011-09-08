@@ -104,8 +104,6 @@ class WinEdrIO(BaseIO):
                   offset = header['NBH'])
 
         for c in range(header['NC']):
-            anaSig = AnalogSignal()
-            
             
             YCF = float(header['YCF%d'%c].replace(',','.'))
             YAG = float(header['YAG%d'%c].replace(',','.'))

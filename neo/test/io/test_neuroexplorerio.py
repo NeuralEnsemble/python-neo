@@ -22,6 +22,7 @@ class TestNeuroExplorerIO(unittest.TestCase, BaseTestIO):
     files_to_test = [ 'File_neuroexplorer_1.nex',
                             'File_neuroexplorer_2.nex',
                             ]
+    files_to_download = files_to_test
 
 
 

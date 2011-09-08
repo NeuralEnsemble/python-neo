@@ -22,6 +22,7 @@ class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
     ioclass =  WinWcpIO
     files_to_test = [   'File_winwcp_1.wcp',
                             ]
+    files_to_download = files_to_test
     
 
 

@@ -22,6 +22,7 @@ class TestSpike2IO(unittest.TestCase, BaseTestIO):
                             'File_spike2_2.smr',
                             'File_spike2_3.smr',
                             ]
+    files_to_download = files_to_test
 
 
 

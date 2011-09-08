@@ -89,7 +89,7 @@ class KlustaKwikIO(BaseIO):
     extensions          = ['fet', 'clu', 'res', 'spk']
     
     # Operates on directories
-    mode = 'dir'     
+    mode = 'file'     
     
     def __init__(self, filename, basename=None, sampling_rate=30000.):
         """Create a new IO to operate on a directory        

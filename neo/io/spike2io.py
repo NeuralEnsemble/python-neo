@@ -386,9 +386,18 @@ class Spike2IO(BaseIO):
                 else :
                     sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
                 
+                if channelHeader.unit in unit_convert:
+                    unit = pq.Quantity(1, unit_convert[channelHeader.unit] )
+                else:
+                    #print channelHeader.unit
+                    try:
+                        unit = pq.Quantity(1, channelHeader.unit )
+                    except:
+                        unit = pq.Quantity(1, '')
+                
                 sptr = SpikeTrain(alltimes,
-                                            waveforms = waveforms,
-                                            sampling_rate = 1./sample_interval,
+                                            waveforms = waveforms*unit,
+                                            sampling_rate = (1./sample_interval)*pq.Hz,
                                             )
                 sptr._annotations['channel_index'] = channel_num
                 

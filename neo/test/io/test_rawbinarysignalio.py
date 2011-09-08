@@ -22,6 +22,7 @@ class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
     ioclass = RawBinarySignalIO
     files_to_test = [ 'File_rawbinary_10kHz_2channels_16bit.raw',
                             ]
+    files_to_download = files_to_test
 
 
 

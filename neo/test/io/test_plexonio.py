@@ -25,6 +25,7 @@ class TestPlexonIO(unittest.TestCase, BaseTestIO):
                                 'File_plexon_2.plx',
                                 'File_plexon_3.plx',
                             ]    
+    files_to_download = files_to_test
 
 
 

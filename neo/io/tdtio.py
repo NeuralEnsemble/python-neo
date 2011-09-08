@@ -94,9 +94,9 @@ class TdtIO(BaseIO):
         tankname = os.path.basename(self.dirname)
         bl.file_origin = tankname
         if not cascade : return bl
-        
         for blockname in os.listdir(self.dirname):
             subdir = os.path.join(self.dirname,blockname)
+            
             if not os.path.isdir(subdir): continue
             
             seg = Segment(name = blockname)
@@ -287,6 +287,7 @@ class TdtIO(BaseIO):
                         dt = a.dtype
                         s = (h['size']*4-40)/dt.itemsize
                         a.fid.seek(h['eventoffset'])
+                        #~ print s
                         a[ a.pos:a.pos+s ]  = np.fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                         a.pos += s
                     

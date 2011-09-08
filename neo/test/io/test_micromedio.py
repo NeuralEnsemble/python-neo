@@ -21,6 +21,7 @@ class TestMicromedIO(unittest.TestCase, BaseTestIO):
     ioclass = MicromedIO
     files_to_test = [ 'File_micromed_1.TRC',
                             ]
+    files_to_download = files_to_test
     
 
 

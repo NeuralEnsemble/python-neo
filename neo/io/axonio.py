@@ -287,8 +287,8 @@ class AxonIO(BaseIO):
                     else:
                         signal = list_data[j][:,i] * pq.Quantity(1, unit)
                     
-                    anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = name)
-                    anaSig._annotations['channel_index'] = num
+                    anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
+                    anaSig._annotations['channel_index'] = int(num)
                     seg._analogsignals.append( anaSig )
                 bl._segments.append(seg)
             

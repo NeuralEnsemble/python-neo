@@ -187,7 +187,7 @@ class NeuroExplorerIO(BaseIO):
 
                                                 name = entityHeader['name'],
                                                 waveforms = waveforms,
-                                                sampling_rate = entityHeader['WFrequency'],
+                                                sampling_rate = entityHeader['WFrequency']*pq.Hz,
                                                 left_sweep = 0*pq.ms,
                                                 )
                 sptr._annotations['channel_index'] = entityHeader['WireNumber']
@@ -226,7 +226,7 @@ class NeuroExplorerIO(BaseIO):
                     signal += entityHeader['MVOffset']
                     signal = signal*pq.mV
                 
-                anaSig = AnalogSignal(signal = signal , t_start =t_start , sampling_rate  = entityHeader['WFrequency'], name = entityHeader['name'])
+                anaSig = AnalogSignal(signal = signal , t_start =t_start*pq.s , sampling_rate  = entityHeader['WFrequency']*pq.Hz, name = entityHeader['name'])
                 anaSig._annotations['channel_index'] = entityHeader['WireNumber']
                 seg._analogsignals.append( anaSig )
                 
@@ -244,12 +244,12 @@ class NeuroExplorerIO(BaseIO):
                     times = times.astype('f')/globalHeader['freq'] * pq.s
                     fid.seek(entityHeader['offset'] + entityHeader['n']*4)
                     markertype = fid.read(64).replace('\x00','')
-                    labels = np.memmap(self.filename, np.dtype('S' + entityHeader['MarkerLength']) ,'r',
+                    labels = np.memmap(self.filename, np.dtype('S' + str(entityHeader['MarkerLength'])) ,'r',
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'] + entityHeader['n']*4 + 64
                                                     )
                 ea = EventArray( times = times,
-                                            labels = labels,
+                                            labels = labels.view(np.ndarray),
                                             name = entityHeader['name'],
                                             channel_index = entityHeader['WireNumber'],
                                             marker_type = markertype

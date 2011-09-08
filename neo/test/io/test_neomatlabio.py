@@ -18,6 +18,7 @@ from neo.test.io.common_io_test import BaseTestIO
 class TestNeoMatlabIO(unittest.TestCase, BaseTestIO):
     ioclass = NeoMatlabIO
     files_to_test = [ ]
+    files_to_download = files_to_test
 
 
 
