@@ -25,7 +25,9 @@ class Unit(BaseNeo):
         u._spiketrains.append(st2)
         
         # channel info
-        u._recordingchannels.append(0)
+        rc = RecordginChannel(index = 0)
+        u._recordingchannels.append(rc)
+
     
     Necessary Attributes/properties:
     

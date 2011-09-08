@@ -25,8 +25,9 @@ class RecordingChannel(BaseNeo):
         Unit
         
     """
-    def __init__(self, **kargs):
+    def __init__(self, index = 0, **kargs):
         BaseNeo.__init__(self, **kargs)
+        self.index = index
         self._analogsignals = [ ]
         self._irregularysampledsignals = [ ]
 
