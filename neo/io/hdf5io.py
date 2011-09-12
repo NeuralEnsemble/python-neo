@@ -327,14 +327,23 @@ def _func_wrapper(func):
 #---------------------------------------------------------------
 # Basic I/O manager, implementing basic I/O functionality
 #---------------------------------------------------------------
-
+all_objects = list(meta_classnames.values())
+all_objects.remove(Block)# the order is important
+all_objects = [Block]+all_objects
 class IOManager(BaseIO):
     """
     The IO Manager is the core I/O class for HDF5 / NEO. It handles the 
     connection with the HDF5 file, and uses PyTables for data operations. Use
     this class to get (load), insert or delete NEO objects to HDF5 file.
     """
-    supported_objects = list(meta_classnames.values())
+    supported_objects = all_objects
+    readable_objects    = all_objects
+    writeable_objects   = all_objects
+    read_params = dict( zip( all_objects, [ ]*len(all_objects)) )
+    write_params = dict( zip( all_objects, [ ]*len(all_objects)) )
+    name = 'Hdf5'
+    extensions = [ 'h5', ]
+    mode = 'file'
     
     def __init__(self, connect=True, path=settings['path'], \
             filename=settings['filename']):

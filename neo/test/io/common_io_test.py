@@ -43,6 +43,18 @@ class BaseTestIO(object):
     files_to_download = [ ] # when files are at G-Node
     files_to_generate = [ ] # when files are not at G-Node and self generated
 
+    def create_local_dir_if_not_exists(self):
+        shortname = self.ioclass.__name__.lower().strip('io')
+        localdir = os.path.dirname(__file__)+'/files_for_tests'
+        if not os.path.exists(localdir):
+            os.mkdir(localdir)
+        localdir = localdir +'/'+ shortname
+        if not os.path.exists(localdir):
+            os.mkdir(localdir)
+        self.local_test_dir = localdir
+        return localdir
+
+
     def test_write_then_read(self):
         """
         Test for IO that are able to write and read:
@@ -54,24 +66,30 @@ class BaseTestIO(object):
         
         Work only for IO for Block and Segment for the higher object (main cases).
         """
+        localdir = self.create_local_dir_if_not_exists()
+        shortname = self.ioclass.__name__.lower().strip('io')
+        
+        
+        
         higher = self.ioclass.supported_objects[0]
         if not(higher in self.ioclass.readable_objects and higher in self.ioclass.writeable_objects):
             return
         if not(higher == neo.Block or higher == neo.Segment):
             return
         
-        # when io need external knowldge for writting or read such as sampling_rate
-        # the test is too much complex too design genericaly
+        # when io need external knowldge for writting or read such as sampling_rate (RawBinaryIO...)
+        # the test is too much complex too design genericaly. 
         if higher in self.ioclass.read_params and len(self.ioclass.read_params[higher]) != 0 : return
         
+        print 'yep'
         if self.ioclass.mode == 'file':
-            filename = 'test_io_'+self.ioclass.__name__
+            filename = localdir+'/Generated_'+self.ioclass.__name__
             if len(self.ioclass.extensions)>=1:
                 filename += '.'+self.ioclass.extensions[0]
             writer = self.ioclass(filename = filename)
             reader = self.ioclass(filename = filename)
         elif self.ioclass.mode == 'dir':
-            dirname = 'test_io_'+self.ioclass.__name__
+            dirname = localdir+'/test_io_'+self.ioclass.__name__
             writer = self.ioclass(dirname = dirname)
             reader = self.ioclass(dirname = dirname)
         else:
@@ -86,6 +104,7 @@ class BaseTestIO(object):
             ob2 = reader.read_segment()
         
         assert_same_sub_schema(ob, ob2)
+        assert_neo_object_is_compliant(ob2)
 
     def test_read_then_write(self):
         """
@@ -98,24 +117,19 @@ class BaseTestIO(object):
         if self.hash_conserved_when_write_read:
             #TODO
             pass
-    
+
     def test_download_test_files_if_not_present(self ):
         """
         Download file at G-node for testing
         url_for_tests is global at beginning of this file.
         
         """
+        localdir = self.create_local_dir_if_not_exists()
+        
         if not hasattr(self,'files_to_download'):
             self.files_to_download = self.files_to_test
         
         shortname = self.ioclass.__name__.lower().strip('io')
-        localdir = os.path.dirname(__file__)+'/files_for_tests'
-        if not os.path.exists(localdir):
-            os.mkdir(localdir)
-        localdir = localdir +'/'+ shortname
-        if not os.path.exists(localdir):
-            os.mkdir(localdir)
-        
         url = url_for_tests+shortname
         for filename in self.files_to_download:
             if os.path.dirname(filename) != '' and not os.path.exists(localdir+'/'+os.path.dirname(filename)) :
@@ -127,13 +141,11 @@ class BaseTestIO(object):
                 logging.info('Downloading %s here %s' % (distantfile, localfile))
                 urllib.urlretrieve(distantfile, localfile)
         
-        self.local_test_dir = localdir
-        
     def test_assert_readed_neo_object_is_compliant(self):
         self.test_download_test_files_if_not_present()
         
+        # This is for files presents at G-Node
         for filename in self.files_to_test:
-            
             filename = os.path.join(self.local_test_dir, filename)
             if self.ioclass.mode == 'file':
                 r = self.ioclass(filename = filename)
@@ -141,9 +153,11 @@ class BaseTestIO(object):
                 r = self.ioclass(dirname = filename)
             else:
                 continue
-            
             ob = r.read()
             assert_neo_object_is_compliant(ob)
+            
+        
+        
 
 
 
