@@ -39,6 +39,12 @@ def assert_file_contents_equal(a, b):
 
 
 def assert_neo_object_is_compliant(ob):
+    """
+    Test neo compliance of one object and sub objects (one_to_many_relation only):
+      * check types and/or presence of necessary and recommended attribute.
+      * If attribute is Quantities or numpy.ndarray it also check ndim.
+      * If attribute is numpy.ndarray also check dtype.kind.
+    """
     assert type(ob) in description.objectlist, '%s is not a neo object' % (type(ob))
     classname =ob.__class__.__name__
     necess = description.classes_necessary_attributes[classname]
@@ -70,10 +76,6 @@ def assert_neo_object_is_compliant(ob):
                 dt = attr[3]
                 assert ob.dtype.kind == dt.kind, '%s dtype.kind is %s should be %s' % (classname, ob.dtype.kind, dt.kind)
             
-
-                
-
-
     # recursive on one to many rel
     if classname in description.one_to_many_reslationship:
         for childname in description.one_to_many_reslationship[classname]:
@@ -82,8 +84,7 @@ def assert_neo_object_is_compliant(ob):
             for child in sub:
                 assert_neo_object_is_compliant(child)
 
-    
-    
+
 
 
 def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
@@ -96,10 +97,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
         equal_almost: if False do a strict arrays_equal if True do arrays_almost_equal
     
     """
-    assert type(ob1) == type(ob2), '%s != %s' % (type(ob1), type(ob2))
-        
-    #~ _type = type(ob1)
-    #~ classname =description.name_by_class[_type]
+    assert type(ob1) == type(ob2), 'type(%s) != type(%s)' % (type(ob1), type(ob2))
     classname =ob1.__class__.__name__
     
     if classname in description.one_to_many_reslationship:
@@ -129,7 +127,6 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
             assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
         assert_eg = assert_arrays_almost_and_dtype
     
-    #~ classname = description.name_by_class[_type]
     necess = description.classes_necessary_attributes[classname]
     recomm = description.classes_recommended_attributes[classname]
     attributes = necess + recomm

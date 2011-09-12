@@ -122,3 +122,10 @@ try:
 except ImportError:
     warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
 
+#~ try:
+    #~ from .alphaomegaio import AlphaOmegaIO
+    #~ iolist.append( AlphaOmegaIO )
+#~ except ImportError:
+    #~ warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
+
+

@@ -4,7 +4,7 @@ This file is a bundle of utilities to discribe neo object representation (attrib
 
 It can be used to:
  * generate diagrams of neo
- * some generics IO like (databases mapper, hdf5, ...)
+ * some generics IO like (databases mapper, hdf5, neomatlab, ...)
  * tests
  * external SQL mappers (Cf OpenElectrophy, Gnode)
 
@@ -31,10 +31,6 @@ This dict descibe attributes that are recommended.
 Notation is same as classes_necessary_attributes.
 
 
-TO BE DISCUSSED Proposal:
- * Unit > CellUnit
- * AnalogSignal.channel_index in classes_recommended_attributes or classes_necessary_attributes
- * SpikeTrain.waveforms_features for compatibility with KlustaquikIO in classes_recommended_attributes
 """
 
 from .core import objectlist
@@ -52,7 +48,7 @@ for ob in objectlist:
     name_by_class[ob] = ob.__name__
 
 
-
+# parent to children
 one_to_many_reslationship = {
     'Block' : [ 'Segment','RecordingChannelGroup', ],
     'Segment' : [ 'AnalogSignal', 'AnalogSignalArray', 'IrregularlySampledSignal', 
@@ -62,11 +58,26 @@ one_to_many_reslationship = {
    'RecordingChannelGroup' : [ 'RecordingChannel',  'AnalogSignalArray'],
     'Unit' : ['SpikeTrain', 'Spike', ]
     }
+# reverse: child to parent
+many_to_one_reslationship = { }
+for p,children in one_to_many_reslationship.iteritems():
+    for c in children:
+        if c not in many_to_one_reslationship:
+            many_to_one_reslationship[c] = [ ]
+        if p not in many_to_one_reslationship[c]:
+            many_to_one_reslationship[c].append(p)
 
 many_to_many_reslationship = {
     'RecordingChannel' : ['Unit', ],
     'Unit' : ['RecordingChannel', ],
     }
+# check bijectivity
+for p,children in many_to_many_reslationship.iteritems():
+    for c in children:
+        if c not in many_to_many_reslationship:
+            many_to_many_reslationship[c] = [ ]
+        if p not in many_to_many_reslationship[c]:
+            many_to_many_reslationship[c].append[p]
 
 
 
