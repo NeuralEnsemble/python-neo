@@ -30,8 +30,8 @@ class WinWcpIO(BaseIO):
         >>> from neo import io
         >>> r = io.WinWcpIO( filename = 'File_winwcp_1.wcp')
         >>> bl = r.read_block(lazy = False, cascade = True,)
-        >>> print bl._segments
-        >>> print bl._segments[0]._analogsignals
+        >>> print bl.segments
+        >>> print bl.segments[0].analogsignals
 
     """
     
@@ -119,7 +119,7 @@ class WinWcpIO(BaseIO):
             
             # create a segment
             seg = Segment()
-            bl._segments.append(seg)
+            bl.segments.append(seg)
             
             for c in range(header['NC']):
 
@@ -145,7 +145,7 @@ class WinWcpIO(BaseIO):
                 anaSig._annotations['channel_index'] = c
                 if lazy:
                     anaSig._data_description = { 'shape' : NP }
-                seg._analogsignals.append(anaSig)
+                seg.analogsignals.append(anaSig)
         
         fid.close()
         return bl

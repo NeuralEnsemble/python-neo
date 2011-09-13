@@ -43,8 +43,8 @@ class Unit(BaseNeo):
     """
     def __init__(self, **kargs):
         BaseNeo.__init__(self, **kargs)
-        self._spiketrains = [ ]
-        self._spikes = [ ]
-        self._recordingchannels = [ ]
+        self.spiketrains = [ ]
+        self.spikes = [ ]
+        self.recordingchannels = [ ]
 
 

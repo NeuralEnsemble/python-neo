@@ -18,8 +18,9 @@ from neo.test.io.common_io_test import BaseTestIO
 
 class TestAsciiSpikeTrainIO(unittest.TestCase, BaseTestIO):
     ioclass = AsciiSpikeTrainIO
-    files_to_test = [ 'File_ascii_spiketrain_1.txt',
+    files_to_download = [ 'File_ascii_spiketrain_1.txt',
                             ]
+    files_to_test = files_to_download
 
 
 

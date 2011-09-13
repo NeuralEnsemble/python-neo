@@ -137,7 +137,7 @@ class WinEdrIO(BaseIO):
             if lazy:
                 ana._data_description = { 'shape' : header['NP']/header['NC'] }
             
-            seg._analogsignals.append(ana)
+            seg.analogsignals.append(ana)
             
             
         return seg

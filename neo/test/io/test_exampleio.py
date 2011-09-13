@@ -38,26 +38,26 @@ class TestExample2IO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = ExampleIO( filename = None)
         seg = r.read_segment(cascade = True, lazy = True)
-        for ana in seg._analogsignals:
+        for ana in seg.analogsignals:
             self.assertEqual(ana.size, 0)
             assert hasattr(ana, '_data_description')
-        for st in seg._spiketrains:
+        for st in seg.spiketrains:
             self.assertEqual(st.size, 0)
             assert hasattr(st, '_data_description')
         
         seg = r.read_segment(cascade = True, lazy = False)
-        for ana in seg._analogsignals:
+        for ana in seg.analogsignals:
             self.assertNotEqual(ana.size, 0)
-        for st in seg._spiketrains:
+        for st in seg.spiketrains:
             self.assertNotEqual(st.size, 0)
     
     @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_cascade(self):
         r = ExampleIO( filename = None)
         seg = r.read_segment(cascade = False)
-        self.assertEqual( len(seg._analogsignals), 0)
+        self.assertEqual( len(seg.analogsignals), 0)
         seg = r.read_segment(cascade = True , num_analogsignal = 4)
-        self.assertEqual( len(seg._analogsignals), 4)
+        self.assertEqual( len(seg.analogsignals), 4)
 
     @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_analogsignal(self):

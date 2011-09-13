@@ -31,7 +31,7 @@ def generate_one_simple_block(block_name = 'block_0',
     if Segment in supported_objects:
         for s in range(nb_segment):
             seg = generate_one_simple_segment(supported_objects=supported_objects, **kws)
-            bl._segments.append(seg)
+            bl.segments.append(seg)
         
     return bl
 
@@ -60,13 +60,13 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
         for a in range(nb_analogsignal):
             anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, 
                                         t_start = t_start, name = 'sig %d og segment %s'%(a, seg.name),)
-            seg._analogsignals.append(anasig)
+            seg.analogsignals.append(anasig)
     
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
             sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration, name = 'spiketrain %d'%s)
-            seg._spiketrains.append(sptr)
+            seg.spiketrains.append(sptr)
     
     if EventArray in supported_objects:
         for name, labels in event_array_types.iteritems():
@@ -75,7 +75,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                             times = rand(ea_size)*duration,
                                             labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
                                             )
-            seg._eventarrays.append(ea)
+            seg.eventarrays.append(ea)
                                         
     
     # TODO other objects

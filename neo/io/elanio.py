@@ -46,9 +46,9 @@ class ElanIO(BaseIO):
         >>> from neo import io
         >>> r = io.ElanIO( filename = 'File_elan_1.eeg')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
         
         >>>
     
@@ -221,7 +221,7 @@ class ElanIO(BaseIO):
                                                     )
             anaSig._annotations['channel_index'] = c
             anaSig._annotations['channel_name'] = labels[c]
-            seg._analogsignals.append( anaSig )
+            seg.analogsignals.append( anaSig )
         
         # triggers
         f = open(self.filename+'.pos')
@@ -239,7 +239,7 @@ class ElanIO(BaseIO):
                                     reject_codes = np.array(reject_codes) 
                                     )
         
-        seg._eventarrays.append(ea)
+        seg.eventarrays.append(ea)
     
         
         f.close()
@@ -286,7 +286,7 @@ class ElanIO(BaseIO):
         #~ fid_ent.write( '%d\n' % (N+2) )
         
         #~ # channel label
-        #~ for i, anaSig in enumerate(seg._analogsignals) :
+        #~ for i, anaSig in enumerate(seg.analogsignals) :
             #~ try :
                 #~ fid_ent.write('%s.%d\n' % (anaSig.label, i+1 ))
             #~ except :
@@ -295,7 +295,7 @@ class ElanIO(BaseIO):
         #~ fid_ent.write('Num2\n')
         
         #~ #channel type
-        #~ for i, anaSig in enumerate(seg._analogsignals) :
+        #~ for i, anaSig in enumerate(seg.analogsignals) :
             #~ fid_ent.write('Electrode\n')
         #~ fid_ent.write( 'dateur echantillon\n')
         #~ fid_ent.write( 'type evenement et byte info\n')

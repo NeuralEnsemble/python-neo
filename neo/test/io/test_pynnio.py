@@ -80,15 +80,15 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         io = self.io_cls(self.test_file)
         segment = io.read_segment(lazy=False, cascade=True)
         self.assertIsInstance(segment, Segment)
-        self.assertEqual(len(segment._analogsignals), NCELLS)
-        as0 = segment._analogsignals[0]
+        self.assertEqual(len(segment.analogsignals), NCELLS)
+        as0 = segment.analogsignals[0]
         self.assertIsInstance(as0, AnalogSignal)
         assert_arrays_equal(as0,
                             AnalogSignal(numpy.arange(0, 101, dtype=float),
                                          sampling_period=0.1*pq.ms,
                                          t_start=0*pq.s,
                                          units=pq.mV))
-        as4 = segment._analogsignals[4]
+        as4 = segment.analogsignals[4]
         self.assertIsInstance(as4, AnalogSignal)
         assert_arrays_equal(as4,
                             AnalogSignal(numpy.arange(4, 105, dtype=float),
@@ -125,14 +125,14 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         io = self.io_cls(self.test_file)
         segment = io.read_segment(lazy=False, cascade=True)
         self.assertIsInstance(segment, Segment)
-        self.assertEqual(len(segment._spiketrains), NCELLS)
-        st0 = segment._spiketrains[0]
+        self.assertEqual(len(segment.spiketrains), NCELLS)
+        st0 = segment.spiketrains[0]
         self.assertIsInstance(st0, SpikeTrain)
         assert_arrays_equal(st0,
                             SpikeTrain(numpy.arange(0, 101, dtype=float),
                                        t_start=0*pq.s,
                                        units=pq.ms))
-        st4 = segment._spiketrains[4]
+        st4 = segment.spiketrains[4]
         self.assertIsInstance(st4, SpikeTrain)
         assert_arrays_equal(st4,
                             SpikeTrain(numpy.arange(4, 105, dtype=float),

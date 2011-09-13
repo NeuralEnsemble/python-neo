@@ -60,7 +60,7 @@ but you can't access them directly. To access your AnalogSignal, you must read a
 True::
 
     >>> seg = reader.read_segment(cascade=True)
-    >>> print seg._analogsignals
+    >>> print seg.analogsignals
 
 To get a list of directly readable objects ::
 
@@ -84,10 +84,10 @@ In some case you may not want to load everything in memory because it could be t
 to True or Fasle::
     
     >>> seg = reader.read_segment(lazy = False, cascade=True)
-    >>> print seg._analogsignals[0].shape
+    >>> print seg.analogsignals[0].shape
     >>> seg = reader.read_segment(lazy = True, cascade=True)
-    >>> print seg._analogsignals[0].shape
-    >>> seg._analogsignals[0]._data_description
+    >>> print seg.analogsignals[0].shape
+    >>> seg.analogsignals[0]._data_description
 
 In the first case segment and subhierachy is read and all analosignal are loaded.
 In later case segment and subhierachy is read but analogsignal are empty (size 0) but

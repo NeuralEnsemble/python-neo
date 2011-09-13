@@ -79,8 +79,8 @@ def assert_neo_object_is_compliant(ob):
     # recursive on one to many rel
     if classname in description.one_to_many_reslationship:
         for childname in description.one_to_many_reslationship[classname]:
-            if not hasattr(ob, '_'+childname.lower()+'s'): continue
-            sub = getattr(ob, '_'+childname.lower()+'s')
+            if not hasattr(ob, childname.lower()+'s'): continue
+            sub = getattr(ob, childname.lower()+'s')
             for child in sub:
                 assert_neo_object_is_compliant(child)
 
@@ -103,16 +103,16 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     if classname in description.one_to_many_reslationship:
         # test one_to_many_relationship
         for child in description.one_to_many_reslationship[classname]:
-            if not hasattr(ob1, '_'+child.lower()+'s'):
-                assert not hasattr(ob2, '_'+child.lower()+'s'), '%s 2 do have %s but not %s 1'%(classname, child, classname)
+            if not hasattr(ob1, child.lower()+'s'):
+                assert not hasattr(ob2, child.lower()+'s'), '%s 2 do have %s but not %s 1'%(classname, child, classname)
                 continue
             else:
-                assert hasattr(ob2, '_'+child.lower()+'s'), '%s 1 have %s but not %s 2'%(classname, child, classname)
+                assert hasattr(ob2, child.lower()+'s'), '%s 1 have %s but not %s 2'%(classname, child, classname)
             
-            sub1 = getattr(ob1, '_'+child.lower()+'s')
-            sub2 = getattr(ob2, '_'+child.lower()+'s')
+            sub1 = getattr(ob1, child.lower()+'s')
+            sub2 = getattr(ob2, child.lower()+'s')
             assert len(sub1) == len(sub2), 'theses two %s have not the same %s number'%(classname, child)
-            for i in range(len(getattr(ob1, '_'+child.lower()+'s'))):
+            for i in range(len(getattr(ob1, child.lower()+'s'))):
                 assert_same_sub_schema(sub1[i], sub2[i], equal_almost = equal_almost)
     
     # check if all attributes are equal

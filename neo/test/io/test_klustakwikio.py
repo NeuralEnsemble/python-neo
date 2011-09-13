@@ -115,39 +115,39 @@ class testWrite(unittest.TestCase):
         block = neo.Block()
         segment = neo.Segment()
         segment2 = neo.Segment()
-        block._segments.append(segment)
-        block._segments.append(segment2)
+        block.segments.append(segment)
+        block.segments.append(segment2)
         
         # Fake spiketrain 1, will be sorted
         st1 = neo.SpikeTrain(times=[.006, .002, .004], units='s', 
             sampling_rate=1000.)
         st1._annotations['cluster'] = 0
         st1._annotations['group'] = 0
-        segment._spiketrains.append(st1)
+        segment.spiketrains.append(st1)
         
         # Fake spiketrain 1B, on another segment. No group specified,
         # default is 0.
         st1B = neo.SpikeTrain(times=[.106], units='s', sampling_rate=1000.)
         st1B._annotations['cluster'] = 0        
-        segment2._spiketrains.append(st1B)
+        segment2.spiketrains.append(st1B)
         
         # Fake spiketrain 2 on same group, no sampling rate specified
         st2 = neo.SpikeTrain(times=[.001, .003, .011], units='s')
         st2._annotations['cluster'] = 1
         st2._annotations['group'] = 0
-        segment._spiketrains.append(st2)
+        segment.spiketrains.append(st2)
         
         # Fake spiketrain 3 on new group, with different sampling rate
         st3 = neo.SpikeTrain(times=[.05, .09, .10], units='s', 
             sampling_rate=100.)
         st3._annotations['cluster'] = -1
         st3._annotations['group'] = 1
-        segment._spiketrains.append(st3)
+        segment.spiketrains.append(st3)
         
         # Fake spiketrain 4 on new group, without cluster info
         st4 = neo.SpikeTrain(times=[.005, .009], units='s')
         st4._annotations['group'] = 2
-        segment._spiketrains.append(st4)
+        segment.spiketrains.append(st4)
         
         # Create empty directory for writing
         dirname = os.path.normpath('./test/test3')

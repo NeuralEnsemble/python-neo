@@ -26,5 +26,5 @@ class Block(BaseNeo):
     """
     def __init__(self, **kargs):
         BaseNeo.__init__(self, **kargs)
-        self._segments = [ ]
-        self._recordingchannelgroups = [ ]
+        self.segments = [ ]
+        self.recordingchannelgroups = [ ]

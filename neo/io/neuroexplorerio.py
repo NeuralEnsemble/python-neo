@@ -35,10 +35,10 @@ class NeuroExplorerIO(BaseIO):
         >>> from neo import io
         >>> r = io.NeuroExplorerIO( filename = 'File_neuroexplorer_1.nex ')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
-        >>> print seg._epocharrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
+        >>> print seg.epocharrays
 
     
     """
@@ -128,7 +128,7 @@ class NeuroExplorerIO(BaseIO):
                                                     name = entityHeader['name'],
                                                     )
                 sptr._annotations['channel_index'] = entityHeader['WireNumber']
-                seg._spiketrains.append(sptr)
+                seg.spiketrains.append(sptr)
             
             if entityHeader['type'] == 1:
                 # event 
@@ -141,7 +141,7 @@ class NeuroExplorerIO(BaseIO):
                                                     )
                     event_times = event_times.astype('f')/globalHeader['freq'] * pq.s
                 evar = EventArray(times = event_times, channel_name = entityHeader['name'] )
-                seg._eventarrays.append(evar)
+                seg.eventarrays.append(evar)
             
             if entityHeader['type'] == 2:
                 # interval
@@ -160,7 +160,7 @@ class NeuroExplorerIO(BaseIO):
                                                     )
                     stop_times = stop_times.astype('f')/globalHeader['freq']*pq.s
                 epar = EpochArray( times = start_times, durations =  stop_times - start_times, channel_name = entityHeader['name'])
-                seg._epocharrays.append(epar)
+                seg.epocharrays.append(epar)
             
             if entityHeader['type'] == 3:
                 # spiketrain and wavefoms
@@ -191,7 +191,7 @@ class NeuroExplorerIO(BaseIO):
                                                 left_sweep = 0*pq.ms,
                                                 )
                 sptr._annotations['channel_index'] = entityHeader['WireNumber']
-                seg._spiketrains.append(sptr)
+                seg.spiketrains.append(sptr)
             
             if entityHeader['type'] == 4:
                 # popvectors
@@ -228,7 +228,7 @@ class NeuroExplorerIO(BaseIO):
                 
                 anaSig = AnalogSignal(signal = signal , t_start =t_start*pq.s , sampling_rate  = entityHeader['WFrequency']*pq.Hz, name = entityHeader['name'])
                 anaSig._annotations['channel_index'] = entityHeader['WireNumber']
-                seg._analogsignals.append( anaSig )
+                seg.analogsignals.append( anaSig )
                 
             if entityHeader['type'] == 6:
                 # markers  : TO TEST
@@ -254,7 +254,7 @@ class NeuroExplorerIO(BaseIO):
                                             channel_index = entityHeader['WireNumber'],
                                             marker_type = markertype
                                             )
-                seg._eventarrays.append(ea)
+                seg.eventarrays.append(ea)
                 
         return seg
 

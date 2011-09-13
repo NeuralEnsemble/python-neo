@@ -28,6 +28,6 @@ class RecordingChannel(BaseNeo):
     def __init__(self, index = 0, **kargs):
         BaseNeo.__init__(self, **kargs)
         self.index = index
-        self._analogsignals = [ ]
-        self._irregularysampledsignals = [ ]
+        self.analogsignals = [ ]
+        self.irregularysampledsignals = [ ]
 

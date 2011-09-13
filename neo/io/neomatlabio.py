@@ -96,28 +96,28 @@ class NeoMatlabIO(BaseIO):
             import neo
             r = neo.io.NeoMatlabIO(filename = 'myblock.mat')
             bl = r.read_block()
-            print bl._segments[1]._analogsignals[2]
-            print bl._segments[1]._spiketrains[4]
+            print bl.segments[1].analogsignals[2]
+            print bl.segments[1].spiketrains[4]
             
 
     2 - **Senario 2: create data in python with neo and read them in matlab
 
         This python code generate the same block as previous (yes, it is more elegant, it is pyhton)::
         
-        import neo
-        import quantities as pq
-        from scipy import rand
-
-        bl = neo.Block(name = 'my block with neo')
-        for s in range(3):
-            seg = neo.Segment( name = 'segment'+str(s))
-            bl._segments.append(seg)
-            for a in range(5):
-                anasig = neo.AnalogSignal( rand(100), units = 'mV', t_start = 0 * pq.s, sampling_rate = 100*pq.Hz)
-                seg._analogsignals.append(anasig)
-            for t in range(7):
-                sptr = neo.SpikeTrain( rand(30), units = 'ms', t_start = 0*pq.ms, t_stop = 10*pq.ms)
-                seg._spiketrains.append(sptr)
+            import neo
+            import quantities as pq
+            from scipy import rand
+            
+            bl = neo.Block(name = 'my block with neo')
+            for s in range(3):
+                seg = neo.Segment( name = 'segment'+str(s))
+                bl._segments.append(seg)
+                for a in range(5):
+                    anasig = neo.AnalogSignal( rand(100), units = 'mV', t_start = 0 * pq.s, sampling_rate = 100*pq.Hz)
+                    seg._analogsignals.append(anasig)
+                for t in range(7):
+                    sptr = neo.SpikeTrain( rand(30), units = 'ms', t_start = 0*pq.ms, t_stop = 10*pq.ms)
+                    seg.spiketrains.append(sptr)
             
 
         w = neo.io.NeoMatlabIO(filename = 'myblock.mat')
@@ -145,7 +145,7 @@ class NeoMatlabIO(BaseIO):
             w = NeoMatlabIO(filename ='convertedfile.mat')
             seg = r.read_segment()
             bl = Block(name = 'a block')
-            bl._segments.append(seg)
+            bl.segments.append(seg)
             w.write_block(bl)
     
 
@@ -212,19 +212,19 @@ class NeoMatlabIO(BaseIO):
         
         bl_struct = self.create_struct_from_obj(bl)
         
-        for seg in bl._segments:
+        for seg in bl.segments:
             seg_struct = self.create_struct_from_obj(seg)
             bl_struct['segments'].append(seg_struct)
             
-            for anasig in seg._analogsignals:
+            for anasig in seg.analogsignals:
                 anasig_struct = self.create_struct_from_obj(anasig)
                 seg_struct['analogsignals'].append(anasig_struct)
             
-            for ea in seg._eventarrays:
+            for ea in seg.eventarrays:
                 ea_struct = self.create_struct_from_obj(ea)
                 seg_struct['eventarrays'].append(ea_struct)
             
-            for sptr in seg._spiketrains:
+            for sptr in seg.spiketrains:
                 sptr_struct = self.create_struct_from_obj(sptr)
                 seg_struct['spiketrains'].append(sptr_struct)
             
@@ -288,7 +288,7 @@ class NeoMatlabIO(BaseIO):
             if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
                 for c in range(len(struct.__getattribute__(attrname))):
                     child = self.create_ob_from_struct(struct.__getattribute__(attrname)[c]  , classname_lower_to_upper[attrname[:-1]])
-                    ob.__getattr__('_'+attrname.lower()).append(child)
+                    ob.__getattr__(attrname.lower()).append(child)
                 continue
             
             # attributes

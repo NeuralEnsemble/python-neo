@@ -129,7 +129,7 @@ class KlustaKwikIO(BaseIO):
         # Create block and segment to hold all the data
         block = Block(name='read by klustakwikio', file_origin=self.filename)        
         seg = Segment(name='seg1', index=0, file_origin=self.filename)
-        block._segments.append(seg)
+        block.segments.append(seg)
         
         # Search data directory for KlustaKwik files.
         self._fetfiles = self._fp.read_filenames('fet')
@@ -171,8 +171,8 @@ class KlustaKwikIO(BaseIO):
                 st._annotations['group'] = group
                 
                 # Link
-                u._spiketrains.append(st)
-                seg._spiketrains.append(st)
+                u.spiketrains.append(st)
+                seg.spiketrains.append(st)
 
         return block
 
@@ -260,9 +260,9 @@ class KlustaKwikIO(BaseIO):
         self._make_all_file_handles(block)
         
         # Iterate through segments in this block
-        for seg in block._segments:
+        for seg in block.segments:
             # Write each spiketrain of the segment
-            for st in seg._spiketrains:
+            for st in seg.spiketrains:
                 # Get file handles for this spiketrain using its group
                 group = self.st2group(st)
                 fetfilehandle = self._fetfilehandles[group]
@@ -309,8 +309,8 @@ class KlustaKwikIO(BaseIO):
         Store in a dict {group_id: list_of_clusters_in_that_group}
         """
         group2clusters = {}
-        for seg in block._segments:
-            for st in seg._spiketrains:
+        for seg in block.segments:
+            for st in seg.spiketrains:
                 group = self.st2group(st)
                 cluster = self.st2cluster(st)
             

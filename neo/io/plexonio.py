@@ -36,9 +36,9 @@ class PlexonIO(BaseIO):
         >>> from neo import io
         >>> r = io.PlexonIO( filename = 'File_plexon_1.plx ')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
     
     """
     
@@ -303,17 +303,16 @@ class PlexonIO(BaseIO):
         # add AnalogSignal to sgement
         for k,anaSig in anaSigs.iteritems() :
             if anaSig is not None:
-                seg._analogsignals.append(anaSig)
+                seg.analogsignals.append(anaSig)
                 
         # add SpikeTrain to sgement
         for chan, sptrs in spiketrains.iteritems():
             for unit, sptr in sptrs.iteritems():
-                    seg._spiketrains.append(sptr)
+                    seg.spiketrains.append(sptr)
         
         # add eventarray to segment
         for chan,ea in  eventarrays.iteritems():
-            seg._eventarrays.append(ea)
-
+            seg.eventarrays.append(ea)
         
         return seg
 

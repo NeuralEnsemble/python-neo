@@ -22,67 +22,67 @@ from neo.test.io.common_io_test import BaseTestIO
 
 def checks():
     block = Block()
-    block._segments = []
+    block.segments = []
     for i in range(4):
-        block._segments.append(Segment())
-    segment = block._segments[0]
-    segment._events = []
+        block.segments.append(Segment())
+    segment = block.segments[0]
+    segment.events = []
     for i in range(5):
-        segment._events.append(Event(time=120 * pq.millisecond, \
+        segment.events.append(Event(time=120 * pq.millisecond, \
             label="Black Label")) # hehe
-    segment._eventarrays = []
+    segment.eventarrays = []
     for i in range(15):
-        segment._eventarrays.append(EventArray(times=np.random.rand(20) * pq.second, \
+        segment.eventarrays.append(EventArray(times=np.random.rand(20) * pq.second, \
             labels=np.array("", dtype="a100")))
-    segment._epochs = []
+    segment.epochs = []
     for i in range(5):
-        segment._epochs.append(Epoch(time=120 * pq.millisecond, \
+        segment.epochs.append(Epoch(time=120 * pq.millisecond, \
             duration = 845.0 * pq.millisecond, label="Red Label")) # hehe
-    segment._epocharrays = []
+    segment.epocharrays = []
     for i in range(15):
-        segment._epocharrays.append(EpochArray(times=np.random.rand(20) \
+        segment.epocharrays.append(EpochArray(times=np.random.rand(20) \
             * pq.second, durations=np.random.rand(20) \
             * pq.second, labels=np.array("", dtype="a100")))
-    segment._spiketrains = []
+    segment.spiketrains = []
     for i in range(30):
-        segment._spiketrains.append(SpikeTrain(t_start=-200.0 * pq.millisecond, \
+        segment.spiketrains.append(SpikeTrain(t_start=-200.0 * pq.millisecond, \
             t_stop=200.0 * pq.millisecond, times=np.random.rand(20) * pq.millisecond, \
             waveforms=np.random.rand(20, 2, 100) * pq.millisecond))
-    segment._analogsignals = []
+    segment.analogsignals = []
     for i in range(300):
-        segment._analogsignals.append(AnalogSignal(name="AS-TEST" + str(i), \
+        segment.analogsignals.append(AnalogSignal(name="AS-TEST" + str(i), \
             t_start=-200.0 * pq.millisecond, sampling_rate=10000.0 * pq.hertz, \
                 signal=np.random.rand(500) * pq.millivolt))
-    segment._irsaanalogsignals = []
+    segment.irsaanalogsignals = []
     for i in range(50):
-        segment._irsaanalogsignals.append(IrregularlySampledSignal(name="IRSA-TEST" + str(i), \
+        segment.irsaanalogsignals.append(IrregularlySampledSignal(name="IRSA-TEST" + str(i), \
             t_start=260.0 * pq.millisecond, channel_name="2", \
             signal=np.random.rand(500) * pq.millivolt, \
             times=np.random.rand(20) * pq.millisecond))
-    segment._analogsignalarrays = []
+    segment.analogsignalarrays = []
     #for i in range(5):
     #    segment._analogsignalarrays.append(AnalogSignalArray(t_start=260.0 \
     #        * pq.millisecond, channel_names="Don't know..", \
     #        signal=np.random.rand(10, 500) * pq.millivolt))
     segment._spikes = []
     for i in range(97):
-        segment._spikes.append(Spike(time=-260.0 * pq.millisecond, \
+        segment.spikes.append(Spike(time=-260.0 * pq.millisecond, \
             sampling_rate=10000.0 * pq.hertz, left_sweep=-108.0 * pq.millisecond, \
             waveform=np.random.rand(10, 500) * pq.millivolt))
-    block._segments.append(segment)
+    block.segments.append(segment)
     
     recch = RecordingChannel(name="Test rec Group", index=i)
-    recch._units = []
+    recch.units = []
     for i in range(3):
-        recch._units.append(Unit(name="Neuron #" + str(i)))
+        recch.units.append(Unit(name="Neuron #" + str(i)))
     recchgrp = RecordingChannelGroup(name="Test rec Group")
-    recchgrp._recordingchannels = []
-    recchgrp._recordingchannels.append(recch)
+    recchgrp.recordingchannels = []
+    recchgrp.recordingchannels.append(recch)
     for i in range(7):
-        recchgrp._recordingchannels.append(RecordingChannel(name="Test rec Group", \
+        recchgrp.recordingchannels.append(RecordingChannel(name="Test rec Group", \
             index=i))
-    block._recordingchannelgroups = []
-    block._recordingchannelgroups.append(recchgrp)
+    block.recordingchannelgroups = []
+    block.recordingchannelgroups.append(recchgrp)
     return block
 
 

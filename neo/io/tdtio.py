@@ -33,9 +33,9 @@ class TdtIO(BaseIO):
         >>> from neo import io
         >>> r = io.TdtIO( dirname = 'MyTdTTank')
         >>> bl = r.read_block(lazy = False, cascade = True,)
-        >>> print bl._segments
-        >>> print bl._segments[0]_analogsignals
-        >>> print bl._segments[0]_eventarrays
+        >>> print bl.segments
+        >>> print bl.segments[0].analogsignals
+        >>> print bl.segments[0].eventarrays
     """
     
     
@@ -100,7 +100,7 @@ class TdtIO(BaseIO):
             if not os.path.isdir(subdir): continue
             
             seg = Segment(name = blockname)
-            bl._segments.append( seg)
+            bl.segments.append( seg)
             
             
             global_t_start = None
@@ -313,13 +313,13 @@ class TdtIO(BaseIO):
                     #~ del anaSig.totalsize
                     #~ del anaSig.pos
                     #~ del anaSig.fid
-                    seg._analogsignals.append( anaSig )
+                    seg.analogsignals.append( anaSig )
 
             for code, v in allevent.iteritems():
                 for channel, ea in v.iteritems():
                     #~ del ea.nbevent
                     #~ del ea.pos
-                    seg._eventarrays.append( ea )
+                    seg.eventarrays.append( ea )
 
 
             for code, v in allspiketr.iteritems():
@@ -329,7 +329,7 @@ class TdtIO(BaseIO):
                         #~ del sptr.waveformsize
                         #~ del sptr.pos
                         #~ del sptr.fid
-                        seg._spiketrains.append( sptr )
+                        seg.spiketrains.append( sptr )
                     
 
 

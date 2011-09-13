@@ -74,9 +74,9 @@ class ExampleIO(BaseIO):
         >>> from neo import io
         >>> r = io.BaseIO( filename = 'itisaafke.nof ')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
         >>> anasig = r.read_analogsignal(lazy = True, cascade = False)
         >>> print anasig._data_description
         >>> anasig = r.read_analogsignal(lazy = False, cascade = False)
@@ -203,14 +203,14 @@ class ExampleIO(BaseIO):
             for i in range(num_analogsignal):
                 ana = self.read_analogsignal( lazy = lazy , cascade = cascade ,
                                             channel_index = i ,segment_duration = segment_duration, t_start = t_start)
-                seg._analogsignals += [ ana ]
+                seg.analogsignals += [ ana ]
             
             # read nested spiketrain
             for i in range(num_analogsignal):
                 for j in range(num_spiketrain_by_channel):
                     sptr = self.read_spiketrain(lazy = lazy , cascade = cascade ,
                                                             segment_duration = segment_duration, t_start = t_start , channel_index = i)
-                    seg._spiketrains += [ sptr ]
+                    seg.spiketrains += [ sptr ]
         
             
             # create an EventArray that mimic triggers.
@@ -236,7 +236,7 @@ class ExampleIO(BaseIO):
                     else : l.append( 'TriggerB' )
                 eva.labels = np.array( l )
                 
-            seg._eventarrays += [ eva ]
+            seg.eventarrays += [ eva ]
         
         
         return seg

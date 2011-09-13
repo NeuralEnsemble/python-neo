@@ -41,7 +41,7 @@ class AsciiSignalIO(BaseIO):
         >>> from neo import io
         >>> r = io.AsciiSignalIO( filename = 'File_ascii_signal_2.txt')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
+        >>> print seg.analogsignals
 
     """
     
@@ -194,7 +194,7 @@ class AsciiSignalIO(BaseIO):
             
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = 'Column %d'%i)
             anaSig._annotations['channel_index'] = i
-            seg._analogsignals.append( anaSig )
+            seg.analogsignals.append( anaSig )
         
         return seg
 
@@ -223,7 +223,7 @@ class AsciiSignalIO(BaseIO):
         l = [ ]
         if writetimecolumn is not None:
             l.append(segment._analogsignals[0].times[:,newaxis])
-        for anaSig in segment._analogsignals:
+        for anaSig in segment.analogsignals:
             l.append(anaSig.magnitude[:,newaxis])
         sigs = np.concatenate(l, axis=1)
         #print sigs.shape

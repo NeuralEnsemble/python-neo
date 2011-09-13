@@ -38,7 +38,7 @@ class AsciiSpikeTrainIO(BaseIO):
         >>> from neo import io
         >>> r = io.AsciiSpikeTrainIO( filename = 'File_ascii_spiketrain_1.txt')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._spiketrains
+        >>> print seg.spiketrains
 
     """
     
@@ -122,7 +122,7 @@ class AsciiSpikeTrainIO(BaseIO):
             
             sptr = SpikeTrain(spike_times*unit, t_start = t_start)
             sptr._annotations['channel_index'] = i
-            seg._spiketrains.append(sptr)
+            seg.spiketrains.append(sptr)
         f.close()
         
         return seg
@@ -150,7 +150,7 @@ class AsciiSpikeTrainIO(BaseIO):
         """
         
         f = file(self.filename, 'w')        
-        for s,sptr in enumerate(segment._spiketrains) :
+        for s,sptr in enumerate(segment.spiketrains) :
             for ts in sptr :
                 f.write('%f%s'% (ts , delimiter) )
             f.write('\n')

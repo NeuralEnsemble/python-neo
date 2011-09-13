@@ -36,14 +36,14 @@ class Segment(BaseNeo):
     """
     def __init__(self, **kargs):
         BaseNeo.__init__(self, **kargs)
-        self._epochs = [ ]
-        self._epocharrays = [ ]
-        self._events = [ ]
-        self._eventarrays = [ ]
-        self._analogsignals = [ ]
-        self._analogsignalarrays = [ ]
-        self._irregularysampledsignals = [ ]
-        self._spikes = [ ]
-        self._spiketrains = [ ]
+        self.epochs = [ ]
+        self.epocharrays = [ ]
+        self.events = [ ]
+        self.eventarrays = [ ]
+        self.analogsignals = [ ]
+        self.analogsignalarrays = [ ]
+        self.irregularysampledsignals = [ ]
+        self.spikes = [ ]
+        self.spiketrains = [ ]
 
 

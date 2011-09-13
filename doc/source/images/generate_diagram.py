@@ -127,7 +127,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         #relationship
         for i,relat in enumerate(relationship):
             ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+2),
-                                '_'+relat.lower()+'s: list',
+                                relat.lower()+'s: list',
                                 horizontalalignment = 'left',
                                 verticalalignment = 'center',
                                 fontsize = fontsize,

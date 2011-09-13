@@ -47,9 +47,9 @@ class NeuroshareIO(BaseIO):
         >>> from neo import io
         >>> r = io.NeuroshareIO( filename = 'a_file', , dllname = the_name_of_dll)
         >>> seg = r.read_segment(lazy = False, cascade = True,import_neuroshare_segment = True)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
         
     Note:
         neuroshare.ns_ENTITY_EVENT: are converted to neo.EventArray
@@ -165,7 +165,7 @@ class NeuroshareIO(BaseIO):
                         labels.append(str(pData))
                     ea.times = times*pq.s
                     ea = np.array(labels)
-                seg._eventarrays.append(ea)
+                seg.eventarrays.append(ea)
             
             # analog
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_ANALOG': 
@@ -198,7 +198,7 @@ class NeuroshareIO(BaseIO):
                                                     t_start = pdTime.value * pq.s, 
                                                     name = str(entityInfo.szEntityLabel),
                                                     )
-                seg._analogsignals.append( anaSig )
+                seg.analogsignals.append( anaSig )
                 
             
             #segment
@@ -248,7 +248,7 @@ class NeuroshareIO(BaseIO):
                                         sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
                                         name = str(entityInfo.szEntityLabel),
                                         )
-                    seg._spiketrains.append(sptr)
+                    seg.spiketrains.append(sptr)
             
             
             # neuralevent
@@ -268,7 +268,7 @@ class NeuroshareIO(BaseIO):
                                                      dwIndexCount,  pData.ctypes.data)
                     times = pData*pq.s
                 sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel),)
-                seg._spiketrains.append(sptr)
+                seg.spiketrains.append(sptr)
         
         # close
         neuroshare.ns_CloseFile(hFile)

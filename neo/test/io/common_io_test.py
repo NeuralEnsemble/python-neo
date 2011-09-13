@@ -41,7 +41,6 @@ class BaseTestIO(object):
     hash_conserved_when_write_read = False # when R/W and hash conserved    
     files_to_test = [ ] # list of files to test compliances
     files_to_download = [ ] # when files are at G-Node
-    files_to_generate = [ ] # when files are not at G-Node and self generated
 
     def create_local_dir_if_not_exists(self):
         shortname = self.ioclass.__name__.lower().strip('io')
@@ -81,7 +80,6 @@ class BaseTestIO(object):
         # the test is too much complex too design genericaly. 
         if higher in self.ioclass.read_params and len(self.ioclass.read_params[higher]) != 0 : return
         
-        print 'yep'
         if self.ioclass.mode == 'file':
             filename = localdir+'/Generated_'+self.ioclass.__name__
             if len(self.ioclass.extensions)>=1:
@@ -89,7 +87,7 @@ class BaseTestIO(object):
             writer = self.ioclass(filename = filename)
             reader = self.ioclass(filename = filename)
         elif self.ioclass.mode == 'dir':
-            dirname = localdir+'/test_io_'+self.ioclass.__name__
+            dirname = localdir+'/Generated_'+self.ioclass.__name__
             writer = self.ioclass(dirname = dirname)
             reader = self.ioclass(dirname = dirname)
         else:
@@ -132,11 +130,12 @@ class BaseTestIO(object):
         shortname = self.ioclass.__name__.lower().strip('io')
         url = url_for_tests+shortname
         for filename in self.files_to_download:
+            # FIXME if path deep is more than 2
             if os.path.dirname(filename) != '' and not os.path.exists(localdir+'/'+os.path.dirname(filename)) :
-                print 'make ', localdir+'/'+os.path.dirname(filename)
                 os.mkdir(localdir+'/'+os.path.dirname(filename))
             localfile =  localdir+'/'+filename
             distantfile = url+'/'+filename
+            
             if not os.path.exists(localfile):
                 logging.info('Downloading %s here %s' % (distantfile, localfile))
                 urllib.urlretrieve(distantfile, localfile)

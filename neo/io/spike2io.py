@@ -40,9 +40,9 @@ class Spike2IO(BaseIO):
         >>> from neo import io
         >>> r = io.Spike2IO( filename = 'File_spike2_1.smr')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
-        >>> print seg._spiketrains
-        >>> print seg._eventarrays
+        >>> print seg.analogsignals
+        >>> print seg.spiketrains
+        >>> print seg.eventarrays
     
     """
     
@@ -126,20 +126,20 @@ class Spike2IO(BaseIO):
                 #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for anaSig in anaSigs :
                     add_annotations(anaSig, channelHeader)
-                    seg._analogsignals.append( anaSig )
+                    seg.analogsignals.append( anaSig )
                     #~ print sig.signal.size,
                 #~ print ''
                     
             elif channelHeader.kind in  [2, 3, 4, 5, 8] :
                 ea = self.readOneChannelEventOrSpike( fid, i, header , lazy = lazy)
                 add_annotations(ea, channelHeader)
-                seg._eventarrays.append(ea)
+                seg.eventarrays.append(ea)
                 
             elif channelHeader.kind in  [6,7] :
                 sptr = self.readOneChannelEventOrSpike( fid, i, header, lazy = lazy )
                 if sptr is not None:
                     add_annotations(sptr, channelHeader)
-                    seg._spiketrains.append(sptr)
+                    seg.spiketrains.append(sptr)
             
         fid.close()
         

@@ -85,18 +85,18 @@ class BasePyNNIO(BaseIO):
             for i in range(metadata['first_index'], metadata['last_index']):
                 spiketrain = self._extract_spikes(data, metadata, i)
                 if spiketrain is not None:
-                    seg._spiketrains.append(spiketrain)
+                    seg.spiketrains.append(spiketrain)
                 seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
         else:
             for i in range(metadata['first_index'], metadata['last_index']):
                 # probably slow. Replace with numpy-based version from 0.1
                 signal = self._extract_signal(data, metadata, i)
                 if signal is not None:
-                    seg._analogsignals.append(signal)
+                    seg.analogsignals.append(signal)
         return seg
 
     def write_segment(self, segment):
-        source = segment._analogsignals or segment._spiketrains
+        source = segment.analogsignals or segment.spiketrains
         assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
         metadata = segment._annotations.copy()
         metadata['size'] = len(source)

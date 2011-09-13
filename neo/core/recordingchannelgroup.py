@@ -24,6 +24,6 @@ class RecordingChannelGroup(BaseNeo):
     """
     def __init__(self, **kargs):
         BaseNeo.__init__(self, **kargs)
-        self._analogsignalarrays = [ ]
-        self._recordingchannels = [ ]
+        self.analogsignalarrays = [ ]
+        self.recordingchannels = [ ]
 

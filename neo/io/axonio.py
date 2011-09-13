@@ -108,18 +108,18 @@ class AxonIO(BaseIO):
         >>> from neo import io
         >>> r = io.AxonIO( filename = 'File_axon_1.abf')
         >>> bl = r.read_block(lazy = False, cascade = True,)
-        >>> print bl._segments
-        >>> print bl._segments[0]_analogsignals
-        >>> print bl._segments[0]_eventarrays
+        >>> print bl.segments
+        >>> print bl.segments[0].analogsignals
+        >>> print bl.segments[0].eventarrays
 
     """
     
     is_readable        = True
     is_writable        = False
     
-    supported_objects  = [Block , Segment , AnalogSignal , Event]
-    readable_objects   = [Block]
-    writeable_objects  = []  
+    supported_objects  = [ Block , Segment , AnalogSignal , EventArray ]
+    readable_objects   = [ Block ]
+    writeable_objects  = [ ]
 
     has_header         = False
     is_streameable     = False
@@ -289,8 +289,8 @@ class AxonIO(BaseIO):
                     
                     anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
                     anaSig._annotations['channel_index'] = int(num)
-                    seg._analogsignals.append( anaSig )
-                bl._segments.append(seg)
+                    seg.analogsignals.append( anaSig )
+                bl.segments.append(seg)
             
             if mode == 3:
                 # check if tags exits in other mode
@@ -305,16 +305,16 @@ class AxonIO(BaseIO):
                 times = np.array(times)
                 labels = np.array(labels)
                 comments = np.array(comments)
-                for seg in bl._segments:
-                    if len(seg._analogsignals) ==0: continue
-                    ana = seg._analogsignals[0]
+                for seg in bl.segments:
+                    if len(seg.analogsignals) ==0: continue
+                    ana = seg.analogsignals[0]
                     ind = (times>=ana.t_start) & (times <= ana.t_stop)
                     if any(ind):
                         if lazy :
                             ea = EventArray( times =[ ] * pq.s )
                         else:
                             ea = EventArray( times = times[ind]*pq.s, labels = labels[ind], comments = comments[ind] )
-                        seg._eventarrays.append(ea)
+                        seg.eventarrays.append(ea)
         
         return bl
 

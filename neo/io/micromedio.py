@@ -41,7 +41,7 @@ class MicromedIO(BaseIO):
         >>> from neo import io
         >>> r = io.MicromedIO( filename = 'File_micromed_1.TRC')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
+        >>> print seg.analogsignals
 
     """
     is_readable        = True
@@ -168,10 +168,10 @@ class MicromedIO(BaseIO):
             anaSig._annotations['channel_index'] = c
             anaSig._annotations['ground'] = ground
             
-            seg._analogsignals.append( anaSig )
+            seg.analogsignals.append( anaSig )
         
         
-        sampling_rate = np.mean([ anaSig.sampling_rate for anaSig in seg._analogsignals ])*pq.Hz
+        sampling_rate = np.mean([ anaSig.sampling_rate for anaSig in seg.analogsignals ])*pq.Hz
         
         # Read trigger
         f.seek(Trigger_Area,0)
@@ -189,7 +189,7 @@ class MicromedIO(BaseIO):
                     times.append(pos/sampling_rate)
             ea.labels = np.array(labels)
             ea.times = times*pq.s
-        seg._eventarrays.append(ea)
+        seg.eventarrays.append(ea)
         
         return seg
         

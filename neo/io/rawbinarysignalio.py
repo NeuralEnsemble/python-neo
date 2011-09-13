@@ -36,7 +36,7 @@ class RawBinarySignalIO(BaseIO):
         >>> from neo import io
         >>> r = io.RawBinarySignalIO( filename = 'File_ascii_signal_2.txt')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
+        >>> print seg.analogsignals
 
     """
     is_readable        = True
@@ -159,7 +159,7 @@ class RawBinarySignalIO(BaseIO):
                 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start,)
             anaSig._annotations['channel_index'] = i
-            seg._analogsignals.append( anaSig )
+            seg.analogsignals.append( anaSig )
         
         return seg
 
@@ -190,11 +190,11 @@ class RawBinarySignalIO(BaseIO):
         dtype = np.dtype(dtype)
         
         # all AnaologSignal from Segment must have the same length
-        for anasig in segment._analogsignals[1:]:
-            assert anasig.size == segment._analogsignals[0].size
+        for anasig in segment.analogsignals[1:]:
+            assert anasig.size == segment.analogsignals[0].size
         
         sigs = np.empty( (segment._analogsignals[0].size, len(segment._analogsignals)) )
-        for i,anasig in enumerate(segment._analogsignals):
+        for i,anasig in enumerate(segment.analogsignals):
             sigs[:,i] = anasig.magnitude
     
         if dtype.kind == 'i' :
