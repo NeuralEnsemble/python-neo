@@ -243,16 +243,17 @@ class NeoMatlabIO(BaseIO):
                 continue
             
             if not(attrname in ob._annotations or hasattr(ob, attrname)): continue
-            if ob.__getattr__(attrname) is None: continue
+            if getattr(ob, attrname) is None : continue
+            
             
             if attrtype == pq.Quantity:
                 #ndim = attr[2]
-                struct[attrname] = ob.__getattr__(attrname).magnitude
-                struct[attrname+'_units'] = ob.__getattr__(attrname).dimensionality.string
+                struct[attrname] = getattr(ob,attrname).magnitude
+                struct[attrname+'_units'] = getattr(ob,attrname).dimensionality.string
             elif attrtype ==datetime:
-                struct[attrname] = str(ob.__getattr__(attrname))
+                struct[attrname] = str(getattr(ob,attrname))
             else:
-                struct[attrname] = ob.__getattr__(attrname)
+                struct[attrname] = getattr(ob,attrname)
                 
         return struct
 
@@ -273,9 +274,9 @@ class NeoMatlabIO(BaseIO):
             # check children
             rel = description.one_to_many_reslationship
             if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
-                for c in range(len(struct.__getattribute__(attrname))):
-                    child = self.create_ob_from_struct(struct.__getattribute__(attrname)[c]  , classname_lower_to_upper[attrname[:-1]])
-                    ob.__getattr__(attrname.lower()).append(child)
+                for c in range(len(getattr(struct,attrname))):
+                    child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]])
+                    getattr(ob, attrname.lower()).append(child)
                 continue
             
             # attributes
@@ -283,10 +284,10 @@ class NeoMatlabIO(BaseIO):
                 # linked with another field
                 continue
             
-            item = struct.__getattribute__(attrname)
+            item = getattr(struct, attrname)
             if attrname+'_units' in struct._fieldnames:
                 # Quantity attributes
-                units = str(struct.__getattribute__(attrname+'_units'))
+                units = str(getattr(struct, attrname+'_units'))
                 item = pq.Quantity(item, units)
             else:
                 # put the good type
