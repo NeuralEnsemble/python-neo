@@ -16,6 +16,8 @@ Authors: Andrew Davison, Pierre Yger
 from __future__ import with_statement
 from .baseio import BaseIO
 from ..core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+from .tools import create_many_to_one_relationship
+
 import numpy
 import quantities as pq
 
@@ -85,6 +87,7 @@ class BasePyNNIO(BaseIO):
                 signal = self._extract_signal(data, metadata, i)
                 if signal is not None:
                     seg.analogsignals.append(signal)
+        create_many_to_one_relationship(seg)
         return seg
 
     def write_segment(self, segment):

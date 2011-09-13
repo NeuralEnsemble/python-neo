@@ -19,6 +19,8 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
+
 import numpy as np
 import quantities as pq
 
@@ -266,6 +268,8 @@ class NeuroshareIO(BaseIO):
         
         # close
         neuroshare.ns_CloseFile(hFile)
+        
+        create_many_to_one_relationship(seg)
         return seg
 
 

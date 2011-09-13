@@ -21,6 +21,9 @@ from .baseio import BaseIO
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 from ..core import *
 
+# some tools to finalyse the hierachy
+from .tools import create_many_to_one_relationship
+
 # note neo.core need only numpy and quantitie
 import numpy as np
 import quantities as pq
@@ -220,7 +223,7 @@ class ExampleIO(BaseIO):
                 
             seg.eventarrays += [ eva ]
         
-        
+        create_many_to_one_relationship(seg)
         return seg
         
     
@@ -277,9 +280,6 @@ class ExampleIO(BaseIO):
 
         num_spike_by_spiketrain = 40
         sr = 10000.
-        
-        
-        
         
         if lazy:
             times = [ ]

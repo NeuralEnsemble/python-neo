@@ -18,6 +18,8 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
+
 import numpy as np
 from numpy import dtype
 import quantities as pq
@@ -320,11 +322,8 @@ class TdtIO(BaseIO):
                         #~ del sptr.pos
                         #~ del sptr.fid
                         seg.spiketrains.append( sptr )
-                    
-
-
-            
         
+        create_many_to_one_relationship(bl)
         return bl
 
 

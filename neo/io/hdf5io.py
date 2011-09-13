@@ -213,6 +213,7 @@ Author: asobolev
 from __future__ import absolute_import
 from ..core import *
 from .baseio import BaseIO
+from .tools import create_many_to_one_relationship
 import types
 import warnings
 import tables as tb
@@ -356,7 +357,9 @@ class IOManager(BaseIO):
         """
         Wrapper for base io "reader" functions.
         """
-        return self.get(path, cascade, lazy)
+        ob = self.get(path, cascade, lazy)
+        create_many_to_one_relationship(ob)
+        return ob
 
     def _write_entity(self, obj, where="/", cascade=True, lazy=False):
         """

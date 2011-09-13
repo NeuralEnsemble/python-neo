@@ -16,6 +16,8 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
+
 import numpy as np
 from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
@@ -132,7 +134,7 @@ class WinEdrIO(BaseIO):
             
             seg.analogsignals.append(ana)
             
-            
+        create_many_to_one_relationship(seg)
         return seg
         
         

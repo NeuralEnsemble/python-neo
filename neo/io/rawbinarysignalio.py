@@ -13,6 +13,8 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
+
 import numpy as np
 import quantities as pq
 
@@ -152,6 +154,7 @@ class RawBinarySignalIO(BaseIO):
             anaSig._annotations['channel_index'] = i
             seg.analogsignals.append( anaSig )
         
+        create_many_to_one_relationship(seg)
         return seg
     
     def write_segment(self, segment,

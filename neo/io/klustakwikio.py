@@ -17,6 +17,7 @@ from .baseio import BaseIO
 
 # to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
 from ..core import *
+from .tools import create_many_to_one_relationship
 
 # note neo.core need only numpy and quantitie
 import numpy as np
@@ -169,7 +170,8 @@ class KlustaKwikIO(BaseIO):
                 # Link
                 u.spiketrains.append(st)
                 seg.spiketrains.append(st)
-
+        
+        create_many_to_one_relationship(block)
         return block
 
     # Helper hidden functions for reading

@@ -12,6 +12,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 import numpy as np
 import quantities as pq
 
@@ -183,6 +184,7 @@ class MicromedIO(BaseIO):
             ea.times = times*pq.s
         seg.eventarrays.append(ea)
         
+        create_many_to_one_relationship(seg)
         return seg
         
     

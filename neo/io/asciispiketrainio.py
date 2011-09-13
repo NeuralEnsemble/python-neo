@@ -11,6 +11,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 import numpy as np
 import quantities as pq
 
@@ -117,6 +118,7 @@ class AsciiSpikeTrainIO(BaseIO):
             seg.spiketrains.append(sptr)
         f.close()
         
+        create_many_to_one_relationship(seg)
         return seg
 
     def write_segment(self, segment,

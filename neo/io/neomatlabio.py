@@ -15,6 +15,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 import numpy as np
 import quantities as pq
 from .. import description
@@ -187,6 +188,7 @@ class NeoMatlabIO(BaseIO):
         assert'block' in d, 'no block in'+self.filename
         bl_struct = d['block']
         bl =  self.create_ob_from_struct(bl_struct, 'Block')
+        create_many_to_one_relationship(bl)
         return bl
     
     def write_block(self, bl,):

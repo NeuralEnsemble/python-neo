@@ -18,6 +18,8 @@ Author: sgarcia,luc estebanez
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
+
 import numpy as np
 import quantities as pq
 
@@ -246,7 +248,9 @@ class NeuroExplorerIO(BaseIO):
                                             marker_type = markertype
                                             )
                 seg.eventarrays.append(ea)
-                
+        
+        
+        create_many_to_one_relationship(seg)
         return seg
 
 

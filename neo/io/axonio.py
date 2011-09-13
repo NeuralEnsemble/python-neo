@@ -32,6 +32,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 import numpy as np
 import quantities as pq
 
@@ -308,6 +309,7 @@ class AxonIO(BaseIO):
                             ea = EventArray( times = times[ind]*pq.s, labels = labels[ind], comments = comments[ind] )
                         seg.eventarrays.append(ea)
         
+        create_many_to_one_relationship(bl)
         return bl
 
 
