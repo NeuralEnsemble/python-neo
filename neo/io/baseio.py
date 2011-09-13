@@ -85,6 +85,7 @@ class BaseIO(object):
                 return bl
             seg = self.read_segment(lazy = lazy, cascade = cascade,  **kargs)
             bl.segments.append(seg)
+            create_many_to_one_relationship(bl)
             return bl
         else:
             raise NotImplementedError

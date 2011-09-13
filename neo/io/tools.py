@@ -29,8 +29,8 @@ def create_many_to_one_relationship(ob):
         return
     
     for childname in one_to_many_reslationship[classname]:
-        if not hasattr(ob, '_'+childname.lower()+'s'): continue
-        sub = getattr(ob, '_'+childname.lower()+'s')
+        if not hasattr(ob, childname.lower()+'s'): continue
+        sub = getattr(ob, childname.lower()+'s')
         for child in sub:
             if not hasattr(child, classname.lower()):
                 setattr(child, classname.lower(), ob)
@@ -56,7 +56,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     recordingchannels = { }
     for seg in bl._segments:
         
-        for sub in ['_analogsignals', '_spiketrains' ]:
+        for sub in ['analogsignals', 'spiketrains' ]:
             if not hasattr(seg, sub) : continue
             for child in getattr(seg, sub):
                 # child is AnaologSIgnal or SpikeTrain
@@ -73,8 +73,8 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                         child._annotations.pop('channel_index')
     indexes = np.sort(recordingchannels.keys())
     rcg = RecordingChannelGroup(name = 'all channels', channel_indexes = indexes)
-    bl._recordingchannelgroups.append(rcg)
+    bl.recordingchannelgroups.append(rcg)
     for ind in indexes:
-        rcg._recordingchannels.append(recordingchannels[ind])
+        rcg.recordingchannels.append(recordingchannels[ind])
 
 

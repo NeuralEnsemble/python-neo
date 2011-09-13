@@ -49,12 +49,15 @@ def assert_neo_object_is_compliant(ob):
     classname =ob.__class__.__name__
     necess = description.classes_necessary_attributes[classname]
     recomm = description.classes_recommended_attributes[classname]
+    
+    # test presence of necessary attributes
     attributes = necess
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
         if attrname != '':
             assert hasattr(ob, attrname), '%s neo obect have not %s' %( classname, attrname)
     
+    # test attributes types
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
@@ -75,7 +78,18 @@ def assert_neo_object_is_compliant(ob):
             if attrtype == np.ndarray:
                 dt = attr[3]
                 assert ob.dtype.kind == dt.kind, '%s dtype.kind is %s should be %s' % (classname, ob.dtype.kind, dt.kind)
-            
+    
+    # test bijectivity : one_to_many_relationship and many_to_one_relationship
+    if classname in description.one_to_many_reslationship:
+        for childname in description.one_to_many_reslationship[classname]:
+            if not hasattr(ob, childname.lower()+'s'): continue
+            sub = getattr(ob, childname.lower()+'s')
+            for child in sub:
+                assert hasattr(child, classname.lower()), '%s should have %s attribute (2 way relationship)' % (childname, classname.lower())
+                if hasattr(child, classname.lower()):
+                    assert getattr(child, classname.lower()) == ob, '%s.%s is not symetric with %s.%ss' (childname, classname.lower(), classname, childname.lower())
+    
+    
     # recursive on one to many rel
     if classname in description.one_to_many_reslationship:
         for childname in description.one_to_many_reslationship[classname]:
