@@ -76,16 +76,6 @@ class TdtIO(BaseIO):
         if self.dirname.endswith('/'):
             self.dirname = self.dirname[:-1]
 
-
-    def read(self , **kargs):
-        """
-        Return a neo.Block
-
-        """
-        return self.read_block( **kargs)
-    
-    
-    
     def read_block(self,
                                         lazy = False,
                                         cascade = True,

@@ -43,7 +43,8 @@ class BaseIO(object):
     The object types can be one of the classes defined in neo.core (Block, Segment, AnalogSignal, ...)
     
     Each class do not necessary support all the whole neo hierarchy but part of it.
-    This is discribe with **supported_objects**
+    This is discribe with **supported_objects**.
+    All IOs must support at least Block with a read_block()
     
     
     ** start a new IO **
@@ -74,12 +75,27 @@ class BaseIO(object):
         self.filename = filename
     
     ######## General read/write methods #######################
+    def read(self, lazy = False, cascade = True,  **kargs):
+        if Block in self.readable_objects:
+            return self.read_block(lazy = lazy, cascade = cascade, **kargs)
+        elif Segment in self.readable_objects:
+            bl = Block(name = 'One segment only')
+            if not cascade:
+                return bl
+            seg = self.read_segment(lazy = lazy, cascade = cascade,  **kargs)
+            bl.segments.append(seg)
+            return bl
+        else:
+            raise NotImplementedError
     
-    def read(self, **kargs):
-        raise NotImplementedError
-
-    def write(self, **kargs):
-        raise NotImplementedError
+    def write(self, bl, **kargs):
+        if Block in self.writeable_objects:
+            self.write_block(bl, **kargs)
+        elif Segment in self.writeable_objects:
+            assert len(bl.segments) == 1, '%s is based on segment so if you try to write a block it must contain only one Segment'% self.__class__.__name__
+            self.write(bl.segments[0], **kargs)
+        else:
+            raise NotImplementedError
 
     ######## All individual read methods #######################
     def read_block(self, **kargs):
@@ -125,44 +141,44 @@ class BaseIO(object):
         assert(EpochArray in self.readable_objects), read_error
     
     ######## All individual write methods #######################
-    def write_block(self, **kargs):
+    def write_block(self, bl, **kargs):
         assert(Block in self.writeable_objects), write_error
 
-    def write_segment(self, **kargs):
+    def write_segment(self, seg, **kargs):
         assert(Segment in self.writeable_objects), write_error
 
-    def write_unit(self, **kargs):
+    def write_unit(self, ut, **kargs):
         assert(Unit in self.writeable_objects), write_error
 
-    def write_spiketrain(self, **kargs):
+    def write_spiketrain(self,sptr,  **kargs):
         assert(SpikeTrain in self.writeable_objects), write_error
 
-    def write_spike(self, **kargs):
+    def write_spike(self, sp, **kargs):
         assert(Spike in self.writeable_objects), write_error
     
-    def write_analogsignal(self, **kargs):
+    def write_analogsignal(self, anasig,  **kargs):
         assert(AnalogSignal in self.writeable_objects), write_error
 
-    def write_irregularlysampledsignal(self, **kargs):
+    def write_irregularlysampledsignal(self,irsig,  **kargs):
         assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
-    def write_analogsignalarray(self, **kargs):
+    def write_analogsignalarray(self, anasigar, **kargs):
         assert(AnalogSignalArray in self.writeable_objects), write_error
 
-    def write_recordingchannelgroup(self, **kargs):
+    def write_recordingchannelgroup(self, rcg, **kargs):
         assert(RecordingChannelGroup in self.writeable_objects), write_error
 
-    def write_recordingchannel(self, **kargs):
+    def write_recordingchannel(self, rc, **kargs):
         assert(RecordingChannel in self.writeable_objects), write_error
     
-    def write_event(self, **kargs):
+    def write_event(self,ev,  **kargs):
         assert(Event in self.writeable_objects), write_error
     
-    def write_eventarray(self, **kargs):
+    def write_eventarray(self, ea,  **kargs):
         assert(EventArray in self.writeable_objects), write_error
     
-    def write_epoch(self, **kargs):
+    def write_epoch(self, ep, **kargs):
         assert(Epoch in self.writeable_objects), write_error
 
-    def write_epocharray(self, **kargs):
+    def write_epocharray(self, epa,  **kargs):
         assert(EpochArray in self.writeable_objects), write_error

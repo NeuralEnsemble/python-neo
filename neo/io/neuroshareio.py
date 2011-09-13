@@ -93,13 +93,7 @@ class NeuroshareIO(BaseIO):
         BaseIO.__init__(self)
 
 
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
+
     
     def read_segment(self, import_neuroshare_segment = True):
         """

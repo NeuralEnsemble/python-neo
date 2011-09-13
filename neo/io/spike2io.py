@@ -51,7 +51,7 @@ class Spike2IO(BaseIO):
     
     supported_objects  = [ Segment , AnalogSignal , EventArray, SpikeTrain]
     readable_objects   = [Segment]
-    writeable_objects  = []      
+    writeable_objects  = [ ]      
 
 
     has_header         = False
@@ -74,13 +74,6 @@ class Spike2IO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
-    def read(self , **kargs):
-        """
-        read a neo.Segment
-        """
-        return self.read_segment( **kargs)
-    
     def read_segment(self ,
                                             lazy = False,
                                             cascade = True,

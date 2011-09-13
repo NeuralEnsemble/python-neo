@@ -142,24 +142,6 @@ class ExampleIO(BaseIO):
         self.filename = filename
 
 
-    def read(self , **kargs):
-        """
-        Read a fake file.
-        Return a neo.Segment
-        See read_segment for detail.
-        
-        Note:
-            - each IO define as many arguments he wants or no one
-            - neo.io API support only named arguments
-            
-        """
-        # the higher level of my IO is Segment so:
-        return self.read_segment( **kargs)
-
-    
-    # write is not supported so I do not over class write from BaseIO
-
-    
     # Segment reading is supported so I define this :
     def read_segment(self, 
                      # the 2 first keyword arguments are imposed by neo.io API

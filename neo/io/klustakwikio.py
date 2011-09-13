@@ -111,10 +111,6 @@ class KlustaKwikIO(BaseIO):
         # initialize a helper object to parse filenames
         self._fp = FilenameParser(dirname=self.filename, basename=basename)
 
-    def read(self , **kwargs):
-        """Read the directory and return a Block."""
-        return self.read_block( **kwargs)
-
     # The reading methods. The `lazy` and `cascade` parameters are imposed
     # by neo.io API
     def read_block(self, lazy=False, cascade=True):

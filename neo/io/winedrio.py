@@ -66,13 +66,6 @@ class WinEdrIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
-    def read(self , **kargs):
-        """
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
     
     def read_segment(self , lazy = False, cascade = True):
         seg  = Segment(

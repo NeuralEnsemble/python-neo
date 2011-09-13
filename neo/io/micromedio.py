@@ -49,7 +49,7 @@ class MicromedIO(BaseIO):
     
     supported_objects            = [ Segment , AnalogSignal , EventArray ]
     readable_objects    = [Segment]
-    writeable_objects    = []      
+    writeable_objects    = [ ]      
     
     has_header         = False
     is_streameable     = False
@@ -71,14 +71,6 @@ class MicromedIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
     
     def read_segment(self, cascade = True, lazy = False,):
         """

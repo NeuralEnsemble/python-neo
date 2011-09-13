@@ -21,10 +21,11 @@ class TestIOObjects(unittest.TestCase):
         for ob in objectlist:
             if ob not in BaseIO.readable_objects:
                 meth = getattr(reader , 'read_'+ob.__name__.lower() )
-                self.assertRaises(TypeError, meth, (None,) )
+                self.assertRaises(AssertionError, meth, )
+            if ob not in BaseIO.writeable_objects:
                 meth = getattr(reader , 'write_'+ob.__name__.lower() )
-                self.assertRaises(TypeError, meth, (None,) )
-    
+                self.assertRaises(AssertionError, meth, () )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -64,15 +64,6 @@ class WinWcpIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
     
-    
-    def read(self , **kargs):
-        """
-        Return a neo.Block
-        See read_block for detail.
-        """
-        return self.read_block( **kargs)
-
-    
     def read_block(self , lazy = False,
                                     cascade = True,
                                     ):

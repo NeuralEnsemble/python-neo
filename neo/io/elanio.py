@@ -85,14 +85,6 @@ class ElanIO(BaseIO):
         self.filename = filename
 
 
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
-    
     def read_segment(self, lazy = False, cascade = True):
         
         ## Read header file
@@ -246,13 +238,6 @@ class ElanIO(BaseIO):
         
         return seg
         
-        
-    #~ def write(self , *args , **kargs):
-        #~ """
-        #~ Write segment in 3 files.
-        #~ See write_segment for detail.
-        #~ """
-        #~ self.write_segment(*args , **kargs)
 
     #~ def write_segment(self, segment, ):
         #~ """

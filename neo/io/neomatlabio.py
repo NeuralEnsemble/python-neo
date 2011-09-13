@@ -176,15 +176,7 @@ class NeoMatlabIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
-
-
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Block
-        See read_segment for detail.
-        """
-        return self.read_block( **kargs)
+    
     
     def read_block(self, cascade = True, lazy = False,):
         """
@@ -196,13 +188,6 @@ class NeoMatlabIO(BaseIO):
         bl_struct = d['block']
         bl =  self.create_ob_from_struct(bl_struct, 'Block')
         return bl
-    
-    
-    def write(self, *args, **kargs):
-        """
-        Write block in .mat
-        """
-        self.write_block(*args , **kargs)
     
     def write_block(self, bl,):
         """

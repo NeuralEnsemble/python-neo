@@ -143,14 +143,6 @@ class AxonIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
-
-    def read(self , *args, **kargs):
-        """
-        Read the file.
-        Return a neo.Block by default
-        See read_block for detail.        
-        """
-        return self.read_block( *args , **kargs)
     
     def read_block(self, lazy = False, cascade = True ):
 

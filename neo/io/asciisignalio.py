@@ -48,8 +48,8 @@ class AsciiSignalIO(BaseIO):
     is_readable        = True
     is_writable        = True
     
-    supported_objects  = [Segment , AnalogSignal]
-    readable_objects   = [Segment]
+    supported_objects  = [ Segment , AnalogSignal]
+    readable_objects   = [ Segment]
     writeable_objects  = [Segment]
 
     has_header         = False
@@ -90,15 +90,6 @@ class AsciiSignalIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
-
-
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
     
     def read_segment(self, 
                                         lazy = False,
@@ -197,14 +188,6 @@ class AsciiSignalIO(BaseIO):
             seg.analogsignals.append( anaSig )
         
         return seg
-
-
-    def write(self , *args , **kargs):
-        """
-        Write segment in a txt file.
-        See write_segment for detail.
-        """
-        self.write_segment(*args , **kargs)
 
     def write_segment(self, segment,
                                 delimiter = '\t',

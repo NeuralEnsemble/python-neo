@@ -83,15 +83,6 @@ class RawBinarySignalIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
         
-    
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment( **kargs)
-    
     def read_segment(self, 
                                         cascade = True,
                                         lazy = False,
@@ -162,15 +153,7 @@ class RawBinarySignalIO(BaseIO):
             seg.analogsignals.append( anaSig )
         
         return seg
-
-
-    def write(self , *args , **kargs):
-        """
-        Write segment in a raw binary file.
-        See write_segment for detail.
-        """
-        self.write_segment(*args , **kargs)
-
+    
     def write_segment(self, segment,
                                 dtype = 'f4',
                                 rangemin = -10,

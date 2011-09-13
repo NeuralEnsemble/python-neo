@@ -69,14 +69,6 @@ class BasePyNNIO(BaseIO):
     def _write_file_contents(self, data, metadata):
         raise NotImplementedError
     
-    def read(self, **kwargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment(**kwargs)
-    
     def read_segment(self, lazy=False, cascade=True):
         data, metadata = self._read_file_contents()
         annotations = dict((k, metadata[k]) for k in ("label", "variable", "first_id", "last_id"))
