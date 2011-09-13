@@ -162,7 +162,6 @@ class AnalogSignal(BaseAnalogSignal):
       t_stop :          time when signal ends (t_start + duration)
       
     Recommanded Attributes/properties:
-        channel_name : 
-        channel_index :
+      name
     """
     pass

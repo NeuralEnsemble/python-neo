@@ -1,3 +1,8 @@
+# TODO
+# Andrey: please remove this to test when your IO is finished
+__test__ = False 
+
+
 # add performance testing!!
 
 import numpy as np

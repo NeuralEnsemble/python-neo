@@ -23,8 +23,6 @@ class AnalogSignalArray(BaseAnalogSignal):
       
       
     Recommanded Attributes/properties:
-        channel_names : 
-        channel_indexes :
 
     Properties:
         sampling_period : interval between two samples (1/sampling_rate)
@@ -35,8 +33,7 @@ class AnalogSignalArray(BaseAnalogSignal):
     """
 
     def __new__(cls, signal, units='', dtype=None, copy=True, t_start=0*pq.s,
-                sampling_rate=None, sampling_period=None, channel_names=None,
-                channel_indexes=None,
+                sampling_rate=None, sampling_period=None, 
                 ):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
@@ -51,8 +48,6 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
         #obj.name = name
         obj._annotations = {}
-        obj._annotations['channel_names'] = channel_names
-        obj._annotations['channel_indexes'] = channel_indexes
         return obj
 
     def __getslice__(self, i, j):

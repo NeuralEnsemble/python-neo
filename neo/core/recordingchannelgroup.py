@@ -13,7 +13,8 @@ class RecordingChannelGroup(BaseNeo):
     Necessary Attributes/properties:
     
     Recommanded Attributes/properties:
-        name:
+        channel_names:
+        channel_indexes:
     
     Container of:
         RecordingChannel

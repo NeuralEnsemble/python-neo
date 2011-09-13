@@ -158,14 +158,14 @@ classes_recommended_attributes= {
                                 ('channel_index', int),
                                 ],
     
-    'AnalogSignalArray': [('channel_names', np.ndarray,1,  np.dtype('S')),
-                                        ('channel_indexes', np.ndarray,1,  np.dtype('i')),
+    'AnalogSignalArray': [
                                         ],
     
-    'IrregularlySampledSignal': [('channel_name', str),
-                                        ('channel_index', int),
-                                        ],
-   'RecordingChannelGroup': [ ],
+    'IrregularlySampledSignal': [ 
+                                                    ],
+   'RecordingChannelGroup': [ ('channel_names', np.ndarray,1,  np.dtype('S')),
+                                                ('channel_indexes', np.ndarray,1,  np.dtype('i')),
+                                            ],
     'RecordingChannel': [('coordinate',pq.Quantity,1),],
     
     }

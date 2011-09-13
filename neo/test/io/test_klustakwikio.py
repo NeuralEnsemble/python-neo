@@ -1,3 +1,8 @@
+#TODO
+# Chris: please remove this to test when your IO is finished
+__test__ = False 
+
+
 import unittest
 import neo.io.klustakwikio
 import os.path
@@ -6,6 +11,7 @@ import quantities as pq
 import glob
 
 from neo.test.io.common_io_test import BaseTestIO
+
 
 
 class testFilenameParser(unittest.TestCase):
