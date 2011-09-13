@@ -28,3 +28,18 @@ class Block(BaseNeo):
         BaseNeo.__init__(self, **kargs)
         self.segments = [ ]
         self.recordingchannelgroups = [ ]
+        
+    @property
+    def list_units(self):
+        """
+        Give a list of all Unit in a block.
+        """
+        units = [ ]
+        for rcg in self.recordingchannelgroups:
+            for rc in rcg.recordingchannel:
+                for unit in rc.units:
+                    if unit not in units:
+                        units.append(unit)
+        return units
+
+
