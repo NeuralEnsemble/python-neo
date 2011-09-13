@@ -154,8 +154,7 @@ classes_recommended_attributes= {
     'Spike': [('waveform', pq.Quantity, 2),
                     ('left_sweep', pq.Quantity, 0 ),
                     ('sampling_rate', pq.Quantity, 0 ), ],
-    'AnalogSignal': [('channel_name', str),
-                                ('channel_index', int),
+    'AnalogSignal': [
                                 ],
     
     'AnalogSignalArray': [
@@ -170,7 +169,7 @@ classes_recommended_attributes= {
     
     }
 
-# main classes can have name, description, file_origin
+# all classes can have name, description, file_origin
 for k in classes_recommended_attributes.keys():
     classes_recommended_attributes[k] += [ ('name', str ), ('description', str ), ('file_origin', str ),]
 

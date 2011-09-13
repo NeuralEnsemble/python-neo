@@ -30,8 +30,10 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     Base class for AnalogSignal and AnalogSignalArray
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, name='',
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None):
+    def __new__(cls, signal, units='', dtype=None, copy=True, 
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin = None, description = None,
+                ):
         """
         Create a new :class:`BaseAnalogSignal` instance from a list or numpy array
         of numerical values, or from a Quantity array.
@@ -44,6 +46,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
         obj.name = name
+        obj.file_origin = file_origin
+        obj.description = description
         obj._annotations = {}
         return obj
 
@@ -163,5 +167,7 @@ class AnalogSignal(BaseAnalogSignal):
       
     Recommanded Attributes/properties:
       name
+      description
+      file_origin
     """
     pass

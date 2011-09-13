@@ -13,8 +13,10 @@ class RecordingChannel(BaseNeo):
         index (int):
     
     Recommanded Attributes/properties:
-        name (str):
         coordinate x,y,z (quantitite array):
+        name:
+        description:
+        file_origin:           
     
     
     Container of:

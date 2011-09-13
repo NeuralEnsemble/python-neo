@@ -26,8 +26,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     """
     
     def __new__(cls, times=numpy.array([])*pq.s, t_start=0*pq.s, 
-                t_stop=0*pq.s, units='', dtype=None, copy=True, waveforms=None, 
-                left_sweep=None, sampling_rate=None, name='', sort=True):
+                t_stop=0*pq.s, units='', dtype=None, copy=True, sort=True,
+                waveforms=None,  left_sweep=None, sampling_rate=None, 
+                name=None, file_origin = None, description = None,
+                ):
         """
         Create a new :class:`SpikeTrain` instance from a list or numpy array
         of numerical values, or from a Quantity array with dimensions of time.
@@ -47,6 +49,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         ``waveforms``  - a 3D quantities array (spike_index, channel_index, time)
         sampling_rate = sampling rate of waveforms
         left_sweep = sometimes the sweep window of each is asymetricly centered (left_sweep need to be define and right_sweep is a propertiy)
+        
+        name:
+        description:
+        file_origin:   
+        
         
         """
         # check units
@@ -77,6 +84,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         obj.t_stop = t_stop
         obj._sorted = sorted
         obj.name = name
+        obj.file_origin = file_origin
+        obj.description = description        
         obj._annotations = {}
         # check waveforms
         obj.waveforms = waveforms

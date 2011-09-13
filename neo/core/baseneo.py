@@ -15,7 +15,8 @@ class BaseNeo(object):
       
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name=None, file_origin = None, description = None,
+                                *args, **kwargs):
         """This is the base constructor for all neo objects.
         
         For definitions of keyword arguments, see the class documentation
@@ -23,6 +24,11 @@ class BaseNeo(object):
         """
         self.__dict__['_annotations'] = kwargs
         #self.__dict__['_annotations'] = { }
+        
+        # theses attributes are recommended for all objects.
+        self.name = name
+        self.description = description
+        self.file_origin = file_origin
 
     def __getattr__(self, k):
         if hasattr(self, '_annotations'):

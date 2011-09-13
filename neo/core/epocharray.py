@@ -18,18 +18,19 @@ class EpochArray(BaseNeo):
         labels (numpy.array 1D dtype='S') ):
     
     Recommanded Attributes/properties:
-        
+        name:
+        description:
+        file_origin:        
     
     
     Container of:
         None
         
     """
-    def __init__(self, times = np.array([ ]) * pq.s ,
-                    durations = np.array([ ]) * pq.s ,
-                    labels = np.array([ ] , dtype = 'S'),
+    def __init__(self, times = np.array([ ]) * pq.s , durations = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S',
                     **kargs):
         BaseNeo.__init__(self, **kargs)
+        
         self.times = times
         self.durations = durations
         self.labels = labels

@@ -18,6 +18,9 @@ class Spike(BaseNeo):
         waveform (quantitie 2D (channel_index X time) = 
         sampling_rate = 
         left_sweep = 
+        name:
+        description:
+        file_origin:           
     
     Properties:
         right_sweep
@@ -30,9 +33,12 @@ class Spike(BaseNeo):
                     left_sweep = None,
                     **kargs):
         BaseNeo.__init__(self , **kargs)
+        
         self.time = time
+        
         self.waveform = waveform
         self.left_sweep = left_sweep
+        self.sampling_rate = sampling_rate
 
     @property
     def duration(self):

@@ -32,7 +32,9 @@ class Unit(BaseNeo):
     Necessary Attributes/properties:
     
     Recommended Attributes/properties:
-        name
+        name:
+        description:
+        file_origin:   
     
     Container of:
         SpikeTrain

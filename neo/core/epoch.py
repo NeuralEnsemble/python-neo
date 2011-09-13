@@ -16,18 +16,19 @@ class Epoch(BaseNeo):
         label (str): 
     
     Recommanded Attributes/properties:
-        
-    
+        name:
+        description:
+        file_origin:
     
     Container of:
         None
         
     """
-    def __init__(self, time = 0*pq.s ,
-                    duration = 0*pq.s ,
-                    label = '',
+    def __init__(self, time = 0*pq.s , duration = 0*pq.s , label = '',
                     **kargs):
         BaseNeo.__init__(self, **kargs)
+        
         self.time = time
         self.duration = duration
         self.label = label
+

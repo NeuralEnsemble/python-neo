@@ -17,9 +17,9 @@ class IrregularlySampledSignal(BaseNeo):
         samples (quantities 1D): 
     
     Recommanded Attributes/properties:
-        channel_name : 
-        channel_index :
-    
+        name:
+        description:
+        file_origin:                
     
     Container of:
         None

@@ -24,8 +24,14 @@ class Block(BaseNeo):
         RecordingChannelGroup
     
     """
-    def __init__(self, **kargs):
+    def __init__(self, file_datetime = None, rec_datetime = None, index = None,
+                        **kargs):
         BaseNeo.__init__(self, **kargs)
+        
+        self.file_datetime.file_datetime
+        self.rec_datetime = rec_datetime
+        self.index = index
+        
         self.segments = [ ]
         self.recordingchannelgroups = [ ]
         

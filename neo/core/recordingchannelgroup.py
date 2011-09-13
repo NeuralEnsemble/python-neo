@@ -15,6 +15,9 @@ class RecordingChannelGroup(BaseNeo):
     Recommanded Attributes/properties:
         channel_names:
         channel_indexes:
+        name:
+        description:
+        file_origin:   
     
     Container of:
         RecordingChannel
@@ -24,7 +27,11 @@ class RecordingChannelGroup(BaseNeo):
         
     """
     def __init__(self, **kargs):
-        BaseNeo.__init__(self, **kargs)
+        BaseNeo.__init__(self, channel_names = None, channel_indexes = None, **kargs)
+        
+        self.channel_names = channel_names
+        self.channel_indexes = channel_indexes
+        
         self.analogsignalarrays = [ ]
         self.recordingchannels = [ ]
 

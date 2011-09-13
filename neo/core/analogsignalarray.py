@@ -22,18 +22,23 @@ class AnalogSignalArray(BaseAnalogSignal):
         sampling_rate :   number of samples per unit time
       
       
-    Recommanded Attributes/properties:
+    
 
     Properties:
         sampling_period : interval between two samples (1/sampling_rate)
         duration :        signal duration (size * sampling_period)
         t_stop :          time when signal ends (t_start + duration)
-
+        
+    Recommanded Attributes/properties:
+        name
+        description
+        file_origin
 
     """
 
     def __new__(cls, signal, units='', dtype=None, copy=True, t_start=0*pq.s,
                 sampling_rate=None, sampling_period=None, 
+                name=None, file_origin = None, description = None,
                 ):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
@@ -46,7 +51,9 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
-        #obj.name = name
+        obj.name = name
+        obj.file_origin = file_origin
+        obj.description = description
         obj._annotations = {}
         return obj
 
