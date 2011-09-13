@@ -139,10 +139,10 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
             assert hasattr(ob2, attrname), '%s 1 have %s but not %s 2'%(classname, attrname, classname)
         
         if getattr(ob1,attrname)  is None:
-            assert getattr(ob2,attrname)  is None, '%s and %s differed'
+            assert getattr(ob2,attrname)  is None, 'In %s.%s %s and %s differed' % (classname,attrname, getattr(ob1,attrname), getattr(ob2,attrname))
             continue
         if getattr(ob2,attrname)  is None:
-            assert getattr(ob1,attrname)  is None, '%s and %s differed'
+            assert getattr(ob1,attrname)  is None, 'In %s.%s %s and %s differed' % (classname,attrname, getattr(ob1,attrname), getattr(ob2,attrname))
             continue
         
         if attrname =='': 

@@ -50,7 +50,11 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         obj.description = description
         obj._annotations = {}
         return obj
-
+    
+    def __init__(self,*args,  **kargs):
+        # this do not call BaseNeo.__init__ because of name= 
+        pass
+    
     def __array_finalize__(self, obj):
         super(BaseAnalogSignal, self).__array_finalize__(obj)
         self.t_start = getattr(obj, 't_start', 0*pq.s)

@@ -28,7 +28,7 @@ class Block(BaseNeo):
                         **kargs):
         BaseNeo.__init__(self, **kargs)
         
-        self.file_datetime.file_datetime
+        self.file_datetime =file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
         

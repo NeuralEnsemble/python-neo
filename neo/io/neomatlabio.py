@@ -253,6 +253,7 @@ class NeoMatlabIO(BaseIO):
                 struct[attrname] = str(ob.__getattr__(attrname))
             else:
                 struct[attrname] = ob.__getattr__(attrname)
+                
         return struct
 
     def create_ob_from_struct(self, struct, classname):
@@ -268,7 +269,6 @@ class NeoMatlabIO(BaseIO):
             ob = cl(struct.array, units = str(struct.units) )
         else:
             ob = cl()
-        
         for attrname in struct._fieldnames:
             # check children
             rel = description.one_to_many_reslationship
@@ -310,12 +310,8 @@ class NeoMatlabIO(BaseIO):
                     else:
                         item = attrtype(item)
             
-            if attrname in [ a[0] for a in description.classes_necessary_attributes[classname]]:
-                # attr is necessary
-                ob.__setattr__(attrname, item)
-            else:
-                # attr is recommended
-                ob._annotations[attrname] =  item
+            setattr(ob, attrname, item)
+
         
         return ob
 

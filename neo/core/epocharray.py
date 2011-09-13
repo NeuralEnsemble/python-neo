@@ -27,7 +27,7 @@ class EpochArray(BaseNeo):
         None
         
     """
-    def __init__(self, times = np.array([ ]) * pq.s , durations = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S',
+    def __init__(self, times = np.array([ ]) * pq.s , durations = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S'),
                     **kargs):
         BaseNeo.__init__(self, **kargs)
         

@@ -93,6 +93,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         obj.sampling_rate = sampling_rate
         return obj
 
+    def __init__(self,*args,  **kargs):
+        # this do not call BaseNeo.__init__ because of name= 
+        pass
+
     def __array_finalize__(self, obj):
         super(SpikeTrain, self).__array_finalize__(obj)
         # FIXME bug when empty
