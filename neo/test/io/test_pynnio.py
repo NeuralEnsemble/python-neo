@@ -17,7 +17,19 @@ from neo.core import Segment, AnalogSignal, SpikeTrain
 from neo.io import PyNNNumpyIO, PyNNTextIO
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
 
+
 NCELLS = 5
+
+
+#TODO: common test fails.
+#from neo.test.io.common_io_test import BaseTestIO
+#class CommonTestPyNNNumpyIO(unittest.TestCase, BaseTestIO):
+#    ioclass = PyNNNumpyIO
+
+#class CommonTestPyNNTextIO(unittest.TestCase, BaseTestIO):
+#    ioclass = PyNNTextIO
+
+
 
 
 def read_test_file(filename):
