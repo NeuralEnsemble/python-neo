@@ -47,7 +47,7 @@ class Segment(BaseNeo):
         self.eventarrays = [ ]
         self.analogsignals = [ ]
         self.analogsignalarrays = [ ]
-        self.irregularysampledsignals = [ ]
+        self.irregularlysampledsignals = [ ]
         self.spikes = [ ]
         self.spiketrains = [ ]
 

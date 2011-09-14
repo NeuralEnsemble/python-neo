@@ -187,7 +187,7 @@ class NeoMatlabIO(BaseIO):
         d = sio.loadmat(self.filename, struct_as_record=False, squeeze_me=True)
         assert'block' in d, 'no block in'+self.filename
         bl_struct = d['block']
-        bl =  self.create_ob_from_struct(bl_struct, 'Block')
+        bl =  self.create_ob_from_struct(bl_struct, 'Block', cascade = cascade, lazy = lazy)
         create_many_to_one_relationship(bl)
         return bl
     
@@ -257,7 +257,7 @@ class NeoMatlabIO(BaseIO):
                 
         return struct
 
-    def create_ob_from_struct(self, struct, classname):
+    def create_ob_from_struct(self, struct, classname, cascade = True, lazy = False,):
         cl = description.class_by_name[classname]
         # check if hinerits Quantity
         is_quantity = False
@@ -275,8 +275,10 @@ class NeoMatlabIO(BaseIO):
             rel = description.one_to_many_reslationship
             if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
                 for c in range(len(getattr(struct,attrname))):
-                    child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]])
-                    getattr(ob, attrname.lower()).append(child)
+                    if cascade:
+                        child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]], 
+                                                                                    cascade = cascade, lazy = lazy)
+                        getattr(ob, attrname.lower()).append(child)
                 continue
             
             # attributes

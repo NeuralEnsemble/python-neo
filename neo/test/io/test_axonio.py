@@ -18,7 +18,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 
 
-class TestAxonIO(unittest.TestCase, BaseTestIO):
+class TestAxonIO(BaseTestIO, unittest.TestCase, ):
     files_to_test = [ 'File_axon_1.abf',
                             'File_axon_2.abf',
                             'File_axon_3.abf',

@@ -16,7 +16,7 @@ import numpy
 from neo.test.io.common_io_test import BaseTestIO
 
 
-class TestAsciiSpikeTrainIO(unittest.TestCase, BaseTestIO):
+class TestAsciiSpikeTrainIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AsciiSpikeTrainIO
     files_to_download = [ 'File_ascii_spiketrain_1.txt',
                             ]

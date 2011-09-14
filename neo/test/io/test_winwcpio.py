@@ -18,7 +18,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 
 
-class TestRawBinarySignalIO(unittest.TestCase, BaseTestIO):
+class TestRawBinarySignalIO(BaseTestIO , unittest.TestCase, ):
     ioclass =  WinWcpIO
     files_to_test = [   'File_winwcp_1.wcp',
                             ]

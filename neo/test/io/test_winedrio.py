@@ -18,7 +18,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 
 
-class TestWinedrIO(unittest.TestCase, BaseTestIO):
+class TestWinedrIO(BaseTestIO , unittest.TestCase, ):
     ioclass = WinEdrIO
     files_to_test = [   'File_WinEDR_1.EDR',
                                 'File_WinEDR_2.EDR',

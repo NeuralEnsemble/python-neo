@@ -15,10 +15,10 @@ import numpy
 
 from neo.test.io.common_io_test import BaseTestIO
 
-class TestNeoMatlabIO(unittest.TestCase, BaseTestIO):
+class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     ioclass = NeoMatlabIO
     files_to_test = [ ]
-    files_to_download = files_to_test
+    files_to_download = [ ]
 
 
 

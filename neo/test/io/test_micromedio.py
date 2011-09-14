@@ -17,7 +17,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 
 
-class TestMicromedIO(unittest.TestCase, BaseTestIO):
+class TestMicromedIO(BaseTestIO, unittest.TestCase, ):
     ioclass = MicromedIO
     files_to_test = [ 'File_micromed_1.TRC',
                             ]

@@ -21,7 +21,7 @@ except ImportError:
 
 
 from neo.test.io.common_io_test import BaseTestIO
-class TestExampleIO(unittest.TestCase, BaseTestIO):
+class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = [ 'fake1',
                             'fake2',

@@ -43,5 +43,5 @@ class RecordingChannel(BaseNeo):
         
         # Initialize contianers
         self.analogsignals = [ ]
-        self.irregularysampledsignals = [ ]
+        self.irregularlysampledsignals = [ ]
 

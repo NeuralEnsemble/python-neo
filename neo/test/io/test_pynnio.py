@@ -23,10 +23,10 @@ NCELLS = 5
 
 #TODO: common test fails.
 #from neo.test.io.common_io_test import BaseTestIO
-#class CommonTestPyNNNumpyIO(unittest.TestCase, BaseTestIO):
+#class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase, ):
 #    ioclass = PyNNNumpyIO
 
-#class CommonTestPyNNTextIO(unittest.TestCase, BaseTestIO):
+#class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase, ):
 #    ioclass = PyNNTextIO
 
 

@@ -20,7 +20,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 
 
-class TestElanIO(unittest.TestCase, BaseTestIO):
+class TestElanIO(BaseTestIO , unittest.TestCase, ):
     ioclass = ElanIO
     files_to_test = [   'File_elan_1.eeg',
                             ]

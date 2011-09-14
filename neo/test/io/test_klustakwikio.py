@@ -201,7 +201,7 @@ class testWrite(unittest.TestCase):
         self.assertTrue(data == [1, 0, 0])
 
 
-class CommonTests(unittest.TestCase, BaseTestIO):
+class CommonTests(BaseTestIO, unittest.TestCase ):
     ioclass = neo.io.KlustaKwikIO
     files_to_test = [ 'test1/basename',
                             'test1/basename',

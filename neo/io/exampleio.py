@@ -287,7 +287,7 @@ class ExampleIO(BaseIO):
             times = rand(num_spike_by_spiketrain)*segment_duration+t_start
         
         # create a spiketrain
-        spiketr = SpikeTrain(times, t_start*pq.s, (t_start+segment_duration)*pq.s ,
+        spiketr = SpikeTrain(times, t_start = t_start*pq.s, t_stop = (t_start+segment_duration)*pq.s ,
                                             units = pq.s, 
                                             name = 'it is a spiketrain from exampleio',
                                             )

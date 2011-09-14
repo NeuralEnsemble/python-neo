@@ -16,7 +16,7 @@ import numpy
 from neo.test.io.common_io_test import BaseTestIO
 
 
-class TestAsciiSignalIO(unittest.TestCase, BaseTestIO):
+class TestAsciiSignalIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AsciiSignalIO
     files_to_download = [ 'File_asciisignal_1.asc',
                             'File_asciisignal_2.txt',

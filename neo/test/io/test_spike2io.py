@@ -16,7 +16,7 @@ import numpy
 from neo.test.io.common_io_test import BaseTestIO
 
 
-class TestSpike2IO(unittest.TestCase, BaseTestIO):
+class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
     ioclass = Spike2IO
     files_to_test = [ 'File_spike2_1.smr',
                             'File_spike2_2.smr',

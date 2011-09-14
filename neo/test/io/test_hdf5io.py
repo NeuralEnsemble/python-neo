@@ -91,11 +91,16 @@ def checks():
     return block
 
 
-class hdf5ioTest(unittest.TestCase, BaseTestIO):
+class HDF5Commontests(BaseTestIO, unittest.TestCase):
+    ioclass = IOManager
+    files_to_test = [  ]
+    files_to_download =  [   ]
+
+class hdf5ioTest(unittest.TestCase):
     """
     Tests for the hdf5 library.
     """
-    ioclass = IOManager
+    
     
     @unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):

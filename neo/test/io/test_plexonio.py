@@ -19,7 +19,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
                         
 
-class TestPlexonIO(unittest.TestCase, BaseTestIO):
+class TestPlexonIO(BaseTestIO, unittest.TestCase, ):
     ioclass = PlexonIO
     files_to_test = [   'File_plexon_1.plx',
                                 'File_plexon_2.plx',
