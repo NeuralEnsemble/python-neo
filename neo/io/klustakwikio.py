@@ -63,8 +63,8 @@ import logging
 class KlustaKwikIO(BaseIO):
     """Reading and writing from KlustaKwik-format files."""    
     # Class variables demonstrating capabilities of this IO
-    is_readable        = True # This a only reading class
-    is_writable        = True # write is not supported
+    is_readable        = True
+    is_writable        = True
     
     # This IO can only manipulate objects relating to spike times
     supported_objects  = [Block, Segment, SpikeTrain, Unit]
