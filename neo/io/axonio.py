@@ -28,6 +28,9 @@ Supported : Read
 
 Author: sgarcia
 
+Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also reads
+abf files - would be good to cross-check
+
 """
 
 from .baseio import BaseIO
