@@ -26,13 +26,13 @@ class TestConstructor(unittest.TestCase):
     def test__create_empty(self):
         t_start = 0.0
         t_stop = 10.0
-        st = SpikeTrain([ ], t_start, t_stop, units = 's')
+        st = SpikeTrain([ ], t_start=t_start, t_stop=t_stop, units = 's')
     
     def test__create_from_list(self):
         times = range(10)
         t_start = 0.0
         t_stop = 10.0
-        st = SpikeTrain(times, t_start, t_stop, units="ms")
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="ms")
         self.assertEqual(st.t_start, t_start*pq.ms)
         self.assertEqual(st.t_stop, t_stop*pq.ms)
         assert_arrays_equal(st, times*pq.ms)
@@ -41,7 +41,7 @@ class TestConstructor(unittest.TestCase):
         times = numpy.arange(10)
         t_start = 0.0*pq.s
         t_stop = 10000.0*pq.ms
-        st = SpikeTrain(times, t_start, t_stop, units="s")
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
         self.assertEqual(st.t_stop, t_stop)
         assert_arrays_equal(st, times*pq.s)
 
@@ -49,13 +49,13 @@ class TestConstructor(unittest.TestCase):
         times = numpy.arange(10)
         t_start = 0.0*pq.s
         t_stop = 10.0*pq.s
-        self.assertRaises(ValueError, SpikeTrain, times, t_start, t_stop)
+        self.assertRaises(ValueError, SpikeTrain, times, t_start=t_start, t_stop=t_stop)
 
     def test__create_from_quantity_array(self):
         times = numpy.arange(10) * pq.ms
-        t_start = 0.0*pq.s
+        t_start = 0.0*pq.ms
         t_stop = 12.0*pq.ms
-        st = SpikeTrain(times, t_start, t_stop)
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
         assert_arrays_equal(st, times)
 
 
