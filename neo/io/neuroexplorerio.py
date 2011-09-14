@@ -226,8 +226,8 @@ class NeuroExplorerIO(BaseIO):
             if entityHeader['type'] == 6:
                 # markers  : TO TEST
                 if lazy:
-                    time = None
-                    labels = None
+                    times = [ ]*pq.s
+                    labels = np.array([ ], dtype = 'S')
                     markertype = None
                 else:
                     times= np.memmap(self.filename , np.dtype('i4') ,'r' ,

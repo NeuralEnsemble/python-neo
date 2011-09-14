@@ -146,6 +146,12 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
+        if attrname =='': 
+            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            assert_eg(ob1.magnitude, ob2.magnitude)
+            assert ob1.dimensionality.string == ob2.dimensionality.string, 'Units of %s are not the same' % classname
+            continue
+
         if not hasattr(ob1, attrname):
             assert not hasattr(ob2, attrname), '%s 2 do have %s but not %s 1'%(classname, attrname, classname)
             continue
@@ -159,11 +165,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
             assert getattr(ob1,attrname)  is None, 'In %s.%s %s and %s differed' % (classname,attrname, getattr(ob1,attrname), getattr(ob2,attrname))
             continue
         
-        if attrname =='': 
-            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
-            assert_eg(ob1.magnitude, ob2.magnitude)
-            assert ob1.dimensionality.string == ob2.dimensionality.string, 'Units of %s are not the same' % classname
-        elif attrtype == pq.Quantity:
+        if attrtype == pq.Quantity:
             assert_eg(ob1.__getattr__(attrname).magnitude, ob2.__getattr__(attrname).magnitude)
             assert ob1.__getattr__(attrname).dimensionality.string == ob2.__getattr__(attrname).dimensionality.string, 'Attribute %s of %s are not the same' % (attrname, classname)
         elif attrtype == np.ndarray:
@@ -171,3 +173,36 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
         else:
             assert ob1.__getattr__(attrname) == ob2.__getattr__(attrname), 'Attribute %s.%s are not the same %s %s' % (classname,attrname, type(ob1.__getattr__(attrname)),  type(ob2.__getattr__(attrname)))
 
+
+
+def assert_sub_schema_is_lazy_loaded(ob):
+    """
+    This is util for testing lazy load. All object must load with ndarray.size or Quantity.size ==0
+    """
+    classname =ob.__class__.__name__
+    
+    if classname in description.one_to_many_reslationship:
+        for childname in description.one_to_many_reslationship[classname]:
+            if not hasattr(ob, childname.lower()+'s'): continue
+            sub = getattr(ob, childname.lower()+'s')
+            for child in sub:
+                assert_sub_schema_is_lazy_loaded(child)
+    
+    necess = description.classes_necessary_attributes[classname]
+    recomm = description.classes_recommended_attributes[classname]
+    attributes = necess + recomm
+    for i, attr in enumerate(attributes):
+        attrname, attrtype = attr[0], attr[1]
+        if attrname == '':
+            assert ob.size == 0, 'Lazy loaded error %s.size = %s' % (classname, ob.size)
+        
+        if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
+            continue
+        if (attrtype == pq.Quantity or attrtype == np.ndarray):
+            ndim = attr[2]
+            if ndim >1:
+                assert  getattr(ob, attrname).size ==0, 'Lazy loaded error %s.%s.size = %s' % (classname, attrname, ob.size)
+
+
+    
+    

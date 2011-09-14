@@ -267,7 +267,10 @@ class NeoMatlabIO(BaseIO):
                 break
         
         if is_quantity:
-            ob = cl(struct.array, units = str(struct.units) )
+            if lazy:
+                ob = cl([ ], units = str(struct.units) )
+            else:
+                ob = cl(struct.array, units = str(struct.units) )
         else:
             ob = cl()
         for attrname in struct._fieldnames:
@@ -290,7 +293,10 @@ class NeoMatlabIO(BaseIO):
             if attrname+'_units' in struct._fieldnames:
                 # Quantity attributes
                 units = str(getattr(struct, attrname+'_units'))
-                item = pq.Quantity(item, units)
+                if lazy:
+                    item = pq.Quantity([ ], units)
+                else:
+                    item = pq.Quantity(item, units)
             else:
                 # put the good type
                 necess = description.classes_necessary_attributes[classname]

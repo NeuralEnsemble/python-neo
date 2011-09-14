@@ -7,6 +7,12 @@ Common tests for IOs:
 
 See BaseTestIO.
 
+
+The public URL is in url_for_tests.
+
+The private url for writing is 
+ssh://gate.g-node.org/groups/neo/io_test_files/
+
 """
 __test__ = False #
 
@@ -18,7 +24,8 @@ import logging
 
 import neo
 from neo.description import one_to_many_reslationship
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema, assert_neo_object_is_compliant, assert_file_contents_equal
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema, \
+            assert_neo_object_is_compliant, assert_file_contents_equal, assert_sub_schema_is_lazy_loaded
 
 
 from neo.test.io.generate_datasets import generate_from_supported_objects
@@ -197,7 +204,7 @@ class BaseTestIO(object):
         With downloaded files test neo compliance with: neo.test.tools.assert_neo_object_is_compliant
         
         """
-        # This is for files presents at G-Node
+        # This is for files presents at G-Node or generated
         for filename in self.files_to_test:
             filename = os.path.join(self.local_test_dir, filename)
             if self.ioclass.mode == 'file':
@@ -215,7 +222,7 @@ class BaseTestIO(object):
         """
         This test reader with cascade = False should return empty children.
         """
-        # This is for files presents at G-Node
+        # This is for files presents at G-Node or generated
         for filename in self.files_to_test:
             filename = os.path.join(self.local_test_dir, filename)
             if self.ioclass.mode == 'file':
@@ -230,17 +237,25 @@ class BaseTestIO(object):
             classname = ob.__class__.__name__
             if classname in one_to_many_reslationship:
                 for childname in one_to_many_reslationship[classname]:
-                    print classname, childname, getattr(ob, childname.lower()+'s')
                     assert len(getattr(ob, childname.lower()+'s')) == 0, '%s reader with cascade = False should return empty children' % self.ioclass
         
 
-    #~ def assert_readed_with_lazy_is_compliant(self):
-        #~ """
-        #~ This test reader with
-        #~ """
-        #~ pass
-
-
+    def test_readed_with_lazy_is_compliant(self):
+        """
+        This test reader with lazy = True : should return all Quantities and ndarray with size = 0.
+        """
+        # This is for files presents at G-Node or generated
+        for filename in self.files_to_test:
+            filename = os.path.join(self.local_test_dir, filename)
+            if self.ioclass.mode == 'file':
+                r = self.ioclass(filename = filename)
+            elif self.ioclass.mode == 'dir':
+                r = self.ioclass(dirname = filename)
+            else:
+                continue
+            ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = True, lazy = True )
+            assert_sub_schema_is_lazy_loaded(ob)
+            
 
 
 

@@ -198,8 +198,11 @@ class ElanIO(BaseIO):
         data = fromfile(self.filename,dtype = 'i'+str(n) )
         data = data.byteswap().reshape( (data.size/(nbchannel+2) ,nbchannel+2) ).astype('f4')
         for c in range(nbchannel) :
-            sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
-                                (max_physic[c]-min_physic[c])+min_physic[c]
+            if lazy:
+                sig = [ ]
+            else:
+                sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
+                                    (max_physic[c]-min_physic[c])+min_physic[c]
             
             try:
                 unit = pq.Quantity(1, units[c] )
@@ -226,10 +229,17 @@ class ElanIO(BaseIO):
             times.append( float(r[0][0])/sampling_rate.magnitude )
             labels.append(str(r[0][1]) )
             reject_codes.append( str(r[0][2]) )
-        
-        ea = EventArray( times = np.array(times) * pq.s,
-                                    labels  = np.array(labels),
-                                    reject_codes = np.array(reject_codes) 
+        if lazy:
+            times = [ ]*pq.S
+            labels = np.array([ ], dtype = 'S')
+            reject_codes = [ ]
+        else:
+            times =  np.array(times) * pq.s
+            labels  = np.array(labels)
+            reject_codes = np.array(reject_codes) 
+        ea = EventArray( times = times,
+                                    labels  = labels,
+                                    reject_codes = reject_codes,
                                     )
         
         seg.eventarrays.append(ea)
