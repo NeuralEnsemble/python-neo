@@ -117,6 +117,13 @@ except ImportError:
     warnings.warn("KlustaKwikIO not available, check dependencies", ImportWarning)
 
 try:
+    from .blackrockio import BlackrockIO
+    iolist.append( BlackrockIO )
+except ImportError:
+    warnings.warn("BlackrockIO not available, check dependencies", ImportWarning)
+
+
+try:
     from .pynnio import PyNNTextIO
     iolist.append( PyNNTextIO )
 except ImportError:
