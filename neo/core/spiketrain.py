@@ -44,9 +44,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         return obj
 
     
-    def __init__(self, times, t_start=0.0, t_stop=None, 
-        units=None, dtype=numpy.float, copy=True, waveforms=None, 
-        sampling_rate=1.0, left_sweep=None, name='', sort=True, **kwargs):
+    def __init__(self, times, units=None,  dtype=numpy.float, copy=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0, t_stop=None,  sort=True,
+        waveforms=None, left_sweep=None, name='', **kwargs):
         """Create a new SpikeTrain instance from data.
         
         Required arguments:
@@ -79,9 +79,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.t_start = pq.Quantity(t_start, units=self.units)
         self.t_stop = pq.Quantity(t_stop, units=self.units)        
         self.name = name
-        self.waveforms = numpy.asarray(waveforms, dtype=numpy.float)
+        self.waveforms = waveforms
         self.left_sweep = left_sweep
-        self.sampling_rate = float(sampling_rate)
+        self.sampling_rate = sampling_rate
 
         # Error checking (do earlier?)
         check_has_dimensions_time(self, self.t_start, self.t_stop)
@@ -91,7 +91,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if sort:
             sort_indices = self.argsort()
             if waveforms is not None and waveforms.any():
-                waveforms = waveforms[sort_indices]
+                self.waveforms = waveforms[sort_indices]
             self.sort()
 
         # create annotations dict
