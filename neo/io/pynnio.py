@@ -51,8 +51,14 @@ class BasePyNNIO(BaseIO):
     def _extract_signal(self, data, metadata, channel_index):
         arr = self._extract_array(data, channel_index)
         if len(arr) > 0:
+            if 'units' in metadata:
+                units = metadata['units']
+            elif 'variable' in metadata and metadata['variable'] in UNITS_MAP:
+                units = UNITS_MAP[metadata['variable']]
+            else:
+                raise IOError("Cannot determine units")
             signal = AnalogSignal(arr,
-                                  units=UNITS_MAP[metadata['variable']],
+                                  units=units,
                                   sampling_period=metadata['dt']*pq.ms)
             signal.annotate(label=metadata["label"],
                             variable=metadata["variable"],
@@ -73,7 +79,7 @@ class BasePyNNIO(BaseIO):
     
     def read_segment(self, lazy=False, cascade=True):
         data, metadata = self._read_file_contents()
-        annotations = dict((k, metadata[k]) for k in ("label", "variable", "first_id", "last_id"))
+        annotations = dict((k, metadata.get(k, 'unknown')) for k in ("label", "variable", "first_id", "last_id"))
         seg = Segment(**annotations)
         if metadata['variable'] == 'spikes':
             for i in range(metadata['first_index'], metadata['last_index']):
@@ -97,14 +103,29 @@ class BasePyNNIO(BaseIO):
         metadata['size'] = len(source)
         metadata['first_index'] = 0
         metadata['last_index'] = metadata['size']
+        if 'label' not in metadata:
+            metadata['label'] = 'unknown'
         s0 = source[0]
         if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
             metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
         n = sum(s.size for s in source)
         metadata['n'] = n
         data = numpy.empty((n, 2))
+        # if the 'variable' annotation is a standard one from PyNN, we rescale
+        # to use standard PyNN units
+        # we take the units from the first element of source and scale all
+        # the signals to have the same units
+        if 'variable' in segment._annotations:
+            units = UNITS_MAP.get(segment._annotations['variable'], source[0].dimensionality)
+        else:
+            units = source[0].dimensionality
+            metadata['variable'] = 'unknown'
+        try:
+            metadata['units'] = units.unicode
+        except AttributeError:
+            metadata['units'] = units.u_symbol
         for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
-            data[i*s0.size:(i+1)*s0.size, 0] = numpy.array(signal.rescale(UNITS_MAP[segment.variable]))
+            data[i*s0.size:(i+1)*s0.size, 0] = numpy.array(signal.rescale(units))
             data[i*s0.size:(i+1)*s0.size, 1] = i*numpy.ones((s0.size,), dtype=float) # index
         self._write_file_contents(data, metadata)
 

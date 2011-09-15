@@ -40,6 +40,7 @@ Example: SpikeTrain
 SpikeTrain is a Quantity, which is a Numpy array with dimensionality. The spike times are a required attribute, because the dimensionality of the spike times determines the way in which the Quantity is constructed.
 
 Here is how you initialize a SpikeTrain with required arguments.::
+
         import neo
         import quantity as pq
         st = neo.SpikeTrain(times=pq.Quantity([3, 4, 5], units='sec'))
@@ -47,11 +48,13 @@ Here is how you initialize a SpikeTrain with required arguments.::
 
 You will see the spike times printed in a nice format including the units.
 
-Because `st` "is a" Quantity array with units 'sec', it absolutely must have this information at the time of initialization. You can specify them with a keyword argument too.
+Because `st` "is a" Quantity array with units 'sec', it absolutely must have this information at the time of initialization. You can specify them with a keyword argument too::
+
     st = neo.SpikeTrain(times=[3, 4, 5], units='sec')
 
 
 In practice, much more information than the raw spike times is necessary to analyze this data. This information falls into the realm of "recommended attributes". For example, at what time did this particular spike train start? ::
+
     st = neo.SpikeTrain(times=[3, 4, 5], units='sec')
     st.t_start = 1.0
 
@@ -63,6 +66,7 @@ Recommended attributes must be specified as keyword arguments, not simple ordere
 
 
 Finally, let's consider "additional arguments". These are the ones you define for your experiment. ::
+
     st = neo.SpikeTrain(times=[3, 4, 5], units='sec', ratname='Fred')\
     print st._annotations
 

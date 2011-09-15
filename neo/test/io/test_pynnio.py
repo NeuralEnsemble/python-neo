@@ -22,12 +22,12 @@ NCELLS = 5
 
 
 #TODO: common test fails.
-#from neo.test.io.common_io_test import BaseTestIO
-#class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase, ):
+from neo.test.io.common_io_test import BaseTestIO
+#class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
 
-#class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase, ):
-#    ioclass = PyNNTextIO
+class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase):
+    ioclass = PyNNTextIO
 
 
 
@@ -73,6 +73,10 @@ class BaseTestPyNNIO(object):
             'dt': 0.1,
             'label': "population0",
         }
+        if variable == 'v':
+            metadata['units'] = 'mV'
+        elif variable == 'spikes':
+            metadata['units'] = 'ms'
         data = numpy.empty((505, 2))
         for i in range(NCELLS):
             data[i*101:(i+1)*101, 0] = numpy.arange(i, i+101, dtype=float) # signal
