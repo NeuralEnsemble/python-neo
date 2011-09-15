@@ -60,7 +60,7 @@ one_to_many_reslationship = {
     }
 # reverse: child to parent
 many_to_one_reslationship = { }
-for p,children in one_to_many_reslationship.iteritems():
+for p,children in one_to_many_reslationship.items():
     for c in children:
         if c not in many_to_one_reslationship:
             many_to_one_reslationship[c] = [ ]
@@ -72,7 +72,7 @@ many_to_many_reslationship = {
     'Unit' : ['RecordingChannel', ],
     }
 # check bijectivity
-for p,children in many_to_many_reslationship.iteritems():
+for p,children in many_to_many_reslationship.items():
     for c in children:
         if c not in many_to_many_reslationship:
             many_to_many_reslationship[c] = [ ]

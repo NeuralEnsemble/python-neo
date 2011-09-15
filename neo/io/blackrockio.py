@@ -8,7 +8,7 @@ import numpy as np
 import struct
 import quantities as pq    
 
-
+import logging
 
 class BlackrockIO(BaseIO):
     """
@@ -279,22 +279,21 @@ class Loader(object):
         self.header.File_Type_ID = [chr(ord(c)) \
             for c in self.file_handle.read(8)]
         if "".join(self.header.File_Type_ID) != 'NEURALSG':
-            print "Incompatible ns5 file format. Only v2.1 is supported.\n" + \
-                "This will probably not work."          
+            logging.info( "Incompatible ns5 file format. Only v2.1 is supported.\nThis will probably not work.")
         
         
         # Read File_Spec and check compatibility.
         self.header.File_Spec = [chr(ord(c)) \
             for c in self.file_handle.read(16)]
         if "".join(self.header.File_Spec[:8]) != '30 kS/s\0':
-            print "File_Spec seems to indicate you did not sample at 30KHz."
+            logging.info( "File_Spec seems to indicate you did not sample at 30KHz.")
         
         
         #R ead Period and verify that 30KHz was used. If not, the code will
         # still run but it's unlikely the data will be useful.
         self.header.period, = struct.unpack('<I', self.file_handle.read(4))
         if self.header.period != 1:
-            print "Period seems to indicate you did not sample at 30KHz."
+            logging.info( "Period seems to indicate you did not sample at 30KHz.")
         self.header.f_samp = self.header.period * 30000.0
 
 
@@ -320,10 +319,10 @@ class Loader(object):
         if self.header.sample_width * self.header.Channel_Count * \
             self.header.n_samples + \
             self.header.Header != self.header.file_total_size:
-            print "I got header of %dB, %d channels, %d samples, \
+            logging.info( "I got header of %dB, %d channels, %d samples, \
                 but total file size of %dB" % (self.header.Header, 
                 self.header.Channel_Count, self.header.n_samples, 
-                self.header.file_total_size)
+                self.header.file_total_size))
 
         # close file
         self.file_handle.close()
@@ -344,14 +343,14 @@ class Loader(object):
     def __del__(self):
         # this deletion doesn't free memory, even though del l._mm does!
         if '_mm' in self.__dict__: del self._mm
-        #else: print "gracefully skipping"
+        #else: logging.info( "gracefully skipping")
     
     def _get_channel(self, channel_number):
         """Returns slice into internal memmap for requested channel"""
         try:
             mm_index = self.header.Channel_ID.index(channel_number)
         except ValueError:
-            print "Channel number %d does not exist" % channel_number
+            logging.info( "Channel number %d does not exist" % channel_number)
             return np.array([])
         
         self.regenerate_memmap()

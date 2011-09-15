@@ -73,7 +73,13 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def __getitem__(self, i):
         obj = super(BaseAnalogSignal, self).__getitem__(i)
         if isinstance(obj, BaseAnalogSignal):
-            obj.t_start = self.t_start + i.start*self.sampling_period
+            # update t_start
+            if isinstance(i, slice):
+                slice_start = i.start
+            elif isinstance(i, tuple) and len(i) == 2:
+                slice_start = i[0].start
+            if slice_start:
+                obj.t_start = self.t_start + slice_start*self.sampling_period
         return obj
 
     def _get_sampling_period(self):
