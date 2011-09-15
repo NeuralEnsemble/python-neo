@@ -167,7 +167,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
         
         if attrtype == pq.Quantity:
             assert_eg(ob1.__getattr__(attrname).magnitude, ob2.__getattr__(attrname).magnitude)
-            assert ob1.__getattr__(attrname).dimensionality.string == ob2.__getattr__(attrname).dimensionality.string, 'Attribute %s of %s are not the same' % (attrname, classname)
+            assert ob1.__getattr__(attrname).dimensionality.simplified == ob2.__getattr__(attrname).dimensionality.simplified, \
+                  'Attribute %s of %s are not the same: %s != %s' % (attrname, classname, ob1.__getattr__(attrname).dimensionality.string, ob2.__getattr__(attrname).dimensionality.string)
         elif attrtype == np.ndarray:
             assert_eg(ob1.__getattr__(attrname), ob2.__getattr__(attrname))
         else:
