@@ -66,7 +66,7 @@ class TestConstructor(unittest.TestCase):
         data = numpy.arange(20.0).reshape((10,2)) * mV
         rate = 5000*Hz
         a = AnalogSignalArray(data, copy=False, sampling_rate=rate)
-        data[3][0] = 99*mV
+        data[3,0] = 99*mV
         self.assertEqual(a[3][0], 99*mV)
 
     # signal must not be 1D - should raise Exception if 1D
