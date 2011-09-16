@@ -1,6 +1,7 @@
 # encoding: utf-8
 """
-This file is a bundle of utilities to discribe neo object representation (attributes and reslationships).
+This file is a bundle of utilities to describe Neo object representation 
+(attributes and relationships).
 
 It can be used to:
  * generate diagrams of neo
@@ -10,27 +11,28 @@ It can be used to:
 
 
 **classes_necessary_attributes**
-This dict descibe attributes that are necessary.
+This dict descibes attributes that are necessary to initialize an instance.
 It a dict of list of tuples.
-Each attributes is describe by a tuple:
- * for standard type, the tuple is: (name + python type )
- * for np.ndarray type, the tuple is : (name + np.ndarray+ndim+dtype)
- * for pq.Quantities, the tuple is : (name+pq.Quantity+ndim)
-ndim is the dimentionaly of the array 1=vector, 2=matrix, 3 = cube, ...
-Special case ndim = 0, this mean that neo expect  a scalar so Quantity.shape=(1,)
-that is in fact a vector (ndim=1) with one element only in Quantities package.
+Each attribute is described by a tuple:
+ * for standard type, the tuple is: (name + python type)
+ * for np.ndarray type, the tuple is : (name + np.ndarray + ndim + dtype)
+ * for pq.Quantities, the tuple is : (name + pq.Quantity + ndim)
+ndim is the dimensionaly of the array: 1=vector, 2=matrix, 3=cube, ...
+Special case: ndim=0 means that neo expects a scalar, so Quantity.shape=(1,).
+That is in fact a vector (ndim=1) with one element only in Quantities package.
 
-For some neo.object, the data is not nold by a field but by the object itself. This is the case
-for AnalogSignal, SpikeTrain : they hinerit Quantity (that also hinerit numpy.array).
-In theses case, an empty field (the first) in classes_necessary_attributes is added to describe
-the object inheritence+ndim or dtype.
+For some neo.object, the data is not held by a field, but by the object itself. 
+This is the case for AnalogSignal, SpikeTrain: they inherit from Quantity,
+which itself inherits from numpy.array.
+
+In these cases, an empty field (the first) in classes_necessary_attributes 
+is added to describe the object inheritance + ndim or dtype.
 
 
 **classes_recommended_attributes**
-This dict descibe attributes that are recommended.
-Notation is same as classes_necessary_attributes.
-
-
+This dict describes recommended attributes, which are optional at
+initialization. If present, they will be stored as attributes of the object.
+The notation is the same as classes_necessary_attributes.
 """
 
 from .core import objectlist
