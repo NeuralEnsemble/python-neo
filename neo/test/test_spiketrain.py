@@ -146,6 +146,109 @@ class TestConstructor(unittest.TestCase):
         
         st = SpikeTrain([3,4,5]*pq.s, ratname='Phillippe')
         self.assertEqual(st._annotations, {'ratname': 'Phillippe'})
+    
+    def test_change_with_copy_default(self):
+        # Default is copy = True
+        # Changing spike train does not change data
+        # Data source is quantity
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data)
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 3*pq.s)
+    
+    def test_change_with_copy_false(self):
+        # Changing spike train also changes data, because it is a view
+        # Data source is quantity
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, copy=False)
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 99*pq.s)
+
+    def test_change_with_copy_false_and_rescale_true(self):
+        # Changing spike train also changes data, because it is a view
+        # Data source is quantity
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, units='ms', copy=False)
+        st[0] = 99000 * pq.ms
+        self.assertEqual(st[0], 99000*pq.ms)
+        self.assertEqual(data[0], 99000*pq.ms)
+    
+    def test_change_with_copy_true(self):
+        # Changing spike train does not change data
+        # Data source is quantity
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, copy=True)
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 3*pq.s)
+
+    def test_change_with_copy_default_and_data_not_quantity(self):
+        # Default is copy = True
+        # Changing spike train does not change data
+        # Data source is array
+        # Array and quantity are tested separately because copy default
+        # is different for these two.
+        data = [3,4,5]
+        st = SpikeTrain(data, units='sec')
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 3*pq.s)
+    
+    def test_change_with_copy_false_and_data_not_quantity(self):
+        # Changing spike train also changes data, because it is a view
+        # Data source is array
+        # Array and quantity are tested separately because copy default
+        # is different for these two.
+        data = [3,4,5]
+        st = SpikeTrain(data, units='sec', copy=False)
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 99*pq.s)
+        
+        # At the moment this test fails because when units are specified,
+        # Quantity.__new__ returns a copy, not a view.
+    
+    def test_change_with_copy_true_and_data_not_quantity(self):
+        # Changing spike train does not change data
+        # Data source is array
+        # Array and quantity are tested separately because copy default
+        # is different for these two.
+        data = [3,4,5]
+        st = SpikeTrain(data, units='sec', copy=True)
+        st[0] = 99 * pq.s
+        self.assertEqual(st[0], 99*pq.s)
+        self.assertEqual(data[0], 3*pq.s)
+    
+    def test_changing_slice_changes_original_spiketrain(self):
+        # If we slice a spiketrain and then change the slice, the
+        # original spiketrain should change.
+        # Whether the original data source changes is dependent on the
+        # copy parameter.
+        # This is compatible with both numpy and quantity default behavior.
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, copy=True)
+        st2 = st[1:3]
+        st2[0] = 99 * pq.s
+        self.assertEqual(st[1], 99*pq.s)
+        self.assertEqual(st2[0], 99*pq.s)
+        self.assertEqual(data[1], 4*pq.s)
+
+    def test_changing_slice_changes_original_spiketrain_with_copy_false(self):
+        # If we slice a spiketrain and then change the slice, the
+        # original spiketrain should change.
+        # Whether the original data source changes is dependent on the
+        # copy parameter.
+        # This is compatible with both numpy and quantity default behavior.
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, copy=False)
+        st2 = st[1:3]
+        st2[0] = 99 * pq.s
+        self.assertEqual(st[1], 99*pq.s)
+        self.assertEqual(st2[0], 99*pq.s)
+        self.assertEqual(data[1], 99*pq.s)
+
 
 
 
