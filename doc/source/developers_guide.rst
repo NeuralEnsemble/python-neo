@@ -72,6 +72,10 @@ PYTHONPATH, for example::
     $ ln -s neo0.2/neo
     $ export PYTHONPATH=/some/directory:${PYTHONPATH}
 
+An alternate solution is to install neo with *develop* option, this avoid to install again for any changes in neo code::
+
+    $ sudo python setup.py develop
+
 To update to the latest version from the repository::
 
     $ svn update
