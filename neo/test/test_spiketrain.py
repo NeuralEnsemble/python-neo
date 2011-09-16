@@ -6,6 +6,7 @@ except ImportError:
 from neo.core.spiketrain import check_has_dimensions_time, SpikeTrain
 import quantities as pq
 import numpy
+import numpy as np
 from neo.test.tools import assert_arrays_equal
 
 class TestFunctions(unittest.TestCase):
@@ -57,6 +58,95 @@ class TestConstructor(unittest.TestCase):
         t_stop = 12.0*pq.ms
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
         assert_arrays_equal(st, times)
+    
+    def test_defaults(self):
+        # default recommended attributes
+        st = SpikeTrain([3,4,5], units='sec')
+        self.assertEqual(st.dtype, numpy.float)
+        self.assertEqual(st.sampling_rate, 1.0 * pq.Hz)
+        self.assertEqual(st.waveforms, None)
+        self.assertEqual(st.left_sweep, None)
+    
+    def test_default_tstart(self):
+        # t start defaults to zero
+        st = SpikeTrain([3,4,5]*pq.s)
+        self.assertEqual(st.t_start, 0.*pq.s)
+        
+        # unless otherwise specified
+        st = SpikeTrain([3,4,5]*pq.s, t_start=2.)
+        self.assertEqual(st.t_start, 2.*pq.s)
+    
+    def test_default_tstop(self):
+        st = SpikeTrain([3,4,5]*pq.s)
+        self.assertEqual(st.t_stop, 5.*pq.s)
+        
+        st = SpikeTrain([3,5,4]*pq.s)
+        self.assertEqual(st.t_stop, 5.*pq.s)
+        
+        st = SpikeTrain([3,5,4]*pq.s, t_stop=10)
+        self.assertEqual(st.t_stop, 10.*pq.s)
+        
+        st = SpikeTrain([3,5,4]*pq.s, t_stop=10000.*pq.ms)
+        self.assertEqual(st.t_stop, 10.*pq.s)
+
+        st = SpikeTrain([3,5,4], units='sec', t_stop=10000.*pq.ms)
+        self.assertEqual(st.t_stop, 10.*pq.s)
+    
+    def test_sort(self):
+        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, sort=True)
+        assert_arrays_equal(st, [3,4,5]*pq.s)
+        assert_arrays_equal(st.waveforms, wf)
+        
+        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf, sort=True)
+        assert_arrays_equal(st, [3,4,5]*pq.s)
+        assert_arrays_equal(st.waveforms, wf[[0,2,1]])
+        
+        # test default sort is True
+        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf)
+        assert_arrays_equal(st, [3,4,5]*pq.s)
+        assert_arrays_equal(st.waveforms, wf[[0,2,1]])
+    
+    def test_slice(self):
+        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf)
+        
+        # slice spike train, keep sliced spike times
+        st2 = st[1:2]        
+        assert_arrays_equal(st[1:2], st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st._annotations, st2._annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        
+        # even the things which we might expect to change
+        assert_arrays_equal(st.waveforms, st2.waveforms)
+        self.assertEqual(st.t_start, st2.t_start)
+        self.assertEqual(st.t_stop, st2.t_stop)
+    
+    def test_set_universally_recommended_attributes(self):
+        st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
+            file_origin='crack.txt')
+        self.assertEqual(st.name, 'Name')
+        self.assertEqual(st.description, 'Desc')
+        self.assertEqual(st.file_origin, 'crack.txt')
+
+    def test_autoset_universally_recommended_attributes(self):
+        st = SpikeTrain([3,4,5]*pq.s)
+        self.assertEqual(st.name, None)
+        self.assertEqual(st.description, None)
+        self.assertEqual(st.file_origin, None)
+    
+    def test_annotations(self):
+        st = SpikeTrain([3,4,5]*pq.s)
+        self.assertEqual(st._annotations, {})
+        
+        st = SpikeTrain([3,4,5]*pq.s, ratname='Phillippe')
+        self.assertEqual(st._annotations, {'ratname': 'Phillippe'})
+
 
 
 if __name__ == "__main__":

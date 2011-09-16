@@ -2,6 +2,21 @@ from neo.core.baseneo import BaseNeo
 import quantities as pq
 import numpy
 
+"""This module implements SpikeTrain.
+
+SpikeTrain inherits from Quantity, which inherits from numpy.array.
+Inheritance from numpy.array is explained here:
+http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
+
+In brief:
+* Initialization of a new object from constructor happens in __new__.
+This is where user-specified attributes are set.
+
+* __array_finalize__ is called for all new objects, including those
+created by slicing. This is where attributes are copied over from
+the old object.
+"""
+
 
 def check_has_dimensions_time(*values):
     errmsgs = []
@@ -14,19 +29,60 @@ def check_has_dimensions_time(*values):
 
 
 class SpikeTrain(BaseNeo, pq.Quantity):
+    """SpikeTrain is a Quantity array of spike times.
+    
+    It is an ensemble of action potentials (spikes) emitted by the same unit
+    in a period of time.
+
+    Required arguments:
+        times : a list, 1d numpy array, or quantity array. 
+        
+        The Quantity array is constructed with the data in `times`, as
+        well as the construction arguments `units`, `dtype`, and `copy`. 
+    
+    Recommended arguments:
+        t_start : time at which SpikeTrain began. This will be converted
+            to the same units as the data.
+        t_stop : time at which SpikeTrain ends. If not provided, the
+            maximum of the data is chosen. This will be converted to the
+            same units as the data.
+        waveforms : the waveforms of each spike
+        sampling_rate : the sampling rate of the waveforms
+        left_sweep : Quantity, in units of time. Time from the beginning
+            of the waveform to the trigger time of the spike.
+        sort : if True, the spike train will be sorted
+    
+    Universally recommended arguments:
+        name, description, file_origin : all string
+
+    Any other keyword arguments are stored in the `self._annotations` dict.
+    
+    Slicing:
+        SpikeTrain can be sliced. When this occurs, a new SpikeTrain (actually
+        a view) is returned, with copies of all attributes. This includes
+        t_start, t_stop, and waveforms, which are copied without modification.
+
+    ** Example **
+    >>> st = SpikeTrain([3,4,5] * pq.s)
+    >>> st2 = st[1:2]
+    >>> st.t_start
+    0. s
+    >>> st2
+    [4, 5] s    
     """
-    An ensemble of action potentials (spikes) emitted by the same unit in a
-    period of time.
     
-    Always contains the spike times, may also contain the waveforms of the
-    individual action potentials.
-    
-    Inherits from :class:`quantities.Quantity`, which in turn inherits from
-    ``numpy.ndarray``.
-    """
-    
-    def __new__(cls, times, units=None, dtype=numpy.float, copy=True, **kwargs):
-        """Constructs Quantity array from data"""
+    def __new__(cls, times, units=None,  dtype=numpy.float, copy=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None, sort=True,
+        waveforms=None, left_sweep=None, **kwargs):
+        """Constructs new SpikeTrain from data.
+        
+        This is called whenever a new SpikeTrain is created from the
+        constructor, but not when slicing.
+        
+        First the Quantity array is constructed from the data. Then,        
+        the attributes are set from the user's arguments. Finally, error
+        checking and (optionally) sorting occurs.
+        """
         # If data is Quantity, rescale to desired units
         if isinstance(times, pq.Quantity) and units: 
             times = times.rescale(units)
@@ -38,64 +94,88 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             except AttributeError:
                 raise ValueError('you must specify units')
         
-        # Construct Quantity and return
+        # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype, 
             copy=copy)
-        return obj
 
-    
-    def __init__(self, times, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0, t_stop=None,  sort=True,
-        waveforms=None, left_sweep=None, name='', **kwargs):
-        """Create a new SpikeTrain instance from data.
-        
-        Required arguments:
-            times : a list, 1d numpy array, or quantity array. 
-            
-            The Quantity array is constructed with the data in `times`, as
-            well as the arguments `units`, `dtype`, and `copy`. 
-            See: SpikeTrain.__new__
-        
-        Recommended arguments:
-            t_start : time at which SpikeTrain began. This will be converted
-                to the same units as the data.
-            t_stop : time at which SpikeTrain ends. If not provided, the
-                maximum of the data is chosen. This will be converted to the
-                same units as the data.
-            waveforms : the waveforms of each spike
-            sampling_rate : the sampling rate of the waveforms
-            left_sweep : hard to explain
-            name : name of the spiketrain
-            sort : if True, the spike train will be sorted
-
-        Any other keyword arguments are stored in the `self.annotations` dict.
-        """
         # Default value of t_stop
         if t_stop is None:
-            try: t_stop = self.max()
-            except ValueError: t_stop = 0.0
+            try: t_stop = obj.max()
+            except ValueError: t_stop = 0.0 * pq.s
 
         # Store recommended attributes
-        self.t_start = pq.Quantity(t_start, units=self.units)
-        self.t_stop = pq.Quantity(t_stop, units=self.units)        
-        self.name = name
-        self.waveforms = waveforms
-        self.left_sweep = left_sweep
-        self.sampling_rate = sampling_rate
+        obj.t_start = pq.Quantity(t_start, units=units)
+        obj.t_stop = pq.Quantity(t_stop, units=units)        
+        obj.waveforms = waveforms
+        obj.left_sweep = left_sweep
+        obj.sampling_rate = sampling_rate
 
         # Error checking (do earlier?)
-        check_has_dimensions_time(self, self.t_start, self.t_stop)
+        check_has_dimensions_time(obj, obj.t_start, obj.t_stop)
 
         # sort the times and waveforms
         # this should be moved to a SpikeTrain.sort() method
         if sort:
-            sort_indices = self.argsort()
+            sort_indices = obj.argsort()
             if waveforms is not None and waveforms.any():
-                self.waveforms = waveforms[sort_indices]
-            self.sort()
+                obj.waveforms = waveforms[sort_indices]
+            obj.sort()
 
-        # create annotations dict
-        self._annotations = kwargs
+        return obj
+
+    
+    def __init__(self, times, units=None,  dtype=numpy.float, copy=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,  sort=True,
+        waveforms=None, left_sweep=None, **kwargs):
+        """Initializes newly constructed SpikeTrain."""
+        # This method is only called when constructing a new SpikeTrain,
+        # not when slicing or viewing. We use the same call signature
+        # as __new__ for documentation purposes. Anything not in the call
+        # signature is stored in _annotations.
+        
+        # Calls parent __init__, which grabs universally recommended
+        # attributes and sets up self._annotations
+        BaseNeo.__init__(self, **kwargs)        
+
+
+    def __array_finalize__(self, obj):
+        """This is called every time a new SpikeTrain is created.
+        
+        It is the appropriate place to set default values for attributes
+        for SpikeTrain constructed by slicing or viewing.
+        
+        User-specified values are only relevant for construction from
+        constructor, and these are set in __new__. Then they are just
+        copied over here.
+        
+        Note that the `waveforms` attibute is not sliced here. Nor is
+        `t_start` or `t_stop` modified.
+        """
+        # This calls Quantity.__array_finalize__ which deals with dimensionality
+        super(SpikeTrain, self).__array_finalize__(obj)
+        
+        # Supposedly, during initialization from constructor, obj is supposed
+        # to be None, but this never happens. It must be something to do
+        # with inheritance from Quantity.
+        if obj is None: return
+        
+        # Set all attributes of the new object `self` from the attributes
+        # of `obj`. For instance, when slicing, we want to copy over the
+        # attributes of the original object.
+        self.t_start = getattr(obj, 't_start', None)
+        self.t_stop = getattr(obj, 't_stop', None)
+        self.waveforms = getattr(obj, 'waveforms', None)
+        self.left_sweep = getattr(obj, 'left_sweep', None)
+        self.sampling_rate = getattr(obj, 'sampling_rate', None)
+        
+        # The additional arguments
+        self._annotations = getattr(obj, '_annotations', None)
+        
+        # Globally recommended attributes
+        self.name = getattr(obj, 'name', None)
+        self.file_origin = getattr(obj, 'file_origin', None)
+        self.description = getattr(obj, 'description', None)
+    
 
     def __repr__(self):
         return '<SpikeTrain(%s, [%s, %s], )>' % (
