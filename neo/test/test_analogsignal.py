@@ -67,6 +67,13 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, copy=False, sampling_rate=rate)
         data[3] = 99*mV
         self.assertEqual(a[3], 99*mV)
+    
+    def test__create_with_additional_argument(self):
+        a = AnalogSignal([1,2,3], file_origin='crack.txt', ratname='Nicolas')
+        self.assertEqual(a._annotations, {'ratname':'Nicolas'})
+        
+        # This one is universally recommended and handled by BaseNeo
+        self.assertEqual(a.file_origin, 'crack.txt')
 
     # signal must be 1D - should raise Exception if not 1D
     
@@ -113,10 +120,51 @@ class TestArrayMethods(unittest.TestCase):
         self.assertIsInstance(sub, AnalogSignal)
         self.assertEqual(sub.size, 5)
         self.assertEqual(sub.sampling_period, self.signal.sampling_period)
+        self.assertEqual(sub.sampling_rate, self.signal.sampling_rate)
         self.assertEqual(sub.t_start,
                          self.signal.t_start+3*sub.sampling_period)
         self.assertEqual(sub.t_stop,
                          sub.t_start + 5*sub.sampling_period)
+        
+        # Test other attributes were copied over (in this case, defaults)
+        self.assertEqual(sub.file_origin, self.signal.file_origin)
+        self.assertEqual(sub.name, self.signal.name)
+        self.assertEqual(sub.description, self.signal.description)        
+        self.assertEqual(sub._annotations, self.signal._annotations)
+        
+
+        sub = self.signal[3:8]
+        self.assertEqual(sub.file_origin, self.signal.file_origin)
+        self.assertEqual(sub.name, self.signal.name)
+        self.assertEqual(sub.description, self.signal.description)
+        self.assertEqual(sub._annotations, self.signal._annotations)
+    
+    def test__slice_with_attributes(self):
+        # Set attributes, slice, test that they are copied
+        self.signal.file_origin = 'crack.txt'
+        self.signal.name = 'sig'
+        self.signal.description = 'a signal'
+        self.signal.annotate(ratname='Georges')
+
+        # slice
+        sub = self.signal[3:8]
+        
+        # tests from other slice test
+        self.assertIsInstance(sub, AnalogSignal)
+        self.assertEqual(sub.size, 5)
+        self.assertEqual(sub.sampling_period, self.signal.sampling_period)
+        self.assertEqual(sub.sampling_rate, self.signal.sampling_rate)
+        self.assertEqual(sub.t_start,
+                         self.signal.t_start+3*sub.sampling_period)
+        self.assertEqual(sub.t_stop,
+                         sub.t_start + 5*sub.sampling_period)
+        
+        # Test other attributes were copied over (in this case, set by user)
+        self.assertEqual(sub.file_origin, self.signal.file_origin)
+        self.assertEqual(sub.name, self.signal.name)
+        self.assertEqual(sub.description, self.signal.description)        
+        self.assertEqual(sub._annotations, self.signal._annotations)
+        self.assertEqual(sub._annotations, {'ratname': 'Georges'})
 
     def test__getitem_should_return_single_quantity(self):
         self.assertEqual(self.signal[0], 0*nA)

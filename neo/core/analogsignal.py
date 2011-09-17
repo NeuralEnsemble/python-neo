@@ -32,11 +32,16 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __new__(cls, signal, units='', dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
-                name=None, file_origin = None, description = None,
-                ):
-        """
-        Create a new :class:`BaseAnalogSignal` instance from a list or numpy array
-        of numerical values, or from a Quantity array.
+                **kwargs):
+        """Constructs new BaseAnalogSignal from data.
+        
+        This is called whenever a new BaseAnalogSignal is created from the
+        constructor, but not when slicing.
+        
+        First the Quantity array is constructed from the data. Then,        
+        the attributes are set from the user's arguments.
+        
+        __array_finalize__ is also called on the new object.
         """
         if isinstance(signal, pq.Quantity) and units:
             signal = signal.rescale(units)
@@ -45,21 +50,43 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
-        obj.name = name
-        obj.file_origin = file_origin
-        obj.description = description
-        obj._annotations = {}
         return obj
     
-    def __init__(self,*args,  **kargs):
-        # this do not call BaseNeo.__init__ because of name= 
-        pass
+    def __init__(self, signal, units='', dtype=None, copy=True, 
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                **kwargs):
+        """Initializes newly constructed SpikeTrain."""
+        # This method is only called when constructing a new SpikeTrain,
+        # not when slicing or viewing. We use the same call signature
+        # as __new__ for documentation purposes. Anything not in the call
+        # signature is stored in _annotations.
+        
+        # Calls parent __init__, which grabs universally recommended
+        # attributes and sets up self._annotations        
+        BaseNeo.__init__(self, **kwargs)
     
     def __array_finalize__(self, obj):
+        """This is called every time a new BaseAnalogSignal is created.
+        
+        It is the appropriate place to set default values for attributes
+        for BaseAnalogSignal constructed by slicing or viewing.
+        
+        User-specified values are only relevant for construction from
+        constructor, and these are set in __new__. Then they are just
+        copied over here.
+        """        
         super(BaseAnalogSignal, self).__array_finalize__(obj)
         self.t_start = getattr(obj, 't_start', 0*pq.s)
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
-
+        
+        # The additional arguments
+        self._annotations = getattr(obj, '_annotations', None)
+        
+        # Globally recommended attributes
+        self.name = getattr(obj, 'name', None)
+        self.file_origin = getattr(obj, 'file_origin', None)
+        self.description = getattr(obj, 'description', None)
+    
     def __repr__(self):
         return '<BaseAnalogSignal(%s, [%s, %s], sampling rate: %s)>' % (
              super(BaseAnalogSignal, self).__repr__(), self.t_start, self.t_stop, self.sampling_rate)
@@ -82,6 +109,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 obj.t_start = self.t_start + slice_start*self.sampling_period
         return obj
 
+    # sampling_period attribute is handled as a property on underlying rate
     def _get_sampling_period(self):
         return 1./self.sampling_rate
     def _set_sampling_period(self, period):
@@ -162,22 +190,47 @@ class AnalogSignal(BaseAnalogSignal):
     
     Usage:
       >>> from quantities import ms, kHz
-      >>> a = BaseAnalogSignal([1,2,3])
-      >>> b = BaseAnalogSignal([4,5,6], sampling_period=42*ms)
-      >>> c = BaseAnalogSignal([1,2,3], t_start=42*ms)
-      >>> d = BaseAnalogSignal([1,2,3], t_start=42*ms, sampling_rate=0.42*kHz])
-      >>> e = BaseAnalogSignal([1,2,3], units='mV')
+      >>> a = AnalogSignal([1,2,3])
+      >>> b = AnalogSignal([4,5,6], sampling_period=42*ms)
+      >>> c = AnalogSignal([1,2,3], t_start=42*ms)
+      >>> d = AnalogSignal([1,2,3], t_start=42*ms, sampling_rate=0.42*kHz])
+      >>> e = AnalogSignal([1,2,3], units='mV')
 
     Necessary Attributes/properties:
-      t_start :         time when signal begins
-      sampling_rate :   number of samples per unit time
-      sampling_period : interval between two samples (1/sampling_rate)
-      duration :        signal duration (size * sampling_period)
-      t_stop :          time when signal ends (t_start + duration)
+      signal : Quantity, the data itself.
+      Alternatively signal can be given as an array or list, but in this
+      case the keyword argument `units` must be specified.
       
-    Recommanded Attributes/properties:
-      name
-      description
-      file_origin
+      The optional `dtype` and `copy` arguments also modify the signal
+      representation.
+    
+    Recommended Attributes/properties:
+      t_start :         Quantity, time when signal begins. Default: 0.0 seconds
+      
+      One of the following:
+      sampling_rate :   Quantity, number of samples per unit time
+      sampling_period : Quantity, interval between two samples
+      If neither is specified, 1.0 Hz is used.
+      If both are specified, they are checked for consistency.
+      (Internally this is always stored as a rate, with property access
+      for period.)
+
+      Note that the length of the signal array and the sampling rate 
+      are used to calculate t_stop and duration.
+
+    Universally recommended Attributes/properties:
+      name, description, file_origin : string
+    
+    Any other additional arguments are assumed to be user-specific metadata
+    and stored in `self._annotations`.
+      >>> a = AnalogSignal([1,2,3], day='Monday')
+      >>> print a._annotations['day']
+      Monday
+    
+    Properties available on this object:
+      sampling_rate, sampling_period, t_stop, duration
+    
+    Operations available on this object:
+      == != + * /
     """
     pass
