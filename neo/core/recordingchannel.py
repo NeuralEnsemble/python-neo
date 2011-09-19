@@ -8,7 +8,7 @@ class RecordingChannel(BaseNeo):
         AnalogSignal
         IrregularlySampleSignal
     """
-    def __init__(self, index, coordinate=None, **kargs):
+    def __init__(self, index=0, coordinate=None, **kargs):
         """Initialize a new RecordingChannel.
         
         Usage:

@@ -6,7 +6,8 @@ Generate datasets for testing
 
 
 
-from ...core import *
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -32,7 +33,10 @@ def generate_one_simple_block(block_name = 'block_0',
         for s in range(nb_segment):
             seg = generate_one_simple_segment(supported_objects=supported_objects, **kws)
             bl.segments.append(seg)
-        
+    
+    if RecordingChannel in supported_objects:
+        populate_RecordingChannel(bl)
+    
     return bl
 
 
@@ -52,20 +56,27 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                                                                         'color' : ['black', 'yellow', 'green' ],
                                                                                         },
                                                     event_array_size_range = [5, 20],
-                                                    
-                                                    
+
+                                                    epoch_array_types = {
+                                                                                        'animal state' : ['Sleep', 'Freeze', 'Escape', ],
+                                                                                        'light' : ['dark', 'lighted',  ],
+                                                                                        },
+                                                    epoch_array_duration_range = [.5, 3., ],
+
                                                 ):
     seg = Segment(name= seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
             anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, 
                                         t_start = t_start, name = 'sig %d for segment %s'%(a, seg.name),)
+            anasig._annotations['channel_index'] = a
             seg.analogsignals.append(anasig)
     
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
             sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration, name = 'spiketrain %d'%s)
+            sptr._annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
     
     if EventArray in supported_objects:
@@ -78,7 +89,23 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
             seg.eventarrays.append(ea)
                                         
     
-    # TODO other objects
+    if EpochArray in supported_objects:
+        for name, labels in epoch_array_types.iteritems():
+            t = 0
+            times, durations = [ ], [ ]
+            while t<duration:
+                times.append(t)
+                dur = (rand()*np.diff(epoch_array_duration_range)+epoch_array_duration_range[0])
+                durations.append(dur)
+                t = t+dur
+            epa = EpochArray(name = name,
+                                            times = pq.Quantity(times, units = pq.s),
+                                            durations = pq.Quantity(durations, units = pq.s),
+                                            labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
+                                            )
+            seg.epocharrays.append(epa)
+            
+    # TODO : Spike, Event, Epoch
     
     return seg
 
@@ -86,14 +113,17 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
 
 
 def generate_from_supported_objects( supported_objects ):
+    #~ create_many_to_one_relationship
     if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects= supported_objects)
+        
     elif Segment in supported_objects:
         higher = generate_one_simple_segment(supported_objects= supported_objects)
     else:
         #TODO
-        pass
+        return None
     
+    create_many_to_one_relationship(higher)
     return higher
     
     

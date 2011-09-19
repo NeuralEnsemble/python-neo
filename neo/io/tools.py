@@ -54,7 +54,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     >>> populate_RecordingChannel(a_block)
     """
     recordingchannels = { }
-    for seg in bl._segments:
+    for seg in bl.segments:
         
         for sub in ['analogsignals', 'spiketrains' ]:
             if not hasattr(seg, sub) : continue
@@ -63,12 +63,12 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                 if 'channel_index' in child._annotations:
                     ind = child._annotations['channel_index']
                     if  ind not in recordingchannels:
-                        recordingchannels[ind] = RecordingChannel(channel_index = ind)
+                        recordingchannels[ind] = RecordingChannel(index = ind)
                         if 'channel_name' in child._annotations:
                             recordingchannels[ind].name = child._annotations['channel_name']
                             if remove_from_annotation:
                                 child._annotations.pop('channel_name')
-                    recordingchannels[ind]._analogsignals.append(child)
+                    recordingchannels[ind].analogsignals.append(child)
                     if remove_from_annotation:
                         child._annotations.pop('channel_index')
     indexes = np.sort(recordingchannels.keys())
