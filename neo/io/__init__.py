@@ -2,12 +2,47 @@
 """
 neo.io provides classes for reading and/or writing electrophysiological data files.
 
-It is a pure Python Neuroshare replacement.
-
 Note that if the package dependency is not satisfied for one io, it do not raise
 a error but a warning.
 
 neo.io.iolist provides the classes list of succesfully imported io.
+
+
+.. autoclass:: neo.io.PlexonIO
+
+.. autoclass:: neo.io.NeuroExplorerIO
+
+.. autoclass:: neo.io.AxonIO
+
+.. autoclass:: neo.io.TdtIO
+
+.. autoclass:: neo.io.WinEdrIO
+
+.. autoclass:: neo.io.WinWcpIO
+
+.. autoclass:: neo.io.ElanIO
+
+.. autoclass:: neo.io.AsciiSignalIO
+
+.. autoclass:: neo.io.AsciiSpikeTrainIO
+
+.. autoclass:: neo.io.RawBinarySignalIO
+
+.. autoclass:: neo.io.MicromedIO
+
+.. autoclass:: neo.io.NeuroshareIO
+
+.. autoclass:: neo.io.NeoMatlabIO
+
+.. autoclass:: neo.io.PyNNNumpyIO
+
+.. autoclass:: neo.io.PyNNTextIO
+
+.. autoclass:: neo.io.KlustaKwikIO
+
+.. autoclass:: neo.io.BlackrockIO
+
+
 """
 
 import warnings
@@ -111,6 +146,13 @@ except ImportError:
     warnings.warn("PyNNNumpyIO not available, check dependencies", ImportWarning)
 
 try:
+    from .pynnio import PyNNTextIO
+    iolist.append( PyNNTextIO )
+except ImportError:
+    warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
+
+
+try:
     from .klustakwikio import KlustaKwikIO
     iolist.append( KlustaKwikIO )
 except ImportError:
@@ -123,11 +165,6 @@ except ImportError:
     warnings.warn("BlackrockIO not available, check dependencies", ImportWarning)
 
 
-try:
-    from .pynnio import PyNNTextIO
-    iolist.append( PyNNTextIO )
-except ImportError:
-    warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
 
 #~ try:
     #~ from .alphaomegaio import AlphaOmegaIO

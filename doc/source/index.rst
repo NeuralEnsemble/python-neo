@@ -14,7 +14,8 @@ Neo provides in particular :
  - documentation.
  - a set of examples, including a format convertor.
 
-For Python users, Neo can be taken as a replacement for the Neuroshare_ API.
+For Python users, Neo can be taken as a replacement for the Neuroshare_ API. 
+Neo natively read: Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and more.
 
 The people behind the project are very open to discussion. Any feedback is gladly received and highly appreciated!
 
@@ -28,9 +29,11 @@ Contents:
    whatisnew
    install
    core
+   usecases
    io
    examples
    developers_guide
+   io_developers_guide
 
 Indices and tables
 ==================

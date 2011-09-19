@@ -220,6 +220,15 @@ have the necessary permissions to do this)::
 
 .. should we also distribute via software.incf.org
 
+
+If you want to developp your own IO
+-------------------------------------------------------------------------
+
+See :ref:`io_dev_guide` for implementation of a new IO.
+
+
+
+
 .. _Python: http://www.python.org
 .. _nose: http://somethingaboutorange.com/mrl/projects/nose/
 .. _unittest2: http://pypi.python.org/pypi/unittest2

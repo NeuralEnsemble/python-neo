@@ -1,3 +1,5 @@
+.. _core_page:
+
 ***********
 Neo core
 ***********
@@ -11,6 +13,7 @@ Objects in Neo represent neural data. They are connected hierarchically to show 
 Block: The main container gathering all of the data, discrete and continuous, for a given recording session.
 
 Segment: A Segment is a heterogeneous container for discrete or continous data data sharing a common clock (time basis) but not necessary the same sampling rate, t_start and t_stop.
+Segment could have been named in different context : trial, run, or recording, ... The concept of Segment is fuzzy enought to cover many cases.
 
 AnalogSignal: A representation of continuous, analog signal acquired at time ``t_start`` at a certain sampling rate.
 
@@ -20,6 +23,8 @@ RecordingChannel: A RecordingChannel is a container of AnalogSignal or SpikeTrai
 
 RecordingChannelGroup: A container inside a Block of some RecordingChannel. Spikes are sorted from more than one recording channel. Therefore each SpikeTrain is associated with the group of recording channels on which it was calculated.
 
+
+See :ref:`use_cases_page` for good understanding.
 
 Inheritance
 ===========
@@ -32,7 +37,7 @@ Initialization
 ==============
 Neo objects are initialized with "required", "recommended", and "additional" arguments.
 
-    - Required arguments MUST be provided at the time of initialization. They are used in the construction of the underlying Numpy object.
+    - Required arguments MUST be provided at the time of initialization. They are used in the construction of the underlying object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
     - Additional arguments are defined by the user (you!) and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called _annotations.
 

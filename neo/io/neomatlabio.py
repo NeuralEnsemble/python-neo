@@ -56,8 +56,7 @@ class NeoMatlabIO(BaseIO):
     
     1 - **Senario 1: create data in matlab and read them in neo**
       
-      This matlab code generate a block::
-            :matlab:
+        This matlab code generate a block::
             
             block = struct();
             block.segments = { };
@@ -94,6 +93,7 @@ class NeoMatlabIO(BaseIO):
 
             
         This code read it in python::
+        
             import neo
             r = neo.io.NeoMatlabIO(filename = 'myblock.mat')
             bl = r.read_block()
@@ -101,7 +101,7 @@ class NeoMatlabIO(BaseIO):
             print bl.segments[1].spiketrains[4]
             
 
-    2 - **Senario 2: create data in python with neo and read them in matlab
+    2 - **Senario 2: create data in python with neo and read them in matlab**
 
         This python code generate the same block as previous (yes, it is more elegant, it is pyhton)::
         
@@ -126,7 +126,6 @@ class NeoMatlabIO(BaseIO):
             
         
         This matlab code read it ::
-            :matlab:
             
             load 'myblock.mat'
             block.name
