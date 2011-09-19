@@ -32,7 +32,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(a.shape, (10, 3)) 
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, len(data)/rate)
-        self.assertEqual(a[9][0], 9*mV)
+        self.assertEqual(a[9, 0], 9*mV)
         
     def test__create_from_numpy_array(self):
         data = numpy.arange(20.0).reshape((10,2))
@@ -40,8 +40,8 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignalArray(data, sampling_rate=rate, units="uV")
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.shape[0]/rate)
-        self.assertEqual(a[9][0], 18*uV)
-        self.assertEqual(a[9][1], 19*uV)
+        self.assertEqual(a[9, 0], 18*uV)
+        self.assertEqual(a[9, 1], 19*uV)
         
     def test__create_from_quantities_array(self):
         data = numpy.arange(20.0).reshape((10,2)) * mV
@@ -49,7 +49,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignalArray(data, sampling_rate=rate)
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.shape[0]/rate)
-        self.assertEqual(a[9][0], 18*mV)
+        self.assertEqual(a[9, 0], 18*mV)
         
     def test__create_from_quantities_array_with_inconsistent_units_should_raise_ValueError(self):
         data = numpy.arange(20.0).reshape((10,2)) * mV
@@ -59,15 +59,15 @@ class TestConstructor(unittest.TestCase):
         data = numpy.arange(20.0).reshape((10,2)) * mV
         rate = 5000*Hz
         a = AnalogSignalArray(data, copy=True, sampling_rate=rate)
-        data[3][0] = 99*mV
-        self.assertNotEqual(a[3][0], 99*mV)
+        data[3, 0] = 99*mV
+        self.assertNotEqual(a[3, 0], 99*mV)
     
     def test__create_with_copy_false_should_return_view(self):
         data = numpy.arange(20.0).reshape((10,2)) * mV
         rate = 5000*Hz
         a = AnalogSignalArray(data, copy=False, sampling_rate=rate)
-        data[3,0] = 99*mV
-        self.assertEqual(a[3][0], 99*mV)
+        data[3, 0] = 99*mV
+        self.assertEqual(a[3, 0], 99*mV)
 
     # signal must not be 1D - should raise Exception if 1D
     
