@@ -128,7 +128,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def times(self):
         return self.t_start + np.arange(self.shape[0])/self.sampling_rate
     
-    def copy_except_signal(self, signal):
+    def duplicate_with_new_array(self, signal):
         #signal is the new signal
         new = AnalogSignal(signal = signal, units= self.units)
         new._copy_data_complement(self)
@@ -151,8 +151,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             # how to handle name and _annotations?
 
     def _copy_data_complement(self, other):
-        for attr in ("t_start", "sampling_rate"): # should we copy name and annotations to the new signal?
-            setattr(self, attr, getattr(other, attr))
+        for attr in ("t_start", "sampling_rate", "name", "file_origin", "description"):
+            setattr(self, attr, getattr(other, attr, None))
 
     def _apply_operator(self, other, op):
         self._check_consistency(other)

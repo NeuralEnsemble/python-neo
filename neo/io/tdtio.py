@@ -87,6 +87,7 @@ class TdtIO(BaseIO):
         bl.file_origin = tankname
         if not cascade : return bl
         for blockname in os.listdir(self.dirname):
+            if blockname == 'TempBlk': continue
             subdir = os.path.join(self.dirname,blockname)
             
             if not os.path.isdir(subdir): continue
@@ -106,7 +107,7 @@ class TdtIO(BaseIO):
                 h= hr.read_f()
                 if h==None:break
                 
-                code, channel,  evtype = h['channel'], h['code'], h['evtype']
+                channel, code ,  evtype = h['channel'], h['code'], h['evtype']
                 
                 if Types[evtype] == 'EVTYPE_UNKNOWN':
                     pass
@@ -190,6 +191,7 @@ class TdtIO(BaseIO):
                     if code not in allsig:
                         allsig[code] = { }
                     if channel not in allsig[code]:
+                        #~ print 'code', code, 'channel',  channel
                         anaSig = AnalogSignal( 
                                                             [ ] * pq.V,
                                                             name =  code,
@@ -218,7 +220,7 @@ class TdtIO(BaseIO):
                 # Step 2 : allocate memory
                 for code, v in allsig.iteritems():
                     for channel, anaSig in v.iteritems():
-                        v[channel] = anaSig.copy_except_signal(np.zeros((anaSig.totalsize) , dtype = anaSig._data_description ['dtype'] )*pq.V )
+                        v[channel] = anaSig.duplicate_with_new_array(np.zeros((anaSig.totalsize) , dtype = anaSig._data_description ['dtype'] )*pq.V )
                         v[channel].pos = 0
                         
                 for code, v in allevent.iteritems():
@@ -257,6 +259,8 @@ class TdtIO(BaseIO):
                     tev = None
                 for code, v in allsig.iteritems():
                     for channel, anaSig in v.iteritems():
+                        #~ print anaSig.name, anaSig.channel_index
+                        #~ print type(anaSig.name), type(anaSig.channel_index)
                         filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.channel_index)+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
@@ -272,7 +276,7 @@ class TdtIO(BaseIO):
                 while 1:
                     h= hr.read_f()
                     if h==None:break
-                    code, channel,  evtype = h['channel'], h['code'], h['evtype']
+                    channel, code ,  evtype = h['channel'], h['code'], h['evtype']
                     
                     if Types[evtype] == 'EVTYPE_STREAM': 
                         a = allsig[code][channel]

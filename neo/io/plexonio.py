@@ -207,7 +207,7 @@ class PlexonIO(BaseIO):
             ## Step 4: allocating memory if not lazy
             # continuous signal
             for chan, anaSig in anaSigs.iteritems():
-                anaSigs[chan] = anaSig.copy_except_signal(np.zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
+                anaSigs[chan] = anaSig.duplicate_with_new_array(np.zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
             
             # allocating mem for SpikeTrain
             for chan, sptrs in spiketrains.iteritems():

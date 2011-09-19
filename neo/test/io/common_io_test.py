@@ -87,9 +87,8 @@ class BaseTestIO(object):
         shortname = self.ioclass.__name__.lower().strip('io')
         url = url_for_tests+shortname
         for filename in self.files_to_download:
-            # FIXME if path deep is more than 2
-            if os.path.dirname(filename) != '' and not os.path.exists(localdir+'/'+os.path.dirname(filename)) :
-                os.mkdir(localdir+'/'+os.path.dirname(filename))
+            make_all_directories(filename, localdir)
+            
             localfile =  localdir+'/'+filename
             distantfile = url+'/'+filename
             
@@ -258,5 +257,14 @@ class BaseTestIO(object):
             
 
 
+
+def make_all_directories(filename, localdir):
+    fullpath = os.path.join(localdir, os.path.dirname(filename))
+    if os.path.dirname(filename) != '' and not os.path.exists(fullpath) :
+        if not os.path.exists( os.path.dirname(fullpath)):
+            make_all_directories(os.path.dirname(filename), localdir)
+        os.mkdir(fullpath)
+    
+    
 
     
