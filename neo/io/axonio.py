@@ -229,11 +229,19 @@ class AxonIO(BaseIO):
                 episodArray[0]['len'] = data.size
                 episodArray[0]['offset'] = 0
                 
-            # read subset of data
-            list_data = [ ]
+            # sampling_rate
+            if version <2. :
+                sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6) * pq.Hz
+            elif version >=2. :
+                sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval'] * pq.Hz
+
+
+            # construct block
+            # one sweep = one segment in a block
             pos = 0
-            
             for j in range(episodArray.size):
+                seg = Segment(index = j)
+                
                 length = episodArray[j]['len']
                 
                 if version <2. :
@@ -251,20 +259,6 @@ class AxonIO(BaseIO):
                         reformat_integer_V1(subdata, nbchannel , header)
                     elif version >=2. :
                         reformat_integer_V2(subdata, nbchannel , header)
-                list_data.append(subdata)
-            
-            # sampling_rate
-            if version <2. :
-                sampling_rate = 1./(header['fADCSampleInterval']*nbchannel*1.e-6) * pq.Hz
-            elif version >=2. :
-                sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval'] * pq.Hz
-
-
-            # construct block
-            # one sweep = one segment in a block
-            for j in range(episodArray.size):
-                seg = Segment(index = j)
-                
                 
                 for i in range(nbchannel):
                     if version <2. :
@@ -281,7 +275,7 @@ class AxonIO(BaseIO):
                     if lazy:
                         signal = [ ] * pq.Quantity(1, unit)
                     else:
-                        signal = list_data[j][:,i] * pq.Quantity(1, unit)
+                        signal = subdata[:,i] * pq.Quantity(1, unit)
                     
                     anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
                     anaSig._annotations['channel_index'] = int(num)
