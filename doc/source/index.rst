@@ -3,6 +3,10 @@ Neo: representing electrophysiology data in Python
 
 .. module:: neo
 
+.. image:: images/neologo.png
+    :width: 600 px
+
+
 
 Neo stands for Neural Ensemble Objects and is a project to provide common class names and concepts
 for dealing with electrophysiological (real and/or simulated) data, with the aim of
