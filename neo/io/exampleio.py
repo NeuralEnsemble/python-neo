@@ -44,35 +44,17 @@ except ImportError:
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
     """
-    Class for reading/writing data in a fake file.
+    Class for fake reading data in a no file.
+
+    For the user, it generates a `Segment` or a `Block` with a sinusoidal `AnalogSignal` + `SpikeTrain` + `EventArray`
+
+    For a developer, it is just an example showing guidelines for someone who wants to develop a new IO.
+
     
-    **For developers**
+    2 rules for for developers:
+      * Respect neo IO API. :ref:`neo_io_API`
+      * Follow :ref:`io_guiline`
     
-    If you start a new IO class :
-        - Copy/paste and modify this class.
-        - Think what objects your IO will support
-        - Think what objects your IO will read or write.
-        - Implement all read_XXX and write_XXX methods
-        - Write a a least a simple test to check neo compliance see neo.test.io.test_exampleio
-
-    If you have a problem just mail me or ask the list.
-
-    The neo.io API is designed to be simple and intuitive:
-        - each file format has its IO classes (for example for Spike2 files you have a Spike2IO class)
-        - each class inherits from the BaseIO class
-        - each io class can read or write directly one or several neo objects (for example Segment, Block, ...)
-        - each io class support part of the neo.core hierachy not necessary all part.
-        - each io is able to do a *lazy* load = all attribute are read execpet numpy.array (if lazy=True) _data_description attrbute is added.
-        - each io is able to do a *cascade* load = if True all children object are also loaded
-        - each io render object (and subojects) with all there necessary attributes 
-        - each io can freely had remcommended attributs (and more) in _annotations dict of object.
-
-    Guidelines:
-        - Each IO implementation of IO should come with its documentation.
-        - Each IO implementation of IO should come with some ligth files deposed at GNode
-        - Each IO implementation of IO should come with its unitest neo/test/io/test_xxxxxio
-
-
     Usage:
         >>> from neo import io
         >>> r = io.BaseIO( filename = 'itisaafke.nof ')
@@ -304,7 +286,6 @@ class ExampleIO(BaseIO):
         w2 = stats.nct.pdf(np.arange(11,60,2), 5,20)
         w = np.r_[ w1 , w2 ]
         w = -w/max(w)
-        #~ w = resample( w , int(w.size * sr / 10000. ) )
         
         # in the neo API the waveforms attr is 3 D in case tetrode
         # in our case it is mono electrode so dim 1 is size 1

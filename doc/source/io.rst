@@ -115,6 +115,7 @@ This simple mecanism is similar to reading a header (lazy =True, cascade = True)
 execpt what is heavy.
 
 
+.. _neo_io_API:
 
 Details of API
 ================
