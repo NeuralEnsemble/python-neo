@@ -1,50 +1,74 @@
+*************************
+Download and Installation
+*************************
 
-****************
-Installation
-****************
-
-
-
+Neo is a pure Python package, so it should be easy to get it running on any
+system.
 
 Dependencies
-==================
-
-Dependencies:
-    
+============
+  
     * Python >= 2.6
-    * Python numpy
-    * quantities
+    * numpy_ >= 1.3.0
+    * quantities_ >= 0.9.0
 
-For testing you also need:
-    * Python scipy
-    * Pyhton matplotlib
+Certain IO modules have additional dependencies. If these are not satisfied,
+Neo will still install but the IO module that uses them will fail on loading.
 
-For IO, there are several additional dependencies. If these are not satisfied, neo will still install but the IO module that use them will fail on loading.
+.. todo:: list dependencies for individual IO modules
 
+For Debian/Ubuntu, you can install these using::
 
+    $ apt-get install python-numpy python-pip
+    $ pip install quantities
 
-Install neo
-=======================
+You may need to run these as root. For other operating systems, you can
+download installers from the links above.
 
-First install the dependencies:
-    sudo apt-get install python-numpy python-scipy python-matplotlib python-pip
-    mkdir quantities-src
-    cd quantities-src
-    sudo pip install quantities
+Installing from the Python Package Index
+========================================
 
-Next install neo. You have two choices: the stable release, and the real-time release which is updated more frequently with bugfixes and feature additions.
+If you have pip_ installed::
+
+    $ pip install neo
     
-    From pypi (last stable release)::
-        
-        sudo apt-get install python-setuptools
-        sudo easy_install neo
+Alternatively, if you have setuptools_::
     
-    From source (real time release)::
-        
-        sudo apt-get install subversion
-        svn co https://neuralensemble.org/svn/neo/
-        cd neo/trunk
-        python setup.py install
+    $ easy_install neo
+    
+Both of these will automatically download and install the latest release (again
+you may need to have administrator privileges on the machine you are installing
+on).
+    
+To download and install manually, download:
+
+    http://pypi.python.org/packages/source/N/neo/neo-0.2.0.tar.gz
+
+Then::
+
+    $ tar xzf neo-0.2.0.tar.gz
+    $ cd neo-0.2.0
+    $ python setup.py install
+    
+or::
+
+    $ python3 setup.py install
+    
+depending on which version of Python you are using.
+
+Installing from source
+======================
+
+To install the latest version of Neo from the Subversion repository::
+
+    svn co https://neuralensemble.org/svn/neo/branches/neo0.2 neo_0.2
+    cd neo_0.2
+    python setup.py install
+
+.. todo:: update this once we release 0.2 and start developing in trunk
 
 
-
+.. _`numpy`: http://numpy.scipy.org/
+.. _`quantities`: http://pypi.python.org/pypi/quantities
+.. _`pip`: http://pypi.python.org/pypi/pip
+.. _`setuptools`: http://pypi.python.org/pypi/setuptools
