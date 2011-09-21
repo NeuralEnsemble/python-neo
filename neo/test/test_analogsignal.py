@@ -15,6 +15,7 @@ import numpy
 import quantities as pq
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
+V = pq.V
 mV = pq.mV
 uV = pq.uV
 Hz = pq.Hz
@@ -32,7 +33,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate, units="mV")
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, len(data)/rate)
-        self.assertEqual(a[9], 9*mV)
+        self.assertEqual(a[9], 9000*uV)
         
     def test__create_from_numpy_array(self):
         data = numpy.arange(10.0)
@@ -40,7 +41,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate, units="uV")
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
-        self.assertEqual(a[9], 9*uV)
+        self.assertEqual(a[9], 0.009*mV)
         
     def test__create_from_quantities_array(self):
         data = numpy.arange(10.0) * mV
@@ -48,7 +49,7 @@ class TestConstructor(unittest.TestCase):
         a = AnalogSignal(data, sampling_rate=rate)
         self.assertEqual(a.t_start, 0*ms)
         self.assertEqual(a.t_stop, data.size/rate)
-        self.assertEqual(a[9], 9*mV)
+        self.assertEqual(a[9], 0.009*V)
         
     def test__create_from_quantities_array_with_inconsistent_units_should_raise_ValueError(self):
         data = numpy.arange(10.0) * mV

@@ -58,28 +58,30 @@ class AnalogSignalArray(BaseAnalogSignal):
         return obj
 
     def __getslice__(self, i, j):
-        raise Exception("%d %d" % (i,j))
-        # doesn't get called in Python 3 - __getitem__ is called instead
-#        obj = super(BaseAnalogSignal, self).__getslice__(i, j)
-#        obj.t_start = self.t_start + i*self.sampling_period
-#        return obj
+        return self.__getitem__(slice(i,j))
 
     def __getitem__(self, i):
         obj = super(BaseAnalogSignal, self).__getitem__(i)
         if isinstance(i, int):
             return obj
         elif isinstance(i, tuple):
-            j,k = i
-            if isinstance(k, int): # extract an AnalogSignal
-                if isinstance(j, slice):
+            j, k = i
+            if isinstance(k, int): 
+                if isinstance(j, slice):  # extract an AnalogSignal
                     obj = AnalogSignal(obj, sampling_rate=self.sampling_rate)
                     if j.start:
                         obj.t_start = self.t_start + j.start*self.sampling_period
+                elif isinstance(j, int):  # return a Quantity (for some reason quantities does not return a Quantity in this case)
+                    obj = pq.Quantity(obj, units=self.units)
                 return obj
             elif isinstance(j, int): # extract a quantity array
                 obj = pq.Quantity(np.array(obj), units=obj.units) # should be a better way to do this
                 return obj
             else:
                 return obj
+        elif isinstance(i, slice):
+            if i.start:
+                obj.t_start = self.t_start + i.start*self.sampling_period
+            return obj
         else:
-            raise IndexError("index should be an integer or a tuple")
+            raise IndexError("index should be an integer, tuple or slice")
