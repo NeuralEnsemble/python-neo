@@ -1,10 +1,36 @@
+"""
+
+here a list of all neo objects:
+
+.. autoclass:: Block
+.. autoclass:: Segment
+.. autoclass:: RecordingChannelGroup
+.. autoclass:: RecordingChannel
+
+.. autoclass:: AnalogSignal
+.. autoclass:: AnalogSignalArray
+.. autoclass:: IrregularlySampledSignal
+
+.. autoclass:: Event
+.. autoclass:: EventArray
+.. autoclass:: Epoch
+.. autoclass:: EpochArray
+
+.. autoclass:: Unit
+.. autoclass:: Spike
+.. autoclass:: SpikeTrain
+
+
+
+"""
+
 from __future__ import absolute_import
 
 from .block import Block
 from .segment import Segment 
 from .recordingchannelgroup import RecordingChannelGroup
 from .recordingchannel import RecordingChannel
-from .unit import Unit
+
 
 from .analogsignal import AnalogSignal
 from .analogsignalarray import AnalogSignalArray
@@ -16,13 +42,14 @@ from .eventarray import EventArray
 from .epoch import Epoch
 from .epocharray import EpochArray
 
+from .unit import Unit
 from .spike import Spike
 from .spiketrain import SpikeTrain
 
 
 
-objectlist = [ Block, Segment, RecordingChannelGroup , RecordingChannel,Unit,
+objectlist = [ Block, Segment, RecordingChannelGroup , RecordingChannel,
         AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
         Event, EventArray, Epoch, EpochArray,
-        Spike , SpikeTrain
+        Unit, Spike , SpikeTrain
             ]

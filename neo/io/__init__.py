@@ -7,7 +7,6 @@ a error but a warning.
 
 neo.io.iolist provides the classes list of succesfully imported io.
 
-
 .. autoclass:: neo.io.PlexonIO
 
 .. autoclass:: neo.io.NeuroExplorerIO

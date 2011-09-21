@@ -22,12 +22,12 @@ import numpy as np
 line_heigth = .22
 fontsize = 10.5
 left_text_shift = .1
-
+dpi = 100
 
 def generate_diagram(filename, rect_pos,rect_width,  figsize ):
     rw = rect_width
     
-    fig = pyplot.figure(figsize = figsize)
+    fig = pyplot.figure(figsize = figsize,)
     ax = fig.add_axes([0,0,1,1])    
     
     #calculate height
@@ -161,7 +161,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
 
     ax.set_xticks([ ])
     ax.set_yticks([ ])
-    fig.savefig(filename)
+    fig.savefig(filename, dpi =dpi)
 
 
 

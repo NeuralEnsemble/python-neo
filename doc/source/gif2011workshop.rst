@@ -46,6 +46,15 @@ in the BaseIO class. These parameters are valid for every method, provided by th
 11. We stay with Python 2.6 / 2.7 support. Python 3 to be considered in a later discussions.
 
 
+
+New object diagram discussed
+===============================================
+
+.. image:: images/neo_UML_French_workshop.png
+   :height: 500 px
+   :align: center
+
+
 Actions to be performed:
 ===============================================================
 promotion:

@@ -52,12 +52,14 @@ The basic syntax is as follows. If you want to load a file format that is implem
     >>> from neo.io import MyFormatIO
     >>> reader = MyFormatIO("myfile.dat")
 
+you can replace MyFormatIO by any implemented class, see :ref:`list_of_io`
+
 Supported object // readable object
 ====================================
 
 To know what types of object are supported by this io interface::
 
-    >>> file.supported_objects
+    >>> MyFormatIO.supported_objects
     [Segment , AnalogSignal , SpikeTrain, Event, Spike ]
 
 Supported objects does not mean objects that you can read directly. For instance, many formats support AnalogSignal
@@ -70,7 +72,7 @@ True::
 
 To get a list of directly readable objects ::
 
-    >>> reader.readable_objects
+    >>> MyFormatIO.readable_objects
     [Segment]
 
 The first element of the previous list is the highest level for reading the file. This mean that the IO have *read_segment* method::
@@ -129,6 +131,7 @@ The neo.io API is designed to be simple and intuitive:
     - each io can freely had remcommended attributs (and more) in _annotations dict of object.
 
 
+.. _list_of_io:
 
 List of implemented formats
 =================================

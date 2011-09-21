@@ -48,19 +48,19 @@ Here is how you initialize a SpikeTrain with required arguments.::
 
         import neo
         import quantity as pq
-        st = neo.SpikeTrain(times=pq.Quantity([3, 4, 5], units='sec'))
+        st = neo.SpikeTrain(pq.Quantity([3, 4, 5], units='sec'))
         print st
 
 You will see the spike times printed in a nice format including the units.
 
 Because `st` "is a" Quantity array with units 'sec', it absolutely must have this information at the time of initialization. You can specify them with a keyword argument too::
 
-    st = neo.SpikeTrain(times=[3, 4, 5], units='sec')
+    st = neo.SpikeTrain([3, 4, 5], units='sec')
 
 
 In practice, much more information than the raw spike times is necessary to analyze this data. This information falls into the realm of "recommended attributes". For example, at what time did this particular spike train start? ::
 
-    st = neo.SpikeTrain(times=[3, 4, 5], units='sec')
+    st = neo.SpikeTrain([3, 4, 5], units='sec')
     st.t_start = 1.0
 
 Here we set t_start like a normal Python attribute, but we could also have provided it as a keyword to initialization.
@@ -88,8 +88,22 @@ Diagrams
 
 The hierachical respresentation can help in understanding the links between objects :
 
-.. image:: images/neo_UML_French_workshop.png
-   :height: 500 px
-   :align: center
+.. image:: images/simple_generated_diagram.png
+    :width: 1000 px
+
+:download:`Click here for SVG better quality diagram <./images/simple_generated_diagram.svg>`
+
+
+
+All classes
+============================
+
+.. automodule:: neo.core
+
+
+
+
+
+
 
 
