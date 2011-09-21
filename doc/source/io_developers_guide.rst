@@ -1,7 +1,7 @@
 .. _io_dev_guide:
 
 ****************************
-IO developpers guide
+IO developers' guide
 ****************************
 
 
