@@ -100,9 +100,4 @@ The hierachical respresentation can help in understanding the links between obje
 
 :download:`Click here for better quality SVG diagram <./images/simple_generated_diagram.svg>`
 
-
-Reference
-=========
-
-.. automodule:: neo.core
-
+For more details, see the :doc:`api_reference`.

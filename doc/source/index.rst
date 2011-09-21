@@ -36,6 +36,7 @@ Documentation
    usecases
    io
    examples
+   api_reference
    whatisnew
    developers_guide
    io_developers_guide

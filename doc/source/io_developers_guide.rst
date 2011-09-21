@@ -1,17 +1,17 @@
 .. _io_dev_guide:
 
-****************************
+********************
 IO developers' guide
-****************************
+********************
 
 
 .. _io_guiline:
 
 Guideline for IO implementation
-===========================
+===============================
 
 Receipe to develop an IO for a new format:
-    1. Fully understand the object model. See core_page_. If doubt ask the list.
+    1. Fully understand the object model. See :doc:`core`. If doubt ask the list.
     2. Fully understand neo.io.exampleio, It is a fake IO to explain the API. If doubt ask the list.
     3. Copy/paste examplio.py and choose a clear file and class names for your IO.
     4. Make the point on which **supported_objects** and **readable_objects** your IO will deal with. This is the crutial point.
@@ -23,8 +23,8 @@ Receipe to develop an IO for a new format:
     10. Commit or send patch only if all tests are compliants.
 
 
-Misclaneous
-============================
+Miscellaneous
+=============
 
 Notes:
     * if your IO support several version of a format (like ABF1, ABF2) you must put all cases for your files
@@ -35,11 +35,12 @@ Notes:
     
 
 Tests
-=============================
+=====
 
 :py:class:`neo.test.io.commun_io_test.BaseTestIO` provide standard test.
 For that you need to upload some files at G-Node. They will publicy accessible for testing neo.
-Theses tests:
+These tests:
+
   * check the compliance with schema: hierachy, type of attributes, ...
   * check if IO respect *lazy* and *cascade* keyword.
   * For IO able to write and read. It compare a generated schema and the same after write/read cycle.
@@ -56,7 +57,7 @@ This is an example of test_axonio.py, note that the list of files is present at 
 
 
 ExampleIO
-==============================
+=========
 
 .. autoclass:: neo.io.ExampleIO
 
