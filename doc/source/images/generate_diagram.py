@@ -2,8 +2,6 @@
 """
 This generate diagram in .png and .svg from neo.description
 
-TODO:
-many_to_many_relationship in matplotlib style annotation.
 
 Author: sgarcia
 """
@@ -45,39 +43,59 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         #~ pos = rect_pos[name]
         #~ htotal = all_h[name]
         #~ if name not in one_to_many_reslationship.keys(): continue
-        relationship = [ ]
-        if name in one_to_many_reslationship: relationship += one_to_many_reslationship[name]
-        #~ if name in many_to_many_reslationship: relationship += many_to_many_reslationship[name]
-        for c,children in enumerate(relationship):
-            if children not in rect_pos.keys(): continue
-            x = rect_pos[children][0] 
-            y = rect_pos[children][1] + all_h[children] - line_heigth*.5
-            x2 = rect_pos[name][0] + rect_width
-            y2 = rect_pos[name][1] + all_h[name] - line_heigth*1.5 - line_heigth*c
-            a = ax.annotate('', (x, y),
-                                        (x2,y2),
-                                        #xycoords="figure fraction", textcoords="figure fraction",
-                                        ha="right", va="center",
-                                        size=fontsize,
-                                        arrowprops=dict(arrowstyle='fancy',
-                                                        #~ patchB=p,
-                                                        shrinkA=.3,
-                                                        shrinkB=.3,
-                                                        fc="w", ec="k",
-                                                        connectionstyle="arc3,rad=-0.05",
-                                                        ),
-                                        bbox=dict(boxstyle="square", fc="w"))
-            a.set_zorder(-4)
+        for r in range(2):
+            relationship = [ ]
+            if r==0 and name in one_to_many_reslationship:
+                relationship = one_to_many_reslationship[name]
+                color = 'c'
+            elif r==1 and name in many_to_many_reslationship:
+                relationship = many_to_many_reslationship[name]
+                color = 'm'
+        
+            for c,children in enumerate(relationship):
+                if children not in rect_pos.keys(): continue
+                x = rect_pos[children][0] 
+                y = rect_pos[children][1] + all_h[children] - line_heigth*.5
+                if r ==0:
+                    x2 = rect_pos[name][0] + rect_width
+                    #~ y2 = rect_pos[name][1] + all_h[name] - line_heigth*1.5 - line_heigth*c
+                    #~ x2 = rect_pos[name][0] 
+                    y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
+                    connectionstyle="arc3,rad=-0.1"
+                elif r ==1:
+                    x2 = rect_pos[name][0] 
+                    y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
+                    if y2>y:
+                        connectionstyle="arc3,rad=0.5"
+                    else:
+                        connectionstyle="arc3,rad=-0.5"
+                    
+                a = ax.annotate('', (x, y),
+                                            (x2,y2),
+                                            #xycoords="figure fraction", textcoords="figure fraction",
+                                            ha="right", va="center",
+                                            size=fontsize,
+                                            
+                                            arrowprops=dict(arrowstyle='fancy',
+                                                            #~ patchB=p,
+                                                            shrinkA=.3,
+                                                            shrinkB=.3,
+                                                            fc=color, ec=color,
+                                                            connectionstyle=connectionstyle,
+                                                            ),
+                                            bbox=dict(boxstyle="square", fc="w"))
+                a.set_zorder(-4)
 
     
     # draw boxes
     for name in rect_pos.keys():
         pos = rect_pos[name]
         htotal = all_h[name]
-        relationship = [ ]
-        if name in one_to_many_reslationship: relationship += one_to_many_reslationship[name]
-        if name in many_to_many_reslationship: relationship += many_to_many_reslationship[name]
         attributes = classes_necessary_attributes[name]+classes_recommended_attributes[name]        
+        allrelationship = [ ]
+        if name in one_to_many_reslationship: allrelationship += one_to_many_reslationship[name]
+        if name in many_to_many_reslationship: allrelationship += many_to_many_reslationship[name]
+        
 
         rect = Rectangle(pos,rect_width ,htotal,
                                     facecolor = 'w',
@@ -97,16 +115,28 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         ax.add_patch(rect)
         
         #relationship
-        pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship))
-        rect = Rectangle(pos2,rect_width ,line_heigth*len(relationship),
-                                    facecolor = 'c',
-                                    edgecolor = 'k',
-                                    alpha = .5,
-                                    )
-        ax.add_patch(rect)
+        for r in range(2):
+            relationship = [ ]
+            if r==0:
+                if name in one_to_many_reslationship: relationship = one_to_many_reslationship[name]
+                color = 'c'
+                pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship))
+                n = len(relationship)
+            elif r==1:
+                if name in many_to_many_reslationship: relationship = many_to_many_reslationship[name]
+                color = 'm'
+                pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship)+n)
+                n = len(relationship)
+            
+            rect = Rectangle(pos2,rect_width ,line_heigth*n,
+                                        facecolor = color,
+                                        edgecolor = 'k',
+                                        alpha = .5,
+                                        )
+            ax.add_patch(rect)
         
         # necessary attr
-        pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship)+len(classes_necessary_attributes[name]))
+        pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(allrelationship)+len(classes_necessary_attributes[name]))
         rect = Rectangle(pos2,rect_width ,line_heigth*len(classes_necessary_attributes[name]),
                                     facecolor = 'r',
                                     edgecolor = 'k',
@@ -124,8 +154,9 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
                             fontproperties = FontProperties(weight = 'bold', 
                                                                                 ),
                     )
+        
         #relationship
-        for i,relat in enumerate(relationship):
+        for i,relat in enumerate(allrelationship):
             ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+2),
                                 relat.lower()+'s: list',
                                 horizontalalignment = 'left',
@@ -147,7 +178,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
             else:t2 = attrtype.__name__
             
             t  = t1+' :  '+t2
-            ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+len(relationship)+2), 
+            ax.text( pos[0]+left_text_shift , pos[1]+htotal - line_heigth*(i+len(allrelationship)+2), 
                                 t,
                                 horizontalalignment = 'left',
                                 verticalalignment = 'center',
