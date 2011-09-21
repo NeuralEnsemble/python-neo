@@ -5,30 +5,24 @@ import quantities as pq
 
 class EventArray(BaseNeo):
     """
-    Subset of event. Introduced for performance reason.
-    An EventArray is prefered to a list of Event.
+    Array of events. Introduced for performance reasons.
+    An :class:`EventArray` is prefered to a list of :class:`Event` objects.
     
-
-    Usage:
+    *Usage*:
+        TODO
     
+    *Required attributes/properties*:
+        :times: (quantity array 1D)
+        :labels: (numpy.array 1D dtype='S')
     
-    Necessary Attributes/properties:
-        times (quantitie array 1D):
-        labels (numpy.array 1D dtype='S') ):
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:            
     
-    Recommanded Attributes/properties:
-        name:
-        description:
-        file_origin:            
-    
-    
-    Container of:
-        None
-        
     """
     def __init__(self, times = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S'), **kargs):
         BaseNeo.__init__(self, **kargs)
-        
         self.times = times
         self.labels = labels
-        
+

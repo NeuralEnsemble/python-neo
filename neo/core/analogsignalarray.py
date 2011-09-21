@@ -7,32 +7,28 @@ from .analogsignal import BaseAnalogSignal, AnalogSignal, _get_sampling_rate
 class AnalogSignalArray(BaseAnalogSignal):
     """
     A representation of several continuous, analog signals that
-    have the same duration, sampling rate and t_start.
-    Basically, it is a 2D array like AnalogSignal.
-      Dim 0 is time
-      Dim 1 is channel index
+    have the same duration, sampling rate and start time.
+    Basically, it is a 2D array like AnalogSignal: dim 0 is time, dim 1 is channel index
     
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
-    ``numpy.ndarray``.
+    :class:`numpy.ndarray`.
     
-    Usage:
+    *Usage*:
+        TODO
 
-    Necessary Attributes/properties:
-        t_start :         time when signal begins
-        sampling_rate :   number of samples per unit time
-      
-      
-    
+    *Required attributes/properties*:
+        :t_start:         time when signal begins
+        :sampling_rate:   number of samples per unit time
 
-    Properties:
-        sampling_period : interval between two samples (1/sampling_rate)
-        duration :        signal duration (size * sampling_period)
-        t_stop :          time when signal ends (t_start + duration)
+    *Properties*:
+        :sampling_period: interval between two samples (1/sampling_rate)
+        :duration:        signal duration (size * sampling_period)
+        :t_stop:          time when signal ends (t_start + duration)
         
-    Recommanded Attributes/properties:
-        name
-        description
-        file_origin
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:
 
     """
 

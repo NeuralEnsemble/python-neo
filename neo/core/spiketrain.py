@@ -29,46 +29,46 @@ def check_has_dimensions_time(*values):
 
 
 class SpikeTrain(BaseNeo, pq.Quantity):
-    """SpikeTrain is a Quantity array of spike times.
+    """SpikeTrain is a :class:`Quantity` array of spike times.
     
     It is an ensemble of action potentials (spikes) emitted by the same unit
     in a period of time.
 
-    Required arguments:
-        times : a list, 1d numpy array, or quantity array. 
+    *Required arguments*:
+        :times: a list, 1d numpy array, or quantity array. 
         
-        The Quantity array is constructed with the data in `times`, as
-        well as the construction arguments `units`, `dtype`, and `copy`. 
+        The Quantity array is constructed with the data in :attr:`times`, as
+        well as the construction arguments :attr:`units`, :attr:`dtype`, and :attr:`copy`. 
     
-    Recommended arguments:
-        t_start : time at which SpikeTrain began. This will be converted
+    *Recommended arguments*:
+        :t_start: time at which SpikeTrain began. This will be converted
             to the same units as the data.
-        t_stop : time at which SpikeTrain ends. If not provided, the
+        :t_stop: time at which SpikeTrain ends. If not provided, the
             maximum of the data is chosen. This will be converted to the
             same units as the data.
-        waveforms : the waveforms of each spike
-        sampling_rate : the sampling rate of the waveforms
-        left_sweep : Quantity, in units of time. Time from the beginning
+        :waveforms: the waveforms of each spike
+        :sampling_rate: the sampling rate of the waveforms
+        :left_sweep: Quantity, in units of time. Time from the beginning
             of the waveform to the trigger time of the spike.
-        sort : if True, the spike train will be sorted
+        :sort: if True, the spike train will be sorted
+        :name: string
+        :description: string
+        :file_origin: string
+        
+    Any other keyword arguments are stored in the :attr:`self._annotations` dict.
     
-    Universally recommended arguments:
-        name, description, file_origin : all string
+    *Slicing*:
+        :class:`SpikeTrain` objects can be sliced. When this occurs, a new :class:`SpikeTrain` (actually
+        a view) is returned, with the same metadata, except that :attr:`waveforms` is also sliced accordingly.
 
-    Any other keyword arguments are stored in the `self._annotations` dict.
+    *Example*::
     
-    Slicing:
-        SpikeTrain can be sliced. When this occurs, a new SpikeTrain (actually
-        a view) is returned, with copies of all attributes. This includes
-        t_start, t_stop, and waveforms, which are copied without modification.
-
-    ** Example **
-    >>> st = SpikeTrain([3,4,5] * pq.s)
-    >>> st2 = st[1:2]
-    >>> st.t_start
-    0. s
-    >>> st2
-    [4, 5] s    
+        >>> st = SpikeTrain([3,4,5] * pq.s)
+        >>> st2 = st[1:2]
+        >>> st.t_start
+        0. s
+        >>> st2
+        [4, 5] s
     """
     
     def __new__(cls, times, units=None,  dtype=numpy.float, copy=True,

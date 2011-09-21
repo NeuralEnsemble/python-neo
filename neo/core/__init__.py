@@ -1,6 +1,5 @@
 """
-
-here a list of all neo objects:
+All Neo objects:
 
 .. autoclass:: Block
 .. autoclass:: Segment

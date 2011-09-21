@@ -2,33 +2,37 @@ from neo.core.baseneo import BaseNeo
 
 class Block(BaseNeo):
     """
-    Main container gathering all the data discrete or continous for a given setup.
-    It can be view as a list of Segment.
-    A block is not necessary a homogeneous in clock point of view recorgding contrary to Segment.
+    Main container gathering all the data, whether discrete or continous, for a
+    given recording session.
     
-    Usage:
+    A block is not necessarily temporally homogeneous, in contrast to Segment.
     
+    *Usage*:
     
-    Necessary Attributes/properties:
+    TODO
     
-    Recommanded Attributes/properties:
-        name:
-        description:
-        file_origin:
-        file_datetime:
-        rec_datetime:
-        index:
+    *Required attributes/properties*:
+        None
     
-    Container of:
-        Segment
-        RecordingChannelGroup
+    *Recommended attributes/properties*:
+        :name: A label for the dataset 
+        :description: text description
+        :file_origin: filesystem path or URL of the original data file.
+        :file_datetime: the creation date and time of the original data file.
+        :rec_datetime: the date and time of the original recording
+        :index: TODO: WHAT IS THIS FOR?
+    
+    *Container of*:
+        :py:class:`Segment`
+        :py:class:`RecordingChannelGroup`
     
     """
-    def __init__(self, file_datetime = None, rec_datetime = None, index = None,
-                        **kargs):
-        BaseNeo.__init__(self, **kargs)
+    def __init__(self, name='', file_origin='', description='',
+                 file_datetime=None, rec_datetime=None, index=None, **kargs):
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **kargs)
         
-        self.file_datetime =file_datetime
+        self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
         
@@ -38,7 +42,7 @@ class Block(BaseNeo):
     @property
     def list_units(self):
         """
-        Give a list of all Unit in a block.
+        Return a list of all Units in a block.
         """
         units = [ ]
         for rcg in self.recordingchannelgroups:

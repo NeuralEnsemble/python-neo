@@ -133,7 +133,8 @@ class NeuroExplorerIO(BaseIO):
                                                     offset = entityHeader['offset'],
                                                     )
                     event_times = event_times.astype('f')/globalHeader['freq'] * pq.s
-                evar = EventArray(times = event_times, channel_name = entityHeader['name'] )
+                labels = np.array(['']*event_times.size)
+                evar = EventArray(times = event_times, labels=labels, channel_name = entityHeader['name'] )
                 seg.eventarrays.append(evar)
             
             if entityHeader['type'] == 2:
@@ -152,7 +153,10 @@ class NeuroExplorerIO(BaseIO):
                                                     offset = entityHeader['offset']+entityHeader['n']*4,
                                                     )
                     stop_times = stop_times.astype('f')/globalHeader['freq']*pq.s
-                epar = EpochArray( times = start_times, durations =  stop_times - start_times, channel_name = entityHeader['name'])
+                epar = EpochArray(times = start_times,
+                                  durations =  stop_times - start_times,
+                                  labels = np.array(['']*start_times.size),
+                                  channel_name = entityHeader['name'])
                 seg.epocharrays.append(epar)
             
             if entityHeader['type'] == 3:

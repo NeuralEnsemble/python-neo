@@ -3,28 +3,26 @@ import quantities as pq
 
 class Spike(BaseNeo):
     """
-    Object to represent one spike emit by a Unit and represented by
+    Object to represent one spike emitted by a :class:`Unit` and represented by
     its time occurence and optional waveform.
     
+    *Usage*:
+        TODO
     
+    *Required attributes/properties*:
+        :time: (quantity)
     
-    Usage:
+    *Recommended attributes/properties*:
+        :waveform: (quantity 2D (channel_index X time))
+        :sampling_rate:
+        :left_sweep:
+        :name:
+        :description:
+        :file_origin:           
     
-    
-    Necessary Attributes/properties:
-        time (quantitie):
-    
-    Recommanded Attributes/properties:
-        waveform (quantitie 2D (channel_index X time) = 
-        sampling_rate = 
-        left_sweep = 
-        name:
-        description:
-        file_origin:           
-    
-    Properties:
-        right_sweep
-        duration
+    *Properties*:
+        :right_sweep:
+        :duration:
     
     """
     def __init__(self, time = 0*pq.s,

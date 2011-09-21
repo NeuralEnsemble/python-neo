@@ -301,7 +301,7 @@ class AxonIO(BaseIO):
                     ind = (times>=ana.t_start) & (times <= ana.t_stop)
                     if any(ind):
                         if lazy :
-                            ea = EventArray( times =[ ] * pq.s )
+                            ea = EventArray( times =[ ] * pq.s , labels=[])
                         else:
                             ea = EventArray( times = times[ind]*pq.s, labels = labels[ind], comments = comments[ind] )
                         seg.eventarrays.append(ea)

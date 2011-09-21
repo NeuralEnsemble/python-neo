@@ -5,30 +5,21 @@ import quantities as pq
 
 class Event(BaseNeo):
     """
-    Object to represent ponctual time event.
+    Object to represent an event occurring at a particular time.
     Useful for managing trigger, stimulus, ...
     
+    *Usage*:
     
-
-    Usage:
+    *Required attributes/properties*:
+        :time: (quantity):
+        :label: (str): 
     
-    
-    Necessary Attributes/properties:
-        time (quantitie):
-        label (str): 
-    
-    Recommanded Attributes/properties:
-        name:
-        description:
-        file_origin:    
-        
-    Container of:
-        None
-        
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:    
     """
-    def __init__(self, time = 0*pq.s , duration = 0*pq.s , label = '',
-                    **kargs):
+    def __init__(self, time, label, **kargs):
         BaseNeo.__init__(self, **kargs)
-        
         self.time = time
         self.label = label

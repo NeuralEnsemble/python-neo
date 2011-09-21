@@ -5,27 +5,21 @@ import quantities as pq
 
 class EpochArray(BaseNeo):
     """
-    Subset of epoch. Introduced for performance reason.
-    An EpochArray is prefered to a list of Epoch.
+    Array of epochs. Introduced for performance reason.
+    An :class:`EpochArray` is prefered to a list of :class:`Epoch` objects.
     
-
-    Usage:
+    *Usage*:
+        TODO
     
+    *Required attributes/properties*:
+        :times: (quantity array 1D)
+        :durations: (quantity array 1D)
+        :labels: (numpy.array 1D dtype='S') )
     
-    Necessary Attributes/properties:
-        times (quantitie array 1D):
-        durations (quantitie array 1D):
-        labels (numpy.array 1D dtype='S') ):
-    
-    Recommanded Attributes/properties:
-        name:
-        description:
-        file_origin:        
-    
-    
-    Container of:
-        None
-        
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:         
     """
     def __init__(self, times = np.array([ ]) * pq.s , durations = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S'),
                     **kargs):

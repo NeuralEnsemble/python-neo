@@ -8,26 +8,19 @@ class IrregularlySampledSignal(BaseNeo):
     Object to manage signal when the sampling is not regular.
     In short this object manage both the signal values and its times vector.
     
-
-    Usage:
+    *Usage*:
+        TODO
     
+    *Required attributes/properties*:
+        :times:
+        :values: 
     
-    Necessary Attributes/properties:
-        times (quantitie 1D):
-        samples (quantities 1D): 
-    
-    Recommanded Attributes/properties:
-        name:
-        description:
-        file_origin:                
-    
-    Container of:
-        None
-        
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:                
     """
-    def __init__(self, times = np.array([ ]) * pq.s ,
-                    samples = np.array([ ]) * pq.dimensionless ,
+    def __init__(self, times, values, time_units=None, value_units=None,
                     **kargs):
+        raise NotImplementedError
         BaseNeo.__init__(self, **kargs)
-        self.times = times
-        self.samples = samples

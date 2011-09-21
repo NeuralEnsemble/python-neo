@@ -2,17 +2,18 @@ from neo.core.baseneo import BaseNeo
 
 class Unit(BaseNeo):
     """    
-    A Unit regroups all the SpikeTrain (or Spike) objects that were emitted
-    by a neuron during a Block. The spikes may come from different Segment
-    within the Block, so this object is not contained in the usual 
-    Block/Segment/SpikeTrain hierarchy.
+    A :class:`Unit` regroups all the :class:`SpikeTrain` objects that were emitted
+    by a neuron during a :class:`Block`. The spikes may come from different :class:`Segment` objects
+    within the :class:`Block`, so this object is not contained in the usual 
+    :class:`Block`/:class:`Segment`/:class:`SpikeTrain` hierarchy.
     
-    A Unit is linked to a list of RecordingChannel on which it was detected.
+    A :class:`Unit` is linked to a list of :class:`RecordingChannel` objects from which it was detected.
     With tetrodes, for instance, multiple channels may record the same unit.
     
-    This replaces the Neuron object in the last version.
+    This replaces the :class:`Neuron` class in the previous version of Neo.
     
-    Usage:
+    *Usage*::
+    
         # Store the spike times from a pyramidal neuron recorded on channel 0
         u = neo.Unit(name='pyramidal neuron')
         
@@ -29,19 +30,21 @@ class Unit(BaseNeo):
         u._recordingchannels.append(rc)
 
     
-    Necessary Attributes/properties:
+    *Required attributes/properties*:
+        None
+        
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:   
     
-    Recommended Attributes/properties:
-        name:
-        description:
-        file_origin:   
+    *Container of*:
+        :class:`SpikeTrain`
+        :class:`Spike`
     
-    Container of:
-        SpikeTrain
-        Spike
-    
-    Container of (many to many):
-       RecordingChannel
+    *Container of (many to many)*:
+       :class:`RecordingChannel`
+
     """
     def __init__(self, **kargs):
         BaseNeo.__init__(self, **kargs)

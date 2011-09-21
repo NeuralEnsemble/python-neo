@@ -185,10 +185,11 @@ class AnalogSignal(BaseAnalogSignal):
     A representation of continuous, analog signal acquired at time ``t_start``
     at a certain sampling rate.
     
-    Inherits from :class:`quantities.Quantity`, which in turn inherits from
-    ``numpy.ndarray``.
+    Inherits from :py:class:`quantities.Quantity`, which in turn inherits from
+    :py:class:``numpy.ndarray``.
     
-    Usage:
+    *Usage*::
+    
       >>> from quantities import ms, kHz
       >>> a = AnalogSignal([1,2,3])
       >>> b = AnalogSignal([4,5,6], sampling_period=42*ms)
@@ -196,41 +197,40 @@ class AnalogSignal(BaseAnalogSignal):
       >>> d = AnalogSignal([1,2,3], t_start=42*ms, sampling_rate=0.42*kHz])
       >>> e = AnalogSignal([1,2,3], units='mV')
 
-    Necessary Attributes/properties:
-      signal : Quantity, the data itself.
-      Alternatively signal can be given as an array or list, but in this
-      case the keyword argument `units` must be specified.
-      
-      The optional `dtype` and `copy` arguments also modify the signal
-      representation.
+    *Required attributes/properties*:
+      :signal: the data itself, as a :py:class:`Quantity` array, NumPy array or list
+      :units: required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
     
-    Recommended Attributes/properties:
-      t_start :         Quantity, time when signal begins. Default: 0.0 seconds
-      
-      One of the following:
-      sampling_rate :   Quantity, number of samples per unit time
-      sampling_period : Quantity, interval between two samples
-      If neither is specified, 1.0 Hz is used.
-      If both are specified, they are checked for consistency.
-      (Internally this is always stored as a rate, with property access
-      for period.)
-
+    *Recommended Attributes/properties*:
+      :t_start:         Quantity, time when signal begins. Default: 0.0 seconds
+      :sampling_rate:   Quantity, number of samples per unit time, default Hz
+      :sampling_period: Quantity, interval between two samples. Either
+                        :py:attr:`sampling_rate` or :py:attr:`sampling_period` may be specified.
+                        If both are specified, they are checked for consistency.
+                        
       Note that the length of the signal array and the sampling rate 
-      are used to calculate t_stop and duration.
-
-    Universally recommended Attributes/properties:
-      name, description, file_origin : string
+      are used to calculate :py:attr:`t_stop` and :py:attr:`duration`.
+      
+      :name: string
+      :description: string
+      :file_origin: string
+      
+    *Optional arguments*:
+        :dtype:
+        :copy: (bool) True by default
     
     Any other additional arguments are assumed to be user-specific metadata
-    and stored in `self._annotations`.
+    and stored in :py:attr:`_annotations`::
+    
       >>> a = AnalogSignal([1,2,3], day='Monday')
       >>> print a._annotations['day']
       Monday
     
-    Properties available on this object:
-      sampling_rate, sampling_period, t_stop, duration
+    *Properties available on this object*:
+      :py:attr:`sampling_rate`, :py:attr:`sampling_period`, :py:attr:`t_stop`,
+      :py:attr:`duration`
     
-    Operations available on this object:
+    *Operations available on this object*:
       == != + * /
     """
     pass
