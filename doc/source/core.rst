@@ -85,6 +85,76 @@ Finally, let's consider "additional arguments". These are the ones you define fo
 Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`_annotations`. This dict can be modified as necessary by your code.
 
 
+Relation between objects
+===========================
+
+On neo :ref:`neo_diagram` you can see that neo object are organized hierachycally.
+People dealing with databases will found this very natural. Maybe other user not.
+Here a short explanation.
+
+Some object like :py:class:`Block` or :py:class:`Segment` are containers. It means that they are gate to acces other objects.
+
+Example Block can access Segment with::
+     
+    bl = Block()
+    print bl.segments
+    # give a list of segments
+
+Or Segment can access AnalogSIgnal with::
+    
+    seg = Segment()
+    print seg.analogsignals
+    # give a list a AnalogSIgnals
+    
+You can see on the diagram that blue cyan arrow represent theses ralationship.
+They are *one to many* relationship. For **one** Segment you have **several** AnalogSignal. For **one** Block you have several **Segment**.
+
+In neo theses relationship are representated by python list. One object can access its children with an attribute :*childrenname*+s. in lower case.
+
+Examples:
+    * Block.segments
+    * Segments.analogsignals
+    * Segments.spiketrains
+    * Block.recordingchannelgroups
+
+
+Note if one parent can access its children it is also reversible but without **s** at the end:
+    * Segment.block
+    * AnalogSignal.segment
+    * SpikeTrains.segment
+    * RecordingChannelGroup.block
+
+
+This code open an abf file::
+
+    from neo import *
+    import urllib
+    url = "https://portal.g-node.org/neo/axon/File_axon_3.abf"
+    filename = './test.abf'
+    urllib.urlretrieve(url, filename)
+
+    r = AxonIO(filename =filename )
+    bl = r.read() # read the entire file > a Block
+    print bl
+    print bl.segments # children access
+    for seg in bl.segments:
+        print seg
+        print seg.block # parent access
+
+
+On the diagram you can also see a magenta relationship. This is more tricky *many to many* relationship.
+
+.. todo:: terminate thsi paragraph when decision is takken about many to many relationship
+
+
+
+
+The better way to anderstand is see :ref:`use_cases_page`.
+
+
+
+.. _neo_diagram:
+
 Diagrams
 ========
 
