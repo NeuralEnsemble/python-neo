@@ -201,14 +201,11 @@ class TestConstructor(unittest.TestCase):
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
-        data = [3,4,5]
+        data = numpy.array([3.0, 4.0, 5.0]) # must be float, otherwise will get copy, not view
         st = SpikeTrain(data, units='sec', copy=False)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
-        self.assertEqual(data[0], 99*pq.s)
-        
-        # At the moment this test fails because when units are specified,
-        # Quantity.__new__ returns a copy, not a view.
+        self.assertEqual(data[0], 99)
     
     def test_change_with_copy_true_and_data_not_quantity(self):
         # Changing spike train does not change data
@@ -219,7 +216,7 @@ class TestConstructor(unittest.TestCase):
         st = SpikeTrain(data, units='sec', copy=True)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
-        self.assertEqual(data[0], 3*pq.s)
+        self.assertEqual(data[0], 3)
     
     def test_changing_slice_changes_original_spiketrain(self):
         # If we slice a spiketrain and then change the slice, the

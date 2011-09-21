@@ -19,6 +19,7 @@ try:
     from neo.io.hdf5io import IOManager
     have_hdf5 = True
 except ImportError:
+    IOManager = None
     have_hdf5 = False
 
 from neo.test.io.common_io_test import BaseTestIO
@@ -95,6 +96,10 @@ class HDF5Commontests(BaseTestIO, unittest.TestCase):
     ioclass = IOManager
     files_to_test = [  ]
     files_to_download =  [   ]
+    
+    @unittest.skipUnless(have_hdf5, "requires PyTables")
+    def setUp(self):
+        BaseTestIO.setUp(self)
 
 class hdf5ioTest(unittest.TestCase):
     """
