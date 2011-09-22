@@ -111,7 +111,7 @@ class TestConstructor(unittest.TestCase):
     
     def test_slice(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf)
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
         
         # slice spike train, keep sliced spike times
         st2 = st[1:2]        
@@ -124,10 +124,70 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
         
-        # even the things which we might expect to change
-        assert_arrays_equal(st.waveforms, st2.waveforms)
-        self.assertEqual(st.t_start, st2.t_start)
-        self.assertEqual(st.t_stop, st2.t_stop)
+        # and update the waveforms and times
+        assert_arrays_equal(st.waveforms[1:2], st2.waveforms)
+        self.assertEqual(1.0*pq.s, st2.t_start)
+        self.assertEqual(1.0*pq.s, st2.t_stop)
+
+    def test_slice_to_end(self):
+        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        
+        # slice spike train, keep sliced spike times
+        st2 = st[1:]        
+        assert_arrays_equal(st[1:], st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        
+        # and update the waveforms and times
+        assert_arrays_equal(st.waveforms[1:], st2.waveforms)
+        self.assertEqual(1.0*pq.s, st2.t_start)
+        self.assertEqual(2.0*pq.s, st2.t_stop)
+
+    def test_slice_from_beginning(self):
+        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        
+        # slice spike train, keep sliced spike times
+        st2 = st[:2]        
+        assert_arrays_equal(st[:2], st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        
+        # and update the waveforms and times
+        assert_arrays_equal(st.waveforms[:2], st2.waveforms)
+        self.assertEqual(0.0*pq.s, st2.t_start)
+        self.assertEqual(2.0*pq.s, st2.t_stop)
+
+    def test_slice_negative_idxs(self):
+        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        
+        # slice spike train, keep sliced spike times
+        st2 = st[:-1]        
+        assert_arrays_equal(st[:-1], st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        
+        # and update the waveforms and times
+        assert_arrays_equal(st.waveforms[:-1], st2.waveforms)
+        self.assertEqual(0.0*pq.s, st2.t_start)
+        self.assertEqual(2.0*pq.s, st2.t_stop)
     
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',

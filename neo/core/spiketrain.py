@@ -62,7 +62,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
         :class:`SpikeTrain` (actually a view) is returned, with the same 
-        metadata, except that :attr:`waveforms` is also sliced accordingly.
+        metadata, except for the following updates:
+
+            :attr:`waveforms` is also sliced accordingly.
+            :attr:`t_start` is the time of the starting index
+            :attr:`t_stop` is the time of the starting index, plus the length
+            of the new signal times the sampling period.
 
     *Example*::
     
@@ -188,6 +193,23 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # a dependency on the slicing functionality of SpikeTrain.
         super(SpikeTrain, self).sort()
 
+    def __getslice__(self, i, j):
+        # doesn't get called in Python 3 - __getitem__ is called instead
+        
+        # first slice the Quantity array
+        obj = super(SpikeTrain, self).__getslice__(i, j)
+        # somehow this knows to call SpikeTrain.__array_finalize__, though
+        # I'm not sure how. (If you know, please add an explanatory comment
+        # here.) That copies over all of the metadata.
+        
+        # update t_start and t_stop
+        obj.t_start = self.t_start + i * self.sampling_period
+        obj.t_stop = self.t_start + len(obj) * self.sampling_period
+        
+        # update waveforms
+        if obj.waveforms is not None:
+            obj.waveforms = obj.waveforms[i:j]
+        return obj
 
     @property
     def times(self):
@@ -196,6 +218,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def duration(self):
         return self.t_stop - self.t_start
+    
+    @property
+    def sampling_period(self):
+        return 1.0 / self.sampling_rate
 
     @property
     def right_sweep(self):
