@@ -8,24 +8,133 @@ Neo core
 
 Introduction
 ============
-Objects in Neo represent neural data. They are connected hierarchically to show the logical linkages between the objects.
 
-:py:class:`Block`: The main container gathering all of the data, discrete and continuous, for a given recording session.
+Objects in Neo represent neural data and collections of data. Neo objects fall
+into three categories: data objects, container objects and grouping objects.
 
-:py:class:`Segment`: A heterogeneous container for discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time.
-In different contexts, a :py:class:`Segment` could be equivalent to a "trial", "episode", "run", "recording", etc. The concept of :py:class:`Segment` is fuzzy enought to cover many cases.
+Data objects
+------------
 
-:py:class:`AnalogSignal`: A representation of a continuous, analog signal acquired at time ``t_start`` at a certain sampling rate.
+These objects directly represent data as arrays of numerical values with
+associated metadata (e.g. units, sampling frequency, etc.)
 
-:py:class:`AnalogSignalArray`: A representation of multiple continuous, analog signals, all acquired the the same time and with the same sampling rate. This representation (as a 2D NumPy array) may be more efficient for subsequent analysis than the equivalent list of individual :py:class:`AnalogSignal` objects.
+:py:class:`AnalogSignal`:
+    A representation of a continuous, analog signal acquired at time ``t_start`` at a certain sampling rate.
 
-:py:class:`SpikeTrain`: An ensemble of action potentials (spikes) emitted by the same unit in a period of time.
+:py:class:`AnalogSignalArray`:
+    A representation of multiple continuous, analog signals, all acquired the the same time and with the same sampling rate. This representation (as a 2D NumPy array) may be more efficient for subsequent analysis than the equivalent list of individual :py:class:`AnalogSignal` objects.
 
-:py:class:`RecordingChannel`: A container of :py:class:`AnalogSignal`, :py:class:`SpikeTrain` or :py:class:`Unit` objects that come from the same logical and/or physical channel inside a :py:class:`Block`.
+:py:class:`SpikeTrain`:
+    An ensemble of action potentials (spikes) emitted by the same unit in a period of time.
 
-:py:class:`RecordingChannelGroup`: A container for associated :py:class:`RecordingChannel` objects. This has several possible uses. For multielectrode arrays, spikes may be recorded on more than one recording channel, and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`SpikeTrain` with the group of recording channels on which it was calculated. For intracellular recording, it is common to record both membrane potentials and currents at the same time, so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded.
+:py:class:`Event` and :py:class:`EventArray`:
+    DESCRIPTION GOES HERE
 
-See :ref:`use_cases_page` for examples of how the different objects may be used.
+:py:class:`Epoch` and :py:class:`EpochArray`:
+    DESCRIPTION GOES HERE
+
+Container objects
+-----------------
+
+There is a simple hierarchy of containers:
+
+:py:class:`Segment`:
+    A container for heterogeneous discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time. A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc., depending on the experimental context. May contain any of the data objects together with :class:`RecordingChannel` and :class:`Unit` objects.
+
+:py:class:`Block`:
+    The top-level container gathering all of the data, discrete and continuous, for a given recording session. Contains :class:`Segment` and :class:`RecordingChannelGroup` objects.
+
+Grouping objects
+----------------
+
+These objects express the relationships between data items, such as which signals
+were recorded on which electrodes, which spike trains were obtained from which
+membrane potential signals, etc. They contain references to data objects that
+cut across the simple container hierarchy.
+
+:py:class:`RecordingChannel`:
+    Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain` or :py:class:`Unit`
+    objects that come from the same logical and/or physical channel inside a :py:class:`Block`.
+
+:py:class:`RecordingChannelGroup`:
+    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses. For multielectrode arrays, spikes may be recorded on more than one recording channel, and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`SpikeTrain` with the group of recording channels on which it was calculated. For intracellular recording, it is common to record both membrane potentials and currents at the same time, so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded.
+
+:py:class:`Unit`:
+    DESCRIPTION GOES HERE
+
+.. image:: images/base_schematic.png
+   :height: 500 px
+   :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
+   :align: center
+
+.. todo:: fill in missing descriptions above
+
+Relationships between objects
+=============================
+
+Container objects like :py:class:`Block` or :py:class:`Segment` are gateways to
+access other objects. For example, a :class:`Block` can access a :class:`Segment`
+with::
+     
+    >>> bl = Block()
+    >>> bl.segments
+    # gives a list of segments
+
+A :class:`Segment` can access the :class:`AnalogSignal` objects that it contains with::
+    
+    >>> seg = Segment()
+    >>> seg.analogsignals
+    # gives a list a AnalogSignals
+    
+In the diagram below, these *one to many* relationships are represented by cyan arrows.
+In general, an object can access its children with an attribute *childname+s* in lower case, e.g.
+
+    * :attr:`Block.segments`
+    * :attr:`Segments.analogsignals`
+    * :attr:`Segments.spiketrains`
+    * :attr:`Block.recordingchannelgroups`
+
+These relationships are bi-directional, i.e. a child object can access its parent:
+
+    * :attr:`Segment.block`
+    * :attr:`AnalogSignal.segment`
+    * :attr:`SpikeTrains.segment`
+    * :attr:`RecordingChannelGroup.block`
+
+Here is an example showing these relationships in use::
+
+    from neo.io import AxonIO
+    import urllib
+    url = "https://portal.g-node.org/neo/axon/File_axon_3.abf"
+    filename = './test.abf'
+    urllib.urlretrieve(url, filename)
+
+    r = AxonIO(filename=filename)
+    bl = r.read() # read the entire file > a Block
+    print(bl)
+    print(bl.segments) # child access
+    for seg in bl.segments:
+        print(seg)
+        print(seg.block) # parent access
+
+
+On the diagram you can also see a magenta relationship. This is more tricky *many to many* relationship.
+
+.. todo:: terminate this paragraph when decision is takken about many to many relationship
+
+
+See :ref:`use_cases_page` for more examples of how the different objects may be used.
+
+.. _neo_diagram:
+
+
+.. image:: images/simple_generated_diagram.png
+    :width: 750 px
+
+:download:`Click here for a better quality SVG diagram <./images/simple_generated_diagram.svg>`
+
+For more details, see the :doc:`api_reference`.
+
 
 Inheritance
 ===========
@@ -83,91 +192,3 @@ Finally, let's consider "additional arguments". These are the ones you define fo
     
 
 Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`_annotations`. This dict can be modified as necessary by your code.
-
-
-Relation between objects
-===========================
-
-On neo :ref:`neo_diagram` you can see that neo object are organized hierachycally.
-People dealing with databases will found this very natural. Maybe other user not.
-Here a short explanation.
-
-Some object like :py:class:`Block` or :py:class:`Segment` are containers. It means that they are gate to acces other objects.
-
-Example Block can access Segment with::
-     
-    bl = Block()
-    print bl.segments
-    # give a list of segments
-
-Or Segment can access AnalogSIgnal with::
-    
-    seg = Segment()
-    print seg.analogsignals
-    # give a list a AnalogSIgnals
-    
-You can see on the diagram that blue cyan arrow represent theses ralationship.
-They are *one to many* relationship. For **one** Segment you have **several** AnalogSignal. For **one** Block you have several **Segment**.
-
-In neo theses relationship are representated by python list. One object can access its children with an attribute :*childrenname*+s. in lower case.
-
-Examples:
-    * Block.segments
-    * Segments.analogsignals
-    * Segments.spiketrains
-    * Block.recordingchannelgroups
-
-
-Note if one parent can access its children it is also reversible but without **s** at the end:
-    * Segment.block
-    * AnalogSignal.segment
-    * SpikeTrains.segment
-    * RecordingChannelGroup.block
-
-
-This code open an abf file::
-
-    from neo import *
-    import urllib
-    url = "https://portal.g-node.org/neo/axon/File_axon_3.abf"
-    filename = './test.abf'
-    urllib.urlretrieve(url, filename)
-
-    r = AxonIO(filename =filename )
-    bl = r.read() # read the entire file > a Block
-    print bl
-    print bl.segments # children access
-    for seg in bl.segments:
-        print seg
-        print seg.block # parent access
-
-
-On the diagram you can also see a magenta relationship. This is more tricky *many to many* relationship.
-
-.. todo:: terminate thsi paragraph when decision is takken about many to many relationship
-
-
-
-
-The better way to anderstand is see :ref:`use_cases_page`.
-
-
-
-.. _neo_diagram:
-
-Diagrams
-========
-
-.. image:: images/base_schematic.png
-   :height: 500 px
-   :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
-   :align: center
-
-The hierachical respresentation can help in understanding the links between objects :
-
-.. image:: images/simple_generated_diagram.png
-    :width: 1000 px
-
-:download:`Click here for better quality SVG diagram <./images/simple_generated_diagram.svg>`
-
-For more details, see the :doc:`api_reference`.

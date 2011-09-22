@@ -1,5 +1,5 @@
 """
-All Neo objects:
+Classes:
 
 .. autoclass:: Block
 .. autoclass:: Segment

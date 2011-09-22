@@ -111,7 +111,7 @@ To run tests from an individual file::
 Using tox
 ---------
 
-TODO
+.. todo:: TODO
 
 
 Writing tests
@@ -221,8 +221,8 @@ have the necessary permissions to do this)::
 .. should we also distribute via software.incf.org
 
 
-If you want to developp your own IO
--------------------------------------------------------------------------
+If you want to develop your own IO module
+-----------------------------------------
 
 See :ref:`io_dev_guide` for implementation of a new IO.
 

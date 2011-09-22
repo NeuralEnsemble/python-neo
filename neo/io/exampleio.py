@@ -1,16 +1,19 @@
 # encoding: utf-8
 """
-Class for fake reading data in a no file.
+Class for "reading" fake data from an imaginary file.
 
-For the user, it generates a `Segment` or a `Block` with a sinusoidal `AnalogSignal` + `SpikeTrain` + `EventArray`
+For the user, it generates a :class:`Segment` or a :class:`Block` with a
+sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
+:class:`EventArray`.
 
-For a developer, it is just an example showing guidelines for someone who wants to develop a new IO.
+For a developer, it is just an example showing guidelines for someone who wants
+to develop a new IO module.
 
-Depend on: scipy
+Depends on: scipy
 
-Supported : Read
+Supported: Read
 
-Author : sgarcia
+Author: sgarcia
 
 """
 from __future__ import absolute_import
@@ -18,13 +21,13 @@ from __future__ import absolute_import
 # I need to subclass BaseIO
 from .baseio import BaseIO
 
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-from ..core import *
+# to import from core
+from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
 
-# some tools to finalyse the hierachy
+# some tools to finalize the hierachy
 from .tools import create_many_to_one_relationship
 
-# note neo.core need only numpy and quantitie
+# note neo.core needs only numpy and quantities
 import numpy as np
 import quantities as pq
 
@@ -40,39 +43,40 @@ except ImportError:
     have_scipy = False
 
 
-
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
     """
-    Class for fake reading data in a no file.
+    Class for "reading" fake data from an imaginary file.
 
-    For the user, it generates a `Segment` or a `Block` with a sinusoidal `AnalogSignal` + `SpikeTrain` + `EventArray`
+    For the user, it generates a :class:`Segment` or a :class:`Block` with a
+    sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
+    :class:`EventArray`.
 
-    For a developer, it is just an example showing guidelines for someone who wants to develop a new IO.
-
-    
-    2 rules for for developers:
-      * Respect neo IO API. :ref:`neo_io_API`
+    For a developer, it is just an example showing guidelines for someone who wants
+    to develop a new IO module.
+  
+    Two rules for developers:
+      * Respect the Neo IO API (:ref:`neo_io_API`)
       * Follow :ref:`io_guiline`
     
     Usage:
         >>> from neo import io
-        >>> r = io.BaseIO( filename = 'itisaafke.nof ')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.analogsignals
-        >>> print seg.spiketrains
-        >>> print seg.eventarrays
-        >>> anasig = r.read_analogsignal(lazy = True, cascade = False)
-        >>> print anasig._data_description
-        >>> anasig = r.read_analogsignal(lazy = False, cascade = False)
-
+        >>> r = io.ExampleIO(filename='itisafake.nof')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> print(seg.analogsignals)
+        >>> print(seg.spiketrains)
+        >>> print(seg.eventarrays)
+        >>> anasig = r.read_analogsignal(lazy=True, cascade=False)
+        >>> print(anasig._data_description)
+        >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
+        
     """
     
-    is_readable        = True # This a only reading class
-    is_writable        = False # write is not supported
+    is_readable = True # This class can only read data
+    is_writable = False # write is not supported
     
-    # This class is able directly or inderectly this kind of objects
-    # You can notice that this is simple because it simplify a lot the full neo object hierachy
+    # This class is able to directly or indirectly handle the following objects
+    # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray ]
     
     # This class can return either a Block or a Segment
