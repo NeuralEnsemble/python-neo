@@ -135,7 +135,7 @@ class WinWcpIO(BaseIO):
                                                     name = header['YN%d'%c],
                                                     
                                                         )
-                anaSig._annotations['channel_index'] = c
+                anaSig.annotations['channel_index'] = c
                 if lazy:
                     anaSig._data_description = { 'shape' : NP }
                 seg.analogsignals.append(anaSig)

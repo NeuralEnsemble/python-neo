@@ -57,7 +57,8 @@ one_to_many_reslationship = {
                          'Event', 'EventArray', 'Epoch', 'EpochArray',
                         'SpikeTrain', 'Spike', ],
     'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
-   'RecordingChannelGroup' : [ 'RecordingChannel',  'AnalogSignalArray'],
+    'RecordingChannelGroup' : [ 'RecordingChannel',  'AnalogSignalArray'],
+    #~ 'RecordingChannelGroup' : [  'Unit', 'AnalogSignalArray'],
     'Unit' : ['SpikeTrain', 'Spike', ]
     }
 # reverse: child to parent
@@ -70,6 +71,8 @@ for p,children in one_to_many_reslationship.items():
             many_to_one_reslationship[c].append(p)
 
 many_to_many_reslationship = {
+    #~ 'RecordingChannel' : ['RecordingChannelGroup', ],
+    #~ 'RecordingChannelGroup' : ['RecordingChannel', ],
     'RecordingChannel' : ['Unit', ],
     'Unit' : ['RecordingChannel', ],
     }

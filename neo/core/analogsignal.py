@@ -59,10 +59,10 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         # This method is only called when constructing a new SpikeTrain,
         # not when slicing or viewing. We use the same call signature
         # as __new__ for documentation purposes. Anything not in the call
-        # signature is stored in _annotations.
+        # signature is stored in annotations.
         
         # Calls parent __init__, which grabs universally recommended
-        # attributes and sets up self._annotations        
+        # attributes and sets up self.annotations        
         BaseNeo.__init__(self, **kwargs)
     
     def __array_finalize__(self, obj):
@@ -80,7 +80,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
         
         # The additional arguments
-        self._annotations = getattr(obj, '_annotations', None)
+        self.annotations = getattr(obj, 'annotations', None)
         
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -132,7 +132,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         #signal is the new signal
         new = AnalogSignal(signal = signal, units= self.units)
         new._copy_data_complement(self)
-        new._annotations.update(self._annotations)
+        new.annotations.update(self.annotations)
         return new
 
     def __eq__(self, other):
@@ -148,7 +148,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
                     raise Exception("Inconsistent values of %s" % attr)
-            # how to handle name and _annotations?
+            # how to handle name and annotations?
 
     def _copy_data_complement(self, other):
         for attr in ("t_start", "sampling_rate", "name", "file_origin", "description"):
@@ -220,10 +220,10 @@ class AnalogSignal(BaseAnalogSignal):
         :copy: (bool) True by default
     
     Any other additional arguments are assumed to be user-specific metadata
-    and stored in :py:attr:`_annotations`::
+    and stored in :py:attr:`annotations`::
     
       >>> a = AnalogSignal([1,2,3], day='Monday')
-      >>> print a._annotations['day']
+      >>> print a.annotations['day']
       Monday
     
     *Properties available on this object*:

@@ -128,7 +128,7 @@ class WinEdrIO(BaseIO):
                                             t_start = 0.*pq.s,
                                             name = header['YN%d'%c],
                                             )
-            ana._annotations['channel_index'] = c
+            ana.annotations['channel_index'] = c
             if lazy:
                 ana._data_description = { 'shape' : header['NP']/header['NC'] }
             

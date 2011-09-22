@@ -111,7 +111,7 @@ class NeuroshareIO(BaseIO):
         # API version
         info = ns_LIBRARYINFO()
         neuroshare.ns_GetLibraryInfo(byref(info) , ctypes.sizeof(info))
-        seg._annotations['neuroshare_version'] = str(info.dwAPIVersionMaj)+'.'+str(info.dwAPIVersionMin)
+        seg.annotations['neuroshare_version'] = str(info.dwAPIVersionMaj)+'.'+str(info.dwAPIVersionMin)
         
         if not cascade:
             return seg

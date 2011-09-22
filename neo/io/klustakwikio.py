@@ -164,8 +164,8 @@ class KlustaKwikIO(BaseIO):
                     times=spks[uids==unit_id] / self.sampling_rate, 
                     units='sec', t_start=0.0, 
                     name=('unit %d from group %d' % (unit_id, group)))
-                st._annotations['cluster'] = unit_id
-                st._annotations['group'] = group
+                st.annotations['cluster'] = unit_id
+                st.annotations['group'] = group
                 
                 # Link
                 u.spiketrains.append(st)
@@ -234,7 +234,7 @@ class KlustaKwikIO(BaseIO):
         that group. 
         
         The group and cluster information are extracted from annotations,
-        eg `sptr._annotations['group']`. If no cluster information exists,
+        eg `sptr.annotations['group']`. If no cluster information exists,
         it is assigned to cluster 0.
         
         Note that all segments are essentially combined in
@@ -271,7 +271,7 @@ class KlustaKwikIO(BaseIO):
                 
                 # Choose sampling rate to convert to samples
                 try:
-                    sr = st._annotations['sampling_rate']
+                    sr = st.annotations['sampling_rate']
                 except KeyError:
                     sr = self.sampling_rate
                 
@@ -290,14 +290,14 @@ class KlustaKwikIO(BaseIO):
     def st2group(self, st):
         # Not sure this is right so make it a method in case we change it
         try:
-            return st._annotations['group']
+            return st.annotations['group']
         except KeyError:
             return 0
     
     def st2cluster(self, st):
         # Not sure this is right so make it a method in case we change it
         try:
-            return st._annotations['cluster']
+            return st.annotations['cluster']
         except KeyError:
             return 0
     

@@ -50,7 +50,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj.name = name
         obj.file_origin = file_origin
         obj.description = description
-        obj._annotations = {}
+        obj.annotations = {}
         return obj
 
     def __getslice__(self, i, j):

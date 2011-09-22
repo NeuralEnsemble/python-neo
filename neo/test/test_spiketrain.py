@@ -118,7 +118,7 @@ class TestConstructor(unittest.TestCase):
         # but keep everything else pristine
         self.assertEqual(st.name, st2.name)
         self.assertEqual(st.description, st2.description)
-        self.assertEqual(st._annotations, st2._annotations)
+        self.assertEqual(st.annotations, st2.annotations)
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
         
@@ -140,12 +140,12 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.description, None)
         self.assertEqual(st.file_origin, None)
     
-    def test_annotations(self):
+    def testannotations(self):
         st = SpikeTrain([3,4,5]*pq.s)
-        self.assertEqual(st._annotations, {})
+        self.assertEqual(st.annotations, {})
         
         st = SpikeTrain([3,4,5]*pq.s, ratname='Phillippe')
-        self.assertEqual(st._annotations, {'ratname': 'Phillippe'})
+        self.assertEqual(st.annotations, {'ratname': 'Phillippe'})
     
     def test_change_with_copy_default(self):
         # Default is copy = True

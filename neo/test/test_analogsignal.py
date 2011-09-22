@@ -71,7 +71,7 @@ class TestConstructor(unittest.TestCase):
     
     def test__create_with_additional_argument(self):
         a = AnalogSignal([1,2,3], file_origin='crack.txt', ratname='Nicolas')
-        self.assertEqual(a._annotations, {'ratname':'Nicolas'})
+        self.assertEqual(a.annotations, {'ratname':'Nicolas'})
         
         # This one is universally recommended and handled by BaseNeo
         self.assertEqual(a.file_origin, 'crack.txt')
@@ -131,14 +131,14 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.file_origin, self.signal.file_origin)
         self.assertEqual(sub.name, self.signal.name)
         self.assertEqual(sub.description, self.signal.description)        
-        self.assertEqual(sub._annotations, self.signal._annotations)
+        self.assertEqual(sub.annotations, self.signal.annotations)
         
 
         sub = self.signal[3:8]
         self.assertEqual(sub.file_origin, self.signal.file_origin)
         self.assertEqual(sub.name, self.signal.name)
         self.assertEqual(sub.description, self.signal.description)
-        self.assertEqual(sub._annotations, self.signal._annotations)
+        self.assertEqual(sub.annotations, self.signal.annotations)
     
     def test__slice_with_attributes(self):
         # Set attributes, slice, test that they are copied
@@ -164,8 +164,8 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.file_origin, self.signal.file_origin)
         self.assertEqual(sub.name, self.signal.name)
         self.assertEqual(sub.description, self.signal.description)        
-        self.assertEqual(sub._annotations, self.signal._annotations)
-        self.assertEqual(sub._annotations, {'ratname': 'Georges'})
+        self.assertEqual(sub.annotations, self.signal.annotations)
+        self.assertEqual(sub.annotations, {'ratname': 'Georges'})
 
     def test__getitem_should_return_single_quantity(self):
         self.assertEqual(self.signal[0], 0*nA)

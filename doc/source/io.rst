@@ -129,7 +129,7 @@ The neo.io API is designed to be simple and intuitive:
     - each io is able to do a *lazy* load = all attribute are read execpet numpy.array (if lazy=True) _data_description attrbute is added.
     - each io is able to do a *cascade* load = if True all children object are also loaded
     - each io render object (and subojects) with all there necessary attributes 
-    - each io can freely had remcommended attributs (and more) in _annotations dict of object.
+    - each io can freely had remcommended attributs (and more) in annotations dict of object.
 
 
 .. _list_of_io:

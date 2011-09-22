@@ -156,7 +156,7 @@ class AxonIO(BaseIO):
         
         bl = Block()
         bl.file_origin = os.path.basename(self.filename)
-        bl._annotations['abf_version'] = version
+        bl.annotations['abf_version'] = version
         
         # date and time
         if version <2. :
@@ -278,7 +278,7 @@ class AxonIO(BaseIO):
                         signal = subdata[:,i] * pq.Quantity(1, unit)
                     
                     anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
-                    anaSig._annotations['channel_index'] = int(num)
+                    anaSig.annotations['channel_index'] = int(num)
                     seg.analogsignals.append( anaSig )
                 bl.segments.append(seg)
             

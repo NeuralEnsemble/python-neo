@@ -116,7 +116,7 @@ class BasePyNNIO(BaseIO):
     def write_segment(self, segment):
         source = segment.analogsignals or segment.spiketrains
         assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
-        metadata = segment._annotations.copy()
+        metadata = segment.annotations.copy()
         metadata['size'] = len(source)
         metadata['first_index'] = 0
         metadata['last_index'] = metadata['size']
@@ -132,8 +132,8 @@ class BasePyNNIO(BaseIO):
         # to use standard PyNN units
         # we take the units from the first element of source and scale all
         # the signals to have the same units
-        if 'variable' in segment._annotations:
-            units = UNITS_MAP.get(segment._annotations['variable'], source[0].dimensionality)
+        if 'variable' in segment.annotations:
+            units = UNITS_MAP.get(segment.annotations['variable'], source[0].dimensionality)
         else:
             units = source[0].dimensionality
             metadata['variable'] = 'unknown'

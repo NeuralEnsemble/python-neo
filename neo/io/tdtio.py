@@ -169,7 +169,7 @@ class TdtIO(BaseIO):
                                                         
                                                         )
                         #~ sptr.channel = channel
-                        sptr._annotations['channel_index'] = channel
+                        sptr.annotations['channel_index'] = channel
 
                         # for counting:
                         sptr.nbspike = 0
@@ -202,7 +202,7 @@ class TdtIO(BaseIO):
                         anaSig._data_description = {
                                                                     'dtype' : dtype(DataFormats[h['dataformat']]),
                                                                     }
-                        anaSig._annotations['channel_index'] = channel
+                        anaSig.annotations['channel_index'] = channel
                         anaSig.pos = 0
                         
                         # for counting:
@@ -240,7 +240,7 @@ class TdtIO(BaseIO):
                                                             sampling_rate = sptr.sampling_rate,
                                                             waveforms = np.empty( (sptr.nbspike, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,
                                                         )
-                            new._annotations.update(sptr._annotations)
+                            new.annotations.update(sptr.annotations)
                             new.pos = 0
                             new.waveformsize = sptr.waveformsize
                             allsorted[sortcode] = new

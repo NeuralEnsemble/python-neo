@@ -55,7 +55,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :description: string
         :file_origin: string
         
-    Any other keyword arguments are stored in the :attr:`self._annotations` dict.
+    Any other keyword arguments are stored in the :attr:`self.annotations` dict.
     
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new :class:`SpikeTrain` (actually
@@ -131,10 +131,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # This method is only called when constructing a new SpikeTrain,
         # not when slicing or viewing. We use the same call signature
         # as __new__ for documentation purposes. Anything not in the call
-        # signature is stored in _annotations.
+        # signature is stored in annotations.
         
         # Calls parent __init__, which grabs universally recommended
-        # attributes and sets up self._annotations
+        # attributes and sets up self.annotations
         BaseNeo.__init__(self, **kwargs)        
 
 
@@ -169,7 +169,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
         
         # The additional arguments
-        self._annotations = getattr(obj, '_annotations', None)
+        self.annotations = getattr(obj, 'annotations', None)
         
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)

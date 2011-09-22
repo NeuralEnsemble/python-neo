@@ -27,7 +27,7 @@ Attributes and parent objects are available on the diagram #FIXME
 
 4. Due to some logical considerations we remove the link between "RecordingChannel" and "Spiketrain". "SpikeTrain" now depends on "Unit", which in its turn connects to "RecordingChannel". For inconsistency reasons we removed  link between "SpikeTrain" and a "Spike" ("SpikeTrain" is an object containing numpy array of spikes, but not a container of "Spike" objects - which is performance-unefficient). The same idea is applied to AnalogSignal / AnalogSignalArray, Event / EventArray etc. All changes are relected in # FIXME
 
-5. In order to implement flexibility and embed user-defined metadata into the NEO objects we decided to assign "_annotations" dictionnary to very NEO object. This attribute is optional; user may add key-value pairs to it according to its scientific needs.
+5. In order to implement flexibility and embed user-defined metadata into the NEO objects we decided to assign "annotations" dictionnary to very NEO object. This attribute is optional; user may add key-value pairs to it according to its scientific needs.
 
 6. The decision is made to use "quantities" package for objects, representing data arrays with units. "Quantities" is a stable (at least for python2.6) package, presented in pypi, easy-embeddable into NEO object model. Points of implementation are presented in the diagram # FIXME
 

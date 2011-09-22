@@ -69,14 +69,14 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
         for a in range(nb_analogsignal):
             anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, 
                                         t_start = t_start, name = 'sig %d for segment %s'%(a, seg.name),)
-            anasig._annotations['channel_index'] = a
+            anasig.annotations['channel_index'] = a
             seg.analogsignals.append(anasig)
     
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
             sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration, name = 'spiketrain %d'%s)
-            sptr._annotations['channel_index'] = s
+            sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
     
     if EventArray in supported_objects:

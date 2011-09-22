@@ -99,10 +99,10 @@ class Spike2IO(BaseIO):
         if not cascade:
             return seg
         
-        def add_annotations(ob, channelHeader):
-            ob._annotations['title'] = channelHeader.title
-            ob._annotations['physical_channel_index'] = channelHeader.phy_chan
-            ob._annotations['comment'] = channelHeader.comment
+        def addannotations(ob, channelHeader):
+            ob.annotations['title'] = channelHeader.title
+            ob.annotations['physical_channel_index'] = channelHeader.phy_chan
+            ob.annotations['comment'] = channelHeader.comment
         
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
@@ -120,20 +120,20 @@ class Spike2IO(BaseIO):
                 anaSigs = self.readOneChannelContinuous( fid, i, header ,lazy = lazy)
                 #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for anaSig in anaSigs :
-                    add_annotations(anaSig, channelHeader)
+                    addannotations(anaSig, channelHeader)
                     seg.analogsignals.append( anaSig )
                     #~ print sig.signal.size,
                 #~ print ''
                     
             elif channelHeader.kind in  [2, 3, 4, 5, 8] :
                 ea = self.readOneChannelEventOrSpike( fid, i, header , lazy = lazy)
-                add_annotations(ea, channelHeader)
+                addannotations(ea, channelHeader)
                 seg.eventarrays.append(ea)
                 
             elif channelHeader.kind in  [6,7] :
                 sptr = self.readOneChannelEventOrSpike( fid, i, header, lazy = lazy )
                 if sptr is not None:
-                    add_annotations(sptr, channelHeader)
+                    addannotations(sptr, channelHeader)
                     seg.spiketrains.append(sptr)
             
         fid.close()
@@ -248,7 +248,7 @@ class Spike2IO(BaseIO):
                                                             sampling_rate = sampling_rate,
                                                             t_start = starttimes[b]*header.us_per_time * header.dtime_base * pq.s,
                                                             )
-            anaSig._annotations['channel_index'] = channel_num
+            anaSig.annotations['channel_index'] = channel_num
             anaSigs.append( anaSig )
         
         if  lazy:
@@ -320,12 +320,12 @@ class Spike2IO(BaseIO):
         if lazy :
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )
-                ea._annotations['channel_index'] = channel_num
+                ea.annotations['channel_index'] = channel_num
                 ea._data_description = { 'shape' : totalitems}
                 return ea
             elif channelHeader.kind in [6 ,7]:
                 sptr = SpikeTrain([ ]*pq.s)
-                sptr._annotations['channel_index'] = channel_num
+                sptr.annotations['channel_index'] = channel_num
                 sptr._data_description = {  'shape' : totalitems }
                 return sptr
         
@@ -350,13 +350,13 @@ class Spike2IO(BaseIO):
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 #events
                 ea = EventArray(  )
-                ea._annotations['channel_index'] = channel_num
+                ea.annotations['channel_index'] = channel_num
                 ea.times = alltimes
                 if channelHeader.kind >= 5:
                     # Spike2 marker is closer to label sens of neo
                     ea.labels = alltrigs['marker'].astype('S')
                 if channelHeader.kind == 8:
-                    ea._annotations['extra_labels'] = alltrigs['label']
+                    ea.annotations['extra_labels'] = alltrigs['label']
                 return ea
                 
             elif channelHeader.kind in [6 ,7]:
@@ -395,7 +395,7 @@ class Spike2IO(BaseIO):
                                             waveforms = waveforms*unit,
                                             sampling_rate = (1./sample_interval)*pq.Hz,
                                             )
-                sptr._annotations['channel_index'] = channel_num
+                sptr.annotations['channel_index'] = channel_num
                 
                 return sptr
             

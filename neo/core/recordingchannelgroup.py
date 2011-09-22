@@ -39,7 +39,7 @@ class RecordingChannelGroup(BaseNeo):
         """Initialize a new RecordingChannelGroup."""
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
-        # in _annotations
+        # in annotations
         BaseNeo.__init__(self, **kargs)
 
         # Defaults

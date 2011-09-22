@@ -44,8 +44,8 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     Block>Segment>AnalogSIgnal or/and Block>Segment>SpikeTrain
     this function auto create all RecordingChannel
     following these rules:
-      * when 'channel_index ' is in _AnalogSIgnal._annotations the corresponding RecordingChannel is created.
-      * 'channel_index ' is then removed from _annotations dict if remove_from_annotation
+      * when 'channel_index ' is in _AnalogSIgnal.annotations the corresponding RecordingChannel is created.
+      * 'channel_index ' is then removed from annotations dict if remove_from_annotation
       * only one RecordingChannelGroup is created
     
     It is a utility at the end of creating a Block for IO.
@@ -60,17 +60,17 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
             if not hasattr(seg, sub) : continue
             for child in getattr(seg, sub):
                 # child is AnaologSIgnal or SpikeTrain
-                if 'channel_index' in child._annotations:
-                    ind = child._annotations['channel_index']
+                if 'channel_index' in child.annotations:
+                    ind = child.annotations['channel_index']
                     if  ind not in recordingchannels:
                         recordingchannels[ind] = RecordingChannel(index = ind)
-                        if 'channel_name' in child._annotations:
-                            recordingchannels[ind].name = child._annotations['channel_name']
+                        if 'channel_name' in child.annotations:
+                            recordingchannels[ind].name = child.annotations['channel_name']
                             if remove_from_annotation:
-                                child._annotations.pop('channel_name')
+                                child.annotations.pop('channel_name')
                     recordingchannels[ind].analogsignals.append(child)
                     if remove_from_annotation:
-                        child._annotations.pop('channel_index')
+                        child.annotations.pop('channel_index')
     indexes = np.sort(recordingchannels.keys())
     rcg = RecordingChannelGroup(name = 'all channels', channel_indexes = indexes)
     bl.recordingchannelgroups.append(rcg)

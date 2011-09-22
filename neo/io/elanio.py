@@ -215,8 +215,8 @@ class ElanIO(BaseIO):
                                                     t_start=0.*pq.s,
                                                     name = labels[c],
                                                     )
-            anaSig._annotations['channel_index'] = c
-            anaSig._annotations['channel_name'] = labels[c]
+            anaSig.annotations['channel_index'] = c
+            anaSig.annotations['channel_name'] = labels[c]
             seg.analogsignals.append( anaSig )
         
         # triggers
@@ -363,7 +363,7 @@ class ElanIO(BaseIO):
         #~ # pos file  eeg.pos
         #~ if len(seg._eventarrays) == 1:
             #~ ea = seg._eventarray[0]
-            #~ if 'reject_codes' in ea._annotations and len(ea.reject_codes) == len(ea.times):
+            #~ if 'reject_codes' in ea.annotations and len(ea.reject_codes) == len(ea.times):
                 #~ rcs = ea.reject_codes
             #~ else:
                 #~ rcs = np.array(  [ '' ]*ea.times.size)

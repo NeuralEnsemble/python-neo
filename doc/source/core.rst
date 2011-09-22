@@ -151,7 +151,7 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`_annotations`.
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
 
 Example: SpikeTrain
 -------------------
@@ -187,8 +187,8 @@ Recommended attributes must be specified as keyword arguments, not positional ar
 Finally, let's consider "additional arguments". These are the ones you define for your experiment. ::
 
     >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', rat_name='Fred')
-    >>> print(st._annotations)
+    >>> print(st.annotations)
     {'rat_name': 'Fred'}
     
 
-Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`_annotations`. This dict can be modified as necessary by your code.
+Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.

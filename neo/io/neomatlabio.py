@@ -241,7 +241,7 @@ class NeoMatlabIO(BaseIO):
                 struct['units'] = ob.dimensionality.string
                 continue
             
-            if not(attrname in ob._annotations or hasattr(ob, attrname)): continue
+            if not(attrname in ob.annotations or hasattr(ob, attrname)): continue
             if getattr(ob, attrname) is None : continue
             
             

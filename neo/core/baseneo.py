@@ -2,7 +2,7 @@ class BaseNeo(object):
     """This is the base class from which all Neo objects inherit.
     
     This class implements support for universally recommended arguments,
-    and also sets up the `_annotations` dict for additional arguments.
+    and also sets up the `annotations` dict for additional arguments.
     
     The following "universal" methods are available:
         __init__ : Grabs the universally recommended arguments `name`,
@@ -10,12 +10,12 @@ class BaseNeo(object):
             
             Also stores every additional argument (that is, every argument
             that is not handled by BaseNeo or the child class), and puts
-            in the dict `_annotations`.
+            in the dict `annotations`.
         
         __getattr__ : Provides shortcut access by argument name to keys
-            in `_annotations`.
+            in `annotations`.
         
-        annotate(**kwargs) : Updates `_annotations` with keyword/value pairs.
+        annotate(**kwargs) : Updates `annotations` with keyword/value pairs.
     
     Each child class should: 
         0) call BaseNeo.__init__(self, **kwargs) with all non-recommended
@@ -32,12 +32,12 @@ class BaseNeo(object):
     def __init__(self, name=None, file_origin=None, description=None, **kwargs):
         """This is the base constructor for all Neo objects.
         
-        Stores universally recommended attributes and creates `_annotations`
+        Stores universally recommended attributes and creates `annotations`
         from additional arguments not processed by BaseNeo or the child class.
         """
-        # create `_annotations` for additional arguments
+        # create `annotations` for additional arguments
         # This funny syntax is to avoid recursion loops with __getattr__
-        self.__dict__['_annotations'] = kwargs
+        self.__dict__['annotations'] = kwargs
         
         # these attributes are recommended for all objects.
         self.name = name
@@ -45,9 +45,9 @@ class BaseNeo(object):
         self.file_origin = file_origin
 
     def __getattr__(self, k):
-        if hasattr(self, '_annotations'):
-            if k in self._annotations.keys():
-                return self._annotations[k]
+        if hasattr(self, 'annotations'):
+            if k in self.annotations.keys():
+                return self.annotations[k]
         return self.__dict__[k]
 
     # The __setattr__ method does problems with properties of the inherited objects
@@ -62,4 +62,4 @@ class BaseNeo(object):
         >>> obj.key2
         value2
         """
-        self._annotations.update(annotations)
+        self.annotations.update(annotations)

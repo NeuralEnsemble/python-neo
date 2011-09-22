@@ -98,7 +98,7 @@ class PlexonIO(BaseIO):
         seg.rec_datetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
         seg.file_origin = os.path.basename(self.filename)
-        seg._annotations['plexon_version'] = globalHeader['Version']
+        seg.annotations['plexon_version'] = globalHeader['Version']
         
         if not cascade:
             return seg
@@ -169,8 +169,8 @@ class PlexonIO(BaseIO):
                 #spike
                 if unit not in spiketrains[chan]:
                     sptr = SpikeTrain([ ], units = 's')
-                    sptr._annotations['unit_name'] = dspChannelHeaders[chan]['Name']
-                    sptr._annotations['channel_index'] = i
+                    sptr.annotations['unit_name'] = dspChannelHeaders[chan]['Name']
+                    sptr.annotations['channel_index'] = i
                     spiketrains[chan][unit] = sptr
                     
                     spiketrains[chan][unit].sizeOfWaveform = n1,n2
@@ -183,8 +183,8 @@ class PlexonIO(BaseIO):
                 neventsperchannel[chan] += 1
                 if chan not in eventarrays:
                     ea = EventArray()
-                    ea._annotations['channel_name'] = eventHeaders[chan]['Name']
-                    ea._annotations['channel_index'] = chan
+                    ea.annotations['channel_name'] = eventHeaders[chan]['Name']
+                    ea.annotations['channel_index'] = chan
                     eventarrays[chan] = ea
                 
             elif dataBlockHeader['Type'] == 5:
@@ -199,8 +199,8 @@ class PlexonIO(BaseIO):
                                                                         sampling_rate = float(slowChannelHeaders[chan]['ADFreq'])*pq.Hz,
                                                                         t_start = 0.*pq.s,
                                                                         )
-                    anasig._annotations['channel_index'] = slowChannelHeaders[chan]['Channel']
-                    anasig._annotations['channel_name'] = slowChannelHeaders[chan]['Name']
+                    anasig.annotations['channel_index'] = slowChannelHeaders[chan]['Channel']
+                    anasig.annotations['channel_name'] = slowChannelHeaders[chan]['Name']
                     anaSigs[chan] =  anasig
 
         if not lazy:    
@@ -213,7 +213,7 @@ class PlexonIO(BaseIO):
             for chan, sptrs in spiketrains.iteritems():
                 for unit, sptr in sptrs.iteritems():
                         new = SpikeTrain( np.zeros( (nspikecounts[chan][unit]) , dtype = 'f' )*pq.s )
-                        new._annotations.update(sptr._annotations)
+                        new.annotations.update(sptr.annotations)
                         if load_spike_waveform:
                             n1, n2 = spiketrains[chan][unit].sizeOfWaveform
                             new.waveforms = np.zeros( (nspikecounts[chan][unit], n1, n2 )*pq.V , dtype = 'f' ) * pq.V

@@ -92,8 +92,8 @@ class NeuroExplorerIO(BaseIO):
         #~ print 'version' , globalHeader['version']
         seg = Segment()
         seg.file_origin = os.path.basename(self.filename)
-        seg._annotations['neuroexplorer_version'] = globalHeader['version']
-        seg._annotations['comment'] = globalHeader['comment']
+        seg.annotations['neuroexplorer_version'] = globalHeader['version']
+        seg.annotations['comment'] = globalHeader['comment']
         
         if not cascade :
             return seg
@@ -120,7 +120,7 @@ class NeuroExplorerIO(BaseIO):
                                                     t_stop = globalHeader['tend']/globalHeader['freq']*pq.s,
                                                     name = entityHeader['name'],
                                                     )
-                sptr._annotations['channel_index'] = entityHeader['WireNumber']
+                sptr.annotations['channel_index'] = entityHeader['WireNumber']
                 seg.spiketrains.append(sptr)
             
             if entityHeader['type'] == 1:
@@ -187,7 +187,7 @@ class NeuroExplorerIO(BaseIO):
                                                 sampling_rate = entityHeader['WFrequency']*pq.Hz,
                                                 left_sweep = 0*pq.ms,
                                                 )
-                sptr._annotations['channel_index'] = entityHeader['WireNumber']
+                sptr.annotations['channel_index'] = entityHeader['WireNumber']
                 seg.spiketrains.append(sptr)
             
             if entityHeader['type'] == 4:
@@ -224,7 +224,7 @@ class NeuroExplorerIO(BaseIO):
                     signal = signal*pq.mV
                 
                 anaSig = AnalogSignal(signal = signal , t_start =t_start*pq.s , sampling_rate  = entityHeader['WFrequency']*pq.Hz, name = entityHeader['name'])
-                anaSig._annotations['channel_index'] = entityHeader['WireNumber']
+                anaSig.annotations['channel_index'] = entityHeader['WireNumber']
                 seg.analogsignals.append( anaSig )
                 
             if entityHeader['type'] == 6:

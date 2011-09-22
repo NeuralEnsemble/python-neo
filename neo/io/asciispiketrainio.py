@@ -114,7 +114,7 @@ class AsciiSpikeTrainIO(BaseIO):
                 spike_times = np.array(all).astype('f')
             
             sptr = SpikeTrain(spike_times*unit, t_start = t_start)
-            sptr._annotations['channel_index'] = i
+            sptr.annotations['channel_index'] = i
             seg.spiketrains.append(sptr)
         f.close()
         

@@ -67,26 +67,26 @@ class testRead(unittest.TestCase):
         
         
         self.assertEqual(seg._spiketrains[0].name, 'unit 1 from group 0')
-        self.assertEqual(seg._spiketrains[0]._annotations['cluster'], 1)
-        self.assertEqual(seg._spiketrains[0]._annotations['group'], 0)
+        self.assertEqual(seg._spiketrains[0].annotations['cluster'], 1)
+        self.assertEqual(seg._spiketrains[0].annotations['group'], 0)
         self.assertTrue(np.all(seg._spiketrains[0].times == np.array(
             [.100, .200])))
 
         self.assertEqual(seg._spiketrains[1].name, 'unit 2 from group 0')
-        self.assertEqual(seg._spiketrains[1]._annotations['cluster'], 2)
-        self.assertEqual(seg._spiketrains[1]._annotations['group'], 0)
+        self.assertEqual(seg._spiketrains[1].annotations['cluster'], 2)
+        self.assertEqual(seg._spiketrains[1].annotations['group'], 0)
         self.assertEqual(seg._spiketrains[1].t_start, 0.0)
         self.assertTrue(np.all(seg._spiketrains[1].times == np.array([.305])))
         
         self.assertEqual(seg._spiketrains[2].name, 'unit -1 from group 1')
-        self.assertEqual(seg._spiketrains[2]._annotations['cluster'], -1)
-        self.assertEqual(seg._spiketrains[2]._annotations['group'], 1)
+        self.assertEqual(seg._spiketrains[2].annotations['cluster'], -1)
+        self.assertEqual(seg._spiketrains[2].annotations['group'], 1)
         self.assertEqual(seg._spiketrains[2].t_start, 0.0)
         self.assertTrue(np.all(seg._spiketrains[2].times == np.array([.253])))
         
         self.assertEqual(seg._spiketrains[3].name, 'unit 2 from group 1')
-        self.assertEqual(seg._spiketrains[3]._annotations['cluster'], 2)
-        self.assertEqual(seg._spiketrains[3]._annotations['group'], 1)
+        self.assertEqual(seg._spiketrains[3].annotations['cluster'], 2)
+        self.assertEqual(seg._spiketrains[3].annotations['group'], 1)
         self.assertEqual(seg._spiketrains[3].t_start, 0.0)
         self.assertTrue(np.all(seg._spiketrains[3].times == np.array(
             [.050, .152])))        
@@ -100,8 +100,8 @@ class testRead(unittest.TestCase):
         seg = block._segments[0]
         self.assertEqual(len(seg._spiketrains), 1)
         self.assertEqual(seg._spiketrains[0].name, 'unit 0 from group 5')
-        self.assertEqual(seg._spiketrains[0]._annotations['cluster'], 0)
-        self.assertEqual(seg._spiketrains[0]._annotations['group'], 5)        
+        self.assertEqual(seg._spiketrains[0].annotations['cluster'], 0)
+        self.assertEqual(seg._spiketrains[0].annotations['group'], 5)        
         self.assertEqual(seg._spiketrains[0].t_start, 0.0)
         self.assertTrue(np.all(seg._spiketrains[0].times == np.array(
             [0.026, 0.122, 0.228])))
@@ -127,32 +127,32 @@ class testWrite(unittest.TestCase):
         # Fake spiketrain 1, will be sorted
         st1 = neo.SpikeTrain(times=[.006, .002, .004], units='s', 
             sampling_rate=1000.)
-        st1._annotations['cluster'] = 0
-        st1._annotations['group'] = 0
+        st1.annotations['cluster'] = 0
+        st1.annotations['group'] = 0
         segment.spiketrains.append(st1)
         
         # Fake spiketrain 1B, on another segment. No group specified,
         # default is 0.
         st1B = neo.SpikeTrain(times=[.106], units='s', sampling_rate=1000.)
-        st1B._annotations['cluster'] = 0        
+        st1B.annotations['cluster'] = 0        
         segment2.spiketrains.append(st1B)
         
         # Fake spiketrain 2 on same group, no sampling rate specified
         st2 = neo.SpikeTrain(times=[.001, .003, .011], units='s')
-        st2._annotations['cluster'] = 1
-        st2._annotations['group'] = 0
+        st2.annotations['cluster'] = 1
+        st2.annotations['group'] = 0
         segment.spiketrains.append(st2)
         
         # Fake spiketrain 3 on new group, with different sampling rate
         st3 = neo.SpikeTrain(times=[.05, .09, .10], units='s', 
             sampling_rate=100.)
-        st3._annotations['cluster'] = -1
-        st3._annotations['group'] = 1
+        st3.annotations['cluster'] = -1
+        st3.annotations['group'] = 1
         segment.spiketrains.append(st3)
         
         # Fake spiketrain 4 on new group, without cluster info
         st4 = neo.SpikeTrain(times=[.005, .009], units='s')
-        st4._annotations['group'] = 2
+        st4.annotations['group'] = 2
         segment.spiketrains.append(st4)
         
         # Create empty directory for writing
