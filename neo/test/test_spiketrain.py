@@ -94,18 +94,20 @@ class TestConstructor(unittest.TestCase):
     
     def test_sort(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, sort=True)
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n')
+        st.sort()
         assert_arrays_equal(st, [3,4,5]*pq.s)
         assert_arrays_equal(st.waveforms, wf)
+        self.assertEqual(st.name, 'n')
+        self.assertEqual(st.t_stop, 5.0 * pq.s)
         
-        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf, sort=True)
+        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf, name='n')
+        st.sort()
         assert_arrays_equal(st, [3,4,5]*pq.s)
         assert_arrays_equal(st.waveforms, wf[[0,2,1]])
-        
-        # test default sort is True
-        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf)
-        assert_arrays_equal(st, [3,4,5]*pq.s)
-        assert_arrays_equal(st.waveforms, wf[[0,2,1]])
+        self.assertEqual(st.name, 'n')
+        self.assertEqual(st.t_start, 0.0 * pq.s)
+        self.assertEqual(st.t_stop, 5.0 * pq.s)
     
     def test_slice(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])

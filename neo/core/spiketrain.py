@@ -1,6 +1,7 @@
 from neo.core.baseneo import BaseNeo
 import quantities as pq
 import numpy
+import numpy as np
 
 """This module implements SpikeTrain.
 
@@ -38,7 +39,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :times: a list, 1d numpy array, or quantity array. 
         
         The Quantity array is constructed with the data in :attr:`times`, as
-        well as the construction arguments :attr:`units`, :attr:`dtype`, and :attr:`copy`. 
+        well as the construction arguments :attr:`units`, :attr:`dtype`, and 
+        :attr:`copy`. 
     
     *Recommended arguments*:
         :t_start: time at which SpikeTrain began. This will be converted
@@ -58,8 +60,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     Any other keyword arguments are stored in the :attr:`self.annotations` dict.
     
     *Slicing*:
-        :class:`SpikeTrain` objects can be sliced. When this occurs, a new :class:`SpikeTrain` (actually
-        a view) is returned, with the same metadata, except that :attr:`waveforms` is also sliced accordingly.
+        :class:`SpikeTrain` objects can be sliced. When this occurs, a new
+        :class:`SpikeTrain` (actually a view) is returned, with the same 
+        metadata, except that :attr:`waveforms` is also sliced accordingly.
 
     *Example*::
     
@@ -72,7 +75,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     """
     
     def __new__(cls, times, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None, sort=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,
         waveforms=None, left_sweep=None, **kwargs):
         """Constructs new SpikeTrain from data.
         
@@ -113,19 +116,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # Error checking (do earlier?)
         check_has_dimensions_time(obj, obj.t_start, obj.t_stop)
 
-        # sort the times and waveforms
-        # this should be moved to a SpikeTrain.sort() method
-        if sort:
-            sort_indices = obj.argsort()
-            if waveforms is not None and waveforms.any():
-                obj.waveforms = waveforms[sort_indices]
-            obj.sort()
-
         return obj
 
     
     def __init__(self, times, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,  sort=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,
         waveforms=None, left_sweep=None, **kwargs):
         """Initializes newly constructed SpikeTrain."""
         # This method is only called when constructing a new SpikeTrain,
@@ -181,6 +176,19 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         return '<SpikeTrain(%s, [%s, %s], )>' % (
              super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop, )
 
+    def sort(self):
+        """Sorts the spiketrain and its waveforms, if any."""
+        # sort the waveforms by the times
+        sort_indices = np.argsort(self)
+        if self.waveforms is not None and self.waveforms.any():
+            self.waveforms = self.waveforms[sort_indices]
+        
+        # now sort the times
+        # We have sorted twice, but `self = self[sort_indices]` introduces
+        # a dependency on the slicing functionality of SpikeTrain.
+        super(SpikeTrain, self).sort()
+
+
     @property
     def times(self):
         return self
@@ -196,6 +204,3 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         except:
             return None
     
-    @property
-    def sorted(self):
-        return self._sorted
