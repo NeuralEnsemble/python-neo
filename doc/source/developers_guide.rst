@@ -41,12 +41,12 @@ Requirements
     * Python_ 2.6, 2.7, 3.1 or 3.2
     * numpy_ >= 1.3.0
     * quantities_ >= 0.9.0
-    * nose_ >= 0.11.4
+    * nose_ >= 0.11.1
     * if using Python 2.6 or 3.1, unittest2_ >= 0.5.1
-    * Distribute_ >= 0.6.14
-    * Sphinx_ >= 1.0
+    * Distribute_ >= 0.6
+    * Sphinx_ >= 0.6.4
     * (optional) tox_ >= 0.9 (makes it easier to test with multiple Python versions)
-    * (optional) coverage_ >= 3.3.1 (for measuring test coverage)
+    * (optional) coverage_ >= 2.85 (for measuring test coverage)
 
 
 Getting the source code
