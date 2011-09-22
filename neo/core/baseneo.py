@@ -12,9 +12,6 @@ class BaseNeo(object):
             that is not handled by BaseNeo or the child class), and puts
             in the dict `annotations`.
         
-        __getattr__ : Provides shortcut access by argument name to keys
-            in `annotations`.
-        
         annotate(**kwargs) : Updates `annotations` with keyword/value pairs.
     
     Each child class should: 
@@ -36,21 +33,13 @@ class BaseNeo(object):
         from additional arguments not processed by BaseNeo or the child class.
         """
         # create `annotations` for additional arguments
-        # This funny syntax is to avoid recursion loops with __getattr__
-        self.__dict__['annotations'] = kwargs
+        self.annotations = kwargs
         
         # these attributes are recommended for all objects.
         self.name = name
         self.description = description
         self.file_origin = file_origin
 
-    def __getattr__(self, k):
-        if hasattr(self, 'annotations'):
-            if k in self.annotations.keys():
-                return self.annotations[k]
-        return self.__dict__[k]
-
-    # The __setattr__ method does problems with properties of the inherited objects
 
     def annotate(self, **annotations):
         """
