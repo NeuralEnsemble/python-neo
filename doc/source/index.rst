@@ -40,6 +40,7 @@ Documentation
    whatisnew
    developers_guide
    io_developers_guide
+   authors
 
 License
 -------
@@ -50,7 +51,7 @@ Neo is distributed under a BSD licence.
 Contributing
 ------------
 
-The people behind the project are very open to discussion. Any feedback is
+The people behind the project (see :doc:`authors`) are very open to discussion. Any feedback is
 gladly received and highly appreciated! Discussion of Neo takes place on the
 NeuralEnsemble mailing list::
 

@@ -13,6 +13,8 @@
 
 import sys, os
 
+AUTHORS = u'Neo authors and contributors <neuralensemble@googlegroups.com>'
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -37,8 +39,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'neo'
-copyright = u'2011, S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger, Yury V. Zaytsev'
+project = u'Neo'
+copyright = u'2010-2011, ' + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -178,8 +180,8 @@ htmlhelp_basename = 'neodoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'neo.tex', u'neo Documentation',
-   u'S.garcia, A.Davison, P.Rautenberg, A.Sobolev, F.Jaillet, Y.Mahnoun, T.Brizzi, T.Wachtler, L.Estebannez, P.Yger, Yury V. Zaytsev', 'manual'),
+  ('index', 'neo.tex', u'Neo Documentation',
+   AUTHORS, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
