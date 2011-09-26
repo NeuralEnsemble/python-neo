@@ -28,6 +28,13 @@ for k in description.class_by_name.keys():
 from datetime import datetime
 import os
 import re
+
+# check if version scipy
+import scipy
+from distutils import version
+if version.StrictVersion(scipy.version.version) < '0.8':
+    raise ImportError("your scipy version is too old to support MatlabIO at least 0.8 you have %s"%scipy.version.version)
+
 from scipy import io as sio
 
 
