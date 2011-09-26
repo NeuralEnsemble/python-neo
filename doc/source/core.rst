@@ -161,18 +161,18 @@ Example: SpikeTrain
 Here is how you initialize a :py:class:`SpikeTrain` with required arguments::
 
     >>> import neo
-    >>> st = neo.SpikeTrain([3, 4, 5], units='sec')
+    >>> st = neo.SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)
     >>> print(st)
     [ 3.  4.  5.] s
 
 You will see the spike times printed in a nice format including the units.
 Because `st` "is a" :py:class:`Quantity` array with units of seconds, it absolutely must have this information at the time of initialization. You can specify the spike times with a keyword argument too::
 
-    >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec')
+    >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_stop=10.0)
 
 The spike times could also be in a NumPy array.
 
-In practice, much more information than the raw spike times is necessary to analyze this data. This information falls into the realm of "recommended attributes". For example, at what time did this particular spike train start and finish? ::
+If it is not specified, :attr:`t_start` is assumed to be zero, but another value can easily be specified::
 
     >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_start=1.0, t_stop=10.0)
     >>> st.t_start
@@ -186,7 +186,7 @@ Recommended attributes must be specified as keyword arguments, not positional ar
 
 Finally, let's consider "additional arguments". These are the ones you define for your experiment. ::
 
-    >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', rat_name='Fred')
+    >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_stop=10.0, rat_name='Fred')
     >>> print(st.annotations)
     {'rat_name': 'Fred'}
     

@@ -70,7 +70,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(a[3], 99*mV)
     
     def test__create_with_additional_argument(self):
-        a = AnalogSignal([1,2,3], file_origin='crack.txt', ratname='Nicolas')
+        a = AnalogSignal([1,2,3], units="mV", sampling_rate=1*kHz, file_origin='crack.txt', ratname='Nicolas')
         self.assertEqual(a.annotations, {'ratname':'Nicolas'})
         
         # This one is universally recommended and handled by BaseNeo

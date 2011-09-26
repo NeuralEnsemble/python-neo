@@ -18,7 +18,8 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     *Required attributes/properties*:
         :t_start:         time when signal begins
-        :sampling_rate:   number of samples per unit time
+        :sampling_rate: *or* :sampling_period: Quantity, number of samples per unit time or
+                interval between two samples. If both are specified, they are checked for consistency.
 
     *Properties*:
         :sampling_period: interval between two samples (1/sampling_rate)

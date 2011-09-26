@@ -15,13 +15,13 @@ from .baseneo import BaseNeo
 def _get_sampling_rate(sampling_rate, sampling_period):
     if sampling_period is None:
         if sampling_rate is None:
-            sampling_rate = 1*pq.Hz
+            raise ValueError("You must provide either the sampling rate or sampling period")
     else:
         if sampling_rate is None:
-            sampling_rate = 1./sampling_period
+            sampling_rate = 1.0/sampling_period
         else:
-            if sampling_period != 1./sampling_rate:
-                raise ValueError('The sampling_rate has to be 1./sampling_period')
+            if sampling_period != 1.0/sampling_rate:
+                raise ValueError('The sampling_rate has to be 1/sampling_period')
     return sampling_rate
 
 
@@ -30,7 +30,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     Base class for AnalogSignal and AnalogSignalArray
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, 
+    def __new__(cls, signal, units=None, dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                 **kwargs):
         """Constructs new BaseAnalogSignal from data.
@@ -43,16 +43,20 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         
         __array_finalize__ is also called on the new object.
         """
-        if isinstance(signal, pq.Quantity) and units:
-            signal = signal.rescale(units)
-        if not units and hasattr(signal, "units"):
-            units = signal.units
+        if units is None:
+            if hasattr(signal, "units"):
+                units = signal.units
+            else:
+                raise ValueError("Units must be specified")
+        elif isinstance(signal, pq.Quantity):
+            if units != signal.units: # could improve this test, what if units is a string?
+                signal = signal.rescale(units) 
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
         return obj
     
-    def __init__(self, signal, units='', dtype=None, copy=True, 
+    def __init__(self, signal, units=None, dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                 **kwargs):
         """Initializes newly constructed SpikeTrain."""
@@ -130,7 +134,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     
     def duplicate_with_new_array(self, signal):
         #signal is the new signal
-        new = AnalogSignal(signal = signal, units= self.units)
+        new = AnalogSignal(signal=signal, units=self.units, sampling_rate=self.sampling_rate)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
         return new
@@ -190,24 +194,22 @@ class AnalogSignal(BaseAnalogSignal):
     
     *Usage*::
     
-      >>> from quantities import ms, kHz
-      >>> a = AnalogSignal([1,2,3])
-      >>> b = AnalogSignal([4,5,6], sampling_period=42*ms)
-      >>> c = AnalogSignal([1,2,3], t_start=42*ms)
-      >>> d = AnalogSignal([1,2,3], t_start=42*ms, sampling_rate=0.42*kHz])
-      >>> e = AnalogSignal([1,2,3], units='mV')
+      >>> from quantities import ms, kHz, nA, uV
+      >>> import numpy as np
+      >>> a = AnalogSignal([1,2,3], sampling_rate=0.42*kHz, units='mV')
+      >>> b = AnalogSignal([4,5,6]*nA, sampling_period=42*ms)
+      >>> c = AnalogSignal(np.array([1.0, 2.0, 3.0]), t_start=42*ms,
+      ...                  sampling_rate=0.42*kHz, units=uV)
 
     *Required attributes/properties*:
       :signal: the data itself, as a :py:class:`Quantity` array, NumPy array or list
       :units: required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
+      :sampling_rate: *or* :sampling_period: Quantity, number of samples per unit time or
+                interval between two samples. If both are specified, they are checked for consistency.
     
-    *Recommended Attributes/properties*:
-      :t_start:         Quantity, time when signal begins. Default: 0.0 seconds
-      :sampling_rate:   Quantity, number of samples per unit time, default Hz
-      :sampling_period: Quantity, interval between two samples. Either
-                        :py:attr:`sampling_rate` or :py:attr:`sampling_period` may be specified.
-                        If both are specified, they are checked for consistency.
-                        
+    *Recommended attributes/properties*:
+      :t_start: Quantity, time when signal begins. Default: 0.0 seconds
+      
       Note that the length of the signal array and the sampling rate 
       are used to calculate :py:attr:`t_stop` and :py:attr:`duration`.
       

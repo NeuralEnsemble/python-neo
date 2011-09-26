@@ -78,10 +78,10 @@ class BaseTestIO(object):
 
     def download_test_files_if_not_present(self ):
         """
-        Download file at G-node for testing
+        Download %s file at G-node for testing
         url_for_tests is global at beginning of this file.
         
-        """
+        """ % self.ioclass.__name__
         localdir = self.local_test_dir
         
         shortname = self.ioclass.__name__.lower().strip('io')
@@ -136,7 +136,7 @@ class BaseTestIO(object):
 
     def test_write_then_read(self):
         """
-        Test for IO that are able to write and read:
+        Test for IO that are able to write and read - here %s:
           1 - Generate a full schema with supported objects.
           2 - Write to a file
           3 - Read from the file
@@ -144,7 +144,7 @@ class BaseTestIO(object):
           5 - Check data
         
         Work only for IO for Block and Segment for the higher object (main cases).
-        """
+        """ % self.ioclass.__name__
         localdir = self.create_local_dir_if_not_exists()
         shortname = self.ioclass.__name__.lower().strip('io')
         
@@ -184,12 +184,12 @@ class BaseTestIO(object):
 
     def test_read_then_write(self):
         """
-        Test for IO that are able to read and write:
+        Test for IO that are able to read and write, here %s:
          1 - Read a file
          2 Write object set in another file
          3 Compare the 2 files hash
          
-        """
+        """ % self.ioclass.__name__
         if self.hash_conserved_when_write_read:
             #TODO
             #localdir = self.create_local_dir_if_not_exists()
@@ -200,9 +200,9 @@ class BaseTestIO(object):
         
     def test_assert_readed_neo_object_is_compliant(self):
         """
-        With downloaded files test neo compliance with: neo.test.tools.assert_neo_object_is_compliant
+        With downloaded files test %s compliance with: neo.test.tools.assert_neo_object_is_compliant
         
-        """
+        """ % self.ioclass.__name__
         # This is for files presents at G-Node or generated
         for filename in self.files_to_test:
             filename = os.path.join(self.local_test_dir, filename)

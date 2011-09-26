@@ -272,10 +272,18 @@ class NeoMatlabIO(BaseIO):
                 break
         
         if is_quantity:
-            if lazy:
-                ob = cl([ ], units = str(struct.units), t_stop=0.0)
+            data_complement = dict(units=str(struct.units))
+            if "sampling_rate" in (at[0] for at in description.classes_necessary_attributes[classname]):
+                data_complement["sampling_rate"] = 0*pq.kHz  # put fake value for now, put correct value later
+            if "t_stop" in (at[0] for at in description.classes_necessary_attributes[classname]):
+                if len(struct.array) > 0:
+                    data_complement["t_stop"] = struct.array.max()
+                else:
+                    data_complement["t_stop"] = 0.0
+            if lazy:    
+                ob = cl([ ], **data_complement)
             else:
-                ob = cl(struct.array, units = str(struct.units), t_stop=struct.array.max())
+                ob = cl(struct.array, **data_complement)
         else:
             ob = cl()
         for attrname in struct._fieldnames:
