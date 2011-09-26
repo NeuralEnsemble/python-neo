@@ -27,7 +27,7 @@ def generate_one_simple_block(block_name = 'block_0',
                                             nb_segment = 3, 
                                             supported_objects = [ ],
                                             **kws):
-    bl = Block(name = block_name)
+    bl = Block()#name = block_name)
     
     if Segment in supported_objects:
         for s in range(nb_segment):
@@ -64,25 +64,26 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                                     epoch_array_duration_range = [.5, 3., ],
 
                                                 ):
-    seg = Segment(name= seg_name)
+    seg = Segment()#name= seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
-            anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, 
-                                        t_start = t_start, name = 'sig %d for segment %s'%(a, seg.name),)
+            anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, t_start = t_start)
+                                        #, name = 'sig %d for segment %s'%(a, seg.name),)
             anasig.annotations['channel_index'] = a
             seg.analogsignals.append(anasig)
     
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
-            sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration, name = 'spiketrain %d'%s)
+            sptr = SpikeTrain( rand(int((spikerate*duration).simplified))*duration , t_start = t_start, t_stop = t_start+duration)
+                                        #, name = 'spiketrain %d'%s)
             sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
     
     if EventArray in supported_objects:
         for name, labels in event_array_types.iteritems():
             ea_size = rand()*np.diff(event_array_size_range)+event_array_size_range[0]
-            ea = EventArray(     name = name,
+            ea = EventArray(     #name = name,
                                             times = rand(ea_size)*duration,
                                             labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
                                             )
@@ -98,7 +99,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                 dur = (rand()*np.diff(epoch_array_duration_range)+epoch_array_duration_range[0])
                 durations.append(dur)
                 t = t+dur
-            epa = EpochArray(name = name,
+            epa = EpochArray(    #name = name,
                                             times = pq.Quantity(times, units = pq.s),
                                             durations = pq.Quantity(durations, units = pq.s),
                                             labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
