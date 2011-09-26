@@ -29,6 +29,19 @@ def check_has_dimensions_time(*values):
         raise ValueError("\n".join(errmsgs))
 
 
+def _check_time_in_range(value, t_start, t_stop):
+    if hasattr(value, "min"):
+        if value.min() < t_start:
+            raise ValueError("The first spike (%s) is before t_start (%s)" % (value, t_start))
+        if value.max() > t_stop:
+            raise ValueError("The last spike (%s) is after t_stop (%s)" % (value, t_stop))
+    else:
+        if value < t_start:
+            raise ValueError("The spike time (%s) is before t_start (%s)" % (value, t_start))
+        if value > t_stop:
+            raise ValueError("The spike time (%s) is after t_stop (%s)" % (value, t_stop))
+
+
 class SpikeTrain(BaseNeo, pq.Quantity):
     """SpikeTrain is a :class:`Quantity` array of spike times.
     
@@ -119,11 +132,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # Error checking (do earlier?)
         check_has_dimensions_time(obj, obj.t_start, obj.t_stop)
         if obj.size > 0:
-            if obj.min() < t_start:
-                raise ValueError("The first spike (%g) is before t_start (%g)" % (obj.min(), obj.t_start))
-            if obj.max() > t_stop:
-                raise ValueError("The last spike (%g) is after t_stop (%g)" % (obj.max(), obj.t_stop))
-
+            _check_time_in_range(obj.min(), obj.t_start, obj.t_stop)
+            _check_time_in_range(obj.max(), obj.t_start, obj.t_stop)
         return obj
 
     
@@ -180,6 +190,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.description = getattr(obj, 'description', None)
     
 
+
     def __repr__(self):
         return '<SpikeTrain(%s, [%s, %s], )>' % (
              super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop, )
@@ -204,17 +215,25 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # somehow this knows to call SpikeTrain.__array_finalize__, though
         # I'm not sure how. (If you know, please add an explanatory comment
         # here.) That copies over all of the metadata.
-        
-        # update t_start and t_stop
-        obj.t_start = self.t_start + i * self.sampling_period
-        obj.t_stop = self.t_start + len(obj) * self.sampling_period
-        
+
         # update waveforms
         if obj.waveforms is not None:
             obj.waveforms = obj.waveforms[i:j]
         return obj
 
-    # need to implement __setitem__ to check for values outside t_start-t_stop
+    def __setitem__(self, i, value):
+        if not hasattr(value, "units"):
+            value = pq.Quantity(value, units=self.units)
+            # or should we be strict: raise ValueError("Setting a value requires a quantity")?
+        # check for values outside t_start, t_stop
+        _check_time_in_range(value, self.t_start, self.t_stop)
+        super(SpikeTrain, self).__setitem__(i, value)
+
+    def __setslice__(self, i, j, value):
+        if not hasattr(value, "units"):
+            value = pq.Quantity(value, units=self.units)
+        _check_time_in_range(value, self.t_start, self.t_stop)
+        super(SpikeTrain, self).__setslice__(i, j, value)
 
     @property
     def times(self):

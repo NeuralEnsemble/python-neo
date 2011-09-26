@@ -8,6 +8,7 @@ import quantities as pq
 import numpy
 import numpy as np
 from neo.test.tools import assert_arrays_equal
+import sys
 
 class TestFunctions(unittest.TestCase):
 
@@ -124,11 +125,11 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.annotations, st2.annotations)
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(st.t_start, st2.t_start)
+        self.assertEqual(st.t_stop, st2.t_stop)
         
-        # and update the waveforms and times
+        # except we update the waveforms
         assert_arrays_equal(st.waveforms[1:2], st2.waveforms)
-        self.assertEqual(1.0*pq.s, st2.t_start)
-        self.assertEqual(1.0*pq.s, st2.t_stop)
 
     def test_slice_to_end(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
@@ -144,11 +145,12 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.annotations, st2.annotations)
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(st.t_start, st2.t_start)
+        self.assertEqual(st.t_stop, st2.t_stop)
         
-        # and update the waveforms and times
+        # except we update the waveforms
         assert_arrays_equal(st.waveforms[1:], st2.waveforms)
-        self.assertEqual(1.0*pq.s, st2.t_start)
-        self.assertEqual(2.0*pq.s, st2.t_stop)
+        
 
     def test_slice_from_beginning(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
@@ -164,11 +166,11 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.annotations, st2.annotations)
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(st.t_start, st2.t_start)
+        self.assertEqual(st.t_stop, st2.t_stop)
         
-        # and update the waveforms and times
+        # except we update the waveforms
         assert_arrays_equal(st.waveforms[:2], st2.waveforms)
-        self.assertEqual(0.0*pq.s, st2.t_start)
-        self.assertEqual(2.0*pq.s, st2.t_stop)
 
     def test_slice_negative_idxs(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
@@ -184,11 +186,11 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.annotations, st2.annotations)
         self.assertEqual(st.file_origin, st2.file_origin)
         self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(st.t_start, st2.t_start)
+        self.assertEqual(st.t_stop, st2.t_stop)
         
-        # and update the waveforms and times
+        # except we update the waveforms
         assert_arrays_equal(st.waveforms[:-1], st2.waveforms)
-        self.assertEqual(0.0*pq.s, st2.t_start)
-        self.assertEqual(2.0*pq.s, st2.t_stop)
     
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
@@ -309,7 +311,26 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st2[0], 99*pq.s)
         self.assertEqual(data[1], 99*pq.s)
 
+    def test__changing_spiketime_should_check_time_in_range(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        self.assertRaises(ValueError, st.__setitem__, 0, 10.1*pq.ms)
+        self.assertRaises(ValueError, st.__setitem__, 1, 5.0*pq.s)
+        self.assertRaises(ValueError, st.__setitem__, 2, 5.0*pq.s)
+        self.assertRaises(ValueError, st.__setitem__, 0, 0)
 
+    def test__changing_multiple_spiketimes(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        st[:] = [7,8,9] * pq.ms
+        assert_arrays_equal(st, np.array([7,8,9]))
+
+    def test__changing_multiple_spiketimes_should_check_time_in_range(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        if sys.version_info.major == 2:
+            self.assertRaises(ValueError, st.__setslice__, 0, 3, [3,4,11] * pq.ms)
+            self.assertRaises(ValueError, st.__setslice__, 0, 3, [0,4,5] * pq.ms)
 
 
 if __name__ == "__main__":
