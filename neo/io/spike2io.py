@@ -324,7 +324,7 @@ class Spike2IO(BaseIO):
                 ea._data_description = { 'shape' : totalitems}
                 return ea
             elif channelHeader.kind in [6 ,7]:
-                sptr = SpikeTrain([ ]*pq.s)
+                sptr = SpikeTrain([ ]*pq.s, t_stop=1e99)  # correct value for t_stop to be put in later
                 sptr.annotate(channel_index = channel_num)
                 sptr._data_description = {  'shape' : totalitems }
                 return sptr
@@ -344,7 +344,7 @@ class Spike2IO(BaseIO):
                 if blockHeader.succ_block > 0 :
                     fid.seek(blockHeader.succ_block)
             
-            ## Step 3 convert in neo standart class : eventarrays or spiketrains
+            ## Step 3 convert in neo standard class : eventarrays or spiketrains
             alltimes = alltrigs['tick'].astype('f')*header.us_per_time * header.dtime_base*pq.s
             
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
@@ -391,9 +391,14 @@ class Spike2IO(BaseIO):
                     except:
                         unit = pq.Quantity(1, '')
                 
+                if len(alltimes) > 0:
+                    t_stop = alltimes.max() # can get better value from associated AnalogSignal(s) ?
+                else:
+                    t_stop = 0.0
                 sptr = SpikeTrain(alltimes,
                                             waveforms = waveforms*unit,
                                             sampling_rate = (1./sample_interval)*pq.Hz,
+                                            t_stop = t_stop
                                             )
                 sptr.annotate(channel_index = channel_num)
                 

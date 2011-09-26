@@ -79,11 +79,11 @@ class BasePyNNIO(BaseIO):
         spiketrain = None
         if lazy:
             if channel_index in data[:, 1]:
-                spiketrain = SpikeTrain([], units=pq.ms)
+                spiketrain = SpikeTrain([], units=pq.ms, t_stop=0.0)
         else:
             spike_times = self._extract_array(data, channel_index)
             if len(spike_times) > 0:
-                spiketrain = SpikeTrain(spike_times, units=pq.ms)
+                spiketrain = SpikeTrain(spike_times, units=pq.ms, t_stop=spike_times.max())
         if spiketrain is not None:
             spiketrain.annotate(label=metadata["label"],
                                 channel_index=channel_index,

@@ -114,6 +114,7 @@ classes_necessary_attributes = {
     'Unit': [ ],
     
     'SpikeTrain': [('', pq.Quantity, 1 ),
+                   ('t_stop', pq.Quantity, 0)
                             ],
     'Spike': [('time', pq.Quantity, 0),
                     ],
@@ -153,8 +154,7 @@ classes_recommended_attributes= {
     'SpikeTrain': [('waveforms', pq.Quantity, 3),
                             ('left_sweep', pq.Quantity, 0 ),
                             ('sampling_rate', pq.Quantity, 0 ),
-                            ('t_start', pq.Quantity, 0 ),
-                            ('t_stop', pq.Quantity, 0 ),                            
+                            ('t_start', pq.Quantity, 0 ),                    
                             ],
     'Spike': [('waveform', pq.Quantity, 2),
                     ('left_sweep', pq.Quantity, 0 ),

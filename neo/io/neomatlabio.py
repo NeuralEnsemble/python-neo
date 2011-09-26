@@ -266,9 +266,9 @@ class NeoMatlabIO(BaseIO):
         
         if is_quantity:
             if lazy:
-                ob = cl([ ], units = str(struct.units) )
+                ob = cl([ ], units = str(struct.units), t_stop=0.0)
             else:
-                ob = cl(struct.array, units = str(struct.units) )
+                ob = cl(struct.array, units = str(struct.units), t_stop=struct.array.max())
         else:
             ob = cl()
         for attrname in struct._fieldnames:

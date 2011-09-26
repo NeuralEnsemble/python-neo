@@ -37,17 +37,16 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     *Required arguments*:
         :times: a list, 1d numpy array, or quantity array. 
-        
+        :t_stop: time at which SpikeTrain ends. This will be converted to the
+            same units as the data.
+            
         The Quantity array is constructed with the data in :attr:`times`, as
         well as the construction arguments :attr:`units`, :attr:`dtype`, and 
         :attr:`copy`. 
     
     *Recommended arguments*:
         :t_start: time at which SpikeTrain began. This will be converted
-            to the same units as the data.
-        :t_stop: time at which SpikeTrain ends. If not provided, the
-            maximum of the data is chosen. This will be converted to the
-            same units as the data.
+            to the same units as the data. Default is zero.
         :waveforms: the waveforms of each spike
         :sampling_rate: the sampling rate of the waveforms
         :left_sweep: Quantity, in units of time. Time from the beginning
@@ -102,16 +101,15 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             except AttributeError:
                 raise ValueError('you must specify units')
         
+        # Check that t_stop was provided
+        if t_stop is None:
+            raise ValueError("Argument t_stop must be provided.")
+        
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype, 
-            copy=copy)
-
-        # Default value of t_stop
-        if t_stop is None:
-            try: t_stop = obj.max()
-            except ValueError: t_stop = 0.0 * pq.s
-
-        # Store recommended attributes
+                                  copy=copy)
+        
+        # Store attributes
         obj.t_start = pq.Quantity(t_start, units=units)
         obj.t_stop = pq.Quantity(t_stop, units=units)        
         obj.waveforms = waveforms
@@ -120,6 +118,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
         # Error checking (do earlier?)
         check_has_dimensions_time(obj, obj.t_start, obj.t_stop)
+        if obj.size > 0:
+            if obj.min() < t_start:
+                raise ValueError("The first spike (%g) is before t_start (%g)" % (obj.min(), obj.t_start))
+            if obj.max() > t_stop:
+                raise ValueError("The last spike (%g) is after t_stop (%g)" % (obj.max(), obj.t_stop))
 
         return obj
 
@@ -210,6 +213,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if obj.waveforms is not None:
             obj.waveforms = obj.waveforms[i:j]
         return obj
+
+    # need to implement __setitem__ to check for values outside t_start-t_stop
 
     @property
     def times(self):

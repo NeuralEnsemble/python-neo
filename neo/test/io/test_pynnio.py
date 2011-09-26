@@ -147,12 +147,14 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         assert_arrays_equal(st0,
                             SpikeTrain(numpy.arange(0, 101, dtype=float),
                                        t_start=0*pq.s,
+                                       t_stop=101*pq.ms,
                                        units=pq.ms))
         st4 = segment.spiketrains[4]
         self.assertIsInstance(st4, SpikeTrain)
         assert_arrays_equal(st4,
                             SpikeTrain(numpy.arange(4, 105, dtype=float),
                                        t_start=0*pq.s,
+                                       t_stop=105*pq.ms,
                                        units=pq.ms))
         # test annotations (stuff from file metadata)
 
@@ -163,6 +165,7 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         assert_arrays_equal(st3,
                             SpikeTrain(numpy.arange(3, 104, dtype=float),
                                        t_start=0*pq.s,
+                                       t_stop=104*pq.s,
                                        units=pq.ms))
         # should test annotations: 'channel_index', etc.
 

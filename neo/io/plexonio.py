@@ -168,7 +168,7 @@ class PlexonIO(BaseIO):
             if dataBlockHeader['Type'] == 1:
                 #spike
                 if unit not in spiketrains[chan]:
-                    sptr = SpikeTrain([ ], units = 's')
+                    sptr = SpikeTrain([ ], units='s', t_stop=0.0)
                     sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
                     sptr.annotate(channel_index = i)
                     spiketrains[chan][unit] = sptr
@@ -212,7 +212,7 @@ class PlexonIO(BaseIO):
             # allocating mem for SpikeTrain
             for chan, sptrs in spiketrains.iteritems():
                 for unit, sptr in sptrs.iteritems():
-                        new = SpikeTrain( np.zeros( (nspikecounts[chan][unit]) , dtype = 'f' )*pq.s )
+                        new = SpikeTrain(np.zeros((nspikecounts[chan][unit]), dtype='f')*pq.s, t_stop=1e99) # use an enormous value for t_stop for now, put in correct value later
                         new.annotations.update(sptr.annotations)
                         if load_spike_waveform:
                             n1, n2 = spiketrains[chan][unit].sizeOfWaveform
@@ -301,7 +301,9 @@ class PlexonIO(BaseIO):
         # add SpikeTrain to sgement
         for chan, sptrs in spiketrains.iteritems():
             for unit, sptr in sptrs.iteritems():
-                    seg.spiketrains.append(sptr)
+                if len(sptr) > 0:
+                    sptr.t_stop = sptr.max() # can probably get a better value for this, from the associated AnalogSignal
+                seg.spiketrains.append(sptr)
         
         # add eventarray to segment
         for chan,ea in  eventarrays.iteritems():

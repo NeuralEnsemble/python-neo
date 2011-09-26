@@ -21,13 +21,13 @@ class TestFunctions(unittest.TestCase):
         self.assertRaises(ValueError, check_has_dimensions_time, c)
         check_has_dimensions_time(d)
         self.assertRaises(ValueError, check_has_dimensions_time, a, b, c, d)
-        
+
 
 class TestConstructor(unittest.TestCase):
     def test__create_empty(self):
         t_start = 0.0
         t_stop = 10.0
-        st = SpikeTrain([ ], t_start=t_start, t_stop=t_stop, units = 's')
+        st = SpikeTrain([ ], t_start=t_start, t_stop=t_stop, units='s')
     
     def test__create_from_list(self):
         times = range(10)
@@ -59,9 +59,16 @@ class TestConstructor(unittest.TestCase):
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
         assert_arrays_equal(st, times)
     
+    def test__create_with_times_outside_tstart_tstop_should_raise_Exception(self):
+        t_start = 23
+        t_stop = 77
+        ok = SpikeTrain(numpy.arange(t_start, t_stop), units='ms', t_start=t_start, t_stop=t_stop)
+        self.assertRaises(ValueError, SpikeTrain, numpy.arange(t_start-5, t_stop), units='ms', t_start=t_start, t_stop=t_stop)
+        self.assertRaises(ValueError, SpikeTrain, numpy.arange(t_start, t_stop+5), units='ms', t_start=t_start, t_stop=t_stop)
+    
     def test_defaults(self):
         # default recommended attributes
-        st = SpikeTrain([3,4,5], units='sec')
+        st = SpikeTrain([3,4,5], units='sec', t_stop=10.0)
         self.assertEqual(st.dtype, numpy.float)
         self.assertEqual(st.sampling_rate, 1.0 * pq.Hz)
         self.assertEqual(st.waveforms, None)
@@ -69,20 +76,14 @@ class TestConstructor(unittest.TestCase):
     
     def test_default_tstart(self):
         # t start defaults to zero
-        st = SpikeTrain([3,4,5]*pq.s)
+        st = SpikeTrain([3,4,5]*pq.s, t_stop=8000*pq.ms)
         self.assertEqual(st.t_start, 0.*pq.s)
         
         # unless otherwise specified
-        st = SpikeTrain([3,4,5]*pq.s, t_start=2.)
+        st = SpikeTrain([3,4,5]*pq.s, t_start=2.0, t_stop=8)
         self.assertEqual(st.t_start, 2.*pq.s)
     
-    def test_default_tstop(self):
-        st = SpikeTrain([3,4,5]*pq.s)
-        self.assertEqual(st.t_stop, 5.*pq.s)
-        
-        st = SpikeTrain([3,5,4]*pq.s)
-        self.assertEqual(st.t_stop, 5.*pq.s)
-        
+    def test_tstop_units_conversion(self):
         st = SpikeTrain([3,5,4]*pq.s, t_stop=10)
         self.assertEqual(st.t_stop, 10.*pq.s)
         
@@ -94,24 +95,24 @@ class TestConstructor(unittest.TestCase):
     
     def test_sort(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n')
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', t_stop=10.0)
         st.sort()
         assert_arrays_equal(st, [3,4,5]*pq.s)
         assert_arrays_equal(st.waveforms, wf)
         self.assertEqual(st.name, 'n')
-        self.assertEqual(st.t_stop, 5.0 * pq.s)
+        self.assertEqual(st.t_stop, 10.0 * pq.s)
         
-        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf, name='n')
+        st = SpikeTrain([3,5,4]*pq.s, waveforms=wf, name='n', t_stop=10.0)
         st.sort()
         assert_arrays_equal(st, [3,4,5]*pq.s)
         assert_arrays_equal(st.waveforms, wf[[0,2,1]])
         self.assertEqual(st.name, 'n')
         self.assertEqual(st.t_start, 0.0 * pq.s)
-        self.assertEqual(st.t_stop, 5.0 * pq.s)
+        self.assertEqual(st.t_stop, 10.0 * pq.s)
     
     def test_slice(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=10.0)
         
         # slice spike train, keep sliced spike times
         st2 = st[1:2]        
@@ -131,7 +132,7 @@ class TestConstructor(unittest.TestCase):
 
     def test_slice_to_end(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=12.3)
         
         # slice spike train, keep sliced spike times
         st2 = st[1:]        
@@ -151,7 +152,7 @@ class TestConstructor(unittest.TestCase):
 
     def test_slice_from_beginning(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=23.4*pq.s)
         
         # slice spike train, keep sliced spike times
         st2 = st[:2]        
@@ -171,7 +172,7 @@ class TestConstructor(unittest.TestCase):
 
     def test_slice_negative_idxs(self):
         wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
-        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb')
+        st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=10.0)
         
         # slice spike train, keep sliced spike times
         st2 = st[:-1]        
@@ -191,22 +192,22 @@ class TestConstructor(unittest.TestCase):
     
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
-            file_origin='crack.txt')
+            file_origin='crack.txt', t_stop=99.9)
         self.assertEqual(st.name, 'Name')
         self.assertEqual(st.description, 'Desc')
         self.assertEqual(st.file_origin, 'crack.txt')
 
     def test_autoset_universally_recommended_attributes(self):
-        st = SpikeTrain([3,4,5]*pq.s)
+        st = SpikeTrain([3,4,5]*pq.s, t_stop=10.0)
         self.assertEqual(st.name, None)
         self.assertEqual(st.description, None)
         self.assertEqual(st.file_origin, None)
     
     def testannotations(self):
-        st = SpikeTrain([3,4,5]*pq.s)
+        st = SpikeTrain([3,4,5]*pq.s, t_stop=11.1)
         self.assertEqual(st.annotations, {})
         
-        st = SpikeTrain([3,4,5]*pq.s, ratname='Phillippe')
+        st = SpikeTrain([3,4,5]*pq.s, t_stop=11.1, ratname='Phillippe')
         self.assertEqual(st.annotations, {'ratname': 'Phillippe'})
     
     def test_change_with_copy_default(self):
@@ -214,7 +215,7 @@ class TestConstructor(unittest.TestCase):
         # Changing spike train does not change data
         # Data source is quantity
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data)
+        st = SpikeTrain(data, t_stop=100.0)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 3*pq.s)
@@ -223,7 +224,7 @@ class TestConstructor(unittest.TestCase):
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data, copy=False)
+        st = SpikeTrain(data, copy=False, t_stop=100.0)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 99*pq.s)
@@ -232,7 +233,7 @@ class TestConstructor(unittest.TestCase):
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data, units='ms', copy=False)
+        st = SpikeTrain(data, units='ms', copy=False, t_stop=100000)
         st[0] = 99000 * pq.ms
         self.assertEqual(st[0], 99000*pq.ms)
         self.assertEqual(data[0], 99000*pq.ms)
@@ -241,7 +242,7 @@ class TestConstructor(unittest.TestCase):
         # Changing spike train does not change data
         # Data source is quantity
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data, copy=True)
+        st = SpikeTrain(data, copy=True, t_stop=100)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 3*pq.s)
@@ -253,7 +254,7 @@ class TestConstructor(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = [3,4,5]
-        st = SpikeTrain(data, units='sec')
+        st = SpikeTrain(data, units='sec', t_stop=100)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 3*pq.s)
@@ -264,7 +265,7 @@ class TestConstructor(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = numpy.array([3.0, 4.0, 5.0]) # must be float, otherwise will get copy, not view
-        st = SpikeTrain(data, units='sec', copy=False)
+        st = SpikeTrain(data, units='sec', copy=False, t_stop=101.0)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 99)
@@ -275,7 +276,7 @@ class TestConstructor(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = [3,4,5]
-        st = SpikeTrain(data, units='sec', copy=True)
+        st = SpikeTrain(data, units='sec', copy=True, t_stop=123.4)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 3)
@@ -287,7 +288,7 @@ class TestConstructor(unittest.TestCase):
         # copy parameter.
         # This is compatible with both numpy and quantity default behavior.
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data, copy=True)
+        st = SpikeTrain(data, copy=True, t_stop=99.9)
         st2 = st[1:3]
         st2[0] = 99 * pq.s
         self.assertEqual(st[1], 99*pq.s)
@@ -301,7 +302,7 @@ class TestConstructor(unittest.TestCase):
         # copy parameter.
         # This is compatible with both numpy and quantity default behavior.
         data = [3,4,5] * pq.s
-        st = SpikeTrain(data, copy=False)
+        st = SpikeTrain(data, copy=False, t_stop=100.0)
         st2 = st[1:3]
         st2[0] = 99 * pq.s
         self.assertEqual(st[1], 99*pq.s)

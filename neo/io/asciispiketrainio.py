@@ -107,13 +107,15 @@ class AsciiSpikeTrainIO(BaseIO):
         for i,line in enumerate(f) :
             if lazy:
                 spike_times = [ ]
+                t_stop = t_start
             else:
                 all = line[:-1].split(delimiter)
                 if all[-1] == '': all = all[:-1]
                 if all[0] == '': all = all[1:]
                 spike_times = np.array(all).astype('f')
+                t_stop = spike_times.max()*unit
             
-            sptr = SpikeTrain(spike_times*unit, t_start = t_start)
+            sptr = SpikeTrain(spike_times*unit, t_start=t_start, t_stop=t_stop)
             sptr.annotate(channel_index = i)
             seg.spiketrains.append(sptr)
         f.close()
