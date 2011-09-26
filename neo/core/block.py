@@ -27,7 +27,7 @@ class Block(BaseNeo):
         :py:class:`RecordingChannelGroup`
     
     """
-    def __init__(self, name='', file_origin='', description='',
+    def __init__(self, name=None, file_origin=None, description=None,
                  file_datetime=None, rec_datetime=None, index=None, **kargs):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **kargs)
