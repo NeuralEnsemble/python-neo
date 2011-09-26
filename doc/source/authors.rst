@@ -18,7 +18,7 @@ and may not be the current affiliation of a contributor.
 * Philipp Rautenberg [5]
 * Thomas Wachtler [5]
 
-1. Laboratoire Neurosciences Sensorielles, Comportement, et Cognition, CNRS UMR 5020 - Université Claude Bernard, Lyon, France 
+1. Centre de Recherche enNeuroscience de Lyon, CNRS UMR5292 -  INSERM U1028 -  Universite Claude Bernard LYON 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France 
 3. University of California, Berkeley
 4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France 
