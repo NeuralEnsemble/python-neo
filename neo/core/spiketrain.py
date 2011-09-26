@@ -49,17 +49,23 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     in a period of time.
 
     *Required arguments*:
-        :times: a list, 1d numpy array, or quantity array. 
+        :times: a list, 1d numpy array, or quantity array, containing the
+            times of each spike.
         :t_stop: time at which SpikeTrain ends. This will be converted to the
-            same units as the data.
-            
-        The Quantity array is constructed with the data in :attr:`times`, as
-        well as the construction arguments :attr:`units`, :attr:`dtype`, and 
-        :attr:`copy`. 
+            same units as the data. This argument is required because it
+            specifies the period of time over which spikes could have occurred.
+            Note that `t_start` is highly recommended for the same reason.
+        
+        Your spike times must have units. Preferably, `times` is a Quantity
+        array with units of time. Otherwise, you must specify the keyword 
+        argument `units`.
+        
+        If `times` contains values outside of the range [t_start, t_stop],
+        an Exception is raised.
     
     *Recommended arguments*:
         :t_start: time at which SpikeTrain began. This will be converted
-            to the same units as the data. Default is zero.
+            to the same units as the data. Default is zero seconds.
         :waveforms: the waveforms of each spike
         :sampling_rate: the sampling rate of the waveforms
         :left_sweep: Quantity, in units of time. Time from the beginning
@@ -70,19 +76,22 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :file_origin: string
         
     Any other keyword arguments are stored in the :attr:`self.annotations` dict.
+
+    *Other arguments relating to implementation*
+        :attr:`dtype` : data type (float32, float64, etc)
+        :attr:`copy` : boolean, whether to copy the data or use a view.
+        
+        These arguments, as well as `units`, are simply passed to the 
+        Quantity constructor.
     
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
         :class:`SpikeTrain` (actually a view) is returned, with the same 
-        metadata, except for the following updates:
+        metadata, except that :attr:`waveforms` is also sliced in the same way.        
+        Note that t_start and t_stop are not changed automatically, though
+        you can still manually change them.
 
-            :attr:`waveforms` is also sliced accordingly.
-            :attr:`t_start` is the time of the starting index
-            :attr:`t_stop` is the time of the starting index, plus the length
-            of the new signal times the sampling period.
-
-    *Example*::
-    
+    *Example*::    
         >>> st = SpikeTrain([3,4,5] * pq.s)
         >>> st2 = st[1:2]
         >>> st.t_start
@@ -91,8 +100,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         [4, 5] s
     """
     
-    def __new__(cls, times, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,
+    def __new__(cls, times, t_stop, units=None,  dtype=numpy.float, copy=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s,
         waveforms=None, left_sweep=None, **kwargs):
         """Constructs new SpikeTrain from data.
         
@@ -114,10 +123,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             except AttributeError:
                 raise ValueError('you must specify units')
         
-        # Check that t_stop was provided
-        if t_stop is None:
-            raise ValueError("Argument t_stop must be provided.")
-        
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype, 
                                   copy=copy)
@@ -137,8 +142,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         return obj
 
     
-    def __init__(self, times, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, t_stop=None,
+    def __init__(self, times, t_stop, units=None,  dtype=numpy.float, copy=True,
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s,
         waveforms=None, left_sweep=None, **kwargs):
         """Initializes newly constructed SpikeTrain."""
         # This method is only called when constructing a new SpikeTrain,
