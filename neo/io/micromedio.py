@@ -116,8 +116,8 @@ class MicromedIO(BaseIO):
         seg = Segment(  name = name,
                                     file_origin = os.path.basename(self.filename),
                                     )
-        seg.annotations['surname'] = surname
-        seg.annotations['rec_date'] = rec_date
+        seg.annotate(surname = surname)
+        seg.annotate(rec_date = rec_date)
         
         if not cascade:
             return seg
@@ -158,8 +158,8 @@ class MicromedIO(BaseIO):
                 signal = ( rawdata[:,c].astype('f') - logical_ground )* factor*unit
 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,name = label)
-            anaSig.annotations['channel_index'] = c
-            anaSig.annotations['ground'] = ground
+            anaSig.annotate(channel_index = c)
+            anaSig.annotate(ground = ground)
             
             seg.analogsignals.append( anaSig )
         

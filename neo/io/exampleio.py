@@ -239,8 +239,9 @@ class ExampleIO(BaseIO):
             sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
             anasig = AnalogSignal(sig, units= 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
         
-        anasig.annotations['channel_index'] = channel_index
-        anasig.annotations['info'] = 'it is a sinus of %f Hz' %sinus_freq
+        # for attributes out of neo you can annotate
+        anasig.annotate(channel_index = channel_index)
+        anasig.annotate(info = 'it is a sinus of %f Hz' %sinus_freq )
         
         return anasig
         
@@ -299,7 +300,8 @@ class ExampleIO(BaseIO):
         spiketr.sampling_rate = sr * pq.Hz
         spiketr.left_sweep = 1.5* pq.s
         
-        spiketr.annotations['channel_index'] = channel_index
+        # for attributes out of neo you can annotate
+        spiketr.annotate(channel_index = channel_index)
         
         return spiketr
 

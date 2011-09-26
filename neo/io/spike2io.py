@@ -100,9 +100,9 @@ class Spike2IO(BaseIO):
             return seg
         
         def addannotations(ob, channelHeader):
-            ob.annotations['title'] = channelHeader.title
-            ob.annotations['physical_channel_index'] = channelHeader.phy_chan
-            ob.annotations['comment'] = channelHeader.comment
+            ob.annotate(title = channelHeader.title)
+            ob.annotate(physical_channel_index = channelHeader.phy_chan)
+            ob.annotate(comment = channelHeader.comment)
         
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
@@ -248,7 +248,7 @@ class Spike2IO(BaseIO):
                                                             sampling_rate = sampling_rate,
                                                             t_start = starttimes[b]*header.us_per_time * header.dtime_base * pq.s,
                                                             )
-            anaSig.annotations['channel_index'] = channel_num
+            anaSig.annotate(channel_index = channel_num)
             anaSigs.append( anaSig )
         
         if  lazy:
@@ -320,12 +320,12 @@ class Spike2IO(BaseIO):
         if lazy :
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )
-                ea.annotations['channel_index'] = channel_num
+                ea.annotate(channel_index = channel_num)
                 ea._data_description = { 'shape' : totalitems}
                 return ea
             elif channelHeader.kind in [6 ,7]:
                 sptr = SpikeTrain([ ]*pq.s)
-                sptr.annotations['channel_index'] = channel_num
+                sptr.annotate(channel_index = channel_num)
                 sptr._data_description = {  'shape' : totalitems }
                 return sptr
         
@@ -350,13 +350,13 @@ class Spike2IO(BaseIO):
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 #events
                 ea = EventArray(  )
-                ea.annotations['channel_index'] = channel_num
+                ea.annotate(channel_index = channel_num)
                 ea.times = alltimes
                 if channelHeader.kind >= 5:
                     # Spike2 marker is closer to label sens of neo
                     ea.labels = alltrigs['marker'].astype('S')
                 if channelHeader.kind == 8:
-                    ea.annotations['extra_labels'] = alltrigs['label']
+                    ea.annotate(extra_labels = alltrigs['label'])
                 return ea
                 
             elif channelHeader.kind in [6 ,7]:
@@ -395,7 +395,7 @@ class Spike2IO(BaseIO):
                                             waveforms = waveforms*unit,
                                             sampling_rate = (1./sample_interval)*pq.Hz,
                                             )
-                sptr.annotations['channel_index'] = channel_num
+                sptr.annotate(channel_index = channel_num)
                 
                 return sptr
             

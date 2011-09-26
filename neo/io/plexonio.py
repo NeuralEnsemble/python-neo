@@ -98,7 +98,7 @@ class PlexonIO(BaseIO):
         seg.rec_datetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
         seg.file_origin = os.path.basename(self.filename)
-        seg.annotations['plexon_version'] = globalHeader['Version']
+        seg.annotate(plexon_version = globalHeader['Version'])
         
         if not cascade:
             return seg
@@ -169,8 +169,8 @@ class PlexonIO(BaseIO):
                 #spike
                 if unit not in spiketrains[chan]:
                     sptr = SpikeTrain([ ], units = 's')
-                    sptr.annotations['unit_name'] = dspChannelHeaders[chan]['Name']
-                    sptr.annotations['channel_index'] = i
+                    sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
+                    sptr.annotate(channel_index = i)
                     spiketrains[chan][unit] = sptr
                     
                     spiketrains[chan][unit].sizeOfWaveform = n1,n2
@@ -183,8 +183,8 @@ class PlexonIO(BaseIO):
                 neventsperchannel[chan] += 1
                 if chan not in eventarrays:
                     ea = EventArray()
-                    ea.annotations['channel_name'] = eventHeaders[chan]['Name']
-                    ea.annotations['channel_index'] = chan
+                    ea.annotate(channel_name= eventHeaders[chan]['Name'])
+                    ea.annotate(channel_index = chan)
                     eventarrays[chan] = ea
                 
             elif dataBlockHeader['Type'] == 5:
@@ -199,8 +199,8 @@ class PlexonIO(BaseIO):
                                                                         sampling_rate = float(slowChannelHeaders[chan]['ADFreq'])*pq.Hz,
                                                                         t_start = 0.*pq.s,
                                                                         )
-                    anasig.annotations['channel_index'] = slowChannelHeaders[chan]['Channel']
-                    anasig.annotations['channel_name'] = slowChannelHeaders[chan]['Name']
+                    anasig.annotate(channel_index = slowChannelHeaders[chan]['Channel'])
+                    anasig.annotate(channel_name = slowChannelHeaders[chan]['Name'])
                     anaSigs[chan] =  anasig
 
         if not lazy:    

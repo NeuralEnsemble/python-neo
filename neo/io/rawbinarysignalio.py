@@ -151,7 +151,7 @@ class RawBinarySignalIO(BaseIO):
                 signal = sig[:,i]*unit
                 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start,)
-            anaSig.annotations['channel_index'] = i
+            anaSig.annotate(channel_index = i)
             seg.analogsignals.append( anaSig )
         
         create_many_to_one_relationship(seg)

@@ -180,9 +180,10 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
                   'Attribute %s of %s are not the same: %s != %s' % \
                   (attrname, classname, dimstr1, dimstr2)
         elif attrtype == np.ndarray:
-            assert_eg(ob1.__getattr__(attrname), ob2.__getattr__(attrname))
+            assert_eg(getattr(ob1, attrname), getattr(ob2, attrname))
         else:
-            assert ob1.__getattr__(attrname) == ob2.__getattr__(attrname), 'Attribute %s.%s are not the same %s %s' % (classname,attrname, type(ob1.__getattr__(attrname)),  type(ob2.__getattr__(attrname)))
+            print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
+            assert getattr(ob1, attrname)== getattr(ob2, attrname), 'Attribute %s.%s are not the same %s %s' % (classname,attrname, type(getattr(ob1, attrname)),  type(getattr(ob2, attrname)))
 
 
 

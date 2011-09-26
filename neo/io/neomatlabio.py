@@ -244,7 +244,6 @@ class NeoMatlabIO(BaseIO):
             if not(attrname in ob.annotations or hasattr(ob, attrname)): continue
             if getattr(ob, attrname) is None : continue
             
-            
             if attrtype == pq.Quantity:
                 #ndim = attr[2]
                 struct[attrname] = getattr(ob,attrname).magnitude
@@ -287,6 +286,7 @@ class NeoMatlabIO(BaseIO):
             if attrname.endswith('_units')  or attrname =='units' or attrname == 'array':
                 # linked with another field
                 continue
+            
             
             item = getattr(struct, attrname)
             if attrname+'_units' in struct._fieldnames:

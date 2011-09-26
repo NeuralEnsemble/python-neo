@@ -215,8 +215,8 @@ class ElanIO(BaseIO):
                                                     t_start=0.*pq.s,
                                                     name = labels[c],
                                                     )
-            anaSig.annotations['channel_index'] = c
-            anaSig.annotations['channel_name'] = labels[c]
+            anaSig.annotate(channel_index = c)
+            anaSig.annotate(channel_name= labels[c])
             seg.analogsignals.append( anaSig )
         
         # triggers

@@ -169,7 +169,8 @@ class TdtIO(BaseIO):
                                                         
                                                         )
                         #~ sptr.channel = channel
-                        sptr.annotations['channel_index'] = channel
+                        #sptr.annotations['channel_index'] = channel
+                        sptr.annotate(channel_index = channel)
 
                         # for counting:
                         sptr.nbspike = 0
@@ -202,7 +203,8 @@ class TdtIO(BaseIO):
                         anaSig._data_description = {
                                                                     'dtype' : dtype(DataFormats[h['dataformat']]),
                                                                     }
-                        anaSig.annotations['channel_index'] = channel
+                        #anaSig.annotations['channel_index'] = channel
+                        anaSig.annotate(channel_index = channel)
                         anaSig.pos = 0
                         
                         # for counting:
@@ -261,7 +263,7 @@ class TdtIO(BaseIO):
                     for channel, anaSig in v.iteritems():
                         #~ print anaSig.name, anaSig.channel_index
                         #~ print type(anaSig.name), type(anaSig.channel_index)
-                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.channel_index)+'.sev')
+                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
                         else:
