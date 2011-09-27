@@ -1,147 +1,148 @@
-***********
+******
 Neo IO
-***********
+******
 
 .. currentmodule:: neo
 
-Preampbule
-===============
+Preamble
+========
 
 
-The Neo IO module aims to provide an exhaustive way of loading and saving several widely used data formats in electrophysiology.
+The Neo :mod:`io` module aims to provide an exhaustive way of loading and saving several widely used data formats in electrophysiology.
 The more these heterogeneous formats are supported, the easier it will be to manipulate them as Neo objects in a similar way.
 Therefore the IO set of classes propose a simple and flexible IO API that fits many format specifications.
-It is not only file oriented, it can also read/write objects from a database.
+It is not only file-oriented, it can also read/write objects from a database.
 
-neo.io can be seen as a *pure Python coded* and open source Neuroshare replacement.
+:mod:`neo.io` can be seen as a *pure-Python* and open-source Neuroshare replacement.
 
-At the moment, there are 3 families of IOs:
-    1. IO for reading closed manufacturers format (Spike2, Plexon, AlphaOmega, BlackRock, Axon, ...)
-    2. IO for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, PyNN, ...)
-    3. IO for reading/writing neo structure in a neutral format (HDF5, .mat, ...) but with neo structure inside (NeoHDF5, NeoMatlab, ...)
+At the moment, there are 3 families of IO modules:
+    1. for reading closed manufacturers' formats (Spike2, Plexon, AlphaOmega, BlackRock, Axon, ...)
+    2. for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, PyNN, ...)
+    3. for reading/writing Neo structure in neutral formats (HDF5, .mat, ...) but with Neo structure inside (NeoHDF5, NeoMatlab, ...)
 
-Combining **1** for reading and **3** for writing is a good example of use : converting your datasets in a more standard format when you want to share/collaborate.
+Combining **1** for reading and **3** for writing is a good example of use: converting your datasets
+to a more standard format when you want to share/collaborate.
 
 
 Introduction
-===============
+============
 
-
-There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy. See :ref:`core_page`.
+There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy with cross-links. See :doc:`core`.
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
 
 A :class:`Block` is therefore a list of :class:`Segment` objects, that can, in some file formats, be accessed individually.
 Depending on the file format, i.e. if it is streamable or not, the whole :class:`Block` may need to be loaded, but sometimes 
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
-A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`  :class:`AnalogSignal`, :class:`AnaloSignalList`, :class:`EpochArray`, :class:`EventArray` (basically, all the different Neo objects).
+A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
+:class:`AnalogSignal`, :class:`AnaloSignalArray`, :class:`EpochArray`, :class:`EventArray`
+(basically, all the different Neo objects).
 
 Depending on the file format, these objects can sometimes be loaded separately, without the need to load the whole file.
 If possible, a file IO therefore provides distinct methods allowing to load only particular objects that may be present in the file.
-The basic idea of each IO file format is to have as much as possible read/write methods for the encapsulated individual objects, 
-and otherwise, to provide a read/write method that will return the object at the highest level of hierarchy (by default, a :class:`Block` or a :class:`Segment`).
+The basic idea of each IO file format is to have, as much as possible, read/write methods for the individual encapsulated objects, 
+and otherwise to provide a read/write method that will return the object at the highest level of hierarchy
+(by default, a :class:`Block` or a :class:`Segment`).
 
-You have to anderstand that the neo.io API is a balanced between a full flexibility for the user (all read_XXX are enable) and a simple, clean and easy code (few read_XXX are enable).
-So not all IOs offer the full flexibility for reading partilly data file.
+The :mod:`neo.io` API is a balance between full flexibility for the user (all :meth:`read_XXX` methods are enabled)
+and simple, clean and understandable code for the developer (few :meth:`read_XXX` methods are enabled).
+This means that not all IOs offer the full flexibility for partial reading of data files.
 
 One format = one class
-===============================
+======================
 
-The basic syntax is as follows. If you want to load a file format that is implemented in a generic MyFormatIO class::
+The basic syntax is as follows. If you want to load a file format that is implemented in a generic :class:`MyFormatIO` class::
 
     >>> from neo.io import MyFormatIO
     >>> reader = MyFormatIO("myfile.dat")
 
-you can replace MyFormatIO by any implemented class, see :ref:`list_of_io`
+you can replace :class:`MyFormatIO` by any implemented class, see :ref:`list_of_io`
 
-Supported object // readable object
-====================================
+Supported objects/readable objects
+==================================
 
-To know what types of object are supported by this io interface::
+To know what types of object are supported by a given IO interface::
 
     >>> MyFormatIO.supported_objects
-    [Segment , AnalogSignal , SpikeTrain, Event, Spike ]
+    [Segment , AnalogSignal , SpikeTrain, Event, Spike]
 
-Supported objects does not mean objects that you can read directly. For instance, many formats support AnalogSignal
-but you can't access them directly. To access your AnalogSignal, you must read a Segment with the **cascade** set to
-True::
+Supported objects does not mean objects that you can read directly. For instance, many formats support :class:`AnalogSignal`
+but don't allow them to be loaded directly, rather to access the :class:`AnalogSignal` objects, you must read a :class:`Segment`::
 
-    >>> seg = reader.read_segment(cascade=True)
-    >>> print seg.analogsignals
-    >>> print seg.analogsignals[0]
+    >>> seg = reader.read_segment()
+    >>> print(seg.analogsignals)
+    >>> print(seg.analogsignals[0])
 
 To get a list of directly readable objects ::
 
     >>> MyFormatIO.readable_objects
     [Segment]
 
-The first element of the previous list is the highest level for reading the file. This mean that the IO have *read_segment* method::
+The first element of the previous list is the highest level for reading the file. This mean that the IO has a :meth:`read_segment` method::
+
     >>> seg = reader.read_segment()
     >>> type(seg)
     neo.core.Segment
 
 
-All IOs have a read() method that return a block event if Segment is not in **readable_objects** or **supported_objects**::
+All IOs have a read() method that returns a :class:`Block` object::
 
     >>> bl = reader.read()
     >>> print bl.segments[0]
     neo.core.Segment
 
 
-lazy and cascade
-================================
+Lazy and cascade options
+========================
 
-In some case you may not want to load everything in memory because it could be to big.
-You play with:
+In some cases you may not want to load everything in memory because it could be too big.
+For this scenario, two options are available:
 
-  * lazy=True/False. With lazy =True all array will have a size of zero.
-  * cascade=True/False. With cascade=False only one object is readed, *one_to_many* and *many_to_many* relationship are readed.
+  * ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero, but all the metadata will be loaded.
+  * ``cascade=True/False``. With ``cascade=False`` only one object is read (and *one_to_many* and *many_to_many* relationship are read).
 
+By default (if they are not specified), ``lazy=False`` and ``cascade=True``, i.e. all data is loaded.
 
 Example::
 
-    >>> seg = reader.read_segment(lazy = False, cascade=True)
-    >>> print seg.analogsignals[0].shape #
-    >>> seg = reader.read_segment(lazy = True, cascade=True)
-    >>> print seg.analogsignals[0].shape # this is zero, the AnalogSIgnal is empty
-    >>> seg = reader.read_segment(lazy = False, cascade=False)
-    >>> print len(seg.analogsignals) # it is zeros
+    >>> seg = reader.read_segment(lazy=False, cascade=True)
+    >>> print(seg.analogsignals[0].shape)
+    >>> seg = reader.read_segment(lazy=True, cascade=True)
+    >>> print(seg.analogsignals[0].shape) # this is zero, the AnalogSignal is empty
+    >>> seg = reader.read_segment(lazy=False, cascade=False)
+    >>> print(len(seg.analogsignals)) # zero
 
-In the first case segment and subhierachy is read and all analosignal are loaded.
-In second case segment and subhierachy is read but analogsignal are empty (size 0).
-In the third case only AnalogSignal are not readed at all.
-
-This simple mecanism is similar to reading a header (lazy =True, cascade = True) because everything is readed
-execpt what is heavy.
-
+In the first case, the segment and sub-hierachy is read and all analog signals are loaded.
+In second case, the segment and sub-hierachy is read but :attr:`analogsignals` is empty (size 0).
+In the third case the analog signals are not read at all.
 
 .. _neo_io_API:
 
 Details of API
-================
+==============
 
-The neo.io API is designed to be simple and intuitive:
-    - each file format has its IO classes (for example for Spike2 files you have a Spike2IO class)
-    - each class inherits from the BaseIO class
-    - each io class can read or write directly one or several neo objects (for example Segment, Block, ...): **readable_objects** or **writable_objects**
-    - each io class support part of the neo.core hierachy not necessary all part: **supported_objects**
-    - each io class have a read() method that return a Block even if there is only one Segment and one AnalogSignal inside.
-    - each io is able to do a *lazy* load = all attribute are read execpet numpy.array (if lazy=True) _data_description attrbute is added.
-    - each io is able to do a *cascade* load = if True all children object are also loaded
-    - each io render object (and subojects) with all there necessary attributes 
-    - each io can freely had remcommended attributs (and more) in annotations dict of object.
+The :mod:`neo.io` API is designed to be simple and intuitive:
+    - each file format has an IO class (for example for Spike2 files you have a :class:`Spike2IO` class).
+    - each IO class inherits from the :class:`BaseIO` class.
+    - each IO class can read or write directly one or several Neo objects (for example :class:`Segment`, :class:`Block`, ...): see the :attr:`readable_objects` and :attr:`writable_objects` attributes of the IO class.
+    - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
+    - each IO class has a :meth:`read()` method that returns a :class:`Block` even if there is only one :class:`Segment` and one :class:`AnalogSignal` inside.
+    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.
+    - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
+    - each IO is able to save and load all required attributes (metadata) of the objects it supports. 
+    - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 
 
 .. _list_of_io:
 
 List of implemented formats
-=================================
+===========================
 
 .. automodule:: neo.io
 
 
-If you want to developp your own IO
-=====================================
+If you want to develop your own IO
+==================================
 
-See :ref:`io_dev_guide` for implementation of a new IO.
+See :doc:`io_developers_guide` for information on how to implement of a new IO.
 
