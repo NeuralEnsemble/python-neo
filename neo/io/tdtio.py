@@ -33,11 +33,15 @@ class TdtIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.TdtIO( dirname = 'MyTdTTank')
-        >>> bl = r.read_block(lazy = False, cascade = True,)
+        >>> r = io.TdtIO(dirname='aep_05')
+        >>> bl = r.read_block(lazy=False, cascade=True)
         >>> print bl.segments
+        [<neo.core.segment.Segment object at 0x1060a4d10>]
         >>> print bl.segments[0].analogsignals
+        [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,  1.33056641,
+                1.3458252 ,  1.3671875 ], dtype=float32) * pA, [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
         >>> print bl.segments[0].eventarrays
+        []
     """
     
     
@@ -164,6 +168,7 @@ class TdtIO(BaseIO):
                         sptr = SpikeTrain([ ], units = 's',
                                                         name = str(h['sortcode']),
                                                         t_start = global_t_start,
+                                                        t_stop = global_t_start, # temporary
                                                         left_sweep = (h['size']-10.)/2./h['frequency'] * pq.s,
                                                         sampling_rate = h['frequency'] * pq.Hz,
                                                         
@@ -238,6 +243,7 @@ class TdtIO(BaseIO):
                             new = SpikeTrain( np.empty( (sptr.nbspike) , dtype = 'f' )*pq.s ,
                                                             name = sptr.name,
                                                             t_start = sptr.t_start,
+                                                            t_stop = sptr.t_start + sptr.nbspike*pq.s/float(sptr.sampling_rate.rescale(pq.Hz)),
                                                             left_sweep = sptr.left_sweep,
                                                             sampling_rate = sptr.sampling_rate,
                                                             waveforms = np.empty( (sptr.nbspike, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,

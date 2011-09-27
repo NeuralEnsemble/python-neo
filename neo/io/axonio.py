@@ -110,11 +110,15 @@ class AxonIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.AxonIO( filename = 'File_axon_1.abf')
-        >>> bl = r.read_block(lazy = False, cascade = True,)
+        >>> r = io.AxonIO(filename='File_axon_1.abf')
+        >>> bl = r.read_block(lazy=False, cascade=True)
         >>> print bl.segments
+        [<neo.core.segment.Segment object at 0x105516fd0>]
         >>> print bl.segments[0].analogsignals
+        [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,  1.33056641,
+                1.3458252 ,  1.3671875 ], dtype=float32) * pA, [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
         >>> print bl.segments[0].eventarrays
+        []
 
     """
     

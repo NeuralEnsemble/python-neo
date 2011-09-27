@@ -44,23 +44,26 @@ class NeuroshareIO(BaseIO):
     Class for reading file trougth neuroshare API.
     The user need the DLLs in the path of the file format.
     
-    
     Usage:
         >>> from neo import io
-        >>> r = io.NeuroshareIO( filename = 'a_file', , dllname = the_name_of_dll)
-        >>> seg = r.read_segment(lazy = False, cascade = True,import_neuroshare_segment = True)
-        >>> print seg.analogsignals
+        >>> r = io.NeuroshareIO(filename='a_file', dllname=the_name_of_dll)
+        >>> seg = r.read_segment(lazy=False, cascade=True, import_neuroshare_segment=True)
+        >>> print seg.analogsignals        # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ -1.77246094e+02,  -2.24707031e+02,  -2.66015625e+02,
+        ...
         >>> print seg.spiketrains
+        []
         >>> print seg.eventarrays
+        [<EventArray: 1@1.12890625 s, 1@2.02734375 s, 1@3.82421875 s>]
         
     Note:
         neuroshare.ns_ENTITY_EVENT: are converted to neo.EventArray
         neuroshare.ns_ENTITY_ANALOG: are converted to neo.AnalogSignal
         neuroshare.ns_ENTITY_NEURALEVENT: are converted to neo.SpikeTrain
         
-        neuroshare.ns_ENTITY_SEGMENT: is something bewtween serie of smalls AnalogSignal 
+        neuroshare.ns_ENTITY_SEGMENT: is something between serie of small AnalogSignal 
                                         and Spiketrain with associated waveforms.
-                                        It is arbitrary converted as SpikeTrain.
+                                        It is arbitrarily converted as SpikeTrain.
     
 
     """
@@ -78,7 +81,7 @@ class NeuroshareIO(BaseIO):
     read_params        = { Segment : [] }
     write_params       = None
     
-    name               = 'neurohare'
+    name               = 'neuroshare'
     extensions          = [  ]    
     mode = 'file'
     

@@ -38,7 +38,8 @@ class RawBinarySignalIO(BaseIO):
         >>> from neo import io
         >>> r = io.RawBinarySignalIO( filename = 'File_ascii_signal_2.txt')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.analogsignals
+        >>> print seg.analogsignals  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        ...
 
     """
     is_readable        = True

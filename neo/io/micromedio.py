@@ -40,10 +40,11 @@ class MicromedIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.MicromedIO( filename = 'File_micromed_1.TRC')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.analogsignals
-
+        >>> r = io.MicromedIO(filename='File_micromed_1.TRC')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> print seg.analogsignals              # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ -1.77246094e+02,  -2.24707031e+02,  -2.66015625e+02,
+        ...
     """
     is_readable        = True
     is_writable        = False

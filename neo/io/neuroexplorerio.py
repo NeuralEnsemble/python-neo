@@ -35,13 +35,16 @@ class NeuroExplorerIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.NeuroExplorerIO( filename = 'File_neuroexplorer_1.nex ')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.analogsignals
-        >>> print seg.spiketrains
-        >>> print seg.eventarrays
-        >>> print seg.epocharrays
-
+        >>> r = io.NeuroExplorerIO(filename='File_neuroexplorer_1.nex')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> print seg.analogsignals   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875, ...
+        >>> print seg.spiketrains     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<SpikeTrain(array([  2.29499992e-02,   6.79249987e-02,   1.13399997e-01, ...       
+        >>> print seg.eventarrays     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<EventArray: @21.1967754364 s, @21.2993755341 s, @21.350725174 s, @21.5048999786 s, ...
+        >>> print seg.epocharrays     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<neo.core.epocharray.EpochArray object at 0x10561ba90>, <neo.core.epocharray.EpochArray object at 0x10561bad0>]
     
     """
     

@@ -40,9 +40,10 @@ class AsciiSignalIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.AsciiSignalIO( filename = 'File_ascii_signal_2.txt')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
+        >>> r = io.AsciiSignalIO(filename='File_asciisignal_2.txt')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
         >>> print seg.analogsignals
+        [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875 ...
 
     """
     

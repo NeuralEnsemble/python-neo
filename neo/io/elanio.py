@@ -47,11 +47,14 @@ class ElanIO(BaseIO):
         >>> from neo import io
         >>> r = io.ElanIO( filename = 'File_elan_1.eeg')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.analogsignals
-        >>> print seg.spiketrains
-        >>> print seg.eventarrays
+        >>> print seg.analogsignals   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ 89.21203613,  88.83666992,  87.21008301, ...,  64.56298828,
+            67.94128418,  68.44177246], dtype=float32) * pA, [0.0 s, 101.5808 s], sampling rate: 10000.0 Hz)>]
+        >>> print seg.spiketrains     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        []
+        >>> print seg.eventarrays     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        []
         
-        >>>
     
     
     """

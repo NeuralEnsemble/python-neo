@@ -32,9 +32,11 @@ class WinEdrIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.WinEdrIO( filename = 'File_WineEDR_1.EDR')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg._analogsignals
+        >>> r = io.WinEdrIO(filename='File_WinEDR_1.EDR')
+        >>> seg = r.read_segment(lazy=False, cascade=True,)
+        >>> print seg.analogsignals
+        [<AnalogSignal(array([ 89.21203613,  88.83666992,  87.21008301, ...,  64.56298828,
+                67.94128418,  68.44177246], dtype=float32) * pA, [0.0 s, 101.5808 s], sampling rate: 10000.0 Hz)>]
     
     """
     

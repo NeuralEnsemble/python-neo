@@ -1,8 +1,6 @@
-.. _core_page:
-
-***********
+********
 Neo core
-***********
+********
 
 .. currentmodule:: neo
 
@@ -184,7 +182,7 @@ Recommended attributes must be specified as keyword arguments, not positional ar
 .. note:: Note for developers: A glance at the underlying code reveals the implementation distinction between required and recommended attributes. Required attributes are set in :py:meth:`object.__new__`, while recommended attributes are set in :py:meth:`object.__init__`
 
 
-Finally, let's consider "additional arguments". These are the ones you define for your experiment. ::
+Finally, let's consider "additional arguments". These are the ones you define for your experiment::
 
     >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_stop=10.0, rat_name='Fred')
     >>> print(st.annotations)

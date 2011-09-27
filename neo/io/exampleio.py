@@ -42,6 +42,7 @@ try:
 except ImportError:
     have_scipy = False
 
+np.random.seed(1234)
 
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
@@ -63,11 +64,18 @@ class ExampleIO(BaseIO):
         >>> from neo import io
         >>> r = io.ExampleIO(filename='itisafake.nof')
         >>> seg = r.read_segment(lazy=False, cascade=True)
-        >>> print(seg.analogsignals)
-        >>> print(seg.spiketrains)
-        >>> print(seg.eventarrays)
+        >>> print(seg.analogsignals)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ 0.19151945,  0.62399373,  0.44149764, ...,  0.96678374,
+        ...
+        >>> print(seg.spiketrains)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+         [<SpikeTrain(array([ -0.83799524,   6.24017951,   7.76366686,   4.45573701,
+            12.60644415,  10.68328994,   8.07765735,   4.89967804,
+        ...
+        >>> print(seg.eventarrays)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<EventArray: TriggerB@9.6976 s, TriggerA@10.2612 s, TriggerB@2.2777 s, TriggerA@6.8607 s, ...
         >>> anasig = r.read_analogsignal(lazy=True, cascade=False)
         >>> print(anasig._data_description)
+        {'shape': (150000,)}
         >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
         
     """

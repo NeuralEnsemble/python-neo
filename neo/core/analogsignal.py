@@ -92,7 +92,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         self.description = getattr(obj, 'description', None)
     
     def __repr__(self):
-        return '<BaseAnalogSignal(%s, [%s, %s], sampling rate: %s)>' % (
+        return '<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
              super(BaseAnalogSignal, self).__repr__(), self.t_start, self.t_stop, self.sampling_rate)
 
     def __getslice__(self, i, j):

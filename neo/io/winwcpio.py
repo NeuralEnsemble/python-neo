@@ -32,8 +32,12 @@ class WinWcpIO(BaseIO):
         >>> from neo import io
         >>> r = io.WinWcpIO( filename = 'File_winwcp_1.wcp')
         >>> bl = r.read_block(lazy = False, cascade = True,)
-        >>> print bl.segments
+        >>> print bl.segments   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<neo.core.segment.Segment object at 0x1057bd350>, <neo.core.segment.Segment object at 0x1057bd2d0>,
+        ...
         >>> print bl.segments[0].analogsignals
+        [<AnalogSignal(array([-2438.73388672, -2428.96801758, -2425.61083984, ..., -2695.39453125,
+        ...
 
     """
     

@@ -36,12 +36,15 @@ class PlexonIO(BaseIO):
     
     Usage:
         >>> from neo import io
-        >>> r = io.PlexonIO( filename = 'File_plexon_1.plx ')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
+        >>> r = io.PlexonIO(filename='File_plexon_1.plx')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
         >>> print seg.analogsignals
-        >>> print seg.spiketrains
+        []
+        >>> print seg.spiketrains  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<SpikeTrain(array([  2.75000000e-02,   5.68250000e-02,   8.52500000e-02, ...,
+        ...
         >>> print seg.eventarrays
-    
+        []
     """
     
     is_readable        = True

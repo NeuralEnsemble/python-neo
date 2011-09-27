@@ -39,7 +39,9 @@ class AsciiSpikeTrainIO(BaseIO):
         >>> from neo import io
         >>> r = io.AsciiSpikeTrainIO( filename = 'File_ascii_spiketrain_1.txt')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        >>> print seg.spiketrains
+        >>> print seg.spiketrains     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<SpikeTrain(array([ 3.89981604,  4.73258781,  0.608428  ,  4.60246277,  1.23805797,
+        ...
 
     """
     

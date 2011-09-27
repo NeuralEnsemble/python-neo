@@ -21,8 +21,10 @@ class EventArray(BaseNeo):
         :file_origin:            
     
     """
-    def __init__(self, times = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S'), **kargs):
-        BaseNeo.__init__(self, **kargs)
+    def __init__(self, times=np.array([])*pq.s, labels=np.array([], dtype='S'), **kwargs):
+        BaseNeo.__init__(self, **kwargs)
         self.times = times
         self.labels = labels
 
+    def __repr__(self):
+        return "<EventArray: %s>" % ", ".join('%s@%s' % item for item in zip(self.labels, self.times))

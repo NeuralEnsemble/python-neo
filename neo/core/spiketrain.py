@@ -92,12 +92,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         you can still manually change them.
 
     *Example*::    
-        >>> st = SpikeTrain([3,4,5] * pq.s)
-        >>> st2 = st[1:2]
+        >>> st = SpikeTrain([3,4,5] * pq.s, t_stop=10.0)
+        >>> st2 = st[1:3]
         >>> st.t_start
-        0. s
+        array(0.0) * s
         >>> st2
-        [4, 5] s
+        <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
     """
     
     def __new__(cls, times, t_stop, units=None,  dtype=numpy.float, copy=True,
@@ -197,8 +197,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
 
     def __repr__(self):
-        return '<SpikeTrain(%s, [%s, %s], )>' % (
-             super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop, )
+        return '<SpikeTrain(%s, [%s, %s])>' % (
+             super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop)
 
     def sort(self):
         """Sorts the spiketrain and its waveforms, if any."""
