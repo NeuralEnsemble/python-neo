@@ -10,6 +10,9 @@ except ImportError:
 from neo.core.block import Block
 
 class TestBlock(unittest.TestCase):
-    pass 
+    def test_init(self):
+        b = Block(name='a block')
+        self.assertEqual(b.name, 'a block')
+        self.assertEqual(b.file_origin, None)
 
 

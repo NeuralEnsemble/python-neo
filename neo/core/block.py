@@ -20,17 +20,23 @@ class Block(BaseNeo):
         :file_origin: filesystem path or URL of the original data file.
         :file_datetime: the creation date and time of the original data file.
         :rec_datetime: the date and time of the original recording
-        :index: TODO: WHAT IS THIS FOR?
+        :index: integer. You can use this to define an ordering of your Block.
+            It is not used by Neo in any way.
     
     *Container of*:
         :py:class:`Segment`
         :py:class:`RecordingChannelGroup`
     
+    *Properties*
+        list_units : descends through hierarchy and returns a list of
+            :py:class:`Unit` existing in the block. This shortcut exists
+            because a common analysis case is analyzing all neurons that
+            you recorded in a session.
     """
-    def __init__(self, name=None, file_origin=None, description=None,
-                 file_datetime=None, rec_datetime=None, index=None, **kargs):
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **kargs)
+    def __init__(self, file_datetime=None, rec_datetime=None, index=None, 
+        **kargs):
+        """Initalize a new Block."""
+        BaseNeo.__init__(self, **kargs)
         
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
