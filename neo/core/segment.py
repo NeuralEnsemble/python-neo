@@ -19,7 +19,8 @@ class Segment(BaseNeo):
         :file_origin: filesystem path or URL of the original data file.
         :file_datetime: the creation date and time of the original data file.
         :rec_datetime: the date and time of the original recording
-        :index: TODO: WHAT IS THIS FOR?
+        :index: integer. You can use this to define a temporal ordering of
+            your Segment. For instance you could use this for trial numbers.
     
     *Container of*:
         :py:class:`Epoch`

@@ -10,6 +10,9 @@ except ImportError:
 from neo.core.segment import Segment
 
 class TestSegment(unittest.TestCase):
-    pass 
-
+    def test_init(self):
+        seg = Segment(name='a segment', index=3)
+        self.assertEqual(seg.name, 'a segment')
+        self.assertEqual(seg.file_origin, None)
+        self.assertEqual(seg.index, 3)
 
