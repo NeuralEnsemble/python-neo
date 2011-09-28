@@ -1,3 +1,43 @@
+"""
+Docstring needed
+
+"""
+
+from datetime import datetime, date, time
+import numpy
+
+# handle both Python 2 and Python 3
+try:
+    basestring
+except NameError:
+    basestring = str
+
+ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
+                            type(None), numpy.integer, numpy.floating)
+                            # allow complex numbers?
+
+
+def _check_annotations(value):
+    """
+    Recursively check that value is either of a "simple" type (number, string,
+    date/time) or is a (possibly nested) dict, list or numpy array containing
+    only simple types.
+    """
+    if isinstance(value, dict):
+        for k, v in value.items():
+            _check_annotations(v)
+    elif isinstance(value, list):
+        for element in value:
+            _check_annotations(element)
+    elif isinstance(value, numpy.ndarray):
+        if value.dtype not in (numpy.integer, numpy.floating) \
+                                         and value.dtype.type != numpy.string_:
+           raise ValueError("Invalid annotation. NumPy arrays with dtype %s are not allowed" % value.dtype)
+    elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
+        raise ValueError("Invalid annotation. Annotations of type %s are not allowed" % type(value))
+
+            
+
 class BaseNeo(object):
     """This is the base class from which all Neo objects inherit.
     
@@ -35,6 +75,7 @@ class BaseNeo(object):
         from additional arguments not processed by BaseNeo or the child class.
         """
         # create `annotations` for additional arguments
+        _check_annotations(annotations)
         self.annotations = annotations
         
         # these attributes are recommended for all objects.
@@ -53,4 +94,5 @@ class BaseNeo(object):
         >>> obj.key2
         value2
         """
+        _check_annotations(annotations)
         self.annotations.update(annotations)

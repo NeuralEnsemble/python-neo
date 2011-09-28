@@ -188,5 +188,22 @@ Finally, let's consider "additional arguments". These are the ones you define fo
     >>> print(st.annotations)
     {'rat_name': 'Fred'}
     
-
 Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.
+
+Annotations
+-----------
+
+As well as adding annotations as "additional" arguments when an object is
+constructed, objects may be annotated using the :meth:`annotate` method
+possessed by all Neo core objects, e.g.::
+
+    >>> seg = Segment()
+    >>> seg.annotate(stimulus="step pulse", amplitude=10*nA)
+    >>> print(seg.annotations)
+    {'amplitude': array(10.0) * nA, 'stimulus': 'step pulse'}
+
+Since annotations may be written to a file or database, there are some
+limitations on the data types of annotations: they must be "simple" types or
+containers (lists, dicts, NumPy arrays) of simple types, where the simple types
+are ``integer``, ``float``, ``Quantity``, ``string``, ``date``, ``time`` and
+``datetime``.
