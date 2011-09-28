@@ -33,12 +33,14 @@ class RecordingChannel(BaseNeo):
         :py:class:`IrregularlySampledSignal`
         
     """
-    def __init__(self, index=0, coordinate=None, **kargs):
+    def __init__(self, index=0, coordinate=None, name=None, description=None,
+                 file_origin=None, **annotations):
         """Initialize a new RecordingChannel."""
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        BaseNeo.__init__(self, **kargs)
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         
         # Store required and recommended attributes
         self.index = index

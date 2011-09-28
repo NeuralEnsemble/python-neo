@@ -34,9 +34,10 @@ class Segment(BaseNeo):
         :py:class:`SpikeTrain`
 
     """
-    def __init__(self, file_datetime=None, rec_datetime=None, index=None,  **kargs):
-        BaseNeo.__init__(self, **kargs)
-        
+    def __init__(self, name=None, description=None, file_origin=None,
+                 file_datetime=None, rec_datetime=None, index=None, **annotations):
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index        

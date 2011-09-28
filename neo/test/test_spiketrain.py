@@ -328,7 +328,7 @@ class TestConstructor(unittest.TestCase):
     def test__changing_multiple_spiketimes_should_check_time_in_range(self):
         data = [3,4,5] * pq.ms
         st = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
-        if sys.version_info.major == 2:
+        if sys.version_info[0] == 2:
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [3,4,11] * pq.ms)
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [0,4,5] * pq.ms)
 

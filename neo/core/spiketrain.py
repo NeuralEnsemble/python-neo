@@ -101,8 +101,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     """
     
     def __new__(cls, times, t_stop, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s,
-        waveforms=None, left_sweep=None, **kwargs):
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
+        left_sweep=None, name=None, file_origin=None, description=None,
+        **annotations):
         """Constructs new SpikeTrain from data.
         
         This is called whenever a new SpikeTrain is created from the
@@ -143,8 +144,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     
     def __init__(self, times, t_stop, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s,
-        waveforms=None, left_sweep=None, **kwargs):
+        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
+        left_sweep=None, name=None, file_origin=None, description=None,
+        **annotations):
         """Initializes newly constructed SpikeTrain."""
         # This method is only called when constructing a new SpikeTrain,
         # not when slicing or viewing. We use the same call signature
@@ -153,8 +155,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        BaseNeo.__init__(self, **kwargs)        
-
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
 
     def __array_finalize__(self, obj):
         """This is called every time a new SpikeTrain is created.

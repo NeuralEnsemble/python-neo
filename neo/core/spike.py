@@ -25,12 +25,12 @@ class Spike(BaseNeo):
         :duration:
     
     """
-    def __init__(self, time = 0*pq.s,
-                    waveform=None,
-                    sampling_rate= None,
-                    left_sweep = None,
-                    **kargs):
-        BaseNeo.__init__(self , **kargs)
+    def __init__(self, time=0*pq.s, waveform=None, sampling_rate=None,
+                 left_sweep=None, name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initialize a new Spike."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         
         self.time = time
         

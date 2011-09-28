@@ -76,7 +76,7 @@ class BaseTestIO(object):
         self.local_test_dir = localdir
         return localdir
 
-    def download_test_files_if_not_present(self ):
+    def download_test_files_if_not_present(self):
         """
         Download %s file at G-node for testing
         url_for_tests is global at beginning of this file.
@@ -94,7 +94,10 @@ class BaseTestIO(object):
             
             if not os.path.exists(localfile):
                 logging.info('Downloading %s here %s' % (distantfile, localfile))
-                urllib.urlretrieve(distantfile, localfile)
+                try:
+                    urllib.urlretrieve(distantfile, localfile)
+                except IOError, e:
+                    raise unittest.SkipTest(e)
     
     def generate_files_for_io_able_to_write(self):
         """

@@ -35,8 +35,7 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     def __new__(cls, signal, units='', dtype=None, copy=True, t_start=0*pq.s,
                 sampling_rate=None, sampling_period=None, 
-                name=None, file_origin = None, description = None,
-                ):
+                name=None, file_origin=None, description=None, **annotations):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
         of numerical values, or from a Quantity array.

@@ -32,7 +32,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __new__(cls, signal, units=None, dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
-                **kwargs):
+                name=None, file_origin=None, description=None, **annotations):
         """Constructs new BaseAnalogSignal from data.
         
         This is called whenever a new BaseAnalogSignal is created from the
@@ -58,7 +58,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     
     def __init__(self, signal, units=None, dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
-                **kwargs):
+                name=None, file_origin=None, description=None, **annotations):
         """Initializes newly constructed SpikeTrain."""
         # This method is only called when constructing a new SpikeTrain,
         # not when slicing or viewing. We use the same call signature
@@ -67,8 +67,9 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations        
-        BaseNeo.__init__(self, **kwargs)
-    
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
+
     def __array_finalize__(self, obj):
         """This is called every time a new BaseAnalogSignal is created.
         

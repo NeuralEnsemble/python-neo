@@ -12,28 +12,30 @@ class BaseNeo(object):
             that is not handled by BaseNeo or the child class), and puts
             in the dict `annotations`.
         
-        annotate(**kwargs) : Updates `annotations` with keyword/value pairs.
+        annotate(**args) : Updates `annotations` with keyword/value pairs.
     
     Each child class should: 
-        0) call BaseNeo.__init__(self, **kwargs) with all non-recommended
-            (additional) arguments.
-        1) process its necessary arguments in its __new__ or __init__ method
-        2) process its recommended arguments in its __new__ or __init__ method
+        0) call BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                                 description=description, **annotations)
+           with the universal recommended arguments, plus optional annotations
+        1) process its required arguments in its __new__ or __init__ method
+        2) process its non-universal recommended arguments (in its __new__ or
+           __init__ method
     
-    Non-keyword arguments should only be used for necessary arguments.
+    Non-keyword arguments should only be used for required arguments.
     
-    The necessary and recommended arguments for each child class (Neo object)
+    The required and recommended arguments for each child class (Neo object)
     are specified in ../description.py and the documentation for the child.
     """
 
-    def __init__(self, name=None, file_origin=None, description=None, **kwargs):
+    def __init__(self, name=None, file_origin=None, description=None, **annotations):
         """This is the base constructor for all Neo objects.
         
         Stores universally recommended attributes and creates `annotations`
         from additional arguments not processed by BaseNeo or the child class.
         """
         # create `annotations` for additional arguments
-        self.annotations = kwargs
+        self.annotations = annotations
         
         # these attributes are recommended for all objects.
         self.name = name

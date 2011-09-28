@@ -33,10 +33,12 @@ class Block(BaseNeo):
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
     """
-    def __init__(self, file_datetime=None, rec_datetime=None, index=None, 
-        **kargs):
+    def __init__(self, name=None, description=None, file_origin=None,
+                 file_datetime=None, rec_datetime=None, index=None, 
+                 **annotations):
         """Initalize a new Block."""
-        BaseNeo.__init__(self, **kargs)
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime

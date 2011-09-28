@@ -21,9 +21,12 @@ class EpochArray(BaseNeo):
         :description:
         :file_origin:         
     """
-    def __init__(self, times = np.array([ ]) * pq.s , durations = np.array([ ]) * pq.s , labels = np.array([ ] , dtype = 'S'),
-                    **kargs):
-        BaseNeo.__init__(self, **kargs)
+    def __init__(self, times=np.array([])*pq.s, durations=np.array([])*pq.s,
+                 labels=np.array([], dtype='S'), name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initialize a new EpochArray."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         
         self.times = times
         self.durations = durations

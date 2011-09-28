@@ -21,6 +21,9 @@ class IrregularlySampledSignal(BaseNeo):
         :file_origin:                
     """
     def __init__(self, times, values, time_units=None, value_units=None,
-                    **kargs):
+                  name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initalize a new IrregularlySampledSignal."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         raise NotImplementedError
-        BaseNeo.__init__(self, **kargs)

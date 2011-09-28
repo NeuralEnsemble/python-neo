@@ -35,12 +35,14 @@ class RecordingChannelGroup(BaseNeo):
         :py:class:`RecordingChannel`
         :py:class:`AnalogSignalArray`
     """
-    def __init__(self, channel_names=None, channel_indexes=None, **kargs):
+    def __init__(self, channel_names=None, channel_indexes=None, name=None,
+                 description=None, file_origin=None, **annotations):
         """Initialize a new RecordingChannelGroup."""
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        BaseNeo.__init__(self, **kargs)
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
 
         # Defaults
         if channel_indexes is None:

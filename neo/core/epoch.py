@@ -19,8 +19,12 @@ class Epoch(BaseNeo):
         :description:
         :file_origin:
     """
-    def __init__(self, time, duration, label, **kargs):
-        BaseNeo.__init__(self, **kargs)
+    
+    def __init__(self, time, duration, label, name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initialize a new Epoch."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         self.time = time
         self.duration = duration
         self.label = label
