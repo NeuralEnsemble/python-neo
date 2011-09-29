@@ -231,14 +231,29 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 99*pq.s)
 
-    def test_change_with_copy_false_and_rescale_true(self):
+    def test_change_with_copy_false_and_fake_rescale(self): 
         # Changing spike train also changes data, because it is a view
         # Data source is quantity
-        data = [3,4,5] * pq.s
+        data = [3000,4000,5000] * pq.ms
+        # even though we specify units, it still returns a view
         st = SpikeTrain(data, units='ms', copy=False, t_stop=100000)
         st[0] = 99000 * pq.ms
         self.assertEqual(st[0], 99000*pq.ms)
         self.assertEqual(data[0], 99000*pq.ms)
+
+    def test_change_with_copy_false_and_rescale_true(self):
+        # When rescaling, a view cannot be returned        
+        # Changing spike train also changes data, because it is a view
+        data = [3,4,5] * pq.s
+        self.assertRaises(ValueError, SpikeTrain, data, units='ms', copy=False, 
+            t_stop=10000)
+
+    def test_init_with_rescale(self):
+        data = [3,4,5] * pq.s
+        st = SpikeTrain(data, units='ms', t_stop=6000)
+        self.assertEqual(st[0], 3000*pq.ms)
+        self.assertEqual(st._dimensionality, pq.ms._dimensionality)
+        self.assertEqual(st.t_stop, 6000*pq.ms)
     
     def test_change_with_copy_true(self):
         # Changing spike train does not change data
@@ -266,11 +281,17 @@ class TestConstructor(unittest.TestCase):
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
-        data = numpy.array([3.0, 4.0, 5.0]) # must be float, otherwise will get copy, not view
-        st = SpikeTrain(data, units='sec', copy=False, t_stop=101.0)
+        data = numpy.array([3, 4, 5]) # must be float, otherwise will get copy, not view
+        st = SpikeTrain(data, units='sec', copy=False, dtype=np.int, t_stop=101)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 99)
+
+    def test_change_with_copy_false_and_dtype_change(self):
+        # You cannot change dtype and request a view
+        data = numpy.array([3, 4, 5])        
+        self.assertRaises(ValueError, SpikeTrain, data, units='sec',
+            copy=False, t_stop=101)
     
     def test_change_with_copy_true_and_data_not_quantity(self):
         # Changing spike train does not change data

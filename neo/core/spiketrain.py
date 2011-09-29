@@ -83,7 +83,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         
         These arguments, as well as `units`, are simply passed to the 
         Quantity constructor.
-    
+        
+        Note that `copy` must be True when you request a change
+        of units or dtype.   
+ 
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
         :class:`SpikeTrain` (actually a view) is returned, with the same 
@@ -113,20 +116,28 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         the attributes are set from the user's arguments. Finally, error
         checking and (optionally) sorting occurs.
         """
-        # If data is Quantity, rescale to desired units
-        if isinstance(times, pq.Quantity) and units: 
-            times = times.rescale(units)
-        
-        # Error check that units were provided somehow
-        if units is None: 
+        # First make sure units are consistent
+        if units is None:
+            # No keyword units, so get from `times`
             try:
                 units = times.units
             except AttributeError:
                 raise ValueError('you must specify units')
+        elif hasattr(times, '_dimensionality'):
+            # Keyword units were provided, so rescale if necessary
+            if times._dimensionality != \
+                pq.quantity.validate_dimensionality(units):
+                if copy:
+                    times = times.rescale(units)
+                else:
+                    raise ValueError("cannot rescale and return view")
         
+        if hasattr(times, 'dtype') and times.dtype != dtype and not copy:
+            raise ValueError("cannot change dtype and return view")
+
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype, 
-                                  copy=copy)
+            copy=copy)
         
         # Store attributes
         obj.t_start = pq.Quantity(t_start, units=units)
