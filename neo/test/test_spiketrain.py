@@ -281,7 +281,7 @@ class TestConstructor(unittest.TestCase):
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
-        data = numpy.array([3, 4, 5]) # must be float, otherwise will get copy, not view
+        data = numpy.array([3, 4, 5])        
         st = SpikeTrain(data, units='sec', copy=False, dtype=np.int, t_stop=101)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
