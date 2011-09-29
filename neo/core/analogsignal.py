@@ -59,8 +59,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def __init__(self, signal, units=None, dtype=None, copy=True, 
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None, **annotations):
-        """Initializes newly constructed SpikeTrain."""
-        # This method is only called when constructing a new SpikeTrain,
+        """Initializes newly constructed BaseAnalogSignal."""
+        # This method is only called when constructing a new BaseAnalogSignal,
         # not when slicing or viewing. We use the same call signature
         # as __new__ for documentation purposes. Anything not in the call
         # signature is stored in annotations.

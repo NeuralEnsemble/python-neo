@@ -33,7 +33,7 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     """
 
-    def __new__(cls, signal, units='', dtype=None, copy=True, t_start=0*pq.s,
+    def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0*pq.s,
                 sampling_rate=None, sampling_period=None, 
                 name=None, file_origin=None, description=None, **annotations):
         """
@@ -47,10 +47,6 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
-        obj.name = name
-        obj.file_origin = file_origin
-        obj.description = description
-        obj.annotations = {}
         return obj
 
     def __getslice__(self, i, j):
