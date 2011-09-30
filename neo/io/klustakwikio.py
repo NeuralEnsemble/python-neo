@@ -162,7 +162,7 @@ class KlustaKwikIO(BaseIO):
                 # Initialize a new SpikeTrain for the spikes from this unit
                 st = SpikeTrain(
                     times=spks[uids==unit_id] / self.sampling_rate, 
-                    units='sec', t_start=0.0, 
+                    units='sec', t_start=0.0, t_stop=spks.max() / self.sampling_rate,
                     name=('unit %d from group %d' % (unit_id, group)))
                 st.annotations['cluster'] = unit_id
                 st.annotations['group'] = group
