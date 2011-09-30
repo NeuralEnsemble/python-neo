@@ -71,7 +71,29 @@ Here we've assumed that each segment contains a single AnalogSignalArray which i
     print "channel 5 is in the %d-th column" % \
         np.nonzero(seg.analogsignalarrays[0].annotations['channel'] == 5)[0][0]
 
-Alternatively, instead of one big AnalogSignalArray in each Segment containing all channels, you could use one AnalogSignalArray for each RecordingChannelGroup. Different users find different structures to be more natural.
+An alternative to the use of annotations is to crawl the hierarchy down in time and then up in hardware. Here we travel from an AnalogSignalArray to its hardware equivalent, a RecordingChannelGroup, and from an AnalogSignal to its hardware equivalent, a RecordingChannel.::
+
+    rcg = seg.analogsignalarrays[0].recordingchannelgroup
+    rc = seg.analogsignals[0].recordingchannel
+
+This is possible because of the bijectivity of the many-to-one relationship, which is auto-created by neo.tools.create_many_to_one_relationship(temporal_object).
+
+So to finish the example::
+
+    # Which column to fetch from seg.analogsignalarrays[0]?
+    colidx = seg.analogsignalarrays[0].recordingchannelgroup.\
+        channel_indexes.index(5)
+    data = seg.analogsignalarrays[0][:, 5]
+
+What about neurons? The hardware equivalent of `SpikeTrain` is `Unit`, which is contained by `RecordingChannelGroup`. (Note: these connections are planned, not existing.)::
+
+    # Get the spiketrains from unit #5 on even trials
+    st_list = []
+    for seg in block.segments[::2]:
+        st_list.append(filter(lambda sptr: sptr.unit.index == 5 
+            and sptr.unit.recordingchannelgroup.index == 0, seg.spiketrains))
+
+
 
 
 
