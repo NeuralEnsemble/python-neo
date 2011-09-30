@@ -146,25 +146,37 @@ class BaseTestIO(object):
           4 - Check the hierachy
           5 - Check data
         
-        Work only for IO for Block and Segment for the higher object (main cases).
+        Work only for IO for Block and Segment for the highest object (main cases).
         """ % self.ioclass.__name__
         localdir = self.create_local_dir_if_not_exists()
         shortname = self.ioclass.__name__.lower().strip('io')
         
+        # Find the highest object that is supported by the IO
+        # Test only if it is a Block or Segment, and if it can both read
+        # and write this object.
         higher = self.ioclass.supported_objects[0]
-        if not(higher in self.ioclass.readable_objects and higher in self.ioclass.writeable_objects):
+        if not(higher in self.ioclass.readable_objects and 
+            higher in self.ioclass.writeable_objects):
             return
         if not(higher == neo.Block or higher == neo.Segment):
             return
         
-        # when io need external knowldge for writting or read such as sampling_rate (RawBinaryIO...)
-        # the test is too much complex too design genericaly. 
-        if higher in self.ioclass.read_params and len(self.ioclass.read_params[higher]) != 0 : return
+        # When the highest-level object requires parameters, such as
+        # sampling rate, this test is too complicated to write generically,
+        # so return.
+        if higher in self.ioclass.read_params and \
+            len(self.ioclass.read_params[higher]) != 0 : return
         
+        # Create writers and readers for a temporary location.
         if self.ioclass.mode == 'file':
-            filename = localdir+'/Generated0_'+self.ioclass.__name__
-            if len(self.ioclass.extensions)>=1:
-                filename += '.'+self.ioclass.extensions[0]
+            # Operates on files, so create a temporary filename with the
+            # first filename extension in `extensions`, if any.
+            filename = os.path.join(localdir, 
+                'Generated0_%s' % self.ioclass.__name__)
+            if len(self.ioclass.extensions) >= 1:
+                filename += '.' + self.ioclass.extensions[0]
+            
+            # Create reader and writer for that file
             writer = self.ioclass(filename = filename)
             reader = self.ioclass(filename = filename)
         elif self.ioclass.mode == 'dir':
@@ -174,7 +186,10 @@ class BaseTestIO(object):
         else:
             return
         
+        # Get an object to write
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
+        
+        # Write and read with the IO and ensure it is the same.
         if higher == neo.Block:
             writer.write_block(ob)
             ob2 = reader.read_block()
@@ -202,9 +217,33 @@ class BaseTestIO(object):
 
         
     def test_assert_readed_neo_object_is_compliant(self):
-        """
-        With downloaded files test %s compliance with: neo.test.tools.assert_neo_object_is_compliant
+        """Reading %s files in `files_to_test` produces compliant objects.
         
+        Compliance test: neo.test.tools.assert_neo_object_is_compliant        
+        """ % self.ioclass.__name__
+        # This is for files presents at G-Node or generated
+        for filename in self.files_to_test:
+            # Load each file in `files_to_test`
+            filename = os.path.join(self.local_test_dir, filename)
+            if self.ioclass.mode == 'file':
+                r = self.ioclass(filename = filename)
+            elif self.ioclass.mode == 'dir':
+                r = self.ioclass(dirname = filename)
+            else:
+                continue
+
+            # Read the highest supported object from the file
+            obname = self.ioclass.supported_objects[0].__name__.lower()
+            ob_reader = getattr(r, 'read_%s' % obname)
+            ob = ob_reader(cascade = True, lazy = False)
+
+            # Check compliance of the block
+            assert_neo_object_is_compliant(ob)
+    
+    def test_readed_with_cascade_is_compliant(self):
+        """Reading %s files in `files_to_test` with `cascade` is compliant.
+
+        This test reader with cascade = False should return empty children.
         """ % self.ioclass.__name__
         # This is for files presents at G-Node or generated
         for filename in self.files_to_test:
@@ -215,32 +254,26 @@ class BaseTestIO(object):
                 r = self.ioclass(dirname = filename)
             else:
                 continue
-            ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = True, lazy = False )
-            assert_neo_object_is_compliant(ob)
             
-    
-    
-    def test_readed_with_cascade_is_compliant(self):
-        """
-        This test reader with cascade = False should return empty children.
-        """
-        # This is for files presents at G-Node or generated
-        for filename in self.files_to_test:
-            filename = os.path.join(self.local_test_dir, filename)
-            if self.ioclass.mode == 'file':
-                r = self.ioclass(filename = filename)
-            elif self.ioclass.mode == 'dir':
-                r = self.ioclass(dirname = filename)
-            else:
-                continue
-            ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = False, lazy = False )
+            # Read the highest supported object from the file
+            obname = self.ioclass.supported_objects[0].__name__.lower()
+            ob_reader = getattr(r, 'read_%s' % obname)
+            ob = ob_reader(cascade = False, lazy = False)
             
+            # Check compliance of the block or segment
             assert_neo_object_is_compliant(ob)
+
+            # Check that the children are empty
             classname = ob.__class__.__name__
-            if classname in one_to_many_reslationship:
-                for childname in one_to_many_reslationship[classname]:
-                    assert len(getattr(ob, childname.lower()+'s')) == 0, '%s reader with cascade = False should return empty children' % self.ioclass
-        
+            errmsg = """%s reader with cascade=False should return
+                empty children""" % self.ioclass.__name__
+            try:
+                childlist = one_to_many_reslationship[classname]
+            except KeyError:
+                childlist = []
+            for childname in childlist:
+                children = getattr(ob, childname.lower() + 's')
+                assert len(children) == 0, errmsg        
 
     def test_readed_with_lazy_is_compliant(self):
         """
