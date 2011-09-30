@@ -67,7 +67,7 @@ class KlustaKwikIO(BaseIO):
     is_writable        = True
     
     # This IO can only manipulate objects relating to spike times
-    supported_objects  = [Block, Segment, SpikeTrain, Unit]
+    supported_objects  = [Block, SpikeTrain, Unit]
     
     # Keep things simple by always returning a block
     readable_objects    = [Block]
@@ -92,7 +92,7 @@ class KlustaKwikIO(BaseIO):
     # Operates on directories
     mode = 'file'     
     
-    def __init__(self, filename, basename=None, sampling_rate=30000.):
+    def __init__(self, filename, sampling_rate=30000.):
         """Create a new IO to operate on a directory        
         
         filename : the directory to contain the files
@@ -101,8 +101,8 @@ class KlustaKwikIO(BaseIO):
             stores data in samples.
         """
         BaseIO.__init__(self)
-        self.filename = os.path.normpath(filename)
-        self.basename = basename
+        #self.filename = os.path.normpath(filename)
+        self.filename, self.basename = os.path.split(os.path.abspath(filename))
         self.sampling_rate = float(sampling_rate)
         
         # error check
@@ -110,7 +110,7 @@ class KlustaKwikIO(BaseIO):
             raise ValueError("filename must be a directory")
         
         # initialize a helper object to parse filenames
-        self._fp = FilenameParser(dirname=self.filename, basename=basename)
+        self._fp = FilenameParser(dirname=self.filename, basename=self.basename)
 
     # The reading methods. The `lazy` and `cascade` parameters are imposed
     # by neo.io API
@@ -124,13 +124,17 @@ class KlustaKwikIO(BaseIO):
         segments.
         """                
         # Create block and segment to hold all the data
-        block = Block(name='read by klustakwikio', file_origin=self.filename)        
-        seg = Segment(name='seg1', index=0, file_origin=self.filename)
-        block.segments.append(seg)
-        
+        block = Block()            
         # Search data directory for KlustaKwik files.
+        # If nothing found, return empty block
         self._fetfiles = self._fp.read_filenames('fet')
-        self._clufiles = self._fp.read_filenames('clu')
+        self._clufiles = self._fp.read_filenames('clu')        
+        if len(self._fetfiles) == 0 or not cascade:
+            return block
+
+        # Create a single segment to hold all of the data
+        seg = Segment(name='seg0', index=0, file_origin=self.filename)
+        block.segments.append(seg)
         
         # Load spike times from each group and store in a dict, keyed
         # by group number
@@ -160,10 +164,18 @@ class KlustaKwikIO(BaseIO):
                     index=unit_id, group=group)                
                 
                 # Initialize a new SpikeTrain for the spikes from this unit
-                st = SpikeTrain(
-                    times=spks[uids==unit_id] / self.sampling_rate, 
-                    units='sec', t_start=0.0, t_stop=spks.max() / self.sampling_rate,
-                    name=('unit %d from group %d' % (unit_id, group)))
+                if lazy:
+                    st = SpikeTrain(
+                        times=[], 
+                        units='sec', t_start=0.0, 
+                        t_stop=spks.max() / self.sampling_rate,
+                        name=('unit %d from group %d' % (unit_id, group)))
+                else:
+                    st = SpikeTrain(
+                        times=spks[uids==unit_id] / self.sampling_rate, 
+                        units='sec', t_start=0.0, 
+                        t_stop=spks.max() / self.sampling_rate,
+                        name=('unit %d from group %d' % (unit_id, group)))
                 st.annotations['cluster'] = unit_id
                 st.annotations['group'] = group
                 
