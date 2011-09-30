@@ -26,10 +26,10 @@ associated metadata (e.g. units, sampling frequency, etc.)
     An ensemble of action potentials (spikes) emitted by the same unit in a period of time.
 
 :py:class:`Event` and :py:class:`EventArray`:
-    DESCRIPTION GOES HERE
+    A time point representng an event in the data, or an array of such time points.
 
 :py:class:`Epoch` and :py:class:`EpochArray`:
-    DESCRIPTION GOES HERE
+    An interval of time representing a period of time in the data, or an array of such intervals.
 
 Container objects
 -----------------
@@ -133,6 +133,7 @@ See :ref:`use_cases_page` for more examples of how the different objects may be 
 
 For more details, see the :doc:`api_reference`.
 
+    
 
 Inheritance
 ===========
