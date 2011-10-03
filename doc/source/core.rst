@@ -52,10 +52,12 @@ cut across the simple container hierarchy.
 
 :py:class:`RecordingChannel`:
     Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain` or :py:class:`Unit`
-    objects that come from the same logical and/or physical channel inside a :py:class:`Block`.
+    objects that come from the same logical and/or physical channel inside a :py:class:`Block` across  several :py:class:`Segment` .
 
 :py:class:`RecordingChannelGroup`:
-    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses. For multielectrode arrays, spikes may be recorded on more than one recording channel, and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`SpikeTrain` with the group of recording channels on which it was calculated. For intracellular recording, it is common to record both membrane potentials and currents at the same time, so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded.
+    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses. The main one is for linking several :py:class:`AnalogSignalArray` across several  :py:class:`Segment` inside a  :py:class:`Block`.
+    A second use for multielectrode arrays, spikes may be recorded on more than one recording channel, and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`SpikeTrain` with the group of recording channels on which it was calculated (Example a tetrode).
+    A third use for intracellular recording, it is common to record both membrane potentials and currents at the same time, so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded.
 
 :py:class:`Unit`:
     DESCRIPTION GOES HERE
@@ -117,8 +119,40 @@ Here is an example showing these relationships in use::
 
 
 On the diagram you can also see a magenta relationship. This is more tricky *many to many* relationship.
+This relationship is between :py:class:`RecordingChannel` and :py:class:`RecordingChannelGroup`.
+*Many to many* relationship means that :py:class:`RecordingChannelGroup` have a list *recordingchannels** 
+that point to many :py:class:`RecordingChannel`, this is the intuitive and general case. But there also a
+link :py:class:`RecordingChannel`.*recordingchannelgroups* to many  :py:class:`RecordingChannelGroup`.
+this second and less intuitive link describe the fact that a :py:class:`RecordingChannel` can belong to
+several groups.
 
-.. todo:: terminate this paragraph when decision is takken about many to many relationship
+An example for helping, take this case: I have a probe with 16 channel divided in 4 tetrodes.
+I want 5 groups: one for describing the whole probe and four for each tetrodes::
+
+    from neo import *
+    bl = Block()
+    
+    # creating individual channel
+    all_rc= [ ]
+    for i in range(16):
+        rc = RecordingChannel( index= i, name ='rc %d' %i)
+        all_rc.append(rc)
+    
+    # global group
+    rcg = RecordginChannelGroup( name = 'The whole probe')
+    for rc in all_rc:
+        rcg.recordingchannels.append(rc)
+        rc.recordingchannelgroups.append(rcg)
+    bl.recordingchannelgroups.append(rcg)
+    
+    # the four tetrodes
+    for i in range(4):
+        rcg = RecordginChannelGroup( name = 'Tetrode %d' % i )
+        for rc in all_rc[i*4:(i+1)*4]:
+            rcg.recordingchannels.append(rc)
+            rc.recordingchannelgroups.append(rcg)
+        bl.recordingchannelgroups.append(rcg)
+
 
 
 See :ref:`use_cases_page` for more examples of how the different objects may be used.

@@ -54,21 +54,23 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         
             for c,children in enumerate(relationship):
                 if children not in rect_pos.keys(): continue
-                x = rect_pos[children][0] 
-                y = rect_pos[children][1] + all_h[children] - line_heigth*.5
                 if r ==0:
+                    x = rect_pos[children][0]
+                    y = rect_pos[children][1] + all_h[children] - line_heigth*.5
                     x2 = rect_pos[name][0] + rect_width
                     #~ y2 = rect_pos[name][1] + all_h[name] - line_heigth*1.5 - line_heigth*c
                     #~ x2 = rect_pos[name][0] 
                     y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
-                    connectionstyle="arc3,rad=-0.1"
+                    connectionstyle="arc3,rad=-0.2"
                 elif r ==1:
-                    x2 = rect_pos[name][0] 
+                    x = rect_pos[children][0] #+ rect_width
+                    y = rect_pos[children][1] + all_h[children] - line_heigth*.5
+                    x2 = rect_pos[name][0]#+ rect_width
                     y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
-                    if y2>y:
-                        connectionstyle="arc3,rad=0.5"
+                    if y2>=y:
+                        connectionstyle="arc3,rad=0.7"
                     else:
-                        connectionstyle="arc3,rad=-0.5"
+                        connectionstyle="arc3,rad=-0.7"
                     
                 a = ax.annotate('', (x, y),
                                             (x2,y2),
@@ -203,17 +205,17 @@ def generate_diagram_simple():
     rect_pos = {
                     'Block' : (.5+rw*bf*0,4),
                     
-                    'Segment' : ( .5+rw*bf*1, 3),
+                    'Segment' : ( .5+rw*bf*1, .5),
 
                     'Event': ( .5+rw*bf*4, 6),
                     'EventArray': ( .5+rw*bf*4, 4),
                     'Epoch': ( .5+rw*bf*4, 2),
                     'EpochArray': ( .5+rw*bf*4, .2),
 
-                    'RecordingChannelGroup': ( .5+rw*bf*1, .5 ),
-                    'RecordingChannel': ( .5+rw*bf*2, 4 ),
+                    'RecordingChannelGroup': ( .5+rw*bf*.8, 8.5 ),
+                    'RecordingChannel': ( .5+rw*bf*1.2, 5.5 ),
 
-                    'Unit': ( .5+rw*bf*2, 7),
+                    'Unit': ( .5+rw*bf*2., 9.5),
                     
                     'SpikeTrain': ( .5+rw*bf*3, 9.5),
                     'Spike': ( .5+rw*bf*3, 7.5),
