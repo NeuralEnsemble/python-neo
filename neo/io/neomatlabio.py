@@ -51,8 +51,8 @@ class NeoMatlabIO(BaseIO):
       * neo classes are converted to matlab struct.
         Ex: Block in neo will be a struct with name, file_datetime, ...
       * neo one_to_many relationship are cellarray in matlab.
-        Ex: seg._analogsignals[2] in neo will be seg.analogsignals{3} in matlab.
-        Note the one based in matlab and the missing underscore.
+        Ex: seg.analogsignals[2] in neo will be seg.analogsignals{3} in matlab.
+        Note the one based in matlab and braket vs singleton.
       * Quantity attributes in neo in will be 2 fields in mallab?
          Ex: anasig.t_start = 1.5 * s  (pq.Quantiy) in neo
          will be anasig.t_start = 1.5 and anasig.t_start_unit = 's' in matlab
@@ -119,10 +119,10 @@ class NeoMatlabIO(BaseIO):
             bl = neo.Block(name = 'my block with neo')
             for s in range(3):
                 seg = neo.Segment( name = 'segment'+str(s))
-                bl._segments.append(seg)
+                bl.segments.append(seg)
                 for a in range(5):
                     anasig = neo.AnalogSignal( rand(100), units = 'mV', t_start = 0 * pq.s, sampling_rate = 100*pq.Hz)
-                    seg._analogsignals.append(anasig)
+                    seg.analogsignals.append(anasig)
                 for t in range(7):
                     sptr = neo.SpikeTrain( rand(30), units = 'ms', t_start = 0*pq.ms, t_stop = 10*pq.ms)
                     seg.spiketrains.append(sptr)

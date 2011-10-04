@@ -63,7 +63,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     Block>Segment>AnalogSIgnal or/and Block>Segment>SpikeTrain
     this function auto create all RecordingChannel
     following these rules:
-      * when 'channel_index ' is in _AnalogSIgnal.annotations the corresponding RecordingChannel is created.
+      * when 'channel_index ' is in AnalogSIgnal.annotations the corresponding RecordingChannel is created.
       * 'channel_index ' is then removed from annotations dict if remove_from_annotation
       * only one RecordingChannelGroup is created
     
@@ -96,6 +96,11 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
         channel_indexes = indexes, channel_names=names)
     bl.recordingchannelgroups.append(rcg)
     for ind in indexes:
+        # many to many relationship
         rcg.recordingchannels.append(recordingchannels[ind])
+        recordingchannels[ind].recordingchannelgroups.append(rcg)
+
+
+
 
 

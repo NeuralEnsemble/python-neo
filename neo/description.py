@@ -57,7 +57,6 @@ one_to_many_reslationship = {
                          'Event', 'EventArray', 'Epoch', 'EpochArray',
                         'SpikeTrain', 'Spike', ],
     'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
-    #~ 'RecordingChannelGroup' : [ 'RecordingChannel',  'AnalogSignalArray'],
     'RecordingChannelGroup' : [  'Unit', 'AnalogSignalArray'],
     'Unit' : ['SpikeTrain', 'Spike', ]
     }
@@ -73,8 +72,6 @@ for p,children in one_to_many_reslationship.items():
 many_to_many_reslationship = {
     'RecordingChannel' : ['RecordingChannelGroup', ],
     'RecordingChannelGroup' : ['RecordingChannel', ],
-    #~ 'RecordingChannel' : ['Unit', ],
-    #~ 'Unit' : ['RecordingChannel', ],
     }
 # check bijectivity
 for p,children in many_to_many_reslationship.items():
@@ -83,6 +80,13 @@ for p,children in many_to_many_reslationship.items():
             many_to_many_reslationship[c] = [ ]
         if p not in many_to_many_reslationship[c]:
             many_to_many_reslationship[c].append(p)
+
+
+# Some relationship shortcuts are accesible througth properties
+property_relationship = {
+    'Block' : ['Unit', 'RecordingChannel'],
+    
+    }
 
 
 
@@ -114,6 +118,7 @@ classes_necessary_attributes = {
     'Unit': [ ],
     
     'SpikeTrain': [('', pq.Quantity, 1 ),
+                    ('t_start', pq.Quantity, 0 ),
                    ('t_stop', pq.Quantity, 0)
                             ],
     'Spike': [('time', pq.Quantity, 0),
@@ -154,7 +159,6 @@ classes_recommended_attributes= {
     'SpikeTrain': [('waveforms', pq.Quantity, 3),
                             ('left_sweep', pq.Quantity, 0 ),
                             ('sampling_rate', pq.Quantity, 0 ),
-                            ('t_start', pq.Quantity, 0 ),                    
                             ],
     'Spike': [('waveform', pq.Quantity, 2),
                     ('left_sweep', pq.Quantity, 0 ),

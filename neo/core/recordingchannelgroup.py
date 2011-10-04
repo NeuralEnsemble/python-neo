@@ -13,6 +13,7 @@ class RecordingChannelGroup(BaseNeo):
         electrodes (4 in tetrode case).
         
     *Usage 1* multi segment recording with 2 electrode array::
+    
         bl = Block()
         # create a block with 3 Segment and 2 RecordingChannelGroup
         for s in range(3):
@@ -45,6 +46,7 @@ class RecordingChannelGroup(BaseNeo):
             rc.recordingchannelgroups.append(rcg) # <- many to many relationship
     
     *Usage 3* dealing with Units::
+    
         bl = Block()
         rcg = RecordingChannelGroup( name = 'octotrode A')
         bl.recordingchannelgroups.append(rcg)

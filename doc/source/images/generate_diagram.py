@@ -11,7 +11,7 @@ from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
 from neo.description import class_by_name, one_to_many_reslationship, many_to_many_reslationship, \
-        classes_necessary_attributes, classes_recommended_attributes
+        property_relationship, classes_necessary_attributes, classes_recommended_attributes
 
 import quantities as pq
 from datetime import datetime
@@ -43,18 +43,24 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         #~ pos = rect_pos[name]
         #~ htotal = all_h[name]
         #~ if name not in one_to_many_reslationship.keys(): continue
-        for r in range(2):
+        for r in range(3):
             relationship = [ ]
             if r==0 and name in one_to_many_reslationship:
                 relationship = one_to_many_reslationship[name]
                 color = 'c'
+                alpha = 1.
             elif r==1 and name in many_to_many_reslationship:
                 relationship = many_to_many_reslationship[name]
                 color = 'm'
+                alpha = 1.
+            elif r ==2 and name in property_relationship:
+                relationship = property_relationship[name]
+                color = 'y'
+                alpha = .3
         
             for c,children in enumerate(relationship):
                 if children not in rect_pos.keys(): continue
-                if r ==0:
+                if r ==0 or r == 2:
                     x = rect_pos[children][0]
                     y = rect_pos[children][1] + all_h[children] - line_heigth*.5
                     x2 = rect_pos[name][0] + rect_width
@@ -84,6 +90,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
                                                             shrinkB=.3,
                                                             fc=color, ec=color,
                                                             connectionstyle=connectionstyle,
+                                                            alpha = alpha,
                                                             ),
                                             bbox=dict(boxstyle="square", fc="w"))
                 a.set_zorder(-4)
@@ -149,7 +156,11 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
 
         
         # name
-        ax.text( pos[0]+rect_width/2. , pos[1]+htotal - line_heigth*1.5/2. , name,
+        if len(classes_necessary_attributes[name]) >0 and classes_necessary_attributes[name][0][0] == '':
+            post= '* '
+        else:
+            post = ''
+        ax.text( pos[0]+rect_width/2. , pos[1]+htotal - line_heigth*1.5/2. , name+post,
                             horizontalalignment = 'center',
                             verticalalignment = 'center',
                             fontsize = fontsize+2,

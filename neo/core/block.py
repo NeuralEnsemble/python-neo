@@ -32,6 +32,11 @@ class Block(BaseNeo):
             :py:class:`Unit` existing in the block. This shortcut exists
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
+        
+        list_recordingchannels: descends through hierarchy and returns
+            a list of :py:class:`RecordingChannel` existing in the block.
+        
+        
     """
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None, 
@@ -50,7 +55,7 @@ class Block(BaseNeo):
     @property
     def list_units(self):
         """
-        Return a list of all Units in a block.
+        Return a list of all :py:class:`Unit` in a block.
         """
         units = [ ]
         for rcg in self.recordingchannelgroups:
@@ -59,5 +64,16 @@ class Block(BaseNeo):
                     if unit not in units:
                         units.append(unit)
         return units
-
+    
+    @property
+    def list_recordingchannels(self):
+        """
+        Return a list of all :py:class:`RecordingChannel` in a block.
+        """
+        all_rc = [ ]
+        for rcg in self.recordingchannelgroups:
+            for rc in rcg.recordingchannel:
+                if rc not in all_rc:
+                    all_rc.append(rc)
+        return all_rc
 

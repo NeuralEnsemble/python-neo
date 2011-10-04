@@ -7,9 +7,8 @@ class RecordingChannel(BaseNeo):
     
     Note that a RecordingChannel can belong to several :py:class:`RecordingChannelGroup`.
 
-    *Usage*::
+    *Usage* one Block with 3 Segment and 16 RecordingChannel and 48 AnalogSignal::
         
-        # one Block with 3 Segment and 16 RecordingChannel and 48 AnalogSignal
         bl = Block()
         # Create a new RecordingChannelGroup and add to current block
         rcg = RecordingChannelGroup(name = 'all channels)
@@ -29,6 +28,7 @@ class RecordingChannel(BaseNeo):
                 anasig = AnalogSignal( np.rand(100000), sampling_rate = 20*pq.Hz)
                 bl.segments[s].analogsignals.append(anasig)
                 rcg.recordingchannels[c].analogsignals.append(anasig)
+        
         
     *Required attributes/properties*:
         :index: (int) Index of the channel

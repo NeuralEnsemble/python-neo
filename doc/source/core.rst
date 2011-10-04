@@ -94,7 +94,7 @@ A :class:`Segment` can access the :class:`AnalogSignal` objects that it contains
     >>> seg.analogsignals
     # gives a list a AnalogSignals
     
-In the diagram below, these *one to many* relationships are represented by cyan arrows.
+In the :ref:`neo_diagram` below, these *one to many* relationships are represented by cyan arrows.
 In general, an object can access its children with an attribute *childname+s* in lower case, e.g.
 
     * :attr:`Block.segments`
@@ -126,7 +126,7 @@ Here is an example showing these relationships in use::
         print(seg.block) # parent access
 
 
-On the diagram you can also see a magenta relationship. This is more tricky *many to many* relationship.
+On the :ref:`neo_diagram` you can also see a magenta relationship. This is more tricky *many to many* relationship.
 This relationship is between :py:class:`RecordingChannel` and :py:class:`RecordingChannelGroup`.
 *Many to many* relationship means that :py:class:`RecordingChannelGroup` have a list *recordingchannels** 
 that point to many :py:class:`RecordingChannel`, this is the intuitive and general case. But there also a
@@ -166,6 +166,19 @@ I want 5 groups: one for describing the whole probe and four for each tetrodes::
 See :ref:`use_cases_page` for more examples of how the different objects may be used.
 
 .. _neo_diagram:
+
+Neo diagram
+========
+
+Object:
+  * With a star = hinerits Quantities
+Attributes:
+  * In red = necessary
+  * In withe = recommended
+Relationship:
+  * In cyan = one to many
+  * In magenta = many to many
+  * In yellow = properties (deducted from other relationship)
 
 
 .. image:: images/simple_generated_diagram.png
