@@ -17,13 +17,16 @@ class testFilenameParser(unittest.TestCase):
     malformed group numbers."""
     def test1(self):
         """Tests that files can be loaded by basename"""
-        dirname = os.path.abspath('./files_for_tests/klustakwik/test1')
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test1')
         kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname,'basename'))
         fetfiles = kio._fp.read_filenames('fet')
         
         self.assertEqual(len(fetfiles), 2)
-        self.assertEqual(fetfiles[0], os.path.join(dirname, 'basename.fet.0'))
-        self.assertEqual(fetfiles[1], os.path.join(dirname, 'basename.fet.1'))
+        self.assertEqual(os.path.abspath(fetfiles[0]), 
+            os.path.abspath(os.path.join(dirname, 'basename.fet.0')))
+        self.assertEqual(os.path.abspath(fetfiles[1]), 
+            os.path.abspath(os.path.join(dirname, 'basename.fet.1')))
 
     def test2(self):
         """Tests that files are loaded even without basename"""
@@ -41,12 +44,14 @@ class testFilenameParser(unittest.TestCase):
 
     def test3(self):
         """Tests that files can be loaded by basename2"""
-        dirname = os.path.abspath('./files_for_tests/klustakwik/test1')
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test1')
         kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname, 'basename2'))
         clufiles = kio._fp.read_filenames('clu')
         
         self.assertEqual(len(clufiles), 1)
-        self.assertEqual(clufiles[1], os.path.join(dirname, 'basename2.clu.1'))
+        self.assertEqual(os.path.abspath(clufiles[1]), 
+            os.path.abspath(os.path.join(dirname, 'basename2.clu.1')))
 
 
 
@@ -54,7 +59,8 @@ class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
     def test1(self):
         """Tests that data and metadata are read correctly"""
-        dirname = os.path.normpath('./files_for_tests/klustakwik/test2')
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test2')
         kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname, 'base'),
             sampling_rate=1000.)
         block = kio.read()
@@ -93,7 +99,8 @@ class testRead(unittest.TestCase):
     
     def test2(self):
         """Checks that cluster id autosets to 0 without clu file"""
-        dirname = os.path.normpath('./files_for_tests/klustakwik/test2')
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test2')
         kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname, 'base2'),
             sampling_rate=1000.)
         block = kio.read()
@@ -153,7 +160,8 @@ class testWrite(unittest.TestCase):
         segment.spiketrains.append(st4)
         
         # Create empty directory for writing
-        dirname = os.path.normpath('./files_for_tests/klustakwik/test3')
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test3')
         delete_test_session()
         
         # Create writer with default sampling rate
@@ -232,8 +240,9 @@ class CommonTests(BaseTestIO, unittest.TestCase ):
 
 def delete_test_session():
     """Removes all file in directory so we can test writing to it"""
-    for fi in glob.glob(os.path.join(
-        './files_for_tests/klustakwik/test3', '*')): 
+    dirname = os.path.join(os.path.dirname(__file__), 
+        'files_for_tests/klustakwik/test3')
+    for fi in glob.glob(os.path.join(dirname, '*')):
         os.remove(fi)
     
 
