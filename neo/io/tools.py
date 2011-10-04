@@ -57,7 +57,7 @@ def create_many_to_one_relationship(ob):
             create_many_to_one_relationship(child)
 
 
-def populate_RecordingChannel(bl, remove_from_annotation = True):
+def populate_RecordingChannel(bl, remove_from_annotation = True, create_many_to_one_relationship = True):
     """
     When a Block is
     Block>Segment>AnalogSIgnal or/and Block>Segment>SpikeTrain
@@ -88,6 +88,8 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                             if remove_from_annotation:
                                 child.annotations.pop('channel_name')
                     recordingchannels[ind].analogsignals.append(child)
+                    if create_many_to_one_relationship:
+                        child.recordingchannel = recordingchannels[ind]
                     if remove_from_annotation:
                         child.annotations.pop('channel_index')
     indexes = np.sort(recordingchannels.keys())
