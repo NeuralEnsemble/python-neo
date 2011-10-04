@@ -11,7 +11,21 @@ Typical use cases
 Multi segment recording
 =======================
 
-Note that this defines two ways you can access your data: in time, or in space. Each way involves descending the hierarchy of Neo objects a little differently.
+Here the typical example to illustrate a multi segment recording.
+I have 1 Block:
+  * with 3 Segment representing for instance trials.
+  * with a probe with 8 RecordingChannel
+In a such case, you can finally play with 3x8 = 24 AnalogSignal. Named here as AS i,j (i = segment.index and j = recordingchannel.index)
+
+.. image:: images/multi_segment_diagram.png
+
+To summary, you can acces by 2 ways Segment or RecordingChannel that represnt in this particulary example time or space.
+
+Note that segments do not always represent trial, it can be use for many purpose but in this example block.segments.
+
+.. todo:: continue thsi paragraph based on the schema
+
+
 
 Temporal
 In this case you want to go through your data in order, perhaps because you want to correlate the neural response with the stimulus that was delivered in each segment. We'll assume that you've already put one trial per segment, and that the LFP data is an AnalogSignalArray in the segment, and that the segment also contains spiketrains. In this example we won't worry about separating the response by channel or neuron.::
