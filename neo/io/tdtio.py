@@ -167,8 +167,9 @@ class TdtIO(BaseIO):
                         
                         sptr = SpikeTrain([ ], units = 's',
                                                         name = str(h['sortcode']),
-                                                        t_start = global_t_start,
-                                                        t_stop = global_t_start, # temporary
+                                                        #t_start = global_t_start,
+                                                        t_start = 0.*pq.s,
+                                                        t_stop = 0.*pq.s, # temporary
                                                         left_sweep = (h['size']-10.)/2./h['frequency'] * pq.s,
                                                         sampling_rate = h['frequency'] * pq.Hz,
                                                         
@@ -219,7 +220,7 @@ class TdtIO(BaseIO):
                     allsig[code][channel].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
 
             if lazy:
-                #TODO : _data_description
+                #TODO : size
                 pass
             else:
 
@@ -239,26 +240,19 @@ class TdtIO(BaseIO):
                 for code, v in allspiketr.iteritems():
                     for channel, allsorted in v.iteritems():
                         for sortcode, sptr in allsorted.iteritems():
-                            
-                            new = SpikeTrain( np.empty( (sptr.nbspike) , dtype = 'f' )*pq.s ,
+                            new = SpikeTrain(np.zeros( (sptr.nbspike), dtype = 'f8' ) *pq.s ,
                                                             name = sptr.name,
                                                             t_start = sptr.t_start,
-                                                            t_stop = sptr.t_start + sptr.nbspike*pq.s/float(sptr.sampling_rate.rescale(pq.Hz)),
+                                                            t_stop = sptr.t_stop,
                                                             left_sweep = sptr.left_sweep,
                                                             sampling_rate = sptr.sampling_rate,
-                                                            waveforms = np.empty( (sptr.nbspike, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,
+                                                            waveforms = np.ones( (sptr.nbspike, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,
                                                         )
                             new.annotations.update(sptr.annotations)
                             new.pos = 0
                             new.waveformsize = sptr.waveformsize
                             allsorted[sortcode] = new
                         
-
-                        
-                        
-                        #~ sptr._spike_times = zeros( (sptr.nbspike), dtype ='f')
-                        #~ sptr._waveforms = zeros( (sptr.nbspike, 1 , sptr.waveformsize), dtype = 'f')
-            
                 # Step 3 : searh sev (individual data files) or tev (common data file)
                 # sev is for version > 70
                 if os.path.exists(os.path.join(subdir, tankname+'_'+blockname+'.tev')):
@@ -305,7 +299,8 @@ class TdtIO(BaseIO):
                     
                     elif Types[evtype] == 'EVTYPE_SNIP': 
                         sptr = allspiketr[code][channel][h['sortcode']]
-                        sptr[sptr.pos] = h['timestamp'] * pq.s
+                        sptr.t_stop =  (h['timestamp'] - global_t_start) * pq.s
+                        sptr[sptr.pos] = (h['timestamp'] - global_t_start) * pq.s
                         sptr.waveforms[sptr.pos, 0, :] = np.fromstring( sptr.fid.read( sptr.waveformsize*4 ), dtype = 'f4') * pq.V
                         sptr.pos += 1
                 
