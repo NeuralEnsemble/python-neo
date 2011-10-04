@@ -76,7 +76,12 @@ class testWrite(unittest.TestCase):
         #tools.create_many_to_one_relationship(block)
         #print "here: "
         #print block.segments[0].analogsignals[0].recordingchannel
-        tools.finalize_block(block)
+        
+        # Chris I prefer that:
+        #tools.finalize_block(block)
+        tools.populate_RecordingChannel(block)
+        tools.create_many_to_one_relationship(block)
+        
         
         # Check that blackrockio is correctly extracting channel indexes
         self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(

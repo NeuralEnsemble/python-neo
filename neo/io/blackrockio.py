@@ -21,7 +21,7 @@ class BlackrockIO(BaseIO):
     is_writable        = True # write is not supported
     
     # This IO can only manipulate continuous data, not spikes or events
-    supported_objects  = [Block, Segment, AnalogSignal, RecordingChannel]
+    supported_objects  = [Block, Segment, AnalogSignal, RecordingChannelGroup, RecordingChannel]
     
     # Keep things simple by always returning a block
     readable_objects    = [Block]

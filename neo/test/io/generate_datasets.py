@@ -7,7 +7,7 @@ Generate datasets for testing
 
 
 from neo.core import *
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel, finalize_block
+from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -34,7 +34,7 @@ def generate_one_simple_block(block_name = 'block_0',
             seg = generate_one_simple_segment(supported_objects=supported_objects, **kws)
             bl.segments.append(seg)
     
-    if RecordingChannelGroup in supported_objects and RecordingChannel in supported_objects:
+    if RecordingChannel in supported_objects:
         populate_RecordingChannel(bl)
     
     return bl

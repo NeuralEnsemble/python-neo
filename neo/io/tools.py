@@ -9,15 +9,15 @@ import numpy as np
 from ..core import *
 from ..description import one_to_many_reslationship, many_to_one_reslationship
 
-def finalize_block(block):
-    populate_RecordingChannel(block)
-    create_many_to_one_relationship(block)
+#def finalize_block(block):
+#    populate_RecordingChannel(block)
+#    create_many_to_one_relationship(block)
     
     # Special case this tricky many-to-many relationship
     # we still need links from recordingchannel to analogsignal
-    for rcg in block.recordingchannelgroups:
-        for rc in rcg.recordingchannels:
-            create_many_to_one_relationship(rc)
+#    for rcg in block.recordingchannelgroups:
+#        for rc in rcg.recordingchannels:
+#            create_many_to_one_relationship(rc)
 
 
 def create_many_to_one_relationship(ob):
@@ -57,7 +57,7 @@ def create_many_to_one_relationship(ob):
             create_many_to_one_relationship(child)
 
 
-def populate_RecordingChannel(bl, remove_from_annotation = True, create_many_to_one_relationship = True):
+def populate_RecordingChannel(bl, remove_from_annotation = True):
     """
     When a Block is
     Block>Segment>AnalogSIgnal or/and Block>Segment>SpikeTrain
@@ -88,8 +88,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True, create_many_to_
                             if remove_from_annotation:
                                 child.annotations.pop('channel_name')
                     recordingchannels[ind].analogsignals.append(child)
-                    if create_many_to_one_relationship:
-                        child.recordingchannel = recordingchannels[ind]
+                    child.recordingchannel = recordingchannels[ind]
                     if remove_from_annotation:
                         child.annotations.pop('channel_index')
     indexes = np.sort(recordingchannels.keys())
