@@ -51,16 +51,24 @@ membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
 :py:class:`RecordingChannel`:
-    Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain` or :py:class:`Unit`
+    Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain`.
     objects that come from the same logical and/or physical channel inside a :py:class:`Block` across  several :py:class:`Segment` .
 
 :py:class:`RecordingChannelGroup`:
-    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses. The main one is for linking several :py:class:`AnalogSignalArray` across several  :py:class:`Segment` inside a  :py:class:`Block`.
-    A second use for multielectrode arrays, spikes may be recorded on more than one recording channel, and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`SpikeTrain` with the group of recording channels on which it was calculated (Example a tetrode).
-    A third use for intracellular recording, it is common to record both membrane potentials and currents at the same time, so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded.
-
+    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses: 
+      * The main one is for linking several :py:class:`AnalogSignalArray` across several  :py:class:`Segment` inside a  :py:class:`Block`.
+      * A second use for multielectrode arrays, spikes may be recorded on more than one recording channel, 
+        and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`Unit` with the
+        group of recording channels on which it was calculated (Example a tetrode).
+      * A third use and flexible use is for grouping several :py:class:`RecordingChannel`. There are many case for that.
+        For instance for intracellular recording, it is common to record both membrane potentials and currents at the same time, 
+        so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded. For Multi Electrode Array,
+        :py:class:`RecordingChannelGroup` is used to gather all :py:class:`RecordingChannel` of the same MEA.
+        
 :py:class:`Unit`:
-    DESCRIPTION GOES HERE
+    It regroups all the :class:`SpikeTrain` objects that were emitted by a neuron during a :class:`Block`. 
+    A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from which it was detected.
+    This replaces the :class:`Neuron` class in the previous version of Neo (V1).
 
 .. image:: images/base_schematic.png
    :height: 500 px

@@ -7,7 +7,7 @@ class Unit(BaseNeo):
     within the :class:`Block`, so this object is not contained in the usual 
     :class:`Block`/:class:`Segment`/:class:`SpikeTrain` hierarchy.
     
-    A :class:`Unit` is linked to a list of :class:`RecordingChannel` objects from which it was detected.
+    A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from which it was detected.
     With tetrodes, for instance, multiple channels may record the same unit.
     
     This replaces the :class:`Neuron` class in the previous version of Neo.
@@ -19,16 +19,12 @@ class Unit(BaseNeo):
         
         # first segment
         st1 = neo.SpikeTrain(times=[.01, 3.3, 9.3], units='sec')
-        u._spiketrains.append(st1)
+        u.spiketrains.append(st1)
         
         # second segment
         st2 = neo.SpikeTrain(times=[100.01, 103.3, 109.3], units='sec')
-        u._spiketrains.append(st2)
+        u.spiketrains.append(st2)
         
-        # channel info
-        rc = RecordginChannel(index = 0)
-        u._recordingchannels.append(rc)
-
     
     *Required attributes/properties*:
         None
@@ -42,9 +38,6 @@ class Unit(BaseNeo):
         :class:`SpikeTrain`
         :class:`Spike`
     
-    *Container of (many to many)*:
-       :class:`RecordingChannel`
-
     """
     def __init__(self, name=None, description=None, file_origin=None, **annotations):
         """Initialize a new neuronal Unit (spike source)"""
@@ -52,7 +45,7 @@ class Unit(BaseNeo):
                          description=description, **annotations)
         self.spiketrains = [ ]
         self.spikes = [ ]
-        self.recordingchannels = [ ]
+        
 
 
 

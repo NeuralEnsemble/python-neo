@@ -4,20 +4,31 @@ class RecordingChannel(BaseNeo):
     """
     A RecordingChannel is a container for :py:class:`AnalogSignal` objects
     that come from the same logical and/or physical channel inside a :py:class:`Block`.
+    
+    Note that a RecordingChannel can belong to several :py:class:`RecordingChannelGroup`.
 
     *Usage*::
-    
-        # Create a new RecordingChannelGroup and add to current block
-        rcg = RecordingChannelGroup(channel_names=['ch1', 'ch2', 'ch3'])
-        rcg.channel_indexes = [1, 2, 3]
-        block.recordingchannelgroups.append(rcg)
         
-        rc1 = RecordingChannel(index=1)
-        rcg.recordingchannels.append(rc)
-        rc2 = RecordingChannel(index=2)
-        rcg.recordingchannels.append(rc)
-        rc3 = RecordingChannel(index=3)
-        rcg.recordingchannels.append(rc)        
+        # one Block with 3 Segment and 16 RecordingChannel and 48 AnalogSignal
+        bl = Block()
+        # Create a new RecordingChannelGroup and add to current block
+        rcg = RecordingChannelGroup(name = 'all channels)
+        bl.recordingchannelgroups.append(rcg)
+        
+        for c in range(16):
+            rc = RecordingChannel(index=c)
+            rcg.recordingchannels.append(rc) # <- many to many relationship
+            rc.recordingchannelgroups.append(rcg) # <- many to many relationship
+
+        for s in range(3):
+            seg = Segment(name = 'segment %d' %s, index = s)
+            bl.segments.append(seg)
+        
+        for c in range(16):
+            for s in range(3):
+                anasig = AnalogSignal( np.rand(100000), sampling_rate = 20*pq.Hz)
+                bl.segments[s].analogsignals.append(anasig)
+                rcg.recordingchannels[c].analogsignals.append(anasig)
         
     *Required attributes/properties*:
         :index: (int) Index of the channel
@@ -48,4 +59,8 @@ class RecordingChannel(BaseNeo):
         # Initialize contianers
         self.analogsignals = [ ]
         self.irregularlysampledsignals = [ ]
+        # Many to many relationship
+        self.recordingchannelgroups = [ ]
+        
+        
 
