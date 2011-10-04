@@ -7,7 +7,7 @@ Generate datasets for testing
 
 
 from neo.core import *
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
+from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel, finalize_block
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -118,6 +118,7 @@ def generate_from_supported_objects( supported_objects ):
     #~ create_many_to_one_relationship
     if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects= supported_objects)
+        finalize_block(higher)
         
     elif Segment in supported_objects:
         higher = generate_one_simple_segment(supported_objects= supported_objects)
