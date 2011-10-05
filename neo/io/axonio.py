@@ -271,8 +271,8 @@ class AxonIO(BaseIO):
                         unit = header['sADCUnits'][i]
                         num = header['nADCPtoLChannelMap'][i]
                     elif version >=2. :
-                        name = header['listADCInfo'][i]['recChNames']
-                        unit = header['listADCInfo'][i]['recChUnits']
+                        name = header['listADCInfo'][i]['ADCChNames']
+                        unit = header['listADCInfo'][i]['ADCChUnits']
                         num = header['listADCInfo'][i]['nADCNum']
                     t_start = float(episodArray[j]['offset'])/sampling_rate
                     t_start = t_start.rescale('s')
@@ -411,8 +411,8 @@ class AxonIO(BaseIO):
                         ADCInfo[key] = val[0]
                     else :
                         ADCInfo[key] = np.array(val)
-                ADCInfo['recChNames'] = strings[ADCInfo['lADCChannelNameIndex']-1]
-                ADCInfo['recChUnits'] = strings[ADCInfo['lADCUnitsIndex']-1]
+                ADCInfo['ADCChNames'] = strings[ADCInfo['lADCChannelNameIndex']-1]
+                ADCInfo['ADCChUnits'] = strings[ADCInfo['lADCUnitsIndex']-1]
                 
                 header['listADCInfo'].append( ADCInfo )
         
@@ -443,6 +443,23 @@ class AxonIO(BaseIO):
                 
             header['listTag'] = listTag
             
+            # DAC sections
+            header['listDACInfo'] = [ ]
+            for i in range(sections['DACSection']['llNumEntries']) :
+                #  read DACInfo
+                fid.seek(sections['DACSection']['uBlockIndex']*\
+                            BLOCKSIZE+sections['DACSection']['uBytes']*i)
+                DACInfo = { }
+                for key, format in DACInfoDescription :
+                    val = fid.read_f(format )
+                    if len(val) == 1:
+                        DACInfo[key] = val[0]
+                    else :
+                        DACInfo[key] = np.array(val)
+                DACInfo['DACChNames'] = strings[DACInfo['lDACChannelNameIndex']-1]
+                DACInfo['DACChUnits'] = strings[DACInfo['lDACChannelUnitsIndex']-1]
+                
+            header['listDACInfo'].append( DACInfo )
             
         fid.close()
         
@@ -648,7 +665,7 @@ DACInfoDescription = [
        ('nTelegraphDACScaleFactorEnable','h'),
        ('fInstrumentHoldingLevel', 'f'),
        ('fDACScaleFactor','f'),
-       ('fDACHoldingLevel','h'),
+       ('fDACHoldingLevel','f'),
        ('fDACCalibrationFactor','f'),
        ('fDACCalibrationOffset','f'),
        ('lDACChannelNameIndex','i'),
