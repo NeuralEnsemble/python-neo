@@ -60,9 +60,8 @@ def create_many_to_one_relationship(ob):
 def populate_RecordingChannel(bl, remove_from_annotation = True):
     """
     When a Block is
-    Block>Segment>AnalogSIgnal or/and Block>Segment>SpikeTrain
-    this function auto create all RecordingChannel
-    following these rules:
+    Block>Segment>AnalogSIgnal
+    this function auto create all RecordingChannel following these rules:
       * when 'channel_index ' is in AnalogSIgnal.annotations the corresponding RecordingChannel is created.
       * 'channel_index ' is then removed from annotations dict if remove_from_annotation
       * only one RecordingChannelGroup is created
@@ -74,23 +73,20 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     """
     recordingchannels = { }
     for seg in bl.segments:
-        
-        for sub in ['analogsignals', 'spiketrains' ]:
-            if not hasattr(seg, sub) : continue
-            for child in getattr(seg, sub):
-                # child is AnaologSIgnal or SpikeTrain
-                if 'channel_index' in child.annotations:
-                    ind = int(child.annotations['channel_index'])
-                    if  ind not in recordingchannels:
-                        recordingchannels[ind] = RecordingChannel(index = ind)
-                        if 'channel_name' in child.annotations:
-                            recordingchannels[ind].name = child.annotations['channel_name']
-                            if remove_from_annotation:
-                                child.annotations.pop('channel_name')
-                    recordingchannels[ind].analogsignals.append(child)
-                    child.recordingchannel = recordingchannels[ind]
-                    if remove_from_annotation:
-                        child.annotations.pop('channel_index')
+        for anasig in seg.analogsignals:
+            if 'channel_index' in anasig.annotations:
+                ind = int(anasig.annotations['channel_index'])
+                if  ind not in recordingchannels:
+                    recordingchannels[ind] = RecordingChannel(index = ind)
+                    if 'channel_name' in anasig.annotations:
+                        recordingchannels[ind].name = anasig.annotations['channel_name']
+                        if remove_from_annotation:
+                            anasig.annotations.pop('channel_name')
+                recordingchannels[ind].analogsignals.append(anasig)
+                anasig.recordingchannel = recordingchannels[ind]
+                if remove_from_annotation:
+                    anasig.annotations.pop('channel_index')
+    
     indexes = np.sort(recordingchannels.keys())
     names = np.array([recordingchannels[idx].name for idx in indexes], dtype='S')
     rcg = RecordingChannelGroup(name = 'all channels', 
