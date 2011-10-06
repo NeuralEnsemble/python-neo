@@ -126,16 +126,9 @@ Here is an example showing these relationships in use::
         print(seg.block) # parent access
 
 
-On the :ref:`neo_diagram` you can also see a magenta relationship. This is more tricky *many to many* relationship.
-This relationship is between :py:class:`RecordingChannel` and :py:class:`RecordingChannelGroup`.
-*Many to many* relationship means that :py:class:`RecordingChannelGroup` have a list *recordingchannels** 
-that point to many :py:class:`RecordingChannel`, this is the intuitive and general case. But there also a
-link :py:class:`RecordingChannel`.*recordingchannelgroups* to many  :py:class:`RecordingChannelGroup`.
-this second and less intuitive link describe the fact that a :py:class:`RecordingChannel` can belong to
-several groups.
+On the :ref:`neo_diagram` you can also see a magenta line reflecting the *many-to-many* relationship between :py:class:`RecordingChannel` and :py:class:`RecordingChannelGroup`. This means that each group can contain multiple channels, and each channel can belong to multiple groups.
 
-An example for helping, take this case: I have a probe with 16 channel divided in 4 tetrodes.
-I want 5 groups: one for describing the whole probe and four for each tetrodes::
+In some cases, a one-to-many relationship is sufficient. Here is a simple example with tetrodes, in which each tetrode has its own group.::
 
     from neo import *
     bl = Block()
@@ -146,21 +139,48 @@ I want 5 groups: one for describing the whole probe and four for each tetrodes::
         rc = RecordingChannel( index= i, name ='rc %d' %i)
         all_rc.append(rc)
     
-    # global group
-    rcg = RecordginChannelGroup( name = 'The whole probe')
-    for rc in all_rc:
-        rcg.recordingchannels.append(rc)
-        rc.recordingchannelgroups.append(rcg)
-    bl.recordingchannelgroups.append(rcg)
-    
     # the four tetrodes
     for i in range(4):
-        rcg = RecordginChannelGroup( name = 'Tetrode %d' % i )
+        rcg = RecordingChannelGroup( name = 'Tetrode %d' % i )
         for rc in all_rc[i*4:(i+1)*4]:
             rcg.recordingchannels.append(rc)
             rc.recordingchannelgroups.append(rcg)
         bl.recordingchannelgroups.append(rcg)
 
+    # now we load the data and associate it with the created channels
+    # ...
+
+Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3. We create a group for each neuron to hold the `Unit` object associated with this spikesorting group. Each group also contains the channels on which that neuron spiked. The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
+
+    from neo import *
+    bl = Block(name='probe data')
+
+    # create individual channels
+    all_rc = []
+    for i in range(4):
+        rc = RecordingChannel(index=i, name='channel %d' % i)
+        all_rc.append(rc)
+
+    # one group for each neuron
+    rcg0 = RecordingChannelGroup(name='Group 0', index=0)
+    for i in [0, 1, 2]:
+        rcg1.recordingchannels.append(all_rc[i])
+        rc[i].recordingchannelgroups.append(rcg0)
+    bl.recordingchannelgroups.append(rcg0)
+
+    rcg1 = RecordingChannelGroup(name='Group 1', index=1)
+    for i in [1, 2, 3]:
+        rcg1.recordingchannels.append(all_rc[i])
+        rc[i].recordingchannelgroups.append(rcg1)
+    bl.recordingchannelgroups.append(rcg1)
+
+    # now we add the spiketrain from Unit 0 to rcg0
+    # and add the spiketrain from Unit 1 to rcg1
+    # ...
+
+Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`RecordingChannelGroup` contains the :py:class:`Unit` object. That unit then contains its spiketrains.
+
+There are some shortcuts for IO writers to automatically create this structure based on 'channel_indexes' entries in the annotations for each spiketrain.
 
 
 See :ref:`use_cases_page` for more examples of how the different objects may be used.
