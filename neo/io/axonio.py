@@ -26,7 +26,7 @@ All possible mode are possible :
 
 Supported : Read
 
-Author: sgarcia
+Author: sgarcia, jnowacki
 
 Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also reads
 abf files - would be good to cross-check
@@ -459,7 +459,35 @@ class AxonIO(BaseIO):
                 DACInfo['DACChNames'] = strings[DACInfo['lDACChannelNameIndex']-1]
                 DACInfo['DACChUnits'] = strings[DACInfo['lDACChannelUnitsIndex']-1]
                 
-            header['listDACInfo'].append( DACInfo )
+                header['listDACInfo'].append( DACInfo )
+            
+            
+            # EpochPerDAC  sections
+            # header['dictEpochInfoPerDAC'] is dict of dicts: 
+            #  - the first index is the DAC number
+            #  - the second index is the epoch number 
+            # It has to be done like that because data may not exist and may not be in sorted order
+            header['dictEpochInfoPerDAC'] = { }  
+            for i in range(sections['EpochPerDACSection']['llNumEntries']) :
+                #  read DACInfo
+                fid.seek(sections['EpochPerDACSection']['uBlockIndex']*\
+                            BLOCKSIZE+sections['EpochPerDACSection']['uBytes']*i)
+                EpochInfoPerDAC = { }
+                for key, format in EpochInfoPerDACDescription :
+                    val = fid.read_f(format )
+                    if len(val) == 1:
+                        EpochInfoPerDAC[key] = val[0]
+                    else :
+                        EpochInfoPerDAC[key] = np.array(val)
+                        
+                DACNum = EpochInfoPerDAC['nDACNum']
+                EpochNum = EpochInfoPerDAC['nEpochNum']
+                # Checking if the key exists, if not, the value is empty 
+                # so we have to create empty dict to populate
+                if  header['dictEpochInfoPerDAC'].has_key(DACNum) == False:
+                    header['dictEpochInfoPerDAC'][DACNum] = { }
+                
+                header['dictEpochInfoPerDAC'][DACNum][EpochNum] = EpochInfoPerDAC  
             
         fid.close()
         
@@ -711,10 +739,10 @@ EpochInfoPerDACDescription = [
        ('nEpochType','h'),
        ('fEpochInitLevel','f'),
        ('fEpochLevelInc','f'),
-       ('lEpochInitDuration','f'),
-       ('lEpochDurationInc','f'),
-       ('lEpochPulsePeriod','f'),
-       ('lEpochPulseWidth','f'),
+       ('lEpochInitDuration','i'),
+       ('lEpochDurationInc','i'),
+       ('lEpochPulsePeriod','i'),
+       ('lEpochPulseWidth','i'),
        ('sUnused','18s'),
        ]
 
