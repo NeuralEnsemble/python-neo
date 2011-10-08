@@ -319,14 +319,17 @@ class AxonIO(BaseIO):
         """
         read the header of the file
         
-        The startegy differ here from the orignal script under Matlab.
+        The strategy differ here from the original script under Matlab.
         In the original script for ABF2, it complete the header with informations
-        that are located in other strutures.
+        that are located in other structures.
         
         In ABF2 this function return header with sub dict :
-            listADCInfo
-            protocole
-            tags
+            sections             (ABF2)
+            protocol             (ABF2)
+            listTags             (ABF1&2) 
+            listADCInfo          (ABF2)
+            listDACInfo          (ABF2)
+            dictEpochInfoPerDAC  (ABF2)
         that contain more information.
         """
         fid = struct_file(self.filename,'rb')
@@ -484,7 +487,7 @@ class AxonIO(BaseIO):
                 EpochNum = EpochInfoPerDAC['nEpochNum']
                 # Checking if the key exists, if not, the value is empty 
                 # so we have to create empty dict to populate
-                if  header['dictEpochInfoPerDAC'].has_key(DACNum) == False:
+                if not header['dictEpochInfoPerDAC'].has_key(DACNum):
                     header['dictEpochInfoPerDAC'][DACNum] = { }
                 
                 header['dictEpochInfoPerDAC'][DACNum][EpochNum] = EpochInfoPerDAC  
@@ -492,7 +495,53 @@ class AxonIO(BaseIO):
         fid.close()
         
         return header
-
+    
+    def read_protocol(self):
+        """
+        Read the protocol waveform of the file, if present; function works with ABF2 only.
+        
+        Returns: list of segments (one for every episode) 
+                 with list of analog signls (one for every DAC).
+        """ 
+        header = self.read_header()
+       
+        if header['fFileVersionNumber'] < 2. :
+            raise "Protocol is only present in ABF2 files."
+        
+        nADC = header['sections']['ADCSection']['llNumEntries'] # Number of ADC channels
+        nDAC = header['sections']['DACSection']['llNumEntries'] # Number of DAC channels
+        nSam = header['protocol']['lNumSamplesPerEpisode']/nADC # Number of samples per episode
+        nEpi = header['lActualEpisodes']                        # Actual number of episodes
+        sampling_rate = 1.e6/header['protocol']['fADCSequenceInterval'] * pq.Hz
+        
+        # Creating a list of segments with analog signals with just holding levels
+        # List of segments relates to number of episodes, as for recorded data
+        segments = []
+        for epiNum in range(nEpi):
+            seg = Segment(index=epiNum)
+            # One analog signal for each DAC in segment (episode)
+            for DACNum in range(nDAC):
+                t_start = 0 * pq.s# TODO: Possibly check with episode array
+                name = header['listDACInfo'][DACNum]['DACChNames']
+                unit = header['listDACInfo'][DACNum]['DACChUnits']
+                signal = np.ones(nSam)*header['listDACInfo'][DACNum]['fDACHoldingLevel']*pq.Quantity(1, unit)
+                anaSig = AnalogSignal(signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name))
+                anaSig.annotate(channel_index = DACNum)
+                # If there are epoch infos for this DAC 
+                if header['dictEpochInfoPerDAC'].has_key(DACNum):
+                    # Save last sample index
+                    i_last = int(nSam*15625/10**6) # TODO guess for first holding
+                    # Go over EpochInfoPerDAC and change the analog signal according to the epochs 
+                    for epochNum,epoch in header['dictEpochInfoPerDAC'][DACNum].iteritems():
+                        i_begin = i_last
+                        i_end = i_last + epoch['lEpochInitDuration'] + epoch['lEpochDurationInc'] * epiNum 
+                        anaSig[i_begin:i_end] = np.ones(len(range(i_end-i_begin)))*pq.Quantity(1, unit)* \
+                                                (epoch['fEpochInitLevel']+epoch['fEpochLevelInc'] * epiNum); 
+                        i_last += epoch['lEpochInitDuration'] 
+                seg.analogsignals.append(anaSig)
+            segments.append(seg)
+            
+        return segments
 
 BLOCKSIZE = 512
 
