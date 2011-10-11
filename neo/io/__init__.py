@@ -2,8 +2,8 @@
 """
 neo.io provides classes for reading and/or writing electrophysiological data files.
 
-Note that if the package dependency is not satisfied for one io, it do not raise
-a error but a warning.
+Note that if the package dependency is not satisfied for one io, it does not 
+raise an error but a warning.
 
 neo.io.iolist provides the classes list of succesfully imported io.
 
@@ -40,6 +40,8 @@ neo.io.iolist provides the classes list of succesfully imported io.
 .. autoclass:: neo.io.KlustaKwikIO
 
 .. autoclass:: neo.io.BlackrockIO
+
+.. autoclass:: neo.io.AlphaOmegaIO
 
 
 """
@@ -150,7 +152,6 @@ try:
 except ImportError:
     warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
 
-
 try:
     from .klustakwikio import KlustaKwikIO
     iolist.append( KlustaKwikIO )
@@ -163,12 +164,10 @@ try:
 except ImportError:
     warnings.warn("BlackrockIO not available, check dependencies", ImportWarning)
 
-
-
-#~ try:
-    #~ from .alphaomegaio import AlphaOmegaIO
-    #~ iolist.append( AlphaOmegaIO )
-#~ except ImportError:
-    #~ warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
+try:
+    from .alphaomegaio import AlphaOmegaIO
+    iolist.append( AlphaOmegaIO )
+except ImportError:
+    warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
 
 
