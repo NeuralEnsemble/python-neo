@@ -106,6 +106,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         obj = super(BaseAnalogSignal, self).__getitem__(i)
         if isinstance(obj, BaseAnalogSignal):
             # update t_start
+            slice_start = None
             if isinstance(i, slice):
                 slice_start = i.start
             elif isinstance(i, tuple) and len(i) == 2:
