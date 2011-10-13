@@ -234,7 +234,13 @@ class CommonTests(BaseTestIO, unittest.TestCase ):
         'test2/base.clu.0',
         'test2/base.clu.1',
         'test2/base.fet.0',
-        'test2/base.fet.1'
+        'test2/base.fet.1',
+        'test3/base1.clu.0',
+        'test3/base1.clu.1',
+        'test3/base1.clu.2',
+        'test3/base1.fet.0',
+        'test3/base1.fet.1',
+        'test3/base1.fet.2'
         ]
 
 
