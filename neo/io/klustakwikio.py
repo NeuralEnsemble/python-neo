@@ -142,7 +142,7 @@ class KlustaKwikIO(BaseIO):
         for group in sorted(self._fetfiles.keys()):
             # Load spike times 
             fetfile = self._fetfiles[group]
-            spks = self._load_spike_times(fetfile)
+            spks, features = self._load_spike_times(fetfile)
             
             # Load cluster ids or generate
             if group in self._clufiles:
@@ -179,6 +179,10 @@ class KlustaKwikIO(BaseIO):
                 st.annotations['cluster'] = unit_id
                 st.annotations['group'] = group
                 
+                # put features in
+                if not lazy and len(features) != 0:
+                    st.annotations['waveform_features'] = features
+                
                 # Link
                 u.spiketrains.append(st)
                 seg.spiketrains.append(st)
@@ -188,7 +192,7 @@ class KlustaKwikIO(BaseIO):
 
     # Helper hidden functions for reading
     def _load_spike_times(self, fetfilename):
-        """Reads and returns the spike times, the last column in the fet file"""
+        """Reads and returns the spike times and features"""
         f = file(fetfilename, 'r')
         
         # Number of clustering features is integer on first line
@@ -200,11 +204,14 @@ class KlustaKwikIO(BaseIO):
         names.append('spike_time')
         
         # Load into recarray
-        data = mlab.csv2rec(f, names=names, skiprows=1)
+        data = mlab.csv2rec(f, names=names, skiprows=1, delimiter=' ')
         f.close()
         
+        # get features
+        features = np.array([data['fet%d' % n] for n in xrange(nbFeatures)])
+        
         # Return the spike_time column
-        return data['spike_time']
+        return data['spike_time'], features.transpose()
     
     def _load_unit_id(self, clufilename):
         """Reads and return the cluster ids as int32"""
@@ -269,6 +276,9 @@ class KlustaKwikIO(BaseIO):
         # First create file handles for each group which will be stored
         self._make_all_file_handles(block)
         
+        # We'll detect how many features belong in each group
+        self._group2features = {}
+        
         # Iterate through segments in this block
         for seg in block.segments:
             # Write each spiketrain of the segment
@@ -287,12 +297,47 @@ class KlustaKwikIO(BaseIO):
                 except KeyError:
                     sr = self.sampling_rate
                 
-                # Write each spike of the spiketrain    
-                spike_times_in_samples = (np.array(st) * sr).astype(np.int)
-                for stt in spike_times_in_samples:
-                    # Would normally write features here
-                    # But currently features are not stored                    
+                # Convert to samples
+                spike_times_in_samples = np.rint(
+                    np.array(st) * sr).astype(np.int)
+                
+                # Try to get features from spiketrain
+                try:
+                    all_features = st.annotations['waveform_features']
+                except KeyError:
+                    # Use empty
+                    all_features = [
+                        [] for n in range(len(spike_times_in_samples))]
+                all_features = np.asarray(all_features)
+                if all_features.ndim != 2:
+                    raise ValueError("waveform features should be 2d array")
+                
+                # Check number of features we're supposed to have
+                try:
+                    n_features = self._group2features[group]
+                except KeyError:
+                    # First time through .. set number of features
+                    n_features = all_features.shape[1]
+                    self._group2features[group] = n_features
+                    
+                    # and write to first line of file
+                    fetfilehandle.write("%d\n" % n_features)                    
+                if n_features != all_features.shape[1]:
+                    raise ValueError("inconsistent number of features: " +
+                        "supposed to be %d but I got %d" %\
+                        (n_features, all_features.shape[1]))
+                
+                # Write features and time for each spike
+                for stt, features in zip(spike_times_in_samples, all_features):
+                    # first features
+                    for val in features:
+                        fetfilehandle.write(str(val))
+                        fetfilehandle.write(" ")
+                    
+                    # now time
                     fetfilehandle.write("%d\n" % stt)
+                    
+                    # and cluster id
                     clufilehandle.write("%d\n" % cluster)
 
         # We're done, so close the files
@@ -353,7 +398,7 @@ class KlustaKwikIO(BaseIO):
         self._clufilehandles[id_group] = file(clufilename, 'w')
         
         # write out first line        
-        self._fetfilehandles[id_group].write("0\n") # Number of features
+        #self._fetfilehandles[id_group].write("0\n") # Number of features
         self._clufilehandles[id_group].write("%d\n" % nbClusters)
     
     def _close_all_files(self):

@@ -7,7 +7,7 @@ import quantities as pq
 import glob
 
 from neo.test.io.common_io_test import BaseTestIO
-
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
 
 class testFilenameParser(unittest.TestCase):
@@ -208,6 +208,81 @@ class testWrite(unittest.TestCase):
         # Empty out test session again
         delete_test_session()
 
+class testWriteWithFeatures(unittest.TestCase):
+    def test1(self):
+        """Create clu and fet files based on spiketrains in a block.
+        
+        Checks that
+            Files are created
+            Converted to samples correctly
+            Missing sampling rate are taken from IO reader default        
+            Spiketrains without cluster info are assigned to cluster 0
+            Spiketrains across segments are concatenated
+        """
+        block = neo.Block()
+        segment = neo.Segment()
+        segment2 = neo.Segment()
+        block.segments.append(segment)
+        block.segments.append(segment2)
+        
+        # Fake spiketrain 1
+        st1 = neo.SpikeTrain(times=[.002, .004, .006], units='s', t_stop=1.)
+        st1.annotations['cluster'] = 0
+        st1.annotations['group'] = 0
+        wff = np.array([
+            [11.3, 0.2],
+            [-0.3, 12.3],
+            [3.0, -2.5]])
+        st1.annotations['waveform_features'] = wff
+        segment.spiketrains.append(st1)        
+        
+        # Create empty directory for writing
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test4')
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        delete_test_session(dirname)
+        
+        # Create writer        
+        kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname, 'base2'),
+            sampling_rate=1000.)
+        kio.write_block(block)
+        
+        # Check files were created
+        for fn in ['.fet.0', '.clu.0']:
+            self.assertTrue(os.path.exists(os.path.join(dirname,
+                'base2' + fn)))
+        
+        # Check files contain correct content
+        fi = file(os.path.join(dirname, 'base2.fet.0'))
+        
+        # first line is nbFeatures
+        self.assertEqual(fi.readline(), '2\n')
+        
+        # Now check waveforms and times are same
+        data = fi.readlines()
+        new_wff = []
+        new_times = []
+        for line in data:
+            line_split = line.split()
+            new_wff.append([float(val) for val in line_split[:-1]])
+            new_times.append(int(line_split[-1]))
+        self.assertEqual(new_times, [2, 4, 6])
+        assert_arrays_almost_equal(wff, np.array(new_wff), .00001)
+        
+        # Clusters on group 0
+        data = file(os.path.join(dirname, 'base2.clu.0')).readlines()
+        data = [int(d) for d in data]
+        self.assertEqual(data, [1, 0, 0, 0])
+        
+        # Now read the features and test same
+        block = kio.read_block()
+        assert_arrays_almost_equal(wff, 
+            block.segments[0].spiketrains[0].annotations['waveform_features'], 
+            .00001)
+        
+        # Empty out test session again
+        delete_test_session(dirname)
 
 class CommonTests(BaseTestIO, unittest.TestCase ):
     ioclass = neo.io.KlustaKwikIO
@@ -244,10 +319,11 @@ class CommonTests(BaseTestIO, unittest.TestCase ):
         ]
 
 
-def delete_test_session():
-    """Removes all file in directory so we can test writing to it"""
-    dirname = os.path.join(os.path.dirname(__file__), 
-        'files_for_tests/klustakwik/test3')
+def delete_test_session(dirname=None):
+    """Removes all file in directory so we can test writing to it"""    
+    if dirname is None:
+        dirname = os.path.join(os.path.dirname(__file__), 
+            'files_for_tests/klustakwik/test3')
     for fi in glob.glob(os.path.join(dirname, '*')):
         os.remove(fi)
     
