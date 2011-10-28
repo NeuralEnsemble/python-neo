@@ -38,6 +38,7 @@ Documentation
    examples
    api_reference
    whatisnew
+   specific_annotations
    developers_guide
    io_developers_guide
    authors

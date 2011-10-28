@@ -283,3 +283,5 @@ limitations on the data types of annotations: they must be "simple" types or
 containers (lists, dicts, NumPy arrays) of simple types, where the simple types
 are ``integer``, ``float``, ``Quantity``, ``string``, ``date``, ``time`` and
 ``datetime``.
+
+See :ref:`specific_annotations`

@@ -53,7 +53,8 @@ class BaseTestIO(object):
     
     # all IO test need to modify this:
     ioclass = None # the IOclass to be tested
-    hash_conserved_when_write_read = False # when R/W and hash conserved    
+    hash_conserved_when_write_read = False # when R/W and hash conserved
+    read_and_write_is_bijective = True
     files_to_test = [ ] # list of files to test compliances
     files_to_download = [ ] # when files are at G-Node
     
@@ -159,6 +160,9 @@ class BaseTestIO(object):
             higher in self.ioclass.writeable_objects):
             return
         if not(higher == neo.Block or higher == neo.Segment):
+            return
+        
+        if not self.read_and_write_is_bijective:
             return
         
         # When the highest-level object requires parameters, such as
