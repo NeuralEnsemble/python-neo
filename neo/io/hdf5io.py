@@ -16,21 +16,21 @@ IO dependencies:
 
 Quick reference:
 ================================================================================
-Class IOManager() with methods get(), save(), delete() is implemented. This 
+Class NeoHdf5IO() with methods get(), save(), delete() is implemented. This 
 class represents a connection manager with the HDF5 file with the possibility
 to put (save()) or retrieve (get()) runtime NEO objects from the file.
 
 Start by initializing IO:
 
->>> from hdf5io import IOManager
->>> iom = IOManager()
+>>> from hdf5io import NeoHdf5IO
+>>> iom = NeoHdf5IO()
 >>> iom
-<hdf5io.IOManager object at 0x7f291ebe6810>
+<hdf5io.NeoHdf5IO object at 0x7f291ebe6810>
 
 The file is created automatically (path/filename can be changed in "settings" 
 option). So you can also do 
 
->>> iom = IOManager(filename="myfile.h5")
+>>> iom = NeoHdf5IO(filename="myfile.h5")
 
 Now you may save any of your neo object into the file (assuming your NEO objects
 are in the python path):
@@ -331,7 +331,7 @@ def _func_wrapper(func):
 all_objects = list(meta_classnames.values())
 all_objects.remove(Block)# the order is important
 all_objects = [Block]+all_objects
-class IOManager(BaseIO):
+class NeoHdf5IO(BaseIO):
     """
     The IO Manager is the core I/O class for HDF5 / NEO. It handles the 
     connection with the HDF5 file, and uses PyTables for data operations. Use
@@ -574,7 +574,7 @@ class IOManager(BaseIO):
             # create a new node?
             raise LookupError("There is no valid object with a given path " +\
                 str(path) + " . Please give correct path or just browse the file \
-                (e.g. IOManager()._data.root.<Block>._segments...) to find an \
+                (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
                 appropriate name.")
         classname = self._get_class_by_node(node)
         if classname:

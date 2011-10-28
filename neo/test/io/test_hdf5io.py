@@ -16,10 +16,10 @@ import os
 
 from neo.core import *
 try:
-    from neo.io.hdf5io import IOManager
+    from neo.io.hdf5io import NeoHdf5IO
     have_hdf5 = True
 except ImportError:
-    IOManager = None
+    NeoHdf5IO = None
     have_hdf5 = False
 
 from neo.test.io.common_io_test import BaseTestIO
@@ -93,7 +93,7 @@ def checks():
 
 
 class HDF5Commontests(BaseTestIO, unittest.TestCase):
-    ioclass = IOManager
+    ioclass = NeoHdf5IO
     files_to_test = [  ]
     files_to_download =  [   ]
     
@@ -119,7 +119,7 @@ class hdf5ioTest(unittest.TestCase):
         """
         Create test file with signals, segments, blocks etc.
         """
-        iom = IOManager(filename=self.test_file)
+        iom = NeoHdf5IO(filename=self.test_file)
         # creating a structure
         block = checks()
         # saving & testing

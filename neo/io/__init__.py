@@ -45,6 +45,8 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 
 """
+# AND also  .. autoclass:: neo.io.NeoHdf5IO
+
 
 import warnings
 
@@ -55,6 +57,12 @@ try:
     iolist.append( ExampleIO )
 except ImportError:
     warnings.warn("ExampleIO not available, check dependencies", ImportWarning)
+
+#try:
+#    from .hdf5 import NeoHdf5IO
+#    iolist.append( NeoHdf5IO )
+#except ImportError:
+#    warnings.warn("NeoHdf5IO not available, check dependencies", ImportWarning)
 
 try:
     from .plexonio import PlexonIO
