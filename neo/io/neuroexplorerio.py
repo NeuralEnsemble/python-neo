@@ -117,7 +117,7 @@ class NeuroExplorerIO(BaseIO):
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'],
                                                     )
-                    spike_times = spike_times.astype('f')/globalHeader['freq']*pq.s
+                    spike_times = spike_times.astype('f8')/globalHeader['freq']*pq.s
                 sptr = SpikeTrain( times= spike_times, 
                                                     t_start = globalHeader['tbeg']/globalHeader['freq']*pq.s,
                                                     t_stop = globalHeader['tend']/globalHeader['freq']*pq.s,
@@ -135,7 +135,7 @@ class NeuroExplorerIO(BaseIO):
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'],
                                                     )
-                    event_times = event_times.astype('f')/globalHeader['freq'] * pq.s
+                    event_times = event_times.astype('f8')/globalHeader['freq'] * pq.s
                 labels = np.array(['']*event_times.size)
                 evar = EventArray(times = event_times, labels=labels, channel_name = entityHeader['name'] )
                 seg.eventarrays.append(evar)
@@ -150,7 +150,7 @@ class NeuroExplorerIO(BaseIO):
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'],
                                                     )
-                    start_times = start_times.astype('f')/globalHeader['freq']*pq.s       
+                    start_times = start_times.astype('f8')/globalHeader['freq']*pq.s       
                     stop_times= np.memmap(self.filename , np.dtype('i4') ,'r' ,
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset']+entityHeader['n']*4,
@@ -173,7 +173,7 @@ class NeuroExplorerIO(BaseIO):
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'],
                                                     )
-                    spike_times = spike_times.astype('f')/globalHeader['freq'] * pq.s
+                    spike_times = spike_times.astype('f8')/globalHeader['freq'] * pq.s
                     
                     waveforms = np.memmap(self.filename , np.dtype('i2') ,'r' ,
                                                 shape = (entityHeader['n'] ,  1,entityHeader['NPointsWave']),
@@ -205,12 +205,12 @@ class NeuroExplorerIO(BaseIO):
                                                         shape = (entityHeader['n'] ),
                                                         offset = entityHeader['offset'],
                                                         )
-                timestamps = timestamps.astype('f')/globalHeader['freq']
+                timestamps = timestamps.astype('f8')/globalHeader['freq']
                 fragmentStarts = np.memmap(self.filename , np.dtype('i4') ,'r' ,
                                                         shape = (entityHeader['n'] ),
                                                         offset = entityHeader['offset'],
                                                         )
-                fragmentStarts = fragmentStarts.astype('f')/globalHeader['freq']
+                fragmentStarts = fragmentStarts.astype('f8')/globalHeader['freq']
                 t_start =  timestamps[0] - fragmentStarts[0]/float(entityHeader['WFrequency'])
                 del timestamps, fragmentStarts
                 
@@ -241,7 +241,7 @@ class NeuroExplorerIO(BaseIO):
                                                     shape = (entityHeader['n'] ),
                                                     offset = entityHeader['offset'],
                                                     )
-                    times = times.astype('f')/globalHeader['freq'] * pq.s
+                    times = times.astype('f8')/globalHeader['freq'] * pq.s
                     fid.seek(entityHeader['offset'] + entityHeader['n']*4)
                     markertype = fid.read(64).replace('\x00','')
                     labels = np.memmap(self.filename, np.dtype('S' + str(entityHeader['MarkerLength'])) ,'r',
