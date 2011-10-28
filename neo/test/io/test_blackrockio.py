@@ -173,6 +173,7 @@ class testRead(unittest.TestCase):
 
 class CommonTests(BaseTestIO, unittest.TestCase ):
     ioclass = neo.io.BlackrockIO
+    read_and_write_is_bijective = False
     
     # These are the files it tries to read and test for compliance
     files_to_test = [ 
