@@ -242,14 +242,15 @@ class ExampleIO(BaseIO):
         """
         sr = 10000.
         sinus_freq = 3. # Hz
+        #time vector for generated signal:
         tvect = np.arange(t_start, t_start+ segment_duration , 1./sr)
+        
         
         if lazy:
             anasig = AnalogSignal([ ], units = 'V', sampling_rate=sr*pq.Hz, t_start=t_start*pq.s)
-            anasig._data_description = {'shape' : tvect.shape}
+            # we add the attribute lazy_shape with the size if loaded
+            anasig.lazy_shape = tvect.shape
         else:
-            #time vector for generated signal
-
             # create analogsignal (sinus of 3 Hz)
             sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
             anasig = AnalogSignal(sig, units= 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
@@ -295,9 +296,8 @@ class ExampleIO(BaseIO):
                                             )
         
         if lazy:
-            spiketr._data_description = {
-                                                        'times_shape' : num_spike_by_spiketrain,
-                                                        }
+            # we add the attribute lazy_shape with the size if loaded
+            spiketr.lazy_shape = (num_spike_by_spiketrain,)
         
         # ours spiketrains also hold the waveforms:
         
@@ -307,19 +307,17 @@ class ExampleIO(BaseIO):
         w = np.r_[ w1 , w2 ]
         w = -w/max(w)
         
-        # in the neo API the waveforms attr is 3 D in case tetrode
-        # in our case it is mono electrode so dim 1 is size 1
-        waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
-        waveforms *=  randn(*waveforms.shape)/6+1
-        spiketr.waveforms = waveforms
-        spiketr.sampling_rate = sr * pq.Hz
-        spiketr.left_sweep = 1.5* pq.s
+        if not lazy:
+            # in the neo API the waveforms attr is 3 D in case tetrode
+            # in our case it is mono electrode so dim 1 is size 1
+            waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
+            waveforms *=  randn(*waveforms.shape)/6+1
+            spiketr.waveforms = waveforms
+            spiketr.sampling_rate = sr * pq.Hz
+            spiketr.left_sweep = 1.5* pq.s
         
         # for attributes out of neo you can annotate
         spiketr.annotate(channel_index = channel_index)
         
         return spiketr
-
-
-
 

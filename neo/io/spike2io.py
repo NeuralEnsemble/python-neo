@@ -253,7 +253,7 @@ class Spike2IO(BaseIO):
         
         if  lazy:
             for s, anaSig in enumerate(anaSigs):
-                anaSig._data_description = { 'shape' : blocksize[s]}
+                anaSig.lazy_shape = blocksize[s]
             
         else:
             # read data  by jumping block to block
@@ -321,12 +321,13 @@ class Spike2IO(BaseIO):
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )
                 ea.annotate(channel_index = channel_num)
-                ea._data_description = { 'shape' : totalitems}
+                ea.lazy_shape = totalitems
                 return ea
+                
             elif channelHeader.kind in [6 ,7]:
                 sptr = SpikeTrain([ ]*pq.s, t_stop=1e99)  # correct value for t_stop to be put in later
                 sptr.annotate(channel_index = channel_num)
-                sptr._data_description = {  'shape' : totalitems }
+                sptr.lazy_shape = totalitems
                 return sptr
         
         else:

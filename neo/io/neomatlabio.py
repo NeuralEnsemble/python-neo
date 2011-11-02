@@ -282,6 +282,7 @@ class NeoMatlabIO(BaseIO):
                     data_complement["t_stop"] = 0.0
             if lazy:    
                 ob = cl([ ], **data_complement)
+                ob.lazy_shape = struct.array.shape
             else:
                 ob = cl(struct.array, **data_complement)
         else:
@@ -304,34 +305,41 @@ class NeoMatlabIO(BaseIO):
             
             
             item = getattr(struct, attrname)
-            if attrname+'_units' in struct._fieldnames:
-                # Quantity attributes
-                units = str(getattr(struct, attrname+'_units'))
-                if lazy:
-                    item = pq.Quantity([ ], units)
-                else:
-                    item = pq.Quantity(item, units)
-            else:
-                # put the good type
-                necess = description.classes_necessary_attributes[classname]
-                recomm = description.classes_recommended_attributes[classname]
-                attributes = necess + recomm
-                #~ attr_types = dict( [ (a[0], a[1]) for a in attributes])
-                dict_attributes = dict( [ (a[0], a[1:]) for a in attributes])
-                if attrname in dict_attributes:
-                    #~ _type = attr_types[attrname]
-                    attrtype = dict_attributes[attrname][0]
-                    if attrtype == datetime:
-                        m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
-                        r = re.findall(m, str(item))
-                        if len(r)==1:
-                            item = datetime( *[ int(e) for e in r[0] ] )
-                        else:
-                            item = None
-                    elif attrtype == np.ndarray:
-                        item = item.astype( dict_attributes[attrname][2] )
+            # put the good type
+            necess = description.classes_necessary_attributes[classname]
+            recomm = description.classes_recommended_attributes[classname]
+            attributes = necess + recomm
+
+            dict_attributes = dict( [ (a[0], a[1:]) for a in attributes])
+            if attrname in dict_attributes:
+                attrtype = dict_attributes[attrname][0]
+                if attrtype == datetime:
+                    m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
+                    r = re.findall(m, str(item))
+                    if len(r)==1:
+                        item = datetime( *[ int(e) for e in r[0] ] )
                     else:
-                        item = attrtype(item)
+                        item = None
+                elif attrtype == np.ndarray:
+                    dt = dict_attributes[attrname][2]
+                    if lazy:
+                        item = np.array([ ], dtype = dt)
+                        ob.lazy_shape = item.shape
+                    else:
+                        item = item.astype( dt )
+                elif attrtype == pq.Quantity:
+                    ndim = dict_attributes[attrname][1]
+                    units = str(getattr(struct, attrname+'_units'))
+                    if ndim == 0:
+                        item = pq.Quantity(item, units)
+                    else:
+                        if lazy:
+                            item = pq.Quantity([ ], units)
+                            item.lazy_shape = item.shape
+                        else:
+                            item = pq.Quantity(item, units)
+                else:
+                    item = attrtype(item)
             
             setattr(ob, attrname, item)
 

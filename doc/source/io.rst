@@ -98,23 +98,26 @@ Lazy and cascade options
 In some cases you may not want to load everything in memory because it could be too big.
 For this scenario, two options are available:
 
-  * ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero, but all the metadata will be loaded.
-  * ``cascade=True/False``. With ``cascade=False`` only one object is read (and *one_to_many* and *many_to_many* relationship are read).
+  * ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero, but all the metadata will be loaded. lazy_shape attribute is added to all object that
+    inheritate Quantitities or numpy.ndarray (AnalogSignal, AnalogSignalArray, SpikeTrain)  and to object that have array like attributes (EpochArray, EventArray)
+    In that cases, lazy_shape is a tuple that have the same shape with lazy=False.
+  * ``cascade=True/False``. With ``cascade=False`` only one object is read (and *one_to_many* and *many_to_many* relationship are not read).
 
 By default (if they are not specified), ``lazy=False`` and ``cascade=True``, i.e. all data is loaded.
 
-Example::
+Example cascade::
+    >>> seg = reader.read_segment( cascade=True)
+    >>> print(len(seg.analogsignals)) # this is N
+    >>> seg = reader.read_segment(cascade=False)
+    >>> print(len(seg.analogsignals)) # this is zero
 
-    >>> seg = reader.read_segment(lazy=False, cascade=True)
-    >>> print(seg.analogsignals[0].shape)
-    >>> seg = reader.read_segment(lazy=True, cascade=True)
+Example lazy::
+    >>> seg = reader.read_segment(lazy=False)
+    >>> print(seg.analogsignals[0].shape) # this is N
+    >>> seg = reader.read_segment(lazy=True)
     >>> print(seg.analogsignals[0].shape) # this is zero, the AnalogSignal is empty
-    >>> seg = reader.read_segment(lazy=False, cascade=False)
-    >>> print(len(seg.analogsignals)) # zero
+    >>> print(seg.analogsignals[0].lazy_shape) # this is N
 
-In the first case, the segment and sub-hierachy is read and all analog signals are loaded.
-In second case, the segment and sub-hierachy is read but :attr:`analogsignals` is empty (size 0).
-In the third case the analog signals are not read at all.
 
 .. _neo_io_API:
 
@@ -127,7 +130,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class can read or write directly one or several Neo objects (for example :class:`Segment`, :class:`Block`, ...): see the :attr:`readable_objects` and :attr:`writable_objects` attributes of the IO class.
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a :class:`Block` even if there is only one :class:`Segment` and one :class:`AnalogSignal` inside.
-    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.
+    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
     - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports. 
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.

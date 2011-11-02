@@ -163,7 +163,9 @@ class NeuroshareIO(BaseIO):
                         times.append(pdTimeStamp.value)
                         labels.append(str(pData))
                     ea.times = times*pq.s
-                    ea = np.array(labels)
+                    ea.labels = np.array(labels, dtype ='S')
+                else :
+                    ea.lazy_shape = entityInfo.dwItemCount
                 seg.eventarrays.append(ea)
             
             # analog
@@ -197,6 +199,8 @@ class NeuroshareIO(BaseIO):
                                                     t_start = pdTime.value * pq.s, 
                                                     name = str(entityInfo.szEntityLabel),
                                                     )
+                if lazy:
+                    anaSig.lazy_shape = entityInfo.dwItemCount
                 seg.analogsignals.append( anaSig )
                 
             
@@ -247,6 +251,8 @@ class NeuroshareIO(BaseIO):
                                         sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
                                         name = str(entityInfo.szEntityLabel),
                                         )
+                    if lazy:
+                        sptr.lazy_shape = entityInfo.dwItemCount
                     seg.spiketrains.append(sptr)
             
             
@@ -267,6 +273,8 @@ class NeuroshareIO(BaseIO):
                                                      dwIndexCount,  pData.ctypes.data)
                     times = pData*pq.s
                 sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel),)
+                if lazy:
+                    sptr.lazy_shape = entityInfo.dwItemCount
                 seg.spiketrains.append(sptr)
         
         # close

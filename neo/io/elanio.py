@@ -218,6 +218,8 @@ class ElanIO(BaseIO):
                                                     t_start=0.*pq.s,
                                                     name = labels[c],
                                                     )
+            if lazy:
+                anaSig.lazy_shape = data.shape[0]
             anaSig.annotate(channel_index = c)
             anaSig.annotate(channel_name= labels[c])
             seg.analogsignals.append( anaSig )
@@ -244,7 +246,8 @@ class ElanIO(BaseIO):
                                     labels  = labels,
                                     reject_codes = reject_codes,
                                     )
-        
+        if lazy:
+            ea.lazy_shape = len(times)
         seg.eventarrays.append(ea)
     
         

@@ -6,6 +6,7 @@ import os
 import quantities as pq
 
 from neo import description
+import neo
 
 def assert_arrays_equal(a, b):
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
@@ -182,7 +183,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
         elif attrtype == np.ndarray:
             assert_eg(getattr(ob1, attrname), getattr(ob2, attrname))
         else:
-            print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
+            #~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
             assert getattr(ob1, attrname)== getattr(ob2, attrname), 'Attribute %s.%s are not the same %s %s' % (classname,attrname, type(getattr(ob1, attrname)),  type(getattr(ob2, attrname)))
 
 
@@ -205,15 +206,25 @@ def assert_sub_schema_is_lazy_loaded(ob):
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
+        #~ print 'xdsd', classname, attrname
         if attrname == '':
             assert ob.size == 0, 'Lazy loaded error %s.size = %s' % (classname, ob.size)
+            assert hasattr(ob, 'lazy_shape'), 'Lazy loaded error, %s should have lazy_shape attribute'% (classname, )
         
         if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
             continue
+        #~ print 'hjkjh'
         if (attrtype == pq.Quantity or attrtype == np.ndarray):
+            
+            # FIXME: it is awork arrounf for recordingChannelGroup.channel_names which is nupy.array but allowed to be loaded when lazy = True
+            if ob.__class__ == neo.RecordingChannelGroup: continue
+            
             ndim = attr[2]
-            if ndim >1:
-                assert  getattr(ob, attrname).size ==0, 'Lazy loaded error %s.%s.size = %s' % (classname, attrname, ob.size)
+            #~ print 'ndim', ndim
+            #~ print getattr(ob, attrname).size
+            if ndim >=1:
+                assert  getattr(ob, attrname).size ==0, 'Lazy loaded error %s.%s.size = %s' % (classname, attrname, getattr(ob, attrname).size)
+                assert hasattr(ob,  'lazy_shape'), 'Lazy loaded error %s should have lazy_shape attribute because of %s attribute' % (classname, attrname, )
 
 
     

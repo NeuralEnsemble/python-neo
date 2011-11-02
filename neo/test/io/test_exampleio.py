@@ -40,10 +40,10 @@ class TestExample2IO(unittest.TestCase):
         seg = r.read_segment(cascade = True, lazy = True)
         for ana in seg.analogsignals:
             self.assertEqual(ana.size, 0)
-            assert hasattr(ana, '_data_description')
+            assert hasattr(ana, 'lazy_shape')
         for st in seg.spiketrains:
             self.assertEqual(st.size, 0)
-            assert hasattr(st, '_data_description')
+            assert hasattr(st, 'lazy_shape')
         
         seg = r.read_segment(cascade = True, lazy = False)
         for ana in seg.analogsignals:

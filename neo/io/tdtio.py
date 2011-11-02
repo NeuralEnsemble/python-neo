@@ -133,13 +133,13 @@ class TdtIO(BaseIO):
                     if channel not in allevent[code]:
                         ea = EventArray(name = code , channel_index = channel)
                         # for counting:
-                        ea.nbevent = 0
+                        ea.lazy_shape = 0
                         ea.maxlabelsize = 0
                         
                         
                         allevent[code][channel] = ea
                         
-                    allevent[code][channel].nbevent += 1
+                    allevent[code][channel].lazy_shape += 1
                     strobe, = struct.unpack('d' , struct.pack('q' , h['eventoffset']))
                     strobe = str(strobe)
                     if len(strobe)>= allevent[code][channel].maxlabelsize:
@@ -179,7 +179,7 @@ class TdtIO(BaseIO):
                         sptr.annotate(channel_index = channel)
 
                         # for counting:
-                        sptr.nbspike = 0
+                        sptr.lazy_shape = 0
                         sptr.pos = 0
                         sptr.waveformsize = h['size']-10
                         
@@ -192,7 +192,7 @@ class TdtIO(BaseIO):
                         
                         allspiketr[code][channel][h['sortcode']] = sptr
                     
-                    allspiketr[code][channel][h['sortcode']].nbspike += 1
+                    allspiketr[code][channel][h['sortcode']].lazy_shape += 1
                 
                 elif Types[evtype] == 'EVTYPE_STREAM':
                     if code not in allsig:
@@ -205,48 +205,40 @@ class TdtIO(BaseIO):
                                                             sampling_rate = h['frequency'] * pq.Hz,
                                                             t_start = (h['timestamp'] - global_t_start) * pq.s,
                                                             )
-                        
-                        anaSig._data_description = {
-                                                                    'dtype' : dtype(DataFormats[h['dataformat']]),
-                                                                    }
+                        anaSig.lazy_dtype = dtype(DataFormats[h['dataformat']])
                         #anaSig.annotations['channel_index'] = channel
                         anaSig.annotate(channel_index = channel)
                         anaSig.pos = 0
                         
                         # for counting:
-                        anaSig.totalsize = 0
+                        anaSig.lazy_shape = 0
                         #~ anaSig.pos = 0
                         allsig[code][channel] = anaSig
-                    allsig[code][channel].totalsize += (h['size']*4-40)/anaSig.dtype.itemsize
+                    allsig[code][channel].lazy_shape += (h['size']*4-40)/anaSig.dtype.itemsize
 
-            if lazy:
-                #TODO : size
-                pass
-            else:
-
-
+            if not lazy:
                 # Step 2 : allocate memory
                 for code, v in allsig.iteritems():
                     for channel, anaSig in v.iteritems():
-                        v[channel] = anaSig.duplicate_with_new_array(np.zeros((anaSig.totalsize) , dtype = anaSig._data_description ['dtype'] )*pq.V )
+                        v[channel] = anaSig.duplicate_with_new_array(np.zeros((anaSig.lazy_shape) , dtype = anaSig.lazy_dtype)*pq.V )
                         v[channel].pos = 0
                         
                 for code, v in allevent.iteritems():
                     for channel, ea in v.iteritems():
-                        ea.times = np.empty( (ea.nbevent)  ) * pq.s
-                        ea.labels = np.empty( (ea.nbevent), dtype = 'S'+str(ea.maxlabelsize) )
+                        ea.times = np.empty( (ea.lazy_shape)  ) * pq.s
+                        ea.labels = np.empty( (ea.lazy_shape), dtype = 'S'+str(ea.maxlabelsize) )
                         ea.pos = 0
                 
                 for code, v in allspiketr.iteritems():
                     for channel, allsorted in v.iteritems():
                         for sortcode, sptr in allsorted.iteritems():
-                            new = SpikeTrain(np.zeros( (sptr.nbspike), dtype = 'f8' ) *pq.s ,
+                            new = SpikeTrain(np.zeros( (sptr.lazy_shape), dtype = 'f8' ) *pq.s ,
                                                             name = sptr.name,
                                                             t_start = sptr.t_start,
                                                             t_stop = sptr.t_stop,
                                                             left_sweep = sptr.left_sweep,
                                                             sampling_rate = sptr.sampling_rate,
-                                                            waveforms = np.ones( (sptr.nbspike, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,
+                                                            waveforms = np.ones( (sptr.lazy_shape, 1, sptr.waveformsize) , dtype = 'f') * pq.mV ,
                                                         )
                             new.annotations.update(sptr.annotations)
                             new.pos = 0
@@ -261,8 +253,6 @@ class TdtIO(BaseIO):
                     tev = None
                 for code, v in allsig.iteritems():
                     for channel, anaSig in v.iteritems():
-                        #~ print anaSig.name, anaSig.channel_index
-                        #~ print type(anaSig.name), type(anaSig.channel_index)
                         filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
@@ -285,7 +275,6 @@ class TdtIO(BaseIO):
                         dt = a.dtype
                         s = (h['size']*4-40)/dt.itemsize
                         a.fid.seek(h['eventoffset'])
-                        #~ print s
                         a[ a.pos:a.pos+s ]  = np.fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                         a.pos += s
                     
@@ -306,28 +295,18 @@ class TdtIO(BaseIO):
                 
             
             # Step 5 : populating segment
-            # FIXME : del attr
             for code, v in allsig.iteritems():
                 for channel, anaSig in v.iteritems():
-                    #~ del anaSig.totalsize
-                    #~ del anaSig.pos
-                    #~ del anaSig.fid
                     seg.analogsignals.append( anaSig )
 
             for code, v in allevent.iteritems():
                 for channel, ea in v.iteritems():
-                    #~ del ea.nbevent
-                    #~ del ea.pos
                     seg.eventarrays.append( ea )
 
 
             for code, v in allspiketr.iteritems():
                 for channel, allsorted in v.iteritems():
                     for sortcode, sptr in allsorted.iteritems():
-                        #~ del sptr.nbspike
-                        #~ del sptr.waveformsize
-                        #~ del sptr.pos
-                        #~ del sptr.fid
                         seg.spiketrains.append( sptr )
         
         create_many_to_one_relationship(bl)

@@ -159,6 +159,9 @@ class MicromedIO(BaseIO):
                 signal = ( rawdata[:,c].astype('f') - logical_ground )* factor*unit
 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,name = label)
+            if lazy:
+                #TODO
+                anaSig.lazy_shape = None
             anaSig.annotate(channel_index = c)
             anaSig.annotate(ground = ground)
             
@@ -183,6 +186,8 @@ class MicromedIO(BaseIO):
                     times.append(pos/sampling_rate)
             ea.labels = np.array(labels)
             ea.times = times*pq.s
+        else:
+            ea.lazy_shape = Tigger_Area_Length/6
         seg.eventarrays.append(ea)
         
         create_many_to_one_relationship(seg)

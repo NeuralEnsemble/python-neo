@@ -283,6 +283,8 @@ class AxonIO(BaseIO):
                         signal = subdata[:,i] * pq.Quantity(1, unit)
                     
                     anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
+                    if lazy:
+                        anaSig.lazy_shape = subdata.shape[0]
                     anaSig.annotate(channel_index = int(num))
                     seg.analogsignals.append( anaSig )
                 bl.segments.append(seg)
@@ -306,7 +308,8 @@ class AxonIO(BaseIO):
                     ind = (times>=ana.t_start) & (times <= ana.t_stop)
                     if any(ind):
                         if lazy :
-                            ea = EventArray( times =[ ] * pq.s , labels=[])
+                            ea = EventArray( times =[ ] * pq.s , labels=np.array([ ], dtype = 'S'))
+                            ea.lazy_shape = sum(ind)
                         else:
                             ea = EventArray( times = times[ind]*pq.s, labels = labels[ind], comments = comments[ind] )
                         seg.eventarrays.append(ea)

@@ -132,7 +132,7 @@ class WinEdrIO(BaseIO):
                                             )
             ana.annotate(channel_index = c)
             if lazy:
-                ana._data_description = { 'shape' : header['NP']/header['NC'] }
+                ana.lazy_shape = header['NP']/header['NC']
             
             seg.analogsignals.append(ana)
             

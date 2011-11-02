@@ -239,10 +239,16 @@ class BaseTestIO(object):
             # Read the highest supported object from the file
             obname = self.ioclass.supported_objects[0].__name__.lower()
             ob_reader = getattr(r, 'read_%s' % obname)
+            
             ob = ob_reader(cascade = True, lazy = False)
-
             # Check compliance of the block
             assert_neo_object_is_compliant(ob)
+            
+            # same but lazy
+            ob = ob_reader(cascade = True, lazy = True)
+            assert_neo_object_is_compliant(ob)
+            
+            
     
     def test_readed_with_cascade_is_compliant(self):
         """Reading %s files in `files_to_test` with `cascade` is compliant.
@@ -280,9 +286,12 @@ class BaseTestIO(object):
                 assert len(children) == 0, errmsg        
 
     def test_readed_with_lazy_is_compliant(self):
-        """
+        """Reading %s files in `files_to_test` with `lazy` is compliant.
+        
         This test reader with lazy = True : should return all Quantities and ndarray with size = 0.
-        """
+        And should return for AnalogSignal, AnalogSignalArray, SpikeTrain, Epocharray, EventArray
+        the lazy_shape attribute
+        """% self.ioclass.__name__
         # This is for files presents at G-Node or generated
         for filename in self.files_to_test:
             filename = os.path.join(self.local_test_dir, filename)

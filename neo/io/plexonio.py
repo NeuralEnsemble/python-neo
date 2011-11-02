@@ -206,7 +206,17 @@ class PlexonIO(BaseIO):
                     anasig.annotate(channel_name = slowChannelHeaders[chan]['Name'])
                     anaSigs[chan] =  anasig
 
-        if not lazy:    
+        if lazy:
+            for chan, anaSig in anaSigs.iteritems():
+                anaSigs[chan].lazy_shape = ncontinuoussamples[chan]
+                
+            for chan, sptrs in spiketrains.iteritems():
+                for unit, sptr in sptrs.iteritems():
+                    spiketrains[chan][unit].lazy_shape = nspikecounts[chan][unit]
+            
+            for chan, ea in eventarrays.iteritems():
+                ea.lazy_shape = neventsperchannel[chan]
+        else:
             ## Step 4: allocating memory if not lazy
             # continuous signal
             for chan, anaSig in anaSigs.iteritems():
@@ -230,6 +240,7 @@ class PlexonIO(BaseIO):
                 #ea.labels = zeros( neventsperchannel[chan] , dtype = 'S'+str(neventsperchannel[chan]) )
                 eventpositions[chan]=0
             
+        if not lazy:
             
             ## Step 5 : a second loop for reading if not lazy
             fid.seek(start)
@@ -291,6 +302,7 @@ class PlexonIO(BaseIO):
                     if sampleposition[chan] ==0:
                         anaSigs[chan].t_start = time
                 
+        
             
         
         #TODO if lazy

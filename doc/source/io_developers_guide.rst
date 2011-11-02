@@ -16,18 +16,19 @@ Receipe to develop an IO module for a new data format:
     3. Copy/paste ``exampleio.py`` and choose clear file and class names for your IO.
     4. Decide which **supported objects** and **readable objects** your IO will deal with. This is the crucial point.
     5. Implement all methods :meth:`read_XXX` related to **readable objects**.
-    6. Write good docstrings. List dependencies, including minimum version numbers.
-    7. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
-    8. Contact the Neo maintainers to put sample files for testing on the G-Node server (write access is not public).
-    9. Write tests in ``neo/test/io/test_xxxxxio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestIO`).
-    10. Commit or send a patch only if all tests pass.
+    6. Do not forget all : lasy and cascade combination.
+    7. Write good docstrings. List dependencies, including minimum version numbers.
+    8. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
+    9. Contact the Neo maintainers to put sample files for testing on the G-Node server (write access is not public).
+    10. Write tests in ``neo/test/io/test_xxxxxio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestIO`).
+    11. Commit or send a patch only if all tests pass.
 
 
 Miscellaneous
 =============
 
 Notes:
-    * if your IO supports several version of a format (like ABF1, ABF2) you must put all cases for your files.
+    * if your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
     * :py:func:`neo.io.tools.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
     * :py:func:`neo.io.tools.populate_RecordingChannel` offers a utility to
       create inside a :class:`Block` all :class:`RecordingChannel` objects and links to :class:`AnalogSignal`, :class:`SpikeTrain`, ...
@@ -36,7 +37,6 @@ Notes:
       because this object can be written to another url for copying.
     
 
-.. todo:: Samuel, I don't understand "you must put all cases for your files" above
 
 Tests
 =====

@@ -354,8 +354,7 @@ class AlphaOmegaIO(BaseIO):
                                            file_origin = \
                                                os.path.basename(self.filename),
                                            units = pq.dimensionless)
-                    ana_sig._data_description = \
-                        {'shape' : (chan_len[ind_chan],)}
+                    ana_sig.lazy_shape = chan_len[ind_chan]
                 else:
                     ana_sig = AnalogSignal(temp_array, 
                                            sampling_rate = sampling_rate,

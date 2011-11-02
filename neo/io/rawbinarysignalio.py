@@ -152,6 +152,9 @@ class RawBinarySignalIO(BaseIO):
                 signal = sig[:,i]*unit
                 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start,)
+            if lazy:
+                # TODO
+                anaSig.lazy_shape = None
             anaSig.annotate(channel_index = i)
             seg.analogsignals.append( anaSig )
         

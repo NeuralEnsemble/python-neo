@@ -123,6 +123,8 @@ class NeuroExplorerIO(BaseIO):
                                                     t_stop = globalHeader['tend']/globalHeader['freq']*pq.s,
                                                     name = entityHeader['name'],
                                                     )
+                if lazy:
+                    sptr.lazy_shape = entityHeader['n']
                 sptr.annotate(channel_index = entityHeader['WireNumber'])
                 seg.spiketrains.append(sptr)
             
@@ -136,8 +138,10 @@ class NeuroExplorerIO(BaseIO):
                                                     offset = entityHeader['offset'],
                                                     )
                     event_times = event_times.astype('f8')/globalHeader['freq'] * pq.s
-                labels = np.array(['']*event_times.size)
+                labels = np.array(['']*event_times.size, dtype = 'S')
                 evar = EventArray(times = event_times, labels=labels, channel_name = entityHeader['name'] )
+                if lazy:
+                    evar.lazy_shape = entityHeader['n']
                 seg.eventarrays.append(evar)
             
             if entityHeader['type'] == 2:
@@ -158,8 +162,10 @@ class NeuroExplorerIO(BaseIO):
                     stop_times = stop_times.astype('f')/globalHeader['freq']*pq.s
                 epar = EpochArray(times = start_times,
                                   durations =  stop_times - start_times,
-                                  labels = np.array(['']*start_times.size),
+                                  labels = np.array(['']*start_times.size, dtype = 'S'),
                                   channel_name = entityHeader['name'])
+                if lazy:
+                    epar.lazy_shape = entityHeader['n']
                 seg.epocharrays.append(epar)
             
             if entityHeader['type'] == 3:
@@ -190,6 +196,8 @@ class NeuroExplorerIO(BaseIO):
                                                 sampling_rate = entityHeader['WFrequency']*pq.Hz,
                                                 left_sweep = 0*pq.ms,
                                                 )
+                if lazy:
+                    sptr.lazy_shape = entityHeader['n'] 
                 sptr.annotate(channel_index = entityHeader['WireNumber'])
                 seg.spiketrains.append(sptr)
             
@@ -227,6 +235,8 @@ class NeuroExplorerIO(BaseIO):
                     signal = signal*pq.mV
                 
                 anaSig = AnalogSignal(signal = signal , t_start =t_start*pq.s , sampling_rate  = entityHeader['WFrequency']*pq.Hz, name = entityHeader['name'])
+                if lazy:
+                    anaSig.lazy_shape = entityHeader['NPointsWave'] 
                 anaSig.annotate(channel_index = entityHeader['WireNumber'])
                 seg.analogsignals.append( anaSig )
                 
@@ -254,6 +264,8 @@ class NeuroExplorerIO(BaseIO):
                                             channel_index = entityHeader['WireNumber'],
                                             marker_type = markertype
                                             )
+                if lazy:
+                    ea.lazy_shape = entityHeader['n']
                 seg.eventarrays.append(ea)
         
         

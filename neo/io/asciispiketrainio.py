@@ -107,17 +107,20 @@ class AsciiSpikeTrainIO(BaseIO):
         
         f = file(self.filename, 'Ur')
         for i,line in enumerate(f) :
+            all = line[:-1].split(delimiter)
+            if all[-1] == '': all = all[:-1]
+            if all[0] == '': all = all[1:]
             if lazy:
                 spike_times = [ ]
                 t_stop = t_start
             else:
-                all = line[:-1].split(delimiter)
-                if all[-1] == '': all = all[:-1]
-                if all[0] == '': all = all[1:]
                 spike_times = np.array(all).astype('f')
                 t_stop = spike_times.max()*unit
             
             sptr = SpikeTrain(spike_times*unit, t_start=t_start, t_stop=t_stop)
+            if lazy:
+                sptr.lazy_shape = len(all)
+                
             sptr.annotate(channel_index = i)
             seg.spiketrains.append(sptr)
         f.close()

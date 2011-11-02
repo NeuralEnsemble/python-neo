@@ -141,7 +141,7 @@ class WinWcpIO(BaseIO):
                                                         )
                 anaSig.annotate(channel_index = c)
                 if lazy:
-                    anaSig._data_description = { 'shape' : NP }
+                    anaSig.lazy_shape = NP
                 seg.analogsignals.append(anaSig)
         
         fid.close()
