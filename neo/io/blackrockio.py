@@ -188,6 +188,10 @@ class BlackrockIO(BaseIO):
                 description='Channel %d from %f to %f' % (ch, t_start, t_stop),
                 channel_index=ch)
             
+            if lazy:
+                anasig.lazy_shape = n_stop-n_start
+                
+            
             # Link the signal to the segment
             seg.analogsignals.append(anasig)
             

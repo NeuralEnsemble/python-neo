@@ -63,6 +63,7 @@ class BasePyNNIO(BaseIO):
                 signal = AnalogSignal([],
                                       units=self._determine_units(metadata),
                                       sampling_period=metadata['dt']*pq.ms)
+                signal.lazy_shape = None
         else:
             arr = self._extract_array(data, channel_index)
             if len(arr) > 0:
@@ -80,6 +81,7 @@ class BasePyNNIO(BaseIO):
         if lazy:
             if channel_index in data[:, 1]:
                 spiketrain = SpikeTrain([], units=pq.ms, t_stop=0.0)
+                spiketrain.lazy_shape = None
         else:
             spike_times = self._extract_array(data, channel_index)
             if len(spike_times) > 0:

@@ -170,6 +170,7 @@ class KlustaKwikIO(BaseIO):
                         units='sec', t_start=0.0, 
                         t_stop=spks.max() / self.sampling_rate,
                         name=('unit %d from group %d' % (unit_id, group)))
+                    st.lazy_shape = len(spks[uids==unit_id])
                 else:
                     st = SpikeTrain(
                         times=spks[uids==unit_id] / self.sampling_rate, 
