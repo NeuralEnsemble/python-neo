@@ -103,7 +103,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
     """
     
-    def __new__(cls, times, t_stop, units=None,  dtype=numpy.float, copy=True,
+    def __new__(cls, times, t_stop, units=None, dtype=numpy.float, copy=True,
         sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
         left_sweep=None, name=None, file_origin=None, description=None,
         **annotations):
@@ -116,7 +116,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         the attributes are set from the user's arguments. Finally, error
         checking and (optionally) sorting occurs.
         """
-        # First make sure units are consistent
+        # Make sure units are consistent
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -136,8 +136,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             raise ValueError("cannot change dtype and return view")
 
         # Construct Quantity from data
-        obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype, 
-            copy=copy)
+        obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype,
+                                  copy=copy)
         
         # Store attributes
         obj.t_start = pq.Quantity(t_start, units=units)
@@ -152,7 +152,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             _check_time_in_range(obj.min(), obj.t_start, obj.t_stop)
             _check_time_in_range(obj.max(), obj.t_start, obj.t_stop)
         return obj
-
     
     def __init__(self, times, t_stop, units=None,  dtype=numpy.float, copy=True,
         sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
@@ -168,6 +167,33 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # attributes and sets up self.annotations
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+
+    def rescale(self, units):
+        """
+        Return a copy of the SpikeTrain converted to the specified units
+        """
+        to_dims = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == to_dims:
+            to_u = self.units
+            spikes = numpy.array(self)
+        else:
+            to_u = Quantity(1.0, to_dims)
+            from_u = Quantity(1.0, self.dimensionality)
+            try:
+                cf = get_conversion_factor(from_u, to_u)
+            except AssertionError:
+                raise ValueError(
+                    'Unable to convert between units of "%s" and "%s"'
+                    %(from_u._dimensionality, to_u._dimensionality)
+                )
+            spikes = cf*self.magnitude
+        return SpikeTrain(spikes, self.t_stop, units=to_u,
+                          dtype=self.dtype, copy=False,
+                          sampling_rate=self.sampling_rate,
+                          t_start=self.t_start, waveforms=self.waveforms,
+                          left_sweep=self.left_sweep, name=self.name,
+                          file_origin=self.file_origin,
+                          description=self.description, **self.annotations)
 
     def __array_finalize__(self, obj):
         """This is called every time a new SpikeTrain is created.
@@ -207,8 +233,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
     
-
-
     def __repr__(self):
         return '<SpikeTrain(%s, [%s, %s])>' % (
              super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop)

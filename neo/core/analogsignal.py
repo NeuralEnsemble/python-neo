@@ -134,9 +134,33 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def times(self):
         return self.t_start + np.arange(self.shape[0])/self.sampling_rate
     
+    def rescale(self, units):
+        """
+        Return a copy of the AnalogSignal(Array) converted to the specified units
+        """
+        to_dims = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == to_dims:
+            to_u = self.units
+            signal = np.array(self)
+        else:
+            to_u = Quantity(1.0, to_dims)
+            from_u = Quantity(1.0, self.dimensionality)
+            try:
+                cf = get_conversion_factor(from_u, to_u)
+            except AssertionError:
+                raise ValueError(
+                    'Unable to convert between units of "%s" and "%s"'
+                    %(from_u._dimensionality, to_u._dimensionality)
+                )
+            signal = cf*self.magnitude
+        new = self.__class__(signal=signal, units=to_u, sampling_rate=self.sampling_rate)
+        new._copy_data_complement(self)
+        new.annotations.update(self.annotations)
+        return new
+    
     def duplicate_with_new_array(self, signal):
         #signal is the new signal
-        new = AnalogSignal(signal=signal, units=self.units, sampling_rate=self.sampling_rate)
+        new = self.__class__(signal=signal, units=self.units, sampling_rate=self.sampling_rate)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
         return new
