@@ -95,7 +95,7 @@ class BaseIO(object):
             self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
             assert len(bl.segments) == 1, '%s is based on segment so if you try to write a block it must contain only one Segment'% self.__class__.__name__
-            self.write(bl.segments[0], **kargs)
+            self.write_segment(bl.segments[0], **kargs)
         else:
             raise NotImplementedError
 
