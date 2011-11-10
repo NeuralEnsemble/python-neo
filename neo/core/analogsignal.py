@@ -22,6 +22,8 @@ def _get_sampling_rate(sampling_rate, sampling_period):
         else:
             if sampling_period != 1.0/sampling_rate:
                 raise ValueError('The sampling_rate has to be 1/sampling_period')
+    if not hasattr(sampling_rate, 'units'):
+        raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
 
