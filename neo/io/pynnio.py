@@ -143,9 +143,12 @@ class BasePyNNIO(BaseIO):
             metadata['units'] = units.unicode
         except AttributeError:
             metadata['units'] = units.u_symbol
+        start = 0
         for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
-            data[i*s0.size:(i+1)*s0.size, 0] = numpy.array(signal.rescale(units))
-            data[i*s0.size:(i+1)*s0.size, 1] = i*numpy.ones((s0.size,), dtype=float) # index
+            end = start + signal.size
+            data[start:end, 0] = numpy.array(signal.rescale(units))
+            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) # index
+            start = end
         self._write_file_contents(data, metadata)
 
     def read_analogsignal(self, lazy=False, channel_index=0): # channel_index should be positional arg, no?
