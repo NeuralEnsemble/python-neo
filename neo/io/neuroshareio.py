@@ -183,7 +183,7 @@ class NeuroshareIO(BaseIO):
                     pdwContCount = c_uint32(0)
                     pData = zeros( (entityInfo.dwItemCount,), dtype = 'f8')
                     ns_RESULT = neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
-                                     dwIndexCount, byref( pdwContCount) , pData.ctypes.data)
+                                     dwIndexCount, byref( pdwContCount) , pData.ctypes.data_as(ctypes.POINTER(c_double)))
                     pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
                     neuroshare.ns_GetLastErrorMsg(byref(pszMsgBuffer), 256)
                     #~ print 'pszMsgBuffer' , pszMsgBuffer.value
@@ -236,8 +236,8 @@ class NeuroshareIO(BaseIO):
                     waveforms = empty( (entityInfo.dwItemCount, nsource, nsample), drtype = 'f')
                     for dwIndex in range(entityInfo.dwItemCount ):
                         ns_RESULT = neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
-                                byref(pdTimeStamp), pData.ctypes.data,
-                                 dwDataBufferSize, byref(pdwSampleCount),
+                            byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(c_double)),
+                            dwDataBufferSize * 8, byref(pdwSampleCount),
                                 byref(pdwUnitID ) )
                         nsample  = pdwSampleCount.value
                         #print 'dwDataBufferSize' , dwDataBufferSize,pdwSampleCount , pdwUnitID
@@ -270,7 +270,7 @@ class NeuroshareIO(BaseIO):
                     dwStartIndex = 0
                     dwIndexCount = entityInfo.dwItemCount
                     neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
-                                                     dwIndexCount,  pData.ctypes.data)
+                        dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(c_double)))
                     times = pData*pq.s
                 sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel),)
                 if lazy:
@@ -291,7 +291,7 @@ class ns_FILEDESC(ctypes.Structure):
     _fields_ = [('szDescription', c_char*32),
                 ('szExtension', c_char*8),
                 ('szMacCodes', c_char*8),
-                ('szMagicCode', c_char*32),
+                ('szMagicCode', c_char*16),
                 ]
 
 
