@@ -88,7 +88,14 @@ property_relationship = {
     
     }
 
-
+# these relationships are used by IOs which do not natively support non-tree
+# structures like NEO to avoid object duplications when saving/retrieving 
+# objects from the data source.
+implicit_reslationship = {
+    'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
+    'RecordingChannelGroup' : [  'AnalogSignalArray'],
+    'Unit' : ['SpikeTrain', 'Spike', ]
+    }
 
 classes_necessary_attributes = {
     'Block': [

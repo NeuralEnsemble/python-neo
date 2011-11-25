@@ -497,9 +497,17 @@ class NeoHdf5IO(BaseIO):
                         for un in obj_attr.dimensionality.items():
                             node._f_setAttr(str(attr) + "__" + un[0].name, un[1])
                 except:
-                    # object does not have this attribute
-                    pass
-            # here we could add metadata-defined attributes processing
+                    pass # object does not have this attribute
+            if hasattr(obj, "_annotations"): # processing annotations
+                try:
+                    for k in obj._annotations.keys():
+                        if not (str(k) in meta_attributes[obj_type]):
+                            node._f_setAttr(k, obj._annotations[k])
+                except Exception, e:
+                    raise TypeError("There was an error: " + str(e) + \
+                        " with annotations for " + str(obj) + \
+                        ". please check the dict and try again.")
+                    pass # object is not a dict, should we raise an exception?
             # processing arrays
             if meta_arrays.has_key(obj_type) and not lazy:
                 for arr in meta_arrays[obj_type]:
