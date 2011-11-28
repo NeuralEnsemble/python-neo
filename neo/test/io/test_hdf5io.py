@@ -32,7 +32,7 @@ except ImportError:
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.datetime.now(), 
     datetime.date.today(), None]
 
-def get_default_value(attr): # attr = (name, type, [dim, [dtype]])
+def get_fake_value(attr): # attr = (name, type, [dim, [dtype]])
     """ returns default value for a given attribute based on description.py """
     if attr[1] == pq.Quantity or attr[1] == np.ndarray:
         size = []
@@ -58,12 +58,12 @@ def fake_NEO(obj_type="Block", cascade=True, follow_links=True):
     with 'implicit' relationships, to avoid duplications. Do not use it. """
     kwargs = {}
     for attr in classes_necessary_attributes[obj_type]:
-        kwargs[attr[0]] = get_default_value(attr)
+        kwargs[attr[0]] = get_fake_value(attr)
     for attr in classes_recommended_attributes[obj_type]:
-        kwargs[attr[0]] = get_default_value(attr)
+        kwargs[attr[0]] = get_fake_value(attr)
     obj = class_by_name[obj_type](**kwargs)
     if cascade:
-        if obj_type = "Block":
+        if obj_type == "Block":
             follow_links = False
         if one_to_many_reslationship.has_key(obj_type):
             rels = one_to_many_reslationship[obj_type]
@@ -71,12 +71,12 @@ def fake_NEO(obj_type="Block", cascade=True, follow_links=True):
                 for i in implicit_reslationship[obj_type]:
                     rels.pop(i)
             for child in rels:
-                setattr(obj, child.lower() + "s", fake_NEO(child, cascade, 
-                    follow_links))
+                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
+                    follow_links)])
         if obj_type = "RecordingChannelGroup":
             for child in many_to_many_reslationship[obj_type]:
-                setattr(obj, child.lower() + "s", fake_NEO(child, cascade, 
-                    follow_links))
+                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
+                    follow_links)])
     if obj_type = "Block": # need to manually create 'implicit' connections
         # connect a unit to the spike and spike train
         u = obj.recordingchannelgroups[0].units[0]
@@ -133,6 +133,7 @@ class hdf5ioTest(unittest.TestCase):
         iom.connect(filename=self.test_file)
         b2 = iom.get(b1.hdf5_path) # new object
         assert_neo_object_is_compliant(b2)
+        assert_same_sub_schema(b1, b2)
 
     def test_property_change(self):
         """ Make sure all attributes are saved properly after the change, 
@@ -170,7 +171,7 @@ class hdf5ioTest(unittest.TestCase):
             if one_to_many_reslationship.has_key(obj_type):
                 rels = one_to_many_reslationship[obj_type]
                 if obj_type = "RecordingChannelGroup":
-                    rels += many_to_many_reslationship[obj_type]:
+                    rels += many_to_many_reslationship[obj_type]
                 for child_type in rels:
                     ch1 = getattr(obj, child_type.lower() + "s")
                     ch2 = getattr(replica, child_type.lower() + "s")
@@ -185,6 +186,9 @@ class hdf5ioTest(unittest.TestCase):
             replica = iom.get(obj.hdf5_path, cascade=True)
             self.assert_children(obj, replica)
 
+    def test_errors(self):
+        # self.assertRaises(LookupError, iom.save(obj.wrong_path))
+        # changes!!! in attr AS WELL AS in relations!!
 
 if __name__ == '__main__':
     unittest.main()

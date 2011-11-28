@@ -90,7 +90,7 @@ property_relationship = {
 
 # these relationships are used by IOs which do not natively support non-tree
 # structures like NEO to avoid object duplications when saving/retrieving 
-# objects from the data source.
+# objects from the data source. We can call em "secondary" connections
 implicit_reslationship = {
     'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
     'RecordingChannelGroup' : [  'AnalogSignalArray'],
