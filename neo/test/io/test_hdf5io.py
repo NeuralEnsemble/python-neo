@@ -189,6 +189,10 @@ class hdf5ioTest(unittest.TestCase):
     def test_errors(self):
         # self.assertRaises(LookupError, iom.save(obj.wrong_path))
         # changes!!! in attr AS WELL AS in relations!!
+        # test annotations
+        # test naming - paths
+        # unicode!!
+        # add a child, then remove, then check it's removed
 
 if __name__ == '__main__':
     unittest.main()

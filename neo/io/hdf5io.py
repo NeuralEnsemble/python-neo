@@ -175,26 +175,10 @@ The general structure of the file:
                      \---'_epochs'
                    etc.
 
-The weakness of the HDF5 format for NEO:
-================================================================================
-We need to keep in mind that NEO is more than a pure tree structure. So it can't
-be fully represented in a HDF5 file tree. To minimise inconsistencies, there 
-were "hard links" (http://www.pytables.org/docs/manual/ch03.html#LinksTutorial)
-implemented for the following types of relations:
-    - recordingchannelgroup <- analogsignalarray
-    - recordingchannel <- analogsignal
-    - recordingchannel <- irsaanalogsignal
-    - unit <- spiketrain
-    - unit <- spike
-    - unit <- recordingchannel
-These "implicit" relations are NOT loaded when you run the "get" function.
-
 Plans for future extensions:
 ================================================================================
 #FIXME - implement logging mechanism (probably in general for NEO)
-#FIXME - implement caching?
 #FIXME - implement actions history (probably in general for NEO)
-#FIXME - extend BaseIO compliance
 #FIXME - use global IDs for NEO objects (or even UUIDs?)
 #FIXME - implement callbacks in functions for GUIs
 #FIXME - no performance testing yet
@@ -212,9 +196,11 @@ Author: asobolev
 
 from __future__ import absolute_import
 from ..core import *
+from ..test.tools import assert_neo_object_is_compliant
 from ..description import *
 from .baseio import BaseIO
-from .tools import create_many_to_one_relationship, assert_neo_object_is_compliant
+from .tools import create_many_to_one_relationship
+from tables import NoSuchNodeError as NSNE
 import types
 import warnings
 import tables as tb
@@ -231,75 +217,6 @@ cascade:        If 'True' all children are retrieved when get(object) is called.
 lazy:           If 'True' data (arrays) is retrieved when get(object) is called. 
 """
 settings = {'path': "", 'filename': "neo.h5", 'cascade': True, 'lazy': True}
-
-# attribute name
-meta_attributes = {
-    "block": ['name', 'filedatetime', 'index'],
-    "segment": ['name', 'filedatetime', 'index'],
-    "event": ['time', 'label'],
-    "eventarray": [],
-    "epoch": ['time', 'label', 'duration'],
-    "epocharray": [],
-    "unit": ['name'],
-    "spiketrain": ['t_start', 't_stop'],
-    "analogsignal": ['name', 'sampling_rate', 't_start'],
-    "analogsignalarray": ['sampling_rate', 't_start'],
-    "irsaanalogsignal": ['name', 'channel_name'],
-    "spike": ['time', 'sampling_rate', 'left_sweep'],
-    "recordingchannelgroup": ['name'],
-    "recordingchannel": ['name', 'index']}
-# explicit relations: relation type, name of NEO attribute (getter), 
-# neo attribute name (to set) 
-meta_exp_relations = {
-    "block": [
-        ['segment', '_segments', '_segments'], 
-        ['recordingchannelgroup', '_recordingchannelgroups', '_recordingchannelgroups']],
-    "segment": [
-        ['analogsignal', '_analogsignals', '_analogsignals'],
-        ['irsaanalogsignal', '_irsaanalogsignals', '_irsaanalogsignals'],
-        ['analogsignalarray', '_analogsignalarrays', '_analogsignalarrays'],
-        ['spiketrain', '_spiketrains', '_spiketrains'],
-        ['spike', '_spikes', '_spikes'],
-        ['event', '_events', '_events'],
-        ['eventarray', '_eventarrays', '_eventarrays'],  
-        ['epoch', '_epochs', '_epochs'],
-        ['epocharray', '_epocharrays', '_epocharrays']],
-    "recordingchannelgroup": [
-        ['recordingchannel', '_recordingchannels', '_recordingchannels']],
-    "recordingchannel": [
-        ['unit', '_units', '_units']]}
-# implicit relations (using hard links)
-meta_imp_relations = {
-    "recordingchannelgroup": [
-        ['analogsignalarray', '_analogsignalarrays', '_analogsignalarrays']],
-    "recordingchannel": [
-        ['analogsignal', '_analogsignals', '_analogsignals'],
-        ['irsaanalogsignal', '_irsaanalogsignals', '_irsaanalogsignals']],  
-    "unit": [
-        ['spiketrain', '_spiketrains', '_spiketrains'],
-        ['spike', '_spikes', '_spikes'],
-        ['recordingchannel', '_recordingchannels', '_recordingchannels']]}
-# array name, default value, neo attribute name (get), neo attribute name (set)
-meta_arrays = {
-    "eventarray": [
-        ["times", np.zeros(1) * pq.millisecond, "times", "times"], \
-        ["labels", np.array("", dtype="a100"), "labels", "labels"]],
-    "epocharray": [
-        ["times", np.zeros(1) * pq.millisecond, "times", "times"], \
-        ["labels", np.array("", dtype="a100"), "labels", "labels"], \
-        ["durations", np.zeros(1) * pq.millisecond, "durations", "durations"]],
-    "spiketrain": [
-        ["spike_times", np.zeros(1) * pq.millisecond, "times", "times"], \
-        ["waveforms", np.zeros([1, 1, 1]) * pq.millisecond, "waveforms", "waveforms"]],
-    "analogsignal": [
-        ["signal", np.zeros(1) * pq.millivolt, "signal", "signal"]],
-    "irsaanalogsignal": [
-        ["signal", np.zeros(1) * pq.millisecond, "signal", "signal"],
-        ["times", np.zeros(1) * pq.millisecond, "times", "times"]],
-    "analogsignalarray": [
-        ["signals", np.zeros([1, 1]) * pq.millisecond, "signal", "signal"]],
-    "spike": [
-        ["waveform", np.zeros([1, 1]) * pq.millisecond, "waveform", "waveform"]]}
 
 def _func_wrapper(func):
     try:
@@ -448,14 +365,13 @@ class NeoHdf5IO(BaseIO):
 
         cascade: process downstream relationships
         lazy: process any quantity/ndarray attributes """
-        if not assert_neo_object_is_compliant(obj):
-            raise TypeError("Given object " + str(obj) + " is not a NEO object instance.")
-        obj_type = name_by_class(obj)
+        #assert_neo_object_is_compliant(obj)
+        obj_type = name_by_class[obj.__class__]
         if hasattr(obj, "hdf5_path"): # this is an update case
             try:
                 path = str(obj.hdf5_path)
                 node = self._data.getNode(obj.hdf5_path)
-            except tb.NoSuchNodeError:  # create a new node?
+            except NSNE:  # create a new node?
                 raise LookupError("A given object has a path %s attribute, \
                     but such an object does not exist in the file. Please \
                     correct these values or delete this attribute \
@@ -488,21 +404,10 @@ class NeoHdf5IO(BaseIO):
                         except:
                             pass # there is no array yet or object is new
                         self._data.renameNode(path, attr[0], name=attr[0] + "__temp")
-                else:
+                elif not obj_attr == None:
                     node._f_setAttr(attr[0], obj_attr)
-        if hasattr(obj, "annotations"): # processing annotations
-            try:
-                annot = self._data.getNode(node, "annotations")
-            except tb.NoSuchNodeError:
-                annot = self._data.createGroup(node, "annotations")
-            try:
-                for k in obj.annotations.keys():
-                    if not (str(k) in [a[0] for a in attrs]):
-                        annot._f_setAttr(k, obj.annotations[k])
-            except Exception, e:
-                raise TypeError("There was an error: " + str(e) + \
-                    " with annotations for " + str(obj) + \
-                    ". please check it is a proper 'dict' and try again.")
+        if hasattr(obj, "annotations"): # annotations should be just a dict
+            node._f_setAttr("annotations", getattr(obj, "annotations"))
         # process downstream relations
         #if obj_type == "Block": follow_links = False
         if one_to_many_reslationship.has_key(obj_type) and cascade:
@@ -510,25 +415,26 @@ class NeoHdf5IO(BaseIO):
             #if not follow_links and implicit_reslationship.has_key(obj_type):
             #    for i in implicit_reslationship[obj_type]:
             #        rels.pop(i) # remove secondary connections, maybe NOT?!!!
-            if obj_type = "RecordingChannelGroup":
+            if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_reslationship[obj_type]
-            for child_name in rels:
-                container = child_name.lower() + "s"
+            for child_name in rels: # child_name like "Segment", "Event" etc.
+                container = child_name.lower() + "s" # like "units"
                 try:
                     ch = self._data.getNode(node, container)
-                except tb.NoSuchNodeError:
+                except NSNE:
                     ch = self._data.createGroup(node, container)
                 saved = [] # keeps track of saved object names for removal
                 for child in getattr(obj, container):
-                    if hasattr(child, "hdf5_path") and hasattr(child, "hdf5_name"): 
-                        # create a Hard Link as object exists already
-                        target = self._data.getNode(child.hdf5_path, child.hdf5_name)
-                        self.createHardLink(ch._v_pathname, child.hdf5_name, target)
+                    if hasattr(child, "hdf5_path") and hasattr(child, "hdf5_name"):
+                        if not ch.__contains__(child.hdf5_name):
+                        # create a Hard Link as object exists already somewhere
+                            target = self._data.getNode(child.hdf5_path)
+                            self.createHardLink(ch._v_pathname, child.hdf5_name, target)
                     self.save(child, where=ch._v_pathname)
                     saved.append(child.hdf5_name)
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
-                        self._data.removeNode(child._v_pathname, child._v_name)
+                        self._data.removeNode(ch._v_pathname, child._v_name, recursive=True)
         # FIXME special processor for RC -> RCG
         self._update_path(obj, node)
 
@@ -549,7 +455,7 @@ class NeoHdf5IO(BaseIO):
             setattr(target, attr, res)
         try:
             node = self._data.getNode(path)
-        except tb.NoSuchNodeError:
+        except NSNE:
             # create a new node?
             raise LookupError("There is no valid object with a given path " +\
                 str(path) + " . Please give correct path or just browse the file \
@@ -559,8 +465,8 @@ class NeoHdf5IO(BaseIO):
         if not classname:
             raise LookupError("The requested object with the path " + str(path) +\
                 " exists, but is not of a NEO type. Please check the '_type' attribute.")
-        obj_type = name_by_class(classname)
-
+        obj_type = name_by_class[classname]
+        # load attributes
         kwargs = {}
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs:
@@ -575,24 +481,22 @@ class NeoHdf5IO(BaseIO):
                     nattr = pq.Quantity(arr.read(), units)
                 else:
                     nattr = node._f_getAttr(attr[0])
-            except AttributeError, tb.NoSuchNodeError: # not assigned, continue
-                pass
-            kwargs[attr[0]] = nattr # collecting NEO attributes
-        try: # retrieve annotations
-            annotations = {}
-            annot = self._data.getNode(node, "annotations")
-            for a in annot._v_attrs._f_list(attrset='user'):
-                annotations[a] = node._f_getAttr(a)
-            kwargs["annotations"] = annotations
-        except tb.NoSuchNodeError: # not assigned
-            pass
+                    if attr[1] == str or attr[1] == int:
+                        nattr = attr[1](nattr) # compliance with NEO attr types
+            except AttributeError, NSNE: # not assigned, continue
+                nattr = None
+            if nattr:
+                kwargs[attr[0]] = nattr # collecting NEO attributes
         obj = class_by_name[obj_type](**kwargs) # instantiate new object
         self._update_path(obj, node) # set up HDF attributes
-        # processing relationships
+        try:
+            setattr(obj, "annotations", node._f_getAttr("annotations"))
+        except AttributeError: pass # not assigned, continue
+        # load relationships
         if cascade:
             if one_to_many_reslationship.has_key(obj_type):
                 rels = one_to_many_reslationship[obj_type]
-                if obj_type = "RecordingChannelGroup":
+                if obj_type == "RecordingChannelGroup":
                     rels += many_to_many_reslationship[obj_type]
                 for child in rels: # 'child' is like 'Segment', 'Event' etc.
                     relatives = []
