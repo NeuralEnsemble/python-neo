@@ -273,13 +273,13 @@ class AxonIO(BaseIO):
                         num = header['listADCInfo'][i]['nADCNum']
                     
                     anaSig = AnalogSignal( signal = list_data[j][:,i],
-                                            sampling_rate = sampling_rate ,
+                                            sampling_rate = float(sampling_rate ),
                                             t_start = float(episodArray[j]['offset'])/sampling_rate,
                                             )
                                             
-                    anaSig.name = name
-                    anaSig.unit = unit
-                    anaSig.channel = num
+                    anaSig.name = str(name)
+                    anaSig.unit = str(unit)
+                    anaSig.channel = int(num)
                     seg._analogsignals.append( anaSig )
                 block._segments.append(seg)
             
@@ -292,7 +292,7 @@ class AxonIO(BaseIO):
                 
                 for i,tag in enumerate(header['listTag']) :
                     event = Event(  )
-                    event.time = tag['lTagTime']/sampling_rate
+                    event.time = float(tag['lTagTime']/sampling_rate)
                     event.name = clean_string(tag['sComment'])
                     event.num = i
                     event.label = str(tag['nTagType'])
