@@ -384,23 +384,25 @@ class NeoHdf5IO(BaseIO):
         # processing attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all
-            if hasattr(obj, attr[0]):
-                obj_attr = getattr(obj, attr[0])
+            if hasattr(obj, attr[0]) or attr[0] == '':
+                if attr[0] == '': # case with AS, ASA or ST
+                    obj_attr = obj
+                else:
+                    obj_attr = getattr(obj, attr[0])
                 if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
-                    obj_array = getattr(obj, attr[0], False)
                     if not lazy:
-                        if obj_array.size == 0:
+                        if obj_attr.size == 0:
                             raise ValueError("A size of the %s of the %s has \
                                 length zero and can't be saved." % 
                                 (attr[0], path))
                         # we try to create new array first, so not to loose the 
                         # data in case of any failure
-                        new_arr = self._data.createArray(path, attr[0] + "__temp", obj_array)
-                        if hasattr(obj_array, "dimensionality"):
-                            for un in obj_array.dimensionality.items():
+                        new_arr = self._data.createArray(path, attr[0] + "__temp", obj_attr)
+                        if hasattr(obj_attr, "dimensionality"):
+                            for un in obj_attr.dimensionality.items():
                                 new_arr._f_setAttr("unit__" + un[0].name, un[1])
                         try:
-                            self._data.removeNode(path, arr[0])
+                            self._data.removeNode(path, attr[0])
                         except:
                             pass # there is no array yet or object is new
                         self._data.renameNode(path, attr[0], name=attr[0] + "__temp")
@@ -408,13 +410,8 @@ class NeoHdf5IO(BaseIO):
                     node._f_setAttr(attr[0], obj_attr)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
-        # process downstream relations
-        #if obj_type == "Block": follow_links = False
         if one_to_many_reslationship.has_key(obj_type) and cascade:
             rels = one_to_many_reslationship[obj_type]
-            #if not follow_links and implicit_reslationship.has_key(obj_type):
-            #    for i in implicit_reslationship[obj_type]:
-            #        rels.pop(i) # remove secondary connections, maybe NOT?!!!
             if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_reslationship[obj_type]
             for child_name in rels: # child_name like "Segment", "Event" etc.
@@ -441,9 +438,7 @@ class NeoHdf5IO(BaseIO):
 
     @_func_wrapper
     def get(self, path, cascade=True, lazy=False):
-        """
-        Returns a requested NEO object as instance of NEO class.
-        """
+        """ Returns a requested NEO object as instance of NEO class. """
         def rem_duplicates(target, source, attr):
             """ removes duplicated objects in case a block is requested: for 
             RCGs, RCs and Units we remove duplicated ASAs, IrSAs, ASs, STs and
@@ -455,8 +450,7 @@ class NeoHdf5IO(BaseIO):
             setattr(target, attr, res)
         try:
             node = self._data.getNode(path)
-        except NSNE:
-            # create a new node?
+        except NSNE: # create a new node?
             raise LookupError("There is no valid object with a given path " +\
                 str(path) + " . Please give correct path or just browse the file \
                 (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
@@ -467,9 +461,10 @@ class NeoHdf5IO(BaseIO):
                 " exists, but is not of a NEO type. Please check the '_type' attribute.")
         obj_type = name_by_class[classname]
         # load attributes
+        args = []
         kwargs = {}
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for attr in attrs:
+        for i, attr in enumerate(attrs):
             try:
                 if attr[1] == pq.Quantity or attr[1] == np.ndarray:
                     arr = self._data.getNode(node, attr[0])
@@ -486,9 +481,12 @@ class NeoHdf5IO(BaseIO):
             except AttributeError, NSNE: # not assigned, continue
                 nattr = None
             if nattr:
-                kwargs[attr[0]] = nattr # collecting NEO attributes
-        obj = class_by_name[obj_type](**kwargs) # instantiate new object
-        self._update_path(obj, node) # set up HDF attributes
+                if i < len(classes_necessary_attributes[obj_type]):
+                    args.append(attr) # required, non-key attributes
+                else:
+                    kwargs[attr[0]] = nattr # recommended key- attributes
+        obj = class_by_name[obj_type](*args, **kwargs) # instantiate new object
+        self._update_path(obj, node) # set up HDF attributes: name, path
         try:
             setattr(obj, "annotations", node._f_getAttr("annotations"))
         except AttributeError: pass # not assigned, continue

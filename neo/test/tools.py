@@ -228,4 +228,29 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
 
     
-    
+def assert_objects_equivalent(obj1, obj2):
+    """ compares two NEO objects by looping over the attributes and annotations 
+    and asserting their hashes. No relationships involved. """
+    def assert_attr(self, obj1, obj2, attr_name):
+        self.assertTrue(hasattr(obj1, attr_name))
+        a1 = md5(getattr(obj1, attr_name)).hexdigest()
+        self.assertTrue(hasattr(obj2, attr_name))
+        a2 = md5(getattr(obj2, attr_name)).hexdigest()
+        self.assertEqual(a1, a2,
+            "Attribute %s for class %s is not equal." %
+             (attr_name, name_by_class[obj1.__class__]))
+    obj_type = name_by_class[obj1.__class__]
+    self.assertEqual(obj_type, name_by_class[obj2.__class__])
+    for attr in classes_necessary_attributes[obj_type]:
+        self.assert_attr(obj1, obj2, attr[0])
+    for attr in classes_recommended_attributes[obj_type]:
+        if hasattr(obj1, attr[0]) or hasattr(obj2, attr[0]):
+            self.assert_attr(obj1, obj2, attr[0])
+    if hasattr(obj1, "annotations"):
+        self.assertTrue(hasattr(obj2, "annotations"))
+        for k, v in obj1.annotations:
+            self.assertTrue(hasattr(obj2.annotations, k))
+            self.assertEqual(obj2.annotations[k], v)
+
+
+
