@@ -1,5 +1,12 @@
 # TODO
 # Andrey: please remove this to test when your IO is finished
+
+"""
+Some examples of using functions in this module:
+
+from neo.test.io.test_hdf5io import fake_NEO
+
+"""
 __test__ = False 
 
 
@@ -38,6 +45,9 @@ def get_fake_value(attr): # attr = (name, type, [dim, [dtype]])
         for i in range(int(attr[2])):
             size.append(np.random.randint(100) + 1)
         to_set = np.random.random(size) * pq.millisecond # let it be ms
+        if attr[0] == 't_start': to_set = 0.0 * pq.millisecond
+        if attr[0] == 't_stop': to_set = 1.0 * pq.millisecond
+        if attr[0] == 'sampling_rate': to_set = 10000.0 * pq.Hz
     if attr[1] == np.ndarray:
         to_set = np.array(to_set, dtype=attr[3])
     if attr[1] == str:
@@ -57,26 +67,30 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
     with 'implicit' relationships, to avoid duplications. Do not use it. """
     args = []
     kwargs = {}
-    for attr in classes_necessary_attributes[obj_type]:
-        args.append(get_fake_value(attr))
-    for attr in classes_recommended_attributes[obj_type]:
-        kwargs[attr[0]] = get_fake_value(attr)
+    attrs = classes_necessary_attributes[obj_type] + \
+        classes_recommended_attributes[obj_type]
+    for attr in attrs:
+        nattr = get_fake_value(attr)
+        if attr[0] == '' or (attr[0] in init_args[obj_type]):
+            args.append(nattr) # required, non-key attributes
+        else:
+            kwargs[attr[0]] = nattr # recommended key- attributes
+    print obj_type
     obj = class_by_name[obj_type](*args, **kwargs)
     if cascade:
         if obj_type == "Block":
             _follow_links = False
         if one_to_many_reslationship.has_key(obj_type):
             rels = one_to_many_reslationship[obj_type]
+            if obj_type == "RecordingChannelGroup":
+                rels += many_to_many_reslationship[obj_type]
             if not _follow_links and implicit_reslationship.has_key(obj_type):
                 for i in implicit_reslationship[obj_type]:
-                    rels.pop(i)
+                    rels.remove(i)
             for child in rels:
-                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
-                    _follow_links)])
-        if obj_type == "RecordingChannelGroup":
-            for child in many_to_many_reslationship[obj_type]:
-                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
-                    _follow_links)])
+                if not child == 'IrregularlySampledSignal': # object not implemented
+                    setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
+                        _follow_links)])
     if obj_type == "Block": # need to manually create 'implicit' connections
         # connect a unit to the spike and spike train
         u = obj.recordingchannelgroups[0].units[0]
@@ -91,10 +105,10 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
         rc = obj.recordingchannelgroups[0].recordingchannels[0]
         rc.recordingchannelgroups.append(obj.recordingchannelgroups[0])
         rc.analogsignals.append(obj.segments[0].analogsignals[0])
-        rc.irregularlysampledsignals.append(obj.segments[0].irregularlysampledsignals[0])
+        #rc.irregularlysampledsignals.append(obj.segments[0].irregularlysampledsignals[0])
     # add some annotations, 80%
-    for i, a in enumerate(TEST_ANNOTATIONS):
-        obj.annotate(i=a)
+    at = dict([(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+    obj.annotate(at)
     return obj
 
 class HDF5Commontests(BaseTestIO, unittest.TestCase):

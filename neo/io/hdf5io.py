@@ -363,8 +363,8 @@ class NeoHdf5IO(BaseIO):
         """ Saves changes of a given object to the file. Saves object as new at 
         location "where" if it is not in the file yet.
 
-        cascade: process downstream relationships
-        lazy: process any quantity/ndarray attributes """
+        cascade: True/False process downstream relationships
+        lazy: True/False process any quantity/ndarray attributes """
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
         if hasattr(obj, "hdf5_path"): # this is an update case
@@ -481,8 +481,8 @@ class NeoHdf5IO(BaseIO):
             except AttributeError, NSNE: # not assigned, continue
                 nattr = None
             if nattr:
-                if i < len(classes_necessary_attributes[obj_type]):
-                    args.append(attr) # required, non-key attributes
+                if attr[0] == '' or (attr[0] in init_args[obj_type]):
+                    args.append(nattr) # required, non-key attributes
                 else:
                     kwargs[attr[0]] = nattr # recommended key- attributes
         obj = class_by_name[obj_type](*args, **kwargs) # instantiate new object

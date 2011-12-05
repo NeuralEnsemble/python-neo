@@ -140,8 +140,8 @@ classes_necessary_attributes = {
                                         ('t_start', pq.Quantity, 0 ),
                                         ],
     
-    'IrregularlySampledSignal': [('samples',pq.Quantity,1),
-                                        ('times',pq.Quantity,1),
+    'IrregularlySampledSignal': [('times',pq.Quantity,1),
+                                 ('values',pq.Quantity,1),
                                     ],
     
    'RecordingChannelGroup': [ ],
@@ -188,6 +188,24 @@ classes_recommended_attributes= {
 # all classes can have name, description, file_origin
 for k in classes_recommended_attributes.keys():
     classes_recommended_attributes[k] += [ ('name', str ), ('description', str ), ('file_origin', str ),]
+
+# list of attributes required to provide as *args to initialize NEO object
+init_args = {
+    'Block': [],
+    'Segment': [],
+    'Event': ['time', 'label'],
+    'EventArray': [],
+    'Epoch': ['time', 'duration', 'label'],
+    'EpochArray': [],
+    'Unit': [],
+    'SpikeTrain': ['times', 't_stop'],
+    'Spike': [],
+    'AnalogSignal': ['signal'], #?? not in attrs but required
+    'AnalogSignalArray': ['signal'], #?? not in attrs but required
+    'IrregularlySampledSignal': ['times', 'values'],
+    'RecordingChannelGroup': [],
+    'RecordingChannel': []
+}
 
 
 
