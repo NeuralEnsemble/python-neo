@@ -12,18 +12,20 @@ class IrregularlySampledSignal(BaseNeo):
         TODO
     
     *Required attributes/properties*:
-        :times:
-        :values: 
+        :times: Quantitiy vector
+        :values: Quantitiy vector same size of times
     
     *Recommended attributes/properties*:
         :name:
         :description:
         :file_origin:                
     """
-    def __init__(self, times, values, time_units=None, value_units=None,
+    def __init__(self, times, values,
                   name=None, description=None,
                  file_origin=None, **annotations):
         """Initalize a new IrregularlySampledSignal."""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
-        raise NotImplementedError
+        
+        self.times = times
+        self.values = values
