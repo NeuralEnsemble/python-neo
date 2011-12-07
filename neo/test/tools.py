@@ -238,12 +238,12 @@ def assert_objects_equivalent(obj1, obj2):
         a2 = md5(getattr(obj2, attr_name)).hexdigest()
         self.assertEqual(a1, a2,
             "Attribute %s for class %s is not equal." %
-             (attr_name, name_by_class[obj1.__class__]))
-    obj_type = name_by_class[obj1.__class__]
-    self.assertEqual(obj_type, name_by_class[obj2.__class__])
-    for attr in classes_necessary_attributes[obj_type]:
+             (attr_name, description.name_by_class[obj1.__class__]))
+    obj_type = description.name_by_class[obj1.__class__]
+    self.assertEqual(obj_type, description.name_by_class[obj2.__class__])
+    for attr in description.classes_necessary_attributes[obj_type]:
         self.assert_attr(obj1, obj2, attr[0])
-    for attr in classes_recommended_attributes[obj_type]:
+    for attr in description.classes_recommended_attributes[obj_type]:
         if hasattr(obj1, attr[0]) or hasattr(obj2, attr[0]):
             self.assert_attr(obj1, obj2, attr[0])
     if hasattr(obj1, "annotations"):

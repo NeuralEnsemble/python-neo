@@ -75,7 +75,6 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
             args.append(nattr) # required, non-key attributes
         else:
             kwargs[attr[0]] = nattr # recommended key- attributes
-    print obj_type
     obj = class_by_name[obj_type](*args, **kwargs)
     if cascade:
         if obj_type == "Block":
@@ -86,10 +85,11 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
                 rels += many_to_many_reslationship[obj_type]
             if not _follow_links and implicit_reslationship.has_key(obj_type):
                 for i in implicit_reslationship[obj_type]:
+                    if not i in rels: 
+                        print "LOOK HERE!!!" + str(obj_type)
                     rels.remove(i)
             for child in rels:
-                if not child == 'IrregularlySampledSignal': # object not implemented
-                    setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
+                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
                         _follow_links)])
     if obj_type == "Block": # need to manually create 'implicit' connections
         # connect a unit to the spike and spike train
@@ -105,10 +105,10 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
         rc = obj.recordingchannelgroups[0].recordingchannels[0]
         rc.recordingchannelgroups.append(obj.recordingchannelgroups[0])
         rc.analogsignals.append(obj.segments[0].analogsignals[0])
-        #rc.irregularlysampledsignals.append(obj.segments[0].irregularlysampledsignals[0])
+        rc.irregularlysampledsignals.append(obj.segments[0].irregularlysampledsignals[0])
     # add some annotations, 80%
     at = dict([(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
-    obj.annotate(at)
+    obj.annotate(**at)
     return obj
 
 class HDF5Commontests(BaseTestIO, unittest.TestCase):
@@ -188,7 +188,7 @@ class hdf5ioTest(unittest.TestCase):
         f = open("thisisafakehdf.h5", "w") # wrong file type
         f.write("this is not an HDF5 file. sorry.")
         f.close()
-        self.assertRaises(TypeError, NeoHdf5IO(filename="thisisafake.h5"))
+        self.assertRaises(TypeError, NeoHdf5IO(filename="thisisafakehdf.h5"))
         iom = NeoHdf5IO(filename=self.test_file) # wrong object path test
         self.assertRaises(LookupError, iom.get("/wrong_path"))
         some_object = np.array([1,2,3]) # non NEO object test

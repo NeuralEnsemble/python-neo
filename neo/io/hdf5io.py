@@ -280,9 +280,9 @@ class NeoHdf5IO(BaseIO):
         self.name = 'HDF5 IO'
         # wraps for Base IO functions
         for obj_type in self.readable_objects:
-            self.__setattr__("read_" + obj_type, self._read_entity)
+            self.__setattr__("read_" + obj_type.lower(), self._read_entity)
         for obj_type in self.writeable_objects:
-            self.__setattr__("write_" + obj_type, self._write_entity)
+            self.__setattr__("write_" + obj_type.lower(), self._write_entity)
 
     #-------------------------------------------
     # IO connectivity / Session management
@@ -385,29 +385,31 @@ class NeoHdf5IO(BaseIO):
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all
             if hasattr(obj, attr[0]) or attr[0] == '':
-                if attr[0] == '': # case with AS, ASA or ST
+                if attr[0] == '': # case with AS, ASA or ST - NEO "stars"
                     obj_attr = obj
+                    attr_name = 'data'
                 else:
                     obj_attr = getattr(obj, attr[0])
+                    attr_name = attr[0]
                 if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
                     if not lazy:
                         if obj_attr.size == 0:
                             raise ValueError("A size of the %s of the %s has \
                                 length zero and can't be saved." % 
-                                (attr[0], path))
+                                (attr_name, path))
                         # we try to create new array first, so not to loose the 
                         # data in case of any failure
-                        new_arr = self._data.createArray(path, attr[0] + "__temp", obj_attr)
+                        new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
                         if hasattr(obj_attr, "dimensionality"):
                             for un in obj_attr.dimensionality.items():
                                 new_arr._f_setAttr("unit__" + un[0].name, un[1])
                         try:
-                            self._data.removeNode(path, attr[0])
+                            self._data.removeNode(path, attr_name)
                         except:
                             pass # there is no array yet or object is new
-                        self._data.renameNode(path, attr[0], name=attr[0] + "__temp")
+                        self._data.renameNode(path, attr_name, name=attr_name + "__temp")
                 elif not obj_attr == None:
-                    node._f_setAttr(attr[0], obj_attr)
+                    node._f_setAttr(attr_name, obj_attr)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         if one_to_many_reslationship.has_key(obj_type) and cascade:
@@ -426,7 +428,7 @@ class NeoHdf5IO(BaseIO):
                         if not ch.__contains__(child.hdf5_name):
                         # create a Hard Link as object exists already somewhere
                             target = self._data.getNode(child.hdf5_path)
-                            self.createHardLink(ch._v_pathname, child.hdf5_name, target)
+                            self._data.createHardLink(ch._v_pathname, child.hdf5_name, target)
                     self.save(child, where=ch._v_pathname)
                     saved.append(child.hdf5_name)
                 for child in self._data.iterNodes(ch._v_pathname):
@@ -465,9 +467,13 @@ class NeoHdf5IO(BaseIO):
         kwargs = {}
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for i, attr in enumerate(attrs):
+            if attr[0] == '':
+                attr_name = 'data'
+            else:
+                attr_name = attr[0]
             try:
                 if attr[1] == pq.Quantity or attr[1] == np.ndarray:
-                    arr = self._data.getNode(node, attr[0])
+                    arr = self._data.getNode(node, attr_name)
                     units = ""
                     for unit in arr._v_attrs._f_list(attrset='user'):
                         if unit.startswith("unit__"):
@@ -475,16 +481,16 @@ class NeoHdf5IO(BaseIO):
                     units = units.replace(" * ", "", 1)
                     nattr = pq.Quantity(arr.read(), units)
                 else:
-                    nattr = node._f_getAttr(attr[0])
+                    nattr = node._f_getAttr(attr_name)
                     if attr[1] == str or attr[1] == int:
                         nattr = attr[1](nattr) # compliance with NEO attr types
             except AttributeError, NSNE: # not assigned, continue
                 nattr = None
-            if nattr:
-                if attr[0] == '' or (attr[0] in init_args[obj_type]):
+            if nattr is not None:
+                if attr_name == 'data' or (attr_name in init_args[obj_type]):
                     args.append(nattr) # required, non-key attributes
                 else:
-                    kwargs[attr[0]] = nattr # recommended key- attributes
+                    kwargs[attr_name] = nattr # recommended key- attributes
         obj = class_by_name[obj_type](*args, **kwargs) # instantiate new object
         self._update_path(obj, node) # set up HDF attributes: name, path
         try:
