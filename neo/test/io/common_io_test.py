@@ -23,7 +23,7 @@ import urllib
 import logging
 
 import neo
-from neo.description import one_to_many_reslationship
+from neo.description import *
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema, \
             assert_neo_object_is_compliant, assert_file_contents_equal, assert_sub_schema_is_lazy_loaded
 
@@ -115,7 +115,7 @@ class BaseTestIO(object):
         # when io need external knowldge for writting or read such as sampling_rate (RawBinaryIO...)
         # the test is too much complex too design genericaly. 
         if higher in self.ioclass.read_params and len(self.ioclass.read_params[higher]) != 0 : return
-        
+
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
         
         if self.ioclass.mode == 'file':
@@ -200,6 +200,9 @@ class BaseTestIO(object):
         elif higher == neo.Segment:
             writer.write_segment(ob)
             ob2 = reader.read_segment()
+
+        import pdb
+        pdb.set_trace()
         
         assert_same_sub_schema(ob, ob2)
         assert_neo_object_is_compliant(ob2)
@@ -226,6 +229,7 @@ class BaseTestIO(object):
         Compliance test: neo.test.tools.assert_neo_object_is_compliant        
         """ % self.ioclass.__name__
         # This is for files presents at G-Node or generated
+
         for filename in self.files_to_test:
             # Load each file in `files_to_test`
             filename = os.path.join(self.local_test_dir, filename)

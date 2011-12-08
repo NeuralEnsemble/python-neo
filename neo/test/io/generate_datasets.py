@@ -31,7 +31,8 @@ def generate_one_simple_block(block_name = 'block_0',
     
     if Segment in supported_objects:
         for s in range(nb_segment):
-            seg = generate_one_simple_segment(supported_objects=supported_objects, **kws)
+            seg = generate_one_simple_segment(seg_name = "seg" + str(s),
+                supported_objects = supported_objects, **kws)
             bl.segments.append(seg)
     
     if RecordingChannel in supported_objects:
@@ -64,12 +65,11 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                                     epoch_array_duration_range = [.5, 3., ],
 
                                                 ):
-    seg = Segment()#name= seg_name)
+    seg = Segment(name = seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
             anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, t_start = t_start,
-                                  units=mV)
-                                        #, name = 'sig %d for segment %s'%(a, seg.name),)
+                                  units=mV, name = 'sig %d for segment %s' % (a, seg.name) )
             anasig.annotations['channel_index'] = a
             seg.analogsignals.append(anasig)
     
@@ -89,7 +89,6 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                             labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
                                             )
             seg.eventarrays.append(ea)
-                                        
     
     if EpochArray in supported_objects:
         for name, labels in epoch_array_types.iteritems():
@@ -100,15 +99,16 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                 dur = (rand()*np.diff(epoch_array_duration_range)+epoch_array_duration_range[0])
                 durations.append(dur)
                 t = t+dur
-            epa = EpochArray(    #name = name,
-                                            times = pq.Quantity(times, units = pq.s),
-                                            durations = pq.Quantity(durations, units = pq.s),
-                                            labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
-                                            )
+            epa = EpochArray(    
+                #name = name,
+                times = pq.Quantity(times, units = pq.s),
+                durations = pq.Quantity([x[0] for x in durations], units = pq.s),
+                labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
+                )
             seg.epocharrays.append(epa)
             
     # TODO : Spike, Event, Epoch
-    
+
     return seg
 
 

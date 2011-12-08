@@ -126,6 +126,10 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
             
             sub1 = getattr(ob1, child.lower()+'s')
             sub2 = getattr(ob2, child.lower()+'s')
+            #if child == "AnalogSignal":
+            #    import pdb
+            #    pdb.set_trace()
+
             assert len(sub1) == len(sub2), 'theses two %s have not the same %s number'%(classname, child)
             for i in range(len(getattr(ob1, child.lower()+'s'))):
                 assert_same_sub_schema(sub1[i], sub2[i], equal_almost = equal_almost)
@@ -231,26 +235,25 @@ def assert_sub_schema_is_lazy_loaded(ob):
 def assert_objects_equivalent(obj1, obj2):
     """ compares two NEO objects by looping over the attributes and annotations 
     and asserting their hashes. No relationships involved. """
-    def assert_attr(self, obj1, obj2, attr_name):
-        self.assertTrue(hasattr(obj1, attr_name))
+    def assert_attr(obj1, obj2, attr_name):
+        assert hasattr(obj1, attr_name)
         a1 = md5(getattr(obj1, attr_name)).hexdigest()
-        self.assertTrue(hasattr(obj2, attr_name))
+        assert hasattr(obj2, attr_name)
         a2 = md5(getattr(obj2, attr_name)).hexdigest()
-        self.assertEqual(a1, a2,
-            "Attribute %s for class %s is not equal." %
-             (attr_name, description.name_by_class[obj1.__class__]))
+        assert a1 == a2, "Attribute %s for class %s is not equal." % \
+             (attr_name, description.name_by_class[obj1.__class__])
     obj_type = description.name_by_class[obj1.__class__]
-    self.assertEqual(obj_type, description.name_by_class[obj2.__class__])
+    assert obj_type == description.name_by_class[obj2.__class__]
     for attr in description.classes_necessary_attributes[obj_type]:
-        self.assert_attr(obj1, obj2, attr[0])
+        assert_attr(obj1, obj2, attr[0])
     for attr in description.classes_recommended_attributes[obj_type]:
         if hasattr(obj1, attr[0]) or hasattr(obj2, attr[0]):
-            self.assert_attr(obj1, obj2, attr[0])
+            assert_attr(obj1, obj2, attr[0])
     if hasattr(obj1, "annotations"):
-        self.assertTrue(hasattr(obj2, "annotations"))
+        assert hasattr(obj2, "annotations")
         for k, v in obj1.annotations:
-            self.assertTrue(hasattr(obj2.annotations, k))
-            self.assertEqual(obj2.annotations[k], v)
+            assert hasattr(obj2.annotations, k)
+            assert obj2.annotations[k] == v
 
 
 

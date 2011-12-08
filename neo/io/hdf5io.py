@@ -177,6 +177,7 @@ The general structure of the file:
 
 Plans for future extensions:
 ================================================================================
+#FIXME - lazy load should be only for huge arrays, but not for all Quantities
 #FIXME - implement logging mechanism (probably in general for NEO)
 #FIXME - implement actions history (probably in general for NEO)
 #FIXME - use global IDs for NEO objects (or even UUIDs?)
@@ -232,6 +233,7 @@ def _func_wrapper(func):
 all_objects = list(class_by_name.values())
 all_objects.remove(Block)# the order is important
 all_objects = [Block]+all_objects
+
 class NeoHdf5IO(BaseIO):
     """
     The IO Manager is the core I/O class for HDF5 / NEO. It handles the 
@@ -254,7 +256,7 @@ class NeoHdf5IO(BaseIO):
         if connect:
             self.connect(path=path, filename=filename)
 
-    def _read_entity(self, path, cascade=True, lazy=False):
+    def _read_entity(self, path="/", cascade=True, lazy=False):
         """
         Wrapper for base io "reader" functions.
         """
@@ -434,12 +436,12 @@ class NeoHdf5IO(BaseIO):
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
                         self._data.removeNode(ch._v_pathname, child._v_name, recursive=True)
-        # FIXME special processor for RC -> RCG
+        # FIXME needed special processor for RC -> RCG
         self._update_path(obj, node)
 
 
     @_func_wrapper
-    def get(self, path, cascade=True, lazy=False):
+    def get(self, path="/", cascade=True, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
         def rem_duplicates(target, source, attr):
             """ removes duplicated objects in case a block is requested: for 
@@ -450,9 +452,19 @@ class NeoHdf5IO(BaseIO):
             res = list(set(a) - set(b))
             res += list(set(b) -(set(b) - set(a)))
             setattr(target, attr, res)
+        if path == "/": # this is just for convenience. Try to return any object
+            found = False
+            for n in self._data.listNodes(path):
+                for obj_type in class_by_name.keys():
+                    if obj_type.lower() in str(n._v_name).lower():
+                        path = n._v_pathname
+                        found = True
+                if found: break
         try:
+            if path == "/":
+                raise ValueError() # root is not a NEO object
             node = self._data.getNode(path)
-        except NSNE: # create a new node?
+        except (NSNE, ValueError): # create a new node?
             raise LookupError("There is no valid object with a given path " +\
                 str(path) + " . Please give correct path or just browse the file \
                 (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
@@ -472,19 +484,28 @@ class NeoHdf5IO(BaseIO):
             else:
                 attr_name = attr[0]
             try:
-                if attr[1] == pq.Quantity or attr[1] == np.ndarray:
+                if attr[1] == pq.Quantity:
                     arr = self._data.getNode(node, attr_name)
                     units = ""
                     for unit in arr._v_attrs._f_list(attrset='user'):
                         if unit.startswith("unit__"):
                             units += " * " + str(unit[6:]) + " ** " + str(arr._f_getAttr(unit))
                     units = units.replace(" * ", "", 1)
-                    nattr = pq.Quantity(arr.read(), units)
+                    if not lazy:
+                        nattr = pq.Quantity(arr.read(), units)
+                    else: # making an empty array
+                        nattr = pq.Quantity(np.empty(tuple([0 for x in range(attr[2])])), units)
+                elif attr[1] == np.ndarray:
+                    if not lazy:
+                        arr = self._data.getNode(node, attr_name)
+                        nattr = np.array(arr.read(), attr[3])
+                    else: # making an empty array
+                        nattr = np.empty((0), attr[3])
                 else:
                     nattr = node._f_getAttr(attr_name)
                     if attr[1] == str or attr[1] == int:
                         nattr = attr[1](nattr) # compliance with NEO attr types
-            except AttributeError, NSNE: # not assigned, continue
+            except (AttributeError, NSNE): # not assigned, continue
                 nattr = None
             if nattr is not None:
                 if attr_name == 'data' or (attr_name in init_args[obj_type]):
@@ -496,6 +517,8 @@ class NeoHdf5IO(BaseIO):
         try:
             setattr(obj, "annotations", node._f_getAttr("annotations"))
         except AttributeError: pass # not assigned, continue
+        if lazy: # FIXME is this really needed?
+            setattr(obj, "lazy_shape", "some shape should go here..")
         # load relationships
         if cascade:
             if one_to_many_reslationship.has_key(obj_type):
@@ -508,19 +531,19 @@ class NeoHdf5IO(BaseIO):
                     for n in self._data.listNodes(container):
                         try:
                             if n._f_getAttr("_type") == child:
-                                relatives.append(self.get(n._v_pathname))
+                                relatives.append(self.get(n._v_pathname, lazy=lazy))
                         except AttributeError: # alien node
                             pass # not an error
                     setattr(obj, child.lower() + "s", relatives)
         if cascade and obj_type == "Block": # this is a special case
             # We need to clean-up some duplicated objects
             for seg in obj.segments:
-                for RCG in obj.recordingchannelgroups: # clean-up duplicate ASA
-                    rem_duplicates(RCG, seg, "analogsignalarrays")
-                    for RC in obj.recordingchannels:
+                for RCG in obj.recordingchannelgroups:
+                    rem_duplicates(RCG, seg, "analogsignalarrays") # clean-up duplicate ASA
+                    for RC in RCG.recordingchannels:
                         rem_duplicates(RC, seg, "analogsignals")
                         rem_duplicates(RC, seg, "irregularlysampledsignals")
-                    for unit in obj.units:
+                    for unit in RCG.units:
                         rem_duplicates(unit, seg, "spiketrains")
                         rem_duplicates(unit, seg, "spikes")
         # FIXME special processor for RC -> RCG
