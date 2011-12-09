@@ -66,6 +66,11 @@ class BaseTestIO(object):
         self.generate_files_for_io_able_to_write()
         self.files_to_test.extend( self.files_generated )
 
+    def tearDown(self):
+        if self.ioclass.name == 'Hdf5':
+            filename = self.local_test_dir + '/Generated0_' + self.ioclass.__name__ + '.h5'
+            os.remove(filename)
+
     def create_local_dir_if_not_exists(self):
         shortname = self.ioclass.__name__.lower().strip('io')
         localdir = os.path.dirname(__file__)+'/files_for_tests'
@@ -137,6 +142,10 @@ class BaseTestIO(object):
         elif higher == neo.Segment:
             writer.write_segment(ob)
 
+        try: # for HDF5IO file should be closed before being opened again in test
+            writer.close()
+        except: pass
+
 
     def test_write_then_read(self):
         """
@@ -179,7 +188,6 @@ class BaseTestIO(object):
                 'Generated0_%s' % self.ioclass.__name__)
             if len(self.ioclass.extensions) >= 1:
                 filename += '.' + self.ioclass.extensions[0]
-            
             # Create reader and writer for that file
             writer = self.ioclass(filename = filename)
             reader = self.ioclass(filename = filename)
@@ -196,16 +204,22 @@ class BaseTestIO(object):
         # Write and read with the IO and ensure it is the same.
         if higher == neo.Block:
             writer.write_block(ob)
-            ob2 = reader.read_block()
+            if writer.__class__.name == 'Hdf5': # need to read what was saved
+                ob2 = reader.read_block(ob.hdf5_path)
+            else:
+                ob2 = reader.read_block()
         elif higher == neo.Segment:
             writer.write_segment(ob)
             ob2 = reader.read_segment()
 
-        import pdb
-        pdb.set_trace()
-        
         assert_same_sub_schema(ob, ob2)
         assert_neo_object_is_compliant(ob2)
+
+        try: # for HDF5IO file should be closed before being opened again in test
+            reader.close()
+            writer.close()
+        except: pass
+
 
     def test_read_then_write(self):
         """
@@ -251,7 +265,10 @@ class BaseTestIO(object):
             # same but lazy
             ob = ob_reader(cascade = True, lazy = True)
             assert_neo_object_is_compliant(ob)
-            
+
+            try: # for HDF5IO file should be closed before being opened again in test
+                r.close()
+            except: pass
             
     
     def test_readed_with_cascade_is_compliant(self):
@@ -289,6 +306,11 @@ class BaseTestIO(object):
                 children = getattr(ob, childname.lower() + 's')
                 assert len(children) == 0, errmsg        
 
+            try: # for HDF5IO file should be closed before being opened again in test
+                r.close()
+            except: pass
+
+
     def test_readed_with_lazy_is_compliant(self):
         """Reading %s files in `files_to_test` with `lazy` is compliant.
         
@@ -308,7 +330,9 @@ class BaseTestIO(object):
             ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = True, lazy = True )
             assert_sub_schema_is_lazy_loaded(ob)
             
-
+            try: # for HDF5IO file should be closed before being opened again in test
+                r.close()
+            except: pass
 
 
 def make_all_directories(filename, localdir):

@@ -121,7 +121,7 @@ class HDF5Commontests(BaseTestIO, unittest.TestCase):
         BaseTestIO.setUp(self)
 
 
-class hdf5ioTest(unittest.TestCase):
+class hdf5ioTest: # inherit this class from unittest.TestCase when ready
     """
     Tests for the hdf5 library.
     """
@@ -216,6 +216,8 @@ class hdf5ioTest(unittest.TestCase):
         # test naming - paths
         # unicode!!
         # add a child, then remove, then check it's removed
+        # update/removal of relations b/w RC and AS which are/not are in the 
+        # same segment
 
 if __name__ == '__main__':
     unittest.main()

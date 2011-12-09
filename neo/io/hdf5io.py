@@ -426,13 +426,16 @@ class NeoHdf5IO(BaseIO):
                     ch = self._data.createGroup(node, container)
                 saved = [] # keeps track of saved object names for removal
                 for child in getattr(obj, container):
+                    new_name = None
                     if hasattr(child, "hdf5_path") and hasattr(child, "hdf5_name"):
-                        if not ch.__contains__(child.hdf5_name):
+                        if not ch._v_pathname in child.hdf5_path:
                         # create a Hard Link as object exists already somewhere
                             target = self._data.getNode(child.hdf5_path)
-                            self._data.createHardLink(ch._v_pathname, child.hdf5_name, target)
+                            new_name = self._get_next_name(name_by_class[child.__class__], ch._v_pathname)
+                            self._data.createHardLink(ch._v_pathname, new_name, target)
                     self.save(child, where=ch._v_pathname)
-                    saved.append(child.hdf5_name)
+                    if not new_name: new_name = child.hdf5_name
+                    saved.append(new_name)
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
                         self._data.removeNode(ch._v_pathname, child._v_name, recursive=True)
@@ -447,8 +450,8 @@ class NeoHdf5IO(BaseIO):
             """ removes duplicated objects in case a block is requested: for 
             RCGs, RCs and Units we remove duplicated ASAs, IrSAs, ASs, STs and
             Spikes if those were already initialized in Segment. """
-            a = getattr(target, attr)
-            b = getattr(source, attr)
+            a = getattr(target, attr) # a container, e.g. "analogsignals"
+            b = getattr(source, attr) # a container, e.g. "analogsignals"
             res = list(set(a) - set(b))
             res += list(set(b) -(set(b) - set(a)))
             setattr(target, attr, res)
