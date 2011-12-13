@@ -247,11 +247,10 @@ class NeoHdf5IO(BaseIO):
     extensions = [ 'h5', ]
     mode = 'file'
     
-    def __init__(self, connect=True, filename=settings['filename']):
+    def __init__(self, filename=settings['filename'], **kwargs):
         self._init_base_io()
         self.connected = False
-        if connect:
-            self.connect(filename=filename)
+        self.connect(filename=filename)
 
     def _read_entity(self, path="/", cascade=True, lazy=False):
         """
