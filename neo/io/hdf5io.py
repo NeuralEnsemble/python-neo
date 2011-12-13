@@ -27,13 +27,13 @@ Start by initializing IO:
 >>> iom
 <hdf5io.NeoHdf5IO object at 0x7f291ebe6810>
 
-The file is created automatically (path/filename can be changed in "settings" 
+The file is created automatically (filename can be changed in "settings" 
 option). So you can also do 
 
 >>> iom = NeoHdf5IO(filename="myfile.h5")
 
 Now you may save any of your neo object into the file (assuming your NEO objects
-are in the python path):
+are in the pythonpath):
 
 >>> b = Block()
 >>> iom.write_block(b)
@@ -211,13 +211,11 @@ import logging
 
 """
 SETTINGS:
-path:           path to the HDF5 file.
-filename:       the name of the HDF5 file. For opening used together with the 
-                file.
+filename:       the full path to the HDF5 file.
 cascade:        If 'True' all children are retrieved when get(object) is called.
 lazy:           If 'True' data (arrays) is retrieved when get(object) is called. 
 """
-settings = {'path': "", 'filename': "neo.h5", 'cascade': True, 'lazy': True}
+settings = {'filename': "neo.h5", 'cascade': True, 'lazy': True}
 
 def _func_wrapper(func):
     try:
@@ -249,12 +247,11 @@ class NeoHdf5IO(BaseIO):
     extensions = [ 'h5', ]
     mode = 'file'
     
-    def __init__(self, connect=True, path=settings['path'], \
-            filename=settings['filename']):
+    def __init__(self, connect=True, filename=settings['filename']):
         self._init_base_io()
         self.connected = False
         if connect:
-            self.connect(path=path, filename=filename)
+            self.connect(filename=filename)
 
     def _read_entity(self, path="/", cascade=True, lazy=False):
         """
@@ -290,21 +287,21 @@ class NeoHdf5IO(BaseIO):
     # IO connectivity / Session management
     #-------------------------------------------
 
-    def connect(self, path=settings['path'], filename=settings['filename']):
+    def connect(self, filename=settings['filename']):
         """
         Opens / initialises new HDF5 file.
         We rely on PyTables and keep all session management staff there.
         """
         if not self.connected:
             try:
-                if tb.isHDF5File(path + filename):
-                    self._data = tb.openFile(path + filename, mode = "a", title = filename)
+                if tb.isHDF5File(filename):
+                    self._data = tb.openFile(filename, mode = "a", title = filename)
                     self.connected = True
                 else:
                     raise TypeError("The file specified is not an HDF5 file format.")
             except IOError:
                 # create a new file if specified file not found
-                self._data = tb.openFile(path + filename, mode = "w", title = filename)
+                self._data = tb.openFile(filename, mode = "w", title = filename)
                 self.connected = True
             except:
                 raise NameError("Incorrect file path, couldn't find or create a file.")
