@@ -259,7 +259,7 @@ class PlexonIO(BaseIO):
                     sptr = spiketrains[chan][unit]
                     
                     pos = nspikecounts[chan,unit]
-                    sptr[pos] = time
+                    sptr[pos] = time * pq.s
                     
                     if load_spike_waveform and n1*n2 != 0 :
                         waveform = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
@@ -283,7 +283,7 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    eventarrays[chan].times[pos] = time
+                    eventarrays[chan].times[pos] = time * pq.s
                     eventpositions[chan]+= 1
                 
                 elif dataBlockHeader['Type'] == 5:
@@ -297,10 +297,10 @@ class PlexonIO(BaseIO):
                     elif globalHeader['Version'] >= 103:
                         data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
                                                             slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
-                    anaSigs[chan][sampleposition[chan] : sampleposition[chan]+data.size] = data
+                    anaSigs[chan][sampleposition[chan] : sampleposition[chan]+data.size] = data * pq.V
                     sampleposition[chan] += data.size
                     if sampleposition[chan] ==0:
-                        anaSigs[chan].t_start = time
+                        anaSigs[chan].t_start = time* pq.s
                 
         
             

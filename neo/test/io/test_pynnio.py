@@ -28,6 +28,7 @@ from neo.test.io.common_io_test import BaseTestIO
 
 class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase):
     ioclass = PyNNTextIO
+    read_and_write_is_bijective = False
 
 
 
