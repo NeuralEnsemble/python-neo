@@ -54,9 +54,28 @@ One format = one class
 The basic syntax is as follows. If you want to load a file format that is implemented in a generic :class:`MyFormatIO` class::
 
     >>> from neo.io import MyFormatIO
-    >>> reader = MyFormatIO("myfile.dat")
+    >>> reader = MyFormatIO(filename = "myfile.dat")
 
 you can replace :class:`MyFormatIO` by any implemented class, see :ref:`list_of_io`
+
+Modes
+======
+
+IO can be based on file, directory, database or fake
+This is describe in mode attribute of the IO class.
+
+    >>> from neo.io import MyFormatIO
+    >>> print MyFormatIO.mode
+    'file'
+
+
+For *file* mode the *filename* keyword argument is necessary.
+For *directory* mode the *dirname* keyword argument is necessary.
+
+Ex:
+    >>> reader = io.PlexonIO(filename='File_plexon_1.plx')
+    >>> reader = io.TdtIO(dirname='aep_05')
+
 
 Supported objects/readable objects
 ==================================

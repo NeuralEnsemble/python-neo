@@ -7,7 +7,6 @@ Some examples of using functions in this module:
 from neo.test.io.test_hdf5io import fake_NEO
 
 """
-__test__ = False 
 
 
 # add performance testing!!
