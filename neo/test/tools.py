@@ -55,14 +55,26 @@ def assert_neo_object_is_compliant(ob):
     attributes = necess
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
-        if attrname != '':
+        #~ if attrname != '':
+        if classname not in description.classes_inheriting_quantities:
             assert hasattr(ob, attrname), '%s neo obect have not %s' %( classname, attrname)
     
     # test attributes types
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
-        if attrname != '' and hasattr(ob, attrname):
+        
+        if classname in description.classes_inheriting_quantities and \
+                        description.classes_inheriting_quantities[classname] == attrname and \
+                        (attrtype == pq.Quantity or attrtype == np.ndarray):
+            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            ndim = attr[2]
+            assert ob.ndim == ndim, '%s is %d dimension should be %d' %(classname, ob.ndim, ndim)
+            if attrtype == np.ndarray:
+                dt = attr[3]
+                assert ob.dtype.kind == dt.kind, '%s dtype.kind is %s should be %s' % (classname, ob.dtype.kind, dt.kind)
+        
+        elif hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
                 at = getattr(ob, attrname)
                 assert type(at) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(at), attrtype )
@@ -72,13 +84,6 @@ def assert_neo_object_is_compliant(ob):
                 if attrtype == np.ndarray:
                     dt = attr[3]
                     assert at.dtype.kind == dt.kind, '%s.%s dtype.kind is %s should be %s' % (classname, attrname, at.dtype.kind, dt.kind)
-                    
-        elif attrname == '' and attrtype == pq.Quantity or attrtype == np.ndarray:
-            ndim = attr[2]
-            assert ob.ndim == ndim, '%s is %d dimension should be %d' %(classname, ob.ndim, ndim)
-            if attrtype == np.ndarray:
-                dt = attr[3]
-                assert ob.dtype.kind == dt.kind, '%s dtype.kind is %s should be %s' % (classname, ob.dtype.kind, dt.kind)
     
     # test bijectivity : one_to_many_relationship and many_to_one_relationship
     if classname in description.one_to_many_reslationship:
@@ -148,7 +153,9 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     attributes = necess + recomm
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
-        if attrname =='': 
+        #~ if attrname =='': 
+        if classname in description.classes_inheriting_quantities and \
+                        description.classes_inheriting_quantities[classname] == attrname:
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             assert_eg(ob1.magnitude, ob2.magnitude)
             assert ob1.dimensionality.string == ob2.dimensionality.string, 'Units of %s are not the same' % classname
@@ -208,9 +215,12 @@ def assert_sub_schema_is_lazy_loaded(ob):
     for i, attr in enumerate(attributes):
         attrname, attrtype = attr[0], attr[1]
         #~ print 'xdsd', classname, attrname
-        if attrname == '':
+        #~ if attrname == '':
+        if classname in description.classes_inheriting_quantities and \
+                        description.classes_inheriting_quantities[classname] == attrname:
             assert ob.size == 0, 'Lazy loaded error %s.size = %s' % (classname, ob.size)
             assert hasattr(ob, 'lazy_shape'), 'Lazy loaded error, %s should have lazy_shape attribute'% (classname, )
+            continue
         
         if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
             continue

@@ -24,9 +24,8 @@ That is in fact a vector (ndim=1) with one element only in Quantities package.
 For some neo.object, the data is not held by a field, but by the object itself. 
 This is the case for AnalogSignal, SpikeTrain: they inherit from Quantity,
 which itself inherits from numpy.array.
-
-In these cases, an empty field (the first) in classes_necessary_attributes 
-is added to describe the object inheritance + ndim or dtype.
+In theses cases, the classes_inheriting_quantities dict provide a list of
+classes inhiriting Quantity and there attribute that will become Quantity itself.
 
 
 **classes_recommended_attributes**
@@ -124,18 +123,18 @@ classes_necessary_attributes = {
     
     'Unit': [ ],
     
-    'SpikeTrain': [('', pq.Quantity, 1 ),
+    'SpikeTrain': [('times', pq.Quantity, 1 ),
                     ('t_start', pq.Quantity, 0 ),
                    ('t_stop', pq.Quantity, 0)
                             ],
     'Spike': [('time', pq.Quantity, 0),
                     ],
     
-    'AnalogSignal': [('', pq.Quantity, 1 ),
+    'AnalogSignal': [('signal', pq.Quantity, 1 ),
                                 ('sampling_rate', pq.Quantity, 0 ),
                                 ('t_start', pq.Quantity, 0 ),
                                 ],
-    'AnalogSignalArray': [('', pq.Quantity, 2 ),
+    'AnalogSignalArray': [('signal', pq.Quantity, 2 ),
                                         ('sampling_rate', pq.Quantity, 0 ),
                                         ('t_start', pq.Quantity, 0 ),
                                         ],
@@ -184,6 +183,14 @@ classes_recommended_attributes= {
     'RecordingChannel': [('coordinate',pq.Quantity,1),],
     
     }
+
+# this list classes inheriting quantities with arguments that will become the quantity array
+classes_inheriting_quantities= {
+    'SpikeTrain': 'times',
+    'AnalogSignal' :'signal',
+    'AnalogSignalArray' : 'signal',
+    }
+
 
 # all classes can have name, description, file_origin
 for k in classes_recommended_attributes.keys():

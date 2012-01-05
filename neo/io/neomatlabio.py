@@ -243,10 +243,17 @@ class NeoMatlabIO(BaseIO):
             
             attrname, attrtype = attr[0], attr[1]
             
-            if attrname =='': 
-                struct['array'] = ob.magnitude
-                struct['units'] = ob.dimensionality.string
+            #~ if attrname =='': 
+                #~ struct['array'] = ob.magnitude
+                #~ struct['units'] = ob.dimensionality.string
+                #~ continue
+            
+            if  classname in description.classes_inheriting_quantities and \
+                    description.classes_inheriting_quantities[classname] == attrname:
+                struct[attrname] = ob.magnitude
+                struct[attrname+'_units'] = ob.dimensionality.string
                 continue
+                
             
             if not(attrname in ob.annotations or hasattr(ob, attrname)): continue
             if getattr(ob, attrname) is None : continue
@@ -265,26 +272,32 @@ class NeoMatlabIO(BaseIO):
     def create_ob_from_struct(self, struct, classname, cascade = True, lazy = False,):
         cl = description.class_by_name[classname]
         # check if hinerits Quantity
-        is_quantity = False
-        for attr in description.classes_necessary_attributes[classname]:
-            if attr[0] == '' and attr[1] == pq.Quantity:
-                is_quantity = True
-                break
+        #~ is_quantity = False
+        #~ for attr in description.classes_necessary_attributes[classname]:
+            #~ if attr[0] == '' and attr[1] == pq.Quantity:
+                #~ is_quantity = True
+                #~ break
+        #~ is_quantiy = classname in description.classes_inheriting_quantities
         
-        if is_quantity:
-            data_complement = dict(units=str(struct.units))
+        #~ if is_quantity:
+        if  classname in description.classes_inheriting_quantities:
+            
+            quantity_attr = description.classes_inheriting_quantities[classname]
+            arr = getattr(struct,quantity_attr)
+            #~ data_complement = dict(units=str(struct.units))
+            data_complement = dict(units=str(getattr(struct,quantity_attr+'_units')))
             if "sampling_rate" in (at[0] for at in description.classes_necessary_attributes[classname]):
                 data_complement["sampling_rate"] = 0*pq.kHz  # put fake value for now, put correct value later
             if "t_stop" in (at[0] for at in description.classes_necessary_attributes[classname]):
-                if len(struct.array) > 0:
-                    data_complement["t_stop"] = struct.array.max()
+                if len(arr) > 0:
+                    data_complement["t_stop"] =arr.max()
                 else:
                     data_complement["t_stop"] = 0.0
             if lazy:    
                 ob = cl([ ], **data_complement)
-                ob.lazy_shape = struct.array.shape
+                ob.lazy_shape = arr.shape
             else:
-                ob = cl(struct.array, **data_complement)
+                ob = cl(arr, **data_complement)
         else:
             ob = cl()
         for attrname in struct._fieldnames:
@@ -299,10 +312,12 @@ class NeoMatlabIO(BaseIO):
                 continue
             
             # attributes
-            if attrname.endswith('_units')  or attrname =='units' or attrname == 'array':
+            if attrname.endswith('_units')  or attrname =='units' :#or attrname == 'array':
                 # linked with another field
                 continue
-            
+            if  classname in description.classes_inheriting_quantities and \
+                    description.classes_inheriting_quantities[classname] == attrname:
+                continue
             
             item = getattr(struct, attrname)
             # put the good type

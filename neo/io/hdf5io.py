@@ -382,8 +382,11 @@ class NeoHdf5IO(BaseIO):
         # processing attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all
-            if hasattr(obj, attr[0]) or attr[0] == '':
-                if attr[0] == '': # case with AS, ASA or ST - NEO "stars"
+            #if hasattr(obj, attr[0]) or attr[0] == '':
+            if hasattr(obj, attr[0]) or (obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]):
+                #if attr[0] == '':
+                if obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]:
+                    # case with AS, ASA or ST - NEO "stars"
                     obj_attr = obj
                     attr_name = 'data'
                 else:
@@ -478,7 +481,8 @@ class NeoHdf5IO(BaseIO):
         kwargs = {}
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for i, attr in enumerate(attrs):
-            if attr[0] == '':
+            #if attr[0] == '':
+            if obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]:
                 attr_name = 'data'
             else:
                 attr_name = attr[0]

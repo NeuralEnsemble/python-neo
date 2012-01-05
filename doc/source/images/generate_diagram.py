@@ -11,7 +11,8 @@ from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
 from neo.description import class_by_name, one_to_many_reslationship, many_to_many_reslationship, \
-        property_relationship, classes_necessary_attributes, classes_recommended_attributes
+        property_relationship, classes_necessary_attributes, classes_recommended_attributes,\
+        classes_inheriting_quantities
 
 import quantities as pq
 from datetime import datetime
@@ -156,7 +157,7 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
 
         
         # name
-        if len(classes_necessary_attributes[name]) >0 and classes_necessary_attributes[name][0][0] == '':
+        if name in classes_inheriting_quantities:
             post= '* '
         else:
             post = ''
@@ -180,8 +181,10 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         for i,attr in enumerate(attributes):
             attrname, attrtype = attr[0], attr[1]
             t1 = attrname
-            if attrname =='': t1 = 'Inherited'
-            else: t1 = attrname
+            if name in classes_inheriting_quantities and classes_inheriting_quantities[name] == attrname:
+                t1 = attrname+'(object itself)'
+            else:
+                t1 = attrname
                 
             if attrtype == pq.Quantity:
                 if attr[2] == 0: t2 = 'Quantity scalar'
