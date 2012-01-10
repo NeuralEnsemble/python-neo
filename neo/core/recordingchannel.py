@@ -55,6 +55,7 @@ class RecordingChannel(BaseNeo):
         
         # Store required and recommended attributes
         self.index = index
+        self.coordinate = coordinate
         
         # Initialize contianers
         self.analogsignals = [ ]

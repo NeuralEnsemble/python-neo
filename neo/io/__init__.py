@@ -58,11 +58,11 @@ try:
 except ImportError:
     warnings.warn("ExampleIO not available, check dependencies", ImportWarning)
 
-#try:
-#    from .hdf5 import NeoHdf5IO
-#    iolist.append( NeoHdf5IO )
-#except ImportError:
-#    warnings.warn("NeoHdf5IO not available, check dependencies", ImportWarning)
+try:
+    from .hdf5io import NeoHdf5IO
+    iolist.append( NeoHdf5IO )
+except ImportError:
+    warnings.warn("NeoHdf5IO not available, check dependencies", ImportWarning)
 
 try:
     from .plexonio import PlexonIO
