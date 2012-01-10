@@ -230,7 +230,7 @@ class NeoMatlabIO(BaseIO):
         struct = { }
         
         # relationship
-        rel = description.one_to_many_reslationship
+        rel = description.one_to_many_relationship
         if classname in rel:
             for childname in rel[classname]:
                 if description.class_by_name[childname] in self.supported_objects:
@@ -302,7 +302,7 @@ class NeoMatlabIO(BaseIO):
             ob = cl()
         for attrname in struct._fieldnames:
             # check children
-            rel = description.one_to_many_reslationship
+            rel = description.one_to_many_relationship
             if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
                 for c in range(len(getattr(struct,attrname))):
                     if cascade:

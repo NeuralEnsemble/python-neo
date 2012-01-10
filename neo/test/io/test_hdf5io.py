@@ -78,12 +78,12 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
     if cascade:
         if obj_type == "Block":
             _follow_links = False
-        if one_to_many_reslationship.has_key(obj_type):
-            rels = one_to_many_reslationship[obj_type]
+        if one_to_many_relationship.has_key(obj_type):
+            rels = one_to_many_relationship[obj_type]
             if obj_type == "RecordingChannelGroup":
-                rels += many_to_many_reslationship[obj_type]
-            if not _follow_links and implicit_reslationship.has_key(obj_type):
-                for i in implicit_reslationship[obj_type]:
+                rels += many_to_many_relationship[obj_type]
+            if not _follow_links and implicit_relationship.has_key(obj_type):
+                for i in implicit_relationship[obj_type]:
                     if not i in rels: 
                         print "LOOK HERE!!!" + str(obj_type)
                     rels.remove(i)
@@ -164,10 +164,10 @@ class hdf5ioTest: # inherit this class from unittest.TestCase when ready
         def assert_children(self, obj, replica):
             obj_type = name_by_class[obj]
             self.assertEqual(md5(str(obj)).hexdigest(), md5(str(replica)).hexdigest())
-            if one_to_many_reslationship.has_key(obj_type):
-                rels = one_to_many_reslationship[obj_type]
+            if one_to_many_relationship.has_key(obj_type):
+                rels = one_to_many_relationship[obj_type]
                 if obj_type == "RecordingChannelGroup":
-                    rels += many_to_many_reslationship[obj_type]
+                    rels += many_to_many_relationship[obj_type]
                 for child_type in rels:
                     ch1 = getattr(obj, child_type.lower() + "s")
                     ch2 = getattr(replica, child_type.lower() + "s")

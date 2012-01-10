@@ -7,7 +7,7 @@ Tools for IO coder:
 import numpy as np
 
 from ..core import *
-from ..description import one_to_many_reslationship, many_to_one_reslationship
+from ..description import one_to_many_relationship, many_to_one_relationship
 
 #def finalize_block(block):
 #    populate_RecordingChannel(block)
@@ -38,12 +38,12 @@ def create_many_to_one_relationship(ob):
     """
     # Determine what class was passed, and whether it has children
     classname =ob.__class__.__name__
-    if classname not in  one_to_many_reslationship: 
+    if classname not in  one_to_many_relationship: 
         # No children
         return
      
     # Iterate through children and build backward links
-    for childname in one_to_many_reslationship[classname]:
+    for childname in one_to_many_relationship[classname]:
         # Doesn't have links to children
         if not hasattr(ob, childname.lower()+'s'): continue
 

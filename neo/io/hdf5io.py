@@ -413,10 +413,10 @@ class NeoHdf5IO(BaseIO):
                     node._f_setAttr(attr_name, obj_attr)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
-        if one_to_many_reslationship.has_key(obj_type) and cascade:
-            rels = one_to_many_reslationship[obj_type]
+        if one_to_many_relationship.has_key(obj_type) and cascade:
+            rels = one_to_many_relationship[obj_type]
             if obj_type == "RecordingChannelGroup":
-                rels += many_to_many_reslationship[obj_type]
+                rels += many_to_many_relationship[obj_type]
             for child_name in rels: # child_name like "Segment", "Event" etc.
                 container = child_name.lower() + "s" # like "units"
                 try:
@@ -524,10 +524,10 @@ class NeoHdf5IO(BaseIO):
             setattr(obj, "lazy_shape", "some shape should go here..")
         # load relationships
         if cascade:
-            if one_to_many_reslationship.has_key(obj_type):
-                rels = one_to_many_reslationship[obj_type]
+            if one_to_many_relationship.has_key(obj_type):
+                rels = one_to_many_relationship[obj_type]
                 if obj_type == "RecordingChannelGroup":
-                    rels += many_to_many_reslationship[obj_type]
+                    rels += many_to_many_relationship[obj_type]
                 for child in rels: # 'child' is like 'Segment', 'Event' etc.
                     relatives = []
                     container = self._data.getNode(node, child.lower() + "s")

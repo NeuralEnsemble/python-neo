@@ -86,8 +86,8 @@ def assert_neo_object_is_compliant(ob):
                     assert at.dtype.kind == dt.kind, '%s.%s dtype.kind is %s should be %s' % (classname, attrname, at.dtype.kind, dt.kind)
     
     # test bijectivity : one_to_many_relationship and many_to_one_relationship
-    if classname in description.one_to_many_reslationship:
-        for childname in description.one_to_many_reslationship[classname]:
+    if classname in description.one_to_many_relationship:
+        for childname in description.one_to_many_relationship[classname]:
             if not hasattr(ob, childname.lower()+'s'): continue
             sub = getattr(ob, childname.lower()+'s')
             for child in sub:
@@ -97,8 +97,8 @@ def assert_neo_object_is_compliant(ob):
     
     
     # recursive on one to many rel
-    if classname in description.one_to_many_reslationship:
-        for childname in description.one_to_many_reslationship[classname]:
+    if classname in description.one_to_many_relationship:
+        for childname in description.one_to_many_relationship[classname]:
             if not hasattr(ob, childname.lower()+'s'): continue
             sub = getattr(ob, childname.lower()+'s')
             for child in sub:
@@ -111,7 +111,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     """
     Test if ob1 and ob2 has the same sub schema.
     Explore all one_to_many_relationship.
-    Many_to_many_reslationship is not tested because of infinite recursive loops.
+    Many_to_many_relationship is not tested because of infinite recursive loops.
     
     Arguments:
         equal_almost: if False do a strict arrays_equal if True do arrays_almost_equal
@@ -120,9 +120,9 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
     assert type(ob1) == type(ob2), 'type(%s) != type(%s)' % (type(ob1), type(ob2))
     classname =ob1.__class__.__name__
     
-    if classname in description.one_to_many_reslationship:
+    if classname in description.one_to_many_relationship:
         # test one_to_many_relationship
-        for child in description.one_to_many_reslationship[classname]:
+        for child in description.one_to_many_relationship[classname]:
             if not hasattr(ob1, child.lower()+'s'):
                 assert not hasattr(ob2, child.lower()+'s'), '%s 2 do have %s but not %s 1'%(classname, child, classname)
                 continue
@@ -202,8 +202,8 @@ def assert_sub_schema_is_lazy_loaded(ob):
     """
     classname =ob.__class__.__name__
     
-    if classname in description.one_to_many_reslationship:
-        for childname in description.one_to_many_reslationship[classname]:
+    if classname in description.one_to_many_relationship:
+        for childname in description.one_to_many_relationship[classname]:
             if not hasattr(ob, childname.lower()+'s'): continue
             sub = getattr(ob, childname.lower()+'s')
             for child in sub:

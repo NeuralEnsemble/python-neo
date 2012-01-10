@@ -50,7 +50,7 @@ for ob in objectlist:
 
 
 # parent to children
-one_to_many_reslationship = {
+one_to_many_relationship = {
     'Block' : [ 'Segment','RecordingChannelGroup', ],
     'Segment' : [ 'AnalogSignal', 'AnalogSignalArray', 'IrregularlySampledSignal', 
                          'Event', 'EventArray', 'Epoch', 'EpochArray',
@@ -60,25 +60,25 @@ one_to_many_reslationship = {
     'Unit' : ['SpikeTrain', 'Spike', ]
     }
 # reverse: child to parent
-many_to_one_reslationship = { }
-for p,children in one_to_many_reslationship.items():
+many_to_one_relationship = { }
+for p,children in one_to_many_relationship.items():
     for c in children:
-        if c not in many_to_one_reslationship:
-            many_to_one_reslationship[c] = [ ]
-        if p not in many_to_one_reslationship[c]:
-            many_to_one_reslationship[c].append(p)
+        if c not in many_to_one_relationship:
+            many_to_one_relationship[c] = [ ]
+        if p not in many_to_one_relationship[c]:
+            many_to_one_relationship[c].append(p)
 
-many_to_many_reslationship = {
+many_to_many_relationship = {
     'RecordingChannel' : ['RecordingChannelGroup', ],
     'RecordingChannelGroup' : ['RecordingChannel', ],
     }
 # check bijectivity
-for p,children in many_to_many_reslationship.items():
+for p,children in many_to_many_relationship.items():
     for c in children:
-        if c not in many_to_many_reslationship:
-            many_to_many_reslationship[c] = [ ]
-        if p not in many_to_many_reslationship[c]:
-            many_to_many_reslationship[c].append(p)
+        if c not in many_to_many_relationship:
+            many_to_many_relationship[c] = [ ]
+        if p not in many_to_many_relationship[c]:
+            many_to_many_relationship[c].append(p)
 
 
 # Some relationship shortcuts are accesible througth properties
@@ -90,7 +90,7 @@ property_relationship = {
 # these relationships are used by IOs which do not natively support non-tree
 # structures like NEO to avoid object duplications when saving/retrieving 
 # objects from the data source. We can call em "secondary" connections
-implicit_reslationship = {
+implicit_relationship = {
     'RecordingChannel' : [ 'AnalogSignal',  'IrregularlySampledSignal', ],
     'RecordingChannelGroup' : [  'AnalogSignalArray'],
     'Unit' : ['SpikeTrain', 'Spike', ]

@@ -300,7 +300,7 @@ class BaseTestIO(object):
             errmsg = """%s reader with cascade=False should return
                 empty children""" % self.ioclass.__name__
             try:
-                childlist = one_to_many_reslationship[classname]
+                childlist = one_to_many_relationship[classname]
             except KeyError:
                 childlist = []
             for childname in childlist:

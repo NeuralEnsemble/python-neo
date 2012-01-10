@@ -10,7 +10,7 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.description import class_by_name, one_to_many_reslationship, many_to_many_reslationship, \
+from neo.description import class_by_name, one_to_many_relationship, many_to_many_relationship, \
         property_relationship, classes_necessary_attributes, classes_recommended_attributes,\
         classes_inheriting_quantities
 
@@ -34,8 +34,8 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
     for name in rect_pos.keys():
         # rectangles
         htotal = (1.5+len(classes_necessary_attributes[name]) + len(classes_recommended_attributes[name]))*line_heigth
-        if name in one_to_many_reslationship: htotal += len(one_to_many_reslationship[name])*line_heigth
-        if name in many_to_many_reslationship: htotal += len(many_to_many_reslationship[name])*line_heigth
+        if name in one_to_many_relationship: htotal += len(one_to_many_relationship[name])*line_heigth
+        if name in many_to_many_relationship: htotal += len(many_to_many_relationship[name])*line_heigth
         all_h[name] = htotal
             
 
@@ -43,15 +43,15 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
     for name in rect_pos.keys():
         #~ pos = rect_pos[name]
         #~ htotal = all_h[name]
-        #~ if name not in one_to_many_reslationship.keys(): continue
+        #~ if name not in one_to_many_relationship.keys(): continue
         for r in range(3):
             relationship = [ ]
-            if r==0 and name in one_to_many_reslationship:
-                relationship = one_to_many_reslationship[name]
+            if r==0 and name in one_to_many_relationship:
+                relationship = one_to_many_relationship[name]
                 color = 'c'
                 alpha = 1.
-            elif r==1 and name in many_to_many_reslationship:
-                relationship = many_to_many_reslationship[name]
+            elif r==1 and name in many_to_many_relationship:
+                relationship = many_to_many_relationship[name]
                 color = 'm'
                 alpha = 1.
             elif r ==2 and name in property_relationship:
@@ -103,8 +103,8 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         htotal = all_h[name]
         attributes = classes_necessary_attributes[name]+classes_recommended_attributes[name]        
         allrelationship = [ ]
-        if name in one_to_many_reslationship: allrelationship += one_to_many_reslationship[name]
-        if name in many_to_many_reslationship: allrelationship += many_to_many_reslationship[name]
+        if name in one_to_many_relationship: allrelationship += one_to_many_relationship[name]
+        if name in many_to_many_relationship: allrelationship += many_to_many_relationship[name]
         
 
         rect = Rectangle(pos,rect_width ,htotal,
@@ -128,12 +128,12 @@ def generate_diagram(filename, rect_pos,rect_width,  figsize ):
         for r in range(2):
             relationship = [ ]
             if r==0:
-                if name in one_to_many_reslationship: relationship = one_to_many_reslationship[name]
+                if name in one_to_many_relationship: relationship = one_to_many_relationship[name]
                 color = 'c'
                 pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship))
                 n = len(relationship)
             elif r==1:
-                if name in many_to_many_reslationship: relationship = many_to_many_reslationship[name]
+                if name in many_to_many_relationship: relationship = many_to_many_relationship[name]
                 color = 'm'
                 pos2 = pos[0] , pos[1]+htotal - line_heigth*(1.5+len(relationship)+n)
                 n = len(relationship)
