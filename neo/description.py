@@ -32,6 +32,7 @@ classes inhiriting Quantity and there attribute that will become Quantity itself
 This dict describes recommended attributes, which are optional at
 initialization. If present, they will be stored as attributes of the object.
 The notation is the same as classes_necessary_attributes.
+
 """
 
 from .core import objectlist
