@@ -1,37 +1,43 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 """
-
-Classe for fake reading/writing data from WinEdr, a software tool written by
+Classe for reading data from WinEdr, a software tool written by
 John Dempster.
 
 WinEdr is free:
 http://spider.science.strath.ac.uk/sipbs/software.htm
 
+Depend on: 
 
 Supported : Read
 
-@author : sgarcia
+Author: sgarcia
 
 """
 
-
-from baseio import BaseIO
-#from neo.core import *
+from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 
+import numpy as np
+from numpy import dtype, zeros, fromstring, empty
+import quantities as pq
 
+import os
 import struct
-from numpy import *
 
 
 class WinEdrIO(BaseIO):
     """
-    Class for reading/writing from a WinEDR file.
+    Class for reading data from WinEDR.
     
-    **Example**
-        #read a file
-        io = WinEdrIO(filename = 'myfile.EDR')
-        blck = io.read() # read the entire file    
+    Usage:
+        >>> from neo import io
+        >>> r = io.WinEdrIO(filename='File_WinEDR_1.EDR')
+        >>> seg = r.read_segment(lazy=False, cascade=True,)
+        >>> print seg.analogsignals
+        [<AnalogSignal(array([ 89.21203613,  88.83666992,  87.21008301, ...,  64.56298828,
+                67.94128418,  68.44177246], dtype=float32) * pA, [0.0 s, 101.5808 s], sampling rate: 10000.0 Hz)>]
+    
     """
     
     is_readable        = True
@@ -44,51 +50,35 @@ class WinEdrIO(BaseIO):
     has_header         = False
     is_streameable     = False
     
-    read_params        = {
-                        Segment : [
-                                ],
-                        }
+    read_params        = { Segment : [ ], }
     
     write_params       = None
     
     name               = 'WinEDR'
     extensions          = [ 'EDR' ]
     
-    
     mode = 'file'
     
     def __init__(self , filename = None) :
         """
-        This class read a WinEDR wcp file.
+        This class read a WinEDR file.
         
-        **Arguments**
-            filename : the filename to read
+        Arguments:
+            filename : the filename 
         
         """
         BaseIO.__init__(self)
         self.filename = filename
 
+    
+    def read_segment(self , lazy = False, cascade = True):
+        seg  = Segment(
+                                    file_origin = os.path.basename(self.filename),
+                                    )
+        
+        if not cascade:
+            return seg
 
-    def read(self , **kargs):
-        """
-        Read a fake file.
-        Return a neo.Block
-        See read_block for detail.
-        """
-        return self.read_segment( **kargs)
-    
-    
-    
-    def read_segment(self ):
-        """
-        Return a Block.
-        
-        **Arguments**
-            no arguments
-        
-        
-        """
-        seg = Segment()
         fid = open(self.filename , 'rb')
         
         headertext = fid.read(2048)
@@ -104,14 +94,13 @@ class WinEdrIO(BaseIO):
                 val = float(val)
             header[key] = val
         
-        data = memmap(self.filename , dtype('i2')  , 'r', 
-              #shape = (header['NC'], header['NP']) ,
-              shape = (header['NP']/header['NC'],header['NC'], ) ,
-              offset = header['NBH'])
+        if not lazy:
+            data = np.memmap(self.filename , dtype('i2')  , 'r', 
+                  #shape = (header['NC'], header['NP']) ,
+                  shape = (header['NP']/header['NC'],header['NC'], ) ,
+                  offset = header['NBH'])
 
         for c in range(header['NC']):
-            anaSig = AnalogSignal()
-            seg._analogsignals.append(anaSig)
             
             YCF = float(header['YCF%d'%c].replace(',','.'))
             YAG = float(header['YAG%d'%c].replace(',','.'))
@@ -125,13 +114,29 @@ class WinEdrIO(BaseIO):
                 if header['TU'] == 'ms':
                     DT *= .001
             
-            anaSig.signal = (data[:,header['YO%d'%c]].astype('f4')-YZ) *AD/( YCF*YAG*(ADCMAX+1))
-            anaSig.sampling_rate = 1./DT
-            anaSig.t_start = 0
-            anaSig.name = header['YN%d'%c]
-            anaSig.unit = header['YU%d'%c]
-            anaSig.channel = c            
+            unit = header['YU%d'%c]
+            try :
+                unit = pq.Quantity(1., unit)
+            except:
+                unit = pq.Quantity(1., '')
             
+            if lazy:
+                signal = [ ] * unit
+            else:
+                signal = (data[:,header['YO%d'%c]].astype('f4')-YZ) *AD/( YCF*YAG*(ADCMAX+1)) * unit
+            
+            ana = AnalogSignal( signal, 
+                                            sampling_rate = pq.Hz/DT,
+                                            t_start = 0.*pq.s,
+                                            name = header['YN%d'%c],
+                                            )
+            ana.annotate(channel_index = c)
+            if lazy:
+                ana.lazy_shape = header['NP']/header['NC']
+            
+            seg.analogsignals.append(ana)
+            
+        create_many_to_one_relationship(seg)
         return seg
         
         

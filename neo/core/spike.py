@@ -1,40 +1,55 @@
-# -*- coding: utf-8 -*-
+from neo.core.baseneo import BaseNeo
+import quantities as pq
 
-
-class Spike(object):
-    definition = """An :class:`Spike` is an evenement at time t with a waveform.
-    Note that the use of :class:`Spike` is optional. :class:`SpikeTrain` is normally
-    suffisent to manage spike_times and waveforms. :class:`Spike` is an alternative and more 
-    flexible way to manage spikes.
+class Spike(BaseNeo):
     """
+    Object to represent one spike emitted by a :class:`Unit` and represented by
+    its time occurence and optional waveform.
     
-     
-    __doc__ = """
-    Object to represent a spike
-
-    **Definition**"""+definition+"""
-
-    with arguments:
+    *Usage*:
+        TODO
     
-    ``time`` The spike time
+    *Required attributes/properties*:
+        :time: (quantity)
     
-    ``waveform`` An 2D array of the waveform 
-                        dim 0 = trodnes (1 = normal, 2 = stereotrod, 4 = tetrod)
-                        dim 1 = form for each one
+    *Recommended attributes/properties*:
+        :waveform: (quantity 2D (channel_index X time))
+        :sampling_rate:
+        :left_sweep:
+        :name:
+        :description:
+        :file_origin:           
     
-    ``sampling_rate`` The waveform sampling rate
+    *Properties*:
+        :right_sweep:
+        :duration:
     
-    **Usage**
-
-    **Example**
-
     """
-    
-    def __init__(self, *arg, **karg):
+    def __init__(self, time=0*pq.s, waveform=None, sampling_rate=None,
+                 left_sweep=None, name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initialize a new Spike."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
         
-        for attr in [  'time' , 'waveform', 'sampling_rate', 'right_sweep', 'left_sweep' ]:
-            if attr in karg:
-                setattr(self, attr, karg[attr])
-            else:
-                setattr(self, attr, None)
+        self.time = time
+        
+        self.waveform = waveform
+        self.left_sweep = left_sweep
+        self.sampling_rate = sampling_rate
+
+    @property
+    def duration(self):
+        try:
+            return self.waveform.shape[1]/self.sampling_rate
+        except:
+            return None
+
+    @property
+    def right_sweep(self):
+        try:
+            return self.left_sweep + self.duration()
+        except:
+            return None
+
 

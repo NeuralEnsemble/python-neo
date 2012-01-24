@@ -1,174 +1,266 @@
-# -*- coding: utf-8 -*-
+"""This module defines objects relating to analog signals.
 
-import numpy
+For documentation on these objects, which are imported into the base
+neo namespace, see:
+    neo.AnalogSignal
+    neo.AnalogSignalArray
+"""
+
+from __future__ import division
+import numpy as np
+import quantities as pq
+from .baseneo import BaseNeo
 
 
+def _get_sampling_rate(sampling_rate, sampling_period):
+    if sampling_period is None:
+        if sampling_rate is None:
+            raise ValueError("You must provide either the sampling rate or sampling period")
+    else:
+        if sampling_rate is None:
+            sampling_rate = 1.0/sampling_period
+        else:
+            if sampling_period != 1.0/sampling_rate:
+                raise ValueError('The sampling_rate has to be 1/sampling_period')
+    if not hasattr(sampling_rate, 'units'):
+        raise TypeError("Sampling rate/sampling period must have units")
+    return sampling_rate
 
-class AnalogSignal(object):
-     
-    definition = """An :class:`AnalogSignal` is a continuous data signal 
-    acquired at time ``t_start`` at a certain sampling rate.
+
+class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
-    
-    __doc__ = """
-    Object to represent a continuous, analog signal
+    Base class for AnalogSignal and AnalogSignalArray
+    """
 
-    **Definition**
-    %s
-    
-    **Attributes**
-    signal : An nd array of the data
-
-    **Methods**    
-    t() : Returns time values of each point in `signal`. This is the
-        preferred way to access the time values, because it will only
-        compute the values once, when it is first called. Subsequent calls
-        will return a cached version.
-    compute_time_vector() : Recomputes and returns time values of each point
-        in `signal`.
-    max() : Maximum of `signal`
-    min() : Minimum of `signal`
-    timeslice() : A new AnalogSignal sliced from this one.
-    """ % definition
-    
-
-
-    def __init__(self, signal=None, channel=None, name=None, 
-        sampling_rate=1., t_start=0., t_stop=None, dt=None, **kargs):
-        """Initialize a new AnalogSignal.
+    def __new__(cls, signal, units=None, dtype=None, copy=True, 
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin=None, description=None, **annotations):
+        """Constructs new BaseAnalogSignal from data.
         
-        It's best to specify all arguments in keyword format. 
-        All other keyword arguments besides those below will be ignored, so
-        that they may be used by other objects that inherit from this class.        
+        This is called whenever a new BaseAnalogSignal is created from the
+        constructor, but not when slicing.
         
-        Parameters (all optional)
-        ----------
-        signal : numpy array of raw data trace, default is empty array
-        channel : channel number
-        name : name of this trace
-        sampling_rate : in Hz, default 1.0, will be converted to float
-        t_start : beginning of signal, will be converted to flaot
-        t_stop : end of signal. If not provided, it will be calculated
-            from t_start and sampling_rate. Specifically t_stop will be
-            the time of the sample after the last one in `signal`.
-        dt : If provided, then sampling rate will be 1/dt. Do not specify
-            both dt and sampling_rate.
+        First the Quantity array is constructed from the data. Then,        
+        the attributes are set from the user's arguments.
         
-        Usage
-        -----
-        sig = AnalogSignal(name='My signal', sampling_rate=1000.,
-            signal=numpy.array([-1, 0, ..., .1]),
-            ignored_keyword='something else')
+        __array_finalize__ is also called on the new object.
         """
-        self.signal = signal
-        self.channel = channel
-        self.name = name
-        self.sampling_rate = float(sampling_rate)
-        self.t_start = float(t_start)
-        self.t_stop = t_stop
-        
-        # Default for signal is empty array
-        if self.signal is None:
-            self.signal = numpy.array([])
-        
-        # Override sampling rate if dt is specified
-        if dt is not None:            
-            self.sampling_rate = 1. / dt        
-        if self.sampling_rate == 0.:
-            raise(ValueError("sampling rate cannot be zero"))
-        
-        # Calculate self.t_stop
-        if self.t_stop is None:
-            self.t_stop = self.t_start + len(self.signal)/self.sampling_rate
-
-        # Initialize variable for time array, to be calculated later
-        self._t = None
-
-    def compute_time_vector(self) :
-        return numpy.arange(len(self.signal), dtype = 'f8')/self.sampling_rate + self.t_start
-
-    def t(self):
-        if self._t==None:
-            self._t=self.compute_time_vector()
-        return self._t
-
-    def max(self):
-        return self.signal.max()
-
-    def min(self):
-        return self.signal.min()
+        if units is None:
+            if hasattr(signal, "units"):
+                units = signal.units
+            else:
+                raise ValueError("Units must be specified")
+        elif isinstance(signal, pq.Quantity):
+            if units != signal.units: # could improve this test, what if units is a string?
+                signal = signal.rescale(units) 
+        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
+        obj.t_start = t_start
+        obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+        return obj
     
-    def mean(self):
-        return numpy.mean(self.signal)
+    def __init__(self, signal, units=None, dtype=None, copy=True, 
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin=None, description=None, **annotations):
+        """Initializes newly constructed BaseAnalogSignal."""
+        # This method is only called when constructing a new BaseAnalogSignal,
+        # not when slicing or viewing. We use the same call signature
+        # as __new__ for documentation purposes. Anything not in the call
+        # signature is stored in annotations.
+        
+        # Calls parent __init__, which grabs universally recommended
+        # attributes and sets up self.annotations        
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
+
+    def __array_finalize__(self, obj):
+        """This is called every time a new BaseAnalogSignal is created.
+        
+        It is the appropriate place to set default values for attributes
+        for BaseAnalogSignal constructed by slicing or viewing.
+        
+        User-specified values are only relevant for construction from
+        constructor, and these are set in __new__. Then they are just
+        copied over here.
+        """        
+        super(BaseAnalogSignal, self).__array_finalize__(obj)
+        self.t_start = getattr(obj, 't_start', 0*pq.s)
+        self.sampling_rate = getattr(obj, 'sampling_rate', None)
+        
+        # The additional arguments
+        self.annotations = getattr(obj, 'annotations', None)
+        
+        # Globally recommended attributes
+        self.name = getattr(obj, 'name', None)
+        self.file_origin = getattr(obj, 'file_origin', None)
+        self.description = getattr(obj, 'description', None)
     
-    def time_slice(self, t_start, t_stop):
-        """ 
-        Return a new AnalogSignal obtained by slicing between t_start and t_stop
+    def __repr__(self):
+        return '<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
+             super(BaseAnalogSignal, self).__repr__(), self.t_start, self.t_stop, self.sampling_rate)
+
+    def __getslice__(self, i, j):
+        # doesn't get called in Python 3 - __getitem__ is called instead
+        obj = super(BaseAnalogSignal, self).__getslice__(i, j)
+        obj.t_start = self.t_start + i*self.sampling_period
+        return obj
+    
+    def __getitem__(self, i):
+        obj = super(BaseAnalogSignal, self).__getitem__(i)
+        if isinstance(obj, BaseAnalogSignal):
+            # update t_start
+            slice_start = None
+            if isinstance(i, slice):
+                slice_start = i.start
+            elif isinstance(i, tuple) and len(i) == 2:
+                slice_start = i[0].start
+            if slice_start:
+                obj.t_start = self.t_start + slice_start*self.sampling_period
+        return obj
+
+    # sampling_period attribute is handled as a property on underlying rate
+    def _get_sampling_period(self):
+        return 1./self.sampling_rate
+    def _set_sampling_period(self, period):
+        self.sampling_rate = 1./period
+    sampling_period = property(fget=_get_sampling_period, fset=_set_sampling_period)
+
+    @property
+    def duration(self):
+        return self.shape[0]/self.sampling_rate
         
-        Inputs:
-            t_start - begining of the new AnalogSignal, in seconds.
-            t_stop  - end of the new AnalogSignal, in seconds.
-            
-            If this signal does not contain sufficient data to meet your
-            request, as much data as possible will be returned and a
-            warning will be printed.
+    @property
+    def t_stop(self):
+        return self.t_start + self.duration
+
+    @property
+    def times(self):
+        return self.t_start + np.arange(self.shape[0])/self.sampling_rate
+    
+    def rescale(self, units):
+        """
+        Return a copy of the AnalogSignal(Array) converted to the specified units
+        """
+        to_dims = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == to_dims:
+            to_u = self.units
+            signal = np.array(self)
+        else:
+            to_u = Quantity(1.0, to_dims)
+            from_u = Quantity(1.0, self.dimensionality)
+            try:
+                cf = get_conversion_factor(from_u, to_u)
+            except AssertionError:
+                raise ValueError(
+                    'Unable to convert between units of "%s" and "%s"'
+                    %(from_u._dimensionality, to_u._dimensionality)
+                )
+            signal = cf*self.magnitude
+        new = self.__class__(signal=signal, units=to_u, sampling_rate=self.sampling_rate)
+        new._copy_data_complement(self)
+        new.annotations.update(self.annotations)
+        return new
+    
+    def duplicate_with_new_array(self, signal):
+        #signal is the new signal
+        new = self.__class__(signal=signal, units=self.units, sampling_rate=self.sampling_rate)
+        new._copy_data_complement(self)
+        new.annotations.update(self.annotations)
+        return new
+
+    def __eq__(self, other):
+        if self.t_start != other.t_start or self.sampling_rate != other.sampling_rate:
+            return False
+        return super(BaseAnalogSignal, self).__eq__(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def _check_consistency(self, other):
+        if isinstance(other, BaseAnalogSignal):
+            for attr in "t_start", "sampling_rate":
+                if getattr(self, attr) != getattr(other, attr):
+                    raise Exception("Inconsistent values of %s" % attr)
+            # how to handle name and annotations?
+
+    def _copy_data_complement(self, other):
+        for attr in ("t_start", "sampling_rate", "name", "file_origin", "description"):
+            setattr(self, attr, getattr(other, attr, None))
+
+    def _apply_operator(self, other, op):
+        self._check_consistency(other)
+        f = getattr(super(BaseAnalogSignal, self), op)
+        new_signal = f(other)
+        new_signal._copy_data_complement(self)
+        return new_signal
+
+    def __add__(self, other):
+        return self._apply_operator(other, "__add__")
+
+    def __sub__(self, other):
+        return self._apply_operator(other, "__sub__")
         
-        Usage:
-            Let's say you have a list of AnalogSignal and a list of Event,
-            one Event per AnalogSignal, and you want to calculate an
-            Event-triggered average. You cannot simply add together
-            the AnalogSignal.signal arrays because the Event occurs at
-            different times in each AnalogSignal.
-            
-            Instead you need to slice each AnalogSignal on the Event time
-            and average together the results.
-            
-            slices = [ ]
-            for anaSig, ev in zip(anaSigList, eventList):
-                # Get a slice 100ms before and 100ms after each event
-                slc = anaSig.time_slice(ev.time - .1, ev.time + .1)
-                slices.append(slc.signal)
-            return numpy.mean(slices, axis=0)
-            
-            Note that for this code to work, you will need the AnalogSignal
-            to actually contain 100ms of data before and after each event.
-            Otherwise an error will occur.                
+    def __mul__(self, other):
+        return self._apply_operator(other, "__mul__")
         
-        Implementation note:
-            The closest time bin to t_start and t_stop is chosen.            
-            Therefore, if the t_start you specify is not in t(), 
-            then the t_start of the returned signal may differ up
-            to half a sampling period.
-        """       
-        # Get time axis and also trigger recalculation if necessary
-        t = self.t()
-        
-        # These kinds of checks aren't a good idea because of possible
-        # floating point round-off error
-        #assert t_start >= t[0], "not enough data on the beginning"
-        #assert t_stop <= t[-1], "not enough data on the end"
-        assert t_stop > t_start, "t_stop must be > t_start"
-        
-        # Find the integer indices of self.signal closest to requested limits
-        # Do the checks here for 
-        i_start = int(numpy.rint((t_start - self.t_start) * self.sampling_rate))
-        if i_start < 0:
-            print "warning: you requested data before signal starts"
-            i_start = 0
-        
-        # Add one so that it is inclusive of t_stop
-        # In the most generous case, all of the data will be included and
-        # i_stop == len(self.signal), which is okay because of fancy indexing
-        i_stop = int(numpy.rint((t_stop - self.t_start) * self.sampling_rate)) + 1
-        if i_stop > len(self.signal):
-            print "warning: you requested data after signal ended"
-            i_stop = len(self.signal)
-        
-        # Slice the signal
-        signal = self.signal[i_start:i_stop]
-        
-        # Create a new AnalogSignal with the specified data and the correct
-        # underlying time-axis
-        result = AnalogSignal(signal=signal, sampling_rate=self.sampling_rate, 
-            t_start=t[i_start])
-        return result
+    def __truediv__(self, other):
+        return self._apply_operator(other, "__truediv__")
+
+    __radd__ = __add__
+    __rmul__ = __sub__
+    
+    def __rsub__(self, other):
+        return self.__mul__(-1) + other
+
+    
+class AnalogSignal(BaseAnalogSignal):
+    """
+    A representation of continuous, analog signal acquired at time ``t_start``
+    at a certain sampling rate.
+    
+    Inherits from :py:class:`quantities.Quantity`, which in turn inherits from
+    :py:class:``numpy.ndarray``.
+    
+    *Usage*::
+    
+      >>> from quantities import ms, kHz, nA, uV
+      >>> import numpy as np
+      >>> a = AnalogSignal([1,2,3], sampling_rate=0.42*kHz, units='mV')
+      >>> b = AnalogSignal([4,5,6]*nA, sampling_period=42*ms)
+      >>> c = AnalogSignal(np.array([1.0, 2.0, 3.0]), t_start=42*ms,
+      ...                  sampling_rate=0.42*kHz, units=uV)
+
+    *Required attributes/properties*:
+      :signal: the data itself, as a :py:class:`Quantity` array, NumPy array or list
+      :units: required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
+      :sampling_rate: *or* :sampling_period: Quantity, number of samples per unit time or
+                interval between two samples. If both are specified, they are checked for consistency.
+    
+    *Recommended attributes/properties*:
+      :t_start: Quantity, time when signal begins. Default: 0.0 seconds
+      
+      Note that the length of the signal array and the sampling rate 
+      are used to calculate :py:attr:`t_stop` and :py:attr:`duration`.
+      
+      :name: string
+      :description: string
+      :file_origin: string
+      
+    *Optional arguments*:
+        :dtype:
+        :copy: (bool) True by default
+    
+    Any other additional arguments are assumed to be user-specific metadata
+    and stored in :py:attr:`annotations`::
+    
+      >>> a = AnalogSignal([1,2,3], day='Monday')
+      >>> print a.annotations['day']
+      Monday
+    
+    *Properties available on this object*:
+      :py:attr:`sampling_rate`, :py:attr:`sampling_period`, :py:attr:`t_stop`,
+      :py:attr:`duration`
+    
+    *Operations available on this object*:
+      == != + * /
+    """
+    pass

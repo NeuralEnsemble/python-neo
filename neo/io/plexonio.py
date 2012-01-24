@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 """
-
 Class for reading data from Plexion acquisition system (.plx)
 
 Compatible with versions 100 to 106.
@@ -10,41 +9,48 @@ This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/downloads.html
 
 
+Depend on: 
+
 Supported : Read
 
-@author :  luc estebanez, sgarcia
-
+Author: sgarcia
 
 """
 
-
-
-
-
-
-from baseio import BaseIO
-#from neo.core import *
+from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 
+import numpy as np
+import quantities as pq
 
-from numpy import *
 import struct
 import datetime
+import os
+
+
 
 class PlexonIO(BaseIO):
     """
-    Class for reading/writing data in a fake file.
+    Class for reading plx file.
     
-    **Usage**
-
-    **Example**
-    
+    Usage:
+        >>> from neo import io
+        >>> r = io.PlexonIO(filename='File_plexon_1.plx')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> print seg.analogsignals
+        []
+        >>> print seg.spiketrains  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<SpikeTrain(array([  2.75000000e-02,   5.68250000e-02,   8.52500000e-02, ...,
+        ...
+        >>> print seg.eventarrays
+        []
     """
     
     is_readable        = True
     is_writable        = False
     
-    supported_objects  = [Segment , AnalogSignal, SpikeTrain, Event, Epoch]
+    supported_objects  = [Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray]
     readable_objects    = [ Segment]
     writeable_objects   = []
 
@@ -70,41 +76,36 @@ class PlexonIO(BaseIO):
         """
         This class read a plx file.
         
-        **Arguments**
-        
-            filename : the filename to read you can pu what ever it do not read anythings
+        Arguments:
+            filename : the filename
         
         """
         BaseIO.__init__(self)
         self.filename = filename
 
 
-    def read(self , **kargs):
+    def read_segment(self, 
+                                        lazy = False,
+                                        cascade = True,
+                                        load_spike_waveform = False,
+                                            ):
         """
-        Read a fake file.
-        Return a neo.Segment
-        See read_block for detail.
+        
         """
-        return self.read_segment( **kargs)
-
-
-
-    def read_segment(self, load_spike_waveform = False):
-        """
-        """
-        seg = Segment()
+        
         fid = open(self.filename, 'rb')
         globalHeader = HeaderReader(fid , GlobalHeader ).read_f(offset = 0)
-        #~ globalHeader['TSCounts'] = array(globalHeader['TSCounts']).reshape((130,5))
-        #~ globalHeader['WFCounts'] = array(globalHeader['WFCounts']).reshape((130,5))
         
-        
-        seg.filedatetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
+        # metadatas
+        seg = Segment()
+        seg.rec_datetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
                     globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
+        seg.file_origin = os.path.basename(self.filename)
+        seg.annotate(plexon_version = globalHeader['Version'])
         
+        if not cascade:
+            return seg
         
-        #~ print 'version' , globalHeader['Version']
-        seg.plexonVersion = globalHeader['Version']
         
         ## Step 1 : read headers
         
@@ -115,8 +116,8 @@ class PlexonIO(BaseIO):
         for i in xrange(globalHeader['NumDSPChannels']):
             # channel is 1 based
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
-            channelHeader['Template'] = array(channelHeader['Template']).reshape((5,64))
-            channelHeader['Boxes'] = array(channelHeader['Boxes']).reshape((5,2,4))
+            channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
+            channelHeader['Boxes'] = np.array(channelHeader['Boxes']).reshape((5,2,4))
             dspChannelHeaders[channelHeader['Channel']]=channelHeader
             maxunit = max(channelHeader['NUnits'],maxunit)
             maxchan = max(channelHeader['Channel'],maxchan)
@@ -135,17 +136,24 @@ class PlexonIO(BaseIO):
         
         ## Step 2 : prepare allocating
         # for allocating continuous signal
-        ncontinuoussamples = zeros(len(slowChannelHeaders))
-        sampleposition = zeros(len(slowChannelHeaders))
+        ncontinuoussamples = np.zeros(len(slowChannelHeaders))
+        sampleposition = np.zeros(len(slowChannelHeaders))
         anaSigs = { }
         
         # for allocating spiketimes and waveform
         spiketrains = { }
-        nspikecounts = zeros((maxchan+1, maxunit+1) ,dtype='i')
+        nspikecounts = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
         for i,channelHeader in dspChannelHeaders.iteritems():
-            
             spiketrains[i] = { }
-
+        
+        # for allocating EventArray
+        eventarrays = { }
+        neventsperchannel = { }
+        #maxstrsizeperchannel = { }
+        for chan, h in eventHeaders.iteritems():
+            neventsperchannel[chan] = 0
+            #maxstrsizeperchannel[chan] = 0
+        
 
         ## Step 3 : a first loop for counting size
         
@@ -163,124 +171,160 @@ class PlexonIO(BaseIO):
             if dataBlockHeader['Type'] == 1:
                 #spike
                 if unit not in spiketrains[chan]:
-                    spiketrains[chan][unit] = SpikeTrain(
-                                                                            channel = i,
-                                                                            name = dspChannelHeaders[chan]['Name'],
-                                                                            sampling_rate = globalHeader['ADFrequency'],
-                                                                            )
+                    sptr = SpikeTrain([ ], units='s', t_stop=0.0)
+                    sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
+                    sptr.annotate(channel_index = i)
+                    spiketrains[chan][unit] = sptr
+                    
                     spiketrains[chan][unit].sizeOfWaveform = n1,n2
+                    
                 nspikecounts[chan,unit] +=1
                 fid.seek(n1*n2*2,1)
             
             elif dataBlockHeader['Type'] ==4:
                 #event
-                pass
-            
+                neventsperchannel[chan] += 1
+                if chan not in eventarrays:
+                    ea = EventArray()
+                    ea.annotate(channel_name= eventHeaders[chan]['Name'])
+                    ea.annotate(channel_index = chan)
+                    eventarrays[chan] = ea
+                
             elif dataBlockHeader['Type'] == 5:
                 #continuous signal
                 fid.seek(n2*2, 1)
                 if n2> 0:
                     ncontinuoussamples[chan] += n2
                     if chan not in anaSigs:
-                        anaSigs[chan] =  AnalogSignal(
-                                                                        sampling_rate = float(slowChannelHeaders[chan]['ADFreq']),
-                                                                        t_start = 0.,
-                                                                        name = slowChannelHeaders[chan]['Name'],
-                                                                        channel = slowChannelHeaders[chan]['Channel']
+                        anasig =  AnalogSignal(
+                                                                        [ ],
+                                                                        units = 'V',
+                                                                        sampling_rate = float(slowChannelHeaders[chan]['ADFreq'])*pq.Hz,
+                                                                        t_start = 0.*pq.s,
                                                                         )
-            else :
-                pass
-        
-        ## Step 4: allocating memory 
-        
-        # continuous signal
-        for chan, anaSig in anaSigs.iteritems():
-            anaSig.signal = zeros((ncontinuoussamples[chan]) , dtype = 'f4')
-        
-        # allocating mem for SpikeTrain
-        for chan, sptrs in spiketrains.iteritems():
-            for unit, sptr in sptrs.iteritems():
-                    spiketrains[chan][unit]._spike_times = zeros( (nspikecounts[chan][unit]) , dtype = 'f' )
-                    if load_spike_waveform:
-                        n1, n2 = spiketrains[chan][unit].sizeOfWaveform
-                        spiketrains[chan][unit]._waveforms = zeros( (nspikecounts[chan][unit], n1, n2 ) , dtype = 'f' )
-        nspikecounts[:] = 0
-        
-        ## Step 5 : a second loop for reading
-        fid.seek(start)
-        while fid.tell() !=-1 :
-            dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
-            if dataBlockHeader is None : break
-            chan = dataBlockHeader['Channel']
-            n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
-            time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 + dataBlockHeader['TimeStamp']
-            time/= globalHeader['ADFrequency'] 
+                    anasig.annotate(channel_index = slowChannelHeaders[chan]['Channel'])
+                    anasig.annotate(channel_name = slowChannelHeaders[chan]['Name'])
+                    anaSigs[chan] =  anasig
+
+        if lazy:
+            for chan, anaSig in anaSigs.iteritems():
+                anaSigs[chan].lazy_shape = ncontinuoussamples[chan]
+                
+            for chan, sptrs in spiketrains.iteritems():
+                for unit, sptr in sptrs.iteritems():
+                    spiketrains[chan][unit].lazy_shape = nspikecounts[chan][unit]
             
-            if n2 <0: break
-            if dataBlockHeader['Type'] == 1:
-                #spike
-                unit = dataBlockHeader['Unit']
-                sptr = spiketrains[chan][unit]
+            for chan, ea in eventarrays.iteritems():
+                ea.lazy_shape = neventsperchannel[chan]
+        else:
+            ## Step 4: allocating memory if not lazy
+            # continuous signal
+            for chan, anaSig in anaSigs.iteritems():
+                anaSigs[chan] = anaSig.duplicate_with_new_array(np.zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
+            
+            # allocating mem for SpikeTrain
+            for chan, sptrs in spiketrains.iteritems():
+                for unit, sptr in sptrs.iteritems():
+                        new = SpikeTrain(np.zeros((nspikecounts[chan][unit]), dtype='f')*pq.s, t_stop=1e99) # use an enormous value for t_stop for now, put in correct value later
+                        new.annotations.update(sptr.annotations)
+                        if load_spike_waveform:
+                            n1, n2 = spiketrains[chan][unit].sizeOfWaveform
+                            new.waveforms = np.zeros( (nspikecounts[chan][unit], n1, n2 )*pq.V , dtype = 'f' ) * pq.V
+                        spiketrains[chan][unit] = new
+            nspikecounts[:] = 0
+            
+            # event
+            eventpositions = { }
+            for chan, ea in eventarrays.iteritems():
+                ea.times = np.zeros( neventsperchannel[chan] )*pq.s
+                #ea.labels = zeros( neventsperchannel[chan] , dtype = 'S'+str(neventsperchannel[chan]) )
+                eventpositions[chan]=0
+            
+        if not lazy:
+            
+            ## Step 5 : a second loop for reading if not lazy
+            fid.seek(start)
+            while fid.tell() !=-1 :
+                dataBlockHeader = HeaderReader(fid , DataBlockHeader ).read_f(offset = None)
+                if dataBlockHeader is None : break
+                chan = dataBlockHeader['Channel']
+                n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
+                time = dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 + dataBlockHeader['TimeStamp']
+                time/= globalHeader['ADFrequency'] 
                 
-                pos = nspikecounts[chan,unit]
-                sptr._spike_times[pos] = time
+                if n2 <0: break
+                if dataBlockHeader['Type'] == 1:
+                    #spike
+                    unit = dataBlockHeader['Unit']
+                    sptr = spiketrains[chan][unit]
+                    
+                    pos = nspikecounts[chan,unit]
+                    sptr[pos] = time * pq.s
+                    
+                    if load_spike_waveform and n1*n2 != 0 :
+                        waveform = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
+                        #range
+                        if globalHeader['Version'] <103:
+                            waveform = waveform*3000./(2048*dspChannelHeaders[chan]['Gain']*1000.)
+                        elif globalHeader['Version'] >=103 and globalHeader['Version'] <105:
+                            waveform = waveform*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*1000.)
+                        elif globalHeader['Version'] >105:
+                            waveform = waveform*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
+                        
+                        sptr._waveforms[pos,:,:] = waveform
+                    else:
+                        fid.seek(n1*n2*2,1)
+                    
+                    nspikecounts[chan,unit] +=1
+                    
+                        
+                    
+                    
+                elif dataBlockHeader['Type'] == 4:
+                    # event
+                    pos = eventpositions[chan]
+                    eventarrays[chan].times[pos] = time * pq.s
+                    eventpositions[chan]+= 1
                 
-                if load_spike_waveform and n1*n2 != 0 :
-                    waveform = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
+                elif dataBlockHeader['Type'] == 5:
+                    #signal
+                    data = np.fromstring( fid.read(n2*2) , dtype = 'i2').astype('f4')
                     #range
-                    if globalHeader['Version'] <103:
-                        waveform = waveform*3000./(2048*dspChannelHeaders[chan]['Gain']*1000.)
-                    elif globalHeader['Version'] >=103 and globalHeader['Version'] <105:
-                        waveform = waveform*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*1000.)
-                    elif globalHeader['Version'] >105:
-                        waveform = waveform*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
-                    
-                    
-                    sptr._waveforms[pos,:,:] = waveform
-                else:
-                    fid.seek(n1*n2*2,1)
+                    if globalHeader['Version'] ==100 or globalHeader['Version'] ==101 :
+                        data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*1000.)
+                    elif globalHeader['Version'] ==102 :
+                        data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
+                    elif globalHeader['Version'] >= 103:
+                        data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
+                                                            slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
+                    anaSigs[chan][sampleposition[chan] : sampleposition[chan]+data.size] = data * pq.V
+                    sampleposition[chan] += data.size
+                    if sampleposition[chan] ==0:
+                        anaSigs[chan].t_start = time* pq.s
                 
-                nspikecounts[chan,unit] +=1
-                
-                    
-                
-                
-            elif dataBlockHeader['Type'] == 4:
-                # event
-                ev = Event(time = time)
-                ev.name = eventHeaders[chan]['Name']
-                seg._events.append(ev)
+        
             
-            elif dataBlockHeader['Type'] == 5:
-                #signal
-                data = fromstring( fid.read(n2*2) , dtype = 'i2').astype('f4')
-                #range
-                if globalHeader['Version'] ==100 or globalHeader['Version'] ==101 :
-                    data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*1000.)
-                elif globalHeader['Version'] ==102 :
-                    data = data*5000./(2048*slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
-                elif globalHeader['Version'] >= 103:
-                    data = data*globalHeader['SlowMaxMagnitudeMV']/(.5*(2**globalHeader['BitsPerSpikeSample'])*\
-                                                        slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
-                anaSigs[chan].signal[sampleposition[chan] : sampleposition[chan]+data.size] = data
-                sampleposition[chan] += data.size
-                if sampleposition[chan] ==0:
-                    anaSigs[chan].t_start = time
-            
-            else :
-                pass
-                
+        
+        #TODO if lazy
+        
+        
         # add AnalogSignal to sgement
         for k,anaSig in anaSigs.iteritems() :
             if anaSig is not None:
-                seg._analogsignals.append(anaSig)
+                seg.analogsignals.append(anaSig)
                 
         # add SpikeTrain to sgement
         for chan, sptrs in spiketrains.iteritems():
             for unit, sptr in sptrs.iteritems():
-                    seg._spiketrains.append(sptr)
-
+                if len(sptr) > 0:
+                    sptr.t_stop = sptr.max() # can probably get a better value for this, from the associated AnalogSignal
+                seg.spiketrains.append(sptr)
         
+        # add eventarray to segment
+        for chan,ea in  eventarrays.iteritems():
+            seg.eventarrays.append(ea)
+        
+        create_many_to_one_relationship(seg)
         return seg
 
 

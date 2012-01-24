@@ -1,145 +1,283 @@
 # -*- coding: utf-8 -*-
-"""Class for reading binary file from Blackrock format.
+"""Module for reading binary file from Blackrock format.
 """
 
-from baseio import BaseIO
-#import OpenElectrophy as OE
+from .baseio import BaseIO
 from ..core import *
 import numpy as np
 import struct
-    
+import quantities as pq  
+from neo.io import tools
 
 
+import logging
 
 class BlackrockIO(BaseIO):
     """
     Class for reading/writing data in a BlackRock Neuroshare ns5 files.
-   
-    **Usage**
+    """    
+    # Class variables demonstrating capabilities of this IO
+    is_readable        = True # This a only reading class
+    is_writable        = True # write is not supported
+    
+    # This IO can only manipulate continuous data, not spikes or events
+    supported_objects  = [Block, Segment, AnalogSignal, RecordingChannelGroup, RecordingChannel]
+    
+    # Keep things simple by always returning a block
+    readable_objects    = [Block]
+    
+    # And write a block
+    writeable_objects   = [Block]
 
-    **Example**
-    
-    """
-    
-    is_readable        = True
-    is_writable        = False
-
-    supported_objects  = [Block, Segment, AnalogSignal]
-    readable_objects    = [ Segment]
-    writeable_objects   = []
-    
-    # The file has a header, is that what this means?
-    has_header         = True
+    # Not sure what these do, if anything
+    has_header         = False
     is_streameable     = False
+    
+    # The IO name and the file extensions it uses
+    name               = 'Blackrock'    
+    extensions          = ['ns5']
+    
+    # Operates on *.ns5 files
+    mode = 'file'  
     
     # GUI defaults for reading
     # Most information is acquired from the file header.
-    # Blocks will start at time zero.
-    # Segments can be read starting from any particular point in the file.
     read_params = { 
-        Block : [
-            ('rangemin' , { 'value' : -10 } ),
-            ('rangemax' , { 'value' : 10 } ),
-            ],
-        Segment : [
-            ('t_start', { 'value' : 0. } ),
-            ('t_stop', { 'value' : 1. } ),
-            ('rangemin', { 'value' : -10. } ),
-            ('rangemax', { 'value' : 10. } ),
+        Block: [
+            #('rangemin' , { 'value' : -10 } ),
+            #('rangemax' , { 'value' : 10 } ),
             ]
         }
 
     # GUI defaults for writing (not supported)
     write_params       = None
-                        
-    name               = 'Blackrock'
-    extensions          = [ 'ns5' ]
+
     
-    
-    mode = 'file'
-    
-    def __init__(self , filename) :
-        """This class read a binary Blackrock file.
+    def __init__(self, filename, full_range=8192.*pq.mV) :
+        """Initialize Blackrock reader.
         
         **Arguments**
-            filename : the filename to read
+            filename: string, the filename to read
+            full_range: Quantity, the full-scale analog range of the data.
+                This is set by your digitizing hardware. It should be in
+                volts or millivolts.
         """
         BaseIO.__init__(self)
         self.filename = filename
-        self.loader = Loader(filename)
+        self.full_range = full_range
+    
+    # The reading methods. The `lazy` and `cascade` parameters are imposed
+    # by neo.io API    
+    def read_block(self, lazy=False, cascade=True, 
+        n_starts=None, n_stops=None, channel_list=None):
+        """Reads the file and returns contents as a Block.
+        
+        The Block contains one Segment for each entry in zip(n_starts,
+        n_stops). If these parameters are not specified, the default is
+        to store all data in one Segment.
+        
+        The Block also contains one RecordingChannelGroup for all channels.
+        
+        n_starts: list or array of starting times of each Segment in
+            samples from the beginning of the file.
+        n_stops: similar, stopping times of each Segment
+        channel_list: list of channel numbers to get. The neural data channels
+            are 1 - 128. The analog inputs are 129 - 144. The default
+            is to acquire all channels.
+        
+        Returns: Block object containing the data.
+        """
+
+
+        # Create block
+        block = Block(file_origin=self.filename)
+        
+        if not cascade:
+            return block
+        
+        self.loader = Loader(self.filename)
         self.loader.load_file()
         self.header = self.loader.header
         
-    
-    def read(self , **kargs):
-        """Read the file and return contents as a Block.
-
-        See read_block for detail.
-        """
-        return self.read_block( **kargs)
-    
-    def read_block(self, full_range=2., 
-        t_starts=[], t_stops=[], chlist=None):
-        """Reads the file and returns contents as a Block.
-        
-        The Block will contain Segment sliced based on the times in
-        t_starts and t_stops.
-        
-        Returns a Block object containing the data.
-        """
-        # Create block
-        block = Block(fileOrigin=self.filename)
-        
         # If channels not specified, get all
-        if chlist is None:
-            chlist = self.loader.get_neural_channel_numbers()
+        if channel_list is None:
+            channel_list = self.loader.get_neural_channel_numbers()
+        
+        # If not specified, load all as one Segment
+        if n_starts is None:
+            n_starts = [0]
+            n_stops = [self.loader.header.n_samples]
+        
+        #~ # Add channel hierarchy
+        #~ rcg = RecordingChannelGroup(name='allchannels',
+            #~ description='group of all channels', file_origin=self.filename)
+        #~ block.recordingchannelgroups.append(rcg)
+        #~ self.channel_number_to_recording_channel = {}
 
-        # Iterate through t_starts and t_stops and add one Segment
+        #~ # Add each channel at a time to hierarchy
+        #~ for ch in channel_list:            
+            #~ ch_object = RecordingChannel(name='channel%d' % ch,
+                #~ file_origin=self.filename, index=ch)
+            #~ rcg.channel_indexes.append(ch_object.index)
+            #~ rcg.channel_names.append(ch_object.name)
+            #~ rcg.recordingchannels.append(ch_object)
+            #~ self.channel_number_to_recording_channel[ch] = ch_object
+
+        # Iterate through n_starts and n_stops and add one Segment
         # per each.
-        for n, (t1, t2) in enumerate(zip(t_starts, t_stops)):
-            seg = self.read_segment(t_start=t1, 
-                t_stop=t2, full_range=full_range, chlist=chlist)
+        for n, (t1, t2) in enumerate(zip(n_starts, n_stops)):
+            # Create segment and add metadata
+            seg = self.read_segment(n_start=t1, n_stop=t2, chlist=channel_list,
+                lazy=lazy, cascade=cascade)
             seg.name = 'Segment %d' % n
-            seg.fileOrigin = self.filename
-            block._segments.append(seg)
+            seg.index = n
+            t1sec = t1 / self.loader.header.f_samp
+            t2sec = t2 / self.loader.header.f_samp
+            seg.description = 'Segment %d from %f to %f' % (n, t1sec, t2sec)
+            
+            # Link to block
+            block.segments.append(seg)
+        
+        # Create hardware view, and bijectivity
+        tools.populate_RecordingChannel(block)
+        tools.create_many_to_one_relationship(block)        
         
         return block
     
-    def read_segment(self, t_start, t_stop, full_range=2., chlist=None):
+    def read_segment(self, n_start, n_stop, chlist=None, lazy=False, cascade=True):
         """Reads a Segment from the file and stores in database.
         
         The Segment will contain one AnalogSignal for each channel
-        and will go from t_start to t_stop.
+        and will go from n_start to n_stop (in samples).
         
         Arguments:
-            t_start : time in seconds that the Segment begins
-            t_stop : time in seconds that the Segment ends
+            n_start : time in samples that the Segment begins
+            n_stop : time in samples that the Segment ends
+        
+        Python indexing is used, so n_stop is not inclusive.
         
         Returns a Segment object containing the data.
         """
-        conversion = np.float(full_range) / 2**16
+        # If no channel numbers provided, get all of them
         if chlist is None:
             chlist = self.loader.get_neural_channel_numbers()
         
-        # Create the Segment
-        seg = Segment(fileOrigin=self.filename)
+        # Conversion from bits to full_range units
+        conversion = self.full_range / 2**(8*self.header.sample_width)
         
+        # Create the Segment
+        seg = Segment(file_origin=self.filename)
+        t_start = float(n_start) / self.header.f_samp
+        t_stop = float(n_stop) / self.header.f_samp        
+        seg.annotate(t_start=t_start)
+        seg.annotate(t_stop=t_stop)
+        
+        # Load data from each channel and store
         for ch in chlist:
-            ts = t_start / self.header.f_samp
-            sig = np.array(\
-                self.loader._get_channel(ch)[t_start:t_stop]) * conversion
+            if lazy:
+                sig = np.array([]) * conversion
+            else:
+                # Get the data from the loader
+                sig = np.array(\
+                    self.loader._get_channel(ch)[n_start:n_stop]) * conversion
 
+            # Create an AnalogSignal with the data in it
             anasig = AnalogSignal(signal=sig,
-                sampling_rate=self.header.f_samp,
-                t_start=ts,
-                channel=ch)
-            seg._analogsignals.append(anasig)
+                sampling_rate=self.header.f_samp*pq.Hz,
+                t_start=t_start*pq.s, file_origin=self.filename,
+                description='Channel %d from %f to %f' % (ch, t_start, t_stop),
+                channel_index=ch)
+            
+            if lazy:
+                anasig.lazy_shape = n_stop-n_start
+                
+            
+            # Link the signal to the segment
+            seg.analogsignals.append(anasig)
+            
+            # Link the signal to the recording channel from which it came
+            #rc = self.channel_number_to_recording_channel[ch]
+            #rc.analogsignals.append(anasig)
         
         return seg
 
 
+    def write_block(self, block):
+        """Writes block to `self.filename`.
+        
+        *.ns5 BINARY FILE FORMAT
+        The following information is contained in the first part of the header
+        file.
+        The size in bytes, the variable name, the data type, and the meaning are
+        given below. Everything is little-endian.
 
+        8B. File_Type_ID. char. Always "NEURALSG"
+        16B. File_Spec. char. Always "30 kS/s\0"
+        4B. Period. uint32. Always 1.
+        4B. Channel_Count. uint32. Generally 32 or 34.
+        Channel_Count*4B. uint32. Channel_ID. One uint32 for each channel.
 
+        Thus the total length of the header is 8+16+4+4+Channel_Count*4.
+        Immediately after this header, the raw data begins.
+        Each sample is a 2B signed int16.
+        For our hardware, the conversion factor is 4096.0 / 2**16 mV/bit.
+        The samples for each channel are interleaved, so the first Channel_Count
+        samples correspond to the first sample from each channel, in the same
+        order as the channel id's in the header.
+
+        Variable names are consistent with the Neuroshare specification.
+        """                
+        fi = file(self.filename, 'wb')
+        self._write_header(block, fi)
+        
+        # Write each segment in order
+        for seg in block.segments:
+            # Create a 2d numpy array of analogsignals converted to bytes
+            all_signals = np.array([
+                np.rint(sig * 2**16 / self.full_range)
+                for sig in seg.analogsignals],
+                dtype=np.int)
+            
+            # Write to file. We transpose because channel changes faster
+            # than time in this format.
+            for vals in all_signals.transpose():
+                fi.write(struct.pack('<%dh' % len(vals), *vals))
+
+        fi.close()
+        
+    
+    def _write_header(self, block, fi):
+        """Write header info about block to fi"""
+        if len(block.segments) > 0:
+            channel_indexes = channel_indexes_in_segment(block.segments[0])
+        else:
+            channel_indexes = []
+            seg = block.segments[0]
+
+        # type of file
+        fi.write('NEURALSG')
+        
+        # sampling rate, in text and integer
+        fi.write('30 kS/s\0')
+        for n in range(8): fi.write('\0')
+        fi.write(struct.pack('<I', 1))
+        
+        # channel count: one for each analogsignal, and then also for
+        # each column in each analogsignalarray        
+        fi.write(struct.pack('<I', len(channel_indexes)))
+        for chidx in channel_indexes:
+            fi.write(struct.pack('<I', chidx))
+    
+def channel_indexes_in_segment(seg):
+    """List channel indexes of analogsignals and analogsignalarrays"""
+    channel_indices = []
+    for sig in seg.analogsignals:
+        channel_indices.append(sig.recordingchannel.index)
+    
+    for asa in seg.analogsignalarrays:
+        channel_indices.append(asa.recordingchannelgroup.channel_indexes)
+    
+    return channel_indices
 
 class HeaderInfo:
     """Holds information from the ns5 file header about the file."""
@@ -236,22 +374,21 @@ class Loader(object):
         self.header.File_Type_ID = [chr(ord(c)) \
             for c in self.file_handle.read(8)]
         if "".join(self.header.File_Type_ID) != 'NEURALSG':
-            print "Incompatible ns5 file format. Only v2.1 is supported.\n" + \
-                "This will probably not work."          
+            logging.info( "Incompatible ns5 file format. Only v2.1 is supported.\nThis will probably not work.")
         
         
         # Read File_Spec and check compatibility.
         self.header.File_Spec = [chr(ord(c)) \
             for c in self.file_handle.read(16)]
         if "".join(self.header.File_Spec[:8]) != '30 kS/s\0':
-            print "File_Spec seems to indicate you did not sample at 30KHz."
+            logging.info( "File_Spec seems to indicate you did not sample at 30KHz.")
         
         
         #R ead Period and verify that 30KHz was used. If not, the code will
         # still run but it's unlikely the data will be useful.
         self.header.period, = struct.unpack('<I', self.file_handle.read(4))
         if self.header.period != 1:
-            print "Period seems to indicate you did not sample at 30KHz."
+            logging.info( "Period seems to indicate you did not sample at 30KHz.")
         self.header.f_samp = self.header.period * 30000.0
 
 
@@ -277,10 +414,10 @@ class Loader(object):
         if self.header.sample_width * self.header.Channel_Count * \
             self.header.n_samples + \
             self.header.Header != self.header.file_total_size:
-            print "I got header of %dB, %d channels, %d samples, \
+            logging.info( "I got header of %dB, %d channels, %d samples, \
                 but total file size of %dB" % (self.header.Header, 
                 self.header.Channel_Count, self.header.n_samples, 
-                self.header.file_total_size)
+                self.header.file_total_size))
 
         # close file
         self.file_handle.close()
@@ -301,14 +438,14 @@ class Loader(object):
     def __del__(self):
         # this deletion doesn't free memory, even though del l._mm does!
         if '_mm' in self.__dict__: del self._mm
-        #else: print "gracefully skipping"
+        #else: logging.info( "gracefully skipping")
     
     def _get_channel(self, channel_number):
         """Returns slice into internal memmap for requested channel"""
         try:
             mm_index = self.header.Channel_ID.index(channel_number)
         except ValueError:
-            print "Channel number %d does not exist" % channel_number
+            logging.info( "Channel number %d does not exist" % channel_number)
             return np.array([])
         
         self.regenerate_memmap()

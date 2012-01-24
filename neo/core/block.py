@@ -1,57 +1,79 @@
-# -*- coding: utf-8 -*-
+from neo.core.baseneo import BaseNeo
 
-
-
-
-class Block(object):
-    
-    definition = \
-    """A `Block` is a container holding all the data from an experiment.
-    
-    It can be viewed as a list of :class: `Segment` objects.
-    A block is not necessarily a homogeneous recording, in contrast
-    to :class:`Segment`.
-    
-    A database can hold more than one Block.
+class Block(BaseNeo):
     """
+    Main container gathering all the data, whether discrete or continous, for a
+    given recording session.
     
-    __doc__ = """
-    Top level container for data.
+    A block is not necessarily temporally homogeneous, in contrast to Segment.
     
-    **Definition**
-    %s
+    *Usage*:
     
-    **Example**
-    >> bl = Block( segments = [seg1 , seg2 , seg3] )
+    TODO
     
-    **Methods**
-    get_segments() : Returns list of Segment in the Block
-    get_recordingpoint() : Returns list of RecordingPoint in the Block
+    *Required attributes/properties*:
+        None
     
+    *Recommended attributes/properties*:
+        :name: A label for the dataset 
+        :description: text description
+        :file_origin: filesystem path or URL of the original data file.
+        :file_datetime: the creation date and time of the original data file.
+        :rec_datetime: the date and time of the original recording
+        :index: integer. You can use this to define an ordering of your Block.
+            It is not used by Neo in any way.
     
-    """ % definition
-    def __init__(self, *arg, **karg):
-        """Initialize a new Block.
+    *Container of*:
+        :py:class:`Segment`
+        :py:class:`RecordingChannelGroup`
+    
+    *Properties*
+        list_units : descends through hierarchy and returns a list of
+            :py:class:`Unit` existing in the block. This shortcut exists
+            because a common analysis case is analyzing all neurons that
+            you recorded in a session.
         
-        Block can be initialized with the following arguments:
+        list_recordingchannels: descends through hierarchy and returns
+            a list of :py:class:`RecordingChannel` existing in the block.
         
-        segments : a list of Segment to add to the block
-        recordingpoints : a list of RecordingPoint add to the block
-        neurons : a list of Neuron to add to the block
+        
+    """
+    def __init__(self, name=None, description=None, file_origin=None,
+                 file_datetime=None, rec_datetime=None, index=None, 
+                 **annotations):
+        """Initalize a new Block."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
+        
+        self.file_datetime = file_datetime
+        self.rec_datetime = rec_datetime
+        self.index = index
+        
+        self.segments = [ ]
+        self.recordingchannelgroups = [ ]
+        
+    @property
+    def list_units(self):
         """
-        self._segments = [ ]
-        self._recordingpoints = [ ]
-        self._neurons = [ ]
-        if 'segments' in karg:
-            self._segments = karg['segments']
-        if 'recordingpoints' in karg:
-            self._recordingpoints = karg['recordingpoints']
-        if 'neurons' in karg:
-            self._neurons = karg['neurons']
-            
+        Return a list of all :py:class:`Unit` in a block.
+        """
+        units = [ ]
+        for rcg in self.recordingchannelgroups:
+            for rc in rcg.recordingchannel:
+                for unit in rc.units:
+                    if unit not in units:
+                        units.append(unit)
+        return units
     
-    def get_segments(self):
-        return self._segments
+    @property
+    def list_recordingchannels(self):
+        """
+        Return a list of all :py:class:`RecordingChannel` in a block.
+        """
+        all_rc = [ ]
+        for rcg in self.recordingchannelgroups:
+            for rc in rcg.recordingchannel:
+                if rc not in all_rc:
+                    all_rc.append(rc)
+        return all_rc
 
-    def get_recordingpoints(self):
-        return self._recordingpoints

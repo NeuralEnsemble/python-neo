@@ -1,37 +1,44 @@
 # -*- coding: utf-8 -*-
 """
-
-Class for fake reading/writing data from WinWCP, a software tool written by
+Class for reading data from WinWCP, a software tool written by
 John Dempster.
 
 WinWCP is free:
 http://spider.science.strath.ac.uk/sipbs/software.htm
 
-
 Supported : Read
 
-@author : sgarcia
+Author : sgarcia
 
 """
 
-
-from baseio import BaseIO
-#from neo.core import *
+from .baseio import BaseIO
 from ..core import *
+from .tools import create_many_to_one_relationship
 
+import numpy as np
+from numpy import dtype, zeros, fromstring, empty
+import quantities as pq
 
+import os
 import struct
-from numpy import *
 
 
 class WinWcpIO(BaseIO):
     """
-    Class for reading/writing from a WinWCP file.
-    
-    **Example**
-        #read a file
-        io = WinWcpIO(filename = 'myfile.wcp')
-        blck = io.read() # read the entire file    
+    Class for reading from a WinWCP file.
+
+    Usage:
+        >>> from neo import io
+        >>> r = io.WinWcpIO( filename = 'File_winwcp_1.wcp')
+        >>> bl = r.read_block(lazy = False, cascade = True,)
+        >>> print bl.segments   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<neo.core.segment.Segment object at 0x1057bd350>, <neo.core.segment.Segment object at 0x1057bd2d0>,
+        ...
+        >>> print bl.segments[0].analogsignals
+        [<AnalogSignal(array([-2438.73388672, -2428.96801758, -2425.61083984, ..., -2695.39453125,
+        ...
+
     """
     
     is_readable        = True
@@ -44,52 +51,32 @@ class WinWcpIO(BaseIO):
     has_header         = False
     is_streameable     = False
     
-    read_params        = {
-                        Block : [
-                                ],
-                        }
+    read_params        = { Block : [ ], }
     
     write_params       = None
     
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
-    
-    
     mode = 'file'
-    
-    
+        
     def __init__(self , filename = None) :
         """
         This class read a WinWCP wcp file.
         
-        **Arguments**
+        Arguments:
             filename : the filename to read
         
         """
         BaseIO.__init__(self)
         self.filename = filename
+    
+    def read_block(self , lazy = False,
+                                    cascade = True,
+                                    ):
+        bl = Block( file_origin = os.path.basename(self.filename), )
+        if not cascade:
+            return bl
 
-
-    def read(self , **kargs):
-        """
-        Read a fake file.
-        Return a neo.Block
-        See read_block for detail.
-        """
-        return self.read_block( **kargs)
-    
-    
-    
-    def read_block(self ):
-        """
-        Return a Block.
-        
-        **Arguments**
-            no arguments
-        
-        
-        """
-        blck = Block()
         fid = open(self.filename , 'rb')
         
         headertext = fid.read(1024)
@@ -121,30 +108,46 @@ class WinWcpIO(BaseIO):
             NP = (SECTORSIZE*header['NBD'])/2
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
-            data = memmap(self.filename , dtype('i2')  , 'r', 
-                          #shape = (header['NC'], header['NP']) ,
-                          shape = (NP,header['NC'], ) ,
-                          offset = offset+header['NBA']*SECTORSIZE)
+            if not lazy:
+                data = np.memmap(self.filename , dtype('i2')  , 'r', 
+                              #shape = (header['NC'], header['NP']) ,
+                              shape = (NP,header['NC'], ) ,
+                              offset = offset+header['NBA']*SECTORSIZE)
             
             # create a segment
             seg = Segment()
-            blck._segments.append(seg)
+            bl.segments.append(seg)
             
             for c in range(header['NC']):
-                anaSig = AnalogSignal()
-                seg._analogsignals.append(anaSig)
-                YG = float(header['YG%d'%c].replace(',','.'))
-                ADCMAX = header['ADCMAX']
-                VMax = analysisHeader['VMax'][c]
-                anaSig.signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG
-                anaSig.sampling_rate = 1./analysisHeader['SamplingInterval']
-                anaSig.t_start = analysisHeader['TimeRecorded']
-                anaSig.name = header['YN%d'%c]
-                anaSig.unit = header['YU%d'%c]
-                anaSig.channel = c
+
+                unit = header['YU%d'%c]
+                try :
+                    unit = pq.Quantity(1., unit)
+                except:
+                    unit = pq.Quantity(1., '')
+
+                if lazy:
+                    signal = [ ] * unit
+                else:
+                    YG = float(header['YG%d'%c].replace(',','.'))
+                    ADCMAX = header['ADCMAX']
+                    VMax = analysisHeader['VMax'][c]
+                    signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG * unit
+                anaSig = AnalogSignal(signal ,
+                                                    sampling_rate = pq.Hz/analysisHeader['SamplingInterval'] ,
+                                                    t_start = analysisHeader['TimeRecorded'] * pq.s,
+                                                    name = header['YN%d'%c],
+                                                    
+                                                        )
+                anaSig.annotate(channel_index = c)
+                if lazy:
+                    anaSig.lazy_shape = NP
+                seg.analogsignals.append(anaSig)
         
         fid.close()
-        return blck
+        
+        create_many_to_one_relationship(bl)
+        return bl
         
 
 

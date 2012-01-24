@@ -1,197 +1,181 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
+"""
+neo.io provides classes for reading and/or writing electrophysiological data files.
+
+Note that if the package dependency is not satisfied for one io, it does not 
+raise an error but a warning.
+
+neo.io.iolist provides the classes list of succesfully imported io.
+
+.. autoclass:: neo.io.PlexonIO
+
+.. autoclass:: neo.io.NeuroExplorerIO
+
+.. autoclass:: neo.io.AxonIO
+
+.. autoclass:: neo.io.TdtIO
+
+.. autoclass:: neo.io.WinEdrIO
+
+.. autoclass:: neo.io.WinWcpIO
+
+.. autoclass:: neo.io.ElanIO
+
+.. autoclass:: neo.io.AsciiSignalIO
+
+.. autoclass:: neo.io.AsciiSpikeTrainIO
+
+.. autoclass:: neo.io.RawBinarySignalIO
+
+.. autoclass:: neo.io.MicromedIO
+
+.. autoclass:: neo.io.NeuroshareIO
+
+.. autoclass:: neo.io.NeoMatlabIO
+
+.. autoclass:: neo.io.PyNNNumpyIO
+
+.. autoclass:: neo.io.PyNNTextIO
+
+.. autoclass:: neo.io.KlustaKwikIO
+
+.. autoclass:: neo.io.BlackrockIO
+
+.. autoclass:: neo.io.AlphaOmegaIO
+
 
 """
-neo.io
-==================
-
-A collection of classes for reading/writing as many formats for
-electrophysiological datasets as possible.
-
-neo.io.all_format contains a list of all IO classes.
+# AND also  .. autoclass:: neo.io.NeoHdf5IO
 
 
+import warnings
 
-Classes
--------
-
-"""
-
-#from baseio import *
-import sys
-all_format = [ ]
-
-
-# all IO import are inside try .. except to prevent module bugs because of one IO.
+iolist = []
 
 try:
-    from tryitio import TryItIO
-    all_format += [ [ 'tryit' , { 'class' : TryItIO  , 'info' :  'a fake file reader for trying OpenElectrophy' } ] ]
+    from .exampleio import ExampleIO
+    iolist.append( ExampleIO )
 except ImportError:
-    print "Error while loading TryItIO module"
-
+    warnings.warn("ExampleIO not available, check dependencies", ImportWarning)
 
 try:
-    from exampleio import ExampleIO
-    all_format += [ [ 'example' , { 'class' : ExampleIO  , 'info' :  'a fake file reader for example' } ] ]
+    from .hdf5io import NeoHdf5IO
+    iolist.append( NeoHdf5IO )
 except ImportError:
-    print "Error while loading ExampleIO module"
-
-
-
+    warnings.warn("NeoHdf5IO not available, check dependencies", ImportWarning)
 
 try:
-    from rawio import RawIO
-    all_format += [ [ 'raw binary' , { 'class' : RawIO  , 'info' :  'Compact raw binary generic file' } ] ]
+    from .plexonio import PlexonIO
+    iolist.append( PlexonIO )
 except ImportError:
-    print "Error while loading RawIO module"
-
+    warnings.warn("PlexonIO not available, check dependencies", ImportWarning)
 
 try:
-    from asciisignalio import AsciiSignalIO
-    all_format += [ [ 'ascii signal' , { 'class' : AsciiSignalIO  , 'info' :  'Ascii Signal generic file' } ] ]
+    from .neuroexplorerio import NeuroExplorerIO
+    iolist.append( NeuroExplorerIO )
 except ImportError:
-    print "Error while loading AsciiSignalIO module"
+    warnings.warn("NeuroExplorerIO not available, check dependencies", ImportWarning)
 
 try:
-    from asciispikeio import AsciiSpikeIO
-    all_format += [ [ 'ascii spike' , { 'class' : AsciiSpikeIO  , 'info' :  'Ascii spike file' } ] ]
+    from .axonio import AxonIO
+    iolist.append( AxonIO )
 except ImportError:
-    print "Error while loading AsciiSpikeIO module"
+    warnings.warn("AxonIO not available, check dependencies", ImportWarning)
 
 try:
-    from elphydatio import ElphyDatIO
-    all_format += [ [ 'elphy DAT' , { 'class' : ElphyDatIO  , 'info' :  'DAT elphy file' } ] ]
+    from .tdtio import TdtIO
+    iolist.append( TdtIO )
 except ImportError:
-    print "Error while loading ElphyDatIO module"
-
+    warnings.warn("TdtIO not available, check dependencies", ImportWarning)
 
 try:
-    from brainvisionio import BrainVisionIO
-    all_format += [ [ 'brainvision' , { 'class' : BrainVisionIO  , 'info' :  'vhdr brain vision file' } ] ]
+    from .spike2io import Spike2IO
+    iolist.append( Spike2IO )
 except ImportError:
-    print "Error while loading BrainVisionIO module"
+    warnings.warn("Spike2IO not available, check dependencies", ImportWarning)
 
 try:
-    from micromedio import MicromedIO
-    all_format += [ [ 'micromed' , { 'class' : MicromedIO  , 'info' :  'TRC micromed file' } ] ]
+    from .winedrio import WinEdrIO
+    iolist.append( WinEdrIO )
 except ImportError:
-    print "Error while loading MicromedIO module"
-
+    warnings.warn("WinEdrIO not available, check dependencies", ImportWarning)
 
 try:
-    from elanio import ElanIO
-    all_format += [ [ 'elan eeg' , { 'class' : ElanIO  , 'info' :  'eeg elan file' } ] ]
+    from .winwcpio import WinWcpIO
+    iolist.append( WinWcpIO )
 except ImportError:
-    print "Error while loading ElanIO module"
+    warnings.warn("WinWcpIO not available, check dependencies", ImportWarning)
 
 try:
-    from eeglabio import EegLabIO
-    all_format += [ [ 'eeglab matlab' , { 'class' : EegLabIO  , 'info' :  'eeglab matlab file' } ] ]
+    from .elanio import ElanIO
+    iolist.append( ElanIO )
 except ImportError:
-    print "Error while loading EegLabIO module"
+    warnings.warn("ElanIO not available, check dependencies", ImportWarning)
 
 try:
-    from axonio import AxonIO
-    all_format += [ [ 'axon abf' , { 'class' : AxonIO  , 'info' :  'axon binary file (abf)' } ] ]
+    from .asciisignalio import AsciiSignalIO
+    iolist.append( AsciiSignalIO )
 except ImportError:
-    print "Error while loading AxonIO module"
+    warnings.warn("AsciiSignalIO not available, check dependencies", ImportWarning)
 
-try :
-    from spike2io import Spike2IO
-    all_format += [ [ 'Spike2 smr' , { 'class' : Spike2IO  , 'info' :  'CED spike2 file (smr)' } ] ]
+try:
+    from .asciispiketrainio import AsciiSpikeTrainIO
+    iolist.append( AsciiSpikeTrainIO )
 except ImportError:
-    print "Error while loading Spike2IO module"
+    warnings.warn("AsciiSpikeTrainIO not available, check dependencies", ImportWarning)
 
-try :
-    from alphaio import AlphaIO
-    all_format += [ [ 'AlphaOmega Map' , { 'class' : AlphaIO  , 'info' :  'AlphaOmega (map)' } ] ]
+try:
+    from .rawbinarysignalio import RawBinarySignalIO
+    iolist.append( RawBinarySignalIO )
 except ImportError:
-    print "Error while loading AlphaIO module"
+    warnings.warn("RawBinarySignalIO not available, check dependencies", ImportWarning)
 
-
-try :
-    from tdtio import TdtIO
-    all_format += [ [ 'Tdt' , { 'class' : TdtIO  , 'info' :  'Tdt TTank' } ] ]
+try:
+    from .micromedio import MicromedIO
+    iolist.append( MicromedIO )
 except ImportError:
-    print "Error while loading TdtIO module"
+    warnings.warn("MicromedIO not available, check dependencies", ImportWarning)
 
-
-
-try :
-    from winwcpio import WinWcpIO
-    all_format += [ [ 'WinWcp' , { 'class' : WinWcpIO  , 'info' :  'WinWcp file (wcp)' } ] ]
+try:
+    from .neuroshareio import NeuroshareIO
+    iolist.append( NeuroshareIO )
 except ImportError:
-    print "Error while loading WinWcpIO module"
+    warnings.warn("NeuroshareIO not available, check dependencies", ImportWarning)
 
-try :
-    from winedrio import WinEdrIO
-    all_format += [ [ 'WinEdr' , { 'class' : WinEdrIO  , 'info' :  'WinEDR file (EDR)' } ] ]
+try:
+    from .neomatlabio import NeoMatlabIO
+    iolist.append( NeoMatlabIO )
 except ImportError:
-    print "Error while loading WinEdrIO module"
+    warnings.warn("NeoMatlabIO not available, check dependencies", ImportWarning)
 
-
-try :
-    from nexio import NexIO
-    all_format += [ [ 'NexIO' , { 'class' : NexIO  , 'info' :  'NeuroExplorer file (nex)' } ] ]
+try:
+    from .pynnio import PyNNNumpyIO
+    iolist.append( PyNNNumpyIO )
 except ImportError:
-    print "Error while loading NexIO module"
+    warnings.warn("PyNNNumpyIO not available, check dependencies", ImportWarning)
 
-
-try :
-    from plexonio import PlexonIO
-    all_format += [ [ 'PlexonIO' , { 'class' : PlexonIO  , 'info' :  'Plexon file (plx)' } ] ]
+try:
+    from .pynnio import PyNNTextIO
+    iolist.append( PyNNTextIO )
 except ImportError:
-    print "Error while loading PlexonIO module"
+    warnings.warn("PyNNTextIO not available, check dependencies", ImportWarning)
 
-
-try :
-    from pynnio import PyNNIO
-    all_format += [ [ 'PyNN Text' , { 'class' : PyNNIO  , 'info' :  'PyNN Text file (pynn)' } ] ]
+try:
+    from .klustakwikio import KlustaKwikIO
+    iolist.append( KlustaKwikIO )
 except ImportError:
-    print "Error while loading PyNNIO module"
+    warnings.warn("KlustaKwikIO not available, check dependencies", ImportWarning)
 
-try :
-    from pynnbinaryio import PyNNBinaryIO
-    all_format += [ [ 'PyNN Numpy Binary' , { 'class' : PyNNBinaryIO  , 'info' :  'PyNN Numpy Binary file (pynn)' } ] ]
+try:
+    from .blackrockio import BlackrockIO
+    iolist.append( BlackrockIO )
 except ImportError:
-    print "Error while loading PyNNBinaryIO module"
+    warnings.warn("BlackrockIO not available, check dependencies", ImportWarning)
 
-
-try :
-    from blackrockio import BlackrockIO
-    all_format += [ [ 'Blackrock Binary' , { 'class' : BlackrockIO  , 'info' :  'Blackrock Binary file' } ] ]
+try:
+    from .alphaomegaio import AlphaOmegaIO
+    iolist.append( AlphaOmegaIO )
 except ImportError:
-    print "Error while loading BlackRock Binary module"
+    warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
 
 
-# Specific platform IO : neuroshare DLLs
-
-if sys.platform =='win32':
-    try :
-        from neuroshare.neuroshareio import NeuroshareSpike2IO
-        all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareSpike2IO  , 'info' :  'CED spike2 file (smr) neuroshare' } ] ]
-    except ImportError:
-        print "Error while loading NeuroshareSpike2IO module"
-    
-
-    try :
-        from neuroshare.neuroshareio import NeurosharePlexonIO
-        all_format += [ [ 'Spike2 smr' , { 'class' : NeurosharePlexonIO  , 'info' :  'plexon file (nex) neuroshare' } ] ]
-    except ImportError:
-        print "Error while loading NeurosharePlexonIO module"
-
-    try :
-        from neuroshare.neuroshareio import NeuroshareAlphaOmegaIO
-        all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareAlphaOmegaIO  , 'info' :  'AlphaOmega file (map) neuroshare' } ] ]
-    except ImportError:
-        print "Error while loading NeuroshareAlphaOmegaIO module"
-
-    try :
-        from neuroshare.neuroshareio import NeuroshareTdtIO
-        all_format += [ [ 'Spike2 smr' , { 'class' : NeuroshareTdtIO  , 'info' :  'TDT tank  neuroshare' } ] ]
-    except ImportError:
-        print "Error while loading NeuroshareTdtIO module"
-
-
-
-	

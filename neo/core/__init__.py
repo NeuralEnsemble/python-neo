@@ -1,40 +1,54 @@
 """
-Neo.core
-==================
+Classes:
 
-A collection of functions to create, manipulate and play with analog signals. 
+.. autoclass:: Block
+.. autoclass:: Segment
+.. autoclass:: RecordingChannelGroup
+.. autoclass:: RecordingChannel
 
-Classes
--------
+.. autoclass:: AnalogSignal
+.. autoclass:: AnalogSignalArray
+.. autoclass:: IrregularlySampledSignal
 
-AnalogSignal     - object representing an analog signal, with its data. Can be used to do 
-                   threshold detection, event triggered averages, ...
-AnalogSignalList - list of AnalogSignal objects, again with methods such as mean, std, plot, 
-                   and so on
-Epoch
-Block
-Neuron
-Segment
-Spike
-SpikeTrain
-SpikeTrainList
-Event
-RecordingPoint
+.. autoclass:: Event
+.. autoclass:: EventArray
+.. autoclass:: Epoch
+.. autoclass:: EpochArray
+
+.. autoclass:: Unit
+.. autoclass:: Spike
+.. autoclass:: SpikeTrain
+
+
+
 """
 
+from __future__ import absolute_import
 
-from block import Block
-from segment import Segment
-from event import Event
-from epoch import Epoch
-from neuron import Neuron
-from spiketrain import SpikeTrain
-from spiketrainlist import SpikeTrainList
-from analogsignal import AnalogSignal
-from analogsignallist import AnalogSignalList
-from spike import Spike
-from recordingpoint import RecordingPoint
+from .block import Block
+from .segment import Segment 
+from .recordingchannelgroup import RecordingChannelGroup
+from .recordingchannel import RecordingChannel
 
 
-# this is for OpenElectrophy
-neotypes = [ Block , Segment , AnalogSignal, Event, Epoch, Neuron, SpikeTrain, SpikeTrainList , Spike , RecordingPoint ]
+from .analogsignal import AnalogSignal
+from .analogsignalarray import AnalogSignalArray
+from .irregularlysampledsignal import IrregularlySampledSignal
+
+
+from .event import Event
+from .eventarray import EventArray
+from .epoch import Epoch
+from .epocharray import EpochArray
+
+from .unit import Unit
+from .spike import Spike
+from .spiketrain import SpikeTrain
+
+
+
+objectlist = [ Block, Segment, RecordingChannelGroup , RecordingChannel,
+        AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
+        Event, EventArray, Epoch, EpochArray,
+        Unit, Spike , SpikeTrain
+            ]

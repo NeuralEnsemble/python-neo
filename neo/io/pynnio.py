@@ -1,188 +1,234 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 """
-Class for reading/writing PyNN output files saved in text format.
+Module for reading/writing data from/to PyNN NumpyBinaryFile format.
 
 PyNN is available at http://neuralensemble.org/PyNN
 
-Supported : Read/Write
+Classes:
+    PyNNNumpyIO
+    PyNNTextIO
 
-@author : pyger
+Supported: Read/Write
 
+Authors: Andrew Davison, Pierre Yger
 """
 
-from baseio import BaseIO
-#from neo.core import *
-from ..core import *
+from __future__ import with_statement
+from .baseio import BaseIO
+from ..core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+from .tools import create_many_to_one_relationship
+
+import numpy
+import quantities as pq
+
+UNITS_MAP = {
+    'spikes': pq.ms,
+    'v': pq.mV,
+    'gsyn': pq.UnitQuantity('microsiemens', 1e-9*pq.S, 'uS', 'µS'), # check
+}
 
 
-try:
-    import TableIO
-    HAVE_TABLEIO = True
-except ImportError:
-    HAVE_TABLEIO = False
-    
-DEFAULT_BUFFER_SIZE = 100000
-
-def _savetxt(filename, data, format, delimiter):
+class BasePyNNIO(BaseIO):
     """
-    Due to the lack of savetxt in older versions of numpy
-    we provide a cut-down version of that function.
+    Base class for PyNN IO classes
     """
-    f = open(filename, 'w')
-    for row in data:
-        f.write(delimiter.join([format%val for val in row]) + '\n')
-    f.close()
-
-
-class PyNNIO(BaseIO):
-    
-    is_readable        = True
-    is_writable        = False  
-    has_header         = True
-    name               = "pyNN Text File"
-    supported_objects  = [Segment, SpikeTrain, SpikeTrainList, AnalogSignal, AnalogSignalList]
-    readable_objects   = [Segment, SpikeTrain, SpikeTrainList, AnalogSignal, AnalogSignalList]
-    writeable_objects  = [SpikeTrainList, AnalogSignalList]
-    
-    read_params        = { Segment : [] }
-    write_params       = None    
-    
-    has_header         = True
-    is_streameable     = False
-    extensions         = ['pynn']
-    
+    is_readable = True 
+    is_writable = True
+    has_header = True
+    is_streameable = False # TODO - correct spelling to "is_streamable"
+    supported_objects = [Segment, AnalogSignal, AnalogSignalArray, SpikeTrain]
+    readable_objects = supported_objects
+    writeable_objects = supported_objects
     mode = 'file'
     
-            
-    def __init__(self , filename=None , **kargs ) :
-        BaseIO.__init__(self)
-        self.filename = filename
+    def _read_file_contents(self):
+        raise NotImplementedError
     
-    def _check_metadata(self, metadata):
-        if 'dt' in metadata:
-            if metadata['dt'] is None and 'dt' in metadata:
-                metadata['dt'] = metadata['dt']
-        if not ('id_list' in metadata) or (metadata['id_list'] is None):
-            if ('first_id' in metadata) and ('last_id' in metadata):
-                metadata['id_list'] = range(int(metadata['first_id']), int(metadata['last_id'])+1)
+    def _extract_array(self, data, channel_index):
+        idx = numpy.where(data[:, 1] == channel_index)[0]
+        return data[idx, 0]
+    
+    def _determine_units(self, metadata):
+        if 'units' in metadata:
+            return metadata['units']
+        elif 'variable' in metadata and metadata['variable'] in UNITS_MAP:
+            return UNITS_MAP[metadata['variable']]
+        else:
+            raise IOError("Cannot determine units")
+    
+    def _extract_signal(self, data, metadata, channel_index, lazy):
+        signal = None
+        if lazy:
+            if channel_index in data[:, 1]:
+                signal = AnalogSignal([],
+                                      units=self._determine_units(metadata),
+                                      sampling_period=metadata['dt']*pq.ms)
+                signal.lazy_shape = None
+        else:
+            arr = self._extract_array(data, channel_index)
+            if len(arr) > 0:
+                signal = AnalogSignal(arr,
+                                      units=self._determine_units(metadata),
+                                      sampling_period=metadata['dt']*pq.ms)
+        if signal is not None:
+            signal.annotate(label=metadata["label"],
+                            variable=metadata["variable"],
+                            channel_index=channel_index)
+            return signal
+    
+    def _extract_spikes(self, data, metadata, channel_index, lazy):
+        spiketrain = None
+        if lazy:
+            if channel_index in data[:, 1]:
+                spiketrain = SpikeTrain([], units=pq.ms, t_stop=0.0)
+                spiketrain.lazy_shape = None
+        else:
+            spike_times = self._extract_array(data, channel_index)
+            if len(spike_times) > 0:
+                spiketrain = SpikeTrain(spike_times, units=pq.ms, t_stop=spike_times.max())
+        if spiketrain is not None:
+            spiketrain.annotate(label=metadata["label"],
+                                channel_index=channel_index,
+                                dt=metadata["dt"])
+            return spiketrain
+    
+    def _write_file_contents(self, data, metadata):
+        raise NotImplementedError
+    
+    def read_segment(self, lazy=False, cascade=True):
+        data, metadata = self._read_file_contents()
+        annotations = dict((k, metadata.get(k, 'unknown')) for k in ("label", "variable", "first_id", "last_id"))
+        seg = Segment(**annotations)
+        if cascade:
+            if metadata['variable'] == 'spikes':
+                for i in range(metadata['first_index'], metadata['last_index']):
+                    spiketrain = self._extract_spikes(data, metadata, i, lazy)
+                    if spiketrain is not None:
+                        seg.spiketrains.append(spiketrain)
+                seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
             else:
-                raise Exception("id_list can not be infered while reading %s" %self.filename)
-        elif isinstance(metadata['id_list'], int): # allows to just specify the number of neurons
-            metadata['id_list'] = range(metadata['id_list'])
-        elif not isinstance(metadata['id_list'], list):
-            raise Exception("id_list should be an int or a list !")
-        return metadata
-
-    def get_data(self, sepchar = "\t", skipchar = "#"):
-        if HAVE_TABLEIO:
-            data = numpy.fliplr(TableIO.readTableAsArray(self.filename, skipchar))
-        else:
-            contents = self.fileobj.readlines()
-            self.fileobj.close()
-            for i in xrange(idx, len(contents)):
-                line = contents[i].strip().split(sepchar)
-                id   = [float(line[-1])]
-                id  += map(float, line[0:-1])
-                data.append(id)
-            logging.debug("Loaded %d lines of data from %s" % (len(data), self))
-            data = numpy.array(data, numpy.float32)
-        return data
-    
-    def read(self , **kargs):
-        """
-        Read the file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        return self.read_segment(**kargs)
-    
-    def read_segment(self, **kargs):
-        seg       = Segment()        
-        metadata  = self.read_header()
-        if metadata['variable'] == 'spikes':
-            spk_list            = self.read_spiketrainlist(**kargs)            
-            seg._spiketrains   += spk_list.spiketrains.values() 
-        else:
-            ag_list             = self.read_analogsignallist(**kargs)
-            seg._analogsignals += ag_list
+                for i in range(metadata['first_index'], metadata['last_index']):
+                    # probably slow. Replace with numpy-based version from 0.1
+                    signal = self._extract_signal(data, metadata, i, lazy)
+                    if signal is not None:
+                        seg.analogsignals.append(signal)
+            create_many_to_one_relationship(seg)
         return seg
-    
-    def read_spiketrain(self, id, **kargs):
-        metadata    = self.read_header()
-        metadata.update(kargs)
-        if metadata['variable'] != 'spikes':
-            raise Exception("The pyNN file contain analog signals !")
-        signals     = self.get_data()
-        idx         = numpy.where(spikes[:,1] == id)[0]
-        signal      = signals[idx, 0]
-        res         = SpikeTrain(spike_times=spike_times, **kargs)
-        return res
-        
-    def read_analogsignal(self, id, **kargs):
-        metadata    = self.read_header()
-        metadata.update(kargs)
-        if metadata['variable'] == 'spikes':
-            raise Exception("The pyNN file contain spikes signals !")
-        signals     = self.get_data()
-        signal      = numpy.transpose(data[data[:,0] == id, 1:])[0]
-        res         = AnalogSignal(signal=signal, dt=metadata['dt'])
-        return res
-        
-    def read_spiketrainlist(self, **kargs):
-        metadata = self.read_header()
-        metadata.update(kargs)
-        if metadata['variable'] != 'spikes':
-            raise Exception("The pyNN file contain analog signals !")
-        metadata = self._check_metadata(metadata)
-        spikes   = self.get_data()
-        N        = len(spikes)        
-        if N > 0:
-            idx          = numpy.argsort(spikes[:,0])
-            spikes       = spikes[idx]
-            break_points = numpy.where(numpy.diff(spikes[:, 0]) > 0)[0] + 1
-            break_points = numpy.concatenate(([0], break_points))
-            break_points = numpy.concatenate((break_points, [N]))
-            res          = []
-            for idx in xrange(len(break_points)-1):
-                id  = spikes[break_points[idx], 0]
-                if id in metadata['id_list']:
-                    nrn  = Neuron(id = int(id))
-                    data = spikes[break_points[idx]:break_points[idx+1], 1]
-                    res += [SpikeTrain(spike_times=1e-3*data, neuron=nrn, **kargs)]
-        result = SpikeTrainList(spiketrains=res, **kargs)
-        result.complete(metadata['id_list'])      
-        return result
 
-    def read_analogsignallist(self, **kargs):
-        metadata = self.read_header()
-        metadata.update(kargs)
-        if metadata['variable'] == 'spikes':
-            raise Exception("The pyNN file contain spikes signals !")
-        metadata = self._check_metadata(metadata)
-        data     = self.get_data()
-        res      = []
-        for id in metadata['id_list']:
-            signal = numpy.transpose(data[data[:,0] == id, 1:])[0]
-            if len(signal) > 0:
-                res += [AnalogSignal(signal=signal, dt=metadata['dt'])]
-        return res
+    def write_segment(self, segment):
+        source = segment.analogsignals or segment.spiketrains
+        assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
+        metadata = segment.annotations.copy()
+        metadata['size'] = len(source)
+        metadata['first_index'] = 0
+        metadata['last_index'] = metadata['size']
+        if 'label' not in metadata:
+            metadata['label'] = 'unknown'
+        s0 = source[0]
+        if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
+            metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
+        n = sum(s.size for s in source)
+        metadata['n'] = n
+        data = numpy.empty((n, 2))
+        # if the 'variable' annotation is a standard one from PyNN, we rescale
+        # to use standard PyNN units
+        # we take the units from the first element of source and scale all
+        # the signals to have the same units
+        if 'variable' in segment.annotations:
+            units = UNITS_MAP.get(segment.annotations['variable'], source[0].dimensionality)
+        else:
+            units = source[0].dimensionality
+            metadata['variable'] = 'unknown'
+        try:
+            metadata['units'] = units.unicode
+        except AttributeError:
+            metadata['units'] = units.u_symbol
+        start = 0
+        for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
+            end = start + signal.size
+            data[start:end, 0] = numpy.array(signal.rescale(units))
+            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) # index
+            start = end
+        self._write_file_contents(data, metadata)
 
-    def read_header(self):
-        metadata = {}
-        self.fileobj  = open(self.filename, 'r', DEFAULT_BUFFER_SIZE)        
-        cmd = ''
-        for line in self.fileobj.readlines():
-            if line[0] == '#':
-                if line[1:].strip().find('variable') == -1:
-                    cmd += line[1:].strip() + ';'
-                else:
-                    tmp = line[1:].strip().split(" = ")
+    def read_analogsignal(self, lazy=False, channel_index=0): # channel_index should be positional arg, no?
+        data, metadata = self._read_file_contents()
+        if metadata['variable'] == 'spikes':
+            raise TypeError("File contains spike data, not analog signals")
+        else:
+            signal = self._extract_signal(data, metadata, channel_index, lazy)
+            if signal is None:
+                raise IndexError("File does not contain a signal with channel index %d" % channel_index)
             else:
-                break
-        exec cmd in None, metadata
-        metadata[tmp[0]] = tmp[1]
-        return metadata
+                return signal
+
+    def read_analogsignalarray(self, lazy=False):
+        raise NotImplementedError
     
-    #def write_spiketrainlist(self, **kargs):
-            
-    #def write_analogsignallist(self, **kargs):    
+    def read_spiketrain(self, lazy=False, channel_index=0):
+        data, metadata = self._read_file_contents()
+        if metadata['variable'] != 'spikes':
+            raise TypeError("File contains analog signals, not spike data")
+        else:
+            spiketrain = self._extract_spikes(data, metadata, channel_index, lazy)
+            if spiketrain is None:
+                raise IndexError("File does not contain any spikes with channel index %d" % channel_index)
+            else:
+                return spiketrain
+
+
+class PyNNNumpyIO(BasePyNNIO):
+    """
+    Reads/writes data from/to PyNN NumpyBinaryFile format
+    """
+    name = "PyNN NumpyBinaryFile"
+    extensions = ['npz']
+
+    def _read_file_contents(self):
+        contents = numpy.load(self.filename)
+        data = contents["data"]
+        metadata = {}
+        for name,value in contents['metadata']:
+            try:
+                metadata[name] = eval(value)
+            except Exception:
+                metadata[name] = value
+        return data, metadata
+
+    def _write_file_contents(self, data, metadata):
+        metadata_array = numpy.array(sorted(metadata.items()))
+        numpy.savez(self.filename, data=data, metadata=metadata_array)
+
+
+class PyNNTextIO(BasePyNNIO):
+    """
+    Reads/writes data from/to PyNN StandardTextFile format
+    """
+    name = "PyNN StandardTextFile"
+    extensions = ['txt', 'v', 'ras']
+
+    def _read_metadata(self):
+        metadata = {}
+        with open(self.filename) as f:
+            for line in f:
+                if line[0] == "#":
+                    name, value = line[1:].strip().split("=")
+                    name = name.strip()
+                    try:
+                        metadata[name] = eval(value)
+                    except Exception:
+                        metadata[name] = value.strip()
+                else:
+                    break
+        return metadata
+
+    def _read_file_contents(self):
+        data = numpy.loadtxt(self.filename)
+        metadata = self._read_metadata()
+        return data, metadata
+
+    def _write_file_contents(self, data, metadata):
+        with open(self.filename, 'wb') as f:
+            for item in sorted(metadata.items()):
+                f.write(("# %s = %s\n" % item).encode('utf8'))
+            numpy.savetxt(f, data)

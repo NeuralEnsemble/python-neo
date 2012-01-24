@@ -1,64 +1,55 @@
-# -*- coding: utf-8 -*-
+from neo.core.baseneo import BaseNeo
 
-class Segment(object):
-    
-    definition = """A :class:`Segment` is a heterogeneous container for 
-    discrete or continous data data sharing a common clock (time base)
-    but not necessarily the same sampling rate, t_start and t_stop. 
-    In short, a :class:`Segment` is a recording that may contain AnalogSignal,
-    SpikeTrain, Event or Epoch objects that share the same logical clock.
+class Segment(BaseNeo):
     """
+    A Segment is a heterogeneous container for discrete or continous data
+    sharing a common clock (time basis) but not necessary the same sampling rate,
+    start or end time.
+
+    *Usage*:
     
-    __doc__ = """
-    Heterogeneous container for data objects sharing a common time base
-
-    **Definition**
-    %s
-
-    **Example**
-    seg = Segment()
-    seg._analogsignals.append(AnalogSignal())
-    print seg.get_analogsignals()[0]
-
-    **Methods**
-    Each returns the child objects of the Segment.
-    get_analogsignals()
-    get_spiketrains()
-    get_events()
-    get_epochs()
-
-    """ % definition
+    TODO
     
+    *Required attributes/properties*:
+        None
     
-    def __init__(self, *arg, **karg):
-        self._analogsignals   = []
-        self._spiketrains     = []
-        self._epochs          = []
-        self._events          = []
-        self._recordingpoints = []
-        self._neurons         = []
-        
-    def get_analogsignals(self):
-        """
-        Return  a list of :class:`AnalogSignal`.
-        """
-        return self._analogsignals
-        
-    def get_spiketrains(self):
-        """
-        Return a list of :class:`SpikeTrain`.
-        """
-        return self._spiketrains
-        
-    def get_events(self):
-        """
-        Return a list of :class:`Event`.
-        """
-        return self._events
+    *Recommended attributes/properties*:
+        :name: A label for the dataset 
+        :description: text description
+        :file_origin: filesystem path or URL of the original data file.
+        :file_datetime: the creation date and time of the original data file.
+        :rec_datetime: the date and time of the original recording
+        :index: integer. You can use this to define a temporal ordering of
+            your Segment. For instance you could use this for trial numbers.
+    
+    *Container of*:
+        :py:class:`Epoch`
+        :py:class:`EpochArray`
+        :py:class:`Event`
+        :py:class:`EventArray`
+        :py:class:`AnalogSignal`
+        :py:class:`AnalogSignalArray`
+        :py:class:`IrregularlySampledSignal`
+        :py:class:`Spike`
+        :py:class:`SpikeTrain`
 
-    def get_epochs(self):
-        """
-        Return a list of :class:`Epoch`.
-        """
-        return self._epochs
+    """
+    def __init__(self, name=None, description=None, file_origin=None,
+                 file_datetime=None, rec_datetime=None, index=None, **annotations):
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
+        self.file_datetime = file_datetime
+        self.rec_datetime = rec_datetime
+        self.index = index        
+        
+        self.epochs = [ ]
+        self.epocharrays = [ ]
+        self.events = [ ]
+        self.eventarrays = [ ]
+        self.analogsignals = [ ]
+        self.analogsignalarrays = [ ]
+        self.irregularlysampledsignals = [ ]
+        self.spikes = [ ]
+        self.spiketrains = [ ]
+
 

@@ -1,135 +1,161 @@
-# -*- coding: utf-8 -*-
+# encoding: utf-8
 """
-Class for fake reading data in a no file.
+Class for "reading" fake data from an imaginary file.
 
-For the user, it generates a `Segment` or a `Block` with a sinusoidal `AnalogSignal` + `SpikeTrain` + `Event`
+For the user, it generates a :class:`Segment` or a :class:`Block` with a
+sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
+:class:`EventArray`.
 
-For a developer, it is just an example showing guidelines for someone who wants to develop a new IO.
+For a developer, it is just an example showing guidelines for someone who wants
+to develop a new IO module.
 
-Supported : Read
+Depends on: scipy
 
-@author : sgarcia
+Supported: Read
 
+Author: sgarcia
 
 """
+from __future__ import absolute_import
 
 # I need to subclass BaseIO
-from baseio import BaseIO
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
+from .baseio import BaseIO
 
-#from neo.core import *
-from ..core import *
+# to import from core
+from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
 
+# some tools to finalize the hierachy
+from .tools import create_many_to_one_relationship
+
+# note neo.core needs only numpy and quantities
+import numpy as np
+import quantities as pq
+
+# but my specific IO can depend on many other packages
+from numpy import pi, newaxis
 import datetime
+try:
+    have_scipy = True
+    from scipy import stats
+    from scipy import randn, rand
+    from scipy.signal import resample
+except ImportError:
+    have_scipy = False
 
-# So bad :
-from numpy import *
-from scipy import stats
-from scipy import randn, rand
-from scipy.signal import resample
-
-
-
+np.random.seed(1234)
 
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
     """
-    Class for reading/writing data in a fake file.
-    
-    **For developpers**
-    
-    If you start a new IO class :
-        - Copy/paste and modify this class.
-        - Think what objects your IO will support
-        - Think what objects your IO will read or write.
-        - Implement all read_XXX and write_XXX methods
+    Class for "reading" fake data from an imaginary file.
 
-    If you have a problem just mail me or ask the list.
+    For the user, it generates a :class:`Segment` or a :class:`Block` with a
+    sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
+    :class:`EventArray`.
 
-    **Guidelines**
-        - Each IO implementation of BaseFile can also add attributs (fields) freely to all object.
-        - Each IO implementation of BaseFile should come with tipics files exemple in neo/test/unitest/io/datafiles.
-        - Each IO implementation of BaseFile should come with its documentation.
-        - Each IO implementation of BaseFile should come with its unitest neo/test/unitest/io.
+    For a developer, it is just an example showing guidelines for someone who wants
+    to develop a new IO module.
+  
+    Two rules for developers:
+      * Respect the Neo IO API (:ref:`neo_io_API`)
+      * Follow :ref:`io_guiline`
+    
+    Usage:
+        >>> from neo import io
+        >>> r = io.ExampleIO(filename='itisafake.nof')
+        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> print(seg.analogsignals)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<AnalogSignal(array([ 0.19151945,  0.62399373,  0.44149764, ...,  0.96678374,
+        ...
+        >>> print(seg.spiketrains)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+         [<SpikeTrain(array([ -0.83799524,   6.24017951,   7.76366686,   4.45573701,
+            12.60644415,  10.68328994,   8.07765735,   4.89967804,
+        ...
+        >>> print(seg.eventarrays)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<EventArray: TriggerB@9.6976 s, TriggerA@10.2612 s, TriggerB@2.2777 s, TriggerA@6.8607 s, ...
+        >>> anasig = r.read_analogsignal(lazy=True, cascade=False)
+        >>> print(anasig._data_description)
+        {'shape': (150000,)}
+        >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
         
-    **Usage**
-     
-    **Example**
-    
     """
     
-    is_readable        = True # This a only reading class
-    is_writable        = False
-    #This class is able directly or inderectly this kind of objects
-    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, Event, Epoch]
+    is_readable = True # This class can only read data
+    is_writable = False # write is not supported
+    
+    # This class is able to directly or indirectly handle the following objects
+    # You can notice that this greatly simplifies the full Neo object hierarchy
+    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray ]
+    
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
-    readable_objects    = [ Segment , AnalogSignal , SpikeTrain] 
+    # These lists should go from highest object to lowest object because
+    # common_io_test assumes it.
+    readable_objects    = [ Segment , AnalogSignal, SpikeTrain ]
     # This class is not able to write objects
-    writeable_objects   = []
+    writeable_objects   = [ ]
 
     has_header         = False
     is_streameable     = False
     
-    # This is for GUI stuf : a definition for parameters when reading.
-    read_params        = {
-                        Segment : [
-                                ('segment_duration' , { 'value' : 15., 
-                                                'label' : 'Segment size (s.)' } ),
-                                ('num_analogsignal' , { 'value' : 8,
-                                                'label' : 'Number of recording points' } ),
-                                ('num_spiketrain' , { 'value' : 3,
-                                                'label' : 'Num of spiketrains' } ),
-
-                                    ],
-                        }
+    # This is for GUI stuff : a definition for parameters when reading.
+    # This dict should be keyed by object (`Block`). Each entry is a list
+    # of tuple. The first entry in each tuple is the parameter name. The
+    # second entry is a dict with keys 'value' (for default value),
+    # and 'label' (for a descriptive name).
+    # Note that if the highest-level object requires parameters,
+    # common_io_test will be skipped.
+    read_params = {
+        Segment : [
+            ('segment_duration', 
+                {'value' : 15., 'label' : 'Segment size (s.)'}),
+            ('num_analogsignal', 
+                {'value' : 8, 'label' : 'Number of recording points'}),
+            ('num_spiketrain', 
+                {'value' : 3, 'label' : 'Num of spiketrains'}),
+            ],
+        }
     
-    # do not supported write so no GUI stuf
+    # do not supported write so no GUI stuff
     write_params       = None
     
     name               = 'example'
-    extensions          = [ 'fak' ]
+    
+    extensions          = [ 'nof' ]
     
     # mode can be 'file' or 'dir' or 'fake' or 'database'
-    # the main case is 'file' but some reader are base on a directory or a db
+    # the main case is 'file' but some reader are base on a directory or a database
+    # this info is for GUI stuff also
     mode = 'fake' 
     
 
     
     def __init__(self , filename = None) :
         """
-        This class read a abf file.
         
-        **Arguments**
         
-            filename : the filename to read you can pu what ever it do not read anythings
-        
+        Arguments:
+            filename : the filename
+            
+        Note:
+            - filename is here just for exampe because it will not be take in account
+            - if mode=='dir' the argument should be dirname (See TdtIO)
+
         """
         BaseIO.__init__(self)
         self.filename = filename
 
 
-    def read(self , **kargs):
-        """
-        Read a fake file.
-        Return a neo.Segment
-        See read_segment for detail.
-        """
-        # the higher level of my IO is Segment so:
-        return self.read_segment( **kargs)
-
-    
-    # write is not supported so I do not over class write from BaseIO
-
-    
     # Segment reading is supported so I define this :
     def read_segment(self, 
-                                        segment_duration = 15.,
-                                        
-                                        num_analogsignal = 4,
-                                        num_spiketrain_by_channel = 3,
-                                        
-                                        ):
+                     # the 2 first keyword arguments are imposed by neo.io API
+                     lazy = False,
+                     cascade = True,                   
+                     # all following arguments are decied by this IO and are free
+                     segment_duration = 15.,
+                     num_analogsignal = 4,
+                     num_spiketrain_by_channel = 3,                   
+                    ):
         """
         Return a fake Segment.
         
@@ -141,9 +167,10 @@ class ExampleIO(BaseIO):
         In this case these 3 paramters are  taken in account because this function
         return a generated segment with fake AnalogSignal and fake SpikeTrain.
         
-        segment_duration is the size in secend of the segment.
-        num_analogsignal number of AnalogSignal in this segment
-        num_spiketrain number of SpikeTrain in this segment
+        Parameters:
+            segment_duration :is the size in secend of the segment.
+            num_analogsignal : number of AnalogSignal in this segment
+            num_spiketrain : number of SpikeTrain in this segment
         
         """
         
@@ -152,63 +179,85 @@ class ExampleIO(BaseIO):
         
         
         #time vector for generated signal
-        t = arange(t_start, t_start+ segment_duration , 1./sampling_rate)
+        timevect = np.arange(t_start, t_start+ segment_duration , 1./sampling_rate)
         
         # create an empty segment
-        seg = Segment()
+        seg = Segment( name = 'it is a seg from exampleio')
         
-        # read nested analosignal
-        for i in range(num_analogsignal):
-            ana = self.read_analogsignal( channel = i ,segment_duration = segment_duration, t_start = t_start)
-            seg._analogsignals += [ ana ]
+        if cascade:
+            # read nested analosignal
+            for i in range(num_analogsignal):
+                ana = self.read_analogsignal( lazy = lazy , cascade = cascade ,
+                                            channel_index = i ,segment_duration = segment_duration, t_start = t_start)
+                seg.analogsignals += [ ana ]
+            
+            # read nested spiketrain
+            for i in range(num_analogsignal):
+                for j in range(num_spiketrain_by_channel):
+                    sptr = self.read_spiketrain(lazy = lazy , cascade = cascade ,
+                                                            segment_duration = segment_duration, t_start = t_start , channel_index = i)
+                    seg.spiketrains += [ sptr ]
         
-        # read nested spiketrain
-        for i in range(num_analogsignal):
-            for j in range(num_spiketrain_by_channel):
-                sptr = self.read_spiketrain(segment_duration = segment_duration, t_start = t_start , channel = i)
-                seg._spiketrains += [ sptr ]
+            
+            # create an EventArray that mimic triggers.
+            # note that ExampleIO  do not allow to acess directly to EventArray
+            # for that you need read_segment(cascade = True)
+            eva = EventArray()
+            if lazy:
+                # in lazy case no data are readed
+                # eva is empty
+                pass
+            else:
+                # otherwise it really contain data
+                n = 1000
+                
+                # neo.io support quantities my vector use second for unit
+                eva.times = timevect[(rand(n)*timevect.size).astype('i')]* pq.s
+                # all duration are the same
+                eva.durations = np.ones(n)*500*pq.ms
+                # label
+                l = [ ]
+                for i in range(n):
+                    if rand()>.6: l.append( 'TriggerA' )
+                    else : l.append( 'TriggerB' )
+                eva.labels = np.array( l )
+                
+            seg.eventarrays += [ eva ]
         
-        
-        # create event and epoch
-        # note that they are not accessible directly
-        n_event = 3
-        n_epoch = 1
-        for i in range(n_event):
-            ev = Event( time = t[int(random.rand()*t.size)] )
-            seg._events.append(ev)
-        
-        for i in range(n_epoch):
-            time = t[int(random.rand()*t.size/2)] 
-            ep = Epoch( time = time,
-                                duration= time+1.,
-                                )
-            seg._epochs.append(ep)
-        
-        
+        create_many_to_one_relationship(seg)
         return seg
         
     
-    def read_analogsignal(self , channel = 0,
-                                                segment_duration = 15.,
-                                                t_start = -1,
-                                                ):
+    def read_analogsignal(self ,
+                          # the 2 first key arguments are imposed by neo.io API
+                          lazy = False,
+                          cascade = True,
+                          channel_index = 0,
+                          segment_duration = 15.,
+                          t_start = -1,
+                          ):
         """
         With this IO AnalogSignal can e acces directly with its channel number
         
         """
-        sampling_rate = 10000.
+        sr = 10000.
+        sinus_freq = 3. # Hz
+        #time vector for generated signal:
+        tvect = np.arange(t_start, t_start+ segment_duration , 1./sr)
         
-        #time vector for generated signal
-        t = arange(t_start, t_start+ segment_duration , 1./sampling_rate)
         
-        # create analogsignal
-        anasig = AnalogSignal()
-        anasig.sampling_rate = sampling_rate
-        anasig.t_start = t_start
-        anasig.t_stop = t_start + segment_duration
-        f1 = 3. # Hz
-        anasig.signal = sin(2*pi*t*f1 + channel/5.*2*pi)+rand(t.size)
-        anasig.channel = channel
+        if lazy:
+            anasig = AnalogSignal([ ], units = 'V', sampling_rate=sr*pq.Hz, t_start=t_start*pq.s)
+            # we add the attribute lazy_shape with the size if loaded
+            anasig.lazy_shape = tvect.shape
+        else:
+            # create analogsignal (sinus of 3 Hz)
+            sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
+            anasig = AnalogSignal(sig, units= 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
+        
+        # for attributes out of neo you can annotate
+        anasig.annotate(channel_index = channel_index)
+        anasig.annotate(info = 'it is a sinus of %f Hz' %sinus_freq )
         
         return anasig
         
@@ -217,9 +266,13 @@ class ExampleIO(BaseIO):
         
         
     def read_spiketrain(self ,
+                                            # the 2 first key arguments are imposed by neo.io API
+                                            lazy = False,
+                                            cascade = True,
+        
                                                 segment_duration = 15.,
                                                 t_start = -1,
-                                                channel = 0,
+                                                channel_index = 0,
                                                 ):
         """
         With this IO SpikeTrain can e acces directly with its channel number
@@ -229,35 +282,42 @@ class ExampleIO(BaseIO):
         # we choose here the first : 
 
         num_spike_by_spiketrain = 40
-        sampling_rate = 10000.
+        sr = 10000.
         
-        #generate a fake spike shape (2d array if trodness >1)
-        sig1 = -stats.nct.pdf(arange(11,60,4), 5,20)[::-1]/3.
-        sig2 = stats.nct.pdf(arange(11,60,2), 5,20)
-        sig = r_[ sig1 , sig2 ]
-        
-        
-        basicshape = -sig/max(sig)
-        basicshape = resample( basicshape , int(basicshape.size * sampling_rate / 10000. ) )
-        wsize = basicshape.size
+        if lazy:
+            times = [ ]
+        else:
+            times = rand(num_spike_by_spiketrain)*segment_duration+t_start
         
         # create a spiketrain
-        spiketr = SpikeTrain()
-        spiketr.sampling_rate = sampling_rate
-        spiketr.t_start = t_start
+        spiketr = SpikeTrain(times, t_start = t_start*pq.s, t_stop = (t_start+segment_duration)*pq.s ,
+                                            units = pq.s, 
+                                            name = 'it is a spiketrain from exampleio',
+                                            )
         
-        spiketr._spikes = [ ]
-        spiketr.name = 'Neuron'
-        spiketr.channel = channel
-        for k in range( num_spike_by_spiketrain ):
-                sp = Spike()
-                sp.time = random.rand()*segment_duration+t_start
-                sp.sampling_rate = sampling_rate
-                factor = randn()/6+1 # nose factor in amplitude
-                sp.waveform = basicshape * factor
-                spiketr._spikes.append(sp)
+        if lazy:
+            # we add the attribute lazy_shape with the size if loaded
+            spiketr.lazy_shape = (num_spike_by_spiketrain,)
+        
+        # ours spiketrains also hold the waveforms:
+        
+        # 1 generate a fake spike shape (2d array if trodness >1)
+        w1 = -stats.nct.pdf(np.arange(11,60,4), 5,20)[::-1]/3.
+        w2 = stats.nct.pdf(np.arange(11,60,2), 5,20)
+        w = np.r_[ w1 , w2 ]
+        w = -w/max(w)
+        
+        if not lazy:
+            # in the neo API the waveforms attr is 3 D in case tetrode
+            # in our case it is mono electrode so dim 1 is size 1
+            waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
+            waveforms *=  randn(*waveforms.shape)/6+1
+            spiketr.waveforms = waveforms
+            spiketr.sampling_rate = sr * pq.Hz
+            spiketr.left_sweep = 1.5* pq.s
+        
+        # for attributes out of neo you can annotate
+        spiketr.annotate(channel_index = channel_index)
         
         return spiketr
-
-
 

@@ -1,37 +1,28 @@
-# -*- coding: utf-8 -*-
+from neo.core.baseneo import BaseNeo
 
-from epoch import Epoch
+import quantities as pq
 
-definition = """
 
-"""
-
-class Event(Epoch):
-    definition = """An :class:`Event` is an object to represent a point in time.
-    Useful for managing triggers, stimuli, ..."""
+class Event(BaseNeo):
+    """
+    Object to represent an event occurring at a particular time.
+    Useful for managing trigger, stimulus, ...
     
-    __doc__ = """
-    Object to represent an event.
-
-    **Definition**
-    %s    
-
-    with arguments:
-        ``time`` The time of the Event
+    *Usage*:
     
-    **Usage**
-    # Add event to segment
-    e = Event(time=3.4, label='Flash')
-    seg._events.append(e)
-    print seg.get_events()[0].label
-    """ % definition
+    *Required attributes/properties*:
+        :time: (quantity):
+        :label: (str): 
     
-    def __init__(self, *arg, **karg):
-        """Initializes as Epoch but with duration zero."""
-        Epoch.__init__(self, *arg, **karg)
-        self.duration = 0
-        if 'time' in karg.keys():
-            self.time = karg['time']
-
-
-
+    *Recommended attributes/properties*:
+        :name:
+        :description:
+        :file_origin:    
+    """
+    def __init__(self, time, label, name=None, description=None,
+                 file_origin=None, **annotations):
+        """Initialize a new Event."""
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
+        self.time = time
+        self.label = label
