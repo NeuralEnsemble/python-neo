@@ -197,23 +197,4 @@ classes_inheriting_quantities= {
 for k in classes_recommended_attributes.keys():
     classes_recommended_attributes[k] += [ ('name', str ), ('description', str ), ('file_origin', str ),]
 
-# list of attributes required to provide as *args to initialize NEO object
-init_args = {
-    'Block': [],
-    'Segment': [],
-    'Event': ['time', 'label'],
-    'EventArray': [],
-    'Epoch': ['time', 'duration', 'label'],
-    'EpochArray': [],
-    'Unit': [],
-    'SpikeTrain': ['times', 't_stop'], # 'times' inherited from Quantities
-    'Spike': [],
-    'AnalogSignal': ['signal'], # inherited from Quantities
-    'AnalogSignalArray': ['signal'], # inherited from Quantities
-    'IrregularlySampledSignal': ['times', 'values'],
-    'RecordingChannelGroup': [],
-    'RecordingChannel': []
-}
-
-
 

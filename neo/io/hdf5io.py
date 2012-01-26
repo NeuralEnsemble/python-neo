@@ -505,22 +505,19 @@ class NeoHdf5IO(BaseIO):
             raise LookupError("The requested object with the path " + str(path) +\
                 " exists, but is not of a NEO type. Please check the '_type' attribute.")
         obj_type = name_by_class[classname]
-        args = []
         kwargs = {}
         # first fetch data-attribute, for special *-ed NEO objects
         if obj_type in classes_inheriting_quantities.keys():
-            nattr = fetch_attribute(classes_inheriting_quantities[obj_type])
-            args.append(nattr) # required, non-key attributes
+            attr_name = classes_inheriting_quantities[obj_type]
+            kwargs[attr_name] = fetch_attribute(attr_name)
         # load other attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for i, attr in enumerate(attrs):
-            nattr = fetch_attribute(attr[0])
+            attr_name = attr[0]
+            nattr = fetch_attribute(attr_name)
             if nattr is not None:
-                if attr_name in init_args[obj_type]:
-                    args.append(nattr) # required, non-key attributes
-                else:
-                    kwargs[attr_name] = nattr # recommended key- attributes
-        obj = class_by_name[obj_type](*args, **kwargs) # instantiate new object
+                kwargs[attr_name] = nattr # recommended key- attributes
+        obj = class_by_name[obj_type](**kwargs) # instantiate new object
         self._update_path(obj, node) # set up HDF attributes: name, path
         try:
             setattr(obj, "annotations", node._f_getAttr("annotations"))
