@@ -206,10 +206,10 @@ init_args = {
     'Epoch': ['time', 'duration', 'label'],
     'EpochArray': [],
     'Unit': [],
-    'SpikeTrain': ['times', 't_stop'],
+    'SpikeTrain': ['times', 't_stop'], # 'times' inherited from Quantities
     'Spike': [],
-    'AnalogSignal': ['signal'], #?? not in attrs but required
-    'AnalogSignalArray': ['signal'], #?? not in attrs but required
+    'AnalogSignal': ['signal'], # inherited from Quantities
+    'AnalogSignalArray': ['signal'], # inherited from Quantities
     'IrregularlySampledSignal': ['times', 'values'],
     'RecordingChannelGroup': [],
     'RecordingChannel': []

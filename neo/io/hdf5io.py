@@ -363,6 +363,29 @@ class NeoHdf5IO(BaseIO):
 
         cascade: True/False process downstream relationships
         lazy: True/False process any quantity/ndarray attributes """
+
+        def assign_attribute(obj_attr, attr_name):
+            """ subfunction to serialize a given attribute """
+            if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
+                if not lazy:
+                    if obj_attr.size == 0:
+                        raise ValueError("A size of the %s of the %s has \
+                            length zero and can't be saved." % 
+                            (attr_name, path))
+                    # we try to create new array first, so not to loose the 
+                    # data in case of any failure
+                    new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
+                    if hasattr(obj_attr, "dimensionality"):
+                        for un in obj_attr.dimensionality.items():
+                            new_arr._f_setAttr("unit__" + un[0].name, un[1])
+                    try:
+                        self._data.removeNode(path, attr_name)
+                    except:
+                        pass # there is no array yet or object is new
+                    self._data.renameNode(path, attr_name, name=attr_name + "__temp")
+            elif not obj_attr == None:
+                node._f_setAttr(attr_name, obj_attr)
+            
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
         if hasattr(obj, "hdf5_path"): # this is an update case
@@ -381,36 +404,12 @@ class NeoHdf5IO(BaseIO):
             path = node._v_pathname
         # processing attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for attr in attrs: # we checked already obj is compliant, loop over all
-            #if hasattr(obj, attr[0]) or attr[0] == '':
-            if hasattr(obj, attr[0]) or (obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]):
-                #if attr[0] == '':
-                if obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]:
-                    # case with AS, ASA or ST - NEO "stars"
-                    obj_attr = obj
-                    attr_name = 'data'
-                else:
-                    obj_attr = getattr(obj, attr[0])
-                    attr_name = attr[0]
-                if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
-                    if not lazy:
-                        if obj_attr.size == 0:
-                            raise ValueError("A size of the %s of the %s has \
-                                length zero and can't be saved." % 
-                                (attr_name, path))
-                        # we try to create new array first, so not to loose the 
-                        # data in case of any failure
-                        new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
-                        if hasattr(obj_attr, "dimensionality"):
-                            for un in obj_attr.dimensionality.items():
-                                new_arr._f_setAttr("unit__" + un[0].name, un[1])
-                        try:
-                            self._data.removeNode(path, attr_name)
-                        except:
-                            pass # there is no array yet or object is new
-                        self._data.renameNode(path, attr_name, name=attr_name + "__temp")
-                elif not obj_attr == None:
-                    node._f_setAttr(attr_name, obj_attr)
+        for attr in attrs: # we checked already obj is compliant, loop over all safely
+            if hasattr(obj, attr[0]): # save an attribute if exists
+                assign_attribute(getattr(obj, attr[0]), attr[0])
+        # not forget to save AS, ASA or ST - NEO "stars"
+        if obj_type in classes_inheriting_quantities.keys():
+            assign_attribute(obj, classes_inheriting_quantities[obj_type])
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         if one_to_many_relationship.has_key(obj_type) and cascade:
@@ -445,6 +444,7 @@ class NeoHdf5IO(BaseIO):
     @_func_wrapper
     def get(self, path="/", cascade=True, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
+
         def rem_duplicates(target, source, attr):
             """ removes duplicated objects in case a block is requested: for 
             RCGs, RCs and Units we remove duplicated ASAs, IrSAs, ASs, STs and
@@ -454,38 +454,9 @@ class NeoHdf5IO(BaseIO):
             res = list(set(a) - set(b))
             res += list(set(b) -(set(b) - set(a)))
             setattr(target, attr, res)
-        if path == "/": # this is just for convenience. Try to return any object
-            found = False
-            for n in self._data.listNodes(path):
-                for obj_type in class_by_name.keys():
-                    if obj_type.lower() in str(n._v_name).lower():
-                        path = n._v_pathname
-                        found = True
-                if found: break
-        try:
-            if path == "/":
-                raise ValueError() # root is not a NEO object
-            node = self._data.getNode(path)
-        except (NSNE, ValueError): # create a new node?
-            raise LookupError("There is no valid object with a given path " +\
-                str(path) + " . Please give correct path or just browse the file \
-                (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
-                appropriate name.")
-        classname = self._get_class_by_node(node)
-        if not classname:
-            raise LookupError("The requested object with the path " + str(path) +\
-                " exists, but is not of a NEO type. Please check the '_type' attribute.")
-        obj_type = name_by_class[classname]
-        # load attributes
-        args = []
-        kwargs = {}
-        attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for i, attr in enumerate(attrs):
-            #if attr[0] == '':
-            if obj_type in classes_inheriting_quantities and attr[0]==classes_inheriting_quantities[obj_type]:
-                attr_name = 'data'
-            else:
-                attr_name = attr[0]
+
+        def fetch_attribute(attr_name):
+            """ fetch required attribute from the corresp. node in the file """
             try:
                 if attr[1] == pq.Quantity:
                     arr = self._data.getNode(node, attr_name)
@@ -510,8 +481,42 @@ class NeoHdf5IO(BaseIO):
                         nattr = attr[1](nattr) # compliance with NEO attr types
             except (AttributeError, NSNE): # not assigned, continue
                 nattr = None
+            return nattr
+
+        if path == "/": # this is just for convenience. Try to return any object
+            found = False
+            for n in self._data.listNodes(path):
+                for obj_type in class_by_name.keys():
+                    if obj_type.lower() in str(n._v_name).lower():
+                        path = n._v_pathname
+                        found = True
+                if found: break
+        try:
+            if path == "/":
+                raise ValueError() # root is not a NEO object
+            node = self._data.getNode(path)
+        except (NSNE, ValueError): # create a new node?
+            raise LookupError("There is no valid object with a given path " +\
+                str(path) + " . Please give correct path or just browse the file \
+                (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
+                appropriate name.")
+        classname = self._get_class_by_node(node)
+        if not classname:
+            raise LookupError("The requested object with the path " + str(path) +\
+                " exists, but is not of a NEO type. Please check the '_type' attribute.")
+        obj_type = name_by_class[classname]
+        args = []
+        kwargs = {}
+        # first fetch data-attribute, for special *-ed NEO objects
+        if obj_type in classes_inheriting_quantities.keys():
+            nattr = fetch_attribute(classes_inheriting_quantities[obj_type])
+            args.append(nattr) # required, non-key attributes
+        # load other attributes
+        attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
+        for i, attr in enumerate(attrs):
+            nattr = fetch_attribute(attr[0])
             if nattr is not None:
-                if attr_name == 'data' or (attr_name in init_args[obj_type]):
+                if attr_name in init_args[obj_type]:
                     args.append(nattr) # required, non-key attributes
                 else:
                     kwargs[attr_name] = nattr # recommended key- attributes
