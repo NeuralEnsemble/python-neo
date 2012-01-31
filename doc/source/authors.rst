@@ -23,7 +23,7 @@ and may not be the current affiliation of a contributor.
 3. University of California, Berkeley
 4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France 
 5. G-Node, Ludwig-Maximilians-Universität, Munich, Germany 
-6. Institut de Neurosciences Cognitives de la Méditerranée, CNRS UMR 6193 - Université de la Méditerranée, Marseille, France
+6. Institut de Neurosciences de la Timone, CNRS UMR 7289 - Université d'Aix-Marseille, Marseille, France
 
 
 If I've somehow missed you off the list I'm very sorry - please let us know.

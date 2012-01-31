@@ -103,7 +103,7 @@ class BaseTestIO(object):
                 logging.info('Downloading %s here %s' % (distantfile, localfile))
                 try:
                     urllib.urlretrieve(distantfile, localfile)
-                except IOError, e:
+                except IOError as e:
                     raise unittest.SkipTest(e)
     
     def generate_files_for_io_able_to_write(self):
