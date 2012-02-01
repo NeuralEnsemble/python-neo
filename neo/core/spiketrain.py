@@ -1,8 +1,3 @@
-from neo.core.baseneo import BaseNeo
-import quantities as pq
-import numpy
-import numpy as np
-
 """This module implements SpikeTrain.
 
 SpikeTrain inherits from Quantity, which inherits from numpy.array.
@@ -17,6 +12,10 @@ This is where user-specified attributes are set.
 created by slicing. This is where attributes are copied over from
 the old object.
 """
+
+from neo.core.baseneo import BaseNeo
+import quantities as pq
+import numpy
 
 
 def check_has_dimensions_time(*values):
@@ -240,7 +239,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def sort(self):
         """Sorts the spiketrain and its waveforms, if any."""
         # sort the waveforms by the times
-        sort_indices = np.argsort(self)
+        sort_indices = numpy.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
         
@@ -261,6 +260,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # update waveforms
         if obj.waveforms is not None:
             obj.waveforms = obj.waveforms[i:j]
+        return obj
+
+    def __getitem__(self, i):
+        obj = super(SpikeTrain, self).__getitem__(i)
+        if isinstance(obj, SpikeTrain) and obj.waveforms is not None:
+            obj.waveforms = obj.waveforms.__getitem__(i)
         return obj
 
     def __setitem__(self, i, value):

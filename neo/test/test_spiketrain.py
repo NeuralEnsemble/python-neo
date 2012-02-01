@@ -6,7 +6,6 @@ except ImportError:
 from neo.core.spiketrain import check_has_dimensions_time, SpikeTrain
 import quantities as pq
 import numpy
-import numpy as np
 from neo.test.tools import assert_arrays_equal
 import sys
 
@@ -95,7 +94,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.t_stop, 10.*pq.s)
     
     def test_sort(self):
-        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', t_stop=10.0)
         st.sort()
         assert_arrays_equal(st, [3,4,5]*pq.s)
@@ -112,7 +111,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(st.t_stop, 10.0 * pq.s)
     
     def test_slice(self):
-        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=10.0)
         
         # slice spike train, keep sliced spike times
@@ -132,7 +131,7 @@ class TestConstructor(unittest.TestCase):
         assert_arrays_equal(st.waveforms[1:2], st2.waveforms)
 
     def test_slice_to_end(self):
-        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=12.3)
         
         # slice spike train, keep sliced spike times
@@ -153,7 +152,7 @@ class TestConstructor(unittest.TestCase):
         
 
     def test_slice_from_beginning(self):
-        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=23.4*pq.s)
         
         # slice spike train, keep sliced spike times
@@ -173,7 +172,7 @@ class TestConstructor(unittest.TestCase):
         assert_arrays_equal(st.waveforms[:2], st2.waveforms)
 
     def test_slice_negative_idxs(self):
-        wf = np.array([[0., 1.], [2., 3.], [4., 5.]])
+        wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', arb='arbb', t_stop=10.0)
         
         # slice spike train, keep sliced spike times
@@ -282,7 +281,7 @@ class TestConstructor(unittest.TestCase):
         # Array and quantity are tested separately because copy default
         # is different for these two.
         data = numpy.array([3, 4, 5])        
-        st = SpikeTrain(data, units='sec', copy=False, dtype=np.int, t_stop=101)
+        st = SpikeTrain(data, units='sec', copy=False, dtype=numpy.int, t_stop=101)
         st[0] = 99 * pq.s
         self.assertEqual(st[0], 99*pq.s)
         self.assertEqual(data[0], 99)
@@ -344,7 +343,7 @@ class TestConstructor(unittest.TestCase):
         data = [3,4,5] * pq.ms
         st = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         st[:] = [7,8,9] * pq.ms
-        assert_arrays_equal(st, np.array([7,8,9]))
+        assert_arrays_equal(st, numpy.array([7,8,9]))
 
     def test__changing_multiple_spiketimes_should_check_time_in_range(self):
         data = [3,4,5] * pq.ms
