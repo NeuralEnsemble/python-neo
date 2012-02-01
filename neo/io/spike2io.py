@@ -30,8 +30,9 @@ import numpy as np
 from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
-import os
+import os, sys
 
+PY3K = (sys.version_info.major == 3)
 
 
 class Spike2IO(BaseIO):
@@ -429,7 +430,10 @@ class HeaderReader(object):
         #~ print name
         if name in self.dtype.names :
             if self.dtype[name].kind == 'S':
-                l = np.fromstring(self.array[name][0] , 'u1')
+                if PY3K:
+                    l = np.fromstring(self.array[name].decode('iso-8859-1')[0], 'u1')    
+                else:
+                    l = np.fromstring(self.array[name][0], 'u1')
                 return self.array[name][1:l+1]
             else:
                 return self.array[name]

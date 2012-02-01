@@ -25,7 +25,10 @@ from numpy import dtype
 import quantities as pq
 
 import struct
-import os
+import os, sys
+
+PY3K = (sys.version_info.major == 3)
+
 
 class TdtIO(BaseIO):
     """
@@ -253,7 +256,11 @@ class TdtIO(BaseIO):
                     tev = None
                 for code, v in iteritems(allsig):
                     for channel, anaSig in iteritems(v):
-                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
+                        if PY3K:
+                            signame = anaSig.name.decode('ascii')
+                        else:
+                            signame = anaSig.name
+                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
                         else:
@@ -273,7 +280,7 @@ class TdtIO(BaseIO):
                     if Types[evtype] == 'EVTYPE_STREAM': 
                         a = allsig[code][channel]
                         dt = a.dtype
-                        s = (h['size']*4-40)/dt.itemsize
+                        s = int((h['size']*4-40)/dt.itemsize)
                         a.fid.seek(h['eventoffset'])
                         a[ a.pos:a.pos+s ]  = np.fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                         a.pos += s

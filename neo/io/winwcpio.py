@@ -20,9 +20,11 @@ import numpy as np
 from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
+import sys
 import os
 import struct
 
+PY3K = (sys.version_info.major == 3)
 
 class WinWcpIO(BaseIO):
     """
@@ -80,6 +82,8 @@ class WinWcpIO(BaseIO):
         fid = open(self.filename , 'rb')
         
         headertext = fid.read(1024)
+        if PY3K:
+            headertext = headertext.decode('ascii')
         header = {}
         for line in headertext.split('\r\n'):
             if '=' not in line : continue
