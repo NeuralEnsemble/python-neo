@@ -1,69 +1,72 @@
-.. _use_cases_page:
-
 *****************
 Typical use cases
 *****************
 
+Recording multiple trials from multiple channels
+================================================
 
+In this example we suppose that we have recorded from an 8-channel probe, and
+that we have recorded three trials/episodes. We therefore have a total of
+8 x 3 = 24 signals, each represented by an :class:`AnalogSignal` object.
 
+Our entire dataset is contained in a :class:`Block`, which in turn contains:
 
-
-Multi segment recording for AnalogSIgnal
-========================================
-
-Here the typical example to illustrate a multi segment recording for signal.
-There 1 Block composed by:
-
-  * 3 Segment representing for instance trials.
-  * 1 probe (RecordingChannelGroup) with 8 RecordingChannel
-
-In a such case, you can finally play with 3x8 = 24 AnalogSignal. Named here as AS i,j (i = segment.index and j = recordingchannel.index)
+  * 3 :class:`Segment` objects, each representing data from a single trial,
+  * 1 :class:`RecordingChannelGroup`, composed of 8 :class:`RecordingChannel` objects.
 
 .. image:: images/multi_segment_diagram.png
 
-To summary, you can acces by 2 ways Segment or RecordingChannel that represent in this particulary example **time** by **space**.
-Note that segments do not always represent trial, it can be use for many purpose: segment could represent parralels recordings for different subject
-or segments could represent several steps in current clamp protocol.
+:class:`Segment` and :class:`RecordingChannel` objects provide two different
+ways to access the data, corresponding respectively, in this scenario, to access
+by **time** and by **space**.
+
+.. note:: segments do not always represent trials, they can be used for many
+          purposes: segments could represent parallel recordings for different
+          subjects, or different steps in a current clamp protocol.
 
 
 **Temporal (by segment)**
 
-In this case you want to go through your data in order, perhaps because you want to correlate the neural response with the stimulus that was delivered in each segment.
-We'll assume that you've already put one trial per segment, and that the LFP data is in AnalogSignal. In this example, we won't worry about separating the response by channel::
+In this case you want to go through your data in order, perhaps because you want
+to correlate the neural response with the stimulus that was delivered in each segment.
+In this example, we're averaging over the channels.
+
+.. doctest::
 
     import numpy as np
     from matplotlib import pyplot as plt
     
     for seg in block.segments:
-        print "Analyzing segment %d" % segment.index
+        print("Analyzing segment %d" % seg.index)
         
         siglist = seg.analogsignals
-        avg = np.mean(siglist, axis = 0)
+        avg = np.mean(siglist, axis=0)
 
         plt.figure()
         plt.plot(avg)
-        plt.title("Peak response in segment %d: %f" % \
-            (segment.index, avg.max()))
+        plt.title("Peak response in segment %d: %f" % (seg.index, avg.max()))
 
-**Hardware (by channel)**
+**Spatial (by channel)**
 
 In this case you want to go through your data by channel location and average over time. 
-Perhaps you want to see which physical location produces the strongest response, and every stimulus was the same::
+Perhaps you want to see which physical location produces the strongest response, and every stimulus was the same:
     
-    # We assume that our block have only 1 RecordingChannelGroup
+.. doctest::
+    
+    # We assume that our block has only 1 RecordingChannelGroup
     rcg = block.recordingchannelgroups[0]:
     for rc in rcg.recordingchannels:
-        print "Analyzing channel %d: %s", (rc.index, rc.name)
+        print("Analyzing channel %d: %s", (rc.index, rc.name))
         
         siglist = rc.analogsignals
-        avg = np.mean(siglist, axis = 0)
+        avg = np.mean(siglist, axis=0)
         
         plt.figure()
         plt.plot(avg)
-        plt.title("Average response on channel %d: %s' %(rc.index, rc.name)
+        plt.title("Average response on channel %d: %s' % (rc.index, rc.name)
 
-Note that Block.list_recordingchannels is a proterty that acces directly to all RecordingChannel.
-So the 2 first lines::
+Note that :attr:`Block.list_recordingchannels` is a property that gives direct
+access to all :class:`RecordingChannels`, so the two first lines::
 
     rcg = block.recordingchannelgroups[0]:
     for rc in rcg.recordingchannels:
@@ -71,92 +74,111 @@ So the 2 first lines::
 could be written as::
     
     for rc in block.list_recordingchannels:
-        print "Analyzing channel %d: %s", (rc.index, rc.name)
 
 
 **Mixed example**
 
-Combining the two approaches of descending the hierarchy temporally and spatially simultaneously can be tricky. Here's an example.
-Let's say you saw something interesting on channel 5 on even numbered trials during the experiment and you want to follow up. What was the average response?::
+Combining simultaneously the two approaches of descending the hierarchy
+temporally and spatially can be tricky. Here's an example.
+Let's say you saw something interesting on channel 5 on even numbered trials
+during the experiment and you want to follow up. What was the average response?
+
+.. doctest::
     
     avg = np.mean([seg.analogsignals[5] for seg in block.segments[::2]], axis=1)
     plt.plot(avg)
 
-Note that in that example we assume that segment are ordered in a block.segments and analogsignals are also ardered in seg.analogsignals.
-In a non symetric and with missing channel it could be safer do loop with testing index attribute for RecordingChannel and Segment. In this example,
-note that we acces the segment througth the AnalogSignal by risingup the hierachy with many_to_one relationship::
+Here we have assumed that segment are temporally ordered in a ``block.segments``
+and that signals are ordered by channel number in ``seg.analogsignals``.
+It would be safer, however, to avoid assumptions by explicitly testing the
+:attr:`index` attribute of the :class:`RecordingChannel` and :class:`Segment`
+objects. One way to do this is to loop over the recording channels and access
+the segments through the signals (each :class:`AnalogSignal` contains a reference
+to the :class:`Segment` it is contained in).
     
-    siglist = [ ]
+.. doctest::
+    
+    siglist = []
     rcg = block.recordingchannelgroups[0]:
     for rc in rcg.recordingchannels:
         if rc.index == 5:
             for anasig in rc.analogsignals:
-                if anasig.segment.index %2 == 0: # <-- here we use the many to one relationship.
+                if anasig.segment.index % 2 == 0:
                     siglist.append(anasig)
     avg = np.mean(siglist)
-    
 
 
+Recording spikes from multiple tetrodes
+=======================================
 
-Multi segment recording for SpikeTrain
-======================================
+Here is a similar example in which we have recorded with two tetrodes and
+extracted spikes from the extra-cellular signals. The spike times are contained
+in :class:`SpikeTrain` objects.
 
-Here an equivalent example with SpikeTrain in a multi segment recording.
+Again, our data set is contained in a :class:`Block`, which contains:
 
-There 1 Block composed by:
-  * 3 Segment representing for instance trials.
-  * 2 RecordingChannelGroup (= tetrode in that case) with respectively:
+  * 3 :class:`Segments` (one per trial).
+  * 2 :class:`RecordingChannelGroups` (one per tetrode), which contain:
   
-    * 4 RecordingChannel for each
-    * 2 Unit (= 2 neurons) for the frist RecordingChannelGroup
-    * 5 Unit for the second RecordingChannelGroup
+    * 4 :class:`RecordingChannels` each
+    * 2 :class:`Unit` objects (= 2 neurons) for the first :class:`RecordingChannelGroup`
+    * 5 :class:`Units` for the second :class:`RecordingChannelGroup`.
 
-Note that there are 3x7=21 SpikeTrain in this Block.
+In total we have 3 x 7 = 21 :class:`SpikeTrains` in this :class:`Block`.
 
 .. image:: images/multi_segment_diagram_spiketrain.png
 
-If you want to access SpikeTrain you have 3 possibilities:
-  * by Segment. In our example it respresent trials.
-  * by RecordingChannel. In this example, they are tetrode.
-  * by Unit. It can be usefull if the location of the Neuron do not matter
+There are three ways to access the :class:`SpikeTrain` data:
 
-**by Segment**
+  * by :class:`Segment`
+  * by :class:`RecordingChannel`
+  * by :class:`Unit`
 
-In this example, we assume that each Segment is a trial and we want a PSTH for each trial from of all Unit blend::
+**By Segment**
+
+In this example, each :class:`Segment` represents data from one trial, and we
+want a PSTH for each trial from all units combined:
+
+.. doctest::
 
     for seg in block.segments:
-        print "Analyzing segment %d" % segment.index
-        
+        print("Analyzing segment %d" % seg.index)
         stlist = [st - st.t_start for st in seg.spiketrains]
         plt.figure()
         count, bins = np.histogram(stlist)
-        plt.bar(bins[:-1], count, width = bins[1] - bins[0])
-        plt.title("PSTH in segment %d" % segment.index)
+        plt.bar(bins[:-1], count, width=bins[1] - bins[0])
+        plt.title("PSTH in segment %d" % seg.index)
 
-**by Unit**
+**By Unit**
 
-In this example we want a PSTH average over trial for each Unit. Note that block.list_units is a property ::
+Now we can calculate the PSTH averaged over trials for each unit, using the
+:attr:`block.list_units` property:
+
+.. doctest::
 
     for unit in block.list_units:
         stlist = [st - st.t_start for st in unit.spiketrains]
         plt.figure()
         count, bins = np.histogram(stlist)
-        plt.bar(bins[:-1], count, width = bins[1] - bins[0])
+        plt.bar(bins[:-1], count, width=bins[1] - bins[0])
         plt.title("PSTH of unit %s" % unit.name)
         
 
-**by RecordingChannelGroup**
+**By RecordingChannelGroup**
 
-In this example we want a PSTH average over trial by channel location blending all Unit (RecordingChannelGroup=tetrode in our case)::
-    
-    for rcg in blocl.recordingchannelgroups:
-        stlist = [ ]
+Here we calculate a PSTH averaged over trials by channel location,
+blending all units:
+
+.. doctest::
+
+    for rcg in block.recordingchannelgroups:
+        stlist = []
         for unit in rcg.units:
-            stlist.append( [st - st.t_start for st in unit.spiketrains] )
+            stlist.extend([st - st.t_start for st in unit.spiketrains])
         plt.figure()
         count, bins = np.histogram(stlist)
-        plt.bar(bins[:-1], count, width = bins[1] - bins[0])
-        plt.title("PSTH blend of RCG  %s" % rcg.name)
+        plt.bar(bins[:-1], count, width=bins[1] - bins[0])
+        plt.title("PSTH blend of tetrode  %s" % rcg.name)
 
 
 Spike sorting
