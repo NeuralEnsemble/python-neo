@@ -13,7 +13,9 @@ except ImportError:
 from neo.core.analogsignal import AnalogSignal
 import numpy
 import quantities as pq
+import pickle
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
+import os
 
 V = pq.V
 mV = pq.mV
@@ -251,6 +253,27 @@ class TestCombination(unittest.TestCase):
         for attr in "t_start", "sampling_rate":
             self.assertEqual(getattr(signal, attr),
                              getattr(amplified_signal, attr))
+
+class TestFunctions(unittest.TestCase):
+    
+    def test__pickle(self):
+        a = AnalogSignal([1,2,3,4],sampling_period=1*pq.ms,units=pq.S)
+        a.annotations['index'] = 2
+
+        f = open('./pickle','wb')
+        pickle.dump(a,f)
+        f.close()
+       
+        f = open('./pickle','rb')
+        try:
+            b = pickle.load(f)
+        except ValueError:
+            b = None
+
+        assert_arrays_equal(a, b)
+        f.close()
+        os.remove('./pickle')
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -26,7 +26,12 @@ def _get_sampling_rate(sampling_rate, sampling_period):
         raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
-
+def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,t_start=0*pq.s, sampling_rate=None, sampling_period=None,name=None, file_origin=None, description=None,annotations=None):
+        """A function to map BaseAnalogSignal.__new__ to function that 
+           does not do the unit checking. This is needed for pickle to work. 
+        """
+        return BaseAnalogSignal(signal, units, dtype, copy,t_start, sampling_rate, sampling_period, name, file_origin, description,**annotations)
+        
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
     Base class for AnalogSignal and AnalogSignalArray
@@ -76,6 +81,13 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
+    def __reduce__(self):
+        """
+        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle works
+        """
+        import numpy
+        return _new_BaseAnalogSignal, (self.__class__,numpy.array(self),self.units,self.dtype,True,self.t_start,self.sampling_rate,self.sampling_period,self.name, self.file_origin, self.description,self.annotations)
+        
     def __array_finalize__(self, obj):
         """This is called every time a new BaseAnalogSignal is created.
         

@@ -41,6 +41,13 @@ def _check_time_in_range(value, t_start, t_stop):
             raise ValueError("The spike time (%s) is after t_stop (%s)" % (value, t_stop))
 
 
+
+def _new_SpikeTrain(cls, signal, t_stop,units=None, dtype=numpy.float, copy=True, sampling_rate=None, t_start=0.0*pq.s, waveforms=None, left_sweep=None,name=None, file_origin=None, description=None,annotations=None):
+        """A function to map BaseAnalogSignal.__new__ to function that 
+           does not do the unit checking. This is needed for pickle to work. 
+        """
+        return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate, t_start,waveforms,left_sweep, name, file_origin, description,**annotations)
+
 class SpikeTrain(BaseNeo, pq.Quantity):
     """SpikeTrain is a :class:`Quantity` array of spike times.
     
@@ -204,6 +211,13 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
                           description=self.description, **self.annotations)
+
+    def __reduce__(self):
+        """
+        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle works
+        """
+        import numpy
+        return _new_SpikeTrain, (self.__class__,numpy.array(self),self.t_stop,self.units,self.dtype,True,self.sampling_rate,self.t_start,self.waveforms,self.left_sweep,self.name, self.file_origin, self.description,self.annotations)
 
     def __array_finalize__(self, obj):
         """This is called every time a new SpikeTrain is created.
