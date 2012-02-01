@@ -2,9 +2,13 @@
 # Andrey: please remove this to test when your IO is finished
 
 """
-Some examples of using functions in this module:
+Usually I run these tests like that. I add neo root folder to the pythonpath
+(usually by adding the neo.pth with the path to the cloned repository to, say,
+/usr/lib/python2.6/dist-packages/) and run
 
-from neo.test.io.test_hdf5io import fake_NEO
+python <path to the neo repo>/test/io/test_hdf5io.py
+
+For the moment only basic tests are active.
 
 """
 
@@ -64,17 +68,12 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
 
     _follow_links - an internal variable, indicates whether to create objects 
     with 'implicit' relationships, to avoid duplications. Do not use it. """
-    args = []
-    kwargs = {}
+    kwargs = {} # assign attributes
     attrs = classes_necessary_attributes[obj_type] + \
         classes_recommended_attributes[obj_type]
     for attr in attrs:
-        nattr = get_fake_value(attr)
-        if attr[0] == '' or (attr[0] in init_args[obj_type]):
-            args.append(nattr) # required, non-key attributes
-        else:
-            kwargs[attr[0]] = nattr # recommended key- attributes
-    obj = class_by_name[obj_type](*args, **kwargs)
+        kwargs[attr[0]] = get_fake_value(attr)
+    obj = class_by_name[obj_type](**kwargs)
     if cascade:
         if obj_type == "Block":
             _follow_links = False

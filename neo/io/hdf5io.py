@@ -506,17 +506,13 @@ class NeoHdf5IO(BaseIO):
                 " exists, but is not of a NEO type. Please check the '_type' attribute.")
         obj_type = name_by_class[classname]
         kwargs = {}
-        # first fetch data-attribute, for special *-ed NEO objects
-        if obj_type in classes_inheriting_quantities.keys():
-            attr_name = classes_inheriting_quantities[obj_type]
-            kwargs[attr_name] = fetch_attribute(attr_name)
-        # load other attributes
+        # load attributes (inherited *-ed attrs are also here)
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for i, attr in enumerate(attrs):
             attr_name = attr[0]
             nattr = fetch_attribute(attr_name)
             if nattr is not None:
-                kwargs[attr_name] = nattr # recommended key- attributes
+                kwargs[attr_name] = nattr
         obj = class_by_name[obj_type](**kwargs) # instantiate new object
         self._update_path(obj, node) # set up HDF attributes: name, path
         try:
