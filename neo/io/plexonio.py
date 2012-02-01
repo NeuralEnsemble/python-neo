@@ -19,8 +19,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
-from .tools import create_many_to_one_relationship
-
+from .tools import create_many_to_one_relationship, iteritems
 import numpy as np
 import quantities as pq
 
@@ -143,14 +142,14 @@ class PlexonIO(BaseIO):
         # for allocating spiketimes and waveform
         spiketrains = { }
         nspikecounts = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
-        for i,channelHeader in dspChannelHeaders.iteritems():
+        for i,channelHeader in iteritems(dspChannelHeaders):
             spiketrains[i] = { }
         
         # for allocating EventArray
         eventarrays = { }
         neventsperchannel = { }
         #maxstrsizeperchannel = { }
-        for chan, h in eventHeaders.iteritems():
+        for chan, h in iteritems(eventHeaders):
             neventsperchannel[chan] = 0
             #maxstrsizeperchannel[chan] = 0
         
@@ -207,24 +206,24 @@ class PlexonIO(BaseIO):
                     anaSigs[chan] =  anasig
 
         if lazy:
-            for chan, anaSig in anaSigs.iteritems():
+            for chan, anaSig in iteritems(anaSigs):
                 anaSigs[chan].lazy_shape = ncontinuoussamples[chan]
                 
-            for chan, sptrs in spiketrains.iteritems():
-                for unit, sptr in sptrs.iteritems():
+            for chan, sptrs in iteritems(spiketrains):
+                for unit, sptr in iteritems(sptrs):
                     spiketrains[chan][unit].lazy_shape = nspikecounts[chan][unit]
             
-            for chan, ea in eventarrays.iteritems():
+            for chan, ea in iteritems(eventarrays):
                 ea.lazy_shape = neventsperchannel[chan]
         else:
             ## Step 4: allocating memory if not lazy
             # continuous signal
-            for chan, anaSig in anaSigs.iteritems():
+            for chan, anaSig in iteritems(anaSigs):
                 anaSigs[chan] = anaSig.duplicate_with_new_array(np.zeros((ncontinuoussamples[chan]) , dtype = 'f4')*pq.V, )
             
             # allocating mem for SpikeTrain
-            for chan, sptrs in spiketrains.iteritems():
-                for unit, sptr in sptrs.iteritems():
+            for chan, sptrs in iteritems(spiketrains):
+                for unit, sptr in iteritems(sptrs):
                         new = SpikeTrain(np.zeros((nspikecounts[chan][unit]), dtype='f')*pq.s, t_stop=1e99) # use an enormous value for t_stop for now, put in correct value later
                         new.annotations.update(sptr.annotations)
                         if load_spike_waveform:
@@ -235,7 +234,7 @@ class PlexonIO(BaseIO):
             
             # event
             eventpositions = { }
-            for chan, ea in eventarrays.iteritems():
+            for chan, ea in iteritems(eventarrays):
                 ea.times = np.zeros( neventsperchannel[chan] )*pq.s
                 #ea.labels = zeros( neventsperchannel[chan] , dtype = 'S'+str(neventsperchannel[chan]) )
                 eventpositions[chan]=0
@@ -309,19 +308,19 @@ class PlexonIO(BaseIO):
         
         
         # add AnalogSignal to sgement
-        for k,anaSig in anaSigs.iteritems() :
+        for k,anaSig in iteritems(anaSigs) :
             if anaSig is not None:
                 seg.analogsignals.append(anaSig)
                 
         # add SpikeTrain to sgement
-        for chan, sptrs in spiketrains.iteritems():
-            for unit, sptr in sptrs.iteritems():
+        for chan, sptrs in iteritems(spiketrains):
+            for unit, sptr in iteritems(sptrs):
                 if len(sptr) > 0:
                     sptr.t_stop = sptr.max() # can probably get a better value for this, from the associated AnalogSignal
                 seg.spiketrains.append(sptr)
         
         # add eventarray to segment
-        for chan,ea in  eventarrays.iteritems():
+        for chan,ea in  iteritems(eventarrays):
             seg.eventarrays.append(ea)
         
         create_many_to_one_relationship(seg)

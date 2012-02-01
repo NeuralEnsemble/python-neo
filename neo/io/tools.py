@@ -98,6 +98,11 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
         recordingchannels[ind].recordingchannelgroups.append(rcg)
 
 
-
+def iteritems(D):
+    try:
+        return D.iteritems() # Python 2
+    except AttributeError:
+        return D.items() # Python 3
+    
 
 

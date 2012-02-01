@@ -18,7 +18,7 @@ Author: sgarcia
 
 from .baseio import BaseIO
 from ..core import *
-from .tools import create_many_to_one_relationship
+from .tools import create_many_to_one_relationship, iteritems
 
 import numpy as np
 from numpy import dtype
@@ -218,20 +218,20 @@ class TdtIO(BaseIO):
 
             if not lazy:
                 # Step 2 : allocate memory
-                for code, v in allsig.iteritems():
-                    for channel, anaSig in v.iteritems():
+                for code, v in iteritems(allsig):
+                    for channel, anaSig in iteritems(v):
                         v[channel] = anaSig.duplicate_with_new_array(np.zeros((anaSig.lazy_shape) , dtype = anaSig.lazy_dtype)*pq.V )
                         v[channel].pos = 0
                         
-                for code, v in allevent.iteritems():
-                    for channel, ea in v.iteritems():
+                for code, v in iteritems(allevent):
+                    for channel, ea in iteritems(v):
                         ea.times = np.empty( (ea.lazy_shape)  ) * pq.s
                         ea.labels = np.empty( (ea.lazy_shape), dtype = 'S'+str(ea.maxlabelsize) )
                         ea.pos = 0
                 
-                for code, v in allspiketr.iteritems():
-                    for channel, allsorted in v.iteritems():
-                        for sortcode, sptr in allsorted.iteritems():
+                for code, v in iteritems(allspiketr):
+                    for channel, allsorted in iteritems(v):
+                        for sortcode, sptr in iteritems(allsorted):
                             new = SpikeTrain(np.zeros( (sptr.lazy_shape), dtype = 'f8' ) *pq.s ,
                                                             name = sptr.name,
                                                             t_start = sptr.t_start,
@@ -251,16 +251,16 @@ class TdtIO(BaseIO):
                     tev = open(os.path.join(subdir, tankname+'_'+blockname+'.tev'), 'rb')
                 else:
                     tev = None
-                for code, v in allsig.iteritems():
-                    for channel, anaSig in v.iteritems():
+                for code, v in iteritems(allsig):
+                    for channel, anaSig in iteritems(v):
                         filename = os.path.join(subdir, tankname+'_'+blockname+'_'+anaSig.name+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
                         else:
                             anaSig.fid = tev
-                for code, v in allspiketr.iteritems():
-                    for channel, allsorted in v.iteritems():
-                        for sortcode, sptr in allsorted.iteritems():
+                for code, v in iteritems(allspiketr):
+                    for channel, allsorted in iteritems(v):
+                        for sortcode, sptr in iteritems(allsorted):
                             sptr.fid = tev
 
                 # Step 4 : second loop for copyin chunk of data
@@ -295,18 +295,18 @@ class TdtIO(BaseIO):
                 
             
             # Step 5 : populating segment
-            for code, v in allsig.iteritems():
-                for channel, anaSig in v.iteritems():
+            for code, v in iteritems(allsig):
+                for channel, anaSig in iteritems(v):
                     seg.analogsignals.append( anaSig )
 
-            for code, v in allevent.iteritems():
-                for channel, ea in v.iteritems():
+            for code, v in iteritems(allevent):
+                for channel, ea in iteritems(v):
                     seg.eventarrays.append( ea )
 
 
-            for code, v in allspiketr.iteritems():
-                for channel, allsorted in v.iteritems():
-                    for sortcode, sptr in allsorted.iteritems():
+            for code, v in iteritems(allspiketr):
+                for channel, allsorted in iteritems(v):
+                    for sortcode, sptr in iteritems(allsorted):
                         seg.spiketrains.append( sptr )
         
         create_many_to_one_relationship(bl)

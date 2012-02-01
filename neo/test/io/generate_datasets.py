@@ -7,7 +7,7 @@ Generate datasets for testing
 
 
 from neo.core import *
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
+from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel, iteritems
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -82,7 +82,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
             seg.spiketrains.append(sptr)
     
     if EventArray in supported_objects:
-        for name, labels in event_array_types.iteritems():
+        for name, labels in iteritems(event_array_types):
             ea_size = rand()*np.diff(event_array_size_range)+event_array_size_range[0]
             ea = EventArray(     #name = name,
                                             times = rand(ea_size)*duration,
@@ -91,7 +91,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
             seg.eventarrays.append(ea)
     
     if EpochArray in supported_objects:
-        for name, labels in epoch_array_types.iteritems():
+        for name, labels in iteritems(epoch_array_types):
             t = 0
             times, durations = [ ], [ ]
             while t<duration:

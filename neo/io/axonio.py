@@ -35,7 +35,7 @@ abf files - would be good to cross-check
 
 from .baseio import BaseIO
 from ..core import *
-from .tools import create_many_to_one_relationship
+from .tools import create_many_to_one_relationship, iteritems
 import numpy as np
 import quantities as pq
 
@@ -535,7 +535,7 @@ class AxonIO(BaseIO):
                     # Save last sample index
                     i_last = int(nSam*15625/10**6) # TODO guess for first holding
                     # Go over EpochInfoPerDAC and change the analog signal according to the epochs 
-                    for epochNum,epoch in header['dictEpochInfoPerDAC'][DACNum].iteritems():
+                    for epochNum,epoch in iteritems(header['dictEpochInfoPerDAC'][DACNum]):
                         i_begin = i_last
                         i_end = i_last + epoch['lEpochInitDuration'] + epoch['lEpochDurationInc'] * epiNum 
                         anaSig[i_begin:i_end] = np.ones(len(range(i_end-i_begin)))*pq.Quantity(1, unit)* \
