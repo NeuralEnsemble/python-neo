@@ -133,11 +133,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         
         if hasattr(times, 'dtype') and times.dtype != dtype and not copy:
             raise ValueError("cannot change dtype and return view")
-
+        
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype,
                                   copy=copy)
-        
         # Store attributes
         obj.t_start = pq.Quantity(t_start, units=units)
         obj.t_stop = pq.Quantity(t_stop, units=units)        
@@ -145,6 +144,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         obj.left_sweep = left_sweep
         obj.sampling_rate = sampling_rate
         
+        # fix to force t_start and t_stop to be in same dtype as times origin
+        if hasattr(times, 'dtype') and times.dtype != dtype and obj.t_start.dtype!=times.dtype:
+            obj.t_start = obj.t_start.astype(times.dtype).astype(dtype)
+        if hasattr(times, 'dtype') and times.dtype != dtype and obj.t_stop.dtype!=times.dtype:
+            obj.t_stop = obj.t_stop.astype(times.dtype).astype(dtype)
+            
+
+
         # parents
         obj.segment = None
         obj.unit = None

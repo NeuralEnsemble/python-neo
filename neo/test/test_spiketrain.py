@@ -351,6 +351,15 @@ class TestConstructor(unittest.TestCase):
         if sys.version_info[0] == 2:
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [3,4,11] * pq.ms)
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [0,4,5] * pq.ms)
+    
+    def test__different_dtype_for_t_start_and_array(self):
+        data = numpy.array([0,9.9999999], dtype = numpy.float64) * pq.s
+        #This is OK.
+        st = SpikeTrain(data.astype(numpy.float64), copy=True, t_start=data[0], t_stop=data[1])
+        #This use to bug
+        st = SpikeTrain(data.astype(numpy.float32), copy=True, t_start=data[0], t_stop=data[1])
+        
+    
 
 
 if __name__ == "__main__":
