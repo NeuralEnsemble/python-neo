@@ -9,6 +9,7 @@ import numpy as np
 from ..core import *
 from ..description import one_to_many_relationship, many_to_one_relationship
 
+
 #def finalize_block(block):
 #    populate_RecordingChannel(block)
 #    create_many_to_one_relationship(block)
@@ -51,7 +52,7 @@ def create_many_to_one_relationship(ob):
         sub = getattr(ob, childname.lower()+'s')
         for child in sub:
             # set a link to parent `ob`, of class `classname`
-            if not hasattr(child, classname.lower()):
+            if getattr(child, classname.lower()) is None:
                 setattr(child, classname.lower(), ob)
             # recursively:
             create_many_to_one_relationship(child)

@@ -31,3 +31,5 @@ class EpochArray(BaseNeo):
         self.times = times
         self.durations = durations
         self.labels = labels
+        
+        self.segment =None

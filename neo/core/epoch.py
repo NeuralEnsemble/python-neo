@@ -28,4 +28,6 @@ class Epoch(BaseNeo):
         self.time = time
         self.duration = duration
         self.label = label
+        
+        self.segment = None
 

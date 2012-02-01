@@ -51,5 +51,7 @@ class Segment(BaseNeo):
         self.irregularlysampledsignals = [ ]
         self.spikes = [ ]
         self.spiketrains = [ ]
+        
+        self.block = None
 
 

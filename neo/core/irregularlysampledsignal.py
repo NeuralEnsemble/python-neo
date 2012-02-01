@@ -29,3 +29,7 @@ class IrregularlySampledSignal(BaseNeo):
         
         self.times = times
         self.values = values
+        
+        self.segment = None
+        self.recordingchannel = None
+        

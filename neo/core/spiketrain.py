@@ -144,6 +144,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         obj.waveforms = waveforms
         obj.left_sweep = left_sweep
         obj.sampling_rate = sampling_rate
+        
+        # parents
+        obj.segment = None
+        obj.unit = None
 
         # Error checking (do earlier?)
         check_has_dimensions_time(obj, obj.t_start, obj.t_stop)

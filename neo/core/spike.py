@@ -37,6 +37,9 @@ class Spike(BaseNeo):
         self.waveform = waveform
         self.left_sweep = left_sweep
         self.sampling_rate = sampling_rate
+        
+        self.segment = None
+        self.unit = None
 
     @property
     def duration(self):

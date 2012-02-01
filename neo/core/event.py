@@ -26,3 +26,5 @@ class Event(BaseNeo):
                          description=description, **annotations)
         self.time = time
         self.label = label
+        
+        self.segment =None

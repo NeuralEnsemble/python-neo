@@ -29,6 +29,8 @@ class EventArray(BaseNeo):
                          description=description, **annotations)
         self.times = times
         self.labels = labels
+        
+        self.segment = None
 
     def __repr__(self):
         return "<EventArray: %s>" % ", ".join('%s@%s' % item for item in zip(self.labels, self.times))

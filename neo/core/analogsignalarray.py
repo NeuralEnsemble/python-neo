@@ -47,6 +47,10 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+        
+        obj.segment = None
+        obj.recordingchannelgroup = None
+        
         return obj
 
     def __getslice__(self, i, j):

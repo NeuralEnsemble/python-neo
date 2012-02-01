@@ -56,6 +56,10 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+        
+        obj.segment = None
+        obj.recordingchannel = None
+        
         return obj
     
     def __init__(self, signal, units=None, dtype=None, copy=True, 
@@ -264,3 +268,5 @@ class AnalogSignal(BaseAnalogSignal):
       == != + * /
     """
     pass
+    
+

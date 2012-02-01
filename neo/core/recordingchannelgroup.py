@@ -95,4 +95,6 @@ class RecordingChannelGroup(BaseNeo):
         self.units =[ ]
         # Many to many relationship
         self.recordingchannels = [ ]
+        
+        self.block = None
 

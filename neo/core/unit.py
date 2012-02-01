@@ -46,6 +46,8 @@ class Unit(BaseNeo):
         self.spiketrains = [ ]
         self.spikes = [ ]
         
+        self.recordingchannelgroup = None
+        
 
 
 
