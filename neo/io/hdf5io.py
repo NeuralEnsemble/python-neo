@@ -5,12 +5,11 @@ This is the implementation of the NEO IO for the HDF5 files.
 http://neuralensemble.org/
 
 IO dependencies:
- - NEO.core
- - BaseIO
+ - NEO
  - types
  - warnings
  - numpy
- - pytables
+ - pytables >= 2.2
  - quantities
 
 
@@ -202,8 +201,6 @@ from ..description import *
 from .baseio import BaseIO
 from .tools import create_many_to_one_relationship
 from tables import NoSuchNodeError as NSNE
-import types
-import warnings
 import tables as tb
 import numpy as np
 import quantities as pq
