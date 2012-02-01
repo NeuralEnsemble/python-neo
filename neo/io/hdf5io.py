@@ -206,6 +206,14 @@ import numpy as np
 import quantities as pq
 import logging
 
+import tables
+
+#version checking
+from distutils import version
+if version.LooseVersion(tables.__version__) < '2.2':
+    raise ImportError("your pytables version is too old to support NeoHdf5IO, you need at least 2.2 you have %s"%tables.__version__)
+
+
 """
 SETTINGS:
 filename:       the full path to the HDF5 file.
