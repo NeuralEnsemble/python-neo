@@ -21,9 +21,10 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from md5 import md5
+from hashlib import md5
 import datetime
 import os
+import logging
 
 from neo.core import *
 from neo.test.tools import assert_neo_object_is_compliant, assert_objects_equivalent
@@ -84,7 +85,7 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
             if not _follow_links and implicit_relationship.has_key(obj_type):
                 for i in implicit_relationship[obj_type]:
                     if not i in rels: 
-                        print "LOOK HERE!!!" + str(obj_type)
+                        logging.debug("LOOK HERE!!!" + str(obj_type))
                     rels.remove(i)
             for child in rels:
                 setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
@@ -114,7 +115,7 @@ class HDF5Commontests(BaseTestIO, unittest.TestCase):
     files_to_test = [  ]
     files_to_download =  [   ]
     
-    #@unittest.skipUnless(have_hdf5, "requires PyTables")
+    @unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):
         BaseTestIO.setUp(self)
 
