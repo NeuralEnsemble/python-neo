@@ -59,7 +59,7 @@ class NeoMatlabIO(BaseIO):
       * classes that inherits Quantity (AnalogSIgnal, SpikeTrain, ...) in neo will
          have 2 fields (array and units) in matlab struct.
          Ex: AnalogSignal( [1., 2., 3.], 'V') in neo will be
-          anasig.array = [1. 2. 3] and anasig.units = 'V' in matlab
+         anasig.array = [1. 2. 3] and anasig.units = 'V' in matlab
     
     1 - **Senario 1: create data in matlab and read them in neo**
       
