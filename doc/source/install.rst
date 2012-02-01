@@ -8,12 +8,12 @@ system.
 Dependencies
 ============
   
-    * Python >= 2.6
+    * Python_ >= 2.6
     * numpy_ >= 1.3.0
     * quantities_ >= 0.9.0
 
 Certain IO modules have additional dependencies. If these are not satisfied,
-Neo will still install but the IO module that uses them will fail on loading.
+neo will still install but the IO module that uses them will fail on loading.
 
 .. todo:: list dependencies for individual IO modules
 
@@ -59,7 +59,7 @@ depending on which version of Python you are using.
 Installing from source
 ======================
 
-To install the latest version of Neo from the Subversion repository::
+To install the latest version of neo from the Subversion repository::
 
     svn co https://neuralensemble.org/svn/neo/branches/neo0.2 neo_0.2
     cd neo_0.2
@@ -68,6 +68,7 @@ To install the latest version of Neo from the Subversion repository::
 .. todo:: update this once we release 0.2 and start developing in trunk
 
 
+.. _`Python`: http://python.org/
 .. _`numpy`: http://numpy.scipy.org/
 .. _`quantities`: http://pypi.python.org/pypi/quantities
 .. _`pip`: http://pypi.python.org/pypi/pip
