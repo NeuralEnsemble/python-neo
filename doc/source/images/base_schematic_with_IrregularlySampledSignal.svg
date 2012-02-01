@@ -18,7 +18,7 @@
    sodipodi:docname="base_schematic.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    version="1.0"
-   inkscape:export-filename="/home/jaillet.f/sync_work/code/neo_svn/neo/trunk/doc/source/images/base_schematic.png"
+   inkscape:export-filename="/home/jaillet/Documents/code/NeoSVN/neo/branches/neo0.2/doc/source/images/base_schematic.png"
    inkscape:export-xdpi="100"
    inkscape:export-ydpi="100">
   <sodipodi:namedview
@@ -30,14 +30,14 @@
      inkscape:pageshadow="2"
      inkscape:zoom="0.80279014"
      inkscape:cx="403.6858"
-     inkscape:cy="159.69265"
+     inkscape:cy="162.18396"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1765"
+     inkscape:window-width="1766"
      inkscape:window-height="1163"
-     inkscape:window-x="80"
-     inkscape:window-y="49"
+     inkscape:window-x="1287"
+     inkscape:window-y="5"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:window-maximized="0" />
@@ -3699,6 +3699,22 @@
          id="tspan12297-8"
          sodipodi:role="line">AnalogSignalArray</tspan></text>
     <text
+       id="text12295-7-4"
+       y="-160.12979"
+       x="122.04489"
+       style="font-size:13.9094429px;font-style:normal;font-weight:normal;fill:#000080;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       xml:space="preserve"><tspan
+         y="-160.12979"
+         x="122.04489"
+         id="tspan12297-8-5"
+         sodipodi:role="line">IrregularlySampledSignal</tspan></text>
+    <path
+       id="path5262"
+       d="m 72,299.1807 5.58,0 5.58,0 5.58,0 5.58,0 5.58,0 5.58,0 5.58,-6.49131 5.58,0 5.58,0 5.58,0 5.58,-9.17618 5.58,-12.79951 5.58,0 5.58,-17.25798 5.58,-21.9093 5.58,-25.46211 5.58,-26.80938 5.58,-46.15479 5.58,-13.80437 5.58,-6.47113 5.58,14.63575 5.58,31.00033 5.58,30.20777 5.58,12.17909 5.58,0.0169 5.58,7.5843 5.58,2.38625 5.58,-1.61599 5.58,-63.27313 5.58,-43.07882 5.58,9.42381 5.58,15.7757 5.58,30.65978 5.58,6.41728 5.58,55.74211 5.58,-97.73918 5.58,-50.403362 5.58,70.019712 5.58,126.56894 5.58,-7.91776 5.58,-50.99126 5.58,65.15371 5.58,-64.0654 5.58,-98.72375 5.58,111.50689 5.58,-8.16682 5.58,-116.378164 5.58,283.377204 5.58,-167.59912 5.58,-57.07383 5.58,40.94041 5.58,124.92077 5.58,-241.440361 5.58,250.006861 5.58,-138.084 5.58,10.38928 5.58,-84.68209 5.58,131.93312 5.58,-109.47494 5.58,-58.354293 5.58,142.623793 5.58,-94.84815 5.58,-71.930213 5.58,147.493293 5.58,-1.94027 5.58,-14.46509 5.58,-28.70446 5.58,16.29718 5.58,32.57558 5.58,-49.33471 5.58,176.52044 5.58,-97.71825 5.58,-96.85304 5.58,163.83965 5.58,-182.74892 5.58,180.15793 5.58,-74.99251 5.58,-42.46786 5.58,62.58263"
+       clip-path="url(#p50431ccdcb28178602d99d9270004dde-48)"
+       style="fill:none;stroke:#000080;stroke-width:6.2600131;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none"
+       transform="matrix(0.29752118,0,0,0.08576925,295.13852,-169.86859)" />
+    <text
        xml:space="preserve"
        style="font-size:15.43365383px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-indent:0;text-align:end;text-decoration:none;line-height:normal;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:end;fill:#00aad4;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate;font-family:Bitstream Vera Sans;-inkscape-font-specification:Bitstream Vera Sans"
        x="278.64908"
@@ -3754,6 +3770,11 @@
        d="m 281.44468,-50.400623 32.71986,-0.513821"
        id="path3376-8-4-4-3"
        sodipodi:nodetypes="cc" />
+    <path
+       sodipodi:nodetypes="cc"
+       id="path12293-8"
+       d="m 299.48726,-164.01522 c 22.28958,0.1741 18.79968,5.02794 40.69144,8.69428"
+       style="fill:none;stroke:#000080;stroke-width:1;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;marker-end:url(#Arrow1LendrB);visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
     <path
        style="fill:none;stroke:#4d0089;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend-1CbS)"
        d="m 291.54042,184.59044 c 2.25775,-0.12975 12.20472,0.3428 16.09739,0.36876 9.58,0.3098 14.13358,6.7723 18.1265,11.63379 l 11.33923,13.04714"

@@ -13,7 +13,7 @@ Dependencies
     * quantities_ >= 0.9.0
 
 Certain IO modules have additional dependencies. If these are not satisfied,
-neo will still install but the IO module that uses them will fail on loading:
+Neo will still install but the IO module that uses them will fail on loading:
 
    * scipy >= 0.8 for NeoMatlabIO
    * pytables >= 2.2 for Hdf5IO
@@ -61,7 +61,7 @@ depending on which version of Python you are using.
 Installing from source
 ======================
 
-To install the latest version of neo from the Subversion repository::
+To install the latest version of Neo from the Subversion repository::
 
     svn co https://neuralensemble.org/svn/neo/trunk neo_trunk
     cd neo_trunk
