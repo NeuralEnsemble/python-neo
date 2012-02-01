@@ -7,23 +7,20 @@ Neo core
 Introduction
 ============
 
-Objects in neo represent neural data and collections of data. Neo objects fall
+Objects in Neo represent neural data and collections of data. Neo objects fall
 into three categories: data objects, container objects and grouping objects.
 
 Data objects
 ------------
 
 These objects directly represent data as arrays of numerical values with
-associated metadata (e.g. units, sampling frequency, etc.)
+associated metadata (units, sampling frequency, etc.).
 
 :py:class:`AnalogSignal`:
-    A regular sampling of a continuous signal.
+    A regular sampling of a continuous, analog signal.
 
 :py:class:`AnalogSignalArray`:
-    A regular sampling of a multichannel continuous signal. This representation (as a 2D NumPy array) may be more efficient for subsequent analysis than the equivalent list of individual :py:class:`AnalogSignal` objects.
-
-:py:class:`IrregularlySampledSignal`:
-    An irregular sampling of a continuous signal.
+    A regular sampling of a multichannel continuous analog signal. This representation (as a 2D NumPy array) may be more efficient for subsequent analysis than the equivalent list of individual :py:class:`AnalogSignal` objects.
 
 :py:class:`Spike`:
     One action potential characterized by its time and waveform.
@@ -43,7 +40,7 @@ Container objects
 There is a simple hierarchy of containers:
 
 :py:class:`Segment`:
-    A container for heterogeneous discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time. A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc., depending on the experimental context. May contain any of the data objects.
+    A container for heterogeneous discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time. A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc., depending on the experimental context. May contain any of the data objects together with :class:`RecordingChannel` and :class:`Unit` objects.
 
 :py:class:`Block`:
     The top-level container gathering all of the data, discrete and continuous, for a given recording session. Contains :class:`Segment` and :class:`RecordingChannelGroup` objects.
@@ -57,30 +54,31 @@ membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
 :py:class:`RecordingChannel`:
-    A physical location identifying the recorded data (for example the position of the electrode).
-    Useful for linking objects that come from the same logical and/or physical channel inside a :py:class:`Block` possibly across  several :py:class:`Segment` .
+    Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain`
+    objects that come from the same logical and/or physical channel inside a :py:class:`Block`, possibly across  several :py:class:`Segment` objects.
 
 :py:class:`RecordingChannelGroup`:
     A group for associated :py:class:`RecordingChannel` objects. This has several possible uses: 
-      * A first one is for linking several :py:class:`AnalogSignalArray` across several  :py:class:`Segment` inside a  :py:class:`Block`.
-      * A second one is for multielectrode arrays, where spikes may be recorded on more than one recording channel, 
+      * for linking several :py:class:`AnalogSignalArray` objects across several  :py:class:`Segment` objects inside a  :py:class:`Block`.
+      * for multielectrode arrays, where spikes may be recorded on more than one recording channel, 
         and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`Unit` with the
-        group of recording channels on which it was calculated (example: a tetrode).
-      * A third use and flexible use is for grouping several :py:class:`RecordingChannel`. There are many case for that.
-        For instance for intracellular recording, it is common to record both membrane potentials and currents at the same time, 
-        so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded. For Multi Electrode Array,
-        :py:class:`RecordingChannelGroup` is used to gather all :py:class:`RecordingChannel` of the same MEA.
+        group of recording channels from which it was calculated.
+      * for grouping several :py:class:`RecordingChannel` objects. There are many use cases for this.
+        For instance, for intracellular recording, it is common to record both membrane potentials and currents at the same time, 
+        so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded. For multielectrode arrays,
+        :py:class:`RecordingChannelGroup` is used to gather all :py:class:`RecordingChannel` objects of the same array.
         
 :py:class:`Unit`:
     A Unit gathers all the :class:`SpikeTrain` objects within a common :class:`Block`, possibly across several
     Segments, that have been emitted by the same cell. 
     A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from which it was detected.
-    This replaces the :class:`Neuron` class in the previous version of neo (v0.1).
+    This replaces the :class:`Neuron` class in the previous version of Neo (v0.1).
 
 .. image:: images/base_schematic.png
    :height: 500 px
    :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
    :align: center
+
 
 Relationships between objects
 =============================
@@ -193,17 +191,17 @@ See :ref:`use_cases_page` for more examples of how the different objects may be 
 .. _neo_diagram:
 
 Neo diagram
-========
+===========
 
 Object:
-  * With a star = hinerits Quantities
+  * With a star = inherits from :class:`Quantity`
 Attributes:
-  * In red = necessary
+  * In red = required
   * In white = recommended
 Relationship:
   * In cyan = one to many
   * In magenta = many to many
-  * In yellow = properties (deducted from other relationship)
+  * In yellow = properties (deduced from other relationships)
 
 
 .. image:: images/simple_generated_diagram.png
@@ -218,7 +216,7 @@ For more details, see the :doc:`api_reference`.
 Inheritance
 ===========
 
-Some neo objects (:py:class:`AnalogSignal`, :py:class:`SpikeTrain`, :py:class:`AnalogSignalArray`) inherit from :py:class:`Quantity`, which in turn inherits from NumPy :py:class:`ndarray`. This means that a neo :py:class:`AnalogSignal` actually is also a :py:class:`Quantity` and an array, giving you access to all of the methods available for those objects.
+Some Neo objects (:py:class:`AnalogSignal`, :py:class:`SpikeTrain`, :py:class:`AnalogSignalArray`) inherit from :py:class:`Quantity`, which in turn inherits from NumPy :py:class:`ndarray`. This means that a Neo :py:class:`AnalogSignal` actually is also a :py:class:`Quantity` and an array, giving you access to all of the methods available for those objects.
 
 For example, you can pass a :py:class:`SpikeTrain` directly to the :py:func:`numpy.histogram` function, or an :py:class:`AnalogSignal` directly to the :py:func:`numpy.std` function.
 
@@ -230,12 +228,12 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the neo object model. A primary goal of the neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
 
 Example: SpikeTrain
 -------------------
 
-:py:class:`SpikeTrain` is a :py:class:`Quantity`, which is a NumPy array with dimensionality. The spike times are a required attribute, because the dimensionality of the spike times determines the way in which the :py:class:`Quantity` is constructed.
+:py:class:`SpikeTrain` is a :py:class:`Quantity`, which is a NumPy array containing values with physical dimensions. The spike times are a required attribute, because the dimensionality of the spike times determines the way in which the :py:class:`Quantity` is constructed.
 
 Here is how you initialize a :py:class:`SpikeTrain` with required arguments::
 
@@ -260,8 +258,6 @@ If it is not specified, :attr:`t_start` is assumed to be zero, but another value
 
 Recommended attributes must be specified as keyword arguments, not positional arguments.
 
-.. note:: Note for developers: A glance at the underlying code reveals the implementation distinction between required and recommended attributes. Required attributes are set in :py:meth:`object.__new__`, while recommended attributes are set in :py:meth:`object.__init__`
-
 
 Finally, let's consider "additional arguments". These are the ones you define for your experiment::
 
@@ -269,14 +265,14 @@ Finally, let's consider "additional arguments". These are the ones you define fo
     >>> print(st.annotations)
     {'rat_name': 'Fred'}
     
-Because ``rat_name`` is not part of the neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.
+Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.
 
 Annotations
 -----------
 
 As well as adding annotations as "additional" arguments when an object is
 constructed, objects may be annotated using the :meth:`annotate` method
-possessed by all neo core objects, e.g.::
+possessed by all Neo core objects, e.g.::
 
     >>> seg = Segment()
     >>> seg.annotate(stimulus="step pulse", amplitude=10*nA)
@@ -286,9 +282,7 @@ possessed by all neo core objects, e.g.::
 Since annotations may be written to a file or database, there are some
 limitations on the data types of annotations: they must be "simple" types or
 containers (lists, dicts, NumPy arrays) of simple types, where the simple types
-are ``integer``, ``float``, ``string``, ``date``, ``time``, ``datetime``, 
-``numpy.integer``, ``numpy.floating``, ``numpy.complex``.
+are ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and
+``datetime``.
 
 See :ref:`specific_annotations`
-
-.. todo:: Check what we do with page specific_annotations

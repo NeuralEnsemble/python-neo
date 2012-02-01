@@ -13,6 +13,7 @@ Multi segment recording for AnalogSIgnal
 
 Here the typical example to illustrate a multi segment recording for signal.
 There 1 Block composed by:
+
   * 3 Segment representing for instance trials.
   * 1 probe (RecordingChannelGroup) with 8 RecordingChannel
 
