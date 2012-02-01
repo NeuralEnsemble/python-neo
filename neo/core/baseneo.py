@@ -13,8 +13,8 @@ except NameError:
     basestring = str
 
 ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
-                            type(None), numpy.integer, numpy.floating)
-                            # allow complex numbers?
+                            type(None), numpy.integer, numpy.floating, numpy.complex,)
+                            
 
 
 def _check_annotations(value):
