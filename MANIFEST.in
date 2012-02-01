@@ -1,0 +1,4 @@
+prune drafts
+include examples *.py
+exclude doc/source/images/*.svg
+exclude doc/source/images/*.dia
