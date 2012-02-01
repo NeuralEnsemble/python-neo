@@ -26,7 +26,7 @@ import sys
 import os
 import struct
 
-PY3K = (sys.version_info.major == 3)
+PY3K = (sys.version_info[0] == 3)
 
 
 class WinEdrIO(BaseIO):

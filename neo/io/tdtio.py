@@ -27,7 +27,7 @@ import quantities as pq
 import struct
 import os, sys
 
-PY3K = (sys.version_info.major == 3)
+PY3K = (sys.version_info[0] == 3)
 
 
 class TdtIO(BaseIO):
