@@ -17,18 +17,7 @@ from .tools import create_many_to_one_relationship
 
 import numpy as np
 import quantities as pq
-
-
 import os
-
-
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-    file = io.BufferedReader
-
 
 class RawBinarySignalIO(BaseIO):
     """
@@ -131,7 +120,7 @@ class RawBinarySignalIO(BaseIO):
         unit = pq.Quantity(1, unit)
 
         if not lazy:
-            f = file(self.filename , 'rb')
+            f = open(self.filename , 'rb')
             buf = f.read()
             f.close()
             sig = np.fromstring(buf[bytesoffset:], dtype = dtype )
@@ -193,7 +182,7 @@ class RawBinarySignalIO(BaseIO):
             sigs = sigs.astype(dtype)
         else:
             sigs = sigs.astype(dtype)
-        f = file(self.filename , 'wb')
+        f = open(self.filename , 'wb')
         f.write( sigs.tostring() )
         f.close()
 

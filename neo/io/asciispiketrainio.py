@@ -21,14 +21,6 @@ import os
 from numpy import newaxis
 
 
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-    file = io.BufferedReader
-
-
 class AsciiSpikeTrainIO(BaseIO):
     """
 
@@ -105,7 +97,7 @@ class AsciiSpikeTrainIO(BaseIO):
         if not cascade:
             return seg
         
-        f = file(self.filename, 'Ur')
+        f = open(self.filename, 'Ur')
         for i,line in enumerate(f) :
             all = line[:-1].split(delimiter)
             if all[-1] == '': all = all[:-1]
@@ -143,7 +135,7 @@ class AsciiSpikeTrainIO(BaseIO):
             
         """
         
-        f = file(self.filename, 'w')        
+        f = open(self.filename, 'w')        
         for s,sptr in enumerate(segment.spiketrains) :
             for ts in sptr :
                 f.write('%f%s'% (ts , delimiter) )

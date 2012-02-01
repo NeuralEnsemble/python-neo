@@ -20,7 +20,7 @@ Author: sgarcia
 
 """
 
-from baseio import BaseIO
+from .baseio import BaseIO
 from ..core import *
 from .tools import create_many_to_one_relationship
 import numpy as np

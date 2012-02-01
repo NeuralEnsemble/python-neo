@@ -22,14 +22,6 @@ import os
 from numpy import newaxis
 
 
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-    file = io.BufferedReader
-
-
 class AsciiSignalIO(BaseIO):
     """
 
@@ -157,7 +149,7 @@ class AsciiSignalIO(BaseIO):
             tab = tab[skiprows:]
             sig = np.array( tab , dtype = 'f')
         elif method == 'homemade' :
-            fid = file(self.filename,'rU')
+            fid = open(self.filename,'rU')
             for l in range(skiprows):
                 fid.readline()
             tab = [ ]
