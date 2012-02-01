@@ -13,7 +13,8 @@ except NameError:
     basestring = str
 
 ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
-                            type(None), numpy.integer, numpy.floating, numpy.complex,)
+                            type(None), numpy.integer, numpy.floating,
+                            numpy.complex, bytes)
                             
 
 
@@ -30,7 +31,7 @@ def _check_annotations(value):
         for element in value:
             _check_annotations(element)
     elif isinstance(value, numpy.ndarray):
-        if value.dtype not in (numpy.integer, numpy.floating) \
+        if value.dtype not in (numpy.integer, numpy.floating, numpy.complex) \
                                          and value.dtype.type != numpy.string_:
            raise ValueError("Invalid annotation. NumPy arrays with dtype %s are not allowed" % value.dtype)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
