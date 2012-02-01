@@ -520,7 +520,7 @@ class NeoHdf5IO(BaseIO):
         # load relationships
         if cascade:
             if one_to_many_relationship.has_key(obj_type):
-                rels = one_to_many_relationship[obj_type]
+                rels = list(one_to_many_relationship[obj_type])
                 if obj_type == "RecordingChannelGroup":
                     rels += many_to_many_relationship[obj_type]
                 for child in rels: # 'child' is like 'Segment', 'Event' etc.
