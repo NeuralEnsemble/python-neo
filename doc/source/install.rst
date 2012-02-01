@@ -13,9 +13,11 @@ Dependencies
     * quantities_ >= 0.9.0
 
 Certain IO modules have additional dependencies. If these are not satisfied,
-neo will still install but the IO module that uses them will fail on loading.
+neo will still install but the IO module that uses them will fail on loading:
 
-.. todo:: list dependencies for individual IO modules
+   * scipy >= 0.8 for NeoMatlabIO
+   * pytables >= 2.2 for Hdf5IO
+
 
 For Debian/Ubuntu, you can install these using::
 
