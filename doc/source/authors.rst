@@ -17,6 +17,7 @@ and may not be the current affiliation of a contributor.
 * Florent Jaillet [6]
 * Philipp Rautenberg [5]
 * Thomas Wachtler [5]
+* Cyril Dejean [7]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France 
@@ -24,6 +25,6 @@ and may not be the current affiliation of a contributor.
 4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France 
 5. G-Node, Ludwig-Maximilians-Universität, Munich, Germany 
 6. Institut de Neurosciences de la Timone, CNRS UMR 7289 - Université d'Aix-Marseille, Marseille, France
-
+7. Centre de Neurosciences Integratives et Cignitives, UMR 5228 - CNRS - Université Bordeaux I - Université Bordeaux II
 
 If I've somehow missed you off the list I'm very sorry - please let us know.
