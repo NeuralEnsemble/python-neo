@@ -182,9 +182,79 @@ blending all units:
 
 
 .. Spike sorting
+Spike sorting is the process of detecting and classifying high-frequency
+deflections ("spikes") on a group of physically nearby recording channels.
 
+<<<<<<< .mine
+For example, let's say you have defined a RecordingChannelGroup for a tetrode
+containing 4 separate channels. Here is an example showing (with fake data)
+how you could iterate over the contained signals and extract spike times.
+(Of course in reality you would use a more sophisticated algorithm.)
+=======
 .. EEG
+>>>>>>> .r447
 
+<<<<<<< .mine
+.. doctest::
+
+    # generate some fake data
+    rcg = RecordingChannelGroup()
+    for n in range(4):
+        rcg.recordingchannels.append(neo.RecordingChannel())
+        rcg.recordingchannels[n].analogsignals.append(
+            AnalogSignal([.1, -2.0, .1, -.1, -.1, -3.0, .1, .1], 
+                sampling_rate=1000*Hz, units='V'))
+
+    # extract spike trains from each channel
+    st_list = []
+    for n in range(len(rcg.recordingchannels[0].analogsignals)):
+        sigarray = np.array(
+            [rcg.recordingchannels[m].analogsignals[n] for m in range(4)])
+        # use a simple threshhold detector
+        spike_mask = np.where(np.min(sigarray, axis=0) < -1.0 * pq.V)[0]
+        
+        # create a spike train
+        anasig = rcg.recordingchannels[m].analogsignals[n]
+        spike_times = anasig.times[spike_mask]
+        st = neo.SpikeTrain(spike_times, t_start=anasig.t_start,
+            anasig.t_stop)
+        
+        # remember the spike waveforms
+        wf_list = []
+        for spike_idx in np.nonzero(spike_mask)[0]:
+            wf_list.append(sigarray[:, spike_idx-1:spike_idx+2])
+        st.waveforms = np.array(wf_list)
+        
+        st_list.append(st)
+
+At this point, we have a list of spiketrain objects. We could simply create
+a single Unit object, assign all spike trains to it, and then assign the
+Unit to the group on which we detected it.
+
+.. doctest::
+    
+    u = Unit()
+    u.spiketrains = st_list
+    rcg.units.append(u)
+
+Now the recording channel group (tetrode) contains a list of analogsignals,
+and a single Unit object containing all of the detected spiketrains from those
+signals.
+
+Further processing could assign each of the detected spikes to an independent
+source, a putative single neuron. (This processing is outside the scope of
+Neo. There are many open-source toolboxes to do it, for instance our sister
+project OpenElectrophy.)
+
+In that case we would create a separate Unit for each cluster, assign its
+spiketrains to it, and then store all the units in the original
+recording channel group.
+
+
+EEG
+===
+=======
 .. Network simulations
+>>>>>>> .r447
 
 
