@@ -186,7 +186,7 @@ Note that because neurons are sorted from groups of channels in this situation, 
 There are some shortcuts for IO writers to automatically create this structure based on 'channel_indexes' entries in the annotations for each spiketrain.
 
 
-See :ref:`use_cases_page` for more examples of how the different objects may be used.
+See :doc:`usecases` for more examples of how the different objects may be used.
 
 .. _neo_diagram:
 

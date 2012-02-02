@@ -93,10 +93,10 @@ AsciiSpikeTrainIO  Yes      Yes
 AxonIO             Yes      No
 BlackrockIO        Yes      No
 ElanIO             Yes      No
-HDF5IO             ?        ?
-KlustakwikIO       ?        ?
+HDF5IO             Yes      No
+KlustakwikIO       Yes      No
 MicromedIO         Yes      No
-NeoMatlabIO        ?        ?
+NeoMatlabIO        Yes      Yes
 NeuroExplorerIO    Yes      No
 PlexonIO           Yes      No
 PyNNIO             Yes      Yes
