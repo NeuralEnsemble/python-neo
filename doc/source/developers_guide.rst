@@ -207,7 +207,7 @@ To upload the package to `PyPI`_ (currently Samuel Garcia and Andrew Davison
 have the necessary permissions to do this)::
 
     $ python setup.py sdist upload
-    $ python setup.py sdist upload_docs
+    $ python setup.py upload_docs
 
 .. I HAVEN'T TESTED THE upload_docs COMMAND YET
 
