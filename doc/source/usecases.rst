@@ -181,20 +181,17 @@ blending all units:
         plt.title("PSTH blend of tetrode  %s" % rcg.name)
 
 
-.. Spike sorting
+Spike sorting
+=============
+
 Spike sorting is the process of detecting and classifying high-frequency
 deflections ("spikes") on a group of physically nearby recording channels.
 
-<<<<<<< .mine
 For example, let's say you have defined a RecordingChannelGroup for a tetrode
 containing 4 separate channels. Here is an example showing (with fake data)
 how you could iterate over the contained signals and extract spike times.
 (Of course in reality you would use a more sophisticated algorithm.)
-=======
-.. EEG
->>>>>>> .r447
 
-<<<<<<< .mine
 .. doctest::
 
     # generate some fake data
@@ -251,10 +248,9 @@ spiketrains to it, and then store all the units in the original
 recording channel group.
 
 
-EEG
-===
-=======
+
+.. EEG
+
 .. Network simulations
->>>>>>> .r447
 
 
