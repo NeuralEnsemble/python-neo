@@ -26,16 +26,14 @@ Neo will still install but the IO module that uses them will fail on loading:
    * scipy >= 0.8 for NeoMatlabIO
    * pytables >= 2.2 for Hdf5IO
 
-For scipy  on Debian testing/Ubuntu, you can install these using::
+For SciPy  on Debian testing/Ubuntu, you can install these using::
 
     $ apt-get install python-scipy
 
-
-For pytables version 2.2 is a bit more complicated::
+For PyTables version 2.2::
 
     $ apt-get install libhdf5-serial-dev python-numexpr cython
     $ pip install tables
-
 
 
 Installing from the Python Package Index
@@ -55,7 +53,7 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/N/neo/neo-0.2.0.tar.gz
+    http://pypi.python.org/packages/source/n/neo/neo-0.2.0.tar.gz
 
 Then::
 
@@ -69,6 +67,7 @@ or::
     
 depending on which version of Python you are using.
 
+
 Installing from source
 ======================
 
@@ -77,6 +76,37 @@ To install the latest version of Neo from the Subversion repository::
     svn co https://neuralensemble.org/svn/neo/trunk neo_trunk
     cd neo_trunk
     python setup.py install
+
+
+Python 3 support
+================
+
+:mod:`neo.core` is fully compatible with Python 3, but only some of the IO
+modules support it, as shown in the table below:
+
+================== ======== ========
+Module             Python 2 Python 3
+================== ======== ========
+AlphaOmegaIO       Yes      No
+AsciiSignalIO      Yes      Yes
+AsciiSpikeTrainIO  Yes      Yes
+AxonIO             Yes      No
+BlackrockIO        Yes      No
+ElanIO             Yes      No
+HDF5IO             ?        ?
+KlustakwikIO       ?        ?
+MicromedIO         Yes      No
+NeoMatlabIO        ?        ?
+NeuroExplorerIO    Yes      No
+PlexonIO           Yes      No
+PyNNIO             Yes      Yes
+RawBinarySignalIO  Yes      Yes
+Spike2IO           Yes      Yes
+TdtIO              Yes      No
+WinEdrIO           Yes      Yes
+WinWcpIO           Yes      Yes
+================== ======== ========
+
 
 
 .. _`Python`: http://python.org/

@@ -181,15 +181,10 @@ blending all units:
         plt.title("PSTH blend of tetrode  %s" % rcg.name)
 
 
-Spike sorting
-=============
+.. Spike sorting
 
+.. EEG
 
-EEG
-===
+.. Network simulations
 
-
-
-Network simulations
-===================
 

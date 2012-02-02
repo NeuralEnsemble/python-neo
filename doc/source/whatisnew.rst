@@ -14,12 +14,5 @@ New features compared to neo 0.1:
  * better tests
 
 
-More information here:
-
-.. toctree::
-   :maxdepth: 1
-   
-   gif2011workshop
-
 
 .. _quantities: http://pypi.python.org/pypi/quantities

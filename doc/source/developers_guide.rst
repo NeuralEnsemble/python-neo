@@ -56,12 +56,12 @@ We use the Subversion version control system. To get a copy of the latest
 development version::
 
     $ cd /some/directory
-    $ svn checkout https://neuralensemble.org/svn/neo/branches/neo0.2
+    $ svn checkout https://neuralensemble.org/svn/neo/trunk neo_trunk
     
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
-    $ cd neo0.2
+    $ cd neo_trunk
     $ python setup.py install
     $ python3 setup.py install
 
@@ -69,10 +69,11 @@ You can do this either by installing Neo::
 changes to the code) *or* by creating symbolic links from somewhere on your
 PYTHONPATH, for example::
 
-    $ ln -s neo0.2/neo
+    $ ln -s neo_trunk/neo
     $ export PYTHONPATH=/some/directory:${PYTHONPATH}
 
-An alternate solution is to install neo with *develop* option, this avoid to install again for any changes in neo code::
+An alternate solution is to install Neo with the *develop* option, this avoids
+reinstalling when there are changes in the code::
 
     $ sudo python setup.py develop
 
@@ -108,12 +109,6 @@ To run tests from an individual file::
     $ python3 test_analogsignal.py
 
 
-Using tox
----------
-
-.. todo:: TODO
-
-
 Writing tests
 -------------
 
@@ -133,10 +128,10 @@ Working on the documentation
 The documentation is written in `reStructuredText`_, using the `Sphinx`_
 documentation system. To build the documentation::
 
-    $ cd neo0.2/doc
+    $ cd neo_trunk/doc
     $ make html
     
-Then open `some/directory/neo0.2/doc/build/html/index.html` in your browser.
+Then open `some/directory/neo_trunk/doc/build/html/index.html` in your browser.
 
 Committing your changes
 -----------------------
@@ -171,9 +166,7 @@ Python 3
 
 Neo core should work with both recent versions of Python 2 (versions 2.6 and 2.7)
 and Python 3. Neo IO modules should ideally work with both Python 2 and 3, but
-certain modules may only work with one or the other.
-
-.. PUT LIST HERE
+certain modules may only work with one or the other (see :doc:install).
 
 So far, we have managed to write code that works with both Python 2 and 3.
 Mainly this involves avoiding the ``print`` statement (use ``logging.info``
@@ -219,6 +212,10 @@ have the necessary permissions to do this)::
 .. I HAVEN'T TESTED THE upload_docs COMMAND YET
 
 .. should we also distribute via software.incf.org
+
+Finally, tag the release in the Subversion repository::
+
+    $ svn cp https://neuralensemble.org/svn/neo/trunk https://neuralensemble.org/svn/neo/tags/<version>
 
 
 If you want to develop your own IO module
