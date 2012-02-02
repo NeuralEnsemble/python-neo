@@ -418,7 +418,7 @@ class NeoHdf5IO(BaseIO):
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         if one_to_many_relationship.has_key(obj_type) and cascade:
-            rels = one_to_many_relationship[obj_type]
+            rels = list(one_to_many_relationship[obj_type])
             if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_relationship[obj_type]
             for child_name in rels: # child_name like "Segment", "Event" etc.
