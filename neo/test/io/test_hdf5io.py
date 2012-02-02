@@ -215,6 +215,25 @@ class hdf5ioTest: # inherit this class from unittest.TestCase when ready
         # update/removal of relations b/w RC and AS which are/not are in the 
         # same segment
 
+def test_store_empty_spike_train():
+        spiketrain0 = SpikeTrain([], t_start=0.0, t_stop=100.0, units="ms")
+        spiketrain1 = SpikeTrain([23.4, 45.6, 67.8], t_start=0.0, t_stop=100.0, units="ms")
+        segment = Segment(name="a_segment")
+        segment.spiketrains.append(spiketrain0)
+        segment.spiketrains.append(spiketrain1)
+        block = Block(name="a_block")
+        block.segments.append(segment)
+        iom = NeoHdf5IO(filename="test987.h5")
+        iom.save(block)
+        iom.close()
+        
+        iom = NeoHdf5IO(filename="test987.h5")
+        block1 = iom.get("/Block_0")
+        assert block1.segments[0].spiketrains[0].t_stop == 100.0
+        assert len(block1.segments[0].spiketrains[0]) == 0
+        assert len(block1.segments[0].spiketrains[1]) == 3
+        os.remove("test987.h5")
+
 if __name__ == '__main__':
     unittest.main()
 

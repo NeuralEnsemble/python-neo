@@ -374,12 +374,15 @@ class NeoHdf5IO(BaseIO):
             if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
                 if not lazy:
                     if obj_attr.size == 0:
-                        raise ValueError("A size of the %s of the %s has \
-                            length zero and can't be saved." % 
-                            (attr_name, path))
+                        atom = tb.Float64Atom(shape=(1,))
+                        new_arr = self._data.createEArray(path, attr_name + "__temp", atom, shape=(0,), expectedrows=1)
+                        #raise ValueError("A size of the %s of the %s has \
+                        #    length zero and can't be saved." % 
+                        #    (attr_name, path))
                     # we try to create new array first, so not to loose the 
                     # data in case of any failure
-                    new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
+                    else:
+                        new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
                     if hasattr(obj_attr, "dimensionality"):
                         for un in obj_attr.dimensionality.items():
                             new_arr._f_setAttr("unit__" + un[0].name, un[1])
