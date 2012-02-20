@@ -81,3 +81,46 @@ class AnalogSignalArray(BaseAnalogSignal):
             return obj
         else:
             raise IndexError("index should be an integer, tuple or slice")
+            
+            
+    def time_slice(self,t_start,t_stop):
+        """
+        Creates a new AnalogSignal corresponding to the time slice of the original AnalogSignal
+        between times t_start, t_stop. Note that t_start, t_stop have to respect the sampling_frequency.
+        """
+        
+        t_start = t_start.rescale(self.sampling_period.units)
+        t_stop = t_stop.rescale(self.sampling_period.units)
+        
+        print t_start
+        print self.t_start
+        
+        print t_stop
+        print self.t_stop
+        print self.duration
+        
+        if (t_start < self.t_start) or (t_stop > self.t_stop):
+            raise ValueError('t_start, t_stop have to be withing the analog signal duration')
+        
+        i = (t_start - self.t_start)/self.sampling_period
+        j = (t_start - self.t_stop)/self.sampling_period
+        
+        if (i.magnitude % 1 != 0) or (j.magnitude % 1 != 0):
+            raise ValueError('t_start, t_stop have to be a multiple of sampling period + t_start')
+        
+        return self[i:j]
+
+
+def test():
+    av = AnalogSignalArray(numpy.array([[1,2,3,4,5],[1,2,3,4,5]]).T, t_start = 0.0 * pq.s,sampling_rate=1.0*pq.Hz, units='mV')
+
+    t_start = 2 * pq.s
+    t_stop = 4 * pq.s
+    print t_start
+    print t_stop
+    av2 = av.time_slice(t_start,t_stop)
+    print AnalogSignalArray([[2,3,4],[2,3,4]], t_start = 2.0,sampling_rate=1.0*pq.Hz, units='mV')
+    print av2
+    #print assert_arrays_equal(st2,AnalogSignalArray([[2,3,4],[2,3,4]], t_start = 2.0,sampling_rate=1.0*Hz, units='mV'))
+        
+        
