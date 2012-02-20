@@ -191,6 +191,81 @@ class TestConstructor(unittest.TestCase):
         # except we update the waveforms
         assert_arrays_equal(st.waveforms[:-1], st2.waveforms)
     
+    
+    def test_time_slice_typical(self):
+        st = SpikeTrain([0.1,0.5,1.2,3.3,6.4,7] * pq.ms, t_stop=10.0)
+        
+        # time_slice spike train, keep sliced spike times
+        # this is the typical time slice falling somewhere in the middle of spikes
+        t_start = 0.12* pq.ms
+        t_stop = 3.5 * pq.ms
+        st2 = st.time_slice(t_start,t_stop)
+        assert_arrays_equal(st2, SpikeTrain([0.5,1.2,3.3] * pq.ms, t_stop=3.3))
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(t_start, st2.t_start)
+        self.assertEqual(t_stop, st2.t_stop)
+
+    def test_time_slice_differnt_units(self):
+        st = SpikeTrain([0.1,0.5,1.2,3.3,6.4,7] * pq.ms, t_stop=10.0)
+        
+        # time_slice spike train, keep sliced spike times
+        t_start = 0.00012* pq.s
+        t_stop = 0.0035 * pq.s
+        st2 = st.time_slice(t_start,t_stop)
+        assert_arrays_equal(st2, SpikeTrain([0.5,1.2,3.3] * pq.ms, t_stop=3.3))
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(t_start, st2.t_start)
+        self.assertEqual(t_stop, st2.t_stop)
+
+    def test_time_slice_matching_ends(self):
+        st = SpikeTrain([0.1,0.5,1.2,3.3,6.4,7] * pq.ms, t_stop=10.0)
+        
+        # time_slice spike train, keep sliced spike times
+        t_start = 0.1* pq.ms
+        t_stop = 7.0 * pq.ms
+        st2 = st.time_slice(t_start,t_stop)
+        assert_arrays_equal(st, st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(t_start, st2.t_start)
+        self.assertEqual(t_stop, st2.t_stop)
+
+    def test_time_slice_out_of_boundries(self):
+        st = SpikeTrain([0.1,0.5,1.2,3.3,6.4,7] * pq.ms, t_stop=10.0)
+        
+        # time_slice spike train, keep sliced spike times
+        t_start = 0.01* pq.ms
+        t_stop = 70.0 * pq.ms
+        st2 = st.time_slice(t_start,t_stop)
+        assert_arrays_equal(st, st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(t_start, st2.t_start)
+        self.assertEqual(t_stop, st2.t_stop)
+
+    
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
             file_origin='crack.txt', t_stop=99.9)

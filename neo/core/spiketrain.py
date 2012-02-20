@@ -306,6 +306,60 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             value = pq.Quantity(value, units=self.units)
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setslice__(i, j, value)
+    
+    def time_slice(self,t_start,t_stop):
+        """
+        Creates a new spiketrain corresponding to the time slice of the original spiketrain
+        between times t_start, t_stop. Note that the t_start and t_stop of the new spike
+        train will be strictly set to t_start, t_stop.
+        """
+        
+        i = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_start)
+        j = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_stop)
+        
+        if j != len(self):
+            if self[j] != t_stop:
+                j = j - 1
+        
+        new_st = self[i:j+1]
+        new_st.t_start = t_start
+        new_st.t_stop = t_stop
+        return new_st
+        
+        
+
+    def fist_occurance_of_spike_at_time_greater_or_equal_than(self,t):
+        """
+        This function finds the first occurance of spike at time greater or equal than t
+        and returns its index.
+        
+        If there is no such spike it returns len(self)
+        """
+        s = 0
+        e = len(self)-1
+        done = False
+        
+        if t <= self[0]:
+           return 0
+        
+        if t >= self[-1]:
+           return len(self)
+        
+        
+        while s+1 != e:
+            middle = int((s+e)/2)
+                                    
+            if self[middle] < t:
+               s = middle
+               e = e
+            elif self[middle] > t:
+               s = s
+               e = middle
+            else:
+               return middle
+        
+        return e
+            
 
     @property
     def times(self):
@@ -325,4 +379,3 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             return self.left_sweep + self.waveforms.shape[2]/self.sampling_rate
         except:
             return None
-    
