@@ -172,6 +172,64 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal.min(), 0*nA)
         self.assertEqual(self.signal.mean(), 27*nA)
 
+    def test_time_slice(self):
+        #import numpy
+        av = AnalogSignalArray(numpy.array([[0,1,2,3,4,5],[0,1,2,3,4,5]]).T,sampling_rate=1.0*pq.Hz, units='mV')
+        t_start = 2 * pq.s
+        t_stop = 4 * pq.s
+        av2 = av.time_slice(t_start,t_stop)
+        correct = AnalogSignalArray(numpy.array([[2,3],[2,3]]).T, sampling_rate=1.0*pq.Hz, units='mV')
+        ar = numpy.array([a == b for (a,b) in zip(av2.flatten(),correct.flatten())])
+        self.assertEqual(ar.all(),True)
+        self.assertIsInstance(av2, AnalogSignalArray)
+        self.assertEqual(av2.t_stop,t_stop)
+        self.assertEqual(av2.t_start,t_start)
+        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
+
+    def test_time_equal(self):
+        #import numpy
+        av = AnalogSignalArray(numpy.array([[0,1,2,3,4,5],[0,1,2,3,4,5]]).T,sampling_rate=1.0*pq.Hz, units='mV')
+        t_start = 0 * pq.s
+        t_stop = 6 * pq.s
+        av2 = av.time_slice(t_start,t_stop)
+        ar = numpy.array([a == b for (a,b) in zip(av2.flatten(),av.flatten())])
+        self.assertEqual(ar.all(),True)
+        self.assertIsInstance(av2, AnalogSignalArray)
+        self.assertEqual(av2.t_stop,t_stop)
+        self.assertEqual(av2.t_start,t_start)
+
+
+    def test_time_slice_offset(self):
+        #import numpy
+        av = AnalogSignalArray(numpy.array([[0,1,2,3,4,5],[0,1,2,3,4,5]]).T, t_start = 10.0 * pq.s,sampling_rate=1.0*pq.Hz, units='mV')
+        t_start = 12 * pq.s
+        t_stop = 14 * pq.s
+        av2 = av.time_slice(t_start,t_stop)
+        correct = AnalogSignalArray(numpy.array([[2,3],[2,3]]).T, t_start = 12.0*pq.ms,sampling_rate=1.0*pq.Hz, units='mV')
+        ar = numpy.array([a == b for (a,b) in zip(av2.flatten(),correct.flatten())])
+        self.assertEqual(ar.all(),True)
+        self.assertIsInstance(av2, AnalogSignalArray)
+        self.assertEqual(av2.t_stop,t_stop)
+        self.assertEqual(av2.t_start,t_start)
+        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
+
+    def test_time_slice_different_units(self):
+        #import numpy
+        av = AnalogSignalArray(numpy.array([[0,1,2,3,4,5],[0,1,2,3,4,5]]).T, t_start = 10.0 * pq.ms,sampling_rate=1.0*pq.Hz, units='mV')
+
+        t_start = 2 * pq.s + 10.0 * pq.ms
+        t_stop = 4 * pq.s + 10.0 * pq.ms
+        av2 = av.time_slice(t_start,t_stop)
+        correct = AnalogSignalArray(numpy.array([[2,3],[2,3]]).T, t_start = t_start,sampling_rate=1.0*pq.Hz, units='mV')
+        
+        self.assertIsInstance(av2, AnalogSignalArray)
+        self.assertAlmostEqual(av2.t_stop,t_stop,delta=1e-12*ms)
+        self.assertAlmostEqual(av2.t_start,t_start,delta=1e-12*ms)
+        assert_arrays_almost_equal(av2.times,correct.times,1e-12*ms)
+        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
+    
+    
+
 
 class TestEquality(unittest.TestCase):
     

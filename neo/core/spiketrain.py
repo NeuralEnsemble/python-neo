@@ -313,6 +313,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         between times t_start, t_stop. Note that the t_start and t_stop of the new spike
         train will be strictly set to t_start, t_stop.
         """
+        if len(self) == 0:
+            new_st = self[:]
+            new_st.t_start = t_start
+            new_st.t_stop = t_stop
+            return new_st
         
         i = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_start)
         j = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_stop)

@@ -265,6 +265,25 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(t_start, st2.t_start)
         self.assertEqual(t_stop, st2.t_stop)
 
+    def test_time_slice_empty(self):
+        st = SpikeTrain([] * pq.ms, t_stop=10.0)
+        
+        # time_slice spike train, keep sliced spike times
+        t_start = 0.01* pq.ms
+        t_stop = 70.0 * pq.ms
+        st2 = st.time_slice(t_start,t_stop)
+        assert_arrays_equal(st, st2)
+        
+        # but keep everything else pristine
+        self.assertEqual(st.name, st2.name)
+        self.assertEqual(st.description, st2.description)
+        self.assertEqual(st.annotations, st2.annotations)
+        self.assertEqual(st.file_origin, st2.file_origin)
+        self.assertEqual(st.dtype, st2.dtype)
+        self.assertEqual(t_start, st2.t_start)
+        self.assertEqual(t_stop, st2.t_stop)
+
+
     
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
