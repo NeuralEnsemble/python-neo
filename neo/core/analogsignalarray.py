@@ -95,10 +95,16 @@ class AnalogSignalArray(BaseAnalogSignal):
         t_stop = t_stop.rescale(self.sampling_period.units)
         i = (t_start - self.t_start)/self.sampling_period
         j = (t_stop - self.t_start)/self.sampling_period
-        i = np.rint(i.magnitude)
-        j = np.rint(j.magnitude)
+        i = int(np.rint(i.magnitude))
+        j = int(np.rint(j.magnitude))
 
         if (i < 0) or (j > len(self)):
             raise ValueError('t_start, t_stop have to be withing the analog signal duration')
         
-        return self[i:j]
+        # we gonna send the list of indicies so that we get *copy* of the sliced data
+        obj = super(BaseAnalogSignal, self).__getitem__(np.arange(i,j,1))
+        obj.t_start = self.t_start + i*self.sampling_period
+        
+        return obj
+
+

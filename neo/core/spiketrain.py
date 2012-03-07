@@ -15,7 +15,7 @@ the old object.
 
 from neo.core.baseneo import BaseNeo
 import quantities as pq
-import numpy
+import numpy 
 
 
 def check_has_dimensions_time(*values):
@@ -322,11 +322,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         i = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_start)
         j = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_stop)
         
-        if j != len(self):
-            if self[j] != t_stop:
-                j = j - 1
-        
-        new_st = self[i:j+1]
+        new_st = self[numpy.arange(i,j,1)]
         new_st.t_start = t_start
         new_st.t_stop = t_stop
         return new_st
