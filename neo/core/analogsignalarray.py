@@ -35,7 +35,8 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0*pq.s,
                 sampling_rate=None, sampling_period=None, 
-                name=None, file_origin=None, description=None, **annotations):
+                name=None, file_origin=None, description=None,
+                channel_indexes = None, **annotations):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
         of numerical values, or from a Quantity array.
@@ -47,6 +48,8 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+        
+        obj.channel_indexes = channel_indexes
         
         obj.segment = None
         obj.recordingchannelgroup = None
@@ -81,8 +84,14 @@ class AnalogSignalArray(BaseAnalogSignal):
             return obj
         else:
             raise IndexError("index should be an integer, tuple or slice")
-            
-            
+
+
+    def _copy_data_complement(self, other):
+        BaseAnalogSignal._copy_data_complement(self, other)
+        for attr in ("channel_indexes"):
+            setattr(self, attr, getattr(other, attr, None))
+    
+
     def time_slice(self,t_start,t_stop):
         """
         Creates a new AnalogSignal corresponding to the time slice of the original AnalogSignal

@@ -39,10 +39,14 @@ class Unit(BaseNeo):
         :class:`Spike`
     
     """
-    def __init__(self, name=None, description=None, file_origin=None, **annotations):
+    def __init__(self, name=None, description=None, file_origin=None, 
+                                channel_indexes = None, **annotations):
         """Initialize a new neuronal Unit (spike source)"""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+        
+        self.channel_indexes = channel_indexes
+        
         self.spiketrains = [ ]
         self.spikes = [ ]
         

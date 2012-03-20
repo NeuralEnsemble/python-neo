@@ -279,6 +279,16 @@ class AnalogSignal(BaseAnalogSignal):
     *Operations available on this object*:
       == != + * /
     """
-    pass
-    
+    def __new__(cls, signal,  channel_index = None,  **kargs):
+        obj = BaseAnalogSignal.__new__(cls,signal,   **kargs)
+        obj.channel_index = channel_index
+        return obj
+
+    def _copy_data_complement(self, other):
+        BaseAnalogSignal._copy_data_complement(self, other)
+        for attr in ("channel_index"):
+            setattr(self, attr, getattr(other, attr, None))
+
+
+
 

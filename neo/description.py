@@ -170,19 +170,23 @@ classes_recommended_attributes= {
     'Spike': [('waveform', pq.Quantity, 2),
                     ('left_sweep', pq.Quantity, 0 ),
                     ('sampling_rate', pq.Quantity, 0 ), ],
-    'AnalogSignal': [
+    'AnalogSignal': [ ('channel_index', int),
                                 ],
     
-    'AnalogSignalArray': [
+    'Unit': [ ('channel_indexes', np.ndarray,1,  np.dtype('i')),
+                
+                ],
+    
+    'AnalogSignalArray': [('channel_indexes', np.ndarray,1,  np.dtype('i')),
                                         ],
     
     'IrregularlySampledSignal': [ 
                                                     ],
-   'RecordingChannelGroup': [ ('channel_names', np.ndarray,1,  np.dtype('S')),
-                                                ('channel_indexes', np.ndarray,1,  np.dtype('i')),
+   'RecordingChannelGroup': [ ('channel_indexes', np.ndarray,1,  np.dtype('i')),
+                                                ('channel_names', np.ndarray,1,  np.dtype('S')),
                                             ],
-    'RecordingChannel': [('coordinate',pq.Quantity,1),],
     
+    'RecordingChannel': [('coordinate',pq.Quantity,1),],
     }
 
 # this list classes inheriting quantities with arguments that will become the quantity array
