@@ -9,10 +9,10 @@ class AnalogSignalArray(BaseAnalogSignal):
     A representation of several continuous, analog signals that
     have the same duration, sampling rate and start time.
     Basically, it is a 2D array like AnalogSignal: dim 0 is time, dim 1 is channel index
-    
+
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
     :class:`numpy.ndarray`.
-    
+
     *Usage*:
         TODO
 
@@ -25,7 +25,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         :sampling_period: interval between two samples (1/sampling_rate)
         :duration:        signal duration (size * sampling_period)
         :t_stop:          time when signal ends (t_start + duration)
-        
+
     *Recommended attributes/properties*:
         :name:
         :description:
@@ -34,26 +34,28 @@ class AnalogSignalArray(BaseAnalogSignal):
     """
 
     def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0*pq.s,
-                sampling_rate=None, sampling_period=None, 
+                sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
                 channel_indexes = None, **annotations):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
         of numerical values, or from a Quantity array.
         """
-        if isinstance(signal, pq.Quantity) and units:
+        if (isinstance(signal, pq.Quantity)
+            and units is not None
+            and units != signal.units):
             signal = signal.rescale(units)
         if not units and hasattr(signal, "units"):
             units = signal.units
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
-        
+
         obj.channel_indexes = channel_indexes
-        
+
         obj.segment = None
         obj.recordingchannelgroup = None
-        
+
         return obj
 
     def __getslice__(self, i, j):
@@ -65,7 +67,7 @@ class AnalogSignalArray(BaseAnalogSignal):
             return obj
         elif isinstance(i, tuple):
             j, k = i
-            if isinstance(k, int): 
+            if isinstance(k, int):
                 if isinstance(j, slice):  # extract an AnalogSignal
                     obj = AnalogSignal(obj, sampling_rate=self.sampling_rate)
                     if j.start:
@@ -90,16 +92,16 @@ class AnalogSignalArray(BaseAnalogSignal):
         BaseAnalogSignal._copy_data_complement(self, other)
         for attr in ("channel_indexes"):
             setattr(self, attr, getattr(other, attr, None))
-    
+
 
     def time_slice(self,t_start,t_stop):
         """
         Creates a new AnalogSignal corresponding to the time slice of the original AnalogSignal
-        between times t_start, t_stop. Note, that for numerical stability reasons if t_start, t_stop 
+        between times t_start, t_stop. Note, that for numerical stability reasons if t_start, t_stop
         do not fall exactly on the time bins defined by the sampling_period they will be rounded to the
         nearest sampling bins.
         """
-        
+
         t_start = t_start.rescale(self.sampling_period.units)
         t_stop = t_stop.rescale(self.sampling_period.units)
         i = (t_start - self.t_start)/self.sampling_period
@@ -109,11 +111,22 @@ class AnalogSignalArray(BaseAnalogSignal):
 
         if (i < 0) or (j > len(self)):
             raise ValueError('t_start, t_stop have to be withing the analog signal duration')
-        
+
         # we gonna send the list of indicies so that we get *copy* of the sliced data
         obj = super(BaseAnalogSignal, self).__getitem__(np.arange(i,j,1))
         obj.t_start = self.t_start + i*self.sampling_period
-        
+
         return obj
 
-
+    def merge(self, other):
+        assert self.sampling_rate == other.sampling_rate
+        assert self.t_start == other.t_start
+        other.units = self.units
+        stack = np.hstack(map(np.array, (self, other)))
+        # handle name, description, file_origin, channel_indexes, annotations
+        return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
+                                 copy=False, t_start=self.t_start,
+                                 sampling_rate=self.sampling_rate,
+                                 name=self.name, file_origin=self.file_origin,
+                                 description=self.description,
+                                 **self.annotations)
