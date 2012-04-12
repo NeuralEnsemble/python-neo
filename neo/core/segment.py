@@ -9,21 +9,21 @@ class Segment(BaseNeo):
     start or end time.
 
     *Usage*:
-    
+
     TODO
-    
+
     *Required attributes/properties*:
         None
-    
+
     *Recommended attributes/properties*:
-        :name: A label for the dataset 
+        :name: A label for the dataset
         :description: text description
         :file_origin: filesystem path or URL of the original data file.
         :file_datetime: the creation date and time of the original data file.
         :rec_datetime: the date and time of the original recording
         :index: integer. You can use this to define a temporal ordering of
             your Segment. For instance you could use this for trial numbers.
-    
+
     *Container of*:
         :py:class:`Epoch`
         :py:class:`EpochArray`
@@ -42,8 +42,8 @@ class Segment(BaseNeo):
                          description=description, **annotations)
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
-        self.index = index        
-        
+        self.index = index
+
         self.epochs = [ ]
         self.epocharrays = [ ]
         self.events = [ ]
@@ -53,17 +53,17 @@ class Segment(BaseNeo):
         self.irregularlysampledsignals = [ ]
         self.spikes = [ ]
         self.spiketrains = [ ]
-        
+
         self.block = None
-    
+
     def take_spiketrains_by_unit(self, unit_list = [ ]):
         st_list = [ ]
         for st in self.spiketrains:
             if st.unit in unit_list:
                 st_list.append(st)
         return st_list
-    
-    
+
+
     def take_analogsignal_by_unit(self, unit_list):
         """
         This assert that Unit.channel_index are the same than AnalogSIgnal.channel_index
@@ -72,61 +72,61 @@ class Segment(BaseNeo):
         for unit in unit_list:
             channel_indexes.extend(unit.channel_indexes)
         return self.take_analogsignal_by_channelindex(channel_indexes)
-    
-    
+
+
     def take_analogsignal_by_channelindex(self, channel_indexes):
         anasig_list = [ ]
         for anasig in self.analogsignals:
             if anasig.channel_index in channel_indexes:
                 anasig_list.append(anasig)
         return anasig_list
-    
-    
+
+
     def take_slice_of_analogsignalarray_by_unit(self, unit_list):
         sub_indexes = [ ]
         for unit in unit_list:
             sub_indexes.extend(unit.channel_indexes)
-        
+
         sliced_sigarrays = [ ]
         for sigarr in self.analogsignalarrays:
             ind = np.in1d(sigarr.channel_indexes, sub_indexes)
             sliced_sigarrays.append(sigarr[:, ind])
-        
+
         return sliced_sigarrays
-    
-    
+
+
     def construct_subsegment_by_unit(self, unit_list):
         """
         Return AnalogSignal list in a given segment given there Unit parents.
-        
+
         *Example*::
-            
+
             # construction
             nb_seg = 3
             nb_unit = 5
             unit_with_sig = [0, 2, 3]
             signal_types = ['Vm', 'Conductances']
-            
+
             #recordingchannelgroups
-            rcgs = [ RecordingChannelGroup(name = 'Vm', channel_indexes = unit_with_sig), 
+            rcgs = [ RecordingChannelGroup(name = 'Vm', channel_indexes = unit_with_sig),
                             RecordingChannelGroup(name = 'Conductance', channel_indexes = unit_with_sig), ]
-            
+
             # Unit
             all_unit = [ ]
             for u in range(nb_unit):
                 un = Unit(name = 'Unit #{}'.format(j), channel_index = u)
                 all_unit.append(un)
-            
+
             bl = block()
             for s in range(nb_seg):
                 seg = Segment(name = 'Simulation {}'.format(s))
                 for j in range(nb_unit):
                     st = SpikeTrain([1, 2, 3], units = 'ms', t_start = 0., t_stop = 10)
                     st.unit = all_unit[j]
-                
+
                 for t in signal_types:
                     anasigarr = AnalogSignalArray( zeros(10000, len(unit_with_sig) ))
-            
+
         """
         seg = Segment()
         seg.analogsignals = self.take_analogsignal_by_unit(unit_list)
@@ -135,4 +135,34 @@ class Segment(BaseNeo):
         #TODO copy others attributes
         return seg
 
+    def merge(self, other):
+        """
+        Merge the contents of another segment into this one.
 
+        For each array-type object in the other segment, if its name matches
+        that of an object of the same type in this segment, the two arrays will
+        be joined by concatenation. Non-array objects will just be added to this
+        segment.
+        """
+        for container in ("epochs",  "events",  "analogsignals",
+                          "irregularlysampledsignals", "spikes", "spiketrains"):
+            getattr(self, container).extend(getattr(other, container))
+        for container in ("epocharrays", "eventarrays", "analogsignalarrays"):
+            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            for obj in getattr(other, container):
+                if obj.name in lookup:
+                    try:
+                        lookup[obj.name] = lookup[obj.name].merge(obj)
+                    except AttributeError as e:
+                        raise AttributeError("%s. container=%s, obj.name=%s, shape=%s" % (e, container, obj.name, obj.shape))
+                else:
+                    lookup[obj.name] = obj
+            setattr(self, container, list(lookup.values()))
+        # need to handle annotations
+
+    def size(self):
+        return dict((name, len(getattr(self, name)))
+                    for name in ("epochs",  "events",  "analogsignals",
+                                 "irregularlysampledsignals", "spikes",
+                                 "spiketrains", "epocharrays", "eventarrays",
+                                 "analogsignalarrays"))
