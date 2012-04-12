@@ -32,7 +32,7 @@ class BasePyNNIO(BaseIO):
     """
     Base class for PyNN IO classes
     """
-    is_readable = True 
+    is_readable = True
     is_writable = True
     has_header = True
     is_streameable = False # TODO - correct spelling to "is_streamable"
@@ -40,14 +40,14 @@ class BasePyNNIO(BaseIO):
     readable_objects = supported_objects
     writeable_objects = supported_objects
     mode = 'file'
-    
+
     def _read_file_contents(self):
         raise NotImplementedError
-    
+
     def _extract_array(self, data, channel_index):
         idx = numpy.where(data[:, 1] == channel_index)[0]
         return data[idx, 0]
-    
+
     def _determine_units(self, metadata):
         if 'units' in metadata:
             return metadata['units']
@@ -55,7 +55,7 @@ class BasePyNNIO(BaseIO):
             return UNITS_MAP[metadata['variable']]
         else:
             raise IOError("Cannot determine units")
-    
+
     def _extract_signal(self, data, metadata, channel_index, lazy):
         signal = None
         if lazy:
@@ -75,7 +75,7 @@ class BasePyNNIO(BaseIO):
                             variable=metadata["variable"],
                             channel_index=channel_index)
             return signal
-    
+
     def _extract_spikes(self, data, metadata, channel_index, lazy):
         spiketrain = None
         if lazy:
@@ -91,10 +91,10 @@ class BasePyNNIO(BaseIO):
                                 channel_index=channel_index,
                                 dt=metadata["dt"])
             return spiketrain
-    
+
     def _write_file_contents(self, data, metadata):
         raise NotImplementedError
-    
+
     def read_segment(self, lazy=False, cascade=True):
         data, metadata = self._read_file_contents()
         annotations = dict((k, metadata.get(k, 'unknown')) for k in ("label", "variable", "first_id", "last_id"))
@@ -116,7 +116,7 @@ class BasePyNNIO(BaseIO):
         return seg
 
     def write_segment(self, segment):
-        source = segment.analogsignals or segment.spiketrains
+        source = segment.analogsignals or segment.analogsignalarrays or segment.spiketrains
         assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
         metadata = segment.annotations.copy()
         metadata['size'] = len(source)
@@ -144,10 +144,13 @@ class BasePyNNIO(BaseIO):
         except AttributeError:
             metadata['units'] = units.u_symbol
         start = 0
+        if isinstance(s0, AnalogSignalArray):
+            assert len(source) == 1, "Cannot handle multiple analog signal arrays"
+            source = s0.T
         for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
             end = start + signal.size
             data[start:end, 0] = numpy.array(signal.rescale(units))
-            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) # index
+            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) # index (what about channel_indexes, if it's an AnalogSignalArray?)
             start = end
         self._write_file_contents(data, metadata)
 
@@ -164,7 +167,7 @@ class BasePyNNIO(BaseIO):
 
     def read_analogsignalarray(self, lazy=False):
         raise NotImplementedError
-    
+
     def read_spiketrain(self, lazy=False, channel_index=0):
         data, metadata = self._read_file_contents()
         if metadata['variable'] != 'spikes':
