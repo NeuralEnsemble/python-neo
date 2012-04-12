@@ -262,13 +262,18 @@ class TestCombination(unittest.TestCase):
         self.assertRaises(Exception, signal1.__add__, signal2)
 
     def test__merge(self):
-        signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)), units="mV", sampling_rate=1*kHz)
-        signal2 = AnalogSignalArray(numpy.arange(1000.0, 1066.0).reshape((11, 6)), units="uV", sampling_rate=1*kHz)
+        signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
+                                    units="mV", sampling_rate=1*kHz,
+                                    channel_indexes=range(5))
+        signal2 = AnalogSignalArray(numpy.arange(1000.0, 1066.0).reshape((11, 6)),
+                                    units="uV", sampling_rate=1*kHz,
+                                    channel_indexes=range(5, 11))
         merged = signal1.merge(signal2)
         self.assertEqual(merged[0, 4], 4*mV)
         self.assertEqual(merged[0, 5], 1*mV)
         self.assertEqual(merged[10, 10], 1.065*mV)
         self.assertEqual(merged.t_stop, signal1.t_stop)
+        assert_arrays_equal(merged.channel_indexes, numpy.arange(11))
 
 
 if __name__ == "__main__":

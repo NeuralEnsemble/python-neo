@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import quantities as pq
 from .analogsignal import BaseAnalogSignal, AnalogSignal, _get_sampling_rate
+from .baseneo import BaseNeo
 
 
 class AnalogSignalArray(BaseAnalogSignal):
@@ -36,7 +37,7 @@ class AnalogSignalArray(BaseAnalogSignal):
     def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0*pq.s,
                 sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
-                channel_indexes = None, **annotations):
+                channel_indexes=None, **annotations):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy array
         of numerical values, or from a Quantity array.
@@ -52,11 +53,17 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
         obj.channel_indexes = channel_indexes
-
         obj.segment = None
         obj.recordingchannelgroup = None
 
         return obj
+
+    def __init__(self, signal, units=None, dtype=None, copy=True,
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin=None, description=None,
+                channel_indexes=None, **annotations):
+        BaseNeo.__init__(self, name=name, file_origin=file_origin,
+                         description=description, **annotations)
 
     def __getslice__(self, i, j):
         return self.__getitem__(slice(i,j))
@@ -123,10 +130,22 @@ class AnalogSignalArray(BaseAnalogSignal):
         assert self.t_start == other.t_start
         other.units = self.units
         stack = np.hstack(map(np.array, (self, other)))
-        # handle name, description, file_origin, channel_indexes, annotations
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+        if self.channel_indexes is None:
+            kwargs['channel_indexes'] = other.channel_indexes
+        elif other.channel_indexes is None:
+            kwargs['channel_indexes'] = self.channel_indexes
+        else:
+            kwargs['channel_indexes'] = np.append(self.channel_indexes, other.channel_indexes)
+        kwargs.update(self.annotations) # TODO: merge self.annotations and other.annotations
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
                                  sampling_rate=self.sampling_rate,
-                                 name=self.name, file_origin=self.file_origin,
-                                 description=self.description,
-                                 **self.annotations)
+                                 **kwargs)
