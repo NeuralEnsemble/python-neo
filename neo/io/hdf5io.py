@@ -244,8 +244,8 @@ class NeoHdf5IO(BaseIO):
     this class to get (load), insert or delete NEO objects to HDF5 file.
     """
     supported_objects = all_objects
-    readable_objects    = all_objects
-    writeable_objects   = all_objects
+    readable_objects  = all_objects
+    writeable_objects = all_objects
     read_params = dict( zip( all_objects, [ ]*len(all_objects)) )
     write_params = dict( zip( all_objects, [ ]*len(all_objects)) )
     name = 'Hdf5'
@@ -253,6 +253,7 @@ class NeoHdf5IO(BaseIO):
     mode = 'file'
     
     def __init__(self, filename=settings['filename'], **kwargs):
+        BaseIO.__init__(self, filename=filename)
         self._init_base_io()
         self.connected = False
         self.connect(filename=filename)
@@ -277,15 +278,12 @@ class NeoHdf5IO(BaseIO):
         """
         self.is_readable = True
         self.is_writable = True
-        self.supported_objects = class_by_name.keys()
-        self.readable_objects = class_by_name.keys()
-        self.writeable_objects = class_by_name.keys()
         self.name = 'HDF5 IO'
         # wraps for Base IO functions
         for obj_type in self.readable_objects:
-            self.__setattr__("read_" + obj_type.lower(), self._read_entity)
+            self.__setattr__("read_" + obj_type.__class__.__name__.lower(), self._read_entity)
         for obj_type in self.writeable_objects:
-            self.__setattr__("write_" + obj_type.lower(), self._write_entity)
+            self.__setattr__("write_" + obj_type.__class__.__name__.lower(), self._write_entity)
 
     #-------------------------------------------
     # IO connectivity / Session management
