@@ -143,7 +143,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         elif other.channel_indexes is None:
             kwargs['channel_indexes'] = self.channel_indexes
         else:
-            kwargs['channel_indexes'] = np.append(self.channel_indexes, other.channel_indexes)
+            kwargs['channel_indexes'] = np.append(self.channel_indexes, other.channel_indexes).tolist()
         kwargs.update(self.annotations) # TODO: merge self.annotations and other.annotations
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,

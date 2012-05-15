@@ -1,1 +1,10 @@
+*.mo
+*.egg-info
+*.egg
+*.EGG
+*.EGG-INFO
+bin
+build
 *.pyc
+*.pyo
+*.tmp*

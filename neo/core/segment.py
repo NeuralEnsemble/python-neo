@@ -1,6 +1,8 @@
 from neo.core.baseneo import BaseNeo
 
 import numpy as np
+import operator
+
 
 class Segment(BaseNeo):
     """
@@ -55,6 +57,27 @@ class Segment(BaseNeo):
         self.spiketrains = [ ]
 
         self.block = None
+
+    @property
+    def all_data(self):
+        return reduce(operator.add,
+                      (self.epochs, self.epocharrays, self.events,
+                       self.eventarrays, self.analogsignals,
+                       self.analogsignalarrays, self.irregularlysampledsignals,
+                       self.spikes, self.spiketrains))
+
+    def filter(self, **kwargs):
+        """
+        Return a list of data objects matching *any* of the search terms.
+
+        Examples::
+
+            >>> segment.filter(name="Vm")
+        """
+        results = []
+        for key, value in kwargs.items():
+            results += [obj for obj in self.all_data if getattr(obj, key) == value]
+        return results
 
     def take_spiketrains_by_unit(self, unit_list = [ ]):
         st_list = [ ]

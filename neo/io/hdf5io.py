@@ -15,7 +15,7 @@ IO dependencies:
 
 Quick reference:
 ================================================================================
-Class NeoHdf5IO() with methods get(), save(), delete() is implemented. This 
+Class NeoHdf5IO() with methods get(), save(), delete() is implemented. This
 class represents a connection manager with the HDF5 file with the possibility
 to put (save()) or retrieve (get()) runtime NEO objects from the file.
 
@@ -26,8 +26,8 @@ Start by initializing IO:
 >>> iom
 <hdf5io.NeoHdf5IO object at 0x7f291ebe6810>
 
-The file is created automatically (filename can be changed in "settings" 
-option). So you can also do 
+The file is created automatically (filename can be changed in "settings"
+option). So you can also do
 
 >>> iom = NeoHdf5IO(filename="myfile.h5")
 
@@ -37,11 +37,11 @@ are in the pythonpath):
 >>> b = Block()
 >>> iom.write_block(b)
 
-or just do 
+or just do
 
 >>> iom.save(b)
 
-After you stored an object it receives a unique "path" in the hdf5 file. This is 
+After you stored an object it receives a unique "path" in the hdf5 file. This is
 exactly the place in the HDF5 hierarchy, where it was written. This information
 is now accessible by "hdf5_path" property:
 
@@ -65,18 +65,18 @@ or just
 
 >>> iom.save(b)
 
-If you already have hdf5 file in NEO format, or you just created one, then you 
+If you already have hdf5 file in NEO format, or you just created one, then you
 may want to read NEO data (providing the path to what to read):
 
 >>> b1 = iom.read_block("/block_0")
 >>> b1
 <neo.core.block.Block object at 0x34ee590>
 
-or just use 
+or just use
 
 >>> b1 = iom.get("/block_0")
 
-You may notice, by default the reading function retrieves all available data, 
+You may notice, by default the reading function retrieves all available data,
 with all downstream relations and arrays:
 
 >>> b1._segments
@@ -95,12 +95,12 @@ relations
 
 and/or even without arrays
 
->>> a2 = iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0", 
+>>> a2 = iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0",
 lazy=True)
 >>> a2.signal
 []
 
-These functions return "pure" NEO objects. They are completely "detached" from 
+These functions return "pure" NEO objects. They are completely "detached" from
 the HDF5 file - changes to the runtime objects will not cause any changes in the
 file:
 
@@ -112,7 +112,7 @@ array(32.0) * ms
 >>> iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0").t_start
 array(42.0) * ms
 
-However, if you want to work directly with HDF5 storage making instant 
+However, if you want to work directly with HDF5 storage making instant
 modifications, you may use the native PyTables functionality, where all objects
 are accessible through "<IO_manager_inst>._data.root":
 
@@ -130,9 +130,9 @@ Finally, you may get an overview of the contents of the file by running
 
 >>> iom.get_info()
 This is a neo.HDF5 file. it contains:
-{'spiketrain': 0, 'irsaanalogsignal': 0, 'analogsignalarray': 0, 
-'recordingchannelgroup': 0, 'eventarray': 0, 'analogsignal': 1, 'epoch': 0, 
-'unit': 0, 'recordingchannel': 0, 'spike': 0, 'epocharray': 0, 'segment': 1, 
+{'spiketrain': 0, 'irsaanalogsignal': 0, 'analogsignalarray': 0,
+'recordingchannelgroup': 0, 'eventarray': 0, 'analogsignal': 1, 'epoch': 0,
+'unit': 0, 'recordingchannel': 0, 'spike': 0, 'epocharray': 0, 'segment': 1,
 'event': 0, 'block': 1}
 
 
@@ -160,7 +160,7 @@ The general structure of the file:
      \                                                    \---'Unit_1'
      \                                                    \
      \                                                    \---'Unit_2'
-     \                        
+     \
      \---'_segments'
             \
              \--'Segment_1'
@@ -205,8 +205,9 @@ import tables as tb
 import numpy as np
 import quantities as pq
 import logging
-
 import tables
+
+logger = logging.getLogger("Neo")
 
 #version checking
 from distutils import version
@@ -218,7 +219,7 @@ if version.LooseVersion(tables.__version__) < '2.2':
 SETTINGS:
 filename:       the full path to the HDF5 file.
 cascade:        If 'True' all children are retrieved when get(object) is called.
-lazy:           If 'True' data (arrays) is retrieved when get(object) is called. 
+lazy:           If 'True' data (arrays) is retrieved when get(object) is called.
 """
 settings = {'filename': "neo.h5", 'cascade': True, 'lazy': True}
 
@@ -239,7 +240,7 @@ all_objects = [Block]+all_objects
 
 class NeoHdf5IO(BaseIO):
     """
-    The IO Manager is the core I/O class for HDF5 / NEO. It handles the 
+    The IO Manager is the core I/O class for HDF5 / NEO. It handles the
     connection with the HDF5 file, and uses PyTables for data operations. Use
     this class to get (load), insert or delete NEO objects to HDF5 file.
     """
@@ -251,7 +252,7 @@ class NeoHdf5IO(BaseIO):
     name = 'Hdf5'
     extensions = [ 'h5', ]
     mode = 'file'
-    
+
     def __init__(self, filename=settings['filename'], **kwargs):
         BaseIO.__init__(self, filename=filename)
         self._init_base_io()
@@ -297,18 +298,21 @@ class NeoHdf5IO(BaseIO):
         if not self.connected:
             try:
                 if tb.isHDF5File(filename):
-                    self._data = tb.openFile(filename, mode = "a", title = filename)
+                    logger.debug('Opening existing file "%s"' % filename)
+                    self._data = tb.openFile(filename, mode="a", title=filename)
                     self.connected = True
                 else:
-                    raise TypeError("The file specified is not an HDF5 file format.")
+                    raise TypeError('"%s" is not an HDF5 file format.' % filename)
             except IOError:
                 # create a new file if specified file not found
-                self._data = tb.openFile(filename, mode = "w", title = filename)
+                logger.debug('Creating new file "%s"' % filename)
+                self._data = tb.openFile(filename, mode="w", title=filename)
                 self.connected = True
-            except:
-                raise NameError("Incorrect file path, couldn't find or create a file.")
+            except Exception as e:
+                raise NameError("Incorrect file path, couldn't find or create a file. (Details: %s)" % e)
+            logger.debug('File "%s" opened' % filename)
         else:
-            logging.info("Already connected.")
+            logger.info("Already connected.")
 
     def close(self):
         """
@@ -344,7 +348,7 @@ class NeoHdf5IO(BaseIO):
         nodes = []
         for node in self._data.listNodes(where):
             index = node._v_name[node._v_name.find(prefix) + len(prefix):]
-            if len(index) > 0: 
+            if len(index) > 0:
                 try:
                     nodes.append(int(index))
                 except ValueError:
@@ -361,7 +365,7 @@ class NeoHdf5IO(BaseIO):
 
     @_func_wrapper
     def save(self, obj, where="/", cascade=True, lazy=False):
-        """ Saves changes of a given object to the file. Saves object as new at 
+        """ Saves changes of a given object to the file. Saves object as new at
         location "where" if it is not in the file yet.
 
         cascade: True/False process downstream relationships
@@ -375,9 +379,9 @@ class NeoHdf5IO(BaseIO):
                         atom = tb.Float64Atom(shape=(1,))
                         new_arr = self._data.createEArray(path, attr_name + "__temp", atom, shape=(0,), expectedrows=1)
                         #raise ValueError("A size of the %s of the %s has \
-                        #    length zero and can't be saved." % 
+                        #    length zero and can't be saved." %
                         #    (attr_name, path))
-                    # we try to create new array first, so not to loose the 
+                    # we try to create new array first, so not to loose the
                     # data in case of any failure
                     else:
                         new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
@@ -391,7 +395,7 @@ class NeoHdf5IO(BaseIO):
                     self._data.renameNode(path, attr_name, name=attr_name + "__temp")
             elif not obj_attr == None:
                 node._f_setAttr(attr_name, obj_attr)
-            
+
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
         if hasattr(obj, "hdf5_path"): # this is an update case
@@ -404,7 +408,7 @@ class NeoHdf5IO(BaseIO):
                     correct these values or delete this attribute \
                     (.__delattr__('hdf5_path')) to create a new object in \
                     the file." % path)
-        else: # create new object                
+        else: # create new object
             node = self._data.createGroup(where, self._get_next_name(obj_type, where))
             node._f_setAttr("_type", obj_type)
             path = node._v_pathname
@@ -452,7 +456,7 @@ class NeoHdf5IO(BaseIO):
         """ Returns a requested NEO object as instance of NEO class. """
 
         def rem_duplicates(target, source, attr):
-            """ removes duplicated objects in case a block is requested: for 
+            """ removes duplicated objects in case a block is requested: for
             RCGs, RCs and Units we remove duplicated ASAs, IrSAs, ASs, STs and
             Spikes if those were already initialized in Segment. """
             a = getattr(target, attr) # a container, e.g. "analogsignals"
@@ -576,7 +580,7 @@ class NeoHdf5IO(BaseIO):
         """
         Returns a quantitative information about the contents of the file.
         """
-        logging.info("This is a neo.HDF5 file. it contains:")
+        logger.info("This is a neo.HDF5 file. it contains:")
         info = {}
         info = info.fromkeys(class_by_name.keys(), 0)
         for node in self._data.walkNodes():
@@ -587,5 +591,3 @@ class NeoHdf5IO(BaseIO):
                 # node is not of NEO type
                 pass
         return info
-
-
