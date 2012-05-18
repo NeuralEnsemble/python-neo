@@ -249,13 +249,14 @@ class NeoHdf5IO(BaseIO):
     writeable_objects = all_objects
     read_params = dict( zip( all_objects, [ ]*len(all_objects)) )
     write_params = dict( zip( all_objects, [ ]*len(all_objects)) )
-    name = 'Hdf5'
+    name = 'HDF5 IO'
     extensions = [ 'h5', ]
     mode = 'file'
+    is_readable = True
+    is_writable = True
 
     def __init__(self, filename=settings['filename'], **kwargs):
         BaseIO.__init__(self, filename=filename)
-        self._init_base_io()
         self.connected = False
         self.connect(filename=filename)
 
@@ -271,20 +272,8 @@ class NeoHdf5IO(BaseIO):
         """
         Wrapper for base io "writer" functions.
         """
+        logger.debug("Writing %s to %s" % (obj, where))
         self.save(obj, where, cascade, lazy)
-
-    def _init_base_io(self):
-        """
-        Base io initialization.
-        """
-        self.is_readable = True
-        self.is_writable = True
-        self.name = 'HDF5 IO'
-        # wraps for Base IO functions
-        for obj_type in self.readable_objects:
-            self.__setattr__("read_" + obj_type.__class__.__name__.lower(), self._read_entity)
-        for obj_type in self.writeable_objects:
-            self.__setattr__("write_" + obj_type.__class__.__name__.lower(), self._write_entity)
 
     #-------------------------------------------
     # IO connectivity / Session management
@@ -408,12 +397,15 @@ class NeoHdf5IO(BaseIO):
                     correct these values or delete this attribute \
                     (.__delattr__('hdf5_path')) to create a new object in \
                     the file." % path)
+            logger.debug("Updating object at path %s" % path)
         else: # create new object
             node = self._data.createGroup(where, self._get_next_name(obj_type, where))
             node._f_setAttr("_type", obj_type)
             path = node._v_pathname
+            logger.debug("Creating object at path %s" % path)
         # processing attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
+        logger.debug("Processing attributes: %s" % attrs)
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
                 assign_attribute(getattr(obj, attr[0]), attr[0])
@@ -591,3 +583,8 @@ class NeoHdf5IO(BaseIO):
                 # node is not of NEO type
                 pass
         return info
+
+for obj_type in NeoHdf5IO.writeable_objects:
+    setattr(NeoHdf5IO, "write_" + obj_type.__name__.lower(), NeoHdf5IO._write_entity)
+for obj_type in NeoHdf5IO.readable_objects:
+    setattr(NeoHdf5IO, "read_" + obj_type.__name__.lower(), NeoHdf5IO._read_entity)
