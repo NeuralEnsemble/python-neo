@@ -186,7 +186,7 @@ class BlackrockIO(BaseIO):
                 sampling_rate=self.header.f_samp*pq.Hz,
                 t_start=t_start*pq.s, file_origin=self.filename,
                 description='Channel %d from %f to %f' % (ch, t_start, t_stop),
-                channel_index=ch)
+                channel_index=int(ch))
             
             if lazy:
                 anasig.lazy_shape = n_stop-n_start
