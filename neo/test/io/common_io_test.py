@@ -21,6 +21,7 @@ url_for_tests =  "https://portal.g-node.org/neo/"
 import os
 import urllib
 import logging
+import tempfile
 
 import neo
 from neo.description import *
@@ -74,7 +75,9 @@ class BaseTestIO(object):
     def create_local_dir_if_not_exists(self):
         # FIXME :  utest do fail bu nosetest OK Due to __file__ maybe
         shortname = self.ioclass.__name__.lower().strip('io')
-        localdir = os.path.dirname(__file__)+'/files_for_tests'
+        #~ localdir = os.path.dirname(__file__)+'/files_for_tests'
+        localdir = os.path.join(tempfile.gettempdir(), 'files_for_testing_neo')
+        
         if not os.path.exists(localdir):
             os.mkdir(localdir)
         localdir = localdir +'/'+ shortname

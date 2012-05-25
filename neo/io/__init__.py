@@ -179,3 +179,10 @@ except ImportError:
     warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
 
 
+try:
+    from .brainvisionio import BrainVisionIO
+    iolist.append( BrainVisionIO )
+except ImportError:
+    warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
+
+
