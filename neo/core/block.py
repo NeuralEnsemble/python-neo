@@ -59,10 +59,9 @@ class Block(BaseNeo):
         """
         units = [ ]
         for rcg in self.recordingchannelgroups:
-            for rc in rcg.recordingchannel:
-                for unit in rc.units:
-                    if unit not in units:
-                        units.append(unit)
+            for unit in rcg.units:
+                if unit not in units:
+                    units.append(unit)
         return units
 
     @property
@@ -72,7 +71,7 @@ class Block(BaseNeo):
         """
         all_rc = [ ]
         for rcg in self.recordingchannelgroups:
-            for rc in rcg.recordingchannel:
+            for rc in rcg.recordingchannels:
                 if rc not in all_rc:
                     all_rc.append(rc)
         return all_rc
