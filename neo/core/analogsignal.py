@@ -172,10 +172,10 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             to_u = self.units
             signal = np.array(self)
         else:
-            to_u = Quantity(1.0, to_dims)
-            from_u = Quantity(1.0, self.dimensionality)
+            to_u = pq.Quantity(1.0, to_dims)
+            from_u = pq.Quantity(1.0, self.dimensionality)
             try:
-                cf = get_conversion_factor(from_u, to_u)
+                cf = pq.quantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
                 raise ValueError(
                     'Unable to convert between units of "%s" and "%s"'
@@ -232,6 +232,9 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def __truediv__(self, other):
         return self._apply_operator(other, "__truediv__")
 
+    def __div__(self, other):
+       return self._apply_operator(other, "__div__")
+       
     __radd__ = __add__
     __rmul__ = __sub__
 

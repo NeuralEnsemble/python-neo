@@ -182,3 +182,9 @@ except ImportError:
 
 from .pickleio import PickleIO # should be always available, so no need for try...except
 iolist.append( PickleIO )
+
+try:
+    from .brainvisionio import BrainVisionIO
+    iolist.append( BrainVisionIO )
+except ImportError:
+    warnings.warn("BrainVisionIO not available, check dependencies", ImportWarning)
