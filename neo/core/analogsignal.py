@@ -161,10 +161,10 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             to_u = self.units
             signal = np.array(self)
         else:
-            to_u = Quantity(1.0, to_dims)
-            from_u = Quantity(1.0, self.dimensionality)
+            to_u = pq.Quantity(1.0, to_dims)
+            from_u = pq.Quantity(1.0, self.dimensionality)
             try:
-                cf = get_conversion_factor(from_u, to_u)
+                cf = pq.unitquantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
                 raise ValueError(
                     'Unable to convert between units of "%s" and "%s"'
