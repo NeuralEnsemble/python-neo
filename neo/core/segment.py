@@ -166,3 +166,47 @@ class Segment(BaseNeo):
                                  "irregularlysampledsignals", "spikes",
                                  "spiketrains", "epocharrays", "eventarrays",
                                  "analogsignalarrays"))
+
+    def _repr_pretty_(self, pp, cycle):
+        pp.text(self.__class__.__name__)
+        pp.text(" with ")
+        first = True
+        for (value, readable) in [
+                (self.analogsignals, "analogs"),
+                (self.analogsignalarrays, "analog arrays"),
+                (self.events, "events"),
+                (self.eventarrays, "event arrays"),
+                (self.epochs, "epochs"),
+                (self.epocharrays, "epoch arrays"),
+                (self.irregularlysampledsignals, "epoch arrays"),
+                (self.spikes, "spikes"),
+                (self.spiketrains, "spike trains"),
+                ]:
+            if value:
+                if first:
+                    first = False
+                else:
+                    pp.text(", ")
+                pp.text("{0} {1}".format(len(value), readable))
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        if self.analogsignals:
+            pp.breakable()
+            pp.text("# Analog signals (N={0})".format(len(self.analogsignals)))
+            for (i, asig) in enumerate(self.analogsignals):
+                pp.breakable()
+                pp.text("{0}: ".format(i))
+                with pp.indent(3):
+                    pp.pretty(asig)
+
+        if self.analogsignalarrays:
+            pp.breakable()
+            pp.text("# Analog signal arrays (N={0})"
+                    .format(len(self.analogsignalarrays)))
+            for asarr in self.analogsignalarrays:
+                pp.breakable()
+                pp.text("{0}: ".format(i))
+                with pp.indent(3):
+                    pp.pretty(asarr)
