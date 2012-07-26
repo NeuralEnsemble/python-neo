@@ -26,11 +26,16 @@ def _get_sampling_rate(sampling_rate, sampling_period):
         raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
-def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,t_start=0*pq.s, sampling_rate=None, sampling_period=None,name=None, file_origin=None, description=None,annotations=None):
+
+def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
+                          t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                          name=None, file_origin=None, description=None,
+                          annotations=None):
         """A function to map BaseAnalogSignal.__new__ to function that
            does not do the unit checking. This is needed for pickle to work.
         """
         return cls(signal, units, dtype, copy,t_start, sampling_rate, sampling_period, name, file_origin, description, **annotations)
+
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
@@ -244,7 +249,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
 class AnalogSignal(BaseAnalogSignal):
     """
-    A representation of continuous, analog signal acquired at time ``t_start``
+    A representation of a continuous, analog signal acquired at time ``t_start``
     at a certain sampling rate.
 
     Inherits from :py:class:`quantities.Quantity`, which in turn inherits from
