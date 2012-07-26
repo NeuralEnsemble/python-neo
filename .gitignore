@@ -8,3 +8,5 @@ build
 *.pyc
 *.pyo
 *.tmp*
+.tox
+neo/test/io/files_for_tests

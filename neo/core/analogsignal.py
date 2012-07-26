@@ -139,14 +139,19 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def __getitem__(self, i):
         obj = super(BaseAnalogSignal, self).__getitem__(i)
         if isinstance(obj, BaseAnalogSignal):
-            # update t_start
+            # update t_start and sampling_rate
             slice_start = None
+            slice_step = None
             if isinstance(i, slice):
                 slice_start = i.start
+                slice_step = i.step
             elif isinstance(i, tuple) and len(i) == 2:
                 slice_start = i[0].start
+                slice_step = i[0].step
             if slice_start:
                 obj.t_start = self.t_start + slice_start*self.sampling_period
+            if slice_step:
+                obj.sampling_period *= slice_step
         return obj
 
     # sampling_period attribute is handled as a property on underlying rate

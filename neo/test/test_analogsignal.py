@@ -169,6 +169,16 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.annotations, self.signal.annotations)
         self.assertEqual(sub.annotations, {'ratname': 'Georges'})
 
+    def test__slice_should_change_sampling_period(self):
+        sub = self.signal[:2]
+        self.assertEqual(sub, self.sampling_period)
+
+        sub = self.signal[::2]
+        self.assertEqual(sub, self.sampling_period * 2)
+
+        sub = self.signal[1:7:2]
+        self.assertEqual(sub, self.sampling_period * 2)
+
     def test__getitem_should_return_single_quantity(self):
         self.assertEqual(self.signal[0], 0*nA)
         self.assertEqual(self.signal[9], 9*nA)
