@@ -85,8 +85,7 @@ class RecordingChannelGroup(BaseNeo):
         if channel_indexes is None:
             channel_indexes = np.array([ ])
         if channel_names is None:
-            #~ channel_names = []
-            channel_indexes = np.array([ ])
+            channel_names = np.array([ ])
 
         # Store recommended attributes
         self.channel_names = channel_names
