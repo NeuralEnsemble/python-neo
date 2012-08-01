@@ -1,4 +1,5 @@
 from neo.core.baseneo import BaseNeo
+import numpy as np
 
 class RecordingChannelGroup(BaseNeo):
     """
@@ -82,9 +83,10 @@ class RecordingChannelGroup(BaseNeo):
 
         # Defaults
         if channel_indexes is None:
-            channel_indexes = []
+            channel_indexes = np.array([ ])
         if channel_names is None:
-            channel_names = []
+            #~ channel_names = []
+            channel_indexes = np.array([ ])
 
         # Store recommended attributes
         self.channel_names = channel_names
