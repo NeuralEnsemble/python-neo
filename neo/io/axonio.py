@@ -135,7 +135,7 @@ class AxonIO(BaseIO):
     read_params        = { Block : [ ] }
     write_params       = None
 
-    name               = None
+    name               =  'Axon'
     extensions         = [ 'abf' ]
     
     mode = 'file'
