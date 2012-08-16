@@ -1,2 +1,3 @@
 .tox
 neo/test/io/files_for_tests
+*.pyc
