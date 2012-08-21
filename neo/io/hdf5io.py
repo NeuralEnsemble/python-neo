@@ -76,7 +76,7 @@ or just use
 
 >>> b1 = iom.get("/block_0")
 
-You may notice, by default the reading function retrieves all available data, 
+You may notice, by default the reading function retrieves all available data,
 with all downstream relations and arrays:
 
 >>> b1._segments
@@ -95,12 +95,12 @@ relations
 
 and/or even without arrays
 
->>> a2 = iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0", 
+>>> a2 = iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0",
 lazy=True)
 >>> a2.signal
 []
 
-These functions return "pure" NEO objects. They are completely "detached" from 
+These functions return "pure" NEO objects. They are completely "detached" from
 the HDF5 file - changes to the runtime objects will not cause any changes in the
 file:
 
@@ -112,7 +112,7 @@ array(32.0) * ms
 >>> iom.get("/block_0/_segments/segment_0/_analogsignals/analogsignal_0").t_start
 array(42.0) * ms
 
-However, if you want to work directly with HDF5 storage making instant 
+However, if you want to work directly with HDF5 storage making instant
 modifications, you may use the native PyTables functionality, where all objects
 are accessible through "<IO_manager_inst>._data.root":
 
@@ -130,9 +130,9 @@ Finally, you may get an overview of the contents of the file by running
 
 >>> iom.get_info()
 This is a neo.HDF5 file. it contains:
-{'spiketrain': 0, 'irsaanalogsignal': 0, 'analogsignalarray': 0, 
-'recordingchannelgroup': 0, 'eventarray': 0, 'analogsignal': 1, 'epoch': 0, 
-'unit': 0, 'recordingchannel': 0, 'spike': 0, 'epocharray': 0, 'segment': 1, 
+{'spiketrain': 0, 'irsaanalogsignal': 0, 'analogsignalarray': 0,
+'recordingchannelgroup': 0, 'eventarray': 0, 'analogsignal': 1, 'epoch': 0,
+'unit': 0, 'recordingchannel': 0, 'spike': 0, 'epocharray': 0, 'segment': 1,
 'event': 0, 'block': 1}
 
 
@@ -160,7 +160,7 @@ The general structure of the file:
      \                                                    \---'Unit_1'
      \                                                    \
      \                                                    \---'Unit_2'
-     \                        
+     \
      \---'_segments'
             \
              \--'Segment_1'
@@ -179,7 +179,6 @@ Plans for future extensions:
 #FIXME - lazy load should be only for huge arrays, but not for all Quantities
 #FIXME - implement logging mechanism (probably in general for NEO)
 #FIXME - implement actions history (probably in general for NEO)
-#FIXME - use global IDs for NEO objects (or even UUIDs?)
 #FIXME - implement callbacks in functions for GUIs
 #FIXME - no performance testing yet
 
@@ -205,6 +204,7 @@ import tables as tb
 import numpy as np
 import quantities as pq
 import logging
+import uuid
 
 import tables
 
@@ -218,9 +218,11 @@ if version.LooseVersion(tables.__version__) < '2.2':
 SETTINGS:
 filename:       the full path to the HDF5 file.
 cascade:        If 'True' all children are retrieved when get(object) is called.
-lazy:           If 'True' data (arrays) is retrieved when get(object) is called. 
+lazy:           If 'True' data (arrays) is retrieved when get(object) is called.
+update:         If 'True' data objects with hdf5_path attribute will be written to that path.
+                If the path does not exist, an exception is raised.
 """
-settings = {'filename': "neo.h5", 'cascade': True, 'lazy': True}
+settings = {'filename': "neo.h5", 'cascade': True, 'lazy': True, 'update': True}
 
 def _func_wrapper(func):
     try:
@@ -237,6 +239,10 @@ all_objects = list(class_by_name.values())
 all_objects.remove(Block)# the order is important
 all_objects = [Block]+all_objects
 
+# Types where an object might have to be loaded multiple times to create
+# all realtionships
+complex_relationships = ["Unit", "Segment", "RecordingChannel"]
+
 class NeoHdf5IO(BaseIO):
     """
     The IO Manager is the core I/O class for HDF5 / NEO. It handles the 
@@ -251,11 +257,24 @@ class NeoHdf5IO(BaseIO):
     name = 'Hdf5'
     extensions = [ 'h5', ]
     mode = 'file'
-    
-    def __init__(self, filename=settings['filename'], **kwargs):
+
+    def __init__(self, filename=settings['filename'], update=settings['update'], **kwargs):
         self._init_base_io()
         self.connected = False
-        self.connect(filename=filename)
+        self.objects_by_ref = {}
+        self.name_indices = {}
+        self.compatibility_mode = True
+        self.connect(filename=filename, update=update)
+
+    def set_compatibility_mode(self, mode):
+        """
+        Sets the compatibility mode. If True (default), only general features
+        of HDF5 are used so that the resulting file is compatible with any
+        HDF5 reader. If False, some features of PyTables are used and the
+        resulting file can only be loaded using PyTables (e.g. using this IO
+        class), but loading will be faster and the file size will be smaller.
+        """
+        self.compatibility_mode = mode
 
     def _read_entity(self, path="/", cascade=True, lazy=False):
         """
@@ -291,11 +310,14 @@ class NeoHdf5IO(BaseIO):
     # IO connectivity / Session management
     #-------------------------------------------
 
-    def connect(self, filename=settings['filename']):
+    def connect(self, filename=settings['filename'], update=settings['update']):
         """
         Opens / initialises new HDF5 file.
         We rely on PyTables and keep all session management staff there.
+        update: True/False try to write objects at the location of their
+            hdf5_path attribute if it exists, raise exception if not.
         """
+        self.update = update
         if not self.connected:
             try:
                 if tb.isHDF5File(filename):
@@ -307,8 +329,11 @@ class NeoHdf5IO(BaseIO):
                 # create a new file if specified file not found
                 self._data = tb.openFile(filename, mode = "w", title = filename)
                 self.connected = True
+                self.update = False
             except:
                 raise NameError("Incorrect file path, couldn't find or create a file.")
+            self.objects_by_ref = {}
+            self.name_indices = {}
         else:
             logging.info("Already connected.")
 
@@ -316,6 +341,7 @@ class NeoHdf5IO(BaseIO):
         """
         Closes the connection.
         """
+        self.objects_by_ref = {}
         self._data.close()
         self.connected = False
 
@@ -340,21 +366,30 @@ class NeoHdf5IO(BaseIO):
     def _get_next_name(self, obj_type, where):
         """
         Returns the next possible name within a given container (group)
-        Expensive with large saves! Define other algorithm?
         """
+        if not (obj_type, where) in self.name_indices:
+            self.name_indices[(obj_type, where)] = 0
+
+        index_num = self.name_indices[(obj_type, where)]
         prefix = str(obj_type) + "_"
+        if where + prefix + str(index_num) not in self._data:
+            self.name_indices[(obj_type, where)] = index_num + 1
+            return prefix + str(index_num)
+
         nodes = []
-        for node in self._data.listNodes(where):
+        for node in self._data.iterNodes(where):
             index = node._v_name[node._v_name.find(prefix) + len(prefix):]
-            if len(index) > 0: 
+            if len(index) > 0:
                 try:
                     nodes.append(int(index))
                 except ValueError:
                     pass # index was changed by user, but then we don't care
         nodes.sort(reverse=True)
         if len(nodes) > 0:
+            self.name_indices[(obj_type, where)] = nodes[0] + 2
             return prefix + str(nodes[0] + 1)
         else:
+            self.name_indices[(obj_type, where)] = 1
             return prefix + "0"
 
     #-------------------------------------------
@@ -376,13 +411,25 @@ class NeoHdf5IO(BaseIO):
                     if obj_attr.size == 0:
                         atom = tb.Float64Atom(shape=(1,))
                         new_arr = self._data.createEArray(path, attr_name + "__temp", atom, shape=(0,), expectedrows=1)
-                        #raise ValueError("A size of the %s of the %s has \
-                        #    length zero and can't be saved." % 
-                        #    (attr_name, path))
                     # we try to create new array first, so not to loose the 
                     # data in case of any failure
                     else:
-                        new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
+                        # we need to simplify custom quantities
+                        if isinstance(obj_attr, pq.Quantity):
+                            for un in obj_attr.dimensionality.keys():
+                                if not un.name in pq.units.__dict__ or \
+                                    not isinstance(pq.units.__dict__[un.name], pq.Quantity):
+                                    obj_attr = obj_attr.simplified
+                                    break
+
+                        if obj_attr.shape and not self.compatibility_mode:
+                            filters = tables.Filters(complevel=5, complib='blosc')
+                            new_arr = self._data.createCArray(path, attr_name + "__temp",
+                                tables.Float64Atom(), obj_attr.shape, filters=filters)
+                            new_arr[...] = obj_attr
+                        else:
+                            new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
+
                     if hasattr(obj_attr, "dimensionality"):
                         for un in obj_attr.dimensionality.items():
                             new_arr._f_setAttr("unit__" + un[0].name, un[1])
@@ -391,12 +438,12 @@ class NeoHdf5IO(BaseIO):
                     except:
                         pass # there is no array yet or object is new
                     self._data.renameNode(path, attr_name, name=attr_name + "__temp")
-            elif not obj_attr == None:
+            elif obj_attr is not None:
                 node._f_setAttr(attr_name, obj_attr)
-            
+
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
-        if hasattr(obj, "hdf5_path"): # this is an update case
+        if hasattr(obj, "hdf5_path") and self.update: # this is an update case
             try:
                 path = str(obj.hdf5_path)
                 node = self._data.getNode(obj.hdf5_path)
@@ -410,16 +457,22 @@ class NeoHdf5IO(BaseIO):
             node = self._data.createGroup(where, self._get_next_name(obj_type, where))
             node._f_setAttr("_type", obj_type)
             path = node._v_pathname
-        # processing attributes
+            # processing attributes
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
                 assign_attribute(getattr(obj, attr[0]), attr[0])
-        # not forget to save AS, ASA or ST - NEO "stars"
+            # not forget to save AS, ASA or ST - NEO "stars"
         if obj_type in classes_inheriting_quantities.keys():
             assign_attribute(obj, classes_inheriting_quantities[obj_type])
         if hasattr(obj, "annotations"): # annotations should be just a dict
-            node._f_setAttr("annotations", getattr(obj, "annotations"))
+            if self.compatibility_mode: # Write each annotation
+                anno = self._data.createGroup(node, "annotations")
+                for n,v in obj.annotations.iteritems():
+                    anno._f_setAttr(n, v)
+            else: # Just pickle the whole dictionary
+                node._f_setAttr("annotations", getattr(obj, "annotations"))
+        node._f_setAttr("object_ref", uuid.uuid4().hex)
         if one_to_many_relationship.has_key(obj_type) and cascade:
             rels = list(one_to_many_relationship[obj_type])
             if obj_type == "RecordingChannelGroup":
@@ -445,23 +498,12 @@ class NeoHdf5IO(BaseIO):
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
                         self._data.removeNode(ch._v_pathname, child._v_name, recursive=True)
-        # FIXME needed special processor for RC -> RCG
         self._update_path(obj, node)
 
 
     @_func_wrapper
     def get(self, path="/", cascade=True, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
-
-        def rem_duplicates(target, source, attr):
-            """ removes duplicated objects in case a block is requested: for 
-            RCGs, RCs and Units we remove duplicated ASAs, IrSAs, ASs, STs and
-            Spikes if those were already initialized in Segment. """
-            a = getattr(target, attr) # a container, e.g. "analogsignals"
-            b = getattr(source, attr) # a container, e.g. "analogsignals"
-            res = list(set(a) - set(b))
-            res += list(set(b) -(set(b) - set(a)))
-            setattr(target, attr, res)
 
         def fetch_attribute(attr_name):
             """ fetch required attribute from the corresp. node in the file """
@@ -505,29 +547,47 @@ class NeoHdf5IO(BaseIO):
             node = self._data.getNode(path)
         except (NSNE, ValueError): # create a new node?
             raise LookupError("There is no valid object with a given path " +\
-                str(path) + " . Please give correct path or just browse the file \
+                              str(path) + " . Please give correct path or just browse the file \
                 (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
                 appropriate name.")
         classname = self._get_class_by_node(node)
         if not classname:
             raise LookupError("The requested object with the path " + str(path) +\
-                " exists, but is not of a NEO type. Please check the '_type' attribute.")
+                              " exists, but is not of a NEO type. Please check the '_type' attribute.")
+
         obj_type = name_by_class[classname]
-        kwargs = {}
-        # load attributes (inherited *-ed attrs are also here)
-        attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for i, attr in enumerate(attrs):
-            attr_name = attr[0]
-            nattr = fetch_attribute(attr_name)
-            if nattr is not None:
-                kwargs[attr_name] = nattr
-        obj = class_by_name[obj_type](**kwargs) # instantiate new object
-        self._update_path(obj, node) # set up HDF attributes: name, path
         try:
-            setattr(obj, "annotations", node._f_getAttr("annotations"))
-        except AttributeError: pass # not assigned, continue
-        if lazy: # FIXME is this really needed?
-            setattr(obj, "lazy_shape", "some shape should go here..")
+            object_ref = self._data.getNodeAttr(node, 'object_ref')
+        except AttributeError: # Object does not have reference, e.g. because this is an old file format
+            object_ref = None
+        if object_ref in self.objects_by_ref:
+            obj = self.objects_by_ref[object_ref]
+            if obj_type not in complex_relationships:
+                return obj
+        else:
+            kwargs = {}
+            # load attributes (inherited *-ed attrs are also here)
+            attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
+            for i, attr in enumerate(attrs):
+                attr_name = attr[0]
+                nattr = fetch_attribute(attr_name)
+                if nattr is not None:
+                    kwargs[attr_name] = nattr
+            obj = class_by_name[obj_type](**kwargs) # instantiate new object
+            self._update_path(obj, node) # set up HDF attributes: name, path
+            try:
+                setattr(obj, "annotations", node._f_getAttr("annotations"))
+            except AttributeError:
+                setattr(obj, "annotations", {})
+                if "annotations" in node:
+                    anno = node.annotations
+                    for attr in anno._v_attrs._f_list('user'):
+                        obj.annotations[attr] = anno._v_attrs[attr]
+            if lazy: # FIXME is this really needed?
+                setattr(obj, "lazy_shape", "some shape should go here..")
+
+        if object_ref:
+            self.objects_by_ref[object_ref] = obj
         # load relationships
         if cascade:
             if one_to_many_relationship.has_key(obj_type):
@@ -544,19 +604,28 @@ class NeoHdf5IO(BaseIO):
                         except AttributeError: # alien node
                             pass # not an error
                     setattr(obj, child.lower() + "s", relatives)
-        if cascade and obj_type == "Block": # this is a special case
-            # We need to clean-up some duplicated objects
-            for seg in obj.segments:
-                for RCG in obj.recordingchannelgroups:
-                    rem_duplicates(RCG, seg, "analogsignalarrays") # clean-up duplicate ASA
-                    for RC in RCG.recordingchannels:
-                        rem_duplicates(RC, seg, "analogsignals")
-                        rem_duplicates(RC, seg, "irregularlysampledsignals")
-                    for unit in RCG.units:
-                        rem_duplicates(unit, seg, "spiketrains")
-                        rem_duplicates(unit, seg, "spikes")
-        # FIXME special processor for RC -> RCG
+            # special processor for RC -> RCG
+            if obj_type == "RecordingChannel":
+                if hasattr(node, '_v_parent'):
+                    parent = node._v_parent
+                    if hasattr(parent, '_v_parent'):
+                        parent = parent._v_parent
+                        obj.recordingchannelgroups.append(self.get(
+                            parent._v_pathname, lazy=lazy))
         return obj
+
+
+    @_func_wrapper
+    def read_all_blocks(self, lazy=False):
+        """
+        Loads all blocks in the file that are attached to the root (which
+        happens when they are saved with save() or write_block()).
+        """
+        blocks = []
+        for n in self._data.listNodes(self._data.root):
+            if self._get_class_by_node(n) == Block:
+                blocks.append(self.read_block(n._v_pathname, lazy=lazy))
+        return blocks
 
 
     @_func_wrapper
@@ -589,5 +658,3 @@ class NeoHdf5IO(BaseIO):
                 # node is not of NEO type
                 pass
         return info
-
-
