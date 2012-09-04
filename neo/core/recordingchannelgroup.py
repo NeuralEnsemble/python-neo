@@ -101,4 +101,4 @@ class RecordingChannelGroup(BaseNeo):
 
     @property
     def spike_rates(self):
-        return [unit.spike_rates for unit in units]
+        return [unit.spike_rates for unit in self.units]
