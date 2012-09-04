@@ -52,6 +52,11 @@ class Unit(BaseNeo):
 
         self.recordingchannelgroup = None
 
+    @property
+    def spike_rates(self):
+        units=self.spiketrains[0].spike_rate.units
+        rates=[train.spike_rate.rescale(units) for train in self.spiketrains]
+        return pq.Quantity(rates,units=units)
 
 
 
