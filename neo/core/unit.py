@@ -1,5 +1,8 @@
 from neo.core.baseneo import BaseNeo
 
+import quantities as pq
+import numpy as np
+
 class Unit(BaseNeo):
     """
     A :class:`Unit` regroups all the :class:`SpikeTrain` objects that were emitted
