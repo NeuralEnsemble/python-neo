@@ -1,5 +1,6 @@
 from neo.core.baseneo import BaseNeo
 
+import quantities as pq
 import numpy as np
 
 class Segment(BaseNeo):
@@ -166,3 +167,10 @@ class Segment(BaseNeo):
                                  "irregularlysampledsignals", "spikes",
                                  "spiketrains", "epocharrays", "eventarrays",
                                  "analogsignalarrays"))
+
+    @property
+    def spike_rates(self):
+        units=self.spiketrains[0].spike_rate.units
+        rates=[train.spike_rate.rescale(units) for train in self.spiketrains]
+        return pq.Quantity(rates,units=units)
+
