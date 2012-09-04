@@ -1,14 +1,14 @@
 # encoding: utf-8
 """
 Class for reading data from from Tucker Davis TTank format.
-Terminology: 
+Terminology:
 TDT hold data with tanks (actually a directory). And tanks hold sub block (sub directories).
 Tanks correspond to neo.Block and tdt block correspond to neo.Segment.
 
 Note the name Block is ambiguous because it does not refer to same thing in TDT terminilogy and neo.
 
 
-Depend on: 
+Depend on:
 
 Supported : Read
 
@@ -33,7 +33,7 @@ PY3K = (sys.version_info[0] == 3)
 class TdtIO(BaseIO):
     """
     Class for reading data from from Tucker Davis TTank format.
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.TdtIO(dirname='aep_05')
@@ -46,39 +46,39 @@ class TdtIO(BaseIO):
         >>> print bl.segments[0].eventarrays
         []
     """
-    
-    
-    
+
+
+
     is_readable        = True
     is_writable        = False
 
     supported_objects  = [Block, Segment , AnalogSignal, EventArray ]
     readable_objects   = [Block]
-    writeable_objects  = []  
+    writeable_objects  = []
 
     has_header         = False
     is_streameable     = False
-    
+
     read_params        = {
                         Block : [
                                 ],
                         }
-    
+
     write_params       = None
-    
+
     name               = 'TDT'
     extensions          = [ ]
-    
+
     mode = 'dir'
-    
+
     def __init__(self , dirname = None) :
         """
         This class read a WinEDR wcp file.
-        
+
         **Arguments**
         Arguments:
             dirname: path of the TDT tank (a directory)
-        
+
         """
         BaseIO.__init__(self)
         self.dirname = dirname
@@ -96,13 +96,13 @@ class TdtIO(BaseIO):
         for blockname in os.listdir(self.dirname):
             if blockname == 'TempBlk': continue
             subdir = os.path.join(self.dirname,blockname)
-            
+
             if not os.path.isdir(subdir): continue
-            
+
             seg = Segment(name = blockname)
             bl.segments.append( seg)
-            
-            
+
+
             global_t_start = None
             # Step 1 : first loop for counting - tsq file
             tsq = open(os.path.join(subdir, tankname+'_'+blockname+'.tsq'), 'rb')
@@ -113,24 +113,24 @@ class TdtIO(BaseIO):
             while 1:
                 h= hr.read_f()
                 if h==None:break
-                
+
                 channel, code ,  evtype = h['channel'], h['code'], h['evtype']
-                
+
                 if Types[evtype] == 'EVTYPE_UNKNOWN':
                     pass
-                    
+
                 elif Types[evtype] == 'EVTYPE_MARK' :
                     if global_t_start is None:
                         global_t_start = h['timestamp']
-                
+
                 elif Types[evtype] == 'EVTYPE_SCALER' :
                     # TODO
                     pass
-                
+
                 elif Types[evtype] == 'EVTYPE_STRON' or \
                      Types[evtype] == 'EVTYPE_STROFF':
                     # EVENTS
-                     
+
                     if code not in allevent:
                         allevent[code] = { }
                     if channel not in allevent[code]:
@@ -138,16 +138,16 @@ class TdtIO(BaseIO):
                         # for counting:
                         ea.lazy_shape = 0
                         ea.maxlabelsize = 0
-                        
-                        
+
+
                         allevent[code][channel] = ea
-                        
+
                     allevent[code][channel].lazy_shape += 1
                     strobe, = struct.unpack('d' , struct.pack('q' , h['eventoffset']))
                     strobe = str(strobe)
                     if len(strobe)>= allevent[code][channel].maxlabelsize:
                         allevent[code][channel].maxlabelsize = len(strobe)
-                    
+
                     #~ ev = Event()
                     #~ ev.time = h['timestamp'] - global_t_start
                     #~ ev.name = code
@@ -157,17 +157,17 @@ class TdtIO(BaseIO):
                     #~ seg._events.append( ev )
 
                 elif Types[evtype] == 'EVTYPE_SNIP' :
-                    
+
                     if code not in allspiketr:
                         allspiketr[code] = { }
                     if channel not in allspiketr[code]:
                         allspiketr[code][channel] = { }
                     if h['sortcode'] not in allspiketr[code][channel]:
-                        
 
 
-                        
-                        
+
+
+
                         sptr = SpikeTrain([ ], units = 's',
                                                         name = str(h['sortcode']),
                                                         #t_start = global_t_start,
@@ -175,7 +175,7 @@ class TdtIO(BaseIO):
                                                         t_stop = 0.*pq.s, # temporary
                                                         left_sweep = (h['size']-10.)/2./h['frequency'] * pq.s,
                                                         sampling_rate = h['frequency'] * pq.Hz,
-                                                        
+
                                                         )
                         #~ sptr.channel = channel
                         #sptr.annotations['channel_index'] = channel
@@ -185,24 +185,24 @@ class TdtIO(BaseIO):
                         sptr.lazy_shape = 0
                         sptr.pos = 0
                         sptr.waveformsize = h['size']-10
-                        
+
                         #~ sptr.name = str(h['sortcode'])
                         #~ sptr.t_start = global_t_start
                         #~ sptr.sampling_rate = h['frequency']
                         #~ sptr.left_sweep = (h['size']-10.)/2./h['frequency']
                         #~ sptr.right_sweep = (h['size']-10.)/2./h['frequency']
                         #~ sptr.waveformsize = h['size']-10
-                        
+
                         allspiketr[code][channel][h['sortcode']] = sptr
-                    
+
                     allspiketr[code][channel][h['sortcode']].lazy_shape += 1
-                
+
                 elif Types[evtype] == 'EVTYPE_STREAM':
                     if code not in allsig:
                         allsig[code] = { }
                     if channel not in allsig[code]:
                         #~ print 'code', code, 'channel',  channel
-                        anaSig = AnalogSignal( 
+                        anaSig = AnalogSignal(
                                                             [ ] * pq.V,
                                                             name =  code,
                                                             sampling_rate = h['frequency'] * pq.Hz,
@@ -212,7 +212,7 @@ class TdtIO(BaseIO):
                         #anaSig.annotations['channel_index'] = channel
                         anaSig.annotate(channel_index = channel)
                         anaSig.pos = 0
-                        
+
                         # for counting:
                         anaSig.lazy_shape = 0
                         #~ anaSig.pos = 0
@@ -225,13 +225,13 @@ class TdtIO(BaseIO):
                     for channel, anaSig in iteritems(v):
                         v[channel] = anaSig.duplicate_with_new_array(np.zeros((anaSig.lazy_shape) , dtype = anaSig.lazy_dtype)*pq.V )
                         v[channel].pos = 0
-                        
+
                 for code, v in iteritems(allevent):
                     for channel, ea in iteritems(v):
                         ea.times = np.empty( (ea.lazy_shape)  ) * pq.s
                         ea.labels = np.empty( (ea.lazy_shape), dtype = 'S'+str(ea.maxlabelsize) )
                         ea.pos = 0
-                
+
                 for code, v in iteritems(allspiketr):
                     for channel, allsorted in iteritems(v):
                         for sortcode, sptr in iteritems(allsorted):
@@ -247,7 +247,7 @@ class TdtIO(BaseIO):
                             new.pos = 0
                             new.waveformsize = sptr.waveformsize
                             allsorted[sortcode] = new
-                        
+
                 # Step 3 : searh sev (individual data files) or tev (common data file)
                 # sev is for version > 70
                 if os.path.exists(os.path.join(subdir, tankname+'_'+blockname+'.tev')):
@@ -276,15 +276,15 @@ class TdtIO(BaseIO):
                     h= hr.read_f()
                     if h==None:break
                     channel, code ,  evtype = h['channel'], h['code'], h['evtype']
-                    
-                    if Types[evtype] == 'EVTYPE_STREAM': 
+
+                    if Types[evtype] == 'EVTYPE_STREAM':
                         a = allsig[code][channel]
                         dt = a.dtype
                         s = int((h['size']*4-40)/dt.itemsize)
                         a.fid.seek(h['eventoffset'])
                         a[ a.pos:a.pos+s ]  = np.fromstring( a.fid.read( s*dt.itemsize ), dtype = a.dtype)
                         a.pos += s
-                    
+
                     elif Types[evtype] == 'EVTYPE_STRON' or \
                         Types[evtype] == 'EVTYPE_STROFF':
                         ea = allevent[code][channel]
@@ -292,15 +292,15 @@ class TdtIO(BaseIO):
                         strobe, = struct.unpack('d' , struct.pack('q' , h['eventoffset']))
                         ea.labels[ea.pos] = str(strobe)
                         ea.pos += 1
-                    
-                    elif Types[evtype] == 'EVTYPE_SNIP': 
+
+                    elif Types[evtype] == 'EVTYPE_SNIP':
                         sptr = allspiketr[code][channel][h['sortcode']]
                         sptr.t_stop =  (h['timestamp'] - global_t_start) * pq.s
                         sptr[sptr.pos] = (h['timestamp'] - global_t_start) * pq.s
                         sptr.waveforms[sptr.pos, 0, :] = np.fromstring( sptr.fid.read( sptr.waveformsize*4 ), dtype = 'f4') * pq.V
                         sptr.pos += 1
-                
-            
+
+
             # Step 5 : populating segment
             for code, v in iteritems(allsig):
                 for channel, anaSig in iteritems(v):
@@ -315,7 +315,7 @@ class TdtIO(BaseIO):
                 for channel, allsorted in iteritems(v):
                     for sortcode, sptr in iteritems(allsorted):
                         seg.spiketrains.append( sptr )
-        
+
         create_many_to_one_relationship(bl)
         return bl
 

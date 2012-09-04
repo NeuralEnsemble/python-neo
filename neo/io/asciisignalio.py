@@ -29,7 +29,7 @@ class AsciiSignalIO(BaseIO):
     Columns respresents signal. They share all the same sampling rate.
     The sampling rate is externally known or the first columns could hold the time
     vector.
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.AsciiSignalIO(filename='File_asciisignal_2.txt')
@@ -38,10 +38,10 @@ class AsciiSignalIO(BaseIO):
         [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875 ...
 
     """
-    
+
     is_readable        = True
     is_writable        = True
-    
+
     supported_objects  = [ Segment , AnalogSignal]
     readable_objects   = [ Segment]
     writeable_objects  = [Segment]
@@ -67,10 +67,10 @@ class AsciiSignalIO(BaseIO):
                                         ('writetimecolumn' , { 'value' : True,  } ) ,
                                         ]
                             }
-    
+
     name               = None
     extensions          = [ 'txt' , 'asc', ]
-    
+
     mode = 'file'
 
     def __init__(self , filename = None) :
@@ -78,28 +78,28 @@ class AsciiSignalIO(BaseIO):
         This class read/write AnalogSignal in a text file.
         Each signal is a column.
         One of the column can be the time vector
-        
+
         Arguments:
             filename : the filename to read/write
         """
         BaseIO.__init__(self)
         self.filename = filename
-    
-    def read_segment(self, 
+
+    def read_segment(self,
                                         lazy = False,
                                         cascade = True,
                                         delimiter = '\t',
                                         usecols = None,
                                         skiprows =0,
-                                        
+
                                         timecolumn = None,
                                         sampling_rate = 1.*pq.Hz,
                                         t_start = 0.*pq.s,
-                                        
+
                                         unit = pq.V,
-                                        
+
                                         method = 'genfromtxt',
-                                        
+
                                         ):
         """
         Arguments:
@@ -110,34 +110,34 @@ class AsciiSignalIO(BaseIO):
             samplerate : the samplerate of signals if timecolumn is not None this is not take in account
             t_start : time of the first sample
             unit : unit of AnalogSignal can be a str or directly a Quantities
-            
+
             method :  'genfromtxt' or 'csv' or 'homemade'
                         in case of bugs you can try one of this methods
-                        
+
                         'genfromtxt' use numpy.genfromtxt
                         'csv' use cvs module
                         'homemade' use a intuitive more robust but slow method
-            
+
         """
         seg = Segment(file_origin = os.path.basename(self.filename))
         if not cascade:
             return seg
-        
+
         if type(sampling_rate) == float or type(sampling_rate)==int:
             # if not quantitities Hz by default
             sampling_rate = sampling_rate*pq.Hz
-        
+
         if type(t_start) == float or type(t_start)==int:
             # if not quantitities s by default
             t_start = t_start*pq.s
-        
+
         unit = pq.Quantity(1, unit)
-        
-            
-        
+
+
+
         #loadtxt
         if method == 'genfromtxt' :
-            sig = np.genfromtxt(self.filename, 
+            sig = np.genfromtxt(self.filename,
                                         delimiter = delimiter,
                                         usecols = usecols ,
                                         skiprows = skiprows,
@@ -161,41 +161,41 @@ class AsciiSignalIO(BaseIO):
                     l.remove('')
                 tab.append(l)
             sig = np.array( tab , dtype = 'f')
-        
+
         if timecolumn is not None:
             sampling_rate = 1./np.mean(np.diff(sig[:,timecolumn])) * pq.Hz
             t_start = sig[0,timecolumn] * pq.s
-        
-        
-        
+
+
+
         for i in range(sig.shape[1]) :
             if timecolumn == i : continue
             if usecols is not None and i not in usecols: continue
-            
+
             if lazy:
                 signal = [ ]*unit
             else:
                 signal = sig[:,i]*unit
-            
+
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = 'Column %d'%i)
             if lazy:
                 anaSig.lazy_shape = sig.shape
             anaSig.annotate( channel_index = i )
             seg.analogsignals.append( anaSig )
-        
+
         create_many_to_one_relationship(seg)
         return seg
 
     def write_segment(self, segment,
                                 delimiter = '\t',
-                                
+
                                 skiprows =0,
                                 writetimecolumn = True,
-                                
+
                                 ):
         """
         Write a segment and AnalogSignal in a text file.
-        
+
          **Arguments**
             delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
             writetimecolumn :  True or Flase write time vector as first column

@@ -7,19 +7,19 @@ class EventArray(BaseNeo):
     """
     Array of events. Introduced for performance reasons.
     An :class:`EventArray` is prefered to a list of :class:`Event` objects.
-    
+
     *Usage*:
         TODO
-    
+
     *Required attributes/properties*:
         :times: (quantity array 1D)
         :labels: (numpy.array 1D dtype='S')
-    
+
     *Recommended attributes/properties*:
         :name:
         :description:
-        :file_origin:            
-    
+        :file_origin:
+
     """
     def __init__(self, times=np.array([])*pq.s, labels=np.array([], dtype='S'),
                  name=None, description=None, file_origin=None,
@@ -29,7 +29,7 @@ class EventArray(BaseNeo):
                          description=description, **annotations)
         self.times = times
         self.labels = labels
-        
+
         self.segment = None
 
     def __repr__(self):

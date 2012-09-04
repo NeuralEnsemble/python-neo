@@ -239,7 +239,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __div__(self, other):
        return self._apply_operator(other, "__div__")
-       
+
     __radd__ = __add__
     __rmul__ = __sub__
 
