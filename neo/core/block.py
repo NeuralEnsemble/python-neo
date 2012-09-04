@@ -92,3 +92,12 @@ class Block(BaseNeo):
                     lookup[obj.name].merge(obj)
                 else:
                     getattr(self, container).append(obj)
+
+    @property
+    def recordingchannelgroups_spike_rates(self):
+        return [group.spike_rates for group in self.recordingchannelgroups]
+
+    @property
+    def segments_spike_rates(self):
+        return [segment.spike_rates for segment in self.segments]
+
