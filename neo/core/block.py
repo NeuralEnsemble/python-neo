@@ -101,3 +101,11 @@ class Block(BaseNeo):
     def segments_spike_rates(self):
         return [segment.spike_rates for segment in self.segments]
 
+    @property
+    def recordingchannelgroups_spike_counts(self):
+        return [group.spike_counts for group in self.recordingchannelgroups]
+
+    @property
+    def segments_spike_counts(self):
+        return [segment.spike_counts for segment in self.segments]
+
