@@ -12,7 +12,7 @@ An Elan dataset is separated into 3 files :
  - .eeg.pos      event file
 
 
-Depend on: 
+Depend on:
 
 Supported : Read and Write
 
@@ -42,7 +42,7 @@ class VersionError(Exception):
 class ElanIO(BaseIO):
     """
     Classe for reading/writing data from Elan.
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.ElanIO( filename = 'File_elan_1.eeg')
@@ -54,11 +54,11 @@ class ElanIO(BaseIO):
         []
         >>> print seg.eventarrays     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         []
-        
-    
-    
+
+
+
     """
-    
+
     is_readable        = True
     is_writable        = False
 
@@ -68,20 +68,20 @@ class ElanIO(BaseIO):
 
     has_header         = False
     is_streameable     = False
-    
+
     read_params        = { Segment : [ ] }
     write_params       = { Segment : [ ] }
 
     name               = None
     extensions         = ['eeg']
-    
+
     mode = 'file'
-    
-    
+
+
     def __init__(self , filename = None) :
         """
         This class read/write a elan based file.
-        
+
         **Arguments**
             filename : the filename to read or write
         """
@@ -90,22 +90,22 @@ class ElanIO(BaseIO):
 
 
     def read_segment(self, lazy = False, cascade = True):
-        
+
         ## Read header file
-        
+
         f = open(self.filename+'.ent' , 'rU')
         #version
         version = f.readline()
         if version[:2] != 'V2' and version[:2] != 'V3':
             # raise('read only V2 .eeg.ent files')
             raise VersionError('Read only V2 or V3 .eeg.ent files. %s given' %
-                               version[:2]) 
+                               version[:2])
             return
-        
+
         #info
         info1 = f.readline()[:-1]
         info2 = f.readline()[:-1]
-        
+
         # strange 2 line for datetime
         #line1
         l = f.readline()
@@ -119,7 +119,7 @@ class ElanIO(BaseIO):
             hh ,mm ,ss = r2[0]
         elif len(r3) != 0:
             DD , MM, YY= r3[0]
-        
+
         #line2
         l = f.readline()
         r1 = re.findall('(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)',l)
@@ -135,46 +135,46 @@ class ElanIO(BaseIO):
             fulldatetime = datetime.datetime(int(YY) , int(MM) , int(DD) , int(hh) , int(mm) , int(ss) )
         except:
             fulldatetime = None
-        
-        
+
+
         seg = Segment(  file_origin = os.path.basename(self.filename),
-                                    elan_version = version, 
+                                    elan_version = version,
                                     info1 = info1,
                                     info2 = info2,
                                     rec_datetime = fulldatetime,
                                     )
-        
+
         if not cascade : return seg
-        
-        
+
+
         l = f.readline()
         l = f.readline()
         l = f.readline()
-        
+
         # sampling rate sample
         l = f.readline()
         sampling_rate = 1./float(l) * pq.Hz
-        
+
         # nb channel
         l = f.readline()
         nbchannel = int(l)-2
-        
+
         #channel label
         labels = [ ]
         for c in range(nbchannel+2) :
             labels.append(f.readline()[:-1])
-        
+
         # channel type
         types = [ ]
         for c in range(nbchannel+2) :
             types.append(f.readline()[:-1])
-        
+
         # channel unit
         units = [ ]
         for c in range(nbchannel+2) :
             units.append(f.readline()[:-1])
         #print units
-        
+
         #range
         min_physic = []
         for c in range(nbchannel+2) :
@@ -188,14 +188,14 @@ class ElanIO(BaseIO):
         max_logic = []
         for c in range(nbchannel+2) :
             max_logic.append( float(f.readline()) )
-        
+
         #info filter
         info_filter = []
         for c in range(nbchannel+2) :
             info_filter.append(f.readline()[:-1])
-        
+
         f.close()
-        
+
         #raw data
         n = int(round(log(max_logic[0]-min_logic[0])/log(2))/8)
         data = fromfile(self.filename,dtype = 'i'+str(n) )
@@ -206,13 +206,13 @@ class ElanIO(BaseIO):
             else:
                 sig = (data[:,c]-min_logic[c])/(max_logic[c]-min_logic[c])*\
                                     (max_physic[c]-min_physic[c])+min_physic[c]
-            
+
             try:
                 unit = pq.Quantity(1, units[c] )
             except:
                 unit = pq.Quantity(1, '' )
-            
-            
+
+
             anaSig = AnalogSignal( sig * unit,
                                                     sampling_rate = sampling_rate,
                                                     t_start=0.*pq.s,
@@ -223,7 +223,7 @@ class ElanIO(BaseIO):
             anaSig.annotate(channel_index = c)
             anaSig.annotate(channel_name= labels[c])
             seg.analogsignals.append( anaSig )
-        
+
         # triggers
         f = open(self.filename+'.pos')
         times =[ ]
@@ -241,7 +241,7 @@ class ElanIO(BaseIO):
         else:
             times =  np.array(times) * pq.s
             labels  = np.array(labels)
-            reject_codes = np.array(reject_codes) 
+            reject_codes = np.array(reject_codes)
         ea = EventArray( times = times,
                                     labels  = labels,
                                     reject_codes = reject_codes,
@@ -249,17 +249,17 @@ class ElanIO(BaseIO):
         if lazy:
             ea.lazy_shape = len(times)
         seg.eventarrays.append(ea)
-    
-        
+
+
         f.close()
-        
+
         create_many_to_one_relationship(seg)
         return seg
-        
+
 
     #~ def write_segment(self, segment, ):
         #~ """
-        
+
          #~ Arguments:
             #~ segment : the segment to write. Only analog signals and events will be written.
         #~ """
@@ -267,11 +267,11 @@ class ElanIO(BaseIO):
         #~ fid_ent = open(self.filename+'.ent' ,'wt')
         #~ fid_eeg = open(self.filename ,'wt')
         #~ fid_pos = open(self.filename+'.pos' ,'wt')
-        
+
         #~ seg = segment
         #~ sampling_rate = seg._analogsignals[0].sampling_rate
         #~ N = len(seg._analogsignals)
-        
+
         #~ #
         #~ # header file
         #~ #
@@ -285,9 +285,9 @@ class ElanIO(BaseIO):
         #~ fid_ent.write('reserved\n')
         #~ fid_ent.write('-1\n')
         #~ fid_ent.write('%g\n' %  (1./sampling_rate))
-        
+
         #~ fid_ent.write( '%d\n' % (N+2) )
-        
+
         #~ # channel label
         #~ for i, anaSig in enumerate(seg.analogsignals) :
             #~ try :
@@ -296,20 +296,20 @@ class ElanIO(BaseIO):
                 #~ fid_ent.write('%s.%d\n' % ('nolabel', i+1 ))
         #~ fid_ent.write('Num1\n')
         #~ fid_ent.write('Num2\n')
-        
+
         #~ #channel type
         #~ for i, anaSig in enumerate(seg.analogsignals) :
             #~ fid_ent.write('Electrode\n')
         #~ fid_ent.write( 'dateur echantillon\n')
         #~ fid_ent.write( 'type evenement et byte info\n')
-        
+
         #~ #units
         #~ for i, anaSig in enumerate(seg._analogsignals) :
             #~ unit_txt = str(anaSig.units).split(' ')[1]
             #~ fid_ent.write('%s\n' % unit_txt)
         #~ fid_ent.write('sans\n')
         #~ fid_ent.write('sans\n')
-    
+
         #~ #range and data
         #~ list_range = []
         #~ data = np.zeros( (seg._analogsignals[0].size , N+2)  , 'i2')
@@ -324,12 +324,12 @@ class ElanIO(BaseIO):
                 #~ # automatic range in arbitrry unit
                 #~ s = anaSig.magnitude
                 #~ s*= 10**(int(np.log10(abs(s).max()))+1)
-            
+
             #~ list_range.append( int(abs(s).max()) +1 )
-            
+
             #~ s2 = s*65535/(2*list_range[i])
             #~ data[:,i] = s2.astype('i2')
-            
+
         #~ for r in list_range :
             #~ fid_ent.write('-%.0f\n'% r)
         #~ fid_ent.write('-1\n')
@@ -338,24 +338,24 @@ class ElanIO(BaseIO):
             #~ fid_ent.write('%.0f\n'% r)
         #~ fid_ent.write('+1\n')
         #~ fid_ent.write('+1\n')
-        
+
         #~ for i in range(N+2) :
             #~ fid_ent.write('-32768\n')
         #~ for i in range(N+2) :
             #~ fid_ent.write('+32767\n')
-        
+
         #~ #info filter
         #~ for i in range(N+2) :
             #~ fid_ent.write('passe-haut ? Hz passe-bas ? Hz\n')
         #~ fid_ent.write('sans\n')
         #~ fid_ent.write('sans\n')
-        
+
         #~ for i in range(N+2) :
             #~ fid_ent.write('1\n')
-            
+
         #~ for i in range(N+2) :
             #~ fid_ent.write('reserved\n')
-    
+
         #~ # raw file .eeg
         #~ if len(seg._eventarrays) == 1:
             #~ ea = seg._eventarrays[0]
@@ -364,8 +364,8 @@ class ElanIO(BaseIO):
             #~ trigs2 = trigs[ (trigs>0) & (trigs<data.shape[0]) ]
             #~ data[trigs2,-1] = 1
         #~ fid_eeg.write(data.byteswap().tostring())
-        
-        
+
+
         #~ # pos file  eeg.pos
         #~ if len(seg._eventarrays) == 1:
             #~ ea = seg._eventarray[0]
@@ -377,10 +377,10 @@ class ElanIO(BaseIO):
                 #~ labels = ea.labels
             #~ else:
                 #~ labels = np.array(  [ '' ]*ea.times.size)
-            
+
             #~ for t, label, rc in zip(ea.times, labels, rcs):
                 #~ fid_pos.write('%d    %s    %s\n' % (trigs[i] , ev.label,0))
-        
+
         #~ fid_ent.close()
         #~ fid_eeg.close()
         #~ fid_pos.close()

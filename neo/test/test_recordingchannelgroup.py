@@ -6,7 +6,7 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-    
+
 from neo.core.recordingchannelgroup import RecordingChannelGroup
 import numpy as np
 
@@ -21,7 +21,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(rcg.analogsignalarrays, [])
         assert_arrays_equal(rcg.channel_names, np.array([]))
         assert_arrays_equal(rcg.channel_indexes, np.array([]))
-    
+
     def testInit(self):
         rcg = RecordingChannelGroup(file_origin='temp.dat', channel_indexes=np.array([1]))
         self.assertEqual(rcg.file_origin, 'temp.dat')

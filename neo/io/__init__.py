@@ -2,7 +2,7 @@
 """
 neo.io provides classes for reading and/or writing electrophysiological data files.
 
-Note that if the package dependency is not satisfied for one io, it does not 
+Note that if the package dependency is not satisfied for one io, it does not
 raise an error but a warning.
 
 neo.io.iolist provides the classes list of succesfully imported io.
