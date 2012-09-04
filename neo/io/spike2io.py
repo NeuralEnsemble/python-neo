@@ -14,7 +14,7 @@ and sonpy come from :
 This IO support old (<v6) and new files (>v7) of spike2
 
 
-Depend on: 
+Depend on:
 
 Supported : Read
 
@@ -38,7 +38,7 @@ PY3K = (sys.version_info[0] == 3)
 class Spike2IO(BaseIO):
     """
     Class for reading data from CED spike2.
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.Spike2IO( filename = 'File_spike2_1.smr')
@@ -46,15 +46,15 @@ class Spike2IO(BaseIO):
         >>> print seg.analogsignals
         >>> print seg.spiketrains
         >>> print seg.eventarrays
-    
+
     """
-    
+
     is_readable        = True
     is_writable        = False
-    
+
     supported_objects  = [ Segment , AnalogSignal , EventArray, SpikeTrain]
     readable_objects   = [Segment]
-    writeable_objects  = [ ]      
+    writeable_objects  = [ ]
 
 
     has_header         = False
@@ -64,15 +64,15 @@ class Spike2IO(BaseIO):
 
     name               = 'Spike 2 CED'
     extensions          = [ 'smr' ]
-    
+
     mode = 'file'
-    
+
     def __init__(self , filename = None) :
         """
         This class read a smr file.
-        
+
         Arguments:
-            filename : the filename 
+            filename : the filename
         """
         BaseIO.__init__(self)
         self.filename = filename
@@ -85,37 +85,37 @@ class Spike2IO(BaseIO):
         """
         Arguments:
         """
-        
-        
+
+
         header = self.read_header(filename = self.filename)
-        
+
         #~ print header
         fid = open(self.filename, 'rb')
-        
+
         seg  = Segment(
                                     file_origin = os.path.basename(self.filename),
                                     ced_version = str(header.system_id),
                                     )
-        
+
         if not cascade:
             return seg
-        
+
         def addannotations(ob, channelHeader):
             ob.annotate(title = channelHeader.title)
             ob.annotate(physical_channel_index = channelHeader.phy_chan)
             ob.annotate(comment = channelHeader.comment)
-        
+
         for i in range(header.channels) :
             channelHeader = header.channelHeaders[i]
-            
+
             #~ print 'channel' , i , 'kind' ,  channelHeader.kind
-            
+
             if channelHeader.kind !=0:
                 #~ print '####'
                 #~ print 'channel' , i, 'kind' , channelHeader.kind , channelHeader.type , channelHeader.phy_chan
                 #~ print channelHeader
                 pass
-            
+
             if channelHeader.kind in [1, 9]:
                 #~ print 'analogChanel'
                 anaSigs = self.readOneChannelContinuous( fid, i, header ,lazy = lazy)
@@ -125,36 +125,36 @@ class Spike2IO(BaseIO):
                     seg.analogsignals.append( anaSig )
                     #~ print sig.signal.size,
                 #~ print ''
-                    
+
             elif channelHeader.kind in  [2, 3, 4, 5, 8] :
                 ea = self.readOneChannelEventOrSpike( fid, i, header , lazy = lazy)
                 addannotations(ea, channelHeader)
                 seg.eventarrays.append(ea)
-                
+
             elif channelHeader.kind in  [6,7] :
                 sptr = self.readOneChannelEventOrSpike( fid, i, header, lazy = lazy )
                 if sptr is not None:
                     addannotations(sptr, channelHeader)
                     seg.spiketrains.append(sptr)
-            
+
         fid.close()
-        
+
         create_many_to_one_relationship(seg)
         return seg
-        
-        
+
+
     def read_header(self , filename = ''):
-        
+
         fid = open(filename, 'rb')
         header = HeaderReader(fid,   dtype(headerDescription))
         #~ print 'chan_size' , header.chan_size
-        
-        
+
+
         if header.system_id < 6:
             header.dtime_base = 1e-6
             header.datetime_detail = 0
             header.datetime_year = 0
-        
+
         channelHeaders = [ ]
         for i in range(header.channels):
             # read global channel header
@@ -167,7 +167,7 @@ class Spike2IO(BaseIO):
                 channelHeader += HeaderReader(fid, dtype(dt))
                 if header.system_id < 6:
                     channelHeader += HeaderReader(fid, dtype([ ('divide' , 'i4')]) )#i8
-                else : 
+                else :
                     channelHeader +=HeaderReader(fid, dtype([ ('interleave' , 'i4')]) )#i8
             if channelHeader.kind in [7, 9]:
                 dt = [('min' , 'f4'),
@@ -182,34 +182,34 @@ class Spike2IO(BaseIO):
                 dt = [('init_low' , 'u1'),
                       ('next_low' , 'u1'),]
                 channelHeader += HeaderReader(fid, dtype(dt))
-            
+
             channelHeader.type = dict_kind[channelHeader.kind]
             channelHeaders.append(channelHeader)
-            
+
         header.channelHeaders = channelHeaders
-        
+
         fid.close()
         return header
 
-    
+
     def readOneChannelContinuous(self , fid, channel_num, header ,lazy = True):
         # read AnalogSignal
         channelHeader = header.channelHeaders[channel_num]
-        
-        
+
+
         # data type
         if channelHeader.kind == 1:
             dt = np.dtype('i2')
         elif channelHeader.kind == 9:
             dt = np.dtype('f4')
-        
+
         # sample rate
         if header.system_id in [1,2,3,4,5]: # Before version 5
             sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
         else :
             sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
         sampling_rate = (1./sample_interval)*pq.Hz
-        
+
         # read blocks header to preallocate memory by jumping block to block
         fid.seek(channelHeader.firstblock)
         blocksize = [ 0 ]
@@ -219,7 +219,7 @@ class Spike2IO(BaseIO):
             if len(blocksize) > len(starttimes):
                 starttimes.append(blockHeader.start_time)
             blocksize[-1] += blockHeader.items
-            
+
             if blockHeader.succ_block > 0 :
                 # this is ugly but CED do not garanty continuity in AnalogSignal
                 fid.seek(blockHeader.succ_block)
@@ -229,7 +229,7 @@ class Spike2IO(BaseIO):
                 if interval_with_next > sample_interval:
                     blocksize.append(0)
                 fid.seek(blockHeader.succ_block)
-        
+
         anaSigs = [ ]
         if channelHeader.unit in unit_convert:
             unit = pq.Quantity(1, unit_convert[channelHeader.unit] )
@@ -239,7 +239,7 @@ class Spike2IO(BaseIO):
                 unit = pq.Quantity(1, channelHeader.unit )
             except:
                 unit = pq.Quantity(1, '')
-            
+
         for b,bs in enumerate(blocksize ):
             if lazy:
                 signal = [ ]*unit
@@ -251,11 +251,11 @@ class Spike2IO(BaseIO):
                                                             )
             anaSig.annotate(channel_index = channel_num)
             anaSigs.append( anaSig )
-        
+
         if  lazy:
             for s, anaSig in enumerate(anaSigs):
                 anaSig.lazy_shape = blocksize[s]
-            
+
         else:
             # read data  by jumping block to block
             fid.seek(channelHeader.firstblock)
@@ -273,22 +273,22 @@ class Spike2IO(BaseIO):
                 # jump to next block
                 if blockHeader.succ_block > 0 :
                     fid.seek(blockHeader.succ_block)
-            
+
         # convert for int16
         if dt.kind == 'i' :
             for anaSig in anaSigs :
                 anaSig *= channelHeader.scale/ 6553.6
                 anaSig += channelHeader.offset*unit
-        
+
         return anaSigs
-    
-    
+
+
     def readOneChannelEventOrSpike(self , fid, channel_num, header ,lazy = True):
         # return SPikeTrain or EventArray
         channelHeader = header.channelHeaders[channel_num]
         if channelHeader.firstblock <0: return
         if channelHeader.kind not in [2, 3, 4 , 5 , 6 ,7, 8]: return
-        
+
         ## Step 1 : type of blocks
         if channelHeader.kind in [2, 3, 4]:
             # Event data
@@ -306,8 +306,8 @@ class Spike2IO(BaseIO):
             # TextMark data
             format = [('tick' , 'i4') , ('marker' , 'i4')  ,  ('label' , 'S%d'%channelHeader.n_extra)]
         dt = dtype(format)
-        
-            
+
+
         ## Step 2 : first read for allocating mem
         fid.seek(channelHeader.firstblock)
         totalitems = 0
@@ -317,20 +317,20 @@ class Spike2IO(BaseIO):
             if blockHeader.succ_block > 0 :
                 fid.seek(blockHeader.succ_block)
         #~ print 'totalitems' , totalitems
-        
+
         if lazy :
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )
                 ea.annotate(channel_index = channel_num)
                 ea.lazy_shape = totalitems
                 return ea
-                
+
             elif channelHeader.kind in [6 ,7]:
                 sptr = SpikeTrain([ ]*pq.s, t_stop=1e99)  # correct value for t_stop to be put in later
                 sptr.annotate(channel_index = channel_num)
                 sptr.lazy_shape = totalitems
                 return sptr
-        
+
         else:
             alltrigs = zeros( totalitems , dtype = dt)
             ## Step 3 : read
@@ -340,15 +340,15 @@ class Spike2IO(BaseIO):
                 blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
                 # read all events in block
                 trigs = fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)
-                
+
                 alltrigs[pos:pos+trigs.size] = trigs
                 pos += trigs.size
                 if blockHeader.succ_block > 0 :
                     fid.seek(blockHeader.succ_block)
-            
+
             ## Step 3 convert in neo standard class : eventarrays or spiketrains
             alltimes = alltrigs['tick'].astype('f')*header.us_per_time * header.dtime_base*pq.s
-            
+
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 #events
                 ea = EventArray(  )
@@ -360,30 +360,30 @@ class Spike2IO(BaseIO):
                 if channelHeader.kind == 8:
                     ea.annotate(extra_labels = alltrigs['label'])
                 return ea
-                
+
             elif channelHeader.kind in [6 ,7]:
                 # spiketrains
-                
+
                 # waveforms
                 if channelHeader.kind == 6 :
                     waveforms = fromstring(alltrigs['adc'].tostring() , dtype = 'i2')
                     waveforms = waveforms.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
                 elif channelHeader.kind == 7 :
                     waveforms = fromstring(alltrigs['real'].tostring() , dtype = 'f4')
-                
-                
+
+
                 if header.system_id>=6 and channelHeader.interleave>1:
                     waveforms = waveforms.reshape((alltimes.size,-1,channelHeader.interleave))
                     waveforms = waveforms.swapaxes(1,2)
                 else:
                     waveforms = waveforms.reshape(( alltimes.size,1, -1))
-                
-                
+
+
                 if header.system_id in [1,2,3,4,5]:
                     sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
                 else :
                     sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
-                
+
                 if channelHeader.unit in unit_convert:
                     unit = pq.Quantity(1, unit_convert[channelHeader.unit] )
                 else:
@@ -392,7 +392,7 @@ class Spike2IO(BaseIO):
                         unit = pq.Quantity(1, channelHeader.unit )
                     except:
                         unit = pq.Quantity(1, '')
-                
+
                 if len(alltimes) > 0:
                     t_stop = alltimes.max() # can get better value from associated AnalogSignal(s) ?
                 else:
@@ -403,10 +403,10 @@ class Spike2IO(BaseIO):
                                             t_stop = t_stop
                                             )
                 sptr.annotate(channel_index = channel_num)
-                
+
                 return sptr
-            
-            
+
+
 
 
 
@@ -419,7 +419,7 @@ class HeaderReader(object):
             array = zeros( (1) , dtype = dtype)[0]
         object.__setattr__(self, 'dtype' , dtype)
         object.__setattr__(self, 'array' , array)
-        
+
     def __setattr__(self, name , val):
         if name in self.dtype.names :
             self.array[name] = val
@@ -431,7 +431,7 @@ class HeaderReader(object):
         if name in self.dtype.names :
             if self.dtype[name].kind == 'S':
                 if PY3K:
-                    l = np.fromstring(self.array[name].decode('iso-8859-1')[0], 'u1')    
+                    l = np.fromstring(self.array[name].decode('iso-8859-1')[0], 'u1')
                 else:
                     l = np.fromstring(self.array[name][0], 'u1')
                 return self.array[name][1:l+1]
@@ -441,16 +441,16 @@ class HeaderReader(object):
             object.__getattr__(self, name )
     def names(self):
         return self.array.dtype.names
-    
+
     def __repr__(self):
         s = 'HEADER'
         for name in self.dtype.names :
-            #~ if self.dtype[name].kind != 'S' :    
+            #~ if self.dtype[name].kind != 'S' :
                 s += name + self.__getattr__(name)
         return s
-    
-                
-    
+
+
+
     def __add__(self, header2):
 #        print 'add' , self.dtype, header2.dtype
         newdtype = [ ]
@@ -508,7 +508,7 @@ channelHeaderDesciption1 = [
     ('ideal_rate','f4'),
     ('kind','u1'),
     ('unused1','i1'),
-    
+
     ]
 
 dict_kind = {

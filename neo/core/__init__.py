@@ -26,7 +26,7 @@ Classes:
 from __future__ import absolute_import
 
 from .block import Block
-from .segment import Segment 
+from .segment import Segment
 from .recordingchannelgroup import RecordingChannelGroup
 from .recordingchannel import RecordingChannel
 

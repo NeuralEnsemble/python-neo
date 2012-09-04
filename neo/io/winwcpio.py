@@ -42,36 +42,36 @@ class WinWcpIO(BaseIO):
         ...
 
     """
-    
+
     is_readable        = True
     is_writable        = False
 
     supported_objects  = [Block, Segment , AnalogSignal ]
     readable_objects   = [Block]
-    writeable_objects  = []  
+    writeable_objects  = []
 
     has_header         = False
     is_streameable     = False
-    
+
     read_params        = { Block : [ ], }
-    
+
     write_params       = None
-    
+
     name               = 'WinWCP'
     extensions          = [ 'wcp' ]
     mode = 'file'
-        
+
     def __init__(self , filename = None) :
         """
         This class read a WinWCP wcp file.
-        
+
         Arguments:
             filename : the filename to read
-        
+
         """
         BaseIO.__init__(self)
         self.filename = filename
-    
+
     def read_block(self , lazy = False,
                                     cascade = True,
                                     ):
@@ -80,7 +80,7 @@ class WinWcpIO(BaseIO):
             return bl
 
         fid = open(self.filename , 'rb')
-        
+
         headertext = fid.read(1024)
         if PY3K:
             headertext = headertext.decode('ascii')
@@ -95,33 +95,33 @@ class WinWcpIO(BaseIO):
                 val = val.replace(',','.')
                 val = float(val)
             header[key] = val
-        
+
         #print header
-        
+
         SECTORSIZE = 512
         # loop for record number
         for i in range(header['NR']):
             #print 'record ',i
             offset = 1024 + i*(SECTORSIZE*header['NBD']+1024)
-            
+
             # read analysis zone
             analysisHeader = HeaderReader(fid , AnalysisDescription ).read_f(offset = offset)
             #print analysisHeader
-            
+
             # read data
             NP = (SECTORSIZE*header['NBD'])/2
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
             if not lazy:
-                data = np.memmap(self.filename , dtype('i2')  , 'r', 
+                data = np.memmap(self.filename , dtype('i2')  , 'r',
                               #shape = (header['NC'], header['NP']) ,
                               shape = (NP,header['NC'], ) ,
                               offset = offset+header['NBA']*SECTORSIZE)
-            
+
             # create a segment
             seg = Segment()
             bl.segments.append(seg)
-            
+
             for c in range(header['NC']):
 
                 unit = header['YU%d'%c]
@@ -141,18 +141,18 @@ class WinWcpIO(BaseIO):
                                                     sampling_rate = pq.Hz/analysisHeader['SamplingInterval'] ,
                                                     t_start = analysisHeader['TimeRecorded'] * pq.s,
                                                     name = header['YN%d'%c],
-                                                    
+
                                                         )
                 anaSig.annotate(channel_index = c)
                 if lazy:
                     anaSig.lazy_shape = NP
                 seg.analogsignals.append(anaSig)
-        
+
         fid.close()
-        
+
         create_many_to_one_relationship(bl)
         return bl
-        
+
 
 
 

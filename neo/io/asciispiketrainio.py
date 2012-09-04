@@ -26,7 +26,7 @@ class AsciiSpikeTrainIO(BaseIO):
 
     Classe for reading/writing SpikeTrain in a text file.
     Each Spiketrain is a line.
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.AsciiSpikeTrainIO( filename = 'File_ascii_spiketrain_1.txt')
@@ -36,17 +36,17 @@ class AsciiSpikeTrainIO(BaseIO):
         ...
 
     """
-    
+
     is_readable        = True
     is_writable        = True
-    
+
     supported_objects  = [Segment , SpikeTrain]
     readable_objects   = [Segment]
-    writeable_objects  = [Segment]    
-    
+    writeable_objects  = [Segment]
+
     has_header         = False
     is_streameable     = False
-    
+
     read_params        = {
                             Segment : [
                                         ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
@@ -61,24 +61,24 @@ class AsciiSpikeTrainIO(BaseIO):
 
     name               = None
     extensions          = [ 'txt' ]
-    
+
     mode = 'file'
-    
+
 
     def __init__(self , filename = None) :
         """
         This class read/write SpikeTrains in a text file.
         Each row is a spiketrain.
-        
+
         **Arguments**
-        
+
         filename : the filename to read/write
-        
+
         """
         BaseIO.__init__(self)
         self.filename = filename
 
-    def read_segment(self, 
+    def read_segment(self,
                             lazy = False,
                             cascade = True,
                             delimiter = '\t',
@@ -96,7 +96,7 @@ class AsciiSpikeTrainIO(BaseIO):
         seg = Segment(file_origin = os.path.basename(self.filename))
         if not cascade:
             return seg
-        
+
         f = open(self.filename, 'Ur')
         for i,line in enumerate(f) :
             all = line[:-1].split(delimiter)
@@ -108,15 +108,15 @@ class AsciiSpikeTrainIO(BaseIO):
             else:
                 spike_times = np.array(all).astype('f')
                 t_stop = spike_times.max()*unit
-            
+
             sptr = SpikeTrain(spike_times*unit, t_start=t_start, t_stop=t_stop)
             if lazy:
                 sptr.lazy_shape = len(all)
-                
+
             sptr.annotate(channel_index = i)
             seg.spiketrains.append(sptr)
         f.close()
-        
+
         create_many_to_one_relationship(seg)
         return seg
 
@@ -126,22 +126,22 @@ class AsciiSpikeTrainIO(BaseIO):
         """
         Write SpikeTrain of a Segment in a txt file.
         Each row is a spiketrain.
-        
+
          Arguments:
             segment : the segment to write. Only analog signals will be written.
-            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'            
-            
+            delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
+
             information of t_start is lost
-            
+
         """
-        
-        f = open(self.filename, 'w')        
+
+        f = open(self.filename, 'w')
         for s,sptr in enumerate(segment.spiketrains) :
             for ts in sptr :
                 f.write('%f%s'% (ts , delimiter) )
             f.write('\n')
         f.close()
-        
+
 
 
 
