@@ -58,6 +58,10 @@ class Unit(BaseNeo):
         rates=[train.spike_rate.rescale(units) for train in self.spiketrains]
         return pq.Quantity(rates,units=units)
 
+    @property
+    def spike_counts(self):
+        return np.asarray([train.size for train in self.spiketrains])
+
 
 
 
