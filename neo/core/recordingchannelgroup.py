@@ -99,3 +99,6 @@ class RecordingChannelGroup(BaseNeo):
 
         self.block = None
 
+    @property
+    def spike_rates(self):
+        return [unit.spike_rates for unit in units]
