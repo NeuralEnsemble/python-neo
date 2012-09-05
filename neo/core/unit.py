@@ -1,5 +1,8 @@
 from neo.core.baseneo import BaseNeo
 
+import quantities as pq
+import numpy as np
+
 class Unit(BaseNeo):
     """
     A :class:`Unit` regroups all the :class:`SpikeTrain` objects that were emitted
@@ -52,6 +55,15 @@ class Unit(BaseNeo):
 
         self.recordingchannelgroup = None
 
+    @property
+    def spike_rates(self):
+        units=self.spiketrains[0].spike_rate.units
+        rates=[train.spike_rate.rescale(units) for train in self.spiketrains]
+        return pq.Quantity(rates,units=units)
+
+    @property
+    def spike_counts(self):
+        return np.asarray([train.size for train in self.spiketrains])
 
 
 

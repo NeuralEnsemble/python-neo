@@ -380,3 +380,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             return self.left_sweep + self.waveforms.shape[2]/self.sampling_rate
         except:
             return None
+
+    @property
+    def spike_rate(self):
+        return self.size / self.duration

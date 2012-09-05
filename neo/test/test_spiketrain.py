@@ -453,6 +453,13 @@ class TestConstructor(unittest.TestCase):
         #This use to bug
         st = SpikeTrain(data.astype(numpy.float32), copy=True, t_start=data[0], t_stop=data[1])
 
+    def test_spike_rate_show_correct_value(self):
+        data = [3,4,5] * pq.ms
+        t_start = 0.5
+        t_stop = 10.0
+        st = SpikeTrain(data, copy=False, t_start=t_start, t_stop=t_stop)
+        self.assertEqual(st.spike_rate, 3 / 9.5 / pq.ms)
+
 
 
 
