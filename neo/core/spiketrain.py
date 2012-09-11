@@ -391,7 +391,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def right_sweep(self):
         try:
-            return (self.left_sweep + 
+            return (self.left_sweep +
                     self.waveforms.shape[2] / self.sampling_rate)
         except:
             return None
