@@ -3,6 +3,7 @@ from neo.core.baseneo import BaseNeo
 import numpy as np
 import quantities as pq
 
+
 class EpochArray(BaseNeo):
     """
     Array of epochs. Introduced for performance reason.
@@ -21,9 +22,9 @@ class EpochArray(BaseNeo):
         :description:
         :file_origin:
     """
-    def __init__(self, times=np.array([])*pq.s, durations=np.array([])*pq.s,
-                 labels=np.array([], dtype='S'), name=None, description=None,
-                 file_origin=None, **annotations):
+    def __init__(self, times=np.array([]) * pq.s,
+                 durations=np.array([]) * pq.s, labels=np.array([], dtype='S'),
+                 name=None, description=None, file_origin=None, **annotations):
         """Initialize a new EpochArray."""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
@@ -32,4 +33,4 @@ class EpochArray(BaseNeo):
         self.durations = durations
         self.labels = labels
 
-        self.segment =None
+        self.segment = None
