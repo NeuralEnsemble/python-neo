@@ -1,4 +1,5 @@
-"""This module defines objects relating to analog signals.
+"""
+This module defines objects relating to analog signals.
 
 For documentation on these objects, which are imported into the base
 neo namespace, see:
@@ -13,6 +14,10 @@ from .baseneo import BaseNeo
 
 
 def _get_sampling_rate(sampling_rate, sampling_period):
+    """
+    Gets the sampling_rate from either the sampling_period or the
+    sampling_rate, or makes sure they match if both are specified
+    """
     if sampling_period is None:
         if sampling_rate is None:
             raise ValueError("You must provide either the sampling rate or \
@@ -33,12 +38,12 @@ def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
                           t_start=0 * pq.s, sampling_rate=None,
                           sampling_period=None, name=None, file_origin=None,
                           description=None, annotations=None):
-        """A function to map BaseAnalogSignal.__new__ to function that
-           does not do the unit checking. This is needed for pickle to work.
-        """
-        return cls(signal, units, dtype, copy, t_start, sampling_rate,
-                   sampling_period, name, file_origin, description,
-                   **annotations)
+    """A function to map BaseAnalogSignal.__new__ to function that
+        does not do the unit checking. This is needed for pickle to work.
+    """
+    return cls(signal, units, dtype, copy, t_start, sampling_rate,
+                sampling_period, name, file_origin, description,
+                **annotations)
 
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
