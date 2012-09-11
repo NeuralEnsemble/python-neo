@@ -1,5 +1,5 @@
 from neo.core.baseneo import BaseNeo
-import quantities as pq
+
 
 class Epoch(BaseNeo):
     """
@@ -30,4 +30,3 @@ class Epoch(BaseNeo):
         self.label = label
 
         self.segment = None
-

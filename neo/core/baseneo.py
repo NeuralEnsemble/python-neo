@@ -17,7 +17,6 @@ ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
                             numpy.complex, bytes)
 
 
-
 def _check_annotations(value):
     """
     Recursively check that value is either of a "simple" type (number, string,
@@ -32,11 +31,12 @@ def _check_annotations(value):
             _check_annotations(element)
     elif isinstance(value, numpy.ndarray):
         if value.dtype not in (numpy.integer, numpy.floating, numpy.complex) \
-                                         and value.dtype.type != numpy.string_:
-           raise ValueError("Invalid annotation. NumPy arrays with dtype %s are not allowed" % value.dtype)
+                and value.dtype.type != numpy.string_:
+            raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
+                             are not allowed" % value.dtype)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not allowed" % type(value))
-
+        raise ValueError("Invalid annotation. Annotations of type %s are not \
+                         allowed" % type(value))
 
 
 class BaseNeo(object):
@@ -68,8 +68,8 @@ class BaseNeo(object):
     The required and recommended arguments for each child class (Neo object)
     are specified in ../description.py and the documentation for the child.
     """
-
-    def __init__(self, name=None, file_origin=None, description=None, **annotations):
+    def __init__(self, name=None, file_origin=None, description=None,
+                 **annotations):
         """This is the base constructor for all Neo objects.
 
         Stores universally recommended attributes and creates `annotations`
@@ -83,7 +83,6 @@ class BaseNeo(object):
         self.name = name
         self.description = description
         self.file_origin = file_origin
-
 
     def annotate(self, **annotations):
         """

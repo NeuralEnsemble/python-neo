@@ -46,9 +46,7 @@ from .spike import Spike
 from .spiketrain import SpikeTrain
 
 
-
-objectlist = [ Block, Segment, RecordingChannelGroup , RecordingChannel,
-        AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
-        Event, EventArray, Epoch, EpochArray,
-        Unit, Spike , SpikeTrain
-            ]
+objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,
+              AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
+              Event, EventArray, Epoch, EpochArray, Unit, Spike, SpikeTrain
+              ]

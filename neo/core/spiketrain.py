@@ -22,8 +22,8 @@ def check_has_dimensions_time(*values):
     errmsgs = []
     for value in values:
         if value._reference.dimensionality != pq.s.dimensionality:
-            errmsgs.append("value %s has dimensions %s, not [time]" % (
-                value,value.dimensionality.simplified))
+            errmsgs.append("value %s has dimensions %s, not [time]" %
+                           (value, value.dimensionality.simplified))
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
@@ -31,22 +31,31 @@ def check_has_dimensions_time(*values):
 def _check_time_in_range(value, t_start, t_stop):
     if hasattr(value, "min"):
         if value.min() < t_start:
-            raise ValueError("The first spike (%s) is before t_start (%s)" % (value, t_start))
+            raise ValueError("The first spike (%s) is before t_start (%s)" %
+                             (value, t_start))
         if value.max() > t_stop:
-            raise ValueError("The last spike (%s) is after t_stop (%s)" % (value, t_stop))
+            raise ValueError("The last spike (%s) is after t_stop (%s)" %
+                             (value, t_stop))
     else:
         if value < t_start:
-            raise ValueError("The spike time (%s) is before t_start (%s)" % (value, t_start))
+            raise ValueError("The spike time (%s) is before t_start (%s)" %
+                             (value, t_start))
         if value > t_stop:
-            raise ValueError("The spike time (%s) is after t_stop (%s)" % (value, t_stop))
+            raise ValueError("The spike time (%s) is after t_stop (%s)" %
+                             (value, t_stop))
 
 
-
-def _new_SpikeTrain(cls, signal, t_stop,units=None, dtype=numpy.float, copy=True, sampling_rate=None, t_start=0.0*pq.s, waveforms=None, left_sweep=None,name=None, file_origin=None, description=None,annotations=None):
+def _new_SpikeTrain(cls, signal, t_stop, units=None, dtype=numpy.float,
+                    copy=True, sampling_rate=None, t_start=0.0 * pq.s,
+                    waveforms=None, left_sweep=None, name=None,
+                    file_origin=None, description=None, annotations=None):
         """A function to map BaseAnalogSignal.__new__ to function that
            does not do the unit checking. This is needed for pickle to work.
         """
-        return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate, t_start,waveforms,left_sweep, name, file_origin, description,**annotations)
+        return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
+                          t_start, waveforms, left_sweep, name, file_origin,
+                          description, **annotations)
+
 
 class SpikeTrain(BaseNeo, pq.Quantity):
     """SpikeTrain is a :class:`Quantity` array of spike times.
@@ -81,7 +90,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :description: string
         :file_origin: string
 
-    Any other keyword arguments are stored in the :attr:`self.annotations` dict.
+    Any other keyword arguments are stored in the :attr:`self.annotations` dict
 
     *Other arguments relating to implementation*
         :attr:`dtype` : data type (float32, float64, etc)
@@ -110,9 +119,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     """
 
     def __new__(cls, times, t_stop, units=None, dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
-        left_sweep=None, name=None, file_origin=None, description=None,
-        **annotations):
+                sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
+                left_sweep=None, name=None, file_origin=None, description=None,
+                **annotations):
         """Constructs new SpikeTrain from data.
 
         This is called whenever a new SpikeTrain is created from the
@@ -131,8 +140,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                 raise ValueError('you must specify units')
         elif hasattr(times, '_dimensionality'):
             # Keyword units were provided, so rescale if necessary
-            if times._dimensionality != \
-                pq.quantity.validate_dimensionality(units):
+            if (times._dimensionality !=
+                    pq.quantity.validate_dimensionality(units)):
                 if copy:
                     times = times.rescale(units)
                 else:
@@ -152,12 +161,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         obj.sampling_rate = sampling_rate
 
         # fix to force t_start and t_stop to be in same dtype as times origin
-        if hasattr(times, 'dtype') and times.dtype != dtype and obj.t_start.dtype!=times.dtype:
+        if (hasattr(times, 'dtype') and times.dtype != dtype and
+                obj.t_start.dtype != times.dtype):
             obj.t_start = obj.t_start.astype(times.dtype).astype(dtype)
-        if hasattr(times, 'dtype') and times.dtype != dtype and obj.t_stop.dtype!=times.dtype:
+        if (hasattr(times, 'dtype') and times.dtype != dtype and
+                obj.t_stop.dtype != times.dtype):
             obj.t_stop = obj.t_stop.astype(times.dtype).astype(dtype)
-
-
 
         # parents
         obj.segment = None
@@ -170,10 +179,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             _check_time_in_range(obj.max(), obj.t_start, obj.t_stop)
         return obj
 
-    def __init__(self, times, t_stop, units=None,  dtype=numpy.float, copy=True,
-        sampling_rate=1.0*pq.Hz, t_start=0.0*pq.s, waveforms=None,
-        left_sweep=None, name=None, file_origin=None, description=None,
-        **annotations):
+    def __init__(self, times, t_stop, units=None,  dtype=numpy.float,
+                 copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
+                 waveforms=None, left_sweep=None, name=None, file_origin=None,
+                 description=None, **annotations):
         """Initializes newly constructed SpikeTrain."""
         # This method is only called when constructing a new SpikeTrain,
         # not when slicing or viewing. We use the same call signature
@@ -201,9 +210,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             except AssertionError:
                 raise ValueError(
                     'Unable to convert between units of "%s" and "%s"'
-                    %(from_u._dimensionality, to_u._dimensionality)
+                    % (from_u._dimensionality, to_u._dimensionality)
                 )
-            spikes = cf*self.magnitude
+            spikes = cf * self.magnitude
         return SpikeTrain(spikes, self.t_stop, units=to_u,
                           dtype=self.dtype, copy=False,
                           sampling_rate=self.sampling_rate,
@@ -214,10 +223,16 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __reduce__(self):
         """
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle works
+        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        works
         """
         import numpy
-        return _new_SpikeTrain, (self.__class__,numpy.array(self),self.t_stop,self.units,self.dtype,True,self.sampling_rate,self.t_start,self.waveforms,self.left_sweep,self.name, self.file_origin, self.description,self.annotations)
+        return _new_SpikeTrain, (self.__class__, numpy.array(self),
+                                 self.t_stop, self.units, self.dtype, True,
+                                 self.sampling_rate, self.t_start,
+                                 self.waveforms, self.left_sweep,
+                                 self.name, self.file_origin, self.description,
+                                 self.annotations)
 
     def __array_finalize__(self, obj):
         """This is called every time a new SpikeTrain is created.
@@ -232,13 +247,15 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Note that the `waveforms` attibute is not sliced here. Nor is
         `t_start` or `t_stop` modified.
         """
-        # This calls Quantity.__array_finalize__ which deals with dimensionality
+        # This calls Quantity.__array_finalize__ which deals with
+        # dimensionality
         super(SpikeTrain, self).__array_finalize__(obj)
 
         # Supposedly, during initialization from constructor, obj is supposed
         # to be None, but this never happens. It must be something to do
         # with inheritance from Quantity.
-        if obj is None: return
+        if obj is None:
+            return
 
         # Set all attributes of the new object `self` from the attributes
         # of `obj`. For instance, when slicing, we want to copy over the
@@ -259,7 +276,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __repr__(self):
         return '<SpikeTrain(%s, [%s, %s])>' % (
-             super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop)
+            super(SpikeTrain, self).__repr__(), self.t_start, self.t_stop)
 
     def sort(self):
         """Sorts the spiketrain and its waveforms, if any."""
@@ -296,7 +313,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def __setitem__(self, i, value):
         if not hasattr(value, "units"):
             value = pq.Quantity(value, units=self.units)
-            # or should we be strict: raise ValueError("Setting a value requires a quantity")?
+            # or should we be strict: raise ValueError("Setting a value
+            # requires a quantity")?
         # check for values outside t_start, t_stop
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setitem__(i, value)
@@ -307,11 +325,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setslice__(i, j, value)
 
-    def time_slice(self,t_start,t_stop):
+    def time_slice(self, t_start, t_stop):
         """
-        Creates a new spiketrain corresponding to the time slice of the original spiketrain
-        between times t_start, t_stop. Note that the t_start and t_stop of the new spike
-        train will be strictly set to t_start, t_stop.
+        Creates a new spiketrain corresponding to the time slice of the
+        original spiketrain between times t_start, t_stop. Note that the
+        t_start and t_stop of the new spike train will be strictly set to
+        t_start, t_stop.
         """
         if len(self) == 0:
             new_st = self[:]
@@ -322,45 +341,40 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         i = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_start)
         j = self.fist_occurance_of_spike_at_time_greater_or_equal_than(t_stop)
 
-        new_st = self[numpy.arange(i,j,1)]
+        new_st = self[numpy.arange(i, j, 1)]
         new_st.t_start = t_start
         new_st.t_stop = t_stop
         return new_st
 
-
-
-    def fist_occurance_of_spike_at_time_greater_or_equal_than(self,t):
+    def fist_occurance_of_spike_at_time_greater_or_equal_than(self, t):
         """
-        This function finds the first occurance of spike at time greater or equal than t
-        and returns its index.
+        This function finds the first occurance of spike at time greater or
+        equal than t and returns its index.
 
         If there is no such spike it returns len(self)
         """
         s = 0
-        e = len(self)-1
-        done = False
+        e = len(self) - 1
 
         if t <= self[0]:
-           return 0
+            return 0
 
         if t >= self[-1]:
-           return len(self)
+            return len(self)
 
-
-        while s+1 != e:
-            middle = int((s+e)/2)
+        while s + 1 != e:
+            middle = int((s + e) / 2)
 
             if self[middle] < t:
-               s = middle
-               e = e
+                s = middle
+                e = e
             elif self[middle] > t:
-               s = s
-               e = middle
+                s = s
+                e = middle
             else:
-               return middle
+                return middle
 
         return e
-
 
     @property
     def times(self):
@@ -377,6 +391,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def right_sweep(self):
         try:
-            return self.left_sweep + self.waveforms.shape[2]/self.sampling_rate
+            return (self.left_sweep +
+                    self.waveforms.shape[2] / self.sampling_rate)
         except:
             return None

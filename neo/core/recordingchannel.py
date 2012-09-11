@@ -1,13 +1,17 @@
 from neo.core.baseneo import BaseNeo
 
+
 class RecordingChannel(BaseNeo):
     """
     A RecordingChannel is a container for :py:class:`AnalogSignal` objects
-    that come from the same logical and/or physical channel inside a :py:class:`Block`.
+    that come from the same logical and/or physical channel inside a
+    :py:class:`Block`.
 
-    Note that a RecordingChannel can belong to several :py:class:`RecordingChannelGroup`.
+    Note that a RecordingChannel can belong to several
+    :py:class:`RecordingChannelGroup`.
 
-    *Usage* one Block with 3 Segment and 16 RecordingChannel and 48 AnalogSignal::
+    *Usage* one Block with 3 Segment and 16 RecordingChannel and 48
+    AnalogSignal::
 
         bl = Block()
         # Create a new RecordingChannelGroup and add to current block
@@ -17,7 +21,8 @@ class RecordingChannel(BaseNeo):
         for c in range(16):
             rc = RecordingChannel(index=c)
             rcg.recordingchannels.append(rc) # <- many to many relationship
-            rc.recordingchannelgroups.append(rcg) # <- many to many relationship
+            rc.recordingchannelgroups.append(rcg) # <- many to many
+                                                       relationship
 
         for s in range(3):
             seg = Segment(name = 'segment %d' %s, index = s)
@@ -25,7 +30,8 @@ class RecordingChannel(BaseNeo):
 
         for c in range(16):
             for s in range(3):
-                anasig = AnalogSignal( np.rand(100000), sampling_rate = 20*pq.Hz)
+                anasig = AnalogSignal( np.rand(100000), sampling_rate =
+                                       20*pq.Hz)
                 bl.segments[s].analogsignals.append(anasig)
                 rcg.recordingchannels[c].analogsignals.append(anasig)
 
@@ -58,10 +64,7 @@ class RecordingChannel(BaseNeo):
         self.coordinate = coordinate
 
         # Initialize contianers
-        self.analogsignals = [ ]
-        self.irregularlysampledsignals = [ ]
+        self.analogsignals = []
+        self.irregularlysampledsignals = []
         # Many to many relationship
-        self.recordingchannelgroups = [ ]
-
-
-
+        self.recordingchannelgroups = []

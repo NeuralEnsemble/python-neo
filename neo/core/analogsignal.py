@@ -1,4 +1,5 @@
-"""This module defines objects relating to analog signals.
+"""
+This module defines objects relating to analog signals.
 
 For documentation on these objects, which are imported into the base
 neo namespace, see:
@@ -13,24 +14,37 @@ from .baseneo import BaseNeo
 
 
 def _get_sampling_rate(sampling_rate, sampling_period):
+    """
+    Gets the sampling_rate from either the sampling_period or the
+    sampling_rate, or makes sure they match if both are specified
+    """
     if sampling_period is None:
         if sampling_rate is None:
-            raise ValueError("You must provide either the sampling rate or sampling period")
+            raise ValueError("You must provide either the sampling rate or \
+                              sampling period")
     else:
         if sampling_rate is None:
-            sampling_rate = 1.0/sampling_period
+            sampling_rate = 1.0 / sampling_period
         else:
-            if sampling_period != 1.0/sampling_rate:
-                raise ValueError('The sampling_rate has to be 1/sampling_period')
+            if sampling_period != 1.0 / sampling_rate:
+                raise ValueError('The sampling_rate has to be \
+                                  1/sampling_period')
     if not hasattr(sampling_rate, 'units'):
         raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
-def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,t_start=0*pq.s, sampling_rate=None, sampling_period=None,name=None, file_origin=None, description=None,annotations=None):
-        """A function to map BaseAnalogSignal.__new__ to function that
-           does not do the unit checking. This is needed for pickle to work.
-        """
-        return cls(signal, units, dtype, copy,t_start, sampling_rate, sampling_period, name, file_origin, description, **annotations)
+
+def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
+                          t_start=0 * pq.s, sampling_rate=None,
+                          sampling_period=None, name=None, file_origin=None,
+                          description=None, annotations=None):
+    """A function to map BaseAnalogSignal.__new__ to function that
+        does not do the unit checking. This is needed for pickle to work.
+    """
+    return cls(signal, units, dtype, copy, t_start, sampling_rate,
+                sampling_period, name, file_origin, description,
+                **annotations)
+
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
@@ -38,7 +52,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None, **annotations):
         """Constructs new BaseAnalogSignal from data.
 
@@ -56,9 +70,11 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             else:
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
-            if units != signal.units: # could improve this test, what if units is a string?
+            # could improve this test, what if units is a string?
+            if units != signal.units:
                 signal = signal.rescale(units)
-        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
+        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype,
+                                  copy=copy)
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
@@ -68,8 +84,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
-                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
-                name=None, file_origin=None, description=None, **annotations):
+                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
+                 name=None, file_origin=None, description=None, **annotations):
         """Initializes newly constructed BaseAnalogSignal."""
         # This method is only called when constructing a new BaseAnalogSignal,
         # not when slicing or viewing. We use the same call signature
@@ -83,7 +99,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __reduce__(self):
         """
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle works
+        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        works
         """
         import numpy
         return _new_BaseAnalogSignal, (self.__class__,
@@ -110,7 +127,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         copied over here.
         """
         super(BaseAnalogSignal, self).__array_finalize__(obj)
-        self.t_start = getattr(obj, 't_start', 0*pq.s)
+        self.t_start = getattr(obj, 't_start', 0 * pq.s)
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
 
         # The additional arguments
@@ -122,13 +139,15 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         self.description = getattr(obj, 'description', None)
 
     def __repr__(self):
-        return '<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
-             super(BaseAnalogSignal, self).__repr__(), self.t_start, self.t_stop, self.sampling_rate)
+        return ('<%s(%s, [%s, %s], sampling rate: %s)>' %
+                (self.__class__.__name__,
+                 super(BaseAnalogSignal, self).__repr__(), self.t_start,
+                 self.t_stop, self.sampling_rate))
 
     def __getslice__(self, i, j):
         # doesn't get called in Python 3 - __getitem__ is called instead
         obj = super(BaseAnalogSignal, self).__getslice__(i, j)
-        obj.t_start = self.t_start + i*self.sampling_period
+        obj.t_start = self.t_start + i * self.sampling_period
         return obj
 
     def __getitem__(self, i):
@@ -144,21 +163,24 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 slice_start = i[0].start
                 slice_step = i[0].step
             if slice_start:
-                obj.t_start = self.t_start + slice_start*self.sampling_period
+                obj.t_start = self.t_start + slice_start * self.sampling_period
             if slice_step:
                 obj.sampling_period *= slice_step
         return obj
 
     # sampling_period attribute is handled as a property on underlying rate
     def _get_sampling_period(self):
-        return 1./self.sampling_rate
+        return 1. / self.sampling_rate
+
     def _set_sampling_period(self, period):
-        self.sampling_rate = 1./period
-    sampling_period = property(fget=_get_sampling_period, fset=_set_sampling_period)
+        self.sampling_rate = 1. / period
+
+    sampling_period = property(fget=_get_sampling_period,
+                               fset=_set_sampling_period)
 
     @property
     def duration(self):
-        return self.shape[0]/self.sampling_rate
+        return self.shape[0] / self.sampling_rate
 
     @property
     def t_stop(self):
@@ -166,11 +188,12 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     @property
     def times(self):
-        return self.t_start + np.arange(self.shape[0])/self.sampling_rate
+        return self.t_start + np.arange(self.shape[0]) / self.sampling_rate
 
     def rescale(self, units):
         """
-        Return a copy of the AnalogSignal(Array) converted to the specified units
+        Return a copy of the AnalogSignal(Array) converted to the specified
+        units
         """
         to_dims = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == to_dims:
@@ -182,25 +205,27 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             try:
                 cf = pq.quantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
-                raise ValueError(
-                    'Unable to convert between units of "%s" and "%s"'
-                    %(from_u._dimensionality, to_u._dimensionality)
-                )
-            signal = cf*self.magnitude
-        new = self.__class__(signal=signal, units=to_u, sampling_rate=self.sampling_rate)
+                raise ValueError('Unable to convert between units of "%s" \
+                                 and "%s"' % (from_u._dimensionality,
+                                              to_u._dimensionality))
+            signal = cf * self.magnitude
+        new = self.__class__(signal=signal, units=to_u,
+                             sampling_rate=self.sampling_rate)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
         return new
 
     def duplicate_with_new_array(self, signal):
         #signal is the new signal
-        new = self.__class__(signal=signal, units=self.units, sampling_rate=self.sampling_rate)
+        new = self.__class__(signal=signal, units=self.units,
+                             sampling_rate=self.sampling_rate)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
         return new
 
     def __eq__(self, other):
-        if self.t_start != other.t_start or self.sampling_rate != other.sampling_rate:
+        if (self.t_start != other.t_start or
+                self.sampling_rate != other.sampling_rate):
             return False
         return super(BaseAnalogSignal, self).__eq__(other)
 
@@ -215,7 +240,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
             # how to handle name and annotations?
 
     def _copy_data_complement(self, other):
-        for attr in ("t_start", "sampling_rate", "name", "file_origin", "description"):
+        for attr in ("t_start", "sampling_rate", "name", "file_origin",
+                     "description"):
             setattr(self, attr, getattr(other, attr, None))
 
     def _apply_operator(self, other, op):
@@ -238,7 +264,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         return self._apply_operator(other, "__truediv__")
 
     def __div__(self, other):
-       return self._apply_operator(other, "__div__")
+        return self._apply_operator(other, "__div__")
 
     __radd__ = __add__
     __rmul__ = __sub__
@@ -265,10 +291,14 @@ class AnalogSignal(BaseAnalogSignal):
       ...                  sampling_rate=0.42*kHz, units=uV)
 
     *Required attributes/properties*:
-      :signal: the data itself, as a :py:class:`Quantity` array, NumPy array or list
-      :units: required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
-      :sampling_rate: *or* :sampling_period: Quantity, number of samples per unit time or
-                interval between two samples. If both are specified, they are checked for consistency.
+      :signal: the data itself, as a :py:class:`Quantity` array, NumPy array
+               or list
+      :units: required if the signal is a list or NumPy array, not if it is a
+              :py:class:`Quantity`
+      :sampling_rate: *or* :sampling_period: Quantity, number of samples per
+                                             unit time or interval between two
+                                             samples. If both are specified,
+                                             they are checked for consistency.
 
     *Recommended attributes/properties*:
       :t_start: Quantity, time when signal begins. Default: 0.0 seconds
@@ -298,8 +328,8 @@ class AnalogSignal(BaseAnalogSignal):
     *Operations available on this object*:
       == != + * /
     """
-    def __new__(cls, signal,  channel_index = None,  **kargs):
-        obj = BaseAnalogSignal.__new__(cls,signal,   **kargs)
+    def __new__(cls, signal,  channel_index=None, **kargs):
+        obj = BaseAnalogSignal.__new__(cls, signal, **kargs)
         obj.channel_index = channel_index
         return obj
 

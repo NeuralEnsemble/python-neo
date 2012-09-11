@@ -1,7 +1,5 @@
 from neo.core.baseneo import BaseNeo
 
-import quantities as pq
-
 
 class Event(BaseNeo):
     """
@@ -27,4 +25,4 @@ class Event(BaseNeo):
         self.time = time
         self.label = label
 
-        self.segment =None
+        self.segment = None
