@@ -93,3 +93,28 @@ class Block(BaseNeo):
                     lookup[obj.name].merge(obj)
                 else:
                     getattr(self, container).append(obj)
+
+    _repr_pretty_attrs_keys_ = [
+        "name", "description", "annotations",
+        "file_origin", "file_datetime", "rec_datetime", "index"]
+
+    def _repr_pretty_(self, pp, cycle):
+        pp.text("{0} with {1} segments and {1} groups".format(
+            self.__class__.__name__,
+            len(self.segments),
+            len(self.recordingchannelgroups),
+        ))
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        if self.segments:
+            pp.breakable()
+            pp.text("# Segments")
+            pp.breakable()
+            for (i, seg) in enumerate(self.segments):
+                if i > 0:
+                    pp.breakable()
+                pp.text("{0}: ".format(i))
+                with pp.indent(3):
+                    pp.pretty(seg)
