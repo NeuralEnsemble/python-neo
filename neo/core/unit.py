@@ -1,14 +1,17 @@
 from neo.core.baseneo import BaseNeo
 
+
 class Unit(BaseNeo):
     """
-    A :class:`Unit` regroups all the :class:`SpikeTrain` objects that were emitted
-    by a neuron during a :class:`Block`. The spikes may come from different :class:`Segment` objects
-    within the :class:`Block`, so this object is not contained in the usual
-    :class:`Block`/:class:`Segment`/:class:`SpikeTrain` hierarchy.
+    A :class:`Unit` regroups all the :class:`SpikeTrain` objects that were
+    emitted by a neuron during a :class:`Block`. The spikes may come from
+    different :class:`Segment` objects within the :class:`Block`, so this
+    object is not contained in the usual :class:`Block`/:class:`Segment`
+    /:class:`SpikeTrain` hierarchy.
 
-    A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from which it was detected.
-    With tetrodes, for instance, multiple channels may record the same unit.
+    A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from
+    which it was detected. With tetrodes, for instance, multiple channels may
+    record the same unit.
 
     This replaces the :class:`Neuron` class in the previous version of Neo.
 
@@ -40,19 +43,14 @@ class Unit(BaseNeo):
 
     """
     def __init__(self, name=None, description=None, file_origin=None,
-                                channel_indexes = None, **annotations):
+                 channel_indexes=None, **annotations):
         """Initialize a new neuronal Unit (spike source)"""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
         self.channel_indexes = channel_indexes
 
-        self.spiketrains = [ ]
-        self.spikes = [ ]
+        self.spiketrains = []
+        self.spikes = []
 
         self.recordingchannelgroup = None
-
-
-
-
-

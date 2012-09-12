@@ -1,6 +1,7 @@
 from neo.core.baseneo import BaseNeo
 import quantities as pq
 
+
 class Spike(BaseNeo):
     """
     Object to represent one spike emitted by a :class:`Unit` and represented by
@@ -25,7 +26,7 @@ class Spike(BaseNeo):
         :duration:
 
     """
-    def __init__(self, time=0*pq.s, waveform=None, sampling_rate=None,
+    def __init__(self, time=0 * pq.s, waveform=None, sampling_rate=None,
                  left_sweep=None, name=None, description=None,
                  file_origin=None, **annotations):
         """Initialize a new Spike."""
@@ -44,7 +45,7 @@ class Spike(BaseNeo):
     @property
     def duration(self):
         try:
-            return self.waveform.shape[1]/self.sampling_rate
+            return self.waveform.shape[1] / self.sampling_rate
         except:
             return None
 
@@ -54,5 +55,3 @@ class Spike(BaseNeo):
             return self.left_sweep + self.duration()
         except:
             return None
-
-

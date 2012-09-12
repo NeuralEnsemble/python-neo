@@ -1,7 +1,5 @@
 from neo.core.baseneo import BaseNeo
 
-import numpy as np
-import quantities as pq
 
 class IrregularlySampledSignal(BaseNeo):
     """
@@ -21,7 +19,7 @@ class IrregularlySampledSignal(BaseNeo):
         :file_origin:
     """
     def __init__(self, times, values,
-                  name=None, description=None,
+                 name=None, description=None,
                  file_origin=None, **annotations):
         """Initalize a new IrregularlySampledSignal."""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
@@ -32,4 +30,3 @@ class IrregularlySampledSignal(BaseNeo):
 
         self.segment = None
         self.recordingchannel = None
-
