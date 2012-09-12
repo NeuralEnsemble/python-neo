@@ -96,3 +96,27 @@ class BaseNeo(object):
         """
         _check_annotations(annotations)
         self.annotations.update(annotations)
+
+    _repr_pretty_attrs_keys_ = ["name", "description", "annotations"]
+
+    def _has_repr_pretty_attrs_(self):
+        return any(getattr(self, k) for k in self._repr_pretty_attrs_keys_)
+
+    def _repr_pretty_attrs_(self, pp, cycle):
+        first = True
+        for key in self._repr_pretty_attrs_keys_:
+            value = getattr(self, key)
+            if value:
+                if first:
+                    first = False
+                else:
+                    pp.breakable()
+                with pp.group(indent=1):
+                    pp.text("{0}: ".format(key))
+                    pp.pretty(value)
+
+    def _repr_pretty_(self, pp, cycle):
+        pp.text(self.__class__.__name__)
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)

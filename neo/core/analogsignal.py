@@ -272,6 +272,27 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     def __rsub__(self, other):
         return self.__mul__(-1) + other
 
+    def _repr_pretty_(self, pp, cycle):
+        pp.text(" ".join([self.__class__.__name__,
+                          "in",
+                          str(self.units),
+                          "with",
+                          "x".join(map(str, self.shape)),
+                          str(self.dtype),
+                          "values",
+                         ]))
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        for line in ["sampling rate: {0}".format(self.sampling_rate),
+                     "time: {0} to {1}".format(self.t_start, self.t_stop),
+                    ]:
+            if line:
+                pp.breakable()
+                with pp.group(indent=1):
+                    pp.text(line)
+
 
 class AnalogSignal(BaseAnalogSignal):
     """
