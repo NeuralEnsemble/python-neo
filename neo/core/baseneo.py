@@ -38,15 +38,17 @@ def _check_annotations(value):
     elif hasattr(value, (list,tuple)):
         for element in value:
             _check_annotations(element)
-    elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) or
+    elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) and
           not issubclass(value, ALLOWED_ANNOTATION_TYPES)):
         raise ValueError("Invalid annotation. Annotations of type %s are not \
                          allowed" % type(value))
     elif isinstance(value, numpy.ndarray):
-        if (not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES) or
-                issubclass(value.dtype.type,numpy.string_)):
+        if ((not isinstance(value.dtype.type, ALLOWED_ANNOTATION_TYPES) and
+                not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES)) or
+                (isinstance(value.dtype.type,numpy.string_) or
+                issubclass(value.dtype.type,numpy.string_))):
             raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
-                             are not allowed" % value.dtype)
+                              are not allowed" % value.dtype)
 
 
 
