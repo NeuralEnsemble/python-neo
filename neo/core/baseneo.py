@@ -32,10 +32,10 @@ def _check_annotations(value):
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
     """
-    if not isinstance(value, dict):
+    if isinstance(value, dict):
         for element in value.values():
             _check_annotations(element)
-    elif hasattr(value, (list, tuple)):
+    elif isinstance(value, (list, tuple)):
         for element in value:
             _check_annotations(element)
     elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) and
