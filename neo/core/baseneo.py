@@ -5,6 +5,7 @@ Docstring needed
 
 from datetime import datetime, date, time, timedelta
 from numbers import Number
+from decimal import Decimal
 import numpy
 
 # handle both Python 2 and Python 3
@@ -21,7 +22,7 @@ ALLOWED_ANNOTATION_TYPES = (int, long, float, complex,
                             basestring, bytes,
                             type(None),
                             datetime, date, time, timedelta,
-                            Number,
+                            Number, Decimal,
                             numpy.number, numpy.complex, numpy.bool)
 
 
