@@ -4,7 +4,7 @@ Docstring needed
 """
 
 from datetime import datetime, date, time, timedelta
-from number import Numbers
+from numbers import Number
 import numpy
 
 # handle both Python 2 and Python 3
@@ -21,9 +21,8 @@ ALLOWED_ANNOTATION_TYPES = (int, long, float, complex,
                             basestring, bytes,
                             type(None),
                             datetime, date, time, timedelta,
-                            Numbers,
+                            Number,
                             numpy.number, numpy.complex, numpy.bool)
-
 
 
 def _check_annotations(value):
@@ -33,9 +32,9 @@ def _check_annotations(value):
     only simple types.
     """
     if not isinstance(value, dict):
-        for v in value.values():
-            _check_annotations(v)
-    elif hasattr(value, (list,tuple)):
+        for element in value.values():
+            _check_annotations(element)
+    elif hasattr(value, (list, tuple)):
         for element in value:
             _check_annotations(element)
     elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) and
@@ -45,11 +44,10 @@ def _check_annotations(value):
     elif isinstance(value, numpy.ndarray):
         if ((not isinstance(value.dtype.type, ALLOWED_ANNOTATION_TYPES) and
                 not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES)) or
-                (isinstance(value.dtype.type,numpy.string_) or
-                issubclass(value.dtype.type,numpy.string_))):
+                (isinstance(value.dtype.type, numpy.string_) or
+                 issubclass(value.dtype.type, numpy.string_))):
             raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
-                              are not allowed" % value.dtype)
-
+                             are not allowed" % value.dtype)
 
 
 class BaseNeo(object):
@@ -82,7 +80,8 @@ class BaseNeo(object):
     are specified in ../description.py and the documentation for the child.
     """
 
-    def __init__(self, name=None, file_origin=None, description=None, **annotations):
+    def __init__(self, name=None, file_origin=None, description=None,
+                 **annotations):
         """This is the base constructor for all Neo objects.
 
         Stores universally recommended attributes and creates `annotations`
@@ -96,7 +95,6 @@ class BaseNeo(object):
         self.name = name
         self.description = description
         self.file_origin = file_origin
-
 
     def annotate(self, **annotations):
         """
