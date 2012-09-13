@@ -3,7 +3,8 @@ Docstring needed
 
 """
 
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
+from number import Numbers
 import numpy
 
 # handle both Python 2 and Python 3
@@ -11,10 +12,17 @@ try:
     basestring
 except NameError:
     basestring = str
+try:
+    long
+except NameError:
+    long = int
 
-ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
-                            type(None), numpy.integer, numpy.floating,
-                            numpy.complex, bytes)
+ALLOWED_ANNOTATION_TYPES = (int, long, float, complex,
+                            basestring, bytes,
+                            type(None),
+                            datetime, date, time, timedelta,
+                            Numbers,
+                            numpy.number, numpy.complex, numpy.bool)
 
 
 
@@ -24,18 +32,21 @@ def _check_annotations(value):
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
     """
-    if isinstance(value, dict):
-        for k, v in value.items():
+    if not isinstance(value, dict):
+        for v in value.values():
             _check_annotations(v)
-    elif isinstance(value, list):
+    elif hasattr(value, (list,tuple)):
         for element in value:
             _check_annotations(element)
+    elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) or
+          not issubclass(value, ALLOWED_ANNOTATION_TYPES)):
+        raise ValueError("Invalid annotation. Annotations of type %s are not \
+                         allowed" % type(value))
     elif isinstance(value, numpy.ndarray):
-        if value.dtype not in (numpy.integer, numpy.floating, numpy.complex) \
-                                         and value.dtype.type != numpy.string_:
-           raise ValueError("Invalid annotation. NumPy arrays with dtype %s are not allowed" % value.dtype)
-    elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not allowed" % type(value))
+        if (not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES) or
+                issubclass(value.dtype.type,numpy.string_)):
+            raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
+                             are not allowed" % value.dtype)
 
 
 
