@@ -8,22 +8,18 @@ from numbers import Number
 from decimal import Decimal
 import numpy
 
-# handle both Python 2 and Python 3
-try:
-    basestring
-except NameError:
-    basestring = str
-try:
-    long
-except NameError:
-    long = int
-
-ALLOWED_ANNOTATION_TYPES = (int, long, float, complex,
-                            basestring, bytes,
+ALLOWED_ANNOTATION_TYPES = (int, float, complex,
+                            str, bytes,
                             type(None),
                             datetime, date, time, timedelta,
                             Number, Decimal,
                             numpy.number, numpy.complex, numpy.bool)
+
+# handle both Python 2 and Python 3
+try:
+    ALLOWED_ANNOTATION_TYPES += (long, unicode)
+except NameError:
+    pass
 
 
 def _check_annotations(value):
