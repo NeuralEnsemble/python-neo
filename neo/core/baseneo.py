@@ -13,11 +13,13 @@ ALLOWED_ANNOTATION_TYPES = (int, float, complex,
                             type(None),
                             datetime, date, time, timedelta,
                             Number, Decimal,
-                            numpy.number, numpy.complex, numpy.bool)
+                            numpy.number, numpy.bool_)
+DISALLOWED_ANNOTATION_DTYPES = (str, numpy.flexible)
 
 # handle both Python 2 and Python 3
 try:
     ALLOWED_ANNOTATION_TYPES += (long, unicode)
+    DISALLOWED_ANNOTATION_DTYPES += (unicode, )
 except NameError:
     pass
 
@@ -28,23 +30,20 @@ def _check_annotations(value):
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
     """
-    if isinstance(value, dict):
+    if isinstance(value, numpy.ndarray):
+        if (not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES) or
+                issubclass(value.dtype.type, DISALLOWED_ANNOTATION_DTYPES)):
+            raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
+                             "are not allowed" % value.dtype.type)
+    elif isinstance(value, dict):
         for element in value.values():
             _check_annotations(element)
     elif isinstance(value, (list, tuple)):
         for element in value:
             _check_annotations(element)
-    elif (not isinstance(value, ALLOWED_ANNOTATION_TYPES) and
-          not issubclass(value, ALLOWED_ANNOTATION_TYPES)):
-        raise ValueError("Invalid annotation. Annotations of type %s are not \
-                         allowed" % type(value))
-    elif isinstance(value, numpy.ndarray):
-        if ((not isinstance(value.dtype.type, ALLOWED_ANNOTATION_TYPES) and
-                not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES)) or
-                (isinstance(value.dtype.type, numpy.string_) or
-                 issubclass(value.dtype.type, numpy.string_))):
-            raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
-                             are not allowed" % value.dtype)
+    elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
+        raise ValueError("Invalid annotation. Annotations of type %s are not"
+                         "allowed" % type(value))
 
 
 class BaseNeo(object):
