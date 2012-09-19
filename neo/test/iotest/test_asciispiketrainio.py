@@ -22,8 +22,5 @@ class TestAsciiSpikeTrainIO(BaseTestIO, unittest.TestCase, ):
     files_to_test = files_to_download
 
 
-
-
-
 if __name__ == "__main__":
     unittest.main()

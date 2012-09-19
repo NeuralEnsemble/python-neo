@@ -235,8 +235,6 @@ def test_store_empty_spike_train():
         iom.close()
         os.remove("test987.h5")
 
+
 if __name__ == '__main__':
     unittest.main()
-
-
-

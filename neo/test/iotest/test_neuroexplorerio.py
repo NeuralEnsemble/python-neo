@@ -24,6 +24,5 @@ class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
     files_to_download = files_to_test
 
 
-
 if __name__ == "__main__":
     unittest.main()

@@ -22,8 +22,6 @@ class TestRawBinarySignalIO(BaseTestIO , unittest.TestCase, ):
     files_to_test = [   'File_winwcp_1.wcp',
                             ]
     files_to_download = files_to_test
-    
-
 
 
 if __name__ == "__main__":

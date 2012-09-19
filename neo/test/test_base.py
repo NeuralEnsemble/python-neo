@@ -11,3 +11,7 @@ from neo.core.baseneo import BaseNeo
 
 class TestBaseNeo(unittest.TestCase):
     pass
+
+
+if __name__ == "__main__":
+    unittest.main()
