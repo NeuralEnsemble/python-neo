@@ -171,13 +171,13 @@ class TestArrayMethods(unittest.TestCase):
 
     def test__slice_should_change_sampling_period(self):
         sub = self.signal[:2]
-        self.assertEqual(sub, self.sampling_period)
+        self.assertEqual(sub.sampling_period, self.signal.sampling_period)
 
         sub = self.signal[::2]
-        self.assertEqual(sub, self.sampling_period * 2)
+        self.assertEqual(sub.sampling_period, self.signal.sampling_period * 2)
 
         sub = self.signal[1:7:2]
-        self.assertEqual(sub, self.sampling_period * 2)
+        self.assertEqual(sub.sampling_period, self.signal.sampling_period * 2)
 
     def test__getitem_should_return_single_quantity(self):
         self.assertEqual(self.signal[0], 0*nA)
