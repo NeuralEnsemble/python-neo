@@ -34,7 +34,7 @@ def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
         """A function to map BaseAnalogSignal.__new__ to function that
            does not do the unit checking. This is needed for pickle to work.
         """
-        return cls(signal, units, dtype, copy,t_start, sampling_rate, sampling_period, name, file_origin, description, **annotations)
+        return cls(signal, units, dtype, copy, t_start, sampling_rate, sampling_period, name, file_origin, description, **annotations)
 
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
@@ -303,12 +303,17 @@ class AnalogSignal(BaseAnalogSignal):
     *Operations available on this object*:
       == != + * /
     """
-    def __new__(cls, signal,  channel_index = None,  **kargs):
-        obj = BaseAnalogSignal.__new__(cls,signal,   **kargs)
+    def __new__(cls, signal, units=None, dtype=None, copy=True,
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin=None, description=None,
+                channel_index=None, **annotations):
+        obj = BaseAnalogSignal.__new__(cls, signal, units, dtype, copy, t_start,
+                                       sampling_rate, sampling_period, name,
+                                       file_origin, description, **annotations)
         obj.channel_index = channel_index
         return obj
 
     def _copy_data_complement(self, other):
         BaseAnalogSignal._copy_data_complement(self, other)
-        for attr in ("channel_index"):
+        for attr in ("channel_index",):
             setattr(self, attr, getattr(other, attr, None))
