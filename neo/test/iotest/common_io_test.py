@@ -14,6 +14,8 @@ The private url for writing is
 ssh://gate.g-node.org/groups/neo/io_test_files/
 
 """
+from __future__ import absolute_import
+
 __test__ = False #
 
 url_for_tests =  "https://portal.g-node.org/neo/"
@@ -23,13 +25,15 @@ import urllib
 import logging
 import tempfile
 
-import neo
-from neo.description import *
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal, assert_same_sub_schema, \
-            assert_neo_object_is_compliant, assert_file_contents_equal, assert_sub_schema_is_lazy_loaded
+from ... import Block, Segment
+from ...description import *
+from ..tools import (assert_arrays_almost_equal, assert_arrays_equal, 
+                     assert_same_sub_schema, assert_neo_object_is_compliant, 
+                     assert_file_contents_equal, 
+                     assert_sub_schema_is_lazy_loaded)
 
 
-from neo.test.io.generate_datasets import generate_from_supported_objects
+from .generate_datasets import generate_from_supported_objects
 
 
 try:
@@ -119,7 +123,7 @@ class BaseTestIO(object):
         
         if not(higher in self.ioclass.readable_objects and higher in self.ioclass.writeable_objects):
             return
-        if not(higher == neo.Block or higher == neo.Segment):
+        if not(higher == Block or higher == Segment):
             return
         # when io need external knowldge for writting or read such as sampling_rate (RawBinaryIO...)
         # the test is too much complex too design genericaly. 
@@ -141,9 +145,9 @@ class BaseTestIO(object):
             return
         
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
-        if higher == neo.Block:
+        if higher == Block:
             writer.write_block(ob)
-        elif higher == neo.Segment:
+        elif higher == Segment:
             writer.write_segment(ob)
 
         try: # for HDF5IO file should be closed before being opened again in test
@@ -172,7 +176,7 @@ class BaseTestIO(object):
         if not(higher in self.ioclass.readable_objects and 
             higher in self.ioclass.writeable_objects):
             return
-        if not(higher == neo.Block or higher == neo.Segment):
+        if not(higher == Block or higher == Segment):
             return
         
         if not self.read_and_write_is_bijective:
@@ -206,13 +210,13 @@ class BaseTestIO(object):
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
         
         # Write and read with the IO and ensure it is the same.
-        if higher == neo.Block:
+        if higher == Block:
             writer.write_block(ob)
             if writer.__class__.name == 'Hdf5': # need to read what was saved
                 ob2 = reader.read_block(ob.hdf5_path)
             else:
                 ob2 = reader.read_block()
-        elif higher == neo.Segment:
+        elif higher == Segment:
             writer.write_segment(ob)
             ob2 = reader.read_segment()
 

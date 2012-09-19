@@ -2,15 +2,14 @@
 """
 Tests of io.base
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import ExampleIO
+from ...io import ExampleIO
 
 import numpy
 try:
@@ -19,8 +18,8 @@ try:
 except ImportError:
     have_scipy = False
 
+from .common_io_test import BaseTestIO
 
-from neo.test.io.common_io_test import BaseTestIO
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = [ 'fake1',

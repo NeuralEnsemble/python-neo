@@ -2,15 +2,14 @@
 """
 Tests of io.asciisignalio
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import NeuroshareIO
+from ...io import NeuroshareIO
 import numpy
 
 #~ class TestNeuroshareIO(unittest.TestCase):

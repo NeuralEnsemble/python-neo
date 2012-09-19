@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 
 import unittest
 import neo.io.blackrockio
@@ -6,9 +7,9 @@ import numpy as np
 import quantities as pq
 import glob
 
-from neo.test.io.common_io_test import BaseTestIO
-from neo.io import tools
-from neo.test.tools import assert_arrays_almost_equal
+from .common_io_test import BaseTestIO
+from ...io import tools
+from ..tools import assert_arrays_almost_equal
 import struct
 
 

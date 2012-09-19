@@ -2,10 +2,8 @@
 """
 Tests of the PyNNNumpyIO and PyNNTextIO classes
 
-
 """
-
-from __future__ import with_statement, division
+from __future__ import absolute_import, with_statement, division
 import numpy
 import quantities as pq
 import os
@@ -13,16 +11,16 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from neo.core import Segment, AnalogSignal, SpikeTrain
-from neo.io import PyNNNumpyIO, PyNNTextIO
-from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
+from ...core import Segment, AnalogSignal, SpikeTrain
+from ...io import PyNNNumpyIO, PyNNTextIO
+from ..tools import assert_arrays_equal, assert_file_contents_equal
 
 
 NCELLS = 5
 
 
 #TODO: common test fails.
-from neo.test.io.common_io_test import BaseTestIO
+from .common_io_test import BaseTestIO
 #class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
 

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 
 import unittest
 import neo.io.klustakwikio
@@ -6,8 +7,8 @@ import numpy as np
 import quantities as pq
 import glob
 
-from neo.test.io.common_io_test import BaseTestIO
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
+from .common_io_test import BaseTestIO
+from ..tools import assert_arrays_almost_equal, assert_arrays_equal
 
 
 class testFilenameParser(unittest.TestCase):

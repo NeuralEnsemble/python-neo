@@ -3,11 +3,11 @@
 Generate datasets for testing
 
 """
+from __future__ import absolute_import
 
-
-
-from neo.core import *
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel, iteritems
+from ...core import *
+from ...io.tools import (create_many_to_one_relationship, 
+                         populate_RecordingChannel, iteritems)
 import numpy as np
 import quantities as pq
 from numpy.random import rand

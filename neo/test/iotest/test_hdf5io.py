@@ -8,9 +8,9 @@ python <path to the neo repo>/test/io/test_hdf5io.py
 For the moment only basic tests are active.
 
 """
+from __future__ import absolute_import
 
-
-# add performance testing!!
+#TODO add performance testing!!
 
 import numpy as np
 import quantities as pq
@@ -23,10 +23,10 @@ import datetime
 import os
 import logging
 
-from neo.core import *
-from neo.test.tools import assert_neo_object_is_compliant, assert_objects_equivalent
-from neo.test.io.common_io_test import BaseTestIO
-from neo.description import *
+from ...core import *
+from ..tools import assert_neo_object_is_compliant, assert_objects_equivalent
+from .common_io_test import BaseTestIO
+from ...description import *
 
 try:
     from neo.io.hdf5io import NeoHdf5IO
