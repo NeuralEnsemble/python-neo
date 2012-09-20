@@ -3531,6 +3531,7 @@ class ElphyIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
+        self.elphy_file = ElphyFile(self.filename)
 
 
     def read_block(self,
@@ -3551,41 +3552,40 @@ class ElphyIO(BaseIO):
         if lazy:
             return block
         else:
-            elphy_file = ElphyFile(self.filename)
             # get analog and tag channels
             try :
-                elphy_file.open()
+                self.elphy_file.open()
             except Exception, e:
-                elphy_file.close()
+                self.elphy_file.close()
                 print("cannot open file %s : %s" % (self.filename, e))
         # cascading
         if cascade:
             # create a segment containing all analog,
             # tag and event channels for the episode
-            for episode in range(1, elphy_file.n_episodes) :
+            for episode in range(1, self.elphy_file.n_episodes) :
                 #print episode
-                segment = self.read_segment(elphy_file, episode)
+                segment = self.read_segment(episode)
                 segment.block = block
                 block.segments.append(segment)
                 # create a single recording channel
                 # group containing all data provided
                 # by a multi-electrode system
-                n_spikes = elphy_file.n_spiketrains(episode)
+                n_spikes = self.elphy_file.n_spiketrains(episode)
                 if n_spikes :
-                    group = self.read_recordingchannelgroup(elphy_file, episode)
+                    group = self.read_recordingchannelgroup(episode)
                     block.recordingchannelgroups.append(group)
         # creating relations
         #populate_RecordingChannel( block )
         #create_many_to_one_relationship( block )
         # close file
-        elphy_file.close()
+        self.elphy_file.close()
         # result    
         return block
         
 
 
 
-    def read_segment( self, elphy_file, episode ):
+    def read_segment( self, episode ):
         """
         Internal method used to return :class:`Segment` data to the main read method.
 
@@ -3596,8 +3596,8 @@ class ElphyIO(BaseIO):
         segment = Segment( name="episode %s" % str(episode + 1) )
         # create an analog signal for
         # each channel in the episode
-        for channel in range(1, elphy_file.n_channels(episode)) :
-            signal = elphy_file.get_signal(episode, channel)
+        for channel in range(1, self.elphy_file.n_channels(episode)) :
+            signal = self.elphy_file.get_signal(episode, channel)
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units = signal.y_unit,
@@ -3608,13 +3608,12 @@ class ElphyIO(BaseIO):
             )
             analog_signal.segment = segment
             segment.analogsignals.append(analog_signal)
-
         # create an analog signal for
         # each tag channel in the episode
-        ntags = elphy_file.n_tags(episode) 
+        ntags = self.elphy_file.n_tags(episode) 
         if ntags:
             for tag in range(1, ntags) :
-                tg = elphy_file.get_tag(episode, tag)
+                tg = self.elphy_file.get_tag(episode, tag)
                 # layout, episode, number, x_unit, sampling_frequency, start, stop, name
                 tag_signal = AnalogSignal(
                     tg.data['x'],
@@ -3626,30 +3625,27 @@ class ElphyIO(BaseIO):
                 )
                 tag_signal.segment = segment
                 segment.analogsignals.append(tag_signal)
-        
         # create an event array for each
         # event channel in the episode
-        for evt in range(1, elphy_file.n_events(episode)) :
+        for evt in range(1, self.elphy_file.n_events(episode)) :
             event = self.read_eventarray(episode, evt)
             segment.eventarrays.append(event)
-    
         # create a spiketrain for each
         # spike channel in the episode
         # in case of multi-electrode
         # acquisition context
-        n_spikes = elphy_file.n_spiketrains(episode)
+        n_spikes = self.elphy_file.n_spiketrains(episode)
         if n_spikes :
             for spk in range(1, n_spikes) :
-                spiketrain = elphy_file.get_spiketrain(episode, spk)
+                spiketrain = self.elphy_file.get_spiketrain(episode, spk)
                 spiketrain.segment = segment
                 segment.spiketrains.append( spiketrain )
-
         return segment
     
 
 
 
-    def read_recordingchannelgroup( self, elphy_file, episode ):
+    def read_recordingchannelgroup( self, episode ):
         """
         Internal method used to return :class:`RecordingChannelGroup` info.
 
@@ -3657,19 +3653,19 @@ class ElphyIO(BaseIO):
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment
         """
-        n_spikes = elphy_file.n_spikes
+        n_spikes = self.elphy_file.n_spikes
         group = RecordingChannelGroup(
             name="episode %s, group of %s electrodes" % (episode, n_spikes)
         )
         for spk in range(0, n_spikes) :
-            channel = self.read_recordingchannel(elphy_file, episode, spk)
+            channel = self.read_recordingchannel(episode, spk)
             group.recordingchannels.append(channel)
         return group
             
 
 
 
-    def read_recordingchannel( self, elphy_file, episode, chl ):
+    def read_recordingchannel( self, episode, chl ):
         """
         Internal method used to return a :class:`RecordingChannel` label.
 
@@ -3686,7 +3682,7 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_eventarray( self, elphy_file, episode, evt ):
+    def read_eventarray( self, episode, evt ):
         """
         Internal method used to return a list of elphy :class:`EventArray` acquired from event channels.
 
@@ -3695,7 +3691,7 @@ class ElphyIO(BaseIO):
             episode : number of elphy episode, roughly corresponding to a segment.
             evt : index of the event.
         """
-        event = elphy_file.get_event(episode, evt)
+        event = self.elphy_file.get_event(episode, evt)
         event_array = EventArray(
             times=event.times * s,
             channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
@@ -3705,7 +3701,7 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_spiketrain( self, elphy_file, episode, spk ):
+    def read_spiketrain( self, episode, spk ):
         """
         Internal method used to return an elphy object :class:`SpikeTrain`.
 
@@ -3714,7 +3710,7 @@ class ElphyIO(BaseIO):
             episode : number of elphy episode, roughly corresponding to a segment.
             spk : index of the spike array.
         """
-        spike = elphy_file.get_spike(episode, spk)
+        spike = self.elphy_file.get_spike(episode, spk)
         waveforms = spike.waveforms
 
         dct = {
