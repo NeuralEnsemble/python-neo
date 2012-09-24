@@ -35,15 +35,17 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 
 def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
-                          t_start=0 * pq.s, sampling_rate=None,
-                          sampling_period=None, name=None, file_origin=None,
-                          description=None, annotations=None):
-    """A function to map BaseAnalogSignal.__new__ to function that
-        does not do the unit checking. This is needed for pickle to work.
-    """
-    return cls(signal, units, dtype, copy, t_start, sampling_rate,
-                sampling_period, name, file_origin, description,
-                **annotations)
+                          t_start=0*pq.s, sampling_rate=None,
+                          sampling_period=None,name=None, file_origin=None,
+                          description=None,annotations=None):
+        """A function to map BaseAnalogSignal.__new__ to function that
+           does not do the unit checking. This is needed for pickle to work.
+        """
+        return cls(signal=signal, units=units, dtype=dtype, copy=copy,
+                   t_start=t_start, sampling_rate=sampling_rate,
+                   sampling_period=sampling_period, name=name,
+                   file_origin=file_origin, description=description,
+                   **annotations)
 
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):

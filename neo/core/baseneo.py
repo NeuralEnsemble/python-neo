@@ -74,10 +74,7 @@ class BaseNeo(object):
     The required and recommended arguments for each child class (Neo object)
     are specified in ../description.py and the documentation for the child.
     """
-<<<<<<< HEAD
-=======
 
->>>>>>> toddrgen/datatypes
     def __init__(self, name=None, file_origin=None, description=None,
                  **annotations):
         """This is the base constructor for all Neo objects.

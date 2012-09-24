@@ -8,9 +8,9 @@ python <path to the neo repo>/test/io/test_hdf5io.py
 For the moment only basic tests are active.
 
 """
+from __future__ import absolute_import
 
-
-# add performance testing!!
+#TODO add performance testing!!
 
 import numpy as np
 import quantities as pq
@@ -23,10 +23,10 @@ import datetime
 import os
 import logging
 
-from neo.core import *
-from neo.test.tools import assert_neo_object_is_compliant, assert_objects_equivalent
-from neo.test.io.common_io_test import BaseTestIO
-from neo.description import *
+from ...core import *
+from ..tools import assert_neo_object_is_compliant, assert_objects_equivalent
+from .common_io_test import BaseTestIO
+from ...description import *
 
 try:
     from neo.io.hdf5io import NeoHdf5IO
@@ -60,11 +60,11 @@ def get_fake_value(attr): # attr = (name, type, [dim, [dtype]])
     return to_set
 
 def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
-    """ Create a fake NEO object of a given type. Follows one-to-many 
+    """ Create a fake NEO object of a given type. Follows one-to-many
     and many-to-many relationships if cascade. RC, when requested cascade, will
     not create RGCs to avoid dead-locks.
 
-    _follow_links - an internal variable, indicates whether to create objects 
+    _follow_links - an internal variable, indicates whether to create objects
     with 'implicit' relationships, to avoid duplications. Do not use it. """
     kwargs = {} # assign attributes
     attrs = classes_necessary_attributes[obj_type] + \
@@ -81,11 +81,11 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
                 rels += many_to_many_relationship[obj_type]
             if not _follow_links and implicit_relationship.has_key(obj_type):
                 for i in implicit_relationship[obj_type]:
-                    if not i in rels: 
+                    if not i in rels:
                         logging.debug("LOOK HERE!!!" + str(obj_type))
                     rels.remove(i)
             for child in rels:
-                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade, 
+                setattr(obj, child.lower() + "s", [fake_NEO(child, cascade,
                         _follow_links)])
     if obj_type == "Block": # need to manually create 'implicit' connections
         # connect a unit to the spike and spike train
@@ -97,7 +97,7 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
         # connect RCG with ASA
         asa = obj.segments[0].analogsignalarrays[0]
         obj.recordingchannelgroups[0].analogsignalarrays.append(asa)
-        # connect RC to AS, IrSAS and back to RGC 
+        # connect RC to AS, IrSAS and back to RGC
         rc = obj.recordingchannelgroups[0].recordingchannels[0]
         rc.recordingchannelgroups.append(obj.recordingchannelgroups[0])
         rc.analogsignals.append(obj.segments[0].analogsignals[0])
@@ -111,7 +111,7 @@ class HDF5Commontests(BaseTestIO, unittest.TestCase):
     ioclass = NeoHdf5IO
     files_to_test = [  ]
     files_to_download =  [   ]
-    
+
     @unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):
         BaseTestIO.setUp(self)
@@ -121,15 +121,15 @@ class hdf5ioTest: # inherit this class from unittest.TestCase when ready
     """
     Tests for the hdf5 library.
     """
-    
+
     #@unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):
         self.test_file = "test.h5"
-    
+
     def tearDown(self):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
-    
+
     def test_create(self):
         """
         Create test file with signals, segments, blocks etc.
@@ -145,7 +145,7 @@ class hdf5ioTest: # inherit this class from unittest.TestCase when ready
         assert_same_sub_schema(b1, b2)
 
     def test_property_change(self):
-        """ Make sure all attributes are saved properly after the change, 
+        """ Make sure all attributes are saved properly after the change,
         including quantities, units, types etc."""
         iom = NeoHdf5IO(filename=self.test_file)
         for obj_type in class_by_name.keys():
@@ -212,7 +212,7 @@ class hdf5ioTest: # inherit this class from unittest.TestCase when ready
         # test naming - paths
         # unicode!!
         # add a child, then remove, then check it's removed
-        # update/removal of relations b/w RC and AS which are/not are in the 
+        # update/removal of relations b/w RC and AS which are/not are in the
         # same segment
 
 def test_store_empty_spike_train():
@@ -226,16 +226,15 @@ def test_store_empty_spike_train():
         iom = NeoHdf5IO(filename="test987.h5")
         iom.save(block)
         iom.close()
-        
+
         iom = NeoHdf5IO(filename="test987.h5")
         block1 = iom.get("/Block_0")
         assert block1.segments[0].spiketrains[0].t_stop == 100.0
         assert len(block1.segments[0].spiketrains[0]) == 0
         assert len(block1.segments[0].spiketrains[1]) == 3
+        iom.close()
         os.remove("test987.h5")
+
 
 if __name__ == '__main__':
     unittest.main()
-
-
-

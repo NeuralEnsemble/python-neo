@@ -16,3 +16,5 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(b.file_origin, None)
 
 
+if __name__ == "__main__":
+    unittest.main()

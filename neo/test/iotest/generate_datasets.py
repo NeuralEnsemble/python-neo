@@ -3,11 +3,11 @@
 Generate datasets for testing
 
 """
+from __future__ import absolute_import
 
-
-
-from neo.core import *
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel, iteritems
+from ...core import *
+from ...io.tools import (create_many_to_one_relationship,
+                         populate_RecordingChannel, iteritems)
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -24,33 +24,33 @@ s = pq.s
 
 
 def generate_one_simple_block(block_name = 'block_0',
-                                            nb_segment = 3, 
+                                            nb_segment = 3,
                                             supported_objects = [ ],
                                             **kws):
     bl = Block()#name = block_name)
-    
+
     if Segment in supported_objects:
         for s in range(nb_segment):
             seg = generate_one_simple_segment(seg_name = "seg" + str(s),
                 supported_objects = supported_objects, **kws)
             bl.segments.append(seg)
-    
+
     if RecordingChannel in supported_objects:
         populate_RecordingChannel(bl)
-    
+
     return bl
 
 
-def generate_one_simple_segment(  seg_name = 'segment 0', 
+def generate_one_simple_segment(  seg_name = 'segment 0',
                                                     supported_objects = [ ],
                                                     nb_analogsignal = 4,
                                                     t_start = 0.*s,
                                                     sampling_rate = 10*kHz,
                                                     duration = 6.*s,
-                                                    
+
                                                     nb_spiketrain = 6,
                                                     spikerate_range = [.5*Hz, 12*Hz],
-                                                    
+
                                                     event_array_types = {
                                                                                         'stim' : ['a', 'b', 'c' , 'd'],
                                                                                         'enter_zone' : [ 'one', 'two'],
@@ -72,7 +72,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                   units=mV, name = 'sig %d for segment %s' % (a, seg.name) )
             anasig.annotations['channel_index'] = a
             seg.analogsignals.append(anasig)
-    
+
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
             spikerate = rand()*np.diff(spikerate_range)+spikerate_range[0].magnitude
@@ -80,7 +80,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                         #, name = 'spiketrain %d'%s)
             sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
-    
+
     if EventArray in supported_objects:
         for name, labels in iteritems(event_array_types):
             ea_size = rand()*np.diff(event_array_size_range)+event_array_size_range[0]
@@ -89,7 +89,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                                             labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
                                             )
             seg.eventarrays.append(ea)
-    
+
     if EpochArray in supported_objects:
         for name, labels in iteritems(epoch_array_types):
             t = 0
@@ -99,14 +99,14 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                 dur = (rand()*np.diff(epoch_array_duration_range)+epoch_array_duration_range[0])
                 durations.append(dur)
                 t = t+dur
-            epa = EpochArray(    
+            epa = EpochArray(
                 #name = name,
                 times = pq.Quantity(times, units = pq.s),
                 durations = pq.Quantity([x[0] for x in durations], units = pq.s),
                 labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
                 )
             seg.epocharrays.append(epa)
-            
+
     # TODO : Spike, Event, Epoch
 
     return seg
@@ -118,20 +118,17 @@ def generate_from_supported_objects( supported_objects ):
     #~ create_many_to_one_relationship
     if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects= supported_objects)
-        
+
         # Chris we do not create RC and RCG if it is not in supported_objects
         # there is a test in generate_one_simple_block so I removed
         #finalize_block(higher)
-        
+
     elif Segment in supported_objects:
         higher = generate_one_simple_segment(supported_objects= supported_objects)
     else:
         #TODO
         return None
-    
+
     create_many_to_one_relationship(higher)
     return higher
-    
-    
-
 

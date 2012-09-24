@@ -698,5 +698,5 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
