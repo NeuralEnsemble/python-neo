@@ -3,19 +3,25 @@ Docstring needed
 
 """
 
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
+from numbers import Number
+from decimal import Decimal
 import numpy
+
+ALLOWED_ANNOTATION_TYPES = (int, float, complex,
+                            str, bytes,
+                            type(None),
+                            datetime, date, time, timedelta,
+                            Number, Decimal,
+                            numpy.number, numpy.bool_)
+DISALLOWED_ANNOTATION_DTYPES = (str, numpy.flexible)
 
 # handle both Python 2 and Python 3
 try:
-    basestring
+    ALLOWED_ANNOTATION_TYPES += (long, unicode)
+    DISALLOWED_ANNOTATION_DTYPES += (unicode, )
 except NameError:
-    basestring = str
-
-ALLOWED_ANNOTATION_TYPES = (int, float, basestring, datetime, date, time,
-                            type(None), numpy.integer, numpy.floating,
-                            numpy.complex, bytes)
-
+    pass
 
 def _check_annotations(value):
     """
@@ -23,20 +29,20 @@ def _check_annotations(value):
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
     """
-    if isinstance(value, dict):
-        for k, v in value.items():
-            _check_annotations(v)
-    elif isinstance(value, list):
+    if isinstance(value, numpy.ndarray):
+        if (not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES) or
+                issubclass(value.dtype.type, DISALLOWED_ANNOTATION_DTYPES)):
+            raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
+                             "are not allowed" % value.dtype.type)
+    elif isinstance(value, dict):
+        for element in value.values():
+            _check_annotations(element)
+    elif isinstance(value, (list, tuple)):
         for element in value:
             _check_annotations(element)
-    elif isinstance(value, numpy.ndarray):
-        if value.dtype not in (numpy.integer, numpy.floating, numpy.complex) \
-                and value.dtype.type != numpy.string_:
-            raise ValueError("Invalid annotation. NumPy arrays with dtype %s \
-                             are not allowed" % value.dtype)
     elif not isinstance(value, ALLOWED_ANNOTATION_TYPES):
-        raise ValueError("Invalid annotation. Annotations of type %s are not \
-                         allowed" % type(value))
+        raise ValueError("Invalid annotation. Annotations of type %s are not"
+                         "allowed" % type(value))
 
 
 class BaseNeo(object):
@@ -68,6 +74,10 @@ class BaseNeo(object):
     The required and recommended arguments for each child class (Neo object)
     are specified in ../description.py and the documentation for the child.
     """
+<<<<<<< HEAD
+=======
+
+>>>>>>> toddrgen/datatypes
     def __init__(self, name=None, file_origin=None, description=None,
                  **annotations):
         """This is the base constructor for all Neo objects.
