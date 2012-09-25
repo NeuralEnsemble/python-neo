@@ -31,16 +31,16 @@ import re
 class BrainVisionIO(BaseIO):
     """
     Class for reading/writing data from BrainVision product (brainAmp, brain analyser...)
-    
+
     Usage:
         >>> from neo import io
         >>> r = io.BrainVisionIO( filename = 'File_brainvision_1.eeg')
         >>> seg = r.read_segment(lazy = False, cascade = True,)
-        
-    
-    
+
+
+
     """
-    
+
     is_readable        = True
     is_writable        = False
 
@@ -50,20 +50,20 @@ class BrainVisionIO(BaseIO):
 
     has_header         = False
     is_streameable     = False
-    
+
     read_params        = { Segment : [ ] }
     write_params       = { Segment : [ ] }
 
     name               = None
     extensions         = ['vhdr']
-    
+
     mode = 'file'
-    
-    
+
+
     def __init__(self , filename = None) :
         """
         This class read/write a elan based file.
-        
+
         **Arguments**
             filename : the filename to read or write
         """
@@ -72,23 +72,23 @@ class BrainVisionIO(BaseIO):
 
 
     def read_segment(self, lazy = False, cascade = True):
-        
+
         ## Read header file (vhdr)
         header = readBrainSoup(self.filename)
-        
+
         assert header['Common Infos']['DataFormat'] == 'BINARY', NotImplementedError
         assert header['Common Infos']['DataOrientation'] == 'MULTIPLEXED', NotImplementedError
         nb_channel = int(header['Common Infos']['NumberOfChannels'])
         sampling_rate = 1.e6/float(header['Common Infos']['SamplingInterval']) * pq.Hz
-        
+
         format = header['Binary Infos']['BinaryFormat']
         formats = { 'INT_16':np.int16, 'IEEE_FLOAT_32':np.float32,}
         assert format in formats, NotImplementedError
         dt = formats[format]
-        
+
         seg = Segment(file_origin = os.path.basename(self.filename), )
         if not cascade : return seg
-        
+
         # read binary
         if not lazy:
             binary_file = os.path.splitext(self.filename)[0]+'.eeg'
@@ -97,7 +97,7 @@ class BrainVisionIO(BaseIO):
             n = int(sigs.size/nb_channel)
             sigs = sigs[:n*nb_channel]
             sigs = sigs.reshape(n, nb_channel)
-        
+
         for c in range(nb_channel):
             name, ref, res, units = header['Channel Infos']['Ch{}'.format(c+1)].split(',')
             units = pq.Quantity(1, units.replace('µ', 'u') )
@@ -113,7 +113,7 @@ class BrainVisionIO(BaseIO):
             if lazy:
                 anasig.lazy_shape = -1
             seg.analogsignals.append(anasig)
-        
+
         # read marker
         marker_file = os.path.splitext(self.filename)[0]+'.vmrk'
         all = readBrainSoup(marker_file)['Marker Infos']
@@ -139,8 +139,8 @@ class BrainVisionIO(BaseIO):
                                     name = str(type_),
                                     )
             seg.eventarrays.append(ea)
-        
-        
+
+
         create_many_to_one_relationship(seg)
         return seg
 
@@ -164,11 +164,11 @@ def readBrainSoup(filename):
             k,v = line.split('=')
             all[section][k] = v
     return all
-        
-        
-        
 
-    
-    
-    
+
+
+
+
+
+
 

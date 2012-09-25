@@ -26,7 +26,7 @@ Classes:
 from __future__ import absolute_import
 
 from .block import Block
-from .segment import Segment 
+from .segment import Segment
 from .recordingchannelgroup import RecordingChannelGroup
 from .recordingchannel import RecordingChannel
 
@@ -46,9 +46,7 @@ from .spike import Spike
 from .spiketrain import SpikeTrain
 
 
-
-objectlist = [ Block, Segment, RecordingChannelGroup , RecordingChannel,
-        AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
-        Event, EventArray, Epoch, EpochArray,
-        Unit, Spike , SpikeTrain
-            ]
+objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,
+              AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
+              Event, EventArray, Epoch, EpochArray, Unit, Spike, SpikeTrain
+              ]

@@ -2,14 +2,15 @@
 """
 Tests of io.axonio
 """
+from __future__ import absolute_import
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import AxonIO
-from neo.test.io.common_io_test import BaseTestIO
+from ...io import AxonIO
+from .common_io_test import BaseTestIO
 
 
 class TestAxonIO(BaseTestIO, unittest.TestCase):

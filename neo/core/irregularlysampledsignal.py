@@ -8,9 +8,9 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     """
     A representation of a continuous, analog signal acquired at time ``t_start``
     with a varying sampling interval.
-    
+
     *Usage*:
-    
+
       >>> from quantities import ms, nA, uV
       >>> import numpy as np
       >>> a = IrregularlySampledSignal([0.0, 1.23, 6.78], [1,2,3], units='mV', time_units='ms')
@@ -21,14 +21,14 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         :signal: Numpy array, Quantity array or list of the same size as times
         :units:  required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
         :time_units:  required if `times` is a list or NumPy array, not if it is a :py:class:`Quantity`
-    
+
     *Optional arguments*:
         :dtype:  Data type of the signal (times are always floats)
     
     *Recommended attributes/properties*:
         :name:
         :description:
-        :file_origin:                
+        :file_origin:
     """
     
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,

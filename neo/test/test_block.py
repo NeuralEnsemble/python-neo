@@ -6,7 +6,7 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-    
+
 from neo.core.block import Block
 
 class TestBlock(unittest.TestCase):
@@ -16,3 +16,5 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(b.file_origin, None)
 
 
+if __name__ == "__main__":
+    unittest.main()

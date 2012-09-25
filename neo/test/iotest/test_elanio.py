@@ -2,19 +2,18 @@
 """
 Tests of io.elanio
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import ElanIO
+from ...io import ElanIO
 import numpy
 
 
-from neo.test.io.common_io_test import BaseTestIO
+from .common_io_test import BaseTestIO
 
 
 
@@ -28,7 +27,6 @@ class TestElanIO(BaseTestIO , unittest.TestCase, ):
                                     'File_elan_1.eeg.ent',
                                     'File_elan_1.eeg.pos',
                                     ]
-
 
 
 if __name__ == "__main__":

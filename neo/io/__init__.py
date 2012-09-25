@@ -2,7 +2,7 @@
 """
 neo.io provides classes for reading and/or writing electrophysiological data files.
 
-Note that if the package dependency is not satisfied for one io, it does not 
+Note that if the package dependency is not satisfied for one io, it does not
 raise an error but a warning.
 
 neo.io.iolist provides the classes list of succesfully imported io.
@@ -45,9 +45,13 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 .. autoclass:: neo.io.PickleIO
 
-"""
-# AND also  .. autoclass:: neo.io.NeoHdf5IO
+.. autoclass:: neo.io.NeoHdf5IO
 
+.. autoclass:: neo.io.BrainVisionIO
+
+.. autoclass:: neo.io.ElphyIO
+
+"""
 
 import warnings
 
@@ -188,3 +192,9 @@ try:
     iolist.append( BrainVisionIO )
 except ImportError:
     warnings.warn("BrainVisionIO not available, check dependencies", ImportWarning)
+
+try:
+    from .elphyio import ElphyIO
+    iolist.append( ElphyIO )
+except ImportError:
+    warnings.warn("ElphyIO not available, check dependencies", ImportWarning)

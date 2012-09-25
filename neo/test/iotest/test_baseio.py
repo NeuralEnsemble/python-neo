@@ -2,16 +2,15 @@
 """
 Tests of io.base
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.core import objectlist
-from neo.io.baseio import BaseIO
+from ...core import objectlist
+from ...io.baseio import BaseIO
 import numpy
 
 class TestIOObjects(unittest.TestCase):

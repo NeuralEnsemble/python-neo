@@ -2,15 +2,14 @@
 """
 Tests of io.base
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import ExampleIO
+from ...io import ExampleIO
 
 import numpy
 try:
@@ -19,8 +18,8 @@ try:
 except ImportError:
     have_scipy = False
 
+from .common_io_test import BaseTestIO
 
-from neo.test.io.common_io_test import BaseTestIO
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = [ 'fake1',
@@ -33,7 +32,7 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
 
 
 class TestExample2IO(unittest.TestCase):
-    
+
     @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_lazy(self):
         r = ExampleIO( filename = None)
@@ -44,13 +43,13 @@ class TestExample2IO(unittest.TestCase):
         for st in seg.spiketrains:
             self.assertEqual(st.size, 0)
             assert hasattr(st, 'lazy_shape')
-        
+
         seg = r.read_segment(cascade = True, lazy = False)
         for ana in seg.analogsignals:
             self.assertNotEqual(ana.size, 0)
         for st in seg.spiketrains:
             self.assertNotEqual(st.size, 0)
-    
+
     @unittest.skipUnless(have_scipy, "requires scipy")
     def test_read_segment_cascade(self):
         r = ExampleIO( filename = None)
@@ -68,8 +67,6 @@ class TestExample2IO(unittest.TestCase):
     def read_spiketrain(self):
         r = ExampleIO( filename = None)
         st = r.read_spiketrain( lazy = False,)
-
-
 
 
 if __name__ == "__main__":

@@ -2,18 +2,17 @@
 """
 Tests of io.NeuroExplorerIO
 """
-
-from __future__ import division
+from __future__ import absolute_import, division
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import NeuroExplorerIO
+from ...io import NeuroExplorerIO
 import numpy
 
-from neo.test.io.common_io_test import BaseTestIO
+from .common_io_test import BaseTestIO
 
 
 
@@ -23,7 +22,6 @@ class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
                             'File_neuroexplorer_2.nex',
                             ]
     files_to_download = files_to_test
-
 
 
 if __name__ == "__main__":

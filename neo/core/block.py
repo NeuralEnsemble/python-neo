@@ -1,5 +1,6 @@
 from neo.core.baseneo import BaseNeo
 
+
 class Block(BaseNeo):
     """
     Main container gathering all the data, whether discrete or continous, for a
@@ -49,15 +50,15 @@ class Block(BaseNeo):
         self.rec_datetime = rec_datetime
         self.index = index
 
-        self.segments = [ ]
-        self.recordingchannelgroups = [ ]
+        self.segments = []
+        self.recordingchannelgroups = []
 
     @property
     def list_units(self):
         """
         Return a list of all :py:class:`Unit` in a block.
         """
-        units = [ ]
+        units = []
         for rcg in self.recordingchannelgroups:
             for unit in rcg.units:
                 if unit not in units:
@@ -69,7 +70,7 @@ class Block(BaseNeo):
         """
         Return a list of all :py:class:`RecordingChannel` in a block.
         """
-        all_rc = [ ]
+        all_rc = []
         for rcg in self.recordingchannelgroups:
             for rc in rcg.recordingchannels:
                 if rc not in all_rc:
@@ -82,8 +83,8 @@ class Block(BaseNeo):
 
         For each :class:`Segment` in the other block, if its name matches that
         of a :class:`Segment` in this block, the two segments will be merged,
-        otherwise it will be added as a new segment. The equivalent procedure is
-        then applied to each :class:`RecordingChannelGroup`.
+        otherwise it will be added as a new segment. The equivalent procedure
+        is then applied to each :class:`RecordingChannelGroup`.
         """
         for container in ("segments", "recordingchannelgroups"):
             lookup = dict((obj.name, obj) for obj in getattr(self, container))
@@ -92,3 +93,28 @@ class Block(BaseNeo):
                     lookup[obj.name].merge(obj)
                 else:
                     getattr(self, container).append(obj)
+
+    _repr_pretty_attrs_keys_ = [
+        "name", "description", "annotations",
+        "file_origin", "file_datetime", "rec_datetime", "index"]
+
+    def _repr_pretty_(self, pp, cycle):
+        pp.text("{0} with {1} segments and {1} groups".format(
+            self.__class__.__name__,
+            len(self.segments),
+            len(self.recordingchannelgroups),
+        ))
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        if self.segments:
+            pp.breakable()
+            pp.text("# Segments")
+            pp.breakable()
+            for (i, seg) in enumerate(self.segments):
+                if i > 0:
+                    pp.breakable()
+                pp.text("{0}: ".format(i))
+                with pp.indent(3):
+                    pp.pretty(seg)
