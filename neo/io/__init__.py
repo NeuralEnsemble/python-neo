@@ -185,4 +185,10 @@ try:
 except ImportError:
     warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
 
+try:
+    from .elphyio import ElphyIO
+    iolist.append( ElphyIO )
+except ImportError:
+    warnings.warn("ElphyIO not available, check dependencies", ImportWarning)
+
 
