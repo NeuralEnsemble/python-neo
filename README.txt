@@ -3,11 +3,11 @@ with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for
 writing to a subset of these formats plus non-proprietary formats including HDF5.
 
-The goal of neo is to improve interoperability between Python tools for
+The goal of Neo is to improve interoperability between Python tools for
 analyzing, visualizing and generating electrophysiology data (such as
-OpenElectrophy_, NeuroTools_, G-node_, Helmholtz_, PyNN_) by providing a common,
+OpenElectrophy, NeuroTools, G-node, Helmholtz, PyNN) by providing a common,
 shared object model. In order to be as lightweight a dependency as possible,
-neo is deliberately limited to represention of data, with no functions for data
+Neo is deliberately limited to represention of data, with no functions for data
 analysis or visualization.
 
 Neo implements a hierarchical data model well adapted to intracellular and

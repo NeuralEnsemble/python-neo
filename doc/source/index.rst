@@ -51,13 +51,14 @@ Neo is distributed under a BSD licence.
 Contributing
 ------------
 
-The people behind the project (see :doc:`authors`) are very open to discussion. Any feedback is
-gladly received and highly appreciated! Discussion of Neo takes place on the
-`NeuralEnsemble mailing list <http://groups.google.com/group/neuralensemble>`_::
-
-    http://groups.google.com/group/neuralensemble
+The people behind the project (see :doc:`authors`) are very open to discussion.
+Any feedback is gladly received and highly appreciated!
+Discussion of Neo takes place on the
+`NeuralEnsemble mailing list <http://groups.google.com/group/neuralensemble>`_.
     
-`Source code <http://neuralensemble.org/trac/neo/browser>`_ and the `bug tracker <http://neuralensemble.org/trac/neo/report>`_ are at::
+`Source code <https://github.com/NeuralEnsemble/python-neo>`_ is on GitHub.
+
+The `bug tracker <http://neuralensemble.org/trac/neo/report>`_ is at::
 
     http://neuralensemble.org/trac/neo
 
