@@ -8,7 +8,7 @@ long_description = open("README.txt").read()
 setup(
     name = "neo",
     version = '0.2.1dev',
-    packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.io'],
+    packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
     install_requires=[
                     'numpy>=1.3.0',
                     'quantities>=0.9.0',
