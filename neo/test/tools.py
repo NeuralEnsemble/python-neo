@@ -47,7 +47,7 @@ def assert_neo_object_is_compliant(ob):
       * If attribute is numpy.ndarray also check dtype.kind.
     """
     assert type(ob) in description.objectlist, '%s is not a neo object' % (type(ob))
-    classname =ob.__class__.__name__
+    classname = ob.__class__.__name__
     necess = description.classes_necessary_attributes[classname]
     recomm = description.classes_recommended_attributes[classname]
 
@@ -77,7 +77,8 @@ def assert_neo_object_is_compliant(ob):
         elif hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
                 at = getattr(ob, attrname)
-                assert type(at) == attrtype, '%s in %s have not the good type (%s should be %s)'%(attrname, classname, type(at), attrtype )
+                if not issubclass(type(at), attrtype):
+                    raise TypeError('%s in %s should be %s, not %s' % (attrname, classname, attrtype, type(at)))
                 if attrtype == pq.Quantity or attrtype == np.ndarray:
                     ndim = attr[2]
                     assert at.ndim == ndim,  '%s.%s  dimension is %d should be %d' % (classname, attrname, at.ndim, ndim)

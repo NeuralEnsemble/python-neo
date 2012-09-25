@@ -1,3 +1,13 @@
+*.mo
+*.egg-info
+*.egg
+*.EGG
+*.EGG-INFO
+bin
+build
+*.pyc
+*.pyo
+*.tmp*
 .tox
 neo/test/io/files_for_tests
 *.pyc

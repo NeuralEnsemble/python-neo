@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-Module for reading/writing data from/to PyNN NumpyBinaryFile format.
+Module for reading/writing data from/to legacy PyNN formats.
 
 PyNN is available at http://neuralensemble.org/PyNN
 

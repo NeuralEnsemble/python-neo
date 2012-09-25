@@ -72,7 +72,7 @@ class BaseTestIO(object):
         self.files_to_test.extend( self.files_generated )
 
     def tearDown(self):
-        if self.ioclass.name == 'Hdf5':
+        if self.ioclass.name == 'NeoHdf5 IO':
             filename = self.local_test_dir + '/Generated0_' + self.ioclass.__name__ + '.h5'
             os.remove(filename)
 
@@ -212,7 +212,7 @@ class BaseTestIO(object):
         # Write and read with the IO and ensure it is the same.
         if higher == Block:
             writer.write_block(ob)
-            if writer.__class__.name == 'Hdf5': # need to read what was saved
+            if writer.__class__.name == 'NeoHdf5 IO': # need to read what was saved
                 ob2 = reader.read_block(ob.hdf5_path)
             else:
                 ob2 = reader.read_block()

@@ -90,7 +90,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :description: string
         :file_origin: string
 
-    Any other keyword arguments are stored in the :attr:`self.annotations` dict
+    Any other keyword arguments are stored in the :attr:`self.annotations` dict.
 
     *Other arguments relating to implementation*
         :attr:`dtype` : data type (float32, float64, etc)
