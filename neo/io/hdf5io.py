@@ -253,7 +253,7 @@ class NeoHdf5IO(BaseIO):
     writeable_objects   = all_objects
     read_params = dict( zip( all_objects, [ ]*len(all_objects)) )
     write_params = dict( zip( all_objects, [ ]*len(all_objects)) )
-    name = 'HDF5 IO'
+    name = 'NeoHdf5 IO'
     extensions = [ 'h5', ]
     mode = 'file'
     is_readable = True
