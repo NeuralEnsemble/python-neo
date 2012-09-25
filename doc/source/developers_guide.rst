@@ -50,16 +50,20 @@ Requirements
 Getting the source code
 -----------------------
 
-We use the Subversion version control system. To get a copy of the latest
-development version::
+We use the Git version control system. The best way to contribute is through
+GitHub_. You will first need a GitHub account, and you should then fork the
+repository at https://github.com/NeuralEnsemble/python-neo
+(see http://help.github.com/fork-a-repo/).
+
+To get a local copy of the repository::
 
     $ cd /some/directory
-    $ svn checkout https://neuralensemble.org/svn/neo/trunk neo_trunk
+    $ git clone git@github.com:<username>/python-neo.git
     
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
-    $ cd neo_trunk
+    $ cd python-neo
     $ python setup.py install
     $ python3 setup.py install
 
@@ -67,7 +71,7 @@ You can do this either by installing Neo::
 changes to the code) *or* by creating symbolic links from somewhere on your
 PYTHONPATH, for example::
 
-    $ ln -s neo_trunk/neo
+    $ ln -s python-neo/neo
     $ export PYTHONPATH=/some/directory:${PYTHONPATH}
 
 An alternate solution is to install Neo with the *develop* option, this avoids
@@ -126,7 +130,7 @@ Working on the documentation
 The documentation is written in `reStructuredText`_, using the `Sphinx`_
 documentation system. To build the documentation::
 
-    $ cd neo_trunk/doc
+    $ cd python-neo/doc
     $ make html
     
 Then open `some/directory/neo_trunk/doc/build/html/index.html` in your browser.
@@ -135,28 +139,20 @@ Committing your changes
 -----------------------
 
 Once you are happy with your changes, **run the test suite again to check
-that you have not introduced any new bugs**. Then you can commit them to the
-central repository, provided you have a NeuralEnsemble account::
+that you have not introduced any new bugs**. Then you can commit them to your
+local repository::
 
-    $ svn commit -m 'informative commit message'
+    $ git commit -m 'informative commit message'
     
 If this is your first commit to the project, please add your name and
-affiliation/employer to AUTHORS.txt.
+affiliation/employer to :file:`doc/source/authors.rst`
 
-If you do not have a NeuralEnsemble account, you can create a patch::
+You can then push your changes to your online repository on GitHub::
 
-    $ svn diff > descriptive_name.patch
+    $ git push
     
-and attach it to a ticket in the `issue tracker`_. If you have made more than
-one commit, determine the revision number of when you checked out or last updated
-from the central repository (using ``svn log``), and then give a range of
-revisions to include in the patch::
-
-    $ svn diff start-revision:HEAD > descriptive_name.diff
-
-To apply a patch to the source tree::
-
-    $ patch -p0 < /path/to/site.descriptive_name.diff
+Once you think your changes are ready to be included in the main Neo repository,
+open a pull request on GitHub (see https://help.github.com/articles/using-pull-requests).
 
 
 Python 3
@@ -191,11 +187,10 @@ Python 2.6, 2.7, 3.1 and 3.2.
 Making a release
 ----------------
 
-.. TODO: discuss branching/tagging policy. We should really be developing in trunk
+.. TODO: discuss branching/tagging policy.
 
-.. so doing a release also involves some svn copy commands and changing version number strings
-
-First check that the version string (in ``neo/version.py``) is correct.
+First check that the version string (in :file:`neo/version.py`, :file:`setup.py`
+and :file:`doc/conf.py`) is correct.
 
 To build a source package::
 
@@ -211,9 +206,7 @@ have the necessary permissions to do this)::
 
 .. should we also distribute via software.incf.org
 
-Finally, tag the release in the Subversion repository::
-
-    $ svn cp https://neuralensemble.org/svn/neo/trunk https://neuralensemble.org/svn/neo/tags/<version>
+.. make a release branch
 
 
 If you want to develop your own IO module
@@ -235,9 +228,10 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 .. _`Porting to Python 3`: http://python3porting.com/
 .. _`NeuralEnsemble Google group`: http://groups.google.com/group/neuralensemble
 .. _`RSS feed`: https://neuralensemble.org/trac/neo/timeline?changeset=on&milestone=on&ticket=on&wiki=on&max=50&daysback=90&format=rss
-.. _`reStructuredText`: http://docutils.sourceforge.net/rst.html
-.. _`Sphinx`: http://sphinx.pocoo.org/
-.. _`numpy`: http://numpy.scipy.org/
-.. _`quantities`: http://pypi.python.org/pypi/quantities
-.. _`PEP394`: http://www.python.org/dev/peps/pep-0394/
-.. _`PyPI`: http://pypi.python.org
+.. _reStructuredText: http://docutils.sourceforge.net/rst.html
+.. _Sphinx: http://sphinx.pocoo.org/
+.. _numpy: http://numpy.scipy.org/
+.. _quantities: http://pypi.python.org/pypi/quantities
+.. _PEP394: http://www.python.org/dev/peps/pep-0394/
+.. _PyPI: http://pypi.python.org
+.. _GitHub: http://github.com

@@ -71,11 +71,11 @@ depending on which version of Python you are using.
 Installing from source
 ======================
 
-To install the latest version of Neo from the Subversion repository::
+To install the latest version of Neo from the Git repository::
 
-    svn co https://neuralensemble.org/svn/neo/trunk neo_trunk
-    cd neo_trunk
-    python setup.py install
+    $ git clone git://github.com/NeuralEnsemble/python-neo.git
+    $ cd python-neo
+    $ python setup.py install
 
 
 Python 3 support
@@ -98,6 +98,7 @@ KlustakwikIO       Yes      No
 MicromedIO         Yes      No
 NeoMatlabIO        Yes      Yes
 NeuroExplorerIO    Yes      No
+PickleIO           Yes      Yes
 PlexonIO           Yes      No
 PyNNIO             Yes      Yes
 RawBinarySignalIO  Yes      Yes
