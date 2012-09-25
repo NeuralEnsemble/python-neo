@@ -43,10 +43,15 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 .. autoclass:: neo.io.AlphaOmegaIO
 
+.. autoclass:: neo.io.PickleIO
+
+.. autoclass:: neo.io.NeoHdf5IO
+
+.. autoclass:: neo.io.BrainVisionIO
+
+.. autoclass:: neo.io.ElphyIO
 
 """
-# AND also  .. autoclass:: neo.io.NeoHdf5IO
-
 
 import warnings
 
@@ -179,16 +184,17 @@ except ImportError:
     warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
 
 
+from .pickleio import PickleIO # should be always available, so no need for try...except
+iolist.append( PickleIO )
+
 try:
     from .brainvisionio import BrainVisionIO
     iolist.append( BrainVisionIO )
 except ImportError:
-    warnings.warn("AlphaOmegaIO not available, check dependencies", ImportWarning)
+    warnings.warn("BrainVisionIO not available, check dependencies", ImportWarning)
 
 try:
     from .elphyio import ElphyIO
     iolist.append( ElphyIO )
 except ImportError:
     warnings.warn("ElphyIO not available, check dependencies", ImportWarning)
-
-

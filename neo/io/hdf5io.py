@@ -207,6 +207,8 @@ import uuid
 
 import tables
 
+logger = logging.getLogger("Neo")
+
 #version checking
 from distutils import version
 if version.LooseVersion(tables.__version__) < '2.2':
@@ -251,12 +253,14 @@ class NeoHdf5IO(BaseIO):
     writeable_objects   = all_objects
     read_params = dict( zip( all_objects, [ ]*len(all_objects)) )
     write_params = dict( zip( all_objects, [ ]*len(all_objects)) )
-    name = 'Hdf5'
+    name = 'NeoHdf5 IO'
     extensions = [ 'h5', ]
     mode = 'file'
+    is_readable = True
+    is_writable = True
 
     def __init__(self, filename=settings['filename'], **kwargs):
-        self._init_base_io()
+        BaseIO.__init__(self, filename=filename)
         self.connected = False
         self.objects_by_ref = {}
         self.name_indices = {}
@@ -276,22 +280,6 @@ class NeoHdf5IO(BaseIO):
         """
         self.save(obj, where, cascade, lazy)
 
-    def _init_base_io(self):
-        """
-        Base io initialization.
-        """
-        self.is_readable = True
-        self.is_writable = True
-        self.supported_objects = class_by_name.keys()
-        self.readable_objects = class_by_name.keys()
-        self.writeable_objects = class_by_name.keys()
-        self.name = 'HDF5 IO'
-        # wraps for Base IO functions
-        for obj_type in self.readable_objects:
-            self.__setattr__("read_" + obj_type.lower(), self._read_entity)
-        for obj_type in self.writeable_objects:
-            self.__setattr__("write_" + obj_type.lower(), self._write_entity)
-
     #-------------------------------------------
     # IO connectivity / Session management
     #-------------------------------------------
@@ -307,7 +295,7 @@ class NeoHdf5IO(BaseIO):
                     self._data = tb.openFile(filename, mode = "a", title = filename)
                     self.connected = True
                 else:
-                    raise TypeError("The file specified is not an HDF5 file format.")
+                    raise TypeError('"%s" is not an HDF5 file format.' % filename)
             except IOError:
                 # create a new file if specified file not found
                 self._data = tb.openFile(filename, mode = "w", title = filename)
@@ -317,7 +305,7 @@ class NeoHdf5IO(BaseIO):
             self.objects_by_ref = {}
             self.name_indices = {}
         else:
-            logging.info("Already connected.")
+            logger.info("Already connected.")
 
     def close(self):
         """
@@ -620,7 +608,7 @@ class NeoHdf5IO(BaseIO):
         """
         Returns a quantitative information about the contents of the file.
         """
-        logging.info("This is a neo.HDF5 file. it contains:")
+        logger.info("This is a neo.HDF5 file. it contains:")
         info = {}
         info = info.fromkeys(class_by_name.keys(), 0)
         for node in self._data.walkNodes():
@@ -631,3 +619,8 @@ class NeoHdf5IO(BaseIO):
                 # node is not of NEO type
                 pass
         return info
+
+for obj_type in NeoHdf5IO.writeable_objects:
+    setattr(NeoHdf5IO, "write_" + obj_type.__name__.lower(), NeoHdf5IO._write_entity)
+for obj_type in NeoHdf5IO.readable_objects:
+    setattr(NeoHdf5IO, "read_" + obj_type.__name__.lower(), NeoHdf5IO._read_entity)

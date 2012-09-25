@@ -1,5 +1,4 @@
-"""
-This module defines objects relating to analog signals.
+"""This module defines objects relating to analog signals.
 
 For documentation on these objects, which are imported into the base
 neo namespace, see:
@@ -35,9 +34,9 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 
 def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
-                          t_start=0*pq.s, sampling_rate=None,
-                          sampling_period=None,name=None, file_origin=None,
-                          description=None,annotations=None):
+                          t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                          name=None, file_origin=None, description=None,
+                          annotations=None):
         """A function to map BaseAnalogSignal.__new__ to function that
            does not do the unit checking. This is needed for pickle to work.
         """
@@ -298,7 +297,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
 class AnalogSignal(BaseAnalogSignal):
     """
-    A representation of continuous, analog signal acquired at time ``t_start``
+    A representation of a continuous, analog signal acquired at time ``t_start``
     at a certain sampling rate.
 
     Inherits from :py:class:`quantities.Quantity`, which in turn inherits from
@@ -351,12 +350,17 @@ class AnalogSignal(BaseAnalogSignal):
     *Operations available on this object*:
       == != + * /
     """
-    def __new__(cls, signal,  channel_index=None, **kargs):
-        obj = BaseAnalogSignal.__new__(cls, signal, **kargs)
+    def __new__(cls, signal, units=None, dtype=None, copy=True,
+                t_start=0*pq.s, sampling_rate=None, sampling_period=None,
+                name=None, file_origin=None, description=None,
+                channel_index=None, **annotations):
+        obj = BaseAnalogSignal.__new__(cls, signal, units, dtype, copy, t_start,
+                                       sampling_rate, sampling_period, name,
+                                       file_origin, description, **annotations)
         obj.channel_index = channel_index
         return obj
 
     def _copy_data_complement(self, other):
         BaseAnalogSignal._copy_data_complement(self, other)
-        for attr in ("channel_index"):
+        for attr in ("channel_index",):
             setattr(self, attr, getattr(other, attr, None))

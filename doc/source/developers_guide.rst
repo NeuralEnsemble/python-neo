@@ -15,8 +15,6 @@ group`_.
 Discussion of issues specific to a particular ticket in the issue tracker should
 take place on the tracker.
 
-.. since the NeuralEnsemble group is private (requires login to read), perhaps
-.. we should create an open group neo_users (anyone can read, login to post) as well?
 
 Using the issue tracker
 -----------------------
