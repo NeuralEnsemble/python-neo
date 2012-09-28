@@ -27,16 +27,8 @@ from fractions import gcd
 from .baseio import BaseIO
 
 # to import from core
-from ..core import Block, Segment, RecordingChannelGroup, RecordingChannel, AnalogSignal, EventArray, SpikeTrain
-
-# some tools to finalize the hierachy
-from .tools import populate_RecordingChannel, create_many_to_one_relationship
-
-# note neo.core needs only numpy and quantities
-import numpy as np
-import quantities as pq
-
-np.random.seed(1234)
+from ..core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
+    AnalogSignal, EventArray, SpikeTrain)
 
 # ElphyIO depends on:
 import numpy
