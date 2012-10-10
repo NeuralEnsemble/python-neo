@@ -42,7 +42,6 @@ try:
 except ImportError:
     have_scipy = False
 
-np.random.seed(1234)
 
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
@@ -144,6 +143,8 @@ class ExampleIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
+        # Seed so all instances can return the same values
+        np.random.seed(1234)
 
 
     # Segment reading is supported so I define this :
