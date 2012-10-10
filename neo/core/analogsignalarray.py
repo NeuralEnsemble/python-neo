@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 import quantities as pq
 from .analogsignal import BaseAnalogSignal, AnalogSignal, _get_sampling_rate
-from .baseneo import BaseNeo
+from .baseneo import BaseNeo, merge_annotations
 import logging
 
 logger = logging.getLogger("Neo")
@@ -155,9 +155,9 @@ class AnalogSignalArray(BaseAnalogSignal):
             kwargs['channel_index'] = self.channel_index
         else:
             kwargs['channel_index'] = np.append(self.channel_index,
-                                           other.channel_index)
-        # TODO: merge self.annotations and other.annotations
-        kwargs.update(self.annotations)
+                                                other.channel_index)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        kwargs.update(merged_annotations)
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
                                  sampling_rate=self.sampling_rate,
