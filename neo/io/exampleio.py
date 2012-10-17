@@ -111,7 +111,7 @@ class ExampleIO(BaseIO):
                 {'value' : 15., 'label' : 'Segment size (s.)'}),
             ('num_analogsignal',
                 {'value' : 8, 'label' : 'Number of recording points'}),
-            ('num_spiketrain',
+            ('num_spiketrain_by_channel',
                 {'value' : 3, 'label' : 'Num of spiketrains'}),
             ],
         }
@@ -312,7 +312,7 @@ class ExampleIO(BaseIO):
             # in our case it is mono electrode so dim 1 is size 1
             waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
             waveforms *=  randn(*waveforms.shape)/6+1
-            spiketr.waveforms = waveforms
+            spiketr.waveforms = waveforms*pq.mV
             spiketr.sampling_rate = sr * pq.Hz
             spiketr.left_sweep = 1.5* pq.s
 
