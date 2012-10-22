@@ -3195,9 +3195,13 @@ class ElphyFile(object):
         self.file_size = path.getsize(self.file.name)
         self.creation_date = datetime.fromtimestamp(path.getctime(self.file.name))
         self.modification_date = datetime.fromtimestamp(path.getmtime(self.file.name))
+        print "\nElphyFile.open() : get_nomenclature()"
         self.nomenclature = self.get_nomenclature()
+        print "\nElphyFile.open() : get_factory(%s)" % self.nomenclature
         self.factory = self.get_factory()
+        print "\nElphyFile.open() : create_layout()"
         self.layout = self.create_layout()
+        print "\nElphyFile.open() : done"
 
 
     def close(self):
@@ -3311,6 +3315,7 @@ class ElphyFile(object):
         # the iteration through the file
         offset = header.size
         offset_stop = layout.get_blocks_end()
+        print "\nElphyFile.create_layout() > offset:%s, stop:%s" %(offset,offset_stop)
         
         # in continuous mode DAC2/GS/2000 raw data are not stored
         # into several DAC2SEQ blocks, they are stored after all 
@@ -3320,16 +3325,21 @@ class ElphyFile(object):
         detect_continuous = False
         detect_main = False
         while (offset < offset_stop) and not (is_continuous  and (offset >= layout.data_offset)) :
+            print "\nElphyFile.create_layout() : new block >", offset
             block = self.factory.create_block(layout, offset)
+            print "ElphyFile.create_layout() : new block >", block.identifier
             
             # create the sub blocks if it is DAC2 objects format
             # this is only done for B_Ep and B_Finfo blocks for
             # DAC2 objects format, maybe it could be useful to
             # spread this to other block types.
-            if isinstance(header, DAC2Header) and (block.identifier in ['B_Ep', 'B_Finfo']) :
+            #if isinstance(header, DAC2Header) and (block.identifier in ['B_Ep', 'B_Finfo']) :
+            if isinstance(header, DAC2Header) and (block.identifier in ['B_Ep']) :
+                print "\nElphyFile.create_layout() - B_Ep"
                 sub_offset = block.data_offset
                 while sub_offset < block.start + block.size :
                     sub_block = self.factory.create_sub_block(block, sub_offset)
+                    print "ElphyFile.create_layout() - B_Ep subblock.",sub_block.size
                     block.add_sub_block(sub_block)
                     sub_offset += sub_block.size
                 
@@ -3342,6 +3352,7 @@ class ElphyFile(object):
             
             layout.add_block(block)
             offset += block.size
+            print "\nElphyFile.create_layout() : added block >", offset
             
             # set up as soon as possible the shortcut 
             # to the main block of a DAC2GSLayout
@@ -3354,17 +3365,21 @@ class ElphyFile(object):
             if not detect_continuous :
                 is_continuous = isinstance(header, DAC2GSHeader) and layout.is_continuous()
         
+        print "\nElphyFile.create_layout() : set_episode_blocks()"
         # set up the shortcut to blocks corresponding
         # to episodes, only available for DAC2Layout
         # and also DAC2GSLayout if not continuous 
         if isinstance(layout, DAC2Layout) or (isinstance(layout, DAC2GSLayout) and not layout.is_continuous()) :
             layout.set_episode_blocks()
         
+        print "\nElphyFile.create_layout() : set_data_blocks()"
         layout.set_data_blocks()
         
         # finally set up the user info block of the layout
+        print "\nElphyFile.create_layout() : set_info_block()"
         layout.set_info_block()
         self.file.seek(0)
+        print "\nElphyFile.create_layout() : done"
         return layout
 
 
@@ -3557,8 +3572,8 @@ class ElphyIO(BaseIO):
         >>> ... creating segments, their contents and append to bl
         >>> r.write_block( bl )
     """
-    is_readable = True # This class can only read data
-    is_writable = True # write is not supported
+    is_readable = True # This class can read data
+    is_writable = True # This class can write data
     # This class is able to directly or indirectly handle the following objects
     supported_objects  = [ Block, Segment, RecordingChannelGroup, RecordingChannel, AnalogSignal, EventArray, SpikeTrain ]
     # This class can return a Block
@@ -3633,7 +3648,7 @@ class ElphyIO(BaseIO):
         if cascade:
             # create a segment containing all analog,
             # tag and event channels for the episode
-            for episode in range(1, self.elphy_file.n_episodes) :
+            for episode in range(1, self.elphy_file.n_episodes+1) :
                 #print episode
                 segment = self.read_segment(episode)
                 segment.block = block
@@ -3664,7 +3679,7 @@ class ElphyIO(BaseIO):
         Block                          File
             Segment                        Episode Block (B_Ep)
                 AnalogSignalArray              Episode Descriptor (Ep + Adc + Ksamp + Ktype)
-                    multichannel                   RDATA (with a ChannelMask multiplexing channels)
+                    multichannel           RDATA (with a ChannelMask multiplexing channels)
                     2D NumPy Array                     
                     ...
                 AnalogSignalArray
@@ -3672,7 +3687,7 @@ class ElphyIO(BaseIO):
                     AnalogSignal
                     ...
                 ...
-                SpikeTrain                     Event Block (Revt) 
+                SpikeTrain                 Event Block (RSPK) 
                 SpikeTrain
                 ...
 
@@ -3687,6 +3702,7 @@ class ElphyIO(BaseIO):
         # which includes that of its subblocks, it is necessary to 
         # serialize first the lowest structures.
         # Iterate over block structures
+        All = ''
         for seg in block.segments:
             size_analogsignalarrays = []
             size_spiketrains = []
@@ -3708,13 +3724,17 @@ class ElphyIO(BaseIO):
             # AnalogSignalArrays -> analogsignals
             analogsignals = numpy.array( seg.analogsignalarrays[0] ) # to have same shape of signalarray [[...]]
             for asigar in seg.analogsignalarrays[1:] :
-                Dxu = asigar.sampling_rate # or sampling_period?
-                analogsignals = numpy.concatenate( (analogsignals,asigar) )
+                Dxu = asigar.sampling_period # sampling_rate or sampling_period?
+                analogsignals = numpy.hstack( (analogsignals,asigar) )
+            # transpose matrix since in Neo channels are column-wise while in Elphy are row-wise
+            analogsignals = analogsignals.T
             # get dimensions
-            nbpt,nbchan = analogsignals.shape
+            nbchan,nbpt = analogsignals.shape
+            #print "\nElphyIO.write_block() : analogsignals.shape (%s, %s)" % (nbchan, nbpt)
             # serialize AnalogSignal
             analog_data_fmt = '<' + str(analogsignals.size) + 'd'
-            analog_data = analogsignals.flatten('F')
+            analog_data_64 = analogsignals.flatten('F')#.astype(numpy.float32)
+            analog_data = numpy.array( analog_data_64, dtype='f' )
             # append serialized flattened numpy channels in 'F'ortran style
             serialized_analog_data += struct.pack( analog_data_fmt, *analog_data )
             # SpikeTrains
@@ -3762,7 +3782,8 @@ class ElphyIO(BaseIO):
                 pc_time # PCtime : longword - time in milliseconds
             ]
             Ep_chr = self.get_serialized( data_format, data_values )
-            Ep_blk = self.get_serialized_block( 'B_Ep1', Ep_chr )
+            Ep_sub = self.get_serialized_subblock( 'Ep', Ep_chr )
+            print "Ep size:",len(Ep_sub)
             # 'Adc'
             # Then, one or more (nbchan) Analog/Digital Channel will be, having their fixed data format 
             data_format = "<B10sdd"
@@ -3770,22 +3791,24 @@ class ElphyIO(BaseIO):
             # for an adc value j, the real value is y = Dyu*j + Y0u
             # default (no scaling) values are then:
             data_values = [
-                10, # uY length 
+                10, # size
                 'ms        ',   # uY string : vertical units
                 1.0,  # Dyu double : scaling parameter
                 0.0   # Y0u double : scaling parameter            
             ]
             Adc_chr = self.get_serialized( data_format, data_values )
-            Adc_blk = self.get_serialized_subblock( 'Adc1', Adc_chr )
-            Adc_chl = Adc_blk * nbchan
+            Adc_chrl = Adc_chr * nbchan
+            Adc_sub = self.get_serialized_subblock( 'Adc', Adc_chrl )
+            print "Adc size:",len(Adc_sub)
             # 'Ksamp'
             # subblock containing an array of nbchan bytes
-            # data_format = '<B...' # nbchan times Bytes
+            # data_format = '<h...' # nbchan times Bytes
             # data_values = [ 1, 1, ... ] # nbchan times 1
-            data_format = "<" + ("B" * nbchan)
+            data_format = "<" + ("h" * nbchan)
             data_values = [ 1 for n in range(nbchan) ]
             Ksamp_chr = self.get_serialized( data_format, data_values )
-            Ksamp_blk = self.get_serialized_subblock( 'Ksamp1', Ksamp_chr )
+            Ksamp_sub = self.get_serialized_subblock( 'Ksamp', Ksamp_chr )
+            print "Ksamp size: %s" % (len(Ksamp_sub))
             # 'Ktype'
             # subblock containing an array of nbchan bytes
             # data_format = '<B...' # nbchan times Bytes
@@ -3801,36 +3824,43 @@ class ElphyIO(BaseIO):
             #  7: double 
             #  8: extended DATA
             # array of nbchan bytes specifying type of data forthcoming
-            ctype = 7 # double
+            ctype = 5 # double
             data_format = "<" + ("B" * nbchan)
             data_values = [ ctype for n in range(nbchan) ]
             Ktype_chr = self.get_serialized( data_format, data_values )
-            Ktype_blk = self.get_serialized_subblock( 'Ktype1', Ktype_chr )
+            Ktype_sub = self.get_serialized_subblock( 'Ktype', Ktype_chr )
+            print "Ktype size: %s" % (len(Ktype_sub))
             # 'RDATA'
             # It produces a two part (header+data) content coming from analog/digital inputs.
             pctime = time()
-            data_format = "<B?dI"
+            data_format = "<h?dI"
             data_values = [ 15, True, pctime, 0 ]
             RDATA_chr = self.get_serialized( data_format, data_values, serialized_analog_data )
-            RDATA_blk = self.get_serialized_block( 'RDATA1', RDATA_chr )
+            RDATA_blk = self.get_serialized_block( 'RDATA', RDATA_chr )
+            print "RDATA size: %s" % (len(RDATA_blk))
             # 'Rspk'
             # like an REVT block + addons
-            # It starts with a RDATA header, after an integer with the number of events, then the number of event channels
-            if NbVeV :
-                data_format = "<B?di" + ("i" * NbVeV)
-                data_values = [ 15, True, pctime, NbVeV] + NbEv_spiketrains
-                Rspk_chr = self.get_serialized( data_format, data_values, serialized_spike_data )
-                Rspk_blk = self.get_serialized_subblock( 'Rspki1', Rspk_chr )
-        # Complete data serialization: concatenate all data strings
-        All = Ep_blk + Adc_chl + Ksamp_blk + Ktype_blk + RDATA_blk + Rspk_blk
+            # It starts with a RDATA header, after an integer with the number of events, then the number of event per channel
+            data_format = "<h?di" + ("i" * NbVeV)
+            data_values = [ 15, True, pctime, NbVeV ] + NbEv_spiketrains
+            Rspk_chr = self.get_serialized( data_format, data_values, serialized_spike_data )
+            Rspk_blk = self.get_serialized_block( 'RSPK', Rspk_chr )
+            print "RSPK size: %s" % (len(Rspk_blk))
+            # Episode data serialization: concatenate all its data strings under a block
+            Ep_data = Ep_sub + Adc_sub + Ksamp_sub + Ktype_sub
+            print "Ep subs size: %s" % (len(Ep_data))
+            Ep_blk = self.get_serialized_block( 'B_Ep', Ep_data )
+            print "B_Ep size: %s" % (len(Ep_blk))
+            # Complete data serialization: concatenate all data strings
+            All += Ep_blk + RDATA_blk + Rspk_blk
         # ElphyFile (open, write and close)
         self.elphy_file.write( All )
 
 
 
     def get_serialized( self, data_format, data_values, ext_data='' ):
-        print "\nget_serialized - data_format: ",data_format
         data_chr = struct.pack( data_format, *data_values )
+        print "\nget_serialized - data_format: %s (size:%s)" % (data_format, len(data_chr+ext_data))
         return data_chr + ext_data
 
 
@@ -3846,14 +3876,15 @@ class ElphyIO(BaseIO):
         data: array[1..YYY] of byte; 
 
         For example:
-        '<4522I22s' followed by an array of bytes as specified
+        '<IB22s' followed by an array of bytes as specified
         """
-        data_size = len( data )
         #        endian 4byte        ident 
         data_format = "<IB" + str(len(ident))+"s"
-        print "\nget_serialized_block(%s) - data_format: %s" % (ident,data_format)
+        data_size = len( data ) + len(ident) + 1 + 4
+        print "size:",data_size
         data_values = [ data_size, len(ident), ident ]
         data_chr = struct.pack( data_format, *data_values )
+        print "get_serialized_block(%s) - data_format: %s (size:%s)" % (ident,data_format, len(data_chr+data))
         return data_chr + data
 
 
@@ -3866,19 +3897,18 @@ class ElphyIO(BaseIO):
         Elphy Sub-Block Header structure:
         id: string[XXX]; // a Pascal variable-length string 
         size1: word      // 2-byte unsigned integer 
-        size2: longint   // 4-byte integer 
         data: array[1..YYY] of byte; 
 
         For example:
         '<22pH4522L' followed by an array of bytes as specified
         """
         data_size = len( data )
-        #             endian  size+string        2byte 4byte  array of size2 bytes
-        data_format = "<B" + str(len(ident))+"s" + "H" + "L" + str(data_size)+"s"
-        print "get_serialized_subblock(%s) - data_format: %s" % (ident,data_format)
-        data_values = [ len(ident), ident, 65535, data_size, data ] #+ data
+        #             endian  size+string        2byte  array of size2 bytes
+        data_format = "<B" + str(len(ident))+"s" + "h" + str(data_size)+"s"
+        data_values = [ len(ident), ident, data_size, data ] #+ data
         data_chr = struct.pack( data_format, *data_values )
-        return data_chr + data
+        print "get_serialized_subblock(%s) - data_format: %s (size:%s)" % (ident,data_format, len(data_chr))
+        return data_chr 
 
 
 
@@ -3937,26 +3967,6 @@ class ElphyIO(BaseIO):
                 spiketrain.segment = segment
                 segment.spiketrains.append( spiketrain )
         return segment
-
-
-
-
-    def write_segment( self, segment ):
-        source = segment.analogsignals or segment.analogsignalarrays or segment.spiketrains
-        assert len(source) > 0, "ElphyIO: Segment contains neither analog signals nor spike trains."
-        s0 = source[0]
-        start = 0
-        # in case source is a signalarray, take T
-        if isinstance(s0, AnalogSignalArray):
-            source = s0.T
-        for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
-            end = start + signal.size
-            data[start:end, 0] = numpy.array(signal.rescale(units))
-            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) 
-            # index (what about channel_indexes, if it's an AnalogSignalArray?)
-            start = end
-        # ElphyFile write serialization to file
-        #self._write_file_contents(data, metadata)
 
 
 
