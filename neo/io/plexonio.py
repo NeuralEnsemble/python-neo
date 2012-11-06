@@ -77,6 +77,7 @@ class PlexonIO(BaseIO):
 
         Arguments:
             filename : the filename
+            load_spike_waveform : load or not waveform of spikes (default True)
 
         """
         BaseIO.__init__(self)
@@ -86,7 +87,7 @@ class PlexonIO(BaseIO):
     def read_segment(self,
                                         lazy = False,
                                         cascade = True,
-                                        load_spike_waveform = False,
+                                        load_spike_waveform = True,
                                             ):
         """
 
@@ -228,7 +229,7 @@ class PlexonIO(BaseIO):
                         new.annotations.update(sptr.annotations)
                         if load_spike_waveform:
                             n1, n2 = spiketrains[chan][unit].sizeOfWaveform
-                            new.waveforms = np.zeros( (nspikecounts[chan][unit], n1, n2 )*pq.V , dtype = 'f' ) * pq.V
+                            new.waveforms = np.zeros( (nspikecounts[chan][unit], n1, n2 ) , dtype = 'f' ) * pq.V
                         spiketrains[chan][unit] = new
             nspikecounts[:] = 0
 
@@ -261,7 +262,7 @@ class PlexonIO(BaseIO):
                     sptr[pos] = time * pq.s
 
                     if load_spike_waveform and n1*n2 != 0 :
-                        waveform = fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
+                        waveform = np.fromstring( fid.read(n1*n2*2) , dtype = 'i2').reshape(n1,n2).astype('f')
                         #range
                         if globalHeader['Version'] <103:
                             waveform = waveform*3000./(2048*dspChannelHeaders[chan]['Gain']*1000.)
@@ -270,7 +271,7 @@ class PlexonIO(BaseIO):
                         elif globalHeader['Version'] >105:
                             waveform = waveform*globalHeader['SpikeMaxMagnitudeMV']/(.5*2.**(globalHeader['BitsPerSpikeSample'])*globalHeader['SpikePreAmpGain'])
 
-                        sptr._waveforms[pos,:,:] = waveform
+                        sptr.waveforms[pos,:,:] = waveform * pq.V
                     else:
                         fid.seek(n1*n2*2,1)
 
