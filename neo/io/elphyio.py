@@ -3753,12 +3753,18 @@ class ElphyIO(BaseIO):
             # get the first to have analogsignals with the right shape
             analogsignals = numpy.array( seg.analogsignalarrays[0] ) # to have same shape of signalarray [[...]]
             smpls,chls = seg.analogsignalarrays[0].shape
-            annotations = dict( [("analogsignal_"+key+"_0",val) for (key,val) in seg.analogsignalarrays[0].annotations.items()] )
+            # units
             for ch in range(chls) :
                 aa_units.append( seg.analogsignalarrays[0].units )
+            # Annotations for analogsignals array come as a list of int being source ids
+            # here, put each source id on a separate dict entry in order to have a matching afterwards
+            idx = 0
+            annotations = dict( [("analogsignal-"+str(idx), 0)] )
+            idx,annotations = self.get_annotations_dict( annotations, "analogsignal", seg.analogsignalarrays[0].annotations.items(), seg.analogsignalarrays[0].name )
             # get all the others
-            for idx,asigar in enumerate(seg.analogsignalarrays[1:]) :
-                annotations.update( dict([("analogsignal_"+key+"_"+str(idx+1), val) for (key,val) in asigar.annotations.items()]) )
+            for asigar in seg.analogsignalarrays[1:] :
+                idx,annotations = self.get_annotations_dict( annotations, "analogsignal", asigar.annotations.items(), asigar.name, idx )
+                # array structure
                 smpls,chls = asigar.shape
                 for ch in range(chls) :
                     aa_units.append( asigar.units )
@@ -3792,7 +3798,7 @@ class ElphyIO(BaseIO):
             spiketrain_data_fmt = '<'
             spiketrains = []
             for idx,train in enumerate(seg.spiketrains[:NbVeV]) :
-                annotations.update( dict([("spiketrain_"+key+"_"+str(idx), val) for (key,val) in train.annotations.items()]) )
+                fake,annotations = self.get_annotations_dict( annotations, "spiketrain", train.annotations.items(), '', idx )
                 smpls,chls = asigar.shape
                 # total number of events format
                 spiketrain_data_fmt += str(train.size) + "i" + str(train.size) + "B"
@@ -3804,6 +3810,7 @@ class ElphyIO(BaseIO):
                 # blackrock acquisition card also adds a byte for each event to sort it
                 spiketrains.extend( [spike.item() for spike in train] + [0 for sp in range(train.size)])
             # Annotations
+            print annotations
             # using DBrecord elphy block, they will be available as values in elphy environment
             # separate keys and values in two separate serialized strings
             ST_sub = ''
@@ -3818,7 +3825,7 @@ class ElphyIO(BaseIO):
                 fmt = ''
                 data = []
                 value = annotations[key]
-                if type( value ) == int :
+                if isinstance( value, (int,numpy.int32,numpy.int64) ) :
                     # elphy type 2
                     fmt = '<Bq'
                     data = [2, value] 
@@ -3827,15 +3834,9 @@ class ElphyIO(BaseIO):
                     str_len = len(value)
                     fmt = '<BI'+str(str_len)+'s'
                     data = [4, str_len, value] 
-                elif isinstance( value, (list,tuple,numpy.ndarray) ) :
-                    # neo array annotations are serialized as strings
-                    #str_tuple = str(value).strip('[]')
-                    #str_len = len(str_tuple)
-                    #fmt = '<BI'+str(str_len)+'s'
-                    #data = [4, str_len, str_tuple] 
-                    continue
                 else :
                     print "ElphyIO.write_block() - unknown annotation type: ", type(value)
+                    continue
                 # last, serialization
                 # BUF values 
                 serialized_BUF_data += struct.pack( fmt, *data )
@@ -4022,6 +4023,20 @@ class ElphyIO(BaseIO):
         data_chr = struct.pack( data_format, *data_values )
         return data_chr + data
 
+
+
+    def get_annotations_dict( self, annotations, prefix, items, name='', idx=0 ) :
+        """
+        Helper function to retrieve annotations in a dictionary to be serialized as Elphy DBrecord
+        """
+        for (key,value) in items :
+            if isinstance( value, (list,tuple,numpy.ndarray) ) :
+                for element in value :
+                    annotations.update( dict( [(prefix+"-"+name+"-"+str(idx), element)] ) )
+                    idx = idx+1
+            else :
+                annotations.update( dict( [(prefix+"-"+name+"-"+str(idx),value)] ) )
+        return (idx,annotations)
 
 
     def read_segment( self, episode ):
