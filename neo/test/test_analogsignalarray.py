@@ -297,8 +297,8 @@ class TestFunctions(unittest.TestCase):
             b = None
 
         assert_arrays_equal(a, b)
-        self.assertEqual(a.channel_indexes, [0,1,2,3,4])
-        self.assertEqual(a.channel_indexes, b.channel_indexes)
+        self.assertEqual(list(a.channel_indexes), [0,1,2,3,4])
+        self.assertEqual(list(a.channel_indexes), list(b.channel_indexes))
         f.close()
         os.remove('./pickle')
 

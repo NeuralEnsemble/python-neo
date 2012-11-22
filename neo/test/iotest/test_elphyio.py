@@ -14,7 +14,7 @@ from neo.io import ElphyIO
 
 import numpy
 
-from neo.test.io.common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestElphyIO( BaseTestIO, unittest.TestCase ):
     ioclass = ElphyIO

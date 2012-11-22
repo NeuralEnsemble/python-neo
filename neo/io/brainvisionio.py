@@ -99,7 +99,7 @@ class BrainVisionIO(BaseIO):
             sigs = sigs.reshape(n, nb_channel)
 
         for c in range(nb_channel):
-            name, ref, res, units = header['Channel Infos']['Ch{}'.format(c+1)].split(',')
+            name, ref, res, units = header['Channel Infos']['Ch%d' % (c+1,)].split(',')
             units = pq.Quantity(1, units.replace('µ', 'u') )
             if lazy:
                 signal = [ ]*units
@@ -121,7 +121,7 @@ class BrainVisionIO(BaseIO):
         times = [ ]
         labels = [ ]
         for i in range(len(all)):
-            type_, label, pos, size, channel = all['Mk{}'.format(i+1)].split(',')[:5]
+            type_, label, pos, size, channel = all['Mk%d' % (i+1,)].split(',')[:5]
             all_types.append(type_)
             times.append(float(pos)/sampling_rate.magnitude)
             labels.append(label)

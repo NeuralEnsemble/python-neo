@@ -111,8 +111,9 @@ class Segment(BaseNeo):
 
         sliced_sigarrays = []
         for sigarr in self.analogsignalarrays:
-            ind = np.in1d(sigarr.channel_indexes, sub_indexes)
-            sliced_sigarrays.append(sigarr[:, ind])
+            if sigarr.channel_indexes is not None:
+                ind = np.in1d(sigarr.channel_indexes, sub_indexes)
+                sliced_sigarrays.append(sigarr[:, ind])
 
         return sliced_sigarrays
 

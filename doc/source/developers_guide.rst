@@ -206,6 +206,10 @@ have the necessary permissions to do this)::
 
 .. should we also distribute via software.incf.org
 
+Finally, tag the release in the Git repository::
+
+    $ git tag <version>
+
 .. make a release branch
 
 

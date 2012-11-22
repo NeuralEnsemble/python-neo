@@ -34,12 +34,12 @@ class TestSegment(unittest.TestCase):
         # Unit
         all_unit = [ ]
         for u in range(nb_unit):
-            un = Unit(name = 'Unit #{}'.format(u), channel_indexes = [u])
+            un = Unit(name = 'Unit #%d' % u, channel_indexes = [u])
             all_unit.append(un)
 
         bl = Block()
         for s in range(nb_seg):
-            seg = Segment(name = 'Simulation {}'.format(s))
+            seg = Segment(name = 'Simulation %s' % s)
             for j in range(nb_unit):
                 st = SpikeTrain([1, 2, 3], units = 'ms', t_start = 0., t_stop = 10)
                 st.unit = all_unit[j]

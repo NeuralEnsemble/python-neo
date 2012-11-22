@@ -331,17 +331,17 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Either parameter can also be None to use infinite endpoints for the
         time interval.
         """
-        if t_stop is not None:
-            indices = (self >= t_start) & (self <= t_stop)
-        else:
-            indices = self >= t_start
+        _t_start = t_start
+        _t_stop = t_stop
+        if t_start is None:
+            _t_start = -numpy.inf
+        if t_stop is None:
+            _t_stop = numpy.inf
+        indices = (self >= _t_start) & (self <= _t_stop)
         new_st = self[indices]
 
-        new_st.t_start = max(t_start, self.t_start)
-        if t_stop is not None:
-            new_st.t_stop = min(t_stop, self.t_stop)
-        else:
-            new_st.t_stop = self.t_stop
+        new_st.t_start = max(_t_start, self.t_start)
+        new_st.t_stop = min(_t_stop, self.t_stop)
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
 
