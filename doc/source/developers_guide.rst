@@ -81,7 +81,7 @@ reinstalling when there are changes in the code::
 
 To update to the latest version from the repository::
 
-    $ svn update
+    $ git pull
 
 
 Running the test suite
