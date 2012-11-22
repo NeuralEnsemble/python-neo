@@ -267,20 +267,22 @@ class TestCombination(unittest.TestCase):
 class TestFunctions(unittest.TestCase):
 
     def test__pickle(self):
-        a = AnalogSignal([1,2,3,4],sampling_period=1*pq.ms,units=pq.S)
+        a = AnalogSignal([1,2,3,4], sampling_period=1*pq.ms, units=pq.S,
+                         channel_index=42)
         a.annotations['index'] = 2
 
         f = open('./pickle','wb')
-        pickle.dump(a,f)
+        pickle.dump(a, f)
         f.close()
 
-        f = open('./pickle','rb')
+        f = open('./pickle', 'rb')
         try:
             b = pickle.load(f)
         except ValueError:
             b = None
 
         assert_arrays_equal(a, b)
+        self.assertEqual(a.channel_index, b.channel_index, 42)
         f.close()
         os.remove('./pickle')
 
