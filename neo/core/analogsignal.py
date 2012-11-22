@@ -36,7 +36,7 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
                           t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                           name=None, file_origin=None, description=None,
-                          annotations=None):
+                          channel_index=None, annotations=None):
         """A function to map BaseAnalogSignal.__new__ to function that
            does not do the unit checking. This is needed for pickle to work.
         """
@@ -44,6 +44,7 @@ def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
                    t_start=t_start, sampling_rate=sampling_rate,
                    sampling_period=sampling_period, name=name,
                    file_origin=file_origin, description=description,
+                   channel_index=channel_index,
                    **annotations)
 
 
@@ -54,7 +55,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
-                name=None, file_origin=None, description=None, **annotations):
+                name=None, file_origin=None, description=None,
+                channel_index=None, **annotations):
         """Constructs new BaseAnalogSignal from data.
 
         This is called whenever a new BaseAnalogSignal is created from the
@@ -86,7 +88,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
                  t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
-                 name=None, file_origin=None, description=None, **annotations):
+                 name=None, file_origin=None, description=None,
+                 channel_index=None, **annotations):
         """Initializes newly constructed BaseAnalogSignal."""
         # This method is only called when constructing a new BaseAnalogSignal,
         # not when slicing or viewing. We use the same call signature
@@ -103,9 +106,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
         works
         """
-        import numpy
         return _new_BaseAnalogSignal, (self.__class__,
-                                       numpy.array(self),
+                                       np.array(self),
                                        self.units,
                                        self.dtype,
                                        True,
@@ -115,6 +117,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                                        self.name,
                                        self.file_origin,
                                        self.description,
+                                       self.channel_index,
                                        self.annotations)
 
     def __array_finalize__(self, obj):
@@ -138,6 +141,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
+        self.channel_index = getattr(obj, 'channel_index', None)
 
     def __repr__(self):
         return ('<%s(%s, [%s, %s], sampling rate: %s)>' %
@@ -242,7 +246,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def _copy_data_complement(self, other):
         for attr in ("t_start", "sampling_rate", "name", "file_origin",
-                     "description"):
+                     "description", "channel_index"):
             setattr(self, attr, getattr(other, attr, None))
 
     def _apply_operator(self, other, op):
@@ -285,14 +289,18 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
-
+        def _pp(line):
+            pp.breakable()
+            with pp.group(indent=1):
+                pp.text(line)
+        if hasattr(self, "channel_index"):
+            _pp("channel index: {0}".format(self.channel_index))
+        elif hasattr(self, "channel_indexes"):
+            _pp("channel indices: %s" % self.channel_indexes)
         for line in ["sampling rate: {0}".format(self.sampling_rate),
                      "time: {0} to {1}".format(self.t_start, self.t_stop),
                     ]:
-            if line:
-                pp.breakable()
-                with pp.group(indent=1):
-                    pp.text(line)
+            _pp(line)
 
 
 class AnalogSignal(BaseAnalogSignal):
@@ -356,11 +364,6 @@ class AnalogSignal(BaseAnalogSignal):
                 channel_index=None, **annotations):
         obj = BaseAnalogSignal.__new__(cls, signal, units, dtype, copy, t_start,
                                        sampling_rate, sampling_period, name,
-                                       file_origin, description, **annotations)
-        obj.channel_index = channel_index
+                                       file_origin, description,
+                                       channel_index, **annotations)
         return obj
-
-    def _copy_data_complement(self, other):
-        BaseAnalogSignal._copy_data_complement(self, other)
-        for attr in ("channel_index",):
-            setattr(self, attr, getattr(other, attr, None))

@@ -236,7 +236,7 @@ class Segment(BaseNeo):
             pp.breakable()
             pp.text("# Analog signal arrays (N={0})"
                     .format(len(self.analogsignalarrays)))
-            for asarr in self.analogsignalarrays:
+            for i, asarr in enumerate(self.analogsignalarrays):
                 pp.breakable()
                 pp.text("{0}: ".format(i))
                 with pp.indent(3):

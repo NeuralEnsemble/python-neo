@@ -93,6 +93,7 @@ class Block(BaseNeo):
                     lookup[obj.name].merge(obj)
                 else:
                     getattr(self, container).append(obj)
+        ## todo: merge annotations
 
     _repr_pretty_attrs_keys_ = [
         "name", "description", "annotations",

@@ -2,7 +2,10 @@ from __future__ import division
 import numpy as np
 import quantities as pq
 from .analogsignal import BaseAnalogSignal, AnalogSignal, _get_sampling_rate
-from .baseneo import BaseNeo
+from .baseneo import BaseNeo, merge_annotations
+import logging
+
+logger = logging.getLogger("Neo")
 
 
 class AnalogSignalArray(BaseAnalogSignal):
@@ -40,7 +43,7 @@ class AnalogSignalArray(BaseAnalogSignal):
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
-                channel_indexes=None, **annotations):
+                channel_index=None, **annotations):
         """
         Create a new :class:`AnalogSignalArray` instance from a list or numpy
         array of numerical values, or from a Quantity array.
@@ -56,7 +59,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
-        obj.channel_indexes = channel_indexes
+        obj.channel_index = channel_index
         obj.segment = None
         obj.recordingchannelgroup = None
 
@@ -65,9 +68,13 @@ class AnalogSignalArray(BaseAnalogSignal):
     def __init__(self, signal, units=None, dtype=None, copy=True,
                  t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                  name=None, file_origin=None, description=None,
-                 channel_indexes=None, **annotations):
+                 channel_index=None, **annotations):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+
+    @property
+    def channel_indexes(self):
+        return self.channel_index
 
     def __getslice__(self, i, j):
         return self.__getitem__(slice(i, j))
@@ -101,11 +108,6 @@ class AnalogSignalArray(BaseAnalogSignal):
             return obj
         else:
             raise IndexError("index should be an integer, tuple or slice")
-
-    def _copy_data_complement(self, other):
-        BaseAnalogSignal._copy_data_complement(self, other)
-        for attr in ("channel_indexes"):
-            setattr(self, attr, getattr(other, attr, None))
 
     def time_slice(self, t_start, t_stop):
         """
@@ -147,15 +149,15 @@ class AnalogSignalArray(BaseAnalogSignal):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        if self.channel_indexes is None:
-            kwargs['channel_indexes'] = other.channel_indexes
-        elif other.channel_indexes is None:
-            kwargs['channel_indexes'] = self.channel_indexes
+        if self.channel_index is None:
+            kwargs['channel_index'] = other.channel_index
+        elif other.channel_index is None:
+            kwargs['channel_index'] = self.channel_index
         else:
-            kwargs['channel_indexes'] = np.append(self.channel_indexes,
-                                                  other.channel_indexes)
-        # TODO: merge self.annotations and other.annotations
-        kwargs.update(self.annotations)
+            kwargs['channel_index'] = np.append(self.channel_index,
+                                                other.channel_index)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        kwargs.update(merged_annotations)
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
                                  sampling_rate=self.sampling_rate,
