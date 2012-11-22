@@ -342,7 +342,7 @@ class NeoHdf5IO(BaseIO):
 
         index_num = self.name_indices[(obj_type, where)]
         prefix = str(obj_type) + "_"
-        if where + prefix + str(index_num) not in self._data:
+        if where + '/' + prefix + str(index_num) not in self._data:
             self.name_indices[(obj_type, where)] = index_num + 1
             return prefix + str(index_num)
 
@@ -431,7 +431,7 @@ class NeoHdf5IO(BaseIO):
             assign_attribute(obj, classes_inheriting_quantities[obj_type])
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
-        node._f_setAttr("object_ref", uuid.uuid4().bytes)
+        node._f_setAttr("object_ref", uuid.uuid4().hex)
         if one_to_many_relationship.has_key(obj_type) and cascade:
             rels = list(one_to_many_relationship[obj_type])
             if obj_type == "RecordingChannelGroup":
@@ -560,6 +560,10 @@ class NeoHdf5IO(BaseIO):
                         except AttributeError: # alien node
                             pass # not an error
                     setattr(obj, child.lower() + "s", relatives)
+                    # RC -> AnalogSignal relationship will not be created later, do it now
+                    if obj_type == "RecordingChannel" and child == "AnalogSignal":
+                        for r in relatives:
+                            r.recordingchannel = obj
                     # Cannot create Many-to-Many relationship with old format, create at least One-to-Many
                     if obj_type == "RecordingChannelGroup" and not object_ref:
                         for r in relatives:
