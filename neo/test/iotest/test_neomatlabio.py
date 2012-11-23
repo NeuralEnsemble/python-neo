@@ -14,6 +14,7 @@ try:
     can_run = True
 except ImportError:
     can_run = False
+    NeoMatlabIO = None
     
 import numpy
 

@@ -4,11 +4,13 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+import neo
 try:
-    import neo.io.klustakwikio
+    from neo.io.klustakwikio import KlustaKwikIO
     can_run = True
 except ImportError:
     can_run = False
+    KlustaKwikIO = None
 import os.path
 import numpy as np
 import quantities as pq
@@ -32,7 +34,7 @@ class testFilenameParser(unittest.TestCase):
 
     def test1(self):
         """Tests that files can be loaded by basename"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
         fetfiles = kio._fp.read_filenames('fet')
 
         self.assertEqual(len(fetfiles), 2)
@@ -48,7 +50,7 @@ class testFilenameParser(unittest.TestCase):
         # this test is in flux, should probably have it default to
         # basename = os.path.split(dirname)[1] when dirname is a directory
         #~ dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
-        #~ kio = neo.io.KlustaKwikIO(filename=dirname)
+        #~ kio = KlustaKwikIO(filename=dirname)
         #~ fetfiles = kio._fp.read_filenames('fet')
 
         #~ # It will just choose one of the two basenames, depending on which
@@ -57,7 +59,7 @@ class testFilenameParser(unittest.TestCase):
 
     def test3(self):
         """Tests that files can be loaded by basename2"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
         clufiles = kio._fp.read_filenames('clu')
 
         self.assertEqual(len(clufiles), 1)
@@ -77,7 +79,7 @@ class testRead(unittest.TestCase):
 
     def test1(self):
         """Tests that data and metadata are read correctly"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
             sampling_rate=1000.)
         block = kio.read()
         seg = block.segments[0]
@@ -115,7 +117,7 @@ class testRead(unittest.TestCase):
 
     def test2(self):
         """Checks that cluster id autosets to 0 without clu file"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
             sampling_rate=1000.)
         block = kio.read()
         seg = block.segments[0]
@@ -185,7 +187,7 @@ class testWrite(unittest.TestCase):
         delete_test_session()
 
         # Create writer with default sampling rate
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
             sampling_rate=1000.)
         kio.write_block(block)
 
@@ -271,7 +273,7 @@ class testWriteWithFeatures(unittest.TestCase):
         delete_test_session(self.dirname)
 
         # Create writer
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
             sampling_rate=1000.)
         kio.write_block(block)
 
@@ -313,7 +315,7 @@ class testWriteWithFeatures(unittest.TestCase):
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class CommonTests(BaseTestIO, unittest.TestCase ):
-    ioclass = neo.io.KlustaKwikIO
+    ioclass = KlustaKwikIO
 
     # These are the files it tries to read and test for compliance
     files_to_test = [
