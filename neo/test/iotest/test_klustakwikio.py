@@ -15,6 +15,7 @@ import os.path
 import numpy as np
 import quantities as pq
 import glob
+import tempfile
 
 from .common_io_test import BaseTestIO
 from ..tools import assert_arrays_almost_equal, assert_arrays_equal
@@ -26,8 +27,9 @@ class testFilenameParser(unittest.TestCase):
     The test directory contains two basenames and some decoy files with
     malformed group numbers."""
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test1')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test1')
         if not os.path.exists(self.dirname):
             raise unittest.SkipTest('data directory does not exist:' +
                                     self.dirname)
@@ -71,8 +73,9 @@ class testFilenameParser(unittest.TestCase):
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test2')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test2')
         if not os.path.exists(self.dirname):
             raise unittest.SkipTest('data directory does not exist:' +
                                     self.dirname)
@@ -132,8 +135,9 @@ class testRead(unittest.TestCase):
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWrite(unittest.TestCase):
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test3')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test3')
         if not os.path.exists(self.dirname):
             raise unittest.SkipTest('data directory does not exist:' +
                                     self.dirname)
@@ -233,10 +237,10 @@ class testWrite(unittest.TestCase):
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
-        subdir=os.path.join(os.path.dirname(__file__),
-                            'files_for_tests/klustakwik')
-        self.dirname = os.path.join(subdir, 'test4')
-        if not os.path.exists(subdir):
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test4')
+        if not os.path.exists(self.dirname):
             raise unittest.SkipTest('data directory does not exist:' +
                                     self.dirname)
 
