@@ -3295,7 +3295,7 @@ class ElphyFile(object):
             self.file.close()
         try :
             self.file = open(self.path, 'wb')
-        except Exception, e:
+        except Exception as e:
             raise Exception("python couldn't open file %s : %s" % (self.path, e))
         self.file_size = 0
         self.creation_date = datetime.now()
@@ -3800,7 +3800,7 @@ class ElphyIO(BaseIO):
                 # blackrock acquisition card also adds a byte for each event to sort it
                 spiketrains.extend( [spike.item() for spike in train] + [0 for sp in range(train.size)])
             # Annotations
-            print annotations
+            print(annotations)
             # using DBrecord elphy block, they will be available as values in elphy environment
             # separate keys and values in two separate serialized strings
             ST_sub = ''
@@ -3825,7 +3825,7 @@ class ElphyIO(BaseIO):
                     fmt = '<BI'+str(str_len)+'s'
                     data = [4, str_len, value] 
                 else :
-                    print "ElphyIO.write_block() - unknown annotation type: ", type(value)
+                    print("ElphyIO.write_block() - unknown annotation type: %s" % type(value))
                     continue
                 # last, serialization
                 # BUF values 
