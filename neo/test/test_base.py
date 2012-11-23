@@ -428,16 +428,20 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         self.assertDictEqual(result, self.base.annotations)
 
     def test_numpy_array_str(self):
-        '''test to make sure str type numpy arrays are rejected'''
+        '''test to make sure str type numpy arrays are accepted'''
         value = numpy.array([1, 2, 3, 4, 5], dtype=numpy.str)
-        self.assertRaises(ValueError, self.base.annotate, data=value)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
 
     @unittest.skipIf(sys.version_info[0] >= 3,
                      "not supported in python %s" % python_version())
     def test_numpy_array_string0(self):
-        '''test to make sure string0 type numpy arrays are rejected'''
+        '''test to make sure string0 type numpy arrays are accepted'''
         value = numpy.array([1, 2, 3, 4, 5], dtype=numpy.string0)
-        self.assertRaises(ValueError, self.base.annotate, data=value)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
 
 
 class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
@@ -617,16 +621,20 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         self.assertDictEqual(result, self.base.annotations)
 
     def test_numpy_array_str(self):
-        '''test to make sure str type numpy scalars are rejected'''
+        '''test to make sure str type numpy scalars are accepted'''
         value = numpy.array(99, dtype=numpy.str)
-        self.assertRaises(ValueError, self.base.annotate, data=value)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
 
     @unittest.skipIf(sys.version_info[0] >= 3,
                      "not supported in python %s" % python_version())
     def test_numpy_scalar_string0(self):
         '''test to make sure string0 type numpy scalars are rejected'''
         value = numpy.array(99, dtype=numpy.string0)
-        self.assertRaises(ValueError, self.base.annotate, data=value)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
 
 
 class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
@@ -662,10 +670,12 @@ class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_array_str(self):
-        '''test to make sure str type quantites arrays are rejected'''
+        '''test to make sure str type quantites arrays are accepted'''
         value = quantities.Quantity([1, 2, 3, 4, 5], dtype=numpy.str,
                                     units=quantities.meter)
-        self.assertRaises(ValueError, self.base.annotate, data=value)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
 
 
 class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
@@ -700,9 +710,36 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_scalar_str(self):
-        '''test to make sure str type quantites scalars are rejected'''
+        '''test to make sure str type quantites scalars are accepted'''
         value = quantities.Quantity(99, dtype=numpy.str,
                                     units=quantities.meter)
+        self.base.annotate(data=value)
+        result = {'data': value}
+        self.assertDictEqual(result, self.base.annotations)
+
+
+class TestBaseNeoUserDefinedTypes(unittest.TestCase):
+    '''
+    TestCase to make sure annotations are properly checked for arbitrary
+    objects
+    '''
+    
+    def setUp(self):
+        '''create the instance to be tested, called before every test'''
+        self.base = BaseNeo()
+        
+    def test_my_class(self):
+        '''test to make sure user defined class type data is rejected'''
+        class Foo(object):
+            pass
+        value = Foo()
+        self.assertRaises(ValueError, self.base.annotate, data=value)
+
+    def test_my_class_list(self):
+        '''test to make sure user defined class type data is rejected'''
+        class Foo(object):
+            pass
+        value = [Foo(), Foo(), Foo()]
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
 

@@ -15,12 +15,10 @@ ALLOWED_ANNOTATION_TYPES = (int, float, complex,
                             datetime, date, time, timedelta,
                             Number, Decimal,
                             numpy.number, numpy.bool_)
-DISALLOWED_ANNOTATION_DTYPES = (str, numpy.flexible)
 
 # handle both Python 2 and Python 3
 try:
     ALLOWED_ANNOTATION_TYPES += (long, unicode)
-    DISALLOWED_ANNOTATION_DTYPES += (unicode, )
 except NameError:
     pass
 
@@ -35,8 +33,7 @@ def _check_annotations(value):
     only simple types.
     """
     if isinstance(value, numpy.ndarray):
-        if (not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES) or
-                issubclass(value.dtype.type, DISALLOWED_ANNOTATION_DTYPES)):
+        if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
             raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
                              "are not allowed" % value.dtype.type)
     elif isinstance(value, dict):
