@@ -189,8 +189,8 @@ Making a release
 
 .. TODO: discuss branching/tagging policy.
 
-First check that the version string (in :file:`neo/version.py`, :file:`setup.py`
-and :file:`doc/conf.py`) is correct.
+First check that the version string (in :file:`neo/version.py`, :file:`setup.py`,
+:file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
 
 To build a source package::
 
