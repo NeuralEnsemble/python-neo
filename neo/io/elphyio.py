@@ -3246,7 +3246,7 @@ class ElphyFile(object):
         self.file.seek(0)
         title = title[0:length]
         if not title in factories :
-            title = "format is not implemented"
+            title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
         return title
     
     
@@ -3398,8 +3398,6 @@ class ElphyFile(object):
 
         self.file.seek(0)
         return layout
-
-
 
     def is_continuous(self):
         return self.layout.is_continuous()
@@ -3592,13 +3590,13 @@ class ElphyIO(BaseIO):
         >>> r.write_block( bl )
     """
     is_readable = True # This class can read data
-    is_writable = True # This class can write data
+    is_writable = False #True # This class can write data
     # This class is able to directly or indirectly handle the following objects
     supported_objects  = [ Block, Segment, RecordingChannelGroup, RecordingChannel, AnalogSignal, EventArray, SpikeTrain ]
     # This class can return a Block
     readable_objects    = [ Block ]
     # This class is not able to write objects
-    writeable_objects   = [ Block ]
+    writeable_objects   = [ ] #Block ]
     has_header         = False
     is_streameable     = False
     # This is for GUI stuff : a definition for parameters when reading.
@@ -3662,7 +3660,7 @@ class ElphyIO(BaseIO):
                 self.elphy_file.open()
             except Exception as e:
                 self.elphy_file.close()
-                print("cannot open file %s : %s" % (self.filename, e))
+                raise Exception("cannot open file %s : %s" % (self.filename, e))
         # cascading
         if cascade:
             # create a segment containing all analog,
