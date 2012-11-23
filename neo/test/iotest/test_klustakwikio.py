@@ -4,7 +4,11 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-import neo.io.klustakwikio
+try:
+    import neo.io.klustakwikio
+    can_run = True
+except ImportError:
+    can_run = False
 import os.path
 import numpy as np
 import quantities as pq
@@ -13,7 +17,7 @@ import glob
 from .common_io_test import BaseTestIO
 from ..tools import assert_arrays_almost_equal, assert_arrays_equal
 
-
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
 
@@ -61,7 +65,7 @@ class testFilenameParser(unittest.TestCase):
             os.path.abspath(os.path.join(self.dirname, 'basename2.clu.1')))
 
 
-
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
     def setUp(self):
@@ -123,6 +127,7 @@ class testRead(unittest.TestCase):
         self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
             [0.026, 0.122, 0.228])))
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWrite(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(os.path.dirname(__file__),
@@ -223,6 +228,7 @@ class testWrite(unittest.TestCase):
         # Empty out test session again
         delete_test_session()
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
         subdir=os.path.join(os.path.dirname(__file__),
@@ -305,6 +311,7 @@ class testWriteWithFeatures(unittest.TestCase):
         # Empty out test session again
         delete_test_session(self.dirname)
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class CommonTests(BaseTestIO, unittest.TestCase ):
     ioclass = neo.io.KlustaKwikIO
 
