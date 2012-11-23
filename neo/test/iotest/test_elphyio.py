@@ -18,12 +18,12 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestElphyIO( BaseTestIO, unittest.TestCase ):
     ioclass = ElphyIO
-    files_to_test = [
-                     'ElphyExample.DAT',
-                     'ElphyExample_Mode1.dat',
-                     'ElphyExample_Mode2.dat',
-                     'ElphyExample_Mode3.dat',
-                    ]
+    files_to_test = []
+                     #'ElphyExample.DAT',
+                     #'ElphyExample_Mode1.dat',
+                     #'ElphyExample_Mode2.dat',
+                     #'ElphyExample_Mode3.dat',
+                    #]
     files_to_download = files_to_test
 
 
