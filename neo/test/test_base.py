@@ -385,6 +385,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
+    @unittest.skipUnless(hasattr(numpy, "float128"), "float128 not available")
     def test_numpy_array_float128(self):
         '''test to make sure float128 type numpy arrays are accepted'''
         value = numpy.array([1, 2, 3, 4, 5], dtype=numpy.float128)
@@ -413,6 +414,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
+    @unittest.skipUnless(hasattr(numpy, "complex256"), "complex256 not available")
     def test_numpy_scalar_complex256(self):
         '''test to make sure complex256 type numpy arrays are accepted'''
         value = numpy.array([1, 2, 3, 4, 5], dtype=numpy.complex256)
@@ -578,6 +580,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
+    @unittest.skipUnless(hasattr(numpy, "float128"), "float128 not available")
     def test_numpy_scalar_float128(self):
         '''test to make sure float128 type numpy scalars are accepted'''
         value = numpy.array(99, dtype=numpy.float128)
@@ -606,6 +609,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
+    @unittest.skipUnless(hasattr(numpy, "complex256"), "complex256 not available")
     def test_numpy_scalar_complex256(self):
         '''test to make sure complex256 type numpy scalars are accepted'''
         value = numpy.array(99, dtype=numpy.complex256)
