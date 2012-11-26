@@ -5,6 +5,7 @@
 *.EGG-INFO
 bin
 build
+dist
 *.pyc
 *.pyo
 *.tmp*
