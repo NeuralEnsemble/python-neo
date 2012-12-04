@@ -14,7 +14,7 @@ from neo.io import ElphyIO
 
 import numpy
 
-from neo.test.io.common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestElphyIO( BaseTestIO, unittest.TestCase ):
     ioclass = ElphyIO
@@ -24,7 +24,7 @@ class TestElphyIO( BaseTestIO, unittest.TestCase ):
                      'ElphyExample_Mode2.dat',
                      'ElphyExample_Mode3.dat',
                     ]
-    files_to_download = files_to_test
+    #files_to_download = files_to_test
 
 
 if __name__ == "__main__":

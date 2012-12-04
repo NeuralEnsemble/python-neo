@@ -220,7 +220,7 @@ class BaseTestIO(object):
             writer.write_segment(ob)
             ob2 = reader.read_segment()
 
-        assert_same_sub_schema(ob, ob2)
+        assert_same_sub_schema(ob, ob2, False, 1e-8) # some format (e.g. elphy) do not support double floating point spiketrains
         assert_neo_object_is_compliant(ob2)
 
         try: # for HDF5IO file should be closed before being opened again in test
