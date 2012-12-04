@@ -2704,7 +2704,7 @@ class DAC2Layout(ElphyLayout):
         # re-encoding after reading byte by byte
         res = numpy.frombuffer(raw[0:(4*rspk_block.n_events[evt_channel-1])], dtype='<i4')
         res.sort() # sometimes timings are not sorted
-        print "load_encoded_data() - spikes:",res
+        #print "load_encoded_data() - spikes:",res
         return res
 
     def get_episode_name( self, episode ):
@@ -3711,8 +3711,8 @@ class ElphyIO(BaseIO):
                 self.elphy_file.close()
                 print("cannot open file %s : %s" % (self.filename, e))
         # cascading
-        print "\n\n==========================================\n"
-        print "read_block() - n_episodes:",self.elphy_file.n_episodes
+        #print "\n\n==========================================\n"
+        #print "read_block() - n_episodes:",self.elphy_file.n_episodes
         if cascade:
             # create a segment containing all analog,
             # tag and event channels for the episode
@@ -3764,8 +3764,8 @@ class ElphyIO(BaseIO):
         # Iterate over block structures
         elphy_limit = 256
         All = ''
-        print "\n\n--------------------------------------------\n"
-        print "write_block() - n_segments:",len(block.segments)
+        #print "\n\n--------------------------------------------\n"
+        #print "write_block() - n_segments:",len(block.segments)
         for seg in block.segments:
             analogsignals = 0 # init
             nbchan = 0
@@ -3800,8 +3800,8 @@ class ElphyIO(BaseIO):
             idx = 0
             annotations = dict( )
             # get all the others
-            print "write_block() - n_analogsignals:",len(seg.analogsignals)
-            print "write_block() - n_analogsignalarrays:",len(seg.analogsignalarrays)
+            #print "write_block() - n_analogsignals:",len(seg.analogsignals)
+            #print "write_block() - n_analogsignalarrays:",len(seg.analogsignalarrays)
             for asigar in seg.analogsignalarrays :
                 idx,annotations = self.get_annotations_dict( annotations, "analogsignal", asigar.annotations.items(), asigar.name, idx )
                 # array structure
@@ -3838,14 +3838,14 @@ class ElphyIO(BaseIO):
             #spiketrains = seg.spiketrains
             # ... but consider elphy loading limitation:
             NbVeV = len( seg.spiketrains )
-            print "write_block() - n_spiketrains:",NbVeV
+            #print "write_block() - n_spiketrains:",NbVeV
             if len(seg.spiketrains) > elphy_limit :
                 NbVeV = elphy_limit
             # serialize format
             spiketrain_data_fmt = '<'
             spiketrains = []
             for idx,train in enumerate(seg.spiketrains[:NbVeV]) :
-                print "write_block() - train.size:", train.size,idx
+                #print "write_block() - train.size:", train.size,idx
                 #print "write_block() - train:", train
                 fake,annotations = self.get_annotations_dict( annotations, "spiketrain", train.annotations.items(), '', idx )
                 # total number of events format + blackrock sorting mark (0 for neo)
@@ -4020,7 +4020,7 @@ class ElphyIO(BaseIO):
             DBrec_blk = self.get_serialized_block( 'DBrecord', annotations_data )
             #print "DBrecord size: %s" % (len(DBrec_blk))
             # 'COM'
-            print "write_block() - segment name:", seg.name
+            #print "write_block() - segment name:", seg.name
             # name of the file - NEO Segment name
             data_format = '<h'+str(len(seg.name))+'s'
             data_values = [ len(seg.name), seg.name ]
@@ -4105,7 +4105,7 @@ class ElphyIO(BaseIO):
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment
         """
-        print "name:",self.elphy_file.layout.get_episode_name(episode)
+        #print "name:",self.elphy_file.layout.get_episode_name(episode)
         episode_name = self.elphy_file.layout.get_episode_name(episode)
         name = episode_name if len(episode_name)>0 else "episode %s" % str(episode + 1)
         segment = Segment( name=name )
@@ -4129,7 +4129,7 @@ class ElphyIO(BaseIO):
         # in case of multi-electrode
         # acquisition context
         n_spikes = self.elphy_file.n_spiketrains(episode)
-        print "read_segment() - n_spikes:",n_spikes
+        #print "read_segment() - n_spikes:",n_spikes
         if n_spikes>0 :
             for spk in range(1, n_spikes+1) :
                 spiketrain = self.read_spiketrain(episode, spk)
