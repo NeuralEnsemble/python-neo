@@ -21,7 +21,7 @@ def assert_arrays_almost_equal(a, b, threshold):
     assert a.shape == b.shape, "%s != %s" % (a,b)
     #assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a,b,a.dtype, b.dtype)
     if a.dtype.kind in ['f', 'c', 'i']:
-        assert (abs(a - b) < threshold).all(), "max(|a - b|) = %s" % (abs(a - b)).max()
+        assert (abs(a - b) < threshold).all(), "abs(%s - %s)    max(|a - b|) = %s    threshold:%s" % (a,b,(abs(a - b)).max(),threshold)
 
 def file_digest(filename):
     with open(filename, 'rb') as f:
@@ -135,7 +135,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
 
             assert len(sub1) == len(sub2), 'theses two %s have not the same %s number'%(classname, child)
             for i in range(len(getattr(ob1, child.lower()+'s'))):
-                assert_same_sub_schema(sub1[i], sub2[i], equal_almost = equal_almost)
+                assert_same_sub_schema(sub1[i], sub2[i], equal_almost, threshold) # previously lacking parameter
 
     # check if all attributes are equal
     if equal_almost:
@@ -179,6 +179,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost = False, threshold = 1e-10):
             # Compare magnitudes
             mag1 = getattr(ob1, attrname).magnitude
             mag2 = getattr(ob2, attrname).magnitude
+            #print "2. ob1(%s) %s:%s\n   ob2(%s) %s:%s" % (ob1,attrname,mag1,ob2,attrname,mag2)
             assert_eg(mag1, mag2)
 
             # Compare dimensionalities
