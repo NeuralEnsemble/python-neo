@@ -31,12 +31,14 @@ class testFilenameParser(unittest.TestCase):
                                     'files_for_testing_neo',
                                     'klustakwik/test1')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
         """Tests that files can be loaded by basename"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
+        if not BaseTestIO.use_network:
+            raise unittest.SkipTest("Requires download of data from the web")
         fetfiles = kio._fp.read_filenames('fet')
 
         self.assertEqual(len(fetfiles), 2)
@@ -62,6 +64,8 @@ class testFilenameParser(unittest.TestCase):
     def test3(self):
         """Tests that files can be loaded by basename2"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
+        if not BaseTestIO.use_network:
+            raise unittest.SkipTest("Requires download of data from the web")
         clufiles = kio._fp.read_filenames('clu')
 
         self.assertEqual(len(clufiles), 1)
@@ -77,7 +81,7 @@ class testRead(unittest.TestCase):
                                     'files_for_testing_neo',
                                     'klustakwik/test2')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
@@ -139,7 +143,7 @@ class testWrite(unittest.TestCase):
                                     'files_for_testing_neo',
                                     'klustakwik/test3')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
@@ -241,7 +245,7 @@ class testWriteWithFeatures(unittest.TestCase):
                                     'files_for_testing_neo',
                                     'klustakwik/test4')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
