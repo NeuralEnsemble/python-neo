@@ -54,7 +54,7 @@ Subsequent test runs use the previously downloaded files, rather than trying to 
 
 Here is an example test script taken from the distribution: ``test_axonio.py``:
 
-.. literalinclude:: ../../neo/test/io/test_axonio.py
+.. literalinclude:: ../../neo/test/iotest/test_axonio.py
 
 
 

@@ -1,6 +1,10 @@
 from __future__ import absolute_import
 
-import unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
 import neo.io.blackrockio
 import os
 import numpy as np
@@ -11,6 +15,7 @@ from .common_io_test import BaseTestIO
 from ...io import tools
 from ..tools import assert_arrays_almost_equal
 import struct
+import tempfile
 
 
 
@@ -37,8 +42,9 @@ import struct
 
 class testWrite(unittest.TestCase):
     def setUp(self):
-        self.datadir = os.path.join(os.path.dirname(__file__),
-                                    './files_for_tests/blackrock/test2/')
+        self.datadir = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'blackrock/test2/')
         self.fn = os.path.join(self.datadir, 'test.write.ns5')
         if not os.path.exists(self.datadir):
             raise unittest.SkipTest('data directory does not exist: ' +
@@ -132,8 +138,9 @@ class testWrite(unittest.TestCase):
 
 class testRead(unittest.TestCase):
     def setUp(self):
-        self.fn = os.path.join(os.path.dirname(__file__),
-                               './files_for_tests/blackrock/test2/test.ns5')
+        self.fn = os.path.join(tempfile.gettempdir(),
+                               'files_for_testing_neo',
+                               'blackrock/test2/test.ns5')
         if not os.path.exists(self.fn):
             raise unittest.SkipTest('data file does not exist:' + self.fn)
 

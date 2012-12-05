@@ -14,6 +14,9 @@ import numpy
 import quantities as pq
 from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
+import pickle
+import os
+
 V = pq.V
 mV = pq.mV
 uV = pq.uV
@@ -264,16 +267,40 @@ class TestCombination(unittest.TestCase):
     def test__merge(self):
         signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
                                     units="mV", sampling_rate=1*kHz,
-                                    channel_indexes=range(5))
+                                    channel_index=range(5))
         signal2 = AnalogSignalArray(numpy.arange(1000.0, 1066.0).reshape((11, 6)),
                                     units="uV", sampling_rate=1*kHz,
-                                    channel_indexes=range(5, 11))
+                                    channel_index=range(5, 11))
         merged = signal1.merge(signal2)
         self.assertEqual(merged[0, 4], 4*mV)
         self.assertEqual(merged[0, 5], 1*mV)
         self.assertEqual(merged[10, 10], 1.065*mV)
         self.assertEqual(merged.t_stop, signal1.t_stop)
         assert_arrays_equal(merged.channel_indexes, numpy.arange(11))
+
+
+class TestFunctions(unittest.TestCase):
+
+    def test__pickle(self):
+        a = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
+                              units="mV", sampling_rate=1*kHz,
+                              channel_index=range(5))
+
+        f = open('./pickle','wb')
+        pickle.dump(a, f)
+        f.close()
+
+        f = open('./pickle', 'rb')
+        try:
+            b = pickle.load(f)
+        except ValueError:
+            b = None
+
+        assert_arrays_equal(a, b)
+        self.assertEqual(list(a.channel_indexes), [0,1,2,3,4])
+        self.assertEqual(list(a.channel_indexes), list(b.channel_indexes))
+        f.close()
+        os.remove('./pickle')
 
 
 if __name__ == "__main__":

@@ -128,8 +128,9 @@ class Spike2IO(BaseIO):
 
             elif channelHeader.kind in  [2, 3, 4, 5, 8] :
                 ea = self.readOneChannelEventOrSpike( fid, i, header , lazy = lazy)
-                addannotations(ea, channelHeader)
-                seg.eventarrays.append(ea)
+                if ea is not None:
+                    addannotations(ea, channelHeader)
+                    seg.eventarrays.append(ea)
 
             elif channelHeader.kind in  [6,7] :
                 sptr = self.readOneChannelEventOrSpike( fid, i, header, lazy = lazy )
@@ -317,7 +318,7 @@ class Spike2IO(BaseIO):
             if blockHeader.succ_block > 0 :
                 fid.seek(blockHeader.succ_block)
         #~ print 'totalitems' , totalitems
-
+        
         if lazy :
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )

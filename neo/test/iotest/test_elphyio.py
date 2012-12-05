@@ -24,8 +24,7 @@ class TestElphyIO( BaseTestIO, unittest.TestCase ):
                      'ElphyExample_Mode2.dat',
                      'ElphyExample_Mode3.dat',
                     ]
-    #files_to_download = files_to_test
-
+    files_to_download = files_to_test
 
 if __name__ == "__main__":
     unittest.main()

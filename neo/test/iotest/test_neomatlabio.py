@@ -9,11 +9,18 @@ try:
 except ImportError:
     import unittest
 
-from ...io import NeoMatlabIO
+try:
+    from ...io import NeoMatlabIO
+    can_run = True
+except ImportError:
+    can_run = False
+    NeoMatlabIO = None
+    
 import numpy
 
 from .common_io_test import BaseTestIO
 
+@unittest.skipUnless(can_run, "NeoMatlabIO not available")
 class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     ioclass = NeoMatlabIO
     files_to_test = [ ]

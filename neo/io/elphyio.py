@@ -864,7 +864,7 @@ class Acquis1Header(Header):
         Y0_ar = list()
         for i in range(0, n_channels) :
             # detect division by zero
-            if (j1[i] <> j2[i]) and (y1[i] <> y2[i]) :
+            if (j1[i] != j2[i]) and (y1[i] != y2[i]) :
                 dY_ar.append((y2[i] - y1[i]) / (j2[i] - j1[i]))
                 Y0_ar.append(y1[i] - j1[i] * dY_ar[i])
             else :
@@ -3254,7 +3254,7 @@ class ElphyFile(object):
             self.file.close()
         try :
             self.file = open(self.path, 'rb')
-        except Exception, e:
+        except Exception as e:
             raise Exception("python couldn't open file %s : %s" % (self.path, e))
         self.file_size = path.getsize(self.file.name)
         self.creation_date = datetime.fromtimestamp(path.getctime(self.file.name))
@@ -3285,7 +3285,7 @@ class ElphyFile(object):
         self.file.seek(0)
         title = title[0:length]
         if not title in factories :
-            title = "format is not implemented"
+            title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
         return title
     
     
@@ -3334,7 +3334,7 @@ class ElphyFile(object):
             self.file.close()
         try :
             self.file = open(self.path, 'wb')
-        except Exception, e:
+        except Exception as e:
             raise Exception("python couldn't open file %s : %s" % (self.path, e))
         self.file_size = 0
         self.creation_date = datetime.now()
@@ -3437,8 +3437,6 @@ class ElphyFile(object):
 
         self.file.seek(0)
         return layout
-
-
 
     def is_continuous(self):
         return self.layout.is_continuous()
@@ -3647,13 +3645,13 @@ class ElphyIO(BaseIO):
         >>> r.write_block( bl )
     """
     is_readable = True # This class can read data
-    is_writable = True#False#True # This class can write data
+    is_writable = True # This class can write data
     # This class is able to directly or indirectly handle the following objects
     supported_objects  = [ Block, Segment, AnalogSignalArray, SpikeTrain ] #, AnalogSignal
     # This class can return a Block
     readable_objects    = [ Block ]
     # This class is not able to write objects
-    writeable_objects   = [ Block ]
+    writeable_objects   = [ ]
     has_header         = False
     is_streameable     = False
     # This is for GUI stuff : a definition for parameters when reading.
@@ -3707,9 +3705,9 @@ class ElphyIO(BaseIO):
             # get analog and tag channels
             try :
                 self.elphy_file.open()
-            except Exception, e:
+            except Exception as e:
                 self.elphy_file.close()
-                print("cannot open file %s : %s" % (self.filename, e))
+                raise Exception("cannot open file %s : %s" % (self.filename, e))
         # cascading
         #print "\n\n==========================================\n"
         #print "read_block() - n_episodes:",self.elphy_file.n_episodes
@@ -3886,7 +3884,7 @@ class ElphyIO(BaseIO):
                     fmt = '<BI'+str(str_len)+'s'
                     data = [4, str_len, value] 
                 else :
-                    print "ElphyIO.write_block() - unknown annotation type: ", type(value)
+                    print("ElphyIO.write_block() - unknown annotation type: %s" % type(value))
                     continue
                 # last, serialization
                 # BUF values 
@@ -4174,7 +4172,7 @@ class ElphyIO(BaseIO):
         channel = RecordingChannel(
             name="episode %s, electrodes %s" % (episode, chl)
         )
-	return channel
+        return channel
         
 
 

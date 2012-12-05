@@ -1,31 +1,44 @@
 from __future__ import absolute_import
 
-import unittest
-import neo.io.klustakwikio
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+import neo
+try:
+    from neo.io.klustakwikio import KlustaKwikIO
+    can_run = True
+except ImportError:
+    can_run = False
+    KlustaKwikIO = None
 import os.path
 import numpy as np
 import quantities as pq
 import glob
+import tempfile
 
 from .common_io_test import BaseTestIO
 from ..tools import assert_arrays_almost_equal, assert_arrays_equal
 
-
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
 
     The test directory contains two basenames and some decoy files with
     malformed group numbers."""
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test1')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test1')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
         """Tests that files can be loaded by basename"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
+        if not BaseTestIO.use_network:
+            raise unittest.SkipTest("Requires download of data from the web")
         fetfiles = kio._fp.read_filenames('fet')
 
         self.assertEqual(len(fetfiles), 2)
@@ -41,7 +54,7 @@ class testFilenameParser(unittest.TestCase):
         # this test is in flux, should probably have it default to
         # basename = os.path.split(dirname)[1] when dirname is a directory
         #~ dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
-        #~ kio = neo.io.KlustaKwikIO(filename=dirname)
+        #~ kio = KlustaKwikIO(filename=dirname)
         #~ fetfiles = kio._fp.read_filenames('fet')
 
         #~ # It will just choose one of the two basenames, depending on which
@@ -50,7 +63,9 @@ class testFilenameParser(unittest.TestCase):
 
     def test3(self):
         """Tests that files can be loaded by basename2"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename2'))
+        if not BaseTestIO.use_network:
+            raise unittest.SkipTest("Requires download of data from the web")
         clufiles = kio._fp.read_filenames('clu')
 
         self.assertEqual(len(clufiles), 1)
@@ -58,19 +73,20 @@ class testFilenameParser(unittest.TestCase):
             os.path.abspath(os.path.join(self.dirname, 'basename2.clu.1')))
 
 
-
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test2')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test2')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
         """Tests that data and metadata are read correctly"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
             sampling_rate=1000.)
         block = kio.read()
         seg = block.segments[0]
@@ -108,7 +124,7 @@ class testRead(unittest.TestCase):
 
     def test2(self):
         """Checks that cluster id autosets to 0 without clu file"""
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
             sampling_rate=1000.)
         block = kio.read()
         seg = block.segments[0]
@@ -120,12 +136,14 @@ class testRead(unittest.TestCase):
         self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
             [0.026, 0.122, 0.228])))
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWrite(unittest.TestCase):
     def setUp(self):
-        self.dirname = os.path.join(os.path.dirname(__file__),
-                                    'files_for_tests/klustakwik/test3')
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test3')
         if not os.path.exists(self.dirname):
-            raise unittest.SkipTest('data directory does not exist:' +
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
@@ -177,7 +195,7 @@ class testWrite(unittest.TestCase):
         delete_test_session()
 
         # Create writer with default sampling rate
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
             sampling_rate=1000.)
         kio.write_block(block)
 
@@ -220,13 +238,14 @@ class testWrite(unittest.TestCase):
         # Empty out test session again
         delete_test_session()
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
-        subdir=os.path.join(os.path.dirname(__file__),
-                            'files_for_tests/klustakwik')
-        self.dirname = os.path.join(subdir, 'test4')
-        if not os.path.exists(subdir):
-            raise unittest.SkipTest('data directory does not exist:' +
+        self.dirname = os.path.join(tempfile.gettempdir(),
+                                    'files_for_testing_neo',
+                                    'klustakwik/test4')
+        if not os.path.exists(self.dirname):
+            raise unittest.SkipTest('data directory does not exist: ' +
                                     self.dirname)
 
     def test1(self):
@@ -262,7 +281,7 @@ class testWriteWithFeatures(unittest.TestCase):
         delete_test_session(self.dirname)
 
         # Create writer
-        kio = neo.io.KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
             sampling_rate=1000.)
         kio.write_block(block)
 
@@ -302,8 +321,9 @@ class testWriteWithFeatures(unittest.TestCase):
         # Empty out test session again
         delete_test_session(self.dirname)
 
+@unittest.skipUnless(can_run, "KlustakwikIO not available")
 class CommonTests(BaseTestIO, unittest.TestCase ):
-    ioclass = neo.io.KlustaKwikIO
+    ioclass = KlustaKwikIO
 
     # These are the files it tries to read and test for compliance
     files_to_test = [

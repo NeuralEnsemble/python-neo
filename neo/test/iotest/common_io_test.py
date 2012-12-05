@@ -62,7 +62,8 @@ class BaseTestIO(object):
     read_and_write_is_bijective = True
     files_to_test = [ ] # list of files to test compliances
     files_to_download = [ ] # when files are at G-Node
-
+    # allow environment to tell avoid using network
+    use_network = not os.environ.get('NOSETESTS_NO_NETWORK', False)
 
     def setUp(self):
         self.local_test_dir = self.create_local_dir_if_not_exists()
@@ -107,11 +108,15 @@ class BaseTestIO(object):
             distantfile = url+'/'+filename
 
             if not os.path.exists(localfile):
-                logging.info('Downloading %s here %s' % (distantfile, localfile))
-                try:
-                    urllib.urlretrieve(distantfile, localfile)
-                except IOError as e:
-                    raise unittest.SkipTest(e)
+                if self.use_network:
+                    logging.info('Downloading %s here %s' % (distantfile, localfile))
+                    try:
+                        urllib.urlretrieve(distantfile, localfile)
+                    except IOError as e:
+                        raise unittest.SkipTest(e)
+                else:
+                    raise unittest.SkipTest(
+                        "Requires download of data from the web")
 
     def generate_files_for_io_able_to_write(self):
         """

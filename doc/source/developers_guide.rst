@@ -81,7 +81,7 @@ reinstalling when there are changes in the code::
 
 To update to the latest version from the repository::
 
-    $ svn update
+    $ git pull
 
 
 Running the test suite
@@ -189,8 +189,8 @@ Making a release
 
 .. TODO: discuss branching/tagging policy.
 
-First check that the version string (in :file:`neo/version.py`, :file:`setup.py`
-and :file:`doc/conf.py`) is correct.
+First check that the version string (in :file:`neo/version.py`, :file:`setup.py`,
+:file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
 
 To build a source package::
 
@@ -200,11 +200,15 @@ To upload the package to `PyPI`_ (currently Samuel Garcia and Andrew Davison
 have the necessary permissions to do this)::
 
     $ python setup.py sdist upload
-    $ python setup.py upload_docs
+    $ python setup.py upload_docs --upload-dir=doc/build/html
 
 .. I HAVEN'T TESTED THE upload_docs COMMAND YET
 
 .. should we also distribute via software.incf.org
+
+Finally, tag the release in the Git repository::
+
+    $ git tag <version>
 
 .. make a release branch
 
