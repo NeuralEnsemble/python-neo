@@ -268,15 +268,16 @@ class AxonIO(BaseIO):
                 for i in range(nbchannel):
                     if version <2. :
                         name = header['sADCChannelName'][i]
-                        unit = header['sADCUnits'][i].replace('µV', 'uV')
+                        
+                        unit = header['sADCUnits'][i].replace('\xb5', 'u')#\xb5 is µ
                         num = header['nADCPtoLChannelMap'][i]
                     elif version >=2. :
                         name = header['listADCInfo'][i]['ADCChNames']
-                        unit = header['listADCInfo'][i]['ADCChUnits'].replace('µV', 'uV')
+                        unit = header['listADCInfo'][i]['ADCChUnits'].replace('\xb5', 'u')#\xb5 is µ
                         num = header['listADCInfo'][i]['nADCNum']
                     t_start = float(episodArray[j]['offset'])/sampling_rate
                     t_start = t_start.rescale('s')
-
+                    
                     if lazy:
                         signal = [ ] * pq.Quantity(1, unit)
                     else:
@@ -526,7 +527,7 @@ class AxonIO(BaseIO):
             for DACNum in range(nDAC):
                 t_start = 0 * pq.s# TODO: Possibly check with episode array
                 name = header['listDACInfo'][DACNum]['DACChNames']
-                unit = header['listDACInfo'][DACNum]['DACChUnits'].replace('µV', 'uV')
+                unit = header['listDACInfo'][DACNum]['DACChUnits'].replace('\xb5', 'u')#\xb5 is µ
                 signal = np.ones(nSam)*header['listDACInfo'][DACNum]['fDACHoldingLevel']*pq.Quantity(1, unit)
                 anaSig = AnalogSignal(signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name))
                 anaSig.annotate(channel_index = DACNum)

@@ -186,11 +186,13 @@ class NeuroExplorerIO(BaseIO):
                                                 offset = entityHeader['offset']+entityHeader['n'] *4,
                                                 )
                     waveforms = (waveforms.astype('f')* entityHeader['ADtoMV'] +  entityHeader['MVOffset'])*pq.mV
-
+                t_stop = globalHeader['tend']/globalHeader['freq']*pq.s
+                if spike_times.size<0:
+                    t_stop = max(t_stop, max(spike_times))
                 sptr = SpikeTrain(      times = spike_times,
                                                 t_start = globalHeader['tbeg']/globalHeader['freq']*pq.s,
-                                                t_stop = globalHeader['tend']/globalHeader['freq']*pq.s,
-
+                                                #~ t_stop = max(globalHeader['tend']/globalHeader['freq']*pq.s,max(spike_times)),
+                                                t_stop = t_stop,
                                                 name = entityHeader['name'],
                                                 waveforms = waveforms,
                                                 sampling_rate = entityHeader['WFrequency']*pq.Hz,
