@@ -22,6 +22,10 @@ try:
 except NameError:
     pass
 
+try:
+    basestring
+except NameError:
+    basestring = str
 
 logger = logging.getLogger("Neo")
 
@@ -62,6 +66,11 @@ def merge_annotation(a, b):
         return merge_annotations(a, b)
     elif isinstance(a, numpy.ndarray):  # concatenate b to a
         return numpy.append(a, b)
+    elif isinstance(a, basestring):
+        if a == b:
+            return a
+        else:
+            return a + ";" + b
     else:
         assert a == b
         return a
