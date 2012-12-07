@@ -1,15 +1,76 @@
 # encoding: utf-8
 
 """
-Class for reading data from an Elphy file.
+README
+=====================================================================================
+This is the implementation of the NEO IO for Elphy files.
 
-Depends on: 
+IO dependencies:
+- NEO
+- types
+- numpy
+- quantities
 
-Supported: Read
+
+Quick reference:
+=====================================================================================
+Class ElphyIO() with methods read_block() and write_block() are implemented. 
+This classes represent the way to access and produce Elphy files 
+from NEO objects.
+
+As regards reading an existing Elphy file, start by initializing a IO class with it:
+
+>>> import neo
+>>> r = neo.io.ElphyIO( filename="Elphy.DAT" )
+>>> r
+<neo.io.elphyio.ElphyIO object at 0xa1e960c>
+
+Read the file content into NEO object Block:
+
+>>> bl = r.read_block(lazy=False, cascade=True)
+>>> bl
+<neo.core.block.Block object at 0x9e3d44c>
+
+Now you can then read all Elphy data as NEO objects:
+
+>>> b1.segments
+[<neo.core.segment.Segment object at 0x9ed85cc>,
+ <neo.core.segment.Segment object at 0x9ed85ec>,
+ <neo.core.segment.Segment object at 0x9ed880c>,
+ <neo.core.segment.Segment object at 0x9ed89cc>]
+
+>>> bl.segments[0].analogsignals[0]
+<AnalogSignal(array([ 0.        , -0.0061037 , -0.0061037 , ...,  0.        ,
+       -0.0061037 , -0.01831111]) * mV, [0.0 s, 7226.2 s], sampling rate: 10.0 Hz)>
+
+These functions return NEO objects, completely "detached" from the original Elphy file.
+Changes to the runtime objects will not cause any changes in the file.
+
+Having already existing NEO structures, it is possible to write them as an Elphy file.
+For example, given a segment:
+
+>>> s = neo.Segment()
+
+filled with other NEO structures:
+
+>>> import numpy as np
+>>> import quantities as pq
+>>> a = AnalogSignal( signal=np.random.rand(300), t_start=42*pq.ms)
+>>> s.analogsignals.append( a )
+
+and added to a newly created NEO Block:
+
+>>> bl = neo.Block()
+>>> bl.segments.append( s )
+
+Then, it's easy to create an Elphy file:
+
+>>> r = neo.io.ElphyIO( filename="ElphyNeoTest.DAT" )
+>>> r.write_block( bl )
+
 
 Author: Thierry Brizzi
         Domenico Guarino
-
 """
 
 #encoding:utf-8
@@ -41,7 +102,7 @@ np.random.seed(1234)
 
 # ElphyIO depends on:
 import numpy
-from quantities import s, Hz
+from quantities import s, ms, Hz, kHz
 import struct
 
 # --------------------------------------------------------
@@ -4114,9 +4175,10 @@ class ElphyIO(BaseIO):
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units = signal.y_unit,
-                t_start = signal.t_start * s,
-                t_stop = signal.t_stop * s,
-                sampling_rate = signal.sampling_frequency * Hz,
+                t_start = signal.t_start * getattr(pq, signal.x_unit),
+                t_stop = signal.t_stop * getattr(pq, signal.x_unit),
+                #sampling_rate = signal.sampling_frequency * kHz,
+                sampling_period = signal.sampling_period * getattr(pq, signal.x_unit),
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
