@@ -102,7 +102,7 @@ np.random.seed(1234)
 
 # ElphyIO depends on:
 import numpy
-from quantities import s, Hz
+from quantities import s, ms, Hz, kHz
 import struct
 
 # --------------------------------------------------------
@@ -4175,9 +4175,10 @@ class ElphyIO(BaseIO):
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units = signal.y_unit,
-                t_start = signal.t_start * s,
-                t_stop = signal.t_stop * s,
-                sampling_rate = signal.sampling_frequency * Hz,
+                t_start = signal.t_start * getattr(pq, signal.x_unit),
+                t_stop = signal.t_stop * getattr(pq, signal.x_unit),
+                #sampling_rate = signal.sampling_frequency * kHz,
+                sampling_period = signal.sampling_period * getattr(pq, signal.x_unit),
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
