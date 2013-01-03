@@ -293,6 +293,12 @@ class NeoMatlabIO(BaseIO):
                     data_complement["t_stop"] =arr.max()
                 else:
                     data_complement["t_stop"] = 0.0
+            if "t_start" in (at[0] for at in description.classes_necessary_attributes[classname]):
+                if len(arr) > 0:
+                    data_complement["t_start"] =arr.min()
+                else:
+                    data_complement["t_start"] = 0.0
+            
             if lazy:
                 ob = cl([ ], **data_complement)
                 ob.lazy_shape = arr.shape
@@ -304,11 +310,18 @@ class NeoMatlabIO(BaseIO):
             # check children
             rel = description.one_to_many_relationship
             if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
-                for c in range(len(getattr(struct,attrname))):
+                try:
+                    for c in range(len(getattr(struct,attrname))):
+                        if cascade:
+                            child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]],
+                                                                                        cascade = cascade, lazy = lazy)
+                            getattr(ob, attrname.lower()).append(child)
+                except TypeError:
+                    # strange behavior in scipy.io: if len is 1 so there is no len() 
                     if cascade:
-                        child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]],
-                                                                                    cascade = cascade, lazy = lazy)
-                        getattr(ob, attrname.lower()).append(child)
+                        child = self.create_ob_from_struct(getattr(struct,attrname)  , classname_lower_to_upper[attrname[:-1]],
+                                                                                        cascade = cascade, lazy = lazy)
+                        getattr(ob, attrname.lower()).append(child)                    
                 continue
 
             # attributes
