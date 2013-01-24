@@ -24,7 +24,7 @@ import quantities as pq
 UNITS_MAP = {
     'spikes': pq.ms,
     'v': pq.mV,
-    'gsyn': pq.UnitQuantity('microsiemens', 10e-6*pq.S, 'uS', 'µS'), # checked
+    'gsyn': pq.UnitQuantity('microsiemens', 1e-6*pq.S, 'uS', 'µS'), # checked
 }
 
 
