@@ -3906,7 +3906,9 @@ class ElphyIO(BaseIO):
             for idx,train in enumerate(seg.spiketrains[:NbVeV]) :
                 #print "write_block() - train.size:", train.size,idx
                 #print "write_block() - train:", train
-                fake,annotations = self.get_annotations_dict( annotations, "spiketrain", train.annotations.items(), '', idx )
+                fake,annotations = self.get_annotations_dict( annotations,"spiketrain", train.annotations.items(), '', idx )
+                #annotations.update( dict( [("spiketrain-"+str(idx),train.annotations['source_id'])] ) )
+                #print "write_block() - train[%s].annotation['source_id']:%s" % (idx,train.annotations['source_id'])
                 # total number of events format + blackrock sorting mark (0 for neo)
                 spiketrain_data_fmt += str(train.size) + "i" + str(train.size) + "B"
                 # get starting time
@@ -4147,12 +4149,13 @@ class ElphyIO(BaseIO):
         Helper function to retrieve annotations in a dictionary to be serialized as Elphy DBrecord
         """
         for (key,value) in items :
+            #print "get_annotation_dict() - items[%s]" % (key)
             if isinstance( value, (list,tuple,numpy.ndarray) ) :
                 for element in value :
-                    annotations.update( dict( [(prefix+"-"+name+"-"+str(idx), element)] ) )
+                    annotations.update( dict( [(prefix+"-"+name+"-"+key+"-"+str(idx), element)] ) )
                     idx = idx+1
             else :
-                annotations.update( dict( [(prefix+"-"+name+"-"+str(idx),value)] ) )
+                annotations.update( dict( [(prefix+"-"+key+"-"+str(idx),value)] ) )
         return (idx,annotations)
 
 
@@ -4175,10 +4178,10 @@ class ElphyIO(BaseIO):
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units = signal.y_unit,
-                t_start = signal.t_start * getattr(pq, signal.x_unit),
-                t_stop = signal.t_stop * getattr(pq, signal.x_unit),
+                t_start = signal.t_start * getattr(pq, signal.x_unit.strip()),
+                t_stop = signal.t_stop * getattr(pq, signal.x_unit.strip()),
                 #sampling_rate = signal.sampling_frequency * kHz,
-                sampling_period = signal.sampling_period * getattr(pq, signal.x_unit),
+                sampling_period = signal.sampling_period * getattr(pq, signal.x_unit.strip()),
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
