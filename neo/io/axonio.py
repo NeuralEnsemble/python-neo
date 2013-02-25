@@ -290,9 +290,10 @@ class AxonIO(BaseIO):
                     seg.analogsignals.append( anaSig )
                 bl.segments.append(seg)
 
-            if mode == 3:
-                # check if tags exits in other mode
-
+            if mode in [3,5]:# TODO check if tags exits in other mode
+                
+                # tag is EventArray that should be attached to Block
+                # It is attched to the first Segment
                 times = [ ]
                 labels = [ ]
                 comments = [ ]
@@ -303,17 +304,15 @@ class AxonIO(BaseIO):
                 times = np.array(times)
                 labels = np.array(labels)
                 comments = np.array(comments)
-                for seg in bl.segments:
-                    if len(seg.analogsignals) ==0: continue
-                    ana = seg.analogsignals[0]
-                    ind = (times>=ana.t_start) & (times <= ana.t_stop)
-                    if any(ind):
-                        if lazy :
-                            ea = EventArray( times =[ ] * pq.s , labels=np.array([ ], dtype = 'S'))
-                            ea.lazy_shape = sum(ind)
-                        else:
-                            ea = EventArray( times = times[ind]*pq.s, labels = labels[ind], comments = comments[ind] )
-                        seg.eventarrays.append(ea)
+                # attach all tags to the first segment.
+                seg = bl.segments[0]
+                if lazy :
+                    ea = EventArray( times =[ ] * pq.s , labels=np.array([ ], dtype = 'S'))
+                    ea.lazy_shape = len(times)
+                else:
+                    ea = EventArray( times = times*pq.s, labels = labels, comments = comments )
+                seg.eventarrays.append(ea)
+
 
         create_many_to_one_relationship(bl)
         return bl
