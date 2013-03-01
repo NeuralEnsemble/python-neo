@@ -359,6 +359,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def sampling_period(self):
         return 1.0 / self.sampling_rate
 
+    @sampling_period.setter
+    def sampling_period(self, period):
+        self.sampling_rate =  1.0 / period
+
     @property
     def right_sweep(self):
         try:
