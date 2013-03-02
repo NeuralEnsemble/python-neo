@@ -175,22 +175,34 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     @property
     def sampling_period(self):
+        if self.sampling_rate is None:
+            return None
         return 1.0 / self.sampling_rate
 
     @sampling_period.setter
     def sampling_period(self, period):
-        self.sampling_rate =  1.0 / period
+        if period is None:
+            self.sampling_rate = None
+        else:
+            self.sampling_rate =  1.0 / period
 
     @property
     def duration(self):
+        if self.sampling_rate is None:
+            return None
         return self.shape[0] / self.sampling_rate
 
     @property
     def t_stop(self):
-        return self.t_start + self.duration
+        dur = self.duration
+        if dur is None or self.t_start is None:
+            return None
+        return self.t_start + dur
 
     @property
     def times(self):
+        if self.t_start is None or self.sampling_rate is None:
+            return None
         return self.t_start + np.arange(self.shape[0]) / self.sampling_rate
 
     def rescale(self, units):

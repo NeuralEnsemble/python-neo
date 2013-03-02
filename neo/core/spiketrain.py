@@ -353,23 +353,32 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     @property
     def duration(self):
+        if self.t_stop is None or self.t_start is None:
+            return None
         return self.t_stop - self.t_start
 
     @property
     def spike_duration(self):
-        return self.waveforms.shape[2] / self.sampling_rate
+        if self.waveforms is None or self.sampling_rate is None:
+            return None
+        return self.waveform.shape[2] / self.sampling_rate
 
     @property
     def sampling_period(self):
+        if self.sampling_rate is None:
+            return None
         return 1.0 / self.sampling_rate
 
     @sampling_period.setter
     def sampling_period(self, period):
-        self.sampling_rate =  1.0 / period
+        if period is None:
+            self.sampling_rate = None
+        else:
+            self.sampling_rate =  1.0 / period
 
     @property
     def right_sweep(self):
-        try:
-            return self.left_sweep + self.spike_duration
-        except:
+        dur = self.spike_duration
+        if self.left_sweep is None or dur is None:
             return None
+        return self.left_sweep + dur

@@ -44,23 +44,27 @@ class Spike(BaseNeo):
 
     @property
     def duration(self):
-        try:
-            return self.waveform.shape[1] / self.sampling_rate
-        except:
+        if self.waveform is None or self.sampling_rate is None:
             return None
+        return self.waveform.shape[1] / self.sampling_rate
 
     @property
     def right_sweep(self):
-        try:
-            return self.left_sweep + self.duration()
-        except:
+        dur = self.duration
+        if dur is None or self.left_sweep is None:
             return None
+        return self.left_sweep + dur
 
     @property
     def sampling_period(self):
+        if self.sampling_rate is None:
+            return None
         return 1.0 / self.sampling_rate
 
     @sampling_period.setter
     def sampling_period(self, period):
-        self.sampling_rate =  1.0 / period
+        if period is None:
+            self.sampling_rate = None
+        else:
+            self.sampling_rate =  1.0 / period
 
