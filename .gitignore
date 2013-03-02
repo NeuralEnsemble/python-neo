@@ -1,16 +1,57 @@
+#########################################
+# Editor temporary/working/backup files #
+.#*
+[#]*#
+*~
+*$
+*.bak
+*.kdev4
+*.komodoproject
+*.orig
+.project
+.pydevproject
+*.tmp*
+
+# Compiled source #
+###################
+*.a
+*.com
+*.class
+*.dll
+*.exe
 *.mo
+*.o
+*.py[ocd]
+*.so
+
+# Python files #
+################
+# setup.py working directory
+build
+# other build directories
+bin
+dist
+# sphinx build directory
+doc/_build
+# setup.py dist directory
+dist
+# Egg metadata
 *.egg-info
 *.egg
 *.EGG
 *.EGG-INFO
-bin
-build
-dist
-*.pyc
-*.pyo
-*.tmp*
+# tox testing tool
 .tox
+
+# OS generated files #
+######################
+.directory
+.gdb_history
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+
+# Things specific to this project #
+###################################
 neo/test/io/files_for_tests
-*.pyc
-*.orig
-*.komodoproject
