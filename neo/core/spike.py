@@ -55,3 +55,12 @@ class Spike(BaseNeo):
             return self.left_sweep + self.duration()
         except:
             return None
+
+    @property
+    def sampling_period(self):
+        return 1.0 / self.sampling_rate
+
+    @sampling_period.setter
+    def sampling_period(self, period):
+        self.sampling_rate =  1.0 / period
+
