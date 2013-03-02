@@ -173,15 +173,13 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 obj.sampling_period *= slice_step
         return obj
 
-    # sampling_period attribute is handled as a property on underlying rate
-    def _get_sampling_period(self):
-        return 1. / self.sampling_rate
+    @property
+    def sampling_period(self):
+        return 1.0 / self.sampling_rate
 
-    def _set_sampling_period(self, period):
-        self.sampling_rate = 1. / period
-
-    sampling_period = property(fget=_get_sampling_period,
-                               fset=_set_sampling_period)
+    @sampling_period.setter
+    def sampling_period(self, period):
+        self.sampling_rate =  1.0 / period
 
     @property
     def duration(self):
