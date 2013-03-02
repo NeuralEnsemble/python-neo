@@ -86,31 +86,61 @@ class TestProperties(unittest.TestCase):
     def setUp(self):
         self.t_start = [0.0*ms, 100*ms, -200*ms]
         self.rates = [1*kHz, 420*Hz, 999*Hz]
+        self.rates2 = [2*kHz, 290*Hz, 1111*Hz]
         self.data = [numpy.arange(10.0)*nA, numpy.arange(-100.0, 100.0, 10.0)*mV,
                      numpy.random.uniform(size=100)*uV]
         self.signals = [AnalogSignal(D, sampling_rate=r, t_start=t)
                         for r,D,t in zip(self.rates, self.data, self.t_start)]
 
-    def test__t_stop(self):
+    def test__t_stop_getter(self):
         for i in range(3):
             self.assertEqual(self.signals[i].t_stop,
                              self.t_start[i] + self.data[i].size/self.rates[i])
+        self.signals[0].t_start = None
+        self.signals[1].sampling_rate = None
+        self.signals[2].t_start = None
+        self.signals[2].sampling_rate = None
+        for signal in self.signals:
+            self.assertEqual(signal.t_stop, None)
 
-    def test__duration(self):
+    def test__duration_getter(self):
         for signal in self.signals:
             self.assertAlmostEqual(signal.duration,
                                    signal.t_stop - signal.t_start,
                                    delta=1e-15)
+        signal = self.signals[0]
+        signal.sampling_rate = None
+        self.assertEqual(signal.duration, None)
 
-    def test__sampling_period(self):
+
+    def test__sampling_period_getter(self):
         for signal, rate in zip(self.signals, self.rates):
-            self.assertEqual(signal.sampling_period, 1/rate)
+            self.assertEqual(signal.sampling_period, 1 / rate)
+        signal = self.signals[0]
+        signal.sampling_rate = None
+        self.assertEqual(signal.sampling_period, None)
 
-    def test__times(self):
+    def test__sampling_period_setter(self):
+        for signal, rate in zip(self.signals, self.rates2):
+            signal.sampling_period = 1 / rate
+            self.assertEqual(signal.sampling_rate, rate)
+            self.assertEqual(signal.sampling_period, 1 / rate)
+        signal = self.signals[0]
+        signal.sampling_period = None
+        self.assertEqual(signal.sampling_rate, None)
+        self.assertEqual(signal.sampling_period, None)
+
+    def test__times_getter(self):
         for i in range(3):
             assert_arrays_almost_equal(self.signals[i].times,
                                        numpy.arange(self.data[i].size)/self.rates[i] + self.t_start[i],
                                        1e-12*ms)
+        self.signals[0].t_start = None
+        self.signals[1].sampling_rate = None
+        self.signals[2].t_start = None
+        self.signals[2].sampling_rate = None
+        for signal in self.signals:
+            self.assertEqual(signal.times, None)
 
 
 class TestArrayMethods(unittest.TestCase):
