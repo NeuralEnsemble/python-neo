@@ -265,6 +265,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.waveforms = getattr(obj, 'waveforms', None)
         self.left_sweep = getattr(obj, 'left_sweep', None)
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
+        self.segment = getattr(obj, 'segment', None)
+        self.unit = getattr(obj, 'unit', None)
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', None)
