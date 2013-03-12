@@ -118,7 +118,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
     """
 
-    def __new__(cls, times, t_stop, units=None, dtype=numpy.float, copy=True,
+    def __new__(cls, times, t_stop, units=None, dtype=numpy.float64, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,
                 **annotations):
@@ -147,26 +147,33 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                 else:
                     raise ValueError("cannot rescale and return view")
 
-        if hasattr(times, 'dtype') and times.dtype != dtype and not copy:
-            raise ValueError("cannot change dtype and return view")
+        if hasattr(times, 'dtype') and times.dtype != dtype:
+            if not copy:
+                raise ValueError("cannot change dtype and return view")
+
+            # if t_start.dtype or t_stop.dtype != times.dtype != dtype,
+            # _check_time_in_range can have problems, so we set the t_start
+            # and t_stop dtypes to be the same as times before converting them
+            # to dtype below
+            # see ticket #38
+            if hasattr(t_start, 'dtype') and t_start.dtype != times.dtype:
+                t_start=t_start.astype(times.dtype)
+            if hasattr(t_stop, 'dtype') and t_stop.dtype != times.dtype:
+                t_stop=t_stop.astype(times.dtype)
 
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype,
                                   copy=copy)
+
+
         # Store attributes
-        obj.t_start = pq.Quantity(t_start, units=units)
-        obj.t_stop = pq.Quantity(t_stop, units=units)
+        obj.t_start = pq.Quantity(t_start, units=units, dtype=dtype)
+        obj.t_stop = pq.Quantity(t_stop, units=units, dtype=dtype)
         obj.waveforms = waveforms
         obj.left_sweep = left_sweep
         obj.sampling_rate = sampling_rate
 
-        # fix to force t_start and t_stop to be in same dtype as times origin
-        if (hasattr(times, 'dtype') and times.dtype != dtype and
-                obj.t_start.dtype != times.dtype):
-            obj.t_start = obj.t_start.astype(times.dtype).astype(dtype)
-        if (hasattr(times, 'dtype') and times.dtype != dtype and
-                obj.t_stop.dtype != times.dtype):
-            obj.t_stop = obj.t_stop.astype(times.dtype).astype(dtype)
+        # fix for issue #38
 
         # parents
         obj.segment = None
