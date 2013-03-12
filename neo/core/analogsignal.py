@@ -78,8 +78,12 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 signal = signal.rescale(units)
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype,
                                   copy=copy)
-        obj.t_start = t_start
-        obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
+
+        if t_start is None:
+            raise ValueError('t_start cannot be None')
+        obj._t_start = t_start
+
+        obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
         obj.segment = None
         obj.recordingchannel = None
@@ -131,8 +135,8 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         copied over here.
         """
         super(BaseAnalogSignal, self).__array_finalize__(obj)
-        self.t_start = getattr(obj, 't_start', 0 * pq.s)
-        self.sampling_rate = getattr(obj, 'sampling_rate', None)
+        self._t_start = getattr(obj, '_t_start', 0 * pq.s)
+        self._sampling_rate = getattr(obj, '_sampling_rate', None)
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', None)
@@ -173,36 +177,54 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 obj.sampling_period *= slice_step
         return obj
 
+    # sampling_rate attribute is handled as a property so type checking can
+    # be done
+    @property
+    def sampling_rate(self):
+        return self._sampling_rate
+
+    @sampling_rate.setter
+    def sampling_rate(self, rate):
+        if rate is None:
+            raise ValueError('sampling_rate cannot be None')
+        elif not hasattr(rate, 'units'):
+            raise ValueError('sampling_rate must have units')
+        self._sampling_rate = rate
+
+    # sampling_period attribute is handled as a property on underlying rate
     @property
     def sampling_period(self):
-        if self.sampling_rate is None:
-            return None
-        return 1.0 / self.sampling_rate
+        return 1. / self.sampling_rate
 
     @sampling_period.setter
     def sampling_period(self, period):
         if period is None:
-            self.sampling_rate = None
-        else:
-            self.sampling_rate =  1.0 / period
+            raise ValueError('sampling_period cannot be None')
+        elif not hasattr(period, 'units'):
+            raise ValueError('sampling_period must have units')
+        self.sampling_rate = 1. / period
+
+    # t_start attribute is handled as a property so type checking can be done
+    @property
+    def t_start(self):
+        return self._t_start
+
+    @t_start.setter
+    def t_start(self, start):
+        if start is None:
+            raise ValueError('t_start cannot be None')
+        self._t_start = start
 
     @property
     def duration(self):
-        if self.sampling_rate is None:
-            return None
         return self.shape[0] / self.sampling_rate
 
     @property
     def t_stop(self):
-        dur = self.duration
-        if dur is None or self.t_start is None:
-            return None
-        return self.t_start + dur
+        return self.t_start + self.duration
 
     @property
     def times(self):
-        if self.t_start is None or self.sampling_rate is None:
-            return None
         return self.t_start + np.arange(self.shape[0]) / self.sampling_rate
 
     def rescale(self, units):

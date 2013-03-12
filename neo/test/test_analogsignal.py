@@ -53,9 +53,29 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(a.t_stop, data.size/rate)
         self.assertEqual(a[9], 0.009*V)
 
-    def test__create_from_quantities_array_with_inconsistent_units_should_raise_ValueError(self):
-        data = numpy.arange(10.0) * mV
-        self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=1*kHz, units="nA")
+    def test__create_from_quantities_array_inconsistent_units_ValueError(self):
+        data = numpy.arange(10.0) * pq.mV
+        self.assertRaises(ValueError, AnalogSignal, data,
+                          sampling_rate=1 * kHz, units="nA")
+
+    def test__create_without_sampling_rate_or_period_ValueError(self):
+        data = numpy.arange(10.0) * pq.mV
+        self.assertRaises(ValueError, AnalogSignal, data)
+
+    def test__create_with_None_sampling_rate_should_raise_ValueError(self):
+        data = numpy.arange(10.0) * pq.mV
+        self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=None)
+
+    def test__create_with_None_t_start_should_raise_ValueError(self):
+        data = numpy.arange(10.0) * pq.mV
+        rate = 5000 * Hz
+        self.assertRaises(ValueError, AnalogSignal, data,
+                          sampling_rate=rate, t_start=None)
+
+    def test__create_inconsistent_sampling_rate_and_period_ValueError(self):
+        data = numpy.arange(10.0) * pq.mV
+        self.assertRaises(ValueError, AnalogSignal, data,
+                          sampling_rate=1 * pq.kHz, sampling_period=5 * pq.s)
 
     def test__create_with_copy_true_should_return_copy(self):
         data = numpy.arange(10.0) * mV
@@ -96,51 +116,50 @@ class TestProperties(unittest.TestCase):
         for i in range(3):
             self.assertEqual(self.signals[i].t_stop,
                              self.t_start[i] + self.data[i].size/self.rates[i])
-        self.signals[0].t_start = None
-        self.signals[1].sampling_rate = None
-        self.signals[2].t_start = None
-        self.signals[2].sampling_rate = None
-        for signal in self.signals:
-            self.assertEqual(signal.t_stop, None)
 
     def test__duration_getter(self):
         for signal in self.signals:
             self.assertAlmostEqual(signal.duration,
                                    signal.t_stop - signal.t_start,
                                    delta=1e-15)
-        signal = self.signals[0]
-        signal.sampling_rate = None
-        self.assertEqual(signal.duration, None)
 
+    def test__sampling_rate_getter(self):
+        for signal, rate in zip(self.signals, self.rates):
+            self.assertEqual(signal.sampling_rate, rate)
 
     def test__sampling_period_getter(self):
         for signal, rate in zip(self.signals, self.rates):
             self.assertEqual(signal.sampling_period, 1 / rate)
-        signal = self.signals[0]
-        signal.sampling_rate = None
-        self.assertEqual(signal.sampling_period, None)
+
+    def test__sampling_rate_setter(self):
+        for signal, rate in zip(self.signals, self.rates2):
+            signal.sampling_rate = rate
+            self.assertEqual(signal.sampling_rate, rate)
+            self.assertEqual(signal.sampling_period, 1 / rate)
 
     def test__sampling_period_setter(self):
         for signal, rate in zip(self.signals, self.rates2):
             signal.sampling_period = 1 / rate
             self.assertEqual(signal.sampling_rate, rate)
             self.assertEqual(signal.sampling_period, 1 / rate)
+
+    def test__sampling_rate_setter_None_ValueError(self):
         signal = self.signals[0]
-        signal.sampling_period = None
-        self.assertEqual(signal.sampling_rate, None)
-        self.assertEqual(signal.sampling_period, None)
+        self.assertRaises(ValueError, setattr, self.signals[0], 'sampling_rate', None)
+
+    def test__sampling_period_setter_None_ValueError(self):
+        signal = self.signals[0]
+        self.assertRaises(ValueError, setattr, signal, 'sampling_period', None)
+
+    def test__t_start_setter_None_ValueError(self):
+        signal = self.signals[0]
+        self.assertRaises(ValueError, setattr, signal, 't_start', None)
 
     def test__times_getter(self):
         for i in range(3):
             assert_arrays_almost_equal(self.signals[i].times,
                                        numpy.arange(self.data[i].size)/self.rates[i] + self.t_start[i],
                                        1e-12*ms)
-        self.signals[0].t_start = None
-        self.signals[1].sampling_rate = None
-        self.signals[2].t_start = None
-        self.signals[2].sampling_rate = None
-        for signal in self.signals:
-            self.assertEqual(signal.times, None)
 
 
 class TestArrayMethods(unittest.TestCase):
