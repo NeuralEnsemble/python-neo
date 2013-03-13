@@ -365,8 +365,8 @@ class AlphaOmegaIO(BaseIO):
                                                os.path.basename(self.filename),
                                            units = pq.dimensionless)
 
-                ana_sig.annotate(channel_index = \
-                            file_blocks[list_chan[ind_chan]]['m_numChannel'])
+                ana_sig.channel_index = \
+                            file_blocks[list_chan[ind_chan]]['m_numChannel']
                 ana_sig.annotate(channel_name = \
                             file_blocks[list_chan[ind_chan]]['m_Name'])
                 ana_sig.annotate(channel_type = \

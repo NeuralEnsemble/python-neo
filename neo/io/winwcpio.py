@@ -137,13 +137,14 @@ class WinWcpIO(BaseIO):
                     ADCMAX = header['ADCMAX']
                     VMax = analysisHeader['VMax'][c]
                     signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG * unit
-                anaSig = AnalogSignal(signal ,
-                                                    sampling_rate = pq.Hz/analysisHeader['SamplingInterval'] ,
-                                                    t_start = analysisHeader['TimeRecorded'] * pq.s,
-                                                    name = header['YN%d'%c],
+                anaSig = AnalogSignal(signal,
+                                      sampling_rate=
+                                      pq.Hz /
+                                      analysisHeader['SamplingInterval'] ,
+                                      t_start=analysisHeader['TimeRecorded'] *
+                                      pq.s,
+                                      name=header['YN%d'%c], channel_index=c)
 
-                                                        )
-                anaSig.annotate(channel_index = c)
                 if lazy:
                     anaSig.lazy_shape = NP
                 seg.analogsignals.append(anaSig)

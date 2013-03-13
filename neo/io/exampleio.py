@@ -248,16 +248,19 @@ class ExampleIO(BaseIO):
 
 
         if lazy:
-            anasig = AnalogSignal([ ], units = 'V', sampling_rate=sr*pq.Hz, t_start=t_start*pq.s)
+            anasig = AnalogSignal([], units='V', sampling_rate=sr * pq.Hz,
+                                  t_start=t_start * pq.s,
+                                  channel_index=channel_index)
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = tvect.shape
         else:
             # create analogsignal (sinus of 3 Hz)
             sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
-            anasig = AnalogSignal(sig, units= 'V' ,  sampling_rate = sr * pq.Hz , t_start = t_start*pq.s)
+            anasig = AnalogSignal(sig, units= 'V', sampling_rate=sr * pq.Hz,
+                                  t_start=t_start * pq.s,
+                                  channel_index=channel_index)
 
         # for attributes out of neo you can annotate
-        anasig.annotate(channel_index = channel_index)
         anasig.annotate(info = 'it is a sinus of %f Hz' %sinus_freq )
 
         return anasig

@@ -150,15 +150,16 @@ class AnalogSignalArray(BaseAnalogSignal):
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
         if self.channel_index is None:
-            kwargs['channel_index'] = other.channel_index
+            channel_index = other.channel_index
         elif other.channel_index is None:
-            kwargs['channel_index'] = self.channel_index
+            channel_index = self.channel_index
         else:
-            kwargs['channel_index'] = np.append(self.channel_index,
-                                                other.channel_index)
+            channel_index = np.append(self.channel_index,
+                                      other.channel_index)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
                                  sampling_rate=self.sampling_rate,
+                                 channel_index=channel_index,
                                  **kwargs)

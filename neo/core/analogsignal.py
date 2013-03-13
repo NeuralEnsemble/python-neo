@@ -85,6 +85,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
+        obj.channel_index = channel_index
         obj.segment = None
         obj.recordingchannel = None
 

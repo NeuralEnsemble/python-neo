@@ -212,15 +212,11 @@ class ElanIO(BaseIO):
             except:
                 unit = pq.Quantity(1, '' )
 
-
-            anaSig = AnalogSignal( sig * unit,
-                                                    sampling_rate = sampling_rate,
-                                                    t_start=0.*pq.s,
-                                                    name = labels[c],
-                                                    )
+            anaSig = AnalogSignal(sig * unit, sampling_rate=sampling_rate,
+                                  t_start=0. * pq.s, name=labels[c],
+                                  channel_index=c)
             if lazy:
                 anaSig.lazy_shape = data.shape[0]
-            anaSig.annotate(channel_index = c)
             anaSig.annotate(channel_name= labels[c])
             seg.analogsignals.append( anaSig )
 
