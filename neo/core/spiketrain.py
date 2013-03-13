@@ -15,46 +15,50 @@ the old object.
 
 from neo.core.baseneo import BaseNeo
 import quantities as pq
-import numpy
+import numpy as np
 
 
 def check_has_dimensions_time(*values):
     errmsgs = []
     for value in values:
-        if value._reference.dimensionality != pq.s.dimensionality:
+        dim = value.dimensionality
+        if (len(dim) != 1 or dim.values()[0] != 1 or
+                not isinstance(dim.keys()[0], pq.UnitTime)):
             errmsgs.append("value %s has dimensions %s, not [time]" %
-                           (value, value.dimensionality.simplified))
+                           (value, dim.simplified))
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
 
-def _check_time_in_range(value, t_start, t_stop):
-    if hasattr(value, "min"):
-        if value.min() < t_start:
-            raise ValueError("The first spike (%s) is before t_start (%s)" %
-                             (value, t_start))
-        if value.max() > t_stop:
-            raise ValueError("The last spike (%s) is after t_stop (%s)" %
-                             (value, t_stop))
-    else:
-        if value < t_start:
-            raise ValueError("The spike time (%s) is before t_start (%s)" %
-                             (value, t_start))
-        if value > t_stop:
-            raise ValueError("The spike time (%s) is after t_stop (%s)" %
-                             (value, t_stop))
+def _check_time_in_range(value, t_start, t_stop, view=False):
+    if not value.size:
+        return
+
+    # using views here drastically increases the speed, but is only
+    # safe if we are certain that the dtype and units are the same
+    if view:
+        value = value.view(np.ndarray)
+        t_start = t_start.view(np.ndarray)
+        t_stop = t_stop.view(np.ndarray)
+
+    if value.min() < t_start:
+        raise ValueError("The first spike (%s) is before t_start (%s)" %
+                         (value, t_start))
+    if value.max() > t_stop:
+        raise ValueError("The last spike (%s) is after t_stop (%s)" %
+                         (value, t_stop))
 
 
-def _new_SpikeTrain(cls, signal, t_stop, units=None, dtype=numpy.float,
+def _new_spiketrain(cls, signal, t_stop, units=None, dtype=np.float,
                     copy=True, sampling_rate=None, t_start=0.0 * pq.s,
                     waveforms=None, left_sweep=None, name=None,
                     file_origin=None, description=None, annotations=None):
-        """A function to map BaseAnalogSignal.__new__ to function that
-           does not do the unit checking. This is needed for pickle to work.
-        """
-        return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
-                          t_start, waveforms, left_sweep, name, file_origin,
-                          description, **annotations)
+    """A function to map BaseAnalogSignal.__new__ to function that
+    does not do the unit checking. This is needed for pickle to work.
+    """
+    return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
+                        t_start, waveforms, left_sweep, name, file_origin,
+                        description, **annotations)
 
 
 class SpikeTrain(BaseNeo, pq.Quantity):
@@ -90,7 +94,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :description: string
         :file_origin: string
 
-    Any other keyword arguments are stored in the :attr:`self.annotations` dict.
+    Any other keyword arguments are stored in the :attr:`self.annotations` dict
 
     *Other arguments relating to implementation*
         :attr:`dtype` : data type (float32, float64, etc)
@@ -132,23 +136,33 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         checking and (optionally) sorting occurs.
         """
         # Make sure units are consistent
+        # also get the dimensionality now since it is much faster to feed
+        # that to Quantity rather than a unit
         if units is None:
             # No keyword units, so get from `times`
             try:
                 units = times.units
+                dim = units.dimensionality
             except AttributeError:
                 raise ValueError('you must specify units')
-        elif hasattr(times, '_dimensionality'):
-            # Keyword units were provided, so rescale if necessary
-            if (times._dimensionality !=
-                    pq.quantity.validate_dimensionality(units)):
-                if copy:
-                    times = times.rescale(units)
-                else:
+        else:
+            if hasattr(units, 'dimensionality'):
+                dim = units.dimensionality
+            else:
+                dim = pq.quantity.validate_dimensionality(units)
+
+            if (hasattr(times, 'dimensionality') and
+                    times.dimensionality.items() != dim.items()):
+                if not copy:
                     raise ValueError("cannot rescale and return view")
+                else:
+                    # this is needed because of a bug in python-quantities
+                    # see issue # 65 in python-quantities github
+                    # remove this if it is fixed
+                    times = times.rescale(dim)
 
         if dtype is None:
-            dtype = getattr(times, 'dtype', numpy.float)
+            dtype = getattr(times, 'dtype', np.float)
         elif hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
@@ -159,35 +173,54 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             # to dtype below
             # see ticket #38
             if hasattr(t_start, 'dtype') and t_start.dtype != times.dtype:
-                t_start=t_start.astype(times.dtype)
+                t_start = t_start.astype(times.dtype)
             if hasattr(t_stop, 'dtype') and t_stop.dtype != times.dtype:
-                t_stop=t_stop.astype(times.dtype)
+                t_stop = t_stop.astype(times.dtype)
+
+        # check to make sure the units are time
+        # this approach is orders of magnitude faster than comparing the
+        # reference dimensionality
+        if (len(dim) != 1 or dim.values()[0] != 1 or
+                not isinstance(dim.keys()[0], pq.UnitTime)):
+            ValueError("Unit %s has dimensions %s, not [time]" %
+                       (units, dim.simplified))
 
         # Construct Quantity from data
-        obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype,
+        obj = pq.Quantity.__new__(cls, times, units=dim, dtype=dtype,
                                   copy=copy)
 
+        # if the dtype and units match, just copy the values here instead
+        # of doing the much more epxensive creation of a new Quantity
+        # using items() is orders of magnitude faster
+        if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
+                hasattr(t_start, 'dimensionality') and
+                t_start.dimensionality.items() == dim.items()):
+            obj.t_start = t_start.copy()
+        else:
+            obj.t_start = pq.Quantity(t_start, units=dim, dtype=dtype)
+
+        if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
+                hasattr(t_stop, 'dimensionality') and
+                t_stop.dimensionality.items() == dim.items()):
+            obj.t_stop = t_stop.copy()
+        else:
+            obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=dtype)
+
         # Store attributes
-        obj.t_start = pq.Quantity(t_start, units=units, dtype=dtype)
-        obj.t_stop = pq.Quantity(t_stop, units=units, dtype=dtype)
         obj.waveforms = waveforms
         obj.left_sweep = left_sweep
         obj.sampling_rate = sampling_rate
-
-        # fix for issue #38
 
         # parents
         obj.segment = None
         obj.unit = None
 
         # Error checking (do earlier?)
-        check_has_dimensions_time(obj, obj.t_start, obj.t_stop)
-        if obj.size > 0:
-            _check_time_in_range(obj.min(), obj.t_start, obj.t_stop)
-            _check_time_in_range(obj.max(), obj.t_start, obj.t_stop)
+        _check_time_in_range(obj, obj.t_start, obj.t_stop, view=True)
+
         return obj
 
-    def __init__(self, times, t_stop, units=None,  dtype=numpy.float,
+    def __init__(self, times, t_stop, units=None,  dtype=np.float,
                  copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
                  waveforms=None, left_sweep=None, name=None, file_origin=None,
                  description=None, **annotations):
@@ -206,23 +239,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         """
         Return a copy of the SpikeTrain converted to the specified units
         """
-        to_dims = pq.quantity.validate_dimensionality(units)
-        if self.dimensionality == to_dims:
-            to_u = self.units
-            spikes = numpy.array(self)
-        else:
-            to_u = pq.Quantity(1.0, to_dims)
-            from_u = pq.Quantity(1.0, self.dimensionality)
-            try:
-                cf = pq.quantity.get_conversion_factor(from_u, to_u)
-            except AssertionError:
-                raise ValueError(
-                    'Unable to convert between units of "%s" and "%s"'
-                    % (from_u._dimensionality, to_u._dimensionality)
-                )
-            spikes = cf * self.magnitude
-        return SpikeTrain(spikes, self.t_stop, units=to_u,
-                          dtype=self.dtype, copy=False,
+        if self.dimensionality == pq.quantity.validate_dimensionality(units):
+            return self.copy()
+        spikes = self.view(pq.Quantity)
+        return SpikeTrain(spikes, self.t_stop, units=units,
                           sampling_rate=self.sampling_rate,
                           t_start=self.t_start, waveforms=self.waveforms,
                           left_sweep=self.left_sweep, name=self.name,
@@ -235,7 +255,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         works
         """
         import numpy
-        return _new_SpikeTrain, (self.__class__, numpy.array(self),
+        return _new_spiketrain, (self.__class__, numpy.array(self),
                                  self.t_stop, self.units, self.dtype, True,
                                  self.sampling_rate, self.t_start,
                                  self.waveforms, self.left_sweep,
@@ -291,7 +311,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def sort(self):
         """Sorts the spiketrain and its waveforms, if any."""
         # sort the waveforms by the times
-        sort_indices = numpy.argsort(self)
+        sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
 
@@ -316,7 +336,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __getitem__(self, i):
         obj = super(SpikeTrain, self).__getitem__(i)
-        if isinstance(obj, SpikeTrain) and obj.waveforms is not None:
+        if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
         return obj
 
@@ -344,9 +364,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         _t_start = t_start
         _t_stop = t_stop
         if t_start is None:
-            _t_start = -numpy.inf
+            _t_start = -np.inf
         if t_stop is None:
-            _t_stop = numpy.inf
+            _t_stop = np.inf
         indices = (self >= _t_start) & (self <= _t_stop)
         new_st = self[indices]
 
@@ -384,7 +404,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if period is None:
             self.sampling_rate = None
         else:
-            self.sampling_rate =  1.0 / period
+            self.sampling_rate = 1.0 / period
 
     @property
     def right_sweep(self):
