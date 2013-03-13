@@ -302,8 +302,8 @@ class AxonIO(BaseIO):
                     labels.append( str(tag['nTagType']) )
                     comments.append(clean_string(tag['sComment']))
                 times = np.array(times)
-                labels = np.array(labels)
-                comments = np.array(comments)
+                labels = np.array(labels, dtype='S')
+                comments = np.array(comments, dtype='S')
                 # attach all tags to the first segment.
                 seg = bl.segments[0]
                 if lazy :
