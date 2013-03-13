@@ -138,7 +138,7 @@ class RawBinarySignalIO(BaseIO):
             if lazy:
                 signal = [ ]*unit
             else:
-                signal = sig[:,i]*unit
+                signal = pq.Quantity(sig[:,i], units=unit)
 
             anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start,)
             if lazy:
