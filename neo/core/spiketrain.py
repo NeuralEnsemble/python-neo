@@ -118,7 +118,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         <SpikeTrain(array([ 4.,  5.]) * s, [0.0 s, 10.0 s])>
     """
 
-    def __new__(cls, times, t_stop, units=None, dtype=numpy.float64, copy=True,
+    def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,
                 **annotations):
@@ -147,7 +147,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                 else:
                     raise ValueError("cannot rescale and return view")
 
-        if hasattr(times, 'dtype') and times.dtype != dtype:
+        if dtype is None:
+            dtype = getattr(times, 'dtype', numpy.float)
+        elif hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
 
@@ -164,7 +166,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # Construct Quantity from data
         obj = pq.Quantity.__new__(cls, times, units=units, dtype=dtype,
                                   copy=copy)
-
 
         # Store attributes
         obj.t_start = pq.Quantity(t_start, units=units, dtype=dtype)

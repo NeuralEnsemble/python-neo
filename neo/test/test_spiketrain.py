@@ -78,7 +78,7 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_list_dtype(self):
+    def test__create_from_list_set_dtype(self):
         times = range(10)
         t_start = 0.0*pq.s
         t_stop = 10000.0*pq.ms
@@ -107,7 +107,7 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_list_no_start_stop_units_dtype(self):
+    def test__create_from_list_no_start_stop_units_set_dtype(self):
         times = range(10)
         t_start = 0.0
         t_stop = 10000.0
@@ -128,7 +128,7 @@ class TestConstructor(unittest.TestCase):
         t_stop = 10000.0*pq.ms
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = numpy.float64
+        dtype = numpy.int64
         units = 1 * pq.s
         t_start_out = t_start
         t_stop_out = t_stop
@@ -136,7 +136,21 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_array_dtype(self):
+    def test__create_from_array_with_dtype(self):
+        times = numpy.arange(10, dtype='f4')
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_set_dtype(self):
         times = numpy.arange(10)
         t_start = 0.0*pq.s
         t_stop = 10000.0*pq.ms
@@ -157,7 +171,7 @@ class TestConstructor(unittest.TestCase):
         t_stop = 10000.0
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = numpy.float64
+        dtype = numpy.int64
         units = 1 * pq.s
         t_start_out = t_start * units
         t_stop_out = t_stop * units
@@ -165,7 +179,21 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_array_no_start_stop_units_dtype(self):
+    def test__create_from_array_no_start_stop_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4')
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_no_start_stop_units_set_dtype(self):
         times = numpy.arange(10)
         t_start = 0.0
         t_stop = 10000.0
@@ -194,7 +222,21 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_quantity_array_dtype(self):
+    def test__create_from_quantity_array_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.astype(dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_set_dtype(self):
         times = numpy.arange(10) * pq.ms
         t_start = 0.0*pq.s
         t_stop = 12.0*pq.ms
@@ -223,7 +265,21 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_quantity_array_no_start_stop_units_dtype(self):
+    def test__create_from_quantity_array_no_start_stop_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_no_start_stop_units_set_dtype(self):
         times = numpy.arange(10) * pq.ms
         t_start = 0.0
         t_stop = 12.0
@@ -253,7 +309,22 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_quantity_array_units_dtype(self):
+    def test__create_from_quantity_array_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units='s')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.rescale(units).astype(dtype)
+        st_out = times.rescale(units).astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_units_set_dtype(self):
         times = numpy.arange(10) * pq.ms
         t_start = 0.0*pq.s
         t_stop = 12.0*pq.ms
@@ -282,7 +353,7 @@ class TestConstructor(unittest.TestCase):
         self.result_spike_check(st, st_out, t_start_out, t_stop_out,
                                 dtype, units)
 
-    def test__create_from_quantity_array_units_no_start_stop_units_dtype(self):
+    def test__create_from_quantity_units_no_start_stop_units_set_dtype(self):
         times = numpy.arange(10) * pq.ms
         t_start = 0.0
         t_stop = 12.0
@@ -710,7 +781,7 @@ class TestChanging(unittest.TestCase):
         # You cannot change dtype and request a view
         data = numpy.array([3, 4, 5])
         self.assertRaises(ValueError, SpikeTrain, data, units='sec',
-            copy=False, t_stop=101)
+            copy=False, t_stop=101, dtype=numpy.float64)
 
     def test_change_with_copy_true_and_data_not_quantity(self):
         # Changing spike train does not change data
