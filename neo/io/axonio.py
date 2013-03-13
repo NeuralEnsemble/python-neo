@@ -283,10 +283,11 @@ class AxonIO(BaseIO):
                     else:
                         signal = subdata[:,i] * pq.Quantity(1, unit)
 
-                    anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name) )
+                    anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                          t_start=t_start, name=str(name),
+                                          channel_index=int(num))
                     if lazy:
                         anaSig.lazy_shape = subdata.shape[0]
-                    anaSig.annotate(channel_index = int(num))
                     seg.analogsignals.append( anaSig )
                 bl.segments.append(seg)
 
@@ -302,8 +303,8 @@ class AxonIO(BaseIO):
                     labels.append( str(tag['nTagType']) )
                     comments.append(clean_string(tag['sComment']))
                 times = np.array(times)
-                labels = np.array(labels)
-                comments = np.array(comments)
+                labels = np.array(labels, dtype='S')
+                comments = np.array(comments, dtype='S')
                 # attach all tags to the first segment.
                 seg = bl.segments[0]
                 if lazy :
@@ -528,8 +529,9 @@ class AxonIO(BaseIO):
                 name = header['listDACInfo'][DACNum]['DACChNames']
                 unit = header['listDACInfo'][DACNum]['DACChUnits'].replace('\xb5', 'u')#\xb5 is µ
                 signal = np.ones(nSam)*header['listDACInfo'][DACNum]['fDACHoldingLevel']*pq.Quantity(1, unit)
-                anaSig = AnalogSignal(signal , sampling_rate = sampling_rate ,t_start =t_start, name = str(name))
-                anaSig.annotate(channel_index = DACNum)
+                anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                      t_start=t_start, name=str(name),
+                                      channel_index=DACNum)
                 # If there are epoch infos for this DAC
                 if header['dictEpochInfoPerDAC'].has_key(DACNum):
                     # Save last sample index

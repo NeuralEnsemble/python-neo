@@ -62,18 +62,19 @@ class BasePyNNIO(BaseIO):
             if channel_index in data[:, 1]:
                 signal = AnalogSignal([],
                                       units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms)
+                                      sampling_period=metadata['dt']*pq.ms,
+                                      channel_index=channel_index)
                 signal.lazy_shape = None
         else:
             arr = self._extract_array(data, channel_index)
             if len(arr) > 0:
                 signal = AnalogSignal(arr,
                                       units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms)
+                                      sampling_period=metadata['dt']*pq.ms,
+                                      channel_index=channel_index)
         if signal is not None:
             signal.annotate(label=metadata["label"],
-                            variable=metadata["variable"],
-                            channel_index=channel_index)
+                            variable=metadata["variable"])
             return signal
 
     def _extract_spikes(self, data, metadata, channel_index, lazy):

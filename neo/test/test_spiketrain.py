@@ -24,47 +24,382 @@ class TestFunctions(unittest.TestCase):
 
 
 class TestConstructor(unittest.TestCase):
+    def result_spike_check(self, st, st_out, t_start_out, t_stop_out,
+                           dtype, units):
+        assert_arrays_equal(st, st_out)
+        self.assertEqual(st.t_start, t_start_out)
+        self.assertEqual(st.t_stop, t_stop_out)
+
+        self.assertEqual(st.units, units)
+        self.assertEqual(st.t_start.units, units)
+        self.assertEqual(st.t_stop.units, units)
+
+        self.assertEqual(st.dtype, dtype)
+        self.assertEqual(st.t_stop.dtype, dtype)
+        self.assertEqual(st.t_start.dtype, dtype)
+
     def test__create_empty(self):
         t_start = 0.0
         t_stop = 10.0
-        st = SpikeTrain([ ], t_start=t_start, t_stop=t_stop, units='s')
+        st = SpikeTrain([], t_start=t_start, t_stop=t_stop, units='s')
+
+        dtype = numpy.float64
+        units = 1 * pq.s
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = [] * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_empty_no_t_start(self):
+        t_start = 0.0
+        t_stop = 10.0
+        st = SpikeTrain([ ], t_stop=t_stop, units='s')
+
+        dtype = numpy.float64
+        units = 1 * pq.s
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = [] * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
 
     def test__create_from_list(self):
         times = range(10)
-        t_start = 0.0
-        t_stop = 10.0
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="ms")
-        self.assertEqual(st.t_start, t_start*pq.ms)
-        self.assertEqual(st.t_stop, t_stop*pq.ms)
-        assert_arrays_equal(st, times*pq.ms)
+
+        dtype = numpy.float64
+        units = 1 * pq.ms
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_list_set_dtype(self):
+        times = range(10)
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units="ms", dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.astype(dtype)
+        st_out = pq.Quantity(times, units=units, dtype=dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_list_no_start_stop_units(self):
+        times = range(10)
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="ms")
+
+        dtype = numpy.float64
+        units = 1 * pq.ms
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_list_no_start_stop_units_set_dtype(self):
+        times = range(10)
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units="ms", dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = pq.Quantity(times, units=units, dtype=dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
 
     def test__create_from_array(self):
         times = numpy.arange(10)
         t_start = 0.0*pq.s
         t_stop = 10000.0*pq.ms
         st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
-        self.assertEqual(st.t_stop, t_stop)
-        assert_arrays_equal(st, times*pq.s)
+
+        dtype = numpy.int64
+        units = 1 * pq.s
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_with_dtype(self):
+        times = numpy.arange(10, dtype='f4')
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_set_dtype(self):
+        times = numpy.arange(10)
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units="s", dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.astype(dtype)
+        st_out = times.astype(dtype) * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_no_start_stop_units(self):
+        times = numpy.arange(10)
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
+
+        dtype = numpy.int64
+        units = 1 * pq.s
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_no_start_stop_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4')
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units="s")
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = times * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_array_no_start_stop_units_set_dtype(self):
+        times = numpy.arange(10)
+        t_start = 0.0
+        t_stop = 10000.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units="s", dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times.astype(dtype) * units
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float64
+        units = 1 * pq.ms
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.astype(dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_set_dtype(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.astype(dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_no_start_stop_units(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float64
+        units = 1 * pq.ms
+        t_start_out = t_start * units
+        t_stop_out = t_stop * units
+        st_out = times
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_no_start_stop_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_no_start_stop_units_set_dtype(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.ms
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times.astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+
+    def test__create_from_quantity_array_units(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units='s')
+
+        dtype = numpy.float64
+        units = 1 * pq.s
+        t_start_out = t_start
+        t_stop_out = t_stop
+        st_out = times
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_units_with_dtype(self):
+        times = numpy.arange(10, dtype='f4') * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units='s')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.rescale(units).astype(dtype)
+        st_out = times.rescale(units).astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_units_set_dtype(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0*pq.s
+        t_stop = 12.0*pq.ms
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units='s', dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = t_start.astype(dtype)
+        t_stop_out = t_stop.rescale(units).astype(dtype)
+        st_out = times.rescale(units).astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_array_units_no_start_stop_units(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop, units='s')
+
+        dtype = numpy.float64
+        units = 1 * pq.s
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_quantity_units_no_start_stop_units_set_dtype(self):
+        times = numpy.arange(10) * pq.ms
+        t_start = 0.0
+        t_stop = 12.0
+        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop,
+                        units='s', dtype='f4')
+
+        dtype = numpy.float32
+        units = 1 * pq.s
+        t_start_out = pq.Quantity(t_start, units=units, dtype=dtype)
+        t_stop_out = pq.Quantity(t_stop, units=units, dtype=dtype)
+        st_out = times.rescale(units).astype(dtype)
+        self.result_spike_check(st, st_out, t_start_out, t_stop_out,
+                                dtype, units)
+
+    def test__create_from_list_without_units_should_raise_ValueError(self):
+        times = range(10)
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        self.assertRaises(ValueError, SpikeTrain, times,
+                          t_start=t_start, t_stop=t_stop)
 
     def test__create_from_array_without_units_should_raise_ValueError(self):
         times = numpy.arange(10)
         t_start = 0.0*pq.s
-        t_stop = 10.0*pq.s
-        self.assertRaises(ValueError, SpikeTrain, times, t_start=t_start, t_stop=t_stop)
+        t_stop = 10000.0*pq.ms
+        self.assertRaises(ValueError, SpikeTrain, times,
+                          t_start=t_start, t_stop=t_stop)
 
-    def test__create_from_quantity_array(self):
-        times = numpy.arange(10) * pq.ms
-        t_start = 0.0*pq.ms
-        t_stop = 12.0*pq.ms
-        st = SpikeTrain(times, t_start=t_start, t_stop=t_stop)
-        assert_arrays_equal(st, times)
+    def test__create_from_array_with_incompatible_units_ValueError(self):
+        times = numpy.arange(10) * pq.km
+        t_start = 0.0*pq.s
+        t_stop = 10000.0*pq.ms
+        self.assertRaises(ValueError, SpikeTrain, times,
+                          t_start=t_start, t_stop=t_stop)
 
-    def test__create_with_times_outside_tstart_tstop_should_raise_Exception(self):
+    def test__create_with_times_outside_tstart_tstop_ValueError(self):
         t_start = 23
         t_stop = 77
-        ok = SpikeTrain(numpy.arange(t_start, t_stop), units='ms', t_start=t_start, t_stop=t_stop)
-        self.assertRaises(ValueError, SpikeTrain, numpy.arange(t_start-5, t_stop), units='ms', t_start=t_start, t_stop=t_stop)
-        self.assertRaises(ValueError, SpikeTrain, numpy.arange(t_start, t_stop+5), units='ms', t_start=t_start, t_stop=t_stop)
+        ok = SpikeTrain(numpy.arange(t_start, t_stop), units='ms',
+                                     t_start=t_start, t_stop=t_stop)
+        self.assertRaises(ValueError, SpikeTrain,
+                          numpy.arange(t_start-5, t_stop), units='ms',
+                          t_start=t_start, t_stop=t_stop)
+        self.assertRaises(ValueError, SpikeTrain,
+                          numpy.arange(t_start, t_stop+5), units='ms',
+                          t_start=t_start, t_stop=t_stop)
 
     def test_defaults(self):
         # default recommended attributes
@@ -95,7 +430,7 @@ class TestConstructor(unittest.TestCase):
 
 
 class TestSorting(unittest.TestCase):
-    
+
     def test_sort(self):
         wf = numpy.array([[0., 1.], [2., 3.], [4., 5.]])
         st = SpikeTrain([3,4,5]*pq.s, waveforms=wf, name='n', t_stop=10.0)
@@ -344,7 +679,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(st.t_stop, st2.t_stop)
 
 class TestAttributesAnnotations(unittest.TestCase):
-    
+
     def test_set_universally_recommended_attributes(self):
         st = SpikeTrain([3,4,5], units='sec', name='Name', description='Desc',
             file_origin='crack.txt', t_stop=99.9)
@@ -366,7 +701,7 @@ class TestAttributesAnnotations(unittest.TestCase):
         self.assertEqual(st.annotations, {'ratname': 'Phillippe'})
 
 class TestChanging(unittest.TestCase):
-    
+
     def test_change_with_copy_default(self):
         # Default is copy = True
         # Changing spike train does not change data
@@ -446,7 +781,7 @@ class TestChanging(unittest.TestCase):
         # You cannot change dtype and request a view
         data = numpy.array([3, 4, 5])
         self.assertRaises(ValueError, SpikeTrain, data, units='sec',
-            copy=False, t_stop=101)
+            copy=False, t_stop=101, dtype=numpy.float64)
 
     def test_change_with_copy_true_and_data_not_quantity(self):
         # Changing spike train does not change data
@@ -464,7 +799,7 @@ class TestChanging(unittest.TestCase):
         # original spiketrain should change.
         # Whether the original data source changes is dependent on the
         # copy parameter.
-        # This is compatible with both numpy and quantity default behavior.
+        # This is compatible with both np and quantity default behavior.
         data = [3,4,5] * pq.s
         st = SpikeTrain(data, copy=True, t_stop=99.9)
         st2 = st[1:3]
@@ -478,7 +813,7 @@ class TestChanging(unittest.TestCase):
         # original spiketrain should change.
         # Whether the original data source changes is dependent on the
         # copy parameter.
-        # This is compatible with both numpy and quantity default behavior.
+        # This is compatible with both np and quantity default behavior.
         data = [3,4,5] * pq.s
         st = SpikeTrain(data, copy=False, t_stop=100.0)
         st2 = st[1:3]
@@ -508,14 +843,167 @@ class TestChanging(unittest.TestCase):
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [3,4,11] * pq.ms)
             self.assertRaises(ValueError, st.__setslice__, 0, 3, [0,4,5] * pq.ms)
 
+    def test__rescale(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        newst = st.rescale(pq.s)
+        assert_arrays_equal(st, newst)
+        self.assertEqual(newst.units, 1 * pq.s)
+
+    def test__rescale_same_units(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        newst = st.rescale(pq.ms)
+        assert_arrays_equal(st, newst)
+        self.assertEqual(newst.units, 1 * pq.ms)
+
+    def test__rescale_incompatible_units_ValueError(self):
+        data = [3,4,5] * pq.ms
+        st = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        self.assertRaises(ValueError, st.rescale, pq.m)
+
 
 class TestMiscellaneous(unittest.TestCase):
     def test__different_dtype_for_t_start_and_array(self):
         data = numpy.array([0,9.9999999], dtype = numpy.float64) * pq.s
+        data16 = data.astype(numpy.float16)
+        data32 = data.astype(numpy.float32)
+        data64 = data.astype(numpy.float64)
+        t_start = data[0]
+        t_stop = data[1]
+        t_start16 = data[0].astype(dtype=numpy.float16)
+        t_stop16 = data[1].astype(dtype=numpy.float16)
+        t_start32 = data[0].astype(dtype=numpy.float32)
+        t_stop32 = data[1].astype(dtype=numpy.float32)
+        t_start64 = data[0].astype(dtype=numpy.float64)
+        t_stop64 = data[1].astype(dtype=numpy.float64)
+        t_start_custom = 0.0
+        t_stop_custom = 10.0
+        t_start_custom16 = numpy.array(t_start_custom, dtype=numpy.float16)
+        t_stop_custom16 = numpy.array(t_stop_custom, dtype=numpy.float16)
+        t_start_custom32 = numpy.array(t_start_custom, dtype=numpy.float32)
+        t_stop_custom32 = numpy.array(t_stop_custom, dtype=numpy.float32)
+        t_start_custom64 = numpy.array(t_start_custom, dtype=numpy.float64)
+        t_stop_custom64 = numpy.array(t_stop_custom, dtype=numpy.float64)
+
         #This is OK.
-        st = SpikeTrain(data.astype(numpy.float64), copy=True, t_start=data[0], t_stop=data[1])
-        #This use to bug
-        st = SpikeTrain(data.astype(numpy.float32), copy=True, t_start=data[0], t_stop=data[1])
+        st = SpikeTrain(data64, copy=True, t_start=t_start, t_stop=t_stop)
+
+        st = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float32)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float32)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16)
+        st = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True, t_start=t_start16, t_stop=t_stop16,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32)
+        st = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True, t_start=t_start32, t_stop=t_stop32,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64,
+                        dtype=numpy.float32)
+
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data16, copy=True,
+                        t_start=t_start_custom, t_stop=t_stop_custom,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom16, t_stop=t_stop_custom16)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom16, t_stop=t_stop_custom16,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom16, t_stop=t_stop_custom16,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom16, t_stop=t_stop_custom16,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom32, t_stop=t_stop_custom32)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom32, t_stop=t_stop_custom32,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom32, t_stop=t_stop_custom32,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom32, t_stop=t_stop_custom32,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom64, t_stop=t_stop_custom64)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom64, t_stop=t_stop_custom64,
+                        dtype=numpy.float16)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom64, t_stop=t_stop_custom64,
+                        dtype=numpy.float32)
+        st = SpikeTrain(data32, copy=True,
+                        t_start=t_start_custom64, t_stop=t_stop_custom64,
+                        dtype=numpy.float64)
+
+        #This use to bug - see ticket #38
+        st = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop)
+        st = SpikeTrain(data16, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop)
+        st = SpikeTrain(data32, copy=True, t_start=t_start, t_stop=t_stop,
+                        dtype=numpy.float64)
+
+        st = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64)
+        st = SpikeTrain(data32, copy=True, t_start=t_start64, t_stop=t_stop64,
+                        dtype=numpy.float64)
 
 
 if __name__ == "__main__":

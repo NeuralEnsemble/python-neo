@@ -63,8 +63,9 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     When a Block is
     Block>Segment>AnalogSIgnal
     this function auto create all RecordingChannel following these rules:
-      * when 'channel_index ' is in AnalogSIgnal.annotations the corresponding RecordingChannel is created.
-      * 'channel_index ' is then removed from annotations dict if remove_from_annotation
+      * when 'channel_index ' is in AnalogSIgnal the corresponding
+        RecordingChannel is created.
+      * 'channel_index ' is then set to None if remove_from_annotation
       * only one RecordingChannelGroup is created
 
     It is a utility at the end of creating a Block for IO.
@@ -75,8 +76,8 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     recordingchannels = { }
     for seg in bl.segments:
         for anasig in seg.analogsignals:
-            if 'channel_index' in anasig.annotations:
-                ind = int(anasig.annotations['channel_index'])
+            if getattr(anasig, 'channel_index', None) is not None:
+                ind = int(anasig.channel_index)
                 if  ind not in recordingchannels:
                     recordingchannels[ind] = RecordingChannel(index = ind)
                     if 'channel_name' in anasig.annotations:
@@ -86,7 +87,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                 recordingchannels[ind].analogsignals.append(anasig)
                 anasig.recordingchannel = recordingchannels[ind]
                 if remove_from_annotation:
-                    anasig.annotations.pop('channel_index')
+                    anasig.channel_index = None
 
     indexes = np.sort(recordingchannels.keys()).astype('i')
     names = np.array([recordingchannels[idx].name for idx in indexes], dtype='S')
