@@ -158,11 +158,11 @@ class MicromedIO(BaseIO):
                 factor = float(physical_max - physical_min) / float(logical_max-logical_min+1)
                 signal = ( rawdata[:,c].astype('f') - logical_ground )* factor*unit
 
-            anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,name = label)
+            anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                  name=label, channel_index=c)
             if lazy:
                 #TODO
                 anaSig.lazy_shape = None
-            anaSig.annotate(channel_index = c)
             anaSig.annotate(ground = ground)
 
             seg.analogsignals.append( anaSig )

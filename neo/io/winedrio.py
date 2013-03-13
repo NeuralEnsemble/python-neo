@@ -130,12 +130,11 @@ class WinEdrIO(BaseIO):
             else:
                 signal = (data[:,header['YO%d'%c]].astype('f4')-YZ) *AD/( YCF*YAG*(ADCMAX+1)) * unit
 
-            ana = AnalogSignal( signal,
-                                            sampling_rate = pq.Hz/DT,
-                                            t_start = 0.*pq.s,
-                                            name = header['YN%d'%c],
-                                            )
-            ana.annotate(channel_index = c)
+            ana = AnalogSignal(signal,
+                               sampling_rate=pq.Hz / DT,
+                               t_start=0. * pq.s,
+                               name=header['YN%d' % c],
+                               channel_index=c)
             if lazy:
                 ana.lazy_shape = header['NP']/header['NC']
 

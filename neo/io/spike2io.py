@@ -246,11 +246,12 @@ class Spike2IO(BaseIO):
                 signal = [ ]*unit
             else:
                 signal = pq.Quantity(empty( bs , dtype = 'f4'), units=unit)
-            anaSig = AnalogSignal(signal ,
-                                                            sampling_rate = sampling_rate,
-                                                            t_start = starttimes[b]*header.us_per_time * header.dtime_base * pq.s,
-                                                            )
-            anaSig.annotate(channel_index = channel_num)
+            anaSig = AnalogSignal(signal,
+                                  sampling_rate=sampling_rate,
+                                  t_start=(starttimes[b] *
+                                           header.us_per_time *
+                                           header.dtime_base * pq.s),
+                                  channel_index=channel_num)
             anaSigs.append( anaSig )
 
         if  lazy:

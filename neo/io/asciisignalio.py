@@ -177,10 +177,11 @@ class AsciiSignalIO(BaseIO):
             else:
                 signal = sig[:,i]*unit
 
-            anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start, name = 'Column %d'%i)
+            anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                  t_start=t_start, channel_index=i,
+                                  name='Column %d'%i)
             if lazy:
                 anaSig.lazy_shape = sig.shape
-            anaSig.annotate( channel_index = i )
             seg.analogsignals.append( anaSig )
 
         create_many_to_one_relationship(seg)

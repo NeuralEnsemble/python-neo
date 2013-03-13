@@ -202,15 +202,14 @@ class TdtIO(BaseIO):
                         allsig[code] = { }
                     if channel not in allsig[code]:
                         #~ print 'code', code, 'channel',  channel
-                        anaSig = AnalogSignal(
-                                                            [ ] * pq.V,
-                                                            name =  code,
-                                                            sampling_rate = h['frequency'] * pq.Hz,
-                                                            t_start = (h['timestamp'] - global_t_start) * pq.s,
-                                                            )
+                        anaSig = AnalogSignal([] * pq.V,
+                                              name=code,
+                                              sampling_rate=
+                                              h['frequency'] * pq.Hz,
+                                              t_start=(h['timestamp'] -
+                                                       global_t_start) * pq.s,
+                                              channel_index=channel)
                         anaSig.lazy_dtype = dtype(DataFormats[h['dataformat']])
-                        #anaSig.annotations['channel_index'] = channel
-                        anaSig.annotate(channel_index = channel)
                         anaSig.pos = 0
 
                         # for counting:
@@ -260,7 +259,7 @@ class TdtIO(BaseIO):
                             signame = anaSig.name.decode('ascii')
                         else:
                             signame = anaSig.name
-                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(anaSig.annotations['channel_index'])+'.sev')
+                        filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(anaSig.channel_index)+'.sev')
                         if os.path.exists(filename):
                             anaSig.fid = open(filename, 'rb')
                         else:

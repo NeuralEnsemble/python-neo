@@ -68,9 +68,10 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
     seg = Segment(name = seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
-            anasig = AnalogSignal( rand(int(sampling_rate*duration)), sampling_rate = sampling_rate, t_start = t_start,
-                                  units=mV, name = 'sig %d for segment %s' % (a, seg.name) )
-            anasig.annotations['channel_index'] = a
+            anasig = AnalogSignal(rand(int(sampling_rate * duration)),
+                                  sampling_rate=sampling_rate, t_start=t_start,
+                                  units=mV, channel_index=a,
+                                  name='sig %d for segment %s' % (a, seg.name))
             seg.analogsignals.append(anasig)
 
     if SpikeTrain in supported_objects:

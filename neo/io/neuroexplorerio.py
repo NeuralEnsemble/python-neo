@@ -236,10 +236,13 @@ class NeuroExplorerIO(BaseIO):
                     signal += entityHeader['MVOffset']
                     signal = signal*pq.mV
 
-                anaSig = AnalogSignal(signal = signal , t_start =t_start*pq.s , sampling_rate  = entityHeader['WFrequency']*pq.Hz, name = entityHeader['name'])
+                anaSig = AnalogSignal(signal=signal, t_start=t_start * pq.s,
+                                      sampling_rate=
+                                      entityHeader['WFrequency'] * pq.Hz,
+                                      name=entityHeader['name'],
+                                      channel_index=entityHeader['WireNumber'])
                 if lazy:
                     anaSig.lazy_shape = entityHeader['NPointsWave']
-                anaSig.annotate(channel_index = entityHeader['WireNumber'])
                 seg.analogsignals.append( anaSig )
 
             if entityHeader['type'] == 6:

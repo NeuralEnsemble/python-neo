@@ -140,12 +140,12 @@ class RawBinarySignalIO(BaseIO):
             else:
                 signal = pq.Quantity(sig[:,i], units=unit)
 
-            anaSig = AnalogSignal( signal , sampling_rate = sampling_rate ,t_start =t_start,)
+            anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                  t_start=t_start, channel_index=i)
             if lazy:
                 # TODO
                 anaSig.lazy_shape = None
-            anaSig.annotate(channel_index = i)
-            seg.analogsignals.append( anaSig )
+            seg.analogsignals.append(anaSig)
 
         create_many_to_one_relationship(seg)
         return seg
