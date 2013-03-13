@@ -245,7 +245,7 @@ class Spike2IO(BaseIO):
             if lazy:
                 signal = [ ]*unit
             else:
-                signal = empty( bs , dtype = 'f4') * unit
+                signal = pq.Quantity(empty( bs , dtype = 'f4'), units=unit)
             anaSig = AnalogSignal(signal ,
                                                             sampling_rate = sampling_rate,
                                                             t_start = starttimes[b]*header.us_per_time * header.dtime_base * pq.s,
