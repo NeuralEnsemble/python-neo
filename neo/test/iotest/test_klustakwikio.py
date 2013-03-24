@@ -88,7 +88,7 @@ class testRead(unittest.TestCase):
         """Tests that data and metadata are read correctly"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
             sampling_rate=1000.)
-        block = kio.read()
+        block = kio.read()[0]
         seg = block.segments[0]
         self.assertEqual(len(seg.spiketrains), 4)
 
@@ -126,7 +126,7 @@ class testRead(unittest.TestCase):
         """Checks that cluster id autosets to 0 without clu file"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
             sampling_rate=1000.)
-        block = kio.read()
+        block = kio.read()[0]
         seg = block.segments[0]
         self.assertEqual(len(seg.spiketrains), 1)
         self.assertEqual(seg.spiketrains[0].name, 'unit 0 from group 5')
