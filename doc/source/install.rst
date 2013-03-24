@@ -53,12 +53,12 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/n/neo/neo-0.2.2.tar.gz
+    http://pypi.python.org/packages/source/n/neo/neo-0.3.0.tar.gz
 
 Then::
 
-    $ tar xzf neo-0.2.2.tar.gz
-    $ cd neo-0.2.2
+    $ tar xzf neo-0.3.0.tar.gz
+    $ cd neo-0.3.0
     $ python setup.py install
     
 or::
