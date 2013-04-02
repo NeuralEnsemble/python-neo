@@ -579,9 +579,8 @@ class NeoHdf5IO(BaseIO):
                                 parent._v_pathname, lazy=lazy))
         return obj
 
-
     @_func_wrapper
-    def read_all_blocks(self, lazy=False):
+    def read_all_blocks(self, lazy=False, cascade=True, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
@@ -589,9 +588,8 @@ class NeoHdf5IO(BaseIO):
         blocks = []
         for n in self._data.listNodes(self._data.root):
             if self._get_class_by_node(n) == Block:
-                blocks.append(self.read_block(n._v_pathname, lazy=lazy))
+                blocks.append(self.read_block(n._v_pathname, lazy=lazy, cascade=cascade, **kargs))
         return blocks
-
 
     @_func_wrapper
     def delete(self, path, cascade=False):

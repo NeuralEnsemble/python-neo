@@ -13,7 +13,7 @@ urllib.urlretrieve(distantfile, localfile)
 
 
 reader = neo.io.NeuroExplorerIO(filename = 'File_neuroexplorer_2.nex')
-bl = reader.read(cascade = True, lazy = False)
+bl = reader.read(cascade = True, lazy = False)[0]
 for seg in bl.segments:
     fig = pyplot.figure()
     ax1 = fig.add_subplot(2,1,1)

@@ -26,7 +26,7 @@ class BaseIO(object):
     read from/written to a database such as TDT sytem tanks or SQLite files.
     This is an abstract class that will be subclassed for each format
     The key methods of the class are:
-        - ``read()`` - Read the whole object structure, return the object at the highest level in the hierarchy
+        - ``read()`` - Read the whole object structure, return a list of Block objects
         - ``read_block(lazy=True, cascade=True, **params)``     - Read Block object from file with some parameters
         - ``read_segment(lazy=True, cascade=True, **params)``     - Read Segment object from file with some parameters
         - ``read_spiketrainlist(lazy=True, cascade=True, **params)`` - Read SpikeTrainList object from file with some parameters
@@ -38,7 +38,7 @@ class BaseIO(object):
     The class can also implement these methods:
         - ``read_XXX(lazy=True, cascade=True, **params)``
         - ``write_XXX(**params)``
-        where XXX could be one one the object supported by the IO
+        where XXX could be one of the objects supported by the IO
 
     Each class is able to declare what can be accessed or written directly discribed by **readable_objects** and **readable_objects**.
     The object types can be one of the classes defined in neo.core (Block, Segment, AnalogSignal, ...)
@@ -78,7 +78,9 @@ class BaseIO(object):
     ######## General read/write methods #######################
     def read(self, lazy = False, cascade = True,  **kargs):
         if Block in self.readable_objects:
-            return self.read_block(lazy = lazy, cascade = cascade, **kargs)
+            if hasattr(self, 'read_all_blocks') and callable(getattr(self, 'read_all_blocks')):
+                return self.read_all_blocks(lazy = lazy, cascade = cascade, **kargs)
+            return [self.read_block(lazy = lazy, cascade = cascade, **kargs)]
         elif Segment in self.readable_objects:
             bl = Block(name = 'One segment only')
             if not cascade:
@@ -86,7 +88,7 @@ class BaseIO(object):
             seg = self.read_segment(lazy = lazy, cascade = cascade,  **kargs)
             bl.segments.append(seg)
             create_many_to_one_relationship(bl)
-            return bl
+            return [bl]
         else:
             raise NotImplementedError
 

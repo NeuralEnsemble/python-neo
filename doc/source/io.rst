@@ -104,10 +104,10 @@ The first element of the previous list is the highest level for reading the file
     neo.core.Segment
 
 
-All IOs have a read() method that returns a :class:`Block` object::
+All IOs have a read() method that returns a list of :class:`Block` objects (representing the whole content of the file)::
 
     >>> bl = reader.read()
-    >>> print bl.segments[0]
+    >>> print bl[0].segments[0]
     neo.core.Segment
 
 
@@ -148,7 +148,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class inherits from the :class:`BaseIO` class.
     - each IO class can read or write directly one or several Neo objects (for example :class:`Segment`, :class:`Block`, ...): see the :attr:`readable_objects` and :attr:`writable_objects` attributes of the IO class.
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
-    - each IO class has a :meth:`read()` method that returns a :class:`Block` even if there is only one :class:`Segment` and one :class:`AnalogSignal` inside.
+    - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
     - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports. 
