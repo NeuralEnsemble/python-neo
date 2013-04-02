@@ -16,12 +16,13 @@ Receipe to develop an IO module for a new data format:
     3. Copy/paste ``exampleio.py`` and choose clear file and class names for your IO.
     4. Decide which **supported objects** and **readable objects** your IO will deal with. This is the crucial point.
     5. Implement all methods :meth:`read_XXX` related to **readable objects**.
-    6. Do not forget all : lasy and cascade combination.
-    7. Write good docstrings. List dependencies, including minimum version numbers.
-    8. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
-    9. Contact the Neo maintainers to put sample files for testing on the G-Node server (write access is not public).
-    10. Write tests in ``neo/test/io/test_xxxxxio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestIO`).
-    11. Commit or send a patch only if all tests pass.
+    6. Optional: If your IO supports reading multiple blocks from one file, implement a :meth:`read_all_blocks` method.
+    7. Do not forget all lazy and cascade combinations.
+    8. Write good docstrings. List dependencies, including minimum version numbers.
+    9. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
+    10. Contact the Neo maintainers to put sample files for testing on the G-Node server (write access is not public).
+    11. Write tests in ``neo/test/io/test_xxxxxio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestIO`).
+    12. Commit or send a patch only if all tests pass.
 
 
 Miscellaneous

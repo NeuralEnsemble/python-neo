@@ -78,6 +78,8 @@ class BaseIO(object):
     ######## General read/write methods #######################
     def read(self, lazy = False, cascade = True,  **kargs):
         if Block in self.readable_objects:
+            if hasattr(self, 'read_all_blocks') and callable(getattr(self, 'read_all_blocks')):
+                return self.read_all_blocks(lazy = lazy, cascade = cascade, **kargs)
             return [self.read_block(lazy = lazy, cascade = cascade, **kargs)]
         elif Segment in self.readable_objects:
             bl = Block(name = 'One segment only')

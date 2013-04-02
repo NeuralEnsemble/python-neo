@@ -580,7 +580,7 @@ class NeoHdf5IO(BaseIO):
         return obj
 
     @_func_wrapper
-    def read(self, lazy=False, cascade=True, **kargs):
+    def read_all_blocks(self, lazy=False, cascade=True, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
