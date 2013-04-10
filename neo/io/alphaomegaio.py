@@ -140,18 +140,6 @@ class AlphaOmegaIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
-    def read(self , **kargs):
-        """
-        Read a file.
-        Return a neo.Block
-        See read_block for more details.
-
-        """
-        # the higher level of my IO is Block so:
-        return self.read_block( **kargs)
-
-
     # write is not supported so I do not overload write method from BaseIO
 
     def read_block(self,
