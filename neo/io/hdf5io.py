@@ -592,6 +592,14 @@ class NeoHdf5IO(BaseIO):
         return blocks
 
     @_func_wrapper
+    def write_all_blocks(self, blocks, **kargs):
+        """
+        Writes a sequence of blocks. Just calls write_block() for each element.
+        """
+        for b in blocks:
+            self.write_block(b)
+
+    @_func_wrapper
     def delete(self, path, cascade=False):
         """
         Deletes an object in the file. Just a simple alternative of removeNode().
