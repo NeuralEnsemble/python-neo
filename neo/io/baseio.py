@@ -11,6 +11,7 @@ BaseIO        - abstract class which should be overridden, managing how a file w
 
 If you want a model for developing a new IO start from exampleIO.
 """
+import collections
 
 from ..core import *
 from .tools import create_many_to_one_relationship
@@ -58,7 +59,7 @@ class BaseIO(object):
     is_writable = False
 
     supported_objects = []
-    readable_objects  = []
+    readable_objects = []
     writeable_objects = []
 
     has_header = False
@@ -68,9 +69,9 @@ class BaseIO(object):
 
     name = 'BaseIO'
     description = 'This IO does not read or write anything'
-    extentions = [ ]
+    extentions = []
 
-    mode = 'file' # or 'fake' or 'dir' or 'database'
+    mode = 'file'  # or 'fake' or 'dir' or 'database'
 
     def __init__(self, filename=None, **kargs):
         self.filename = filename
@@ -94,7 +95,11 @@ class BaseIO(object):
 
     def write(self, bl, **kargs):
         if Block in self.writeable_objects:
-            self.write_block(bl, **kargs)
+            if isinstance(bl, collections.Sequence):
+                assert hasattr(self, 'write_all_blocks'), '%s does not offer to store a sequence of blocks' % self.__class__.__name__
+                self.write_all_blocks(bl, **kargs)
+            else:
+                self.write_block(bl, **kargs)
         elif Segment in self.writeable_objects:
             assert len(bl.segments) == 1, '%s is based on segment so if you try to write a block it must contain only one Segment'% self.__class__.__name__
             self.write_segment(bl.segments[0], **kargs)
