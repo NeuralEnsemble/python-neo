@@ -21,7 +21,7 @@ to put (save()) or retrieve (get()) runtime NEO objects from the file.
 
 Start by initializing IO:
 
->>> from hdf5io import NeoHdf5IO
+>>> from neo.io.hdf5io import NeoHdf5IO
 >>> iom = NeoHdf5IO()
 >>> iom
 <hdf5io.NeoHdf5IO object at 0x7f291ebe6810>
@@ -53,9 +53,9 @@ You may save more complicated NEO stuctures, with relations and arrays:
 >>> import numpy as np
 >>> import quantities as pq
 >>> s = Segment()
->>> b._segments.append(s)
->>> a1 = AnalogSignal(signal=np.random.rand(300), t_start=42*ms)
->>> s._analogsignals.append(a1)
+>>> b.segments.append(s)
+>>> a1 = AnalogSignal(signal=np.random.rand(300), t_start=42*pq.ms)
+>>> s.analogsignals.append(a1)
 
 and then
 
@@ -378,20 +378,20 @@ class NeoHdf5IO(BaseIO):
             """ subfunction to serialize a given attribute """
             if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
                 if not lazy:
+                    # we need to simplify custom quantities
+                    if isinstance(obj_attr, pq.Quantity):
+                        for un in obj_attr.dimensionality.keys():
+                            if not un.name in pq.units.__dict__ or \
+                                    not isinstance(pq.units.__dict__[un.name], pq.Quantity):
+                                obj_attr = obj_attr.simplified
+                                break
+
+                    # we try to create new array first, so not to loose the
+                    # data in case of any failure
                     if obj_attr.size == 0:
                         atom = tb.Float64Atom(shape=(1,))
                         new_arr = self._data.createEArray(path, attr_name + "__temp", atom, shape=(0,), expectedrows=1)
-                    # we try to create new array first, so not to loose the
-                    # data in case of any failure
                     else:
-                        # we need to simplify custom quantities
-                        if isinstance(obj_attr, pq.Quantity):
-                            for un in obj_attr.dimensionality.keys():
-                                if not un.name in pq.units.__dict__ or \
-                                    not isinstance(pq.units.__dict__[un.name], pq.Quantity):
-                                    obj_attr = obj_attr.simplified
-                                    break
-
                         new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
 
                     if hasattr(obj_attr, "dimensionality"):
