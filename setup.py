@@ -4,15 +4,18 @@ from setuptools import setup
 import os
 
 long_description = open("README.txt").read()
+install_requires = ['numpy>=1.3.0',
+                    'quantities>=0.9.0']
+
+if os.environ.get('TRAVIS') == 'true' and \
+    os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
+    install_requires.append('unittest2>=0.5.1')
 
 setup(
     name = "neo",
     version = '0.3.0dev',
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
-    install_requires=[
-                    'numpy>=1.3.0',
-                    'quantities>=0.9.0',
-                    ],
+    install_requires=install_requires,
     author = "Neo authors and contributors",
     author_email = "sgarcia at olfac.univ-lyon1.fr",
     description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats",
