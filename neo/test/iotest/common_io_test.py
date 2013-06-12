@@ -120,6 +120,7 @@ class BaseTestIO(object):
                 else:
                     raise unittest.SkipTest(
                         "Requires download of data from the web")
+    download_test_files_if_not_present.__test__ = False
 
     def generate_files_for_io_able_to_write(self):
         """
