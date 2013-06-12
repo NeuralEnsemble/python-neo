@@ -4,7 +4,7 @@ Tests of elphyio
 """
 
 from __future__ import division
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -16,6 +16,7 @@ import numpy
 
 from neo.test.iotest.common_io_test import BaseTestIO
 
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestElphyIO( BaseTestIO, unittest.TestCase ):
     ioclass = ElphyIO
     files_to_test = [

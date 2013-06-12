@@ -3,7 +3,7 @@
 Tests of io.asciisignalio
 """
 from __future__ import absolute_import, division
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -15,7 +15,7 @@ import numpy
 from .common_io_test import BaseTestIO
 
 
-
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestMicromedIO(BaseTestIO, unittest.TestCase, ):
     ioclass = MicromedIO
     files_to_test = [ 'File_micromed_1.TRC',

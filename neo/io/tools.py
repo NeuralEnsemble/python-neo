@@ -89,7 +89,7 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                 if remove_from_annotation:
                     anasig.channel_index = None
 
-    indexes = np.sort(recordingchannels.keys()).astype('i')
+    indexes = np.sort(list(recordingchannels.keys())).astype('i')
     names = np.array([recordingchannels[idx].name for idx in indexes], dtype='S')
     rcg = RecordingChannelGroup(name = 'all channels',
         channel_indexes = indexes, channel_names=names)
