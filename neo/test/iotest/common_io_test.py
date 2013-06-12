@@ -21,7 +21,10 @@ __test__ = False #
 url_for_tests =  "https://portal.g-node.org/neo/"
 
 import os
-import urllib
+try:
+    from urllib import urlretrieve  # Py2
+except ImportError:  
+    from urllib.request import urlretrieve  # Py3
 import logging
 import tempfile
 
@@ -63,7 +66,7 @@ class BaseTestIO(object):
     files_to_test = [ ] # list of files to test compliances
     files_to_download = [ ] # when files are at G-Node
     # allow environment to tell avoid using network
-    use_network = not os.environ.get('NOSETESTS_NO_NETWORK', False)
+    use_network = not (os.environ.get('NOSETESTS_NO_NETWORK', False) or os.environ.get('TRAVIS') == 'true')
 
     def setUp(self):
         self.local_test_dir = self.create_local_dir_if_not_exists()
@@ -111,7 +114,7 @@ class BaseTestIO(object):
                 if self.use_network:
                     logging.info('Downloading %s here %s' % (distantfile, localfile))
                     try:
-                        urllib.urlretrieve(distantfile, localfile)
+                        urlretrieve(distantfile, localfile)
                     except IOError as e:
                         raise unittest.SkipTest(e)
                 else:
