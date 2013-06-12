@@ -3,7 +3,7 @@
 from setuptools import setup
 import os
 
-long_description = open("README.md").read()
+long_description = open("README.rst").read()
 install_requires = ['numpy>=1.3.0',
                     'quantities>=0.9.0']
 

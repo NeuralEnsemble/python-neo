@@ -1,4 +1,6 @@
-# Neo
+===
+Neo
+===
 
 Neo is a package for representing electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
@@ -19,11 +21,14 @@ which in turn builds on NumPy by adding support for physical dimensions. Thus
 neo objects behave just like normal NumPy arrays, but with additional metadata,
 checks for dimensional consistency and automatic unit conversion.
 
-## Code status
+Code status
+-----------
 
-* [![Build Status](https://travis-ci.org/NeuralEnsemble/python-neo.png)](https://travis-ci.org/NeuralEnsemble/python-neo)
+.. image:: https://secure.travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
+   :target: https://travis-ci.org/NeuralEnsemble/python-neo.png
 
-## More informations
+More information
+----------------
 
 - Home page: http://neuralensemble.org/neo
 - Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
