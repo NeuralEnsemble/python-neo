@@ -204,13 +204,13 @@ have the necessary permissions to do this)::
     $ python setup.py sdist upload
     $ python setup.py upload_docs --upload-dir=doc/build/html
 
-.. I HAVEN'T TESTED THE upload_docs COMMAND YET
-
 .. should we also distribute via software.incf.org
 
-Finally, tag the release in the Git repository::
+Finally, tag the release in the Git repository and push it::
 
     $ git tag <version>
+    $ git push --tags origin
+    
 
 .. make a release branch
 
