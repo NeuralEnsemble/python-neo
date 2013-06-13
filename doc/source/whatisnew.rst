@@ -2,6 +2,17 @@
 Release notes
 *************
 
+
+What's new in version 0.3.0?
+----------------------------
+
+  * various bug fixes in neo.io
+  * added ElphyIO
+  * SpikeTrain performence improved
+  * An IO class now can return a list of Block (see read_all_blocks in IOs)
+  * python3 compatibility improved
+
+
 What's new in version 0.2.1?
 ----------------------------
 

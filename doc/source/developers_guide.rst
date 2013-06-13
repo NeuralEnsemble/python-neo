@@ -189,6 +189,8 @@ Making a release
 
 .. TODO: discuss branching/tagging policy.
 
+Add a section in /doc/src/whatisnew.rst for the release.
+
 First check that the version string (in :file:`neo/version.py`, :file:`setup.py`,
 :file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
 
