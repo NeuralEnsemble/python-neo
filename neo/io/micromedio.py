@@ -182,7 +182,7 @@ class MicromedIO(BaseIO):
             triggers = np.fromstring(f.read(length) , dtype = [('pos','u4'), ('label', label_dtype)] ,  )
             ea = EventArray(name =zname[0]+zname[1:].lower())
             if not lazy:
-                keep = (triggers['pos']>triggers['pos'][0]) & (triggers['pos']<rawdata.shape[0]) & (triggers['pos']!=0)
+                keep = (triggers['pos']>=triggers['pos'][0]) & (triggers['pos']<rawdata.shape[0]) & (triggers['pos']!=0)
                 triggers = triggers[keep]
                 ea.labels = triggers['label'].astype('S')
                 ea.times = (triggers['pos']/sampling_rate).rescale('s')
