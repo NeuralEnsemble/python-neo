@@ -22,8 +22,8 @@ def check_has_dimensions_time(*values):
     errmsgs = []
     for value in values:
         dim = value.dimensionality
-        if (len(dim) != 1 or dim.values()[0] != 1 or
-                not isinstance(dim.keys()[0], pq.UnitTime)):
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or
+                not isinstance(list(dim.keys())[0], pq.UnitTime)):
             errmsgs.append("value %s has dimensions %s, not [time]" %
                            (value, dim.simplified))
     if errmsgs:
@@ -180,8 +180,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # check to make sure the units are time
         # this approach is orders of magnitude faster than comparing the
         # reference dimensionality
-        if (len(dim) != 1 or dim.values()[0] != 1 or
-                not isinstance(dim.keys()[0], pq.UnitTime)):
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or
+                not isinstance(list(dim.keys())[0], pq.UnitTime)):
             ValueError("Unit %s has dimensions %s, not [time]" %
                        (units, dim.simplified))
 

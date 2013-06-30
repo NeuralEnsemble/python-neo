@@ -3,7 +3,7 @@
 Tests of io.tdtio
 """
 from __future__ import absolute_import, division
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -18,7 +18,7 @@ from .common_io_test import BaseTestIO
 
 
 
-
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestTdtIOIO(BaseTestIO, unittest.TestCase, ):
     ioclass = TdtIO
     files_to_test = [ 'aep_05'

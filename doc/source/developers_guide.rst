@@ -189,6 +189,8 @@ Making a release
 
 .. TODO: discuss branching/tagging policy.
 
+Add a section in /doc/src/whatisnew.rst for the release.
+
 First check that the version string (in :file:`neo/version.py`, :file:`setup.py`,
 :file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
 
@@ -202,13 +204,13 @@ have the necessary permissions to do this)::
     $ python setup.py sdist upload
     $ python setup.py upload_docs --upload-dir=doc/build/html
 
-.. I HAVEN'T TESTED THE upload_docs COMMAND YET
-
 .. should we also distribute via software.incf.org
 
-Finally, tag the release in the Git repository::
+Finally, tag the release in the Git repository and push it::
 
     $ git tag <version>
+    $ git push --tags origin
+    
 
 .. make a release branch
 

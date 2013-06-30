@@ -3,6 +3,9 @@
 Class for reading/writing data from micromed (.trc).
 Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
 
+Completed with matlab Guillaume BECQ code.
+
+
 Supported : Read
 
 
@@ -49,7 +52,7 @@ class MicromedIO(BaseIO):
     is_readable        = True
     is_writable        = False
 
-    supported_objects            = [ Segment , AnalogSignal , EventArray ]
+    supported_objects            = [ Segment , AnalogSignal , EventArray, EpochArray ]
     readable_objects    = [Segment]
     writeable_objects    = [ ]
 
@@ -77,11 +80,7 @@ class MicromedIO(BaseIO):
     def read_segment(self, cascade = True, lazy = False,):
         """
         Arguments:
-
         """
-
-
-
         f = struct_file(self.filename, 'rb')
 
         #Name
@@ -90,39 +89,44 @@ class MicromedIO(BaseIO):
         while surname[-1] == ' ' :
             if len(surname) == 0 :break
             surname = surname[:-1]
-        name = f.read(20)
-        while name[-1] == ' ' :
-            if len(name) == 0 :break
-            name = name[:-1]
+        firstname = f.read(20)
+        while firstname[-1] == ' ' :
+            if len(firstname) == 0 :break
+            firstname = firstname[:-1]
 
         #Date
         f.seek(128,0)
-        day, month, year = f.read_f('bbb')
-        rec_date = datetime.date(year+1900 , month , day)
+        day, month, year, hour, min, sec = f.read_f('bbbbbb')
+        rec_datetime = datetime.datetime(year+1900 , month , day, hour, min, sec)
 
-        #header
+        f.seek(138,0)
+        Data_Start_Offset , Num_Chan , Multiplexer , Rate_Min , Bytes = f.read_f('IHHHH')
+        #~ print Num_Chan, Bytes
+
+        #header version
         f.seek(175,0)
         header_version, = f.read_f('b')
         assert header_version == 4
 
-        f.seek(138,0)
-        Data_Start_Offset , Num_Chan , Multiplexer , Rate_Min , Bytes = f.read_f('IHHHH')
-        f.seek(176+8,0)
-        Code_Area , Code_Area_Length, = f.read_f('II')
-        f.seek(192+8,0)
-        Electrode_Area , Electrode_Area_Length = f.read_f('II')
-        f.seek(400+8,0)
-        Trigger_Area , Tigger_Area_Length=f.read_f('II')
-
-        seg = Segment(  name = name,
+        seg = Segment(  name = firstname+' '+surname,
                                     file_origin = os.path.basename(self.filename),
                                     )
         seg.annotate(surname = surname)
-        seg.annotate(rec_date = rec_date)
+        seg.annotate(firstname = firstname)
+        seg.annotate(rec_datetime = rec_datetime)
 
         if not cascade:
             return seg
 
+        # area
+        f.seek(176,0)
+        zone_names = ['ORDER', 'LABCOD', 'NOTE', 'FLAGS', 'TRONCA', 'IMPED_B', 'IMPED_E', 'MONTAGE',
+                'COMPRESS', 'AVERAGE', 'HISTORY', 'DVIDEO', 'EVENT A', 'EVENT B', 'TRIGGER']
+        zones = { }
+        for zname in zone_names:
+            zname2, pos, length = f.read_f('8sII')
+            zones[zname] = zname2, pos, length
+            #~ print zname2, pos, length
 
         # reading raw data
         if not lazy:
@@ -131,13 +135,15 @@ class MicromedIO(BaseIO):
             rawdata = rawdata.reshape(( rawdata.size/Num_Chan , Num_Chan))
 
         # Reading Code Info
-        f.seek(Code_Area,0)
+        zname2, pos, length = zones['ORDER']
+        f.seek(pos,0)
         code = np.fromfile(f, dtype='u2', count=Num_Chan)
 
         units = {-1: pq.nano*pq.V, 0:pq.uV, 1:pq.mV, 2:1, 100: pq.percent,  101:pq.dimensionless, 102:pq.dimensionless}
 
         for c in range(Num_Chan):
-            f.seek(Electrode_Area+code[c]*128+2,0)
+            zname2, pos, length = zones['LABCOD']
+            f.seek(pos+code[c]*128+2,0)
 
             label = f.read(6).strip("\x00")
             ground = f.read(6).strip("\x00")
@@ -161,7 +167,6 @@ class MicromedIO(BaseIO):
             anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                   name=label, channel_index=c)
             if lazy:
-                #TODO
                 anaSig.lazy_shape = None
             anaSig.annotate(ground = ground)
 
@@ -170,26 +175,40 @@ class MicromedIO(BaseIO):
 
         sampling_rate = np.mean([ anaSig.sampling_rate for anaSig in seg.analogsignals ])*pq.Hz
 
-        # Read trigger
-        f.seek(Trigger_Area,0)
-        ea = EventArray()
-        if not lazy:
-            labels = [ ]
-            times = [ ]
-            first_trig = 0
-            for i in range(0,Tigger_Area_Length/6) :
-                pos , label = f.read_f('IH')
-                if i == 0:
-                    first_trig = pos
-                if ( pos > first_trig ) and (pos < rawdata.shape[0]) :
-                    labels.append(str(label))
-                    times.append(pos/sampling_rate)
-            ea.labels = np.array(labels)
-            ea.times = times*pq.s
-        else:
-            ea.lazy_shape = Tigger_Area_Length/6
-        seg.eventarrays.append(ea)
-
+        # Read trigger and notes
+        for zname, label_dtype in [ ('TRIGGER', 'u2'), ('NOTE', 'S40') ]:
+            zname2, pos, length = zones[zname]
+            f.seek(pos,0)
+            triggers = np.fromstring(f.read(length) , dtype = [('pos','u4'), ('label', label_dtype)] ,  )
+            ea = EventArray(name =zname[0]+zname[1:].lower())
+            if not lazy:
+                keep = (triggers['pos']>=triggers['pos'][0]) & (triggers['pos']<rawdata.shape[0]) & (triggers['pos']!=0)
+                triggers = triggers[keep]
+                ea.labels = triggers['label'].astype('S')
+                ea.times = (triggers['pos']/sampling_rate).rescale('s')
+            else:
+                ea.lazy_shape = triggers.size
+            seg.eventarrays.append(ea)
+        
+        # Read Event A and B
+        # Not so well  tested
+        for zname in ['EVENT A', 'EVENT B']:
+            zname2, pos, length = zones[zname]
+            f.seek(pos,0)
+            epochs = np.fromstring(f.read(length) , 
+                            dtype = [('label','u4'),('start','u4'),('stop','u4'),]  )
+            ep = EpochArray(name =zname[0]+zname[1:].lower())
+            if not lazy:
+                keep = (epochs['start']>0) & (epochs['start']<rawdata.shape[0]) & (epochs['stop']<rawdata.shape[0])
+                epochs = epochs[keep]
+                ep.labels = epochs['label'].astype('S')
+                ep.times = (epochs['start']/sampling_rate).rescale('s')
+                ep.durations = ((epochs['stop'] - epochs['start'])/sampling_rate).rescale('s')
+            else:
+                ep.lazy_shape = triggers.size
+            seg.epocharrays.append(ep)
+        
+        
         create_many_to_one_relationship(seg)
         return seg
 

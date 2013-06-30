@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -40,6 +40,7 @@ import tempfile
         #~ self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
             #~ [0.026, 0.122, 0.228])))
 
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWrite(unittest.TestCase):
     def setUp(self):
         self.datadir = os.path.join(tempfile.gettempdir(),
@@ -136,6 +137,7 @@ class testWrite(unittest.TestCase):
         # Empty out test session again
         #~ delete_test_session()
 
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testRead(unittest.TestCase):
     def setUp(self):
         self.fn = os.path.join(tempfile.gettempdir(),
@@ -190,6 +192,7 @@ class testRead(unittest.TestCase):
             [-6., 4., 5.] * pq.mV, .0001)
 
 
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class CommonTests(BaseTestIO, unittest.TestCase ):
     ioclass = neo.io.BlackrockIO
     read_and_write_is_bijective = False

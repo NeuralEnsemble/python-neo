@@ -227,7 +227,7 @@ class BlackrockIO(BaseIO):
 
         Variable names are consistent with the Neuroshare specification.
         """
-        fi = file(self.filename, 'wb')
+        fi = open(self.filename, 'wb')
         self._write_header(block, fi)
 
         # Write each segment in order

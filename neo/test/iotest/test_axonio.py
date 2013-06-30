@@ -3,7 +3,7 @@
 Tests of io.axonio
 """
 from __future__ import absolute_import
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -12,7 +12,7 @@ except ImportError:
 from ...io import AxonIO
 from .common_io_test import BaseTestIO
 
-
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestAxonIO(BaseTestIO, unittest.TestCase):
     files_to_test = ['File_axon_1.abf',
                      'File_axon_2.abf',

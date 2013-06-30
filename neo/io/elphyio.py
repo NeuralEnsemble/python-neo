@@ -98,8 +98,6 @@ from .tools import populate_RecordingChannel, create_many_to_one_relationship
 import numpy as np
 import quantities as pq
 
-np.random.seed(1234)
-
 # ElphyIO depends on:
 import numpy
 from quantities import s, ms, Hz, kHz

@@ -1,3 +1,7 @@
+===
+Neo
+===
+
 Neo is a package for representing electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for
@@ -17,9 +21,18 @@ which in turn builds on NumPy by adding support for physical dimensions. Thus
 neo objects behave just like normal NumPy arrays, but with additional metadata,
 checks for dimensional consistency and automatic unit conversion.
 
-Documentation is available at http://packages.python.org/neo/
+Code status
+-----------
 
-The project home page is at http://neuralensemble.org/neo
+.. image:: https://secure.travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
+   :target: https://travis-ci.org/NeuralEnsemble/python-neo.png
+
+More information
+----------------
+
+- Home page: http://neuralensemble.org/neo
+- Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
+- Documentation: http://packages.python.org/neo/
 
 For installation instructions, see doc/source/install.rst
 

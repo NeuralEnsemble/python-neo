@@ -57,8 +57,8 @@ To download and install manually, download:
 
 Then::
 
-    $ tar xzf neo-0.3.0.tar.gz
-    $ cd neo-0.3.0
+    $ tar xzf neo-0.3.1.tar.gz
+    $ cd neo-0.3.1
     $ python setup.py install
     
 or::

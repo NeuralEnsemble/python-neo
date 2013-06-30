@@ -3,7 +3,7 @@
 Tests of io.NeuroExplorerIO
 """
 from __future__ import absolute_import, division
-
+import sys
 try:
     import unittest2 as unittest
 except ImportError:
@@ -15,7 +15,7 @@ import numpy
 from .common_io_test import BaseTestIO
 
 
-
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuroExplorerIO
     files_to_test = [ 'File_neuroexplorer_1.nex',

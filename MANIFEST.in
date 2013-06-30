@@ -1,3 +1,4 @@
+include README.rst
 prune drafts
 include examples/*.py
 recursive-include doc *
