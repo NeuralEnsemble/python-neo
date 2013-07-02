@@ -3704,7 +3704,7 @@ class ElphyIO(BaseIO):
         >>> r.write_block( bl )
     """
     is_readable = True # This class can read data
-    is_writable = True # This class can write data
+    is_writable = False # This class can write data
     # This class is able to directly or indirectly handle the following objects
     supported_objects  = [ Block, Segment, AnalogSignalArray, SpikeTrain ] #, AnalogSignal
     # This class can return a Block
@@ -3725,7 +3725,7 @@ class ElphyIO(BaseIO):
     # do not supported write so no GUI stuff
     write_params       = {
     }
-    name               = 'ElphyExample'
+    name               = 'Elphy IO'
     extensions         = [ 'DAT' ]
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     mode = 'file' 
