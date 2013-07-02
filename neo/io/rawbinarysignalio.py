@@ -150,12 +150,8 @@ class RawBinarySignalIO(BaseIO):
         create_many_to_one_relationship(seg)
         return seg
 
-    def write_segment(self, segment,
-                                dtype = 'f4',
-                                rangemin = -10,
-                                rangemax = 10,
-                                bytesoffset = 0,
-                            ):
+    def write_segment(self, segment, dtype='f4', rangemin=-10,
+                      rangemax=10, bytesoffset=0):
         """
 
          **Arguments**
@@ -172,18 +168,18 @@ class RawBinarySignalIO(BaseIO):
         for anasig in segment.analogsignals[1:]:
             assert anasig.size == segment.analogsignals[0].size
 
-        sigs = np.empty( (segment._analogsignals[0].size, len(segment._analogsignals)) )
-        for i,anasig in enumerate(segment.analogsignals):
-            sigs[:,i] = anasig.magnitude
+        sigs = np.empty((segment.analogsignals[0].size, len(segment.analogsignals)))
+        for i, anasig in enumerate(segment.analogsignals):
+            sigs[:, i] = anasig.magnitude
 
-        if dtype.kind == 'i' :
+        if dtype.kind == 'i':
             sigs /= (rangemax - rangemin)
-            sigs *= 2**(8*dtype.itemsize-1)
+            sigs *= 2 ** (8 * dtype.itemsize - 1)
             sigs = sigs.astype(dtype)
         else:
             sigs = sigs.astype(dtype)
-        f = open(self.filename , 'wb')
-        f.write( sigs.tostring() )
+        f = open(self.filename, 'wb')
+        f.write(sigs.tostring())
         f.close()
 
 
