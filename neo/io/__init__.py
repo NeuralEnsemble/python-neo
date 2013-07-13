@@ -54,6 +54,7 @@ neo.io.iolist provides the classes list of succesfully imported io.
 """
 
 import warnings
+import os.path
 
 iolist = []
 
@@ -198,3 +199,20 @@ try:
     iolist.append( ElphyIO )
 except ImportError:
     warnings.warn("ElphyIO not available, check dependencies", ImportWarning)
+
+
+def get_io(filename):
+    """
+    Return a Neo IO instance, guessing the type based on the filename suffix.
+    """
+    extension = os.path.splitext(filename)[1]
+    if extension in (".ras", ".v", ".gsyn"):
+        return PyNNTextIO(filename=filename)
+    elif extension in (".h5",):
+        return NeoHdf5IO(filename=filename)
+    elif extension in (".pkl", ".pickle"):
+        return PickleIO(filename=filename)
+    elif extension == ".mat":
+        return NeoMatlabIO(filename=filename)
+    else: # function to be improved later
+        raise IOError("file extension %s not registered" % extension)
