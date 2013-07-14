@@ -22,17 +22,11 @@ to put (save()) or retrieve (get()) runtime NEO objects from the file.
 Start by initializing IO:
 
 >>> from neo.io.hdf5io import NeoHdf5IO
->>> iom = NeoHdf5IO()
+>>> iom = NeoHdf5IO('myfile.h5')
 >>> iom
 <hdf5io.NeoHdf5IO object at 0x7f291ebe6810>
 
-The file is created automatically (filename can be changed in "settings"
-option). So you can also do
-
->>> iom = NeoHdf5IO(filename="myfile.h5")
-
-Now you may save any of your neo object into the file (assuming your NEO objects
-are in the pythonpath):
+Now you may save any of your neo objects into the file:
 
 >>> b = Block()
 >>> iom.write_block(b)
@@ -196,11 +190,10 @@ from __future__ import absolute_import
 from ..core import *
 from ..description import *
 from .baseio import BaseIO
-from .tools import create_many_to_one_relationship
+from .tools import create_many_to_one_relationship, LazyList
 from tables import NoSuchNodeError as NSNE
 import tables as tb
 import numpy as np
-import quantities as pq
 import logging
 import uuid
 
@@ -212,15 +205,6 @@ logger = logging.getLogger("Neo")
 from distutils import version
 if version.LooseVersion(tables.__version__) < '2.2':
     raise ImportError("your pytables version is too old to support NeoHdf5IO, you need at least 2.2 you have %s"%tables.__version__)
-
-
-"""
-SETTINGS:
-filename:       the full path to the HDF5 file.
-cascade:        If 'True' all children are retrieved when get(object) is called.
-lazy:           If 'True' data (arrays) is retrieved when get(object) is called.
-"""
-settings = {'filename': "neo.h5", 'cascade': True, 'lazy': True}
 
 
 def _func_wrapper(func):
@@ -241,6 +225,12 @@ all_objects = [Block] + all_objects
 # Types where an object might have to be loaded multiple times to create
 # all realtionships
 complex_relationships = ["Unit", "Segment", "RecordingChannel"]
+
+# Data objects which have multiple parents (Segment and one other)
+multi_parent = {'AnalogSignal': 'RecordingChannel',
+                          'AnalogSignalArray': 'RecordingChannelGroup',
+                          'IrregularlySampledSignal': 'RecordingChannel',
+                          'Spike': 'Unit', 'SpikeTrain': 'Unit'}
 
 # Arrays node names for lazy shapes
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
@@ -266,19 +256,23 @@ class NeoHdf5IO(BaseIO):
     is_readable = True
     is_writable = True
 
-    def __init__(self, filename=settings['filename'], **kwargs):
+
+    def __init__(self, filename=None, **kwargs):
         BaseIO.__init__(self, filename=filename)
         self.connected = False
-        self.objects_by_ref = {}
+        self.objects_by_ref = {}  # Loaded objects by reference id
+        self.parent_paths = {}  # Tuples of (Segment, other parent) paths
         self.name_indices = {}
-        self.connect(filename=filename)
+        if filename:
+            self.connect(filename=filename)
 
-    def _read_entity(self, path="/", cascade=True, lazy=False):
+    def _read_entity(self, path="/", cascade=1, lazy=False):
         """
         Wrapper for base io "reader" functions.
         """
         ob = self.get(path, cascade, lazy)
-        create_many_to_one_relationship(ob)
+        if cascade == 1:
+            create_many_to_one_relationship(ob)
         return ob
 
     def _write_entity(self, obj, where="/", cascade=True, lazy=False):
@@ -291,7 +285,7 @@ class NeoHdf5IO(BaseIO):
     # IO connectivity / Session management
     #-------------------------------------------
 
-    def connect(self, filename=settings['filename']):
+    def connect(self, filename):
         """
         Opens / initialises new HDF5 file.
         We rely on PyTables and keep all session management staff there.
@@ -319,6 +313,8 @@ class NeoHdf5IO(BaseIO):
         Closes the connection.
         """
         self.objects_by_ref = {}
+        self.parent_paths = {}
+        self.name_indices = {}
         self._data.close()
         self.connected = False
 
@@ -376,7 +372,7 @@ class NeoHdf5IO(BaseIO):
     @_func_wrapper
     def save(self, obj, where="/", cascade=True, lazy=False):
         """ Saves changes of a given object to the file. Saves object as new at
-        location "where" if it is not in the file yet.
+        location "where" if it is not in the file yet. Returns saved node.
 
         cascade: True/False process downstream relationships
         lazy: True/False process any quantity/ndarray attributes """
@@ -443,6 +439,7 @@ class NeoHdf5IO(BaseIO):
             rels = list(one_to_many_relationship[obj_type])
             if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_relationship[obj_type]
+
             for child_name in rels: # child_name like "Segment", "Event" etc.
                 container = child_name.lower() + "s" # like "units"
                 try:
@@ -461,16 +458,164 @@ class NeoHdf5IO(BaseIO):
                                 if not hasattr(ch, new_name): # Only link if path does not exist
                                     self._data.createHardLink(ch._v_pathname, new_name, target)
                             except NSNE: pass
-                    self.save(child, where=ch._v_pathname)
-                    if not new_name: new_name = child.hdf5_name
+                    child_node = self.save(child, where=ch._v_pathname)
+
+                    if child_name in multi_parent: # Save parent for multiparent objects
+                        child_node._f_setAttr(obj_type.lower(), path)
+                    elif child_name == 'RecordingChannel':
+                        parents = []
+                        if 'recordingchannelgroups' in child_node._v_attrs:
+                            parents = child_node._v_attrs['recordingchannelgroups']
+                        parents.append(path)
+                        child_node._f_setAttr('recordingchannelgroups', parents)
+                    if not new_name:
+                        new_name = child.hdf5_name
                     saved.append(new_name)
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
                         self._data.removeNode(ch._v_pathname, child._v_name, recursive=True)
+
         self._update_path(obj, node)
+        return node
+
+    def _get_parent(self, path, ref, parent_type):
+        """ Return the path of the parent of type "parent_type" for the object
+        in "path" with id "ref".
+        """
+        parts = path.split('/')
+
+        if parent_type == 'Block' or parts[-4] == parent_type.lower() + 's':
+            return '/'.join(parts[:-2])
+
+        object_folder = parts[-2]
+        parent_folder = parts[-4]
+        if parent_folder in ('recordingchannels', 'units'):
+            block_path = '/'.join(parts[:-6])
+        else:
+            block_path = '/'.join(parts[:-4])
+
+        if parent_type in ('RecordingChannel', 'Unit'):
+            # We need to search all recording channels
+            path = block_path + '/recordingchannelgroups'
+            for n in self._data.iterNodes(path):
+                if not '_type' in n._v_attrs:
+                    continue
+                p = self._search_parent(
+                    '%s/%ss' % (n._v_pathname, parent_type.lower()),
+                    object_folder, ref)
+                if p is not None:
+                    return p
+            return None
+
+        if parent_type == 'Segment':
+            path = block_path + '/segments'
+        elif parent_type == 'RecordingChannelGroup':
+            path = block_path + '/recordingchannelgroups'
+        else:
+            return None
+
+        return self._search_parent(path, object_folder, ref)
+
+    def _get_rcgs(self, path, ref):
+        """ Get RecordingChannelGroup parents for a RecordingChannel
+        """
+        parts = path.split('/')
+        object_folder = parts[-2]
+        block_path = '/'.join(parts[:-4])
+        path = block_path + '/recordingchannelgroups'
+        return self._search_parent(path, object_folder, ref, True)
+
+    def _search_parent(self, path, object_folder, ref, multi=False):
+        """ Searches a folder for an object with a given reference
+        and returns the path of the parent node.
+
+        :param str path: Path to search
+        :param str object_folder: The name of the folder within the parent
+            object containing the objects to search.
+        :param ref: Object reference
+        """
+        if multi:
+            ret = []
+        else:
+            ret = None
+
+        for n in self._data.iterNodes(path):
+            if not '_type' in n._v_attrs:
+                continue
+            for c in self._data.iterNodes(n._f_getChild(object_folder)):
+                try:
+                    if c._f_getAttr("object_ref") == ref:
+                        if not multi:
+                            return n._v_pathname
+                        else:
+                            ret.append(n._v_pathname)
+                except AttributeError:  # alien node
+                    pass  # not an error
+
+        return ret
+
+    _second_parent = {  # Second parent type apart from Segment
+        'AnalogSignal': 'RecordingChannel',
+        'AnalogSignalArray': 'RecordingChannelGroup',
+        'IrregularlySampledSignal': 'RecordingChannel',
+        'Spike': 'Unit', 'SpikeTrain': 'Unit'}
+
+    def load_lazy_cascade(self, path, lazy):
+        """ Load an object with the given path in lazy cascade mode.
+        """
+        o = self.get(path, cascade=2, lazy=lazy)
+        t = type(o).__name__
+        node = self._data.getNode(path)
+
+        if t in multi_parent:  # Try to read parent objects from attributes
+            if not path in self.parent_paths:
+                ppaths = [None, None]
+                if 'segment' in node._v_attrs:
+                    ppaths[0] = node._f_getAttr('segment')
+                if multi_parent[t] in node._v_attrs:
+                    ppaths[1] = node._f_getAttr(multi_parent[t])
+                self.parent_paths[path] = ppaths
+        elif  t == 'RecordingChannel':
+            if not path in self.parent_paths:
+                if 'recordingchannelgroups' in node._v_attrs:
+                    self.parent_paths[path] = node._f_getAttr('recordingchannelgroups')
+
+        # Set parent objects
+        if path in self.parent_paths:
+            paths = self.parent_paths[path]
+
+            if t == 'RecordingChannel':  # Set list of parnet channel groups
+                for rcg in self.parent_paths[path]:
+                    o.recordingchannelgroups.append(self.get(rcg, cascade=2, lazy=lazy))
+            else:  # Set parents: Segment and another parent
+                if paths[0] is None:
+                    paths[0] = self._get_parent(
+                        path, self._data.getNodeAttr(path, 'object_ref'),
+                        'Segment')
+                o.segment = self.get(paths[0], cascade=2, lazy=lazy)
+
+                parent = self._second_parent[t]
+                if paths[1] is None:
+                    paths[1] = self._get_parent(
+                        path, self._data.getNodeAttr(path, 'object_ref'),
+                        parent)
+                setattr(o, parent.lower(), self.get(paths[1], cascade=2, lazy=lazy))
+        elif t != 'Block':
+            ref = self._data.getNodeAttr(path, 'object_ref')
+
+            if t == 'RecordingChannel':
+                rcg_paths = self._get_rcgs(path, ref)
+                for rcg in rcg_paths:
+                    o.recordingchannelgroups.append(self.get(rcg, cascade=2, lazy=lazy))
+                self.parent_paths[path] = rcg_paths
+            else:
+                for p in many_to_one_relationship[t]:
+                    parent = self._get_parent(path, ref, p)
+                    setattr(o, p.lower(), self.get(parent, cascade=2, lazy=lazy))
+        return o
 
     @_func_wrapper
-    def get(self, path="/", cascade=True, lazy=False):
+    def get(self, path="/", cascade=1, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
         def fetch_attribute(attr_name):
             """ fetch required attribute from the corresp. node in the file """
@@ -507,7 +652,7 @@ class NeoHdf5IO(BaseIO):
 
         if path == "/":  # this is just for convenience. Try to return any object
             found = False
-            for n in self._data.listNodes(path):
+            for n in self._data.iterNodes(path):
                 for obj_type in class_by_name.keys():
                     if obj_type.lower() in str(n._v_name).lower():
                         path = n._v_pathname
@@ -520,9 +665,9 @@ class NeoHdf5IO(BaseIO):
             node = self._data.getNode(path)
         except (NSNE, ValueError):  # create a new node?
             raise LookupError("There is no valid object with a given path " +
-                              str(path) + " . Please give correct path or just browse the file \
-                (e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an \
-                appropriate name.")
+                              str(path) + ' . Please give correct path or just browse the file '
+                              '(e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an '
+                              'appropriate name.')
         classname = self._get_class_by_node(node)
         if not classname:
             raise LookupError("The requested object with the path " + str(path) +
@@ -535,7 +680,7 @@ class NeoHdf5IO(BaseIO):
             object_ref = None
         if object_ref in self.objects_by_ref:
             obj = self.objects_by_ref[object_ref]
-            if obj_type not in complex_relationships:
+            if cascade == 2 or obj_type not in complex_relationships:
                 return obj
         else:
             kwargs = {}
@@ -563,24 +708,31 @@ class NeoHdf5IO(BaseIO):
                 rels = list(one_to_many_relationship[obj_type])
                 if obj_type == "RecordingChannelGroup":
                     rels += many_to_many_relationship[obj_type]
-                for child in rels: # 'child' is like 'Segment', 'Event' etc.
-                    relatives = []
+                for child in rels:  # 'child' is like 'Segment', 'Event' etc.
+                    if cascade == 2:
+                        relatives = LazyList(self, lazy)
+                    else:
+                        relatives = []
                     container = self._data.getNode(node, child.lower() + "s")
-                    for n in self._data.listNodes(container):
-                        try:
-                            if n._f_getAttr("_type") == child:
-                                relatives.append(self.get(n._v_pathname, lazy=lazy))
-                        except AttributeError: # alien node
-                            pass # not an error
+                    for n in self._data.iterNodes(container):
+                        if cascade == 2:
+                            relatives.append(n._v_pathname)
+                        else:
+                            try:
+                                if n._f_getAttr("_type") == child:
+                                    relatives.append(self.get(n._v_pathname, lazy=lazy))
+                            except AttributeError:  # alien node
+                                pass  # not an error
                     setattr(obj, child.lower() + "s", relatives)
-                    # RC -> AnalogSignal relationship will not be created later, do it now
-                    if obj_type == "RecordingChannel" and child == "AnalogSignal":
-                        for r in relatives:
-                            r.recordingchannel = obj
-                    # Cannot create Many-to-Many relationship with old format, create at least One-to-Many
-                    if obj_type == "RecordingChannelGroup" and not object_ref:
-                        for r in relatives:
-                            r.recordingchannelgroups = [obj]
+                    if not cascade == 2:
+                        # RC -> AnalogSignal relationship will not be created later, do it now
+                        if obj_type == "RecordingChannel" and child == "AnalogSignal":
+                            for r in relatives:
+                                r.recordingchannel = obj
+                        # Cannot create Many-to-Many relationship with old format, create at least One-to-Many
+                        if obj_type == "RecordingChannelGroup" and not object_ref:
+                            for r in relatives:
+                                r.recordingchannelgroups = [obj]
             # special processor for RC -> RCG
             if obj_type == "RecordingChannel":
                 if hasattr(node, '_v_parent'):
@@ -593,13 +745,13 @@ class NeoHdf5IO(BaseIO):
         return obj
 
     @_func_wrapper
-    def read_all_blocks(self, lazy=False, cascade=True, **kargs):
+    def read_all_blocks(self, lazy=False, cascade=1, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
         """
         blocks = []
-        for n in self._data.listNodes(self._data.root):
+        for n in self._data.iterNodes(self._data.root):
             if self._get_class_by_node(n) == Block:
                 blocks.append(self.read_block(n._v_pathname, lazy=lazy, cascade=cascade, **kargs))
         return blocks
