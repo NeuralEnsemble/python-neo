@@ -614,6 +614,12 @@ class NeoHdf5IO(BaseIO):
                     setattr(o, p.lower(), self.get(parent, cascade=2, lazy=lazy))
         return o
 
+    def load_lazy_object(self, obj):
+        """ Return the fully loaded version of a lazily loaded object. Does not
+        set links to parent objects.
+        """
+        return self.get(obj.hdf5_path, cascade=0, lazy=False)
+
     @_func_wrapper
     def get(self, path="/", cascade=1, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
