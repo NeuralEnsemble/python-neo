@@ -228,9 +228,9 @@ complex_relationships = ["Unit", "Segment", "RecordingChannel"]
 
 # Data objects which have multiple parents (Segment and one other)
 multi_parent = {'AnalogSignal': 'RecordingChannel',
-                          'AnalogSignalArray': 'RecordingChannelGroup',
-                          'IrregularlySampledSignal': 'RecordingChannel',
-                          'Spike': 'Unit', 'SpikeTrain': 'Unit'}
+                'AnalogSignalArray': 'RecordingChannelGroup',
+                'IrregularlySampledSignal': 'RecordingChannel',
+                'Spike': 'Unit', 'SpikeTrain': 'Unit'}
 
 # Arrays node names for lazy shapes
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
@@ -411,8 +411,8 @@ class NeoHdf5IO(BaseIO):
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
         if self._data.mode != 'w' and hasattr(obj, "hdf5_path"): # this is an update case
+            path = str(obj.hdf5_path)
             try:
-                path = str(obj.hdf5_path)
                 node = self._data.getNode(obj.hdf5_path)
             except NSNE:  # create a new node?
                 raise LookupError("A given object has a path %s attribute, \
@@ -684,7 +684,8 @@ class NeoHdf5IO(BaseIO):
             object_ref = self._data.getNodeAttr(node, 'object_ref')
         except AttributeError:  # Object does not have reference, e.g. because this is an old file format
             object_ref = None
-        if object_ref in self.objects_by_ref:
+        if object_ref in self.objects_by_ref and (lazy or
+                not hasattr(self.objects_by_ref[object_ref], 'lazy_shape')):
             obj = self.objects_by_ref[object_ref]
             if cascade == 2 or obj_type not in complex_relationships:
                 return obj
@@ -706,7 +707,7 @@ class NeoHdf5IO(BaseIO):
             except AttributeError:
                 pass  # not assigned, continue
 
-        if object_ref:
+        if object_ref and (lazy or not hasattr(obj, 'lazy_shape')):
             self.objects_by_ref[object_ref] = obj
         # load relationships
         if cascade:
