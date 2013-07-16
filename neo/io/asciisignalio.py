@@ -203,7 +203,7 @@ class AsciiSignalIO(BaseIO):
         """
         l = [ ]
         if writetimecolumn is not None:
-            l.append(segment._analogsignals[0].times[:,newaxis])
+            l.append(segment.analogsignals[0].times[:,newaxis])
         for anaSig in segment.analogsignals:
             l.append(anaSig.magnitude[:,newaxis])
         sigs = np.concatenate(l, axis=1)
