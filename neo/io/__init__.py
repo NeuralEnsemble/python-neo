@@ -205,14 +205,9 @@ def get_io(filename):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
-    extension = os.path.splitext(filename)[1]
-    if extension in (".ras", ".v", ".gsyn"):
-        return PyNNTextIO(filename=filename)
-    elif extension in (".h5",):
-        return NeoHdf5IO(filename=filename)
-    elif extension in (".pkl", ".pickle"):
-        return PickleIO(filename=filename)
-    elif extension == ".mat":
-        return NeoMatlabIO(filename=filename)
-    else: # function to be improved later
-        raise IOError("file extension %s not registered" % extension)
+    extension = os.path.splitext(filename)[1][1:]
+    for io in iolist:
+        if extension in io.extensions:
+            return io(filename=filename)
+
+    raise IOError("file extension %s not registered" % extension)

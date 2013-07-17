@@ -209,7 +209,7 @@ class PyNNTextIO(BasePyNNIO):
     Reads/writes data from/to PyNN StandardTextFile format
     """
     name = "PyNN StandardTextFile"
-    extensions = ['txt', 'v', 'ras']
+    extensions = ['v', 'ras', 'gsyn']
 
     def _read_metadata(self):
         metadata = {}
