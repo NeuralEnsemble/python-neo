@@ -256,7 +256,6 @@ class NeoHdf5IO(BaseIO):
     is_readable = True
     is_writable = True
 
-
     def __init__(self, filename=None, **kwargs):
         BaseIO.__init__(self, filename=filename)
         self.connected = False
@@ -266,12 +265,12 @@ class NeoHdf5IO(BaseIO):
         if filename:
             self.connect(filename=filename)
 
-    def _read_entity(self, path="/", cascade=1, lazy=False):
+    def _read_entity(self, path="/", cascade=True, lazy=False):
         """
         Wrapper for base io "reader" functions.
         """
         ob = self.get(path, cascade, lazy)
-        if cascade == 1:
+        if cascade and cascade != 'lazy':
             create_many_to_one_relationship(ob)
         return ob
 
@@ -563,7 +562,7 @@ class NeoHdf5IO(BaseIO):
     def load_lazy_cascade(self, path, lazy):
         """ Load an object with the given path in lazy cascade mode.
         """
-        o = self.get(path, cascade=2, lazy=lazy)
+        o = self.get(path, cascade='lazy', lazy=lazy)
         t = type(o).__name__
         node = self._data.getNode(path)
 
@@ -586,42 +585,42 @@ class NeoHdf5IO(BaseIO):
 
             if t == 'RecordingChannel':  # Set list of parnet channel groups
                 for rcg in self.parent_paths[path]:
-                    o.recordingchannelgroups.append(self.get(rcg, cascade=2, lazy=lazy))
+                    o.recordingchannelgroups.append(self.get(rcg, cascade='lazy', lazy=lazy))
             else:  # Set parents: Segment and another parent
                 if paths[0] is None:
                     paths[0] = self._get_parent(
                         path, self._data.getNodeAttr(path, 'object_ref'),
                         'Segment')
-                o.segment = self.get(paths[0], cascade=2, lazy=lazy)
+                o.segment = self.get(paths[0], cascade='lazy', lazy=lazy)
 
                 parent = self._second_parent[t]
                 if paths[1] is None:
                     paths[1] = self._get_parent(
                         path, self._data.getNodeAttr(path, 'object_ref'),
                         parent)
-                setattr(o, parent.lower(), self.get(paths[1], cascade=2, lazy=lazy))
+                setattr(o, parent.lower(), self.get(paths[1], cascade='lazy', lazy=lazy))
         elif t != 'Block':
             ref = self._data.getNodeAttr(path, 'object_ref')
 
             if t == 'RecordingChannel':
                 rcg_paths = self._get_rcgs(path, ref)
                 for rcg in rcg_paths:
-                    o.recordingchannelgroups.append(self.get(rcg, cascade=2, lazy=lazy))
+                    o.recordingchannelgroups.append(self.get(rcg, cascade='lazy', lazy=lazy))
                 self.parent_paths[path] = rcg_paths
             else:
                 for p in many_to_one_relationship[t]:
                     parent = self._get_parent(path, ref, p)
-                    setattr(o, p.lower(), self.get(parent, cascade=2, lazy=lazy))
+                    setattr(o, p.lower(), self.get(parent, cascade='lazy', lazy=lazy))
         return o
 
     def load_lazy_object(self, obj):
         """ Return the fully loaded version of a lazily loaded object. Does not
         set links to parent objects.
         """
-        return self.get(obj.hdf5_path, cascade=0, lazy=False)
+        return self.get(obj.hdf5_path, cascade=False, lazy=False)
 
     @_func_wrapper
-    def get(self, path="/", cascade=1, lazy=False):
+    def get(self, path="/", cascade=True, lazy=False):
         """ Returns a requested NEO object as instance of NEO class. """
         def fetch_attribute(attr_name):
             """ fetch required attribute from the corresp. node in the file """
@@ -686,7 +685,7 @@ class NeoHdf5IO(BaseIO):
             object_ref = None
         if object_ref in self.objects_by_ref:
             obj = self.objects_by_ref[object_ref]
-            if cascade == 2 or obj_type not in complex_relationships:
+            if cascade == 'lazy' or obj_type not in complex_relationships:
                 return obj
         else:
             kwargs = {}
@@ -715,13 +714,13 @@ class NeoHdf5IO(BaseIO):
                 if obj_type == "RecordingChannelGroup":
                     rels += many_to_many_relationship[obj_type]
                 for child in rels:  # 'child' is like 'Segment', 'Event' etc.
-                    if cascade == 2:
+                    if cascade == 'lazy':
                         relatives = LazyList(self, lazy)
                     else:
                         relatives = []
                     container = self._data.getNode(node, child.lower() + "s")
                     for n in self._data.iterNodes(container):
-                        if cascade == 2:
+                        if cascade == 'lazy':
                             relatives.append(n._v_pathname)
                         else:
                             try:
@@ -730,7 +729,7 @@ class NeoHdf5IO(BaseIO):
                             except AttributeError:  # alien node
                                 pass  # not an error
                     setattr(obj, child.lower() + "s", relatives)
-                    if not cascade == 2:
+                    if not cascade == 'lazy':
                         # RC -> AnalogSignal relationship will not be created later, do it now
                         if obj_type == "RecordingChannel" and child == "AnalogSignal":
                             for r in relatives:
@@ -751,7 +750,7 @@ class NeoHdf5IO(BaseIO):
         return obj
 
     @_func_wrapper
-    def read_all_blocks(self, lazy=False, cascade=1, **kargs):
+    def read_all_blocks(self, lazy=False, cascade=True, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
