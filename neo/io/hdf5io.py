@@ -332,7 +332,6 @@ class NeoHdf5IO(BaseIO):
             return None # that's an alien node
 
     def _update_path(self, obj, node):
-        setattr(obj, "hdf5_name", node._v_name)
         setattr(obj, "hdf5_path", node._v_pathname)
 
     def _get_next_name(self, obj_type, where):
@@ -439,25 +438,29 @@ class NeoHdf5IO(BaseIO):
             if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_relationship[obj_type]
 
-            for child_name in rels: # child_name like "Segment", "Event" etc.
-                container = child_name.lower() + "s" # like "units"
+            for child_name in rels:  # child_name like "Segment", "Event" etc.
+                container = child_name.lower() + "s"  # like "units"
                 try:
                     ch = self._data.getNode(node, container)
                 except NSNE:
                     ch = self._data.createGroup(node, container)
-                saved = [] # keeps track of saved object names for removal
+                saved = []  # keeps track of saved object names for removal
                 for child in getattr(obj, container):
                     new_name = None
-                    if hasattr(child, "hdf5_path") and hasattr(child, "hdf5_name"):
-                        if not ch._v_pathname in child.hdf5_path:
+                    child_node = None
+                    if hasattr(child, "hdf5_path"):
+                        if not child.hdf5_path.startswith(ch._v_pathname):
                         # create a Hard Link if object exists already somewhere
                             try:
                                 target = self._data.getNode(child.hdf5_path)
-                                new_name = self._get_next_name(name_by_class[child.__class__], ch._v_pathname)
-                                if not hasattr(ch, new_name): # Only link if path does not exist
-                                    self._data.createHardLink(ch._v_pathname, new_name, target)
-                            except NSNE: pass
-                    child_node = self.save(child, where=ch._v_pathname)
+                                new_name = self._get_next_name(
+                                    name_by_class[child.__class__], ch._v_pathname)
+                                if not hasattr(ch, new_name):  # Only link if path does not exist
+                                    child_node = self._data.createHardLink(ch._v_pathname, new_name, target)
+                            except NSNE:
+                                pass
+                    if child_node is None:
+                        child_node = self.save(child, where=ch._v_pathname)
 
                     if child_name in multi_parent: # Save parent for multiparent objects
                         child_node._f_setAttr(obj_type.lower(), path)
@@ -468,7 +471,7 @@ class NeoHdf5IO(BaseIO):
                         parents.append(path)
                         child_node._f_setAttr('recordingchannelgroups', parents)
                     if not new_name:
-                        new_name = child.hdf5_name
+                        new_name = child.hdf5_path.split('/')[-1]
                     saved.append(new_name)
                 for child in self._data.iterNodes(ch._v_pathname):
                     if child._v_name not in saved: # clean-up
@@ -640,6 +643,8 @@ class NeoHdf5IO(BaseIO):
                     arr = self._data.getNode(node, attr_name)
                     if not lazy or sum(arr.shape) <= 1:
                         nattr = np.array(arr.read(), attr[3])
+                        if nattr.shape == (0, 1):  # Fix: Empty arrays should have only one dimension
+                            nattr = nattr.reshape(-1)
                     else:  # making an empty array
                         nattr = np.empty(0, attr[3])
                 else:
