@@ -423,6 +423,9 @@ class NeoHdf5IO(BaseIO):
             node._f_setAttr("_type", obj_type)
             path = node._v_pathname
             # processing attributes
+        if obj_type in multi_parent: # Initialize empty parent paths
+            node._f_setAttr('segment', '')
+            node._f_setAttr(multi_parent[obj_type].lower(), '')
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
@@ -482,7 +485,7 @@ class NeoHdf5IO(BaseIO):
 
     def _get_parent(self, path, ref, parent_type):
         """ Return the path of the parent of type "parent_type" for the object
-        in "path" with id "ref".
+        in "path" with id "ref". Returns an empty string if no parent extists.
         """
         parts = path.split('/')
 
@@ -505,16 +508,16 @@ class NeoHdf5IO(BaseIO):
                 p = self._search_parent(
                     '%s/%ss' % (n._v_pathname, parent_type.lower()),
                     object_folder, ref)
-                if p is not None:
+                if p != '':
                     return p
-            return None
+            return ''
 
         if parent_type == 'Segment':
             path = block_path + '/segments'
         elif parent_type == 'RecordingChannelGroup':
             path = block_path + '/recordingchannelgroups'
         else:
-            return None
+            return ''
 
         return self._search_parent(path, object_folder, ref)
 
@@ -539,7 +542,7 @@ class NeoHdf5IO(BaseIO):
         if multi:
             ret = []
         else:
-            ret = None
+            ret = ''
 
         for n in self._data.iterNodes(path):
             if not '_type' in n._v_attrs:
@@ -594,14 +597,16 @@ class NeoHdf5IO(BaseIO):
                     paths[0] = self._get_parent(
                         path, self._data.getNodeAttr(path, 'object_ref'),
                         'Segment')
-                o.segment = self.get(paths[0], cascade='lazy', lazy=lazy)
+                if paths[0]:
+                    o.segment = self.get(paths[0], cascade='lazy', lazy=lazy)
 
                 parent = self._second_parent[t]
                 if paths[1] is None:
                     paths[1] = self._get_parent(
                         path, self._data.getNodeAttr(path, 'object_ref'),
                         parent)
-                setattr(o, parent.lower(), self.get(paths[1], cascade='lazy', lazy=lazy))
+                if paths[1]:
+                    setattr(o, parent.lower(), self.get(paths[1], cascade='lazy', lazy=lazy))
         elif t != 'Block':
             ref = self._data.getNodeAttr(path, 'object_ref')
 
@@ -613,18 +618,21 @@ class NeoHdf5IO(BaseIO):
             else:
                 for p in many_to_one_relationship[t]:
                     parent = self._get_parent(path, ref, p)
-                    setattr(o, p.lower(), self.get(parent, cascade='lazy', lazy=lazy))
+                    if parent:
+                        setattr(o, p.lower(), self.get(parent, cascade='lazy', lazy=lazy))
         return o
 
     def load_lazy_object(self, obj):
         """ Return the fully loaded version of a lazily loaded object. Does not
         set links to parent objects.
         """
-        return self.get(obj.hdf5_path, cascade=False, lazy=False)
+        return self.get(obj.hdf5_path, cascade=False, lazy=False, lazy_loaded=True)
 
     @_func_wrapper
-    def get(self, path="/", cascade=True, lazy=False):
-        """ Returns a requested NEO object as instance of NEO class. """
+    def get(self, path="/", cascade=True, lazy=False, lazy_loaded=False):
+        """ Returns a requested NEO object as instance of NEO class.
+        Set lazy_loaded to True to load a previously lazily loaded object
+        (cache is ignored in this case)."""
         def fetch_attribute(attr_name):
             """ fetch required attribute from the corresp. node in the file """
             try:
@@ -641,7 +649,7 @@ class NeoHdf5IO(BaseIO):
                         nattr = pq.Quantity(np.empty(tuple([0 for x in range(attr[2])])), units)
                 elif attr[1] == np.ndarray:
                     arr = self._data.getNode(node, attr_name)
-                    if not lazy or sum(arr.shape) <= 1:
+                    if not lazy:
                         nattr = np.array(arr.read(), attr[3])
                         if nattr.shape == (0, 1):  # Fix: Empty arrays should have only one dimension
                             nattr = nattr.reshape(-1)
@@ -672,7 +680,10 @@ class NeoHdf5IO(BaseIO):
         try:
             if path == "/":
                 raise ValueError()  # root is not a NEO object
-            node = self._data.getNode(path)
+            try:
+                node = self._data.getNode(path)
+            except TypeError:
+                print 'whatsup'
         except (NSNE, ValueError):  # create a new node?
             raise LookupError("There is no valid object with a given path " +
                               str(path) + ' . Please give correct path or just browse the file '
@@ -688,7 +699,7 @@ class NeoHdf5IO(BaseIO):
             object_ref = self._data.getNodeAttr(node, 'object_ref')
         except AttributeError:  # Object does not have reference, e.g. because this is an old file format
             object_ref = None
-        if object_ref in self.objects_by_ref:
+        if object_ref in self.objects_by_ref and not lazy_loaded:
             obj = self.objects_by_ref[object_ref]
             if cascade == 'lazy' or obj_type not in complex_relationships:
                 return obj
@@ -710,7 +721,7 @@ class NeoHdf5IO(BaseIO):
             except AttributeError:
                 pass  # not assigned, continue
 
-        if object_ref:
+        if object_ref and not lazy_loaded:
             self.objects_by_ref[object_ref] = obj
         # load relationships
         if cascade:
