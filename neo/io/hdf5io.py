@@ -228,9 +228,9 @@ complex_relationships = ["Unit", "Segment", "RecordingChannel"]
 
 # Data objects which have multiple parents (Segment and one other)
 multi_parent = {'AnalogSignal': 'RecordingChannel',
-                          'AnalogSignalArray': 'RecordingChannelGroup',
-                          'IrregularlySampledSignal': 'RecordingChannel',
-                          'Spike': 'Unit', 'SpikeTrain': 'Unit'}
+                'AnalogSignalArray': 'RecordingChannelGroup',
+                'IrregularlySampledSignal': 'RecordingChannel',
+                'Spike': 'Unit', 'SpikeTrain': 'Unit'}
 
 # Arrays node names for lazy shapes
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
@@ -409,8 +409,8 @@ class NeoHdf5IO(BaseIO):
         #assert_neo_object_is_compliant(obj)
         obj_type = name_by_class[obj.__class__]
         if self._data.mode != 'w' and hasattr(obj, "hdf5_path"): # this is an update case
+            path = str(obj.hdf5_path)
             try:
-                path = str(obj.hdf5_path)
                 node = self._data.getNode(obj.hdf5_path)
             except NSNE:  # create a new node?
                 raise LookupError("A given object has a path %s attribute, \
