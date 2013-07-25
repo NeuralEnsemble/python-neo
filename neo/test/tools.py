@@ -240,6 +240,35 @@ def assert_sub_schema_is_lazy_loaded(ob):
                 assert hasattr(ob,  'lazy_shape'), 'Lazy loaded error %s should have lazy_shape attribute because of %s attribute' % (classname, attrname, )
 
 
+lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
+                     'AnalogSignal': 'signal',
+                     'AnalogSignalArray': 'signal',
+                     'EventArray': 'times', 'EpochArray': 'times'}
+
+
+def assert_lazy_sub_schema_can_be_loaded(ob, io):
+    """
+    This is util for testing lazy load. All object must load with ndarray.size or Quantity.size ==0
+    """
+    classname = ob.__class__.__name__
+
+    if classname in lazy_shape_arrays:
+        new_load = io.load_lazy_object(ob)
+        assert hasattr(ob, 'lazy_shape'), 'Object was not lazy loaded'
+        assert not hasattr(new_load, 'lazy_shape'), 'Newly loaded object was also lazy loaded'
+        if classname in description.classes_inheriting_quantities:
+            assert ob.lazy_shape == new_load.shape, 'Shape of loaded object not equal to lazy shape'
+        else:
+            assert ob.lazy_shape == getattr(new_load, lazy_shape_arrays[classname]).shape, \
+                'Shape of loaded object not equal to lazy shape'
+    elif classname in description.one_to_many_relationship:
+        for childname in description.one_to_many_relationship[classname]:
+            if not hasattr(ob, childname.lower() + 's'):
+                continue
+            sub = getattr(ob, childname.lower() + 's')
+            for child in sub:
+                assert_lazy_sub_schema_can_be_loaded(child, io)
+
 
 def assert_objects_equivalent(obj1, obj2):
     """ compares two NEO objects by looping over the attributes and annotations
