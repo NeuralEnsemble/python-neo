@@ -680,10 +680,7 @@ class NeoHdf5IO(BaseIO):
         try:
             if path == "/":
                 raise ValueError()  # root is not a NEO object
-            try:
-                node = self._data.getNode(path)
-            except TypeError:
-                print 'whatsup'
+            node = self._data.getNode(path)
         except (NSNE, ValueError):  # create a new node?
             raise LookupError("There is no valid object with a given path " +
                               str(path) + ' . Please give correct path or just browse the file '
