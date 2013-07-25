@@ -110,7 +110,9 @@ def iteritems(D):
 
 class LazyList(collections.MutableSequence):
     """ An enhanced list that can load its members on demand. Behaves exactly
-    like a regular list for members that are Neo objects.
+    like a regular list for members that are Neo objects. Each item should
+    contain the information that ``load_lazy_cascade`` needs to load the
+    respective object.
     """
     _container_objects = set(
         [Block, Segment, RecordingChannelGroup, RecordingChannel, Unit])
@@ -119,6 +121,12 @@ class LazyList(collections.MutableSequence):
          IrregularlySampledSignal, Spike, SpikeTrain])
 
     def __init__(self, io, lazy, items=None):
+        """
+        :param io: IO instance that can load items.
+        :param lazy: Lazy parameter with which the container object
+            using the list was loaded.
+        :param items: Optional, initial list of items.
+        """
         if items is None:
             self._data = []
         else:
