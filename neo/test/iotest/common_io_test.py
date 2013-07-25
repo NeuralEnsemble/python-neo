@@ -27,13 +27,13 @@ except ImportError:
     from urllib.request import urlretrieve  # Py3
 import logging
 import tempfile
+import shutil
 
 from ... import Block, Segment
 from ...description import *
-from ..tools import (assert_arrays_almost_equal, assert_arrays_equal,
-                     assert_same_sub_schema, assert_neo_object_is_compliant,
-                     assert_file_contents_equal,
-                     assert_sub_schema_is_lazy_loaded)
+from ..tools import (assert_same_sub_schema, assert_neo_object_is_compliant,
+                     assert_sub_schema_is_lazy_loaded,
+                     assert_lazy_sub_schema_can_be_loaded)
 
 
 from .generate_datasets import generate_from_supported_objects
@@ -43,6 +43,7 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
 
 class BaseTestIO(object):
     """
@@ -74,11 +75,7 @@ class BaseTestIO(object):
         self.files_generated = [ ]
         self.generate_files_for_io_able_to_write()
         self.files_to_test.extend( self.files_generated )
-
-    def tearDown(self):
-        if self.ioclass.name == 'NeoHdf5 IO':
-            filename = self.local_test_dir + '/Generated0_' + self.ioclass.__name__ + '.h5'
-            os.remove(filename)
+        self.cascade_modes = [True, 'lazy'] if hasattr(self.ioclass, 'load_lazy_cascade') else [True]
 
     def create_local_dir_if_not_exists(self):
         # FIXME :  utest do fail bu nosetest OK Due to __file__ maybe
@@ -88,7 +85,7 @@ class BaseTestIO(object):
 
         if not os.path.exists(localdir):
             os.mkdir(localdir)
-        localdir = localdir +'/'+ shortname
+        localdir = os.path.join(localdir, shortname)
         if not os.path.exists(localdir):
             os.mkdir(localdir)
         self.local_test_dir = localdir
@@ -107,8 +104,8 @@ class BaseTestIO(object):
         for filename in self.files_to_download:
             make_all_directories(filename, localdir)
 
-            localfile =  localdir+'/'+filename
-            distantfile = url+'/'+filename
+            localfile =  os.path.join(localdir, filename)
+            distantfile = url + '/' + filename
 
             if not os.path.exists(localfile):
                 if self.use_network:
@@ -141,13 +138,17 @@ class BaseTestIO(object):
         ob = generate_from_supported_objects(self.ioclass.supported_objects)
 
         if self.ioclass.mode == 'file':
-            filename = localdir+'/Generated0_'+self.ioclass.__name__
+            filename = os.path.join(localdir, 'Generated0_' + self.ioclass.__name__)
             if len(self.ioclass.extensions)>=1:
                 filename += '.'+self.ioclass.extensions[0]
+            if os.path.exists(filename):
+                os.remove(filename)
             writer = self.ioclass(filename = filename)
             self.files_generated.append( filename )
         elif self.ioclass.mode == 'dir':
-            dirname = localdir+'/Generated0_'+self.ioclass.__name__
+            dirname = os.path.join(localdir, 'Generated0_'+self.ioclass.__name__)
+            if os.path.exists(dirname):
+                shutil.rmtree(dirname)
             writer = self.ioclass(dirname = dirname)
             self.files_generated.append( dirname )
         else:
@@ -197,45 +198,54 @@ class BaseTestIO(object):
         if higher in self.ioclass.read_params and \
             len(self.ioclass.read_params[higher]) != 0 : return
 
-        # Create writers and readers for a temporary location.
-        if self.ioclass.mode == 'file':
-            # Operates on files, so create a temporary filename with the
-            # first filename extension in `extensions`, if any.
-            filename = os.path.join(localdir,
-                'Generated0_%s' % self.ioclass.__name__)
-            if len(self.ioclass.extensions) >= 1:
-                filename += '.' + self.ioclass.extensions[0]
-            # Create reader and writer for that file
-            writer = self.ioclass(filename = filename)
-            reader = self.ioclass(filename = filename)
-        elif self.ioclass.mode == 'dir':
-            dirname = localdir+'/Generated0_'+self.ioclass.__name__
-            writer = self.ioclass(dirname = dirname)
-            reader = self.ioclass(dirname = dirname)
-        else:
-            return
-
-        # Get an object to write
-        ob = generate_from_supported_objects(self.ioclass.supported_objects)
-
-        # Write and read with the IO and ensure it is the same.
-        if higher == Block:
-            writer.write_block(ob)
-            if writer.__class__.name == 'NeoHdf5 IO': # need to read what was saved
-                ob2 = reader.read_block(ob.hdf5_path)
+        for cascade in self.cascade_modes:
+            # Create writers and readers for a temporary location.
+            if self.ioclass.mode == 'file':
+                # Operates on files, so create a temporary filename with the
+                # first filename extension in `extensions`, if any.
+                path = os.path.join(localdir,
+                    'Generated0_%s' % self.ioclass.__name__)
+                if len(self.ioclass.extensions) >= 1:
+                    path += '.' + self.ioclass.extensions[0]
+            elif self.ioclass.mode == 'dir':
+                path = os.path.join(localdir, 'Generated0_' + self.ioclass.__name__)
             else:
-                ob2 = reader.read_block()
-        elif higher == Segment:
-            writer.write_segment(ob)
-            ob2 = reader.read_segment()
+                return
 
-        assert_same_sub_schema(ob, ob2, False, 1e-8) # some format (e.g. elphy) do not support double floating point spiketrains
-        assert_neo_object_is_compliant(ob2)
+            # Try to delete previous files
+            try:
+                if os.path.exists(path):
+                    if self.ioclass.mode == 'file':
+                        os.remove(path)
+                    elif self.ioclass.mode == 'dir':
+                        shutil.rmtree(path)
+            except:
+                pass
 
-        try: # for HDF5IO file should be closed before being opened again in test
-            reader.close()
-            writer.close()
-        except: pass
+            # Get an object to write
+            ob = generate_from_supported_objects(self.ioclass.supported_objects)
+            writer = self.ioclass(filename=path)
+            # Write and read with the IO and ensure it is the same.
+            if higher == Block:
+                writer.write_block(ob)
+            elif higher == Segment:
+                writer.write_segment(ob)
+            try: # for HDF5IO file needs to be closed, otherwise it might not be written
+                writer.close()
+            except:
+                pass
+
+            reader = self.ioclass(filename=path)
+            ob2 = reader.read(cascade=cascade)[0]
+            if higher == Segment:
+                ob2 = ob2.segments[0]
+
+            assert_same_sub_schema(ob, ob2, False, 1e-8) # some format (e.g. elphy) do not support double floating point spiketrains
+            assert_neo_object_is_compliant(ob2)
+
+            try: # for HDF5IO file should be closed before being opened again in test
+                reader.close()
+            except: pass
 
 
     def test_read_then_write(self):
@@ -260,32 +270,32 @@ class BaseTestIO(object):
         Compliance test: neo.test.tools.assert_neo_object_is_compliant
         """ % self.ioclass.__name__
         # This is for files presents at G-Node or generated
+        for cascade in self.cascade_modes:
+            for filename in self.files_to_test:
+                # Load each file in `files_to_test`
+                filename = os.path.join(self.local_test_dir, filename)
+                if self.ioclass.mode == 'file':
+                    r = self.ioclass(filename = filename)
+                elif self.ioclass.mode == 'dir':
+                    r = self.ioclass(dirname = filename)
+                else:
+                    continue
 
-        for filename in self.files_to_test:
-            # Load each file in `files_to_test`
-            filename = os.path.join(self.local_test_dir, filename)
-            if self.ioclass.mode == 'file':
-                r = self.ioclass(filename = filename)
-            elif self.ioclass.mode == 'dir':
-                r = self.ioclass(dirname = filename)
-            else:
-                continue
+                # Read the highest supported object from the file
+                obname = self.ioclass.supported_objects[0].__name__.lower()
+                ob_reader = getattr(r, 'read_%s' % obname)
 
-            # Read the highest supported object from the file
-            obname = self.ioclass.supported_objects[0].__name__.lower()
-            ob_reader = getattr(r, 'read_%s' % obname)
+                ob = ob_reader(cascade = cascade, lazy = False)
+                # Check compliance of the block
+                assert_neo_object_is_compliant(ob)
 
-            ob = ob_reader(cascade = True, lazy = False)
-            # Check compliance of the block
-            assert_neo_object_is_compliant(ob)
+                # same but lazy
+                ob = ob_reader(cascade = cascade, lazy = True)
+                assert_neo_object_is_compliant(ob)
 
-            # same but lazy
-            ob = ob_reader(cascade = True, lazy = True)
-            assert_neo_object_is_compliant(ob)
-
-            try: # for HDF5IO file should be closed before being opened again in test
-                r.close()
-            except: pass
+                try: # for HDF5IO file should be closed before being opened again in test
+                    r.close()
+                except: pass
 
 
     def test_readed_with_cascade_is_compliant(self):
@@ -336,20 +346,49 @@ class BaseTestIO(object):
         the lazy_shape attribute
         """% self.ioclass.__name__
         # This is for files presents at G-Node or generated
-        for filename in self.files_to_test:
-            filename = os.path.join(self.local_test_dir, filename)
-            if self.ioclass.mode == 'file':
-                r = self.ioclass(filename = filename)
-            elif self.ioclass.mode == 'dir':
-                r = self.ioclass(dirname = filename)
-            else:
-                continue
-            ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = True, lazy = True )
-            assert_sub_schema_is_lazy_loaded(ob)
+        for cascade in self.cascade_modes:
+            for filename in self.files_to_test:
+                filename = os.path.join(self.local_test_dir, filename)
+                if self.ioclass.mode == 'file':
+                    r = self.ioclass(filename = filename)
+                elif self.ioclass.mode == 'dir':
+                    r = self.ioclass(dirname = filename)
+                else:
+                    continue
+                ob = getattr(r, 'read_'+self.ioclass.supported_objects[0].__name__.lower())( cascade = cascade, lazy = True )
+                assert_sub_schema_is_lazy_loaded(ob)
 
-            try: # for HDF5IO file should be closed before being opened again in test
-                r.close()
-            except: pass
+                try: # for HDF5IO file should be closed before being opened again in test
+                    r.close()
+                except: pass
+
+    def test_load_lazy_objects(self):
+        """Reading %s files in `files_to_test` with `lazy` is compliant.
+
+        This test reader with lazy = True : should return all Quantities and ndarray with size = 0.
+        And should return for AnalogSignal, AnalogSignalArray, SpikeTrain, Epocharray, EventArray
+        the lazy_shape attribute
+        """% self.ioclass.__name__
+        if not hasattr(self.ioclass, 'load_lazy_object'):
+            return
+
+        for cascade in self.cascade_modes:
+            # This is for files presents at G-Node or generated
+            for filename in self.files_to_test:
+                filename = os.path.join(self.local_test_dir, filename)
+                if self.ioclass.mode == 'file':
+                    r = self.ioclass(filename=filename)
+                elif self.ioclass.mode == 'dir':
+                    r = self.ioclass(dirname=filename)
+                else:
+                    continue
+                ob = getattr(r, 'read_' + self.ioclass.supported_objects[0].__name__.lower())(cascade=cascade, lazy=True)
+                assert_lazy_sub_schema_can_be_loaded(ob, r)
+
+                try:  # for HDF5IO file should be closed before being opened again in test
+                    r.close()
+                except:
+                    pass
 
 
 def make_all_directories(filename, localdir):

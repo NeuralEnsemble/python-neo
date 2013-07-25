@@ -107,10 +107,11 @@ def fake_NEO(obj_type="Block", cascade=True, _follow_links=True):
     obj.annotate(**at)
     return obj
 
+
 class HDF5Commontests(BaseTestIO, unittest.TestCase):
     ioclass = NeoHdf5IO
-    files_to_test = [  ]
-    files_to_download =  [   ]
+    files_to_test = ['test.h5']
+    files_to_download = files_to_test
 
     @unittest.skipUnless(have_hdf5, "requires PyTables")
     def setUp(self):
