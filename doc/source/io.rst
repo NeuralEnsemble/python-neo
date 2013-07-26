@@ -30,7 +30,7 @@ Introduction
 There is an intrinsic structure in the different Neo objects, that could be seen as a hierachy with cross-links. See :doc:`core`.
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
 
-A :class:`Block` is therefore a list of :class:`Segment` objects, that can, in some file formats, be accessed individually.
+A :class:`Block` has therefore a list of :class:`Segment` objects, that can, in some file formats, be accessed individually.
 Depending on the file format, i.e. if it is streamable or not, the whole :class:`Block` may need to be loaded, but sometimes 
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
@@ -125,17 +125,45 @@ For this scenario, two options are available:
 By default (if they are not specified), ``lazy=False`` and ``cascade=True``, i.e. all data is loaded.
 
 Example cascade::
+
     >>> seg = reader.read_segment( cascade=True)
-    >>> print(len(seg.analogsignals)) # this is N
+    >>> print(len(seg.analogsignals))  # this is N
     >>> seg = reader.read_segment(cascade=False)
-    >>> print(len(seg.analogsignals)) # this is zero
+    >>> print(len(seg.analogsignals))  # this is zero
 
 Example lazy::
+
     >>> seg = reader.read_segment(lazy=False)
-    >>> print(seg.analogsignals[0].shape) # this is N
+    >>> print(seg.analogsignals[0].shape)  # this is N
     >>> seg = reader.read_segment(lazy=True)
-    >>> print(seg.analogsignals[0].shape) # this is zero, the AnalogSignal is empty
-    >>> print(seg.analogsignals[0].lazy_shape) # this is N
+    >>> print(seg.analogsignals[0].shape)  # this is zero, the AnalogSignal is empty
+    >>> print(seg.analogsignals[0].lazy_shape)  # this is N
+
+Some IOs support advanced forms of lazy loading, cascading or both (these features are currently limited to the HDF5 IO, which supports both forms).
+
+* For lazy loading, these IOs have a :meth:`load_lazy_object` method that takes a single parameter: a data object previously loaded by the same IO
+  in lazy mode. It returns the fully loaded object, without links to container objects (Segment etc.). Continuing the lazy example above::
+
+    >>> lazy_sig = seg.analogsignals[0]  # Empty signal
+    >>> full_sig = reader.load_lazy_object(lazy_sig)
+    >>> print(lazy_sig.lazy_shape, full_sig.shape)  # Identical
+    >>> print(lazy_sig.segment)  # Has the link to the object "seg"
+    >>> print(full_sig.segment)  # Does not have the link: None
+
+* For lazy cascading, IOs have a :meth:`load_lazy_cascade` method. This method is not called directly when interacting with the IO, but its
+  presence can be used to check if an IO supports lazy cascading. To use lazy cascading, the cascade parameter is set to ``'lazy'``::
+
+    >>> block = reader.read(cascade='lazy')
+
+  You do not have to do anything else, lazy cascading is now active for the object you just loaded. You can interact with the object in the same way
+  as if it was loaded with ``cascade=True``. However, only the objects that are actually accessed are loaded as soon as they are needed::
+
+    >>> print(block.recordingchannelgroups[0].name)  # The first RecordingChannelGroup is loaded
+    >>> print(block.segments[0].analogsignals[1])  # The first Segment and its second AnalogSignal are loaded
+
+  Once an object has been loaded with lazy cascading, it stays in memory::
+
+    >>> print(block.segments[0].analogsignals[0])  # The first Segment is already in memory, its first AnalogSignal is loaded
 
 
 .. _neo_io_API:
@@ -149,6 +177,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class can read or write directly one or several Neo objects (for example :class:`Segment`, :class:`Block`, ...): see the :attr:`readable_objects` and :attr:`writable_objects` attributes of the IO class.
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
+    - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
     - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
     - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports. 
