@@ -41,20 +41,21 @@ Notes:
 Advanced lazy loading
 =====================
 
-If your IO supports a format that might take a long time to load or require lots of memory, consider implementing one or both methods for advanced lazy loading:
+If your IO supports a format that might take a long time to load or require lots of memory, consider implementing one or both of the following methods to
+enable advanced lazy loading:
 
-* :meth:`load_lazy_object(obj)`: This method takes a lazily loaded object and returns the corresponding fully loaded object.
-  It does not set any links of the newly loaded object (e.g. the segment attribute). The information needed to fully load the
+* ``load_lazy_object(self, obj)``: This method takes a lazily loaded object and returns the corresponding fully loaded object.
+  It does not set any links of the newly loaded object (e.g. the segment attribute of a SpikeTrain). The information needed to fully load the
   lazy object should usually be stored in the IO object (e.g. in a dictionary with lazily loaded objects as keys and the address
   in the file as values).
-* :meth:`load_lazy_cascade(address, lazy)`: This method takes two parameters: The information required by your IO to laod an object and a boolean that indicates
-  if data objects should be lazy loaded (in the same way as with regular :meth:`read_XXX` methods). The method should return a loaded
+* ``load_lazy_cascade(self, address, lazy)``: This method takes two parameters: The information required by your IO to load an object and a boolean that
+  indicates if data objects should be lazy loaded (in the same way as with regular :meth:`read_XXX` methods). The method should return a loaded
   objects, including all the links for one-to-many and many-to-many relationships (lists of links should be replaced by ``LazyList`` objects,
   see below).
 
   To implement lazy cascading, your read methods need to react when a user calls them with the ``cascade`` parameter set to ``lazy``.
   In this case, you have to replace all the link lists of your loaded objects with instances of :class:`neo.io.tools.LazyList`. Instead
-  of the actual objects that your IO would load at this point, fill the list with items containing that `load_lazy_cascade` needs to load the
+  of the actual objects that your IO would load at this point, fill the list with items that ``load_lazy_cascade`` needs to load the
   object.
 
   Because the links of objects can point to previously loaded objects, you need to cache all loaded objects in the IO. If :meth:`load_lazy_cascade`
