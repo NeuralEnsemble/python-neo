@@ -94,8 +94,7 @@ def assert_neo_object_is_compliant(ob):
             for child in sub:
                 assert hasattr(child, classname.lower()), '%s should have %s attribute (2 way relationship)' % (childname, classname.lower())
                 if hasattr(child, classname.lower()):
-                    assert getattr(child, classname.lower()) == ob, '%s.%s is not symetric with %s.%ss' (childname, classname.lower(), classname, childname.lower())
-
+                    assert getattr(child, classname.lower()) == ob, '%s.%s is not symetric with %s.%s s' %(childname, classname.lower(), classname, childname.lower())
 
     # recursive on one to many rel
     if classname in description.one_to_many_relationship:

@@ -51,6 +51,7 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 .. autoclass:: neo.io.ElphyIO
 
+.. autoclass:: neo.io.NeuroScopeIO
 """
 
 import warnings
@@ -200,6 +201,14 @@ try:
 except ImportError:
     warnings.warn("ElphyIO not available, check dependencies", ImportWarning)
 
+try:
+    from .neuroscopeio import NeuroScopeIO
+    iolist.append( NeuroScopeIO )
+except ImportError:
+    warnings.warn("NeuroScopeIO not available, check dependencies", ImportWarning)
+
+
+
 
 def get_io(filename):
     """
@@ -211,3 +220,6 @@ def get_io(filename):
             return io(filename=filename)
 
     raise IOError("file extension %s not registered" % extension)
+
+
+
