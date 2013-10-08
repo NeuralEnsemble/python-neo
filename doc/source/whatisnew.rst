@@ -3,6 +3,14 @@ Release notes
 *************
 
 
+What's new in version 0.3.1?
+----------------------------
+
+  * lazy/cascading improvement
+  * load_lazy_olbject() in neo.io added
+  * added NeuroscopeIO
+
+
 What's new in version 0.3.0?
 ----------------------------
 

@@ -53,7 +53,7 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/n/neo/neo-0.3.0.tar.gz
+    http://pypi.python.org/packages/source/n/neo/neo-0.3.1.tar.gz
 
 Then::
 
@@ -106,6 +106,7 @@ Spike2IO           Yes      Yes
 TdtIO              Yes      No
 WinEdrIO           Yes      Yes
 WinWcpIO           Yes      Yes
+NeuroscopeIO           Yes      Yes
 ================== ======== ========
 
 
