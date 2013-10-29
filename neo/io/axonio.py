@@ -267,11 +267,11 @@ class AxonIO(BaseIO):
 
                 for i in range(nbchannel):
                     if version <2. :
-                        name = header['sADCChannelName'][i]
+                        name = header['sADCChannelName'][i].replace('\x00','')
                         unit = header['sADCUnits'][i].replace('\xb5', 'u').replace('\x00','')#\xb5 is µ
                         num = header['nADCPtoLChannelMap'][i]
                     elif version >=2. :
-                        name = header['listADCInfo'][i]['ADCChNames']
+                        name = header['listADCInfo'][i]['ADCChNames'].replace('\x00','')
                         unit = header['listADCInfo'][i]['ADCChUnits'].replace('\xb5', 'u').replace('\x00','')#\xb5 is µ
                         num = header['listADCInfo'][i]['nADCNum']
                     t_start = float(episodArray[j]['offset'])/sampling_rate
@@ -279,6 +279,7 @@ class AxonIO(BaseIO):
                     try:
                         pq.Quantity(1, unit)
                     except:
+                        #~ print 'bug units', i, unit
                         unit = ''
                     
                     if lazy:
