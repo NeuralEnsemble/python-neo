@@ -52,6 +52,8 @@ neo.io.iolist provides the classes list of succesfully imported io.
 .. autoclass:: neo.io.ElphyIO
 
 .. autoclass:: neo.io.NeuroScopeIO
+
+.. autoclass:: neo.io.BrainwareSrcIO
 """
 
 import warnings
@@ -206,6 +208,12 @@ try:
     iolist.append( NeuroScopeIO )
 except ImportError:
     warnings.warn("NeuroScopeIO not available, check dependencies", ImportWarning)
+
+try:
+    from .brainwaresrcio import BrainwareSrcIO
+    iolist.append( BrainwareSrcIO )
+except ImportError:
+    warnings.warn("BrainwareSrcIO not available, check dependencies", ImportWarning)
 
 
 
