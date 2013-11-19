@@ -274,11 +274,11 @@ def assert_objects_equivalent(obj1, obj2):
     and asserting their hashes. No relationships involved. """
     def assert_attr(obj1, obj2, attr_name):
         assert hasattr(obj1, attr_name)
-        a1 = md5(getattr(obj1, attr_name)).hexdigest()
+        a1 = hashlib.md5(getattr(obj1, attr_name)).hexdigest()
         assert hasattr(obj2, attr_name)
-        a2 = md5(getattr(obj2, attr_name)).hexdigest()
+        a2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
         assert a1 == a2, "Attribute %s for class %s is not equal." % \
-             (attr_name, description.name_by_class[obj1.__class__])
+            (attr_name, description.name_by_class[obj1.__class__])
     obj_type = description.name_by_class[obj1.__class__]
     assert obj_type == description.name_by_class[obj2.__class__]
     for attr in description.classes_necessary_attributes[obj_type]:
@@ -291,6 +291,3 @@ def assert_objects_equivalent(obj1, obj2):
         for k, v in obj1.annotations:
             assert hasattr(obj2.annotations, k)
             assert obj2.annotations[k] == v
-
-
-
