@@ -57,8 +57,8 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=np.float,
     does not do the unit checking. This is needed for pickle to work.
     """
     return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
-                        t_start, waveforms, left_sweep, name, file_origin,
-                        description, **annotations)
+                      t_start, waveforms, left_sweep, name, file_origin,
+                      description, **annotations)
 
 
 class SpikeTrain(BaseNeo, pq.Quantity):
@@ -242,7 +242,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if self.dimensionality == pq.quantity.validate_dimensionality(units):
             return self.copy()
         spikes = self.view(pq.Quantity)
-        return SpikeTrain(spikes, self.t_stop, units=units,
+        return SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
                           sampling_rate=self.sampling_rate,
                           t_start=self.t_start, waveforms=self.waveforms,
                           left_sweep=self.left_sweep, name=self.name,
@@ -391,7 +391,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def spike_duration(self):
         if self.waveforms is None or self.sampling_rate is None:
             return None
-        return self.waveform.shape[2] / self.sampling_rate
+        return self.waveforms.shape[2] / self.sampling_rate
 
     @property
     def sampling_period(self):
