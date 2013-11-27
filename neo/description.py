@@ -141,7 +141,7 @@ classes_necessary_attributes = {
                                         ],
 
     'IrregularlySampledSignal': [('times',pq.Quantity,1),
-                                 ('values',pq.Quantity,1),
+                                 ('signal',pq.Quantity,1),
                                     ],
 
    'RecordingChannelGroup': [ ],
@@ -194,6 +194,7 @@ classes_inheriting_quantities= {
     'SpikeTrain': 'times',
     'AnalogSignal' :'signal',
     'AnalogSignalArray' : 'signal',
+    'IrregularlySampledSignal':  'signal',
     }
 
 
