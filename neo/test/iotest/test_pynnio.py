@@ -11,16 +11,16 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from ...core import Segment, AnalogSignal, SpikeTrain
-from ...io import PyNNNumpyIO, PyNNTextIO
-from ..tools import assert_arrays_equal, assert_file_contents_equal
+from neo.core import Segment, AnalogSignal, SpikeTrain
+from neo.io import PyNNNumpyIO, PyNNTextIO
+from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
 
 
 NCELLS = 5
 
 
 #TODO: common test fails.
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 #class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
 

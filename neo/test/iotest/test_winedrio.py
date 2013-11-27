@@ -9,11 +9,11 @@ try:
 except ImportError:
     import unittest
 
-from ...io import WinEdrIO
+from neo.io import WinEdrIO
 import numpy
 
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 

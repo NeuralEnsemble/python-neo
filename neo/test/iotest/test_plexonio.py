@@ -9,10 +9,10 @@ try:
 except ImportError:
     import unittest
 
-from ...io import PlexonIO
+from neo.io import PlexonIO
 import numpy
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 

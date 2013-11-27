@@ -9,10 +9,10 @@ try:
 except ImportError:
     import unittest
 
-from ...io import AsciiSpikeTrainIO
+from neo.io import AsciiSpikeTrainIO
 import numpy
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestAsciiSpikeTrainIO(BaseTestIO, unittest.TestCase, ):

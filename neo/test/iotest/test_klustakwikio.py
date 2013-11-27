@@ -22,8 +22,8 @@ import quantities as pq
 import glob
 import tempfile
 
-from .common_io_test import BaseTestIO
-from ..tools import assert_arrays_almost_equal, assert_arrays_equal
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testFilenameParser(unittest.TestCase):

@@ -9,10 +9,10 @@ try:
 except ImportError:
     import unittest
 
-from ...io import MicromedIO
+from neo.io import MicromedIO
 import numpy
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")

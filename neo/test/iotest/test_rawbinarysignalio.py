@@ -9,11 +9,11 @@ try:
 except ImportError:
     import unittest
 
-from ...io import RawBinarySignalIO
+from neo.io import RawBinarySignalIO
 import numpy
 
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 

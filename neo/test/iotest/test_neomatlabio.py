@@ -10,15 +10,15 @@ except ImportError:
     import unittest
 
 try:
-    from ...io import NeoMatlabIO
+    from neo.io import NeoMatlabIO
     can_run = True
 except ImportError:
     can_run = False
     NeoMatlabIO = None
-    
+
 import numpy
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 @unittest.skipUnless(can_run, "NeoMatlabIO not available")
 class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
