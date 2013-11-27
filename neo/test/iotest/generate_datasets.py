@@ -89,7 +89,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
             ea_size = rand()*np.diff(event_array_size_range)+event_array_size_range[0]
             ea = EventArray(     #name = name,
                                             times = rand(ea_size)*duration,
-                                            labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
+                                            labels = np.array( labels, dtype='S')[(rand(ea_size)*len(labels)).astype('i')],
                                             )
             seg.eventarrays.append(ea)
 
@@ -106,7 +106,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                 #name = name,
                 times = pq.Quantity(times, units = pq.s),
                 durations = pq.Quantity([x[0] for x in durations], units = pq.s),
-                labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
+                labels =  np.array( labels, dtype='S')[(rand(len(times))*len(labels)).astype('i')],
                 )
             seg.epocharrays.append(epa)
 

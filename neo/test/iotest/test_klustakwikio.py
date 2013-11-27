@@ -5,12 +5,17 @@ try:
 except ImportError:
     import unittest
 import neo
+import sys
 try:
     from neo.io.klustakwikio import KlustaKwikIO
-    can_run = True
 except ImportError:
     can_run = False
     KlustaKwikIO = None
+else:
+    # not python 3 compatible
+    can_run = sys.version_info[0] == 2
+
+
 import os.path
 import numpy as np
 import quantities as pq

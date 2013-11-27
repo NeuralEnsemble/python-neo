@@ -21,6 +21,7 @@ except ImportError:
 from hashlib import md5
 import datetime
 import os
+import sys
 import logging
 
 from ...core import *
@@ -30,10 +31,12 @@ from ...description import *
 
 try:
     from neo.io.hdf5io import NeoHdf5IO
-    have_hdf5 = True
 except ImportError:
     NeoHdf5IO = None
     have_hdf5 = False
+else:
+    # not python 3 compatible
+    have_hdf5 = sys.version_info[0] == 2
 
 #===============================================================================
 
