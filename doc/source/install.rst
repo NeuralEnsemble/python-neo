@@ -92,6 +92,7 @@ AsciiSignalIO      Yes      Yes
 AsciiSpikeTrainIO  Yes      Yes
 AxonIO             Yes      No
 BlackrockIO        Yes      No
+BrainwareSrcIO     Yes      Yes
 ElanIO             Yes      No
 HDF5IO             Yes      No
 KlustakwikIO       Yes      No
