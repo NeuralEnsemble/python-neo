@@ -9,7 +9,7 @@ try:
 except ImportError:
     import unittest
 
-from ...io import NeuroshareIO
+from neo.io import NeuroshareIO
 import numpy
 
 #~ class TestNeuroshareIO(unittest.TestCase):

@@ -9,11 +9,11 @@ try:
 except ImportError:
     import unittest
 
-from ...io import ElanIO
+from neo.io import ElanIO
 import numpy
 
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 

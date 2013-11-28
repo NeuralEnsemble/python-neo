@@ -9,8 +9,8 @@ try:
 except ImportError:
     import unittest
 
-from ...core import objectlist
-from ...io.baseio import BaseIO
+from neo.core import objectlist
+from neo.io.baseio import BaseIO
 import numpy
 
 class TestIOObjects(unittest.TestCase):

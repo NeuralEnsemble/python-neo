@@ -9,7 +9,7 @@ try:
 except ImportError:
     import unittest
 
-from ...io import ExampleIO
+from neo.io import ExampleIO
 
 import numpy
 try:
@@ -18,7 +18,7 @@ try:
 except ImportError:
     have_scipy = False
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO

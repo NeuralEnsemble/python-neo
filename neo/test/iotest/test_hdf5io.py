@@ -21,19 +21,22 @@ except ImportError:
 from hashlib import md5
 import datetime
 import os
+import sys
 import logging
 
-from ...core import *
-from ..tools import assert_neo_object_is_compliant, assert_objects_equivalent
-from .common_io_test import BaseTestIO
-from ...description import *
+from neo.core import *
+from neo.test.tools import assert_neo_object_is_compliant, assert_objects_equivalent
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.description import *
 
 try:
     from neo.io.hdf5io import NeoHdf5IO
-    have_hdf5 = True
 except ImportError:
     NeoHdf5IO = None
     have_hdf5 = False
+else:
+    # not python 3 compatible
+    have_hdf5 = sys.version_info[0] == 2
 
 #===============================================================================
 

@@ -5,20 +5,25 @@ try:
 except ImportError:
     import unittest
 import neo
+import sys
 try:
     from neo.io.klustakwikio import KlustaKwikIO
-    can_run = True
 except ImportError:
     can_run = False
     KlustaKwikIO = None
+else:
+    # not python 3 compatible
+    can_run = sys.version_info[0] == 2
+
+
 import os.path
 import numpy as np
 import quantities as pq
 import glob
 import tempfile
 
-from .common_io_test import BaseTestIO
-from ..tools import assert_arrays_almost_equal, assert_arrays_equal
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testFilenameParser(unittest.TestCase):

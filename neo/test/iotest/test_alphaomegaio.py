@@ -9,9 +9,9 @@ try:
 except ImportError:
     import unittest
 
-from ...io import AlphaOmegaIO
+from neo.io import AlphaOmegaIO
 
-from .common_io_test import BaseTestIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestAlphaOmegaIO(BaseTestIO, unittest.TestCase):

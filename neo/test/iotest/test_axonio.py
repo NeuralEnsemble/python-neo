@@ -9,8 +9,8 @@ try:
 except ImportError:
     import unittest
 
-from ...io import AxonIO
-from .common_io_test import BaseTestIO
+from neo.io import AxonIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestAxonIO(BaseTestIO, unittest.TestCase):

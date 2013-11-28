@@ -5,9 +5,9 @@ Generate datasets for testing
 """
 from __future__ import absolute_import
 
-from ...core import *
-from ...io.tools import (create_many_to_one_relationship,
-                         populate_RecordingChannel, iteritems)
+from neo.core import *
+from neo.io.tools import (create_many_to_one_relationship,
+                          populate_RecordingChannel, iteritems)
 import numpy as np
 import quantities as pq
 from numpy.random import rand
@@ -89,7 +89,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
             ea_size = rand()*np.diff(event_array_size_range)+event_array_size_range[0]
             ea = EventArray(     #name = name,
                                             times = rand(ea_size)*duration,
-                                            labels = np.array( labels)[(rand(ea_size)*len(labels)).astype('i')],
+                                            labels = np.array( labels, dtype='S')[(rand(ea_size)*len(labels)).astype('i')],
                                             )
             seg.eventarrays.append(ea)
 
@@ -106,7 +106,7 @@ def generate_one_simple_segment(  seg_name = 'segment 0',
                 #name = name,
                 times = pq.Quantity(times, units = pq.s),
                 durations = pq.Quantity([x[0] for x in durations], units = pq.s),
-                labels =  np.array( labels)[(rand(len(times))*len(labels)).astype('i')],
+                labels =  np.array( labels, dtype='S')[(rand(len(times))*len(labels)).astype('i')],
                 )
             seg.epocharrays.append(epa)
 
