@@ -122,6 +122,7 @@ class Spike2IO(BaseIO):
                 #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for anaSig in anaSigs :
                     addannotations(anaSig, channelHeader)
+                    anaSig.name = str(anaSig.annotations['title'])
                     seg.analogsignals.append( anaSig )
                     #~ print sig.signal.size,
                 #~ print ''
@@ -185,6 +186,7 @@ class Spike2IO(BaseIO):
                 channelHeader += HeaderReader(fid, dtype(dt))
 
             channelHeader.type = dict_kind[channelHeader.kind]
+            #~ print i, channelHeader
             channelHeaders.append(channelHeader)
 
         header.channelHeaders = channelHeaders
@@ -206,6 +208,7 @@ class Spike2IO(BaseIO):
 
         # sample rate
         if header.system_id in [1,2,3,4,5]: # Before version 5
+            #~ print channel_num, channelHeader.divide, header.us_per_time, header.time_per_adc
             sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
         else :
             sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
@@ -448,7 +451,8 @@ class HeaderReader(object):
         s = 'HEADER'
         for name in self.dtype.names :
             #~ if self.dtype[name].kind != 'S' :
-                s += name + self.__getattr__(name)
+                #~ s += name + self.__getattr__(name)
+                s += '{}: {}\n'.format(name,self.__getattr__(name))
         return s
 
 
