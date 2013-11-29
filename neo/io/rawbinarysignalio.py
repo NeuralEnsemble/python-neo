@@ -120,28 +120,25 @@ class RawBinarySignalIO(BaseIO):
         unit = pq.Quantity(1, unit)
 
         if not lazy:
-            f = open(self.filename , 'rb')
-            buf = f.read()
-            f.close()
-            sig = np.fromstring(buf[bytesoffset:], dtype = dtype )
-
+            sig = np.memmap(self.filename, dtype = dtype, mode = 'r', offset = bytesoffset)
             if sig.size % nbchannel != 0 :
                 sig = sig[:- sig.size%nbchannel]
             sig = sig.reshape((sig.size/nbchannel,nbchannel))
-
             if dtype.kind == 'i' :
                 sig = sig.astype('f')
                 sig /= 2**(8*dtype.itemsize-1)
                 sig *= ( rangemax-rangemin )
-
+            sig_with_units =  pq.Quantity(sig, units=unit, copy = False)
+        
         for i in range(nbchannel) :
             if lazy:
                 signal = [ ]*unit
             else:
-                signal = pq.Quantity(sig[:,i], units=unit)
+                signal = sig_with_units[:,i]
 
             anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                  t_start=t_start, channel_index=i)
+                                  t_start=t_start, channel_index=i, copy = False)
+            
             if lazy:
                 # TODO
                 anaSig.lazy_shape = None
