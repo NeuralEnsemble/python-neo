@@ -54,6 +54,8 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 .. autoclass:: neo.io.NeuroScopeIO
 
+.. autoclass:: neo.io.BrainwareDamIO
+
 .. autoclass:: neo.io.BrainwareSrcIO
 """
 
@@ -291,6 +293,15 @@ except ImportError:
                   ImportWarning)
 else:
     iolist.append(BrainwareSrcIO)
+
+
+try:
+    from neo.io.brainwaredamio import BrainwareDamIO
+except ImportError:
+    warnings.warn("BrainwareDamIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BrainwareDamIO)
 
 
 def get_io(filename):
