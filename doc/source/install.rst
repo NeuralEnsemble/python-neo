@@ -92,12 +92,16 @@ AsciiSignalIO      Yes      Yes
 AsciiSpikeTrainIO  Yes      Yes
 AxonIO             Yes      No
 BlackrockIO        Yes      No
+BrainwareDamIO     Yes      Yes
+BrainwareF32IO     Yes      Yes
+BrainwareSrcIO     Yes      Yes
 ElanIO             Yes      No
 HDF5IO             Yes      No
 KlustakwikIO       Yes      No
 MicromedIO         Yes      No
 NeoMatlabIO        Yes      Yes
 NeuroExplorerIO    Yes      No
+NeuroscopeIO       Yes      Yes
 PickleIO           Yes      Yes
 PlexonIO           Yes      No
 PyNNIO             Yes      Yes
@@ -106,7 +110,6 @@ Spike2IO           Yes      Yes
 TdtIO              Yes      No
 WinEdrIO           Yes      Yes
 WinWcpIO           Yes      Yes
-NeuroscopeIO           Yes      Yes
 ================== ======== ========
 
 

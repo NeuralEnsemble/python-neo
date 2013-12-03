@@ -3,6 +3,15 @@ Release notes
 *************
 
 
+What's new in version 0.3.2?
+----------------------------
+
+  * cleanup ot io test code, with additional helper functions and methods
+  * added BrainwareDamIo
+  * added BrainwareF32Io
+  * added BrainwareSrcIo
+
+
 What's new in version 0.3.1?
 ----------------------------
 
