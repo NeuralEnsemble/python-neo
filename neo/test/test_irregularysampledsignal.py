@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
+
 class TestIrregularlySampledSignal(unittest.TestCase):
     pass
 

@@ -22,12 +22,16 @@ class EventArray(BaseNeo):
         :file_origin:
 
     """
-    def __init__(self, times=np.array([]) * pq.s,
-                 labels=np.array([], dtype='S'), name=None, description=None,
+    def __init__(self, times=None, labels=None, name=None, description=None,
                  file_origin=None, **annotations):
         """Initialize a new EventArray."""
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+        if times is None:
+            times = np.array([]) * pq.s
+        if labels is None:
+            labels = np.array([], dtype='S')
+
         self.times = times
         self.labels = labels
 

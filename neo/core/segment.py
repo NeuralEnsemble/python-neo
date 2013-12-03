@@ -1,7 +1,6 @@
 from neo.core.baseneo import BaseNeo
 
 import numpy as np
-import operator
 
 
 class Segment(BaseNeo):
@@ -77,7 +76,8 @@ class Segment(BaseNeo):
         """
         results = []
         for key, value in kwargs.items():
-            results += [obj for obj in self.all_data if getattr(obj, key) == value]
+            results += [obj for obj in self.all_data
+                        if getattr(obj, key) == value]
         return results
 
     def take_spiketrains_by_unit(self, unit_list=[]):

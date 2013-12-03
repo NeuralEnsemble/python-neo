@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.unit import Unit
 
+
 class TestUnit(unittest.TestCase):
     pass
 

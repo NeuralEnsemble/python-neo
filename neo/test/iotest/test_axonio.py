@@ -12,6 +12,7 @@ except ImportError:
 from neo.io import AxonIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
+
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestAxonIO(BaseTestIO, unittest.TestCase):
     files_to_test = ['File_axon_1.abf',
@@ -20,9 +21,7 @@ class TestAxonIO(BaseTestIO, unittest.TestCase):
                      'File_axon_4.abf',
                      'File_axon_5.abf',
                      'File_axon_6.abf',
-                     
-                     
-                        ]
+                     ]
     files_to_download = files_to_test
     ioclass = AxonIO
 

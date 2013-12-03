@@ -16,15 +16,14 @@ except ImportError:
     can_run = False
     NeoMatlabIO = None
 
-import numpy
-
 from neo.test.iotest.common_io_test import BaseTestIO
+
 
 @unittest.skipUnless(can_run, "NeoMatlabIO not available")
 class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     ioclass = NeoMatlabIO
-    files_to_test = [ ]
-    files_to_download = [ ]
+    files_to_test = []
+    files_to_download = []
 
 
 if __name__ == "__main__":

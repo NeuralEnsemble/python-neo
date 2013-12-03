@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.recordingchannel import RecordingChannel
 
+
 class TestRecordingChannel(unittest.TestCase):
     pass
 

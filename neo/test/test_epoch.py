@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.epoch import Epoch
 
+
 class TestEpoch(unittest.TestCase):
     pass
 

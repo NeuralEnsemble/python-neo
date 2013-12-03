@@ -18,10 +18,13 @@ import quantities
 import sys
 from platform import python_version
 
+
 if sys.version_info[0] >= 3:
     _bytes = bytes
+
     def bytes(s):
         return _bytes(s, encoding='ascii')
+
 
 class TestBaseNeo(unittest.TestCase):
     '''
@@ -119,7 +122,9 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
                      "not supported in python %s" % python_version())
     def test_python_unicode(self):
         '''test to make sure unicode type data is accepted'''
-        value = eval("u'this is also a test'")  # the eval is needed because otherwise it is a SyntaxError in Python 3.2 
+        # the eval is needed because otherwise
+        # it is a SyntaxError in Python 3.2
+        value = eval("u'this is also a test'")
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -414,7 +419,8 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    @unittest.skipUnless(hasattr(numpy, "complex256"), "complex256 not available")
+    @unittest.skipUnless(hasattr(numpy, "complex256"),
+                         "complex256 not available")
     def test_numpy_scalar_complex256(self):
         '''test to make sure complex256 type numpy arrays are accepted'''
         value = numpy.array([1, 2, 3, 4, 5], dtype=numpy.complex256)
@@ -609,7 +615,8 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    @unittest.skipUnless(hasattr(numpy, "complex256"), "complex256 not available")
+    @unittest.skipUnless(hasattr(numpy, "complex256"),
+                         "complex256 not available")
     def test_numpy_scalar_complex256(self):
         '''test to make sure complex256 type numpy scalars are accepted'''
         value = numpy.array(99, dtype=numpy.complex256)
@@ -727,11 +734,11 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for arbitrary
     objects
     '''
-    
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
-        
+
     def test_my_class(self):
         '''test to make sure user defined class type data is rejected'''
         class Foo(object):

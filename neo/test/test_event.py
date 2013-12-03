@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.event import Event
 
+
 class TestEvent(unittest.TestCase):
     pass
 

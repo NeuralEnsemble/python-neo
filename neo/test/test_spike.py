@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.spike import Spike
 
+
 class TestSpike(unittest.TestCase):
     pass
 

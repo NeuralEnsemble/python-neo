@@ -1,4 +1,5 @@
-"""This module defines objects relating to analog signals.
+"""
+This module defines objects relating to analog signals.
 
 For documentation on these objects, which are imported into the base
 neo namespace, see:
@@ -9,7 +10,7 @@ neo namespace, see:
 from __future__ import division
 import numpy as np
 import quantities as pq
-from .baseneo import BaseNeo
+from neo.core.baseneo import BaseNeo
 
 
 def _get_sampling_rate(sampling_rate, sampling_period):
@@ -19,40 +20,37 @@ def _get_sampling_rate(sampling_rate, sampling_period):
     """
     if sampling_period is None:
         if sampling_rate is None:
-            raise ValueError("You must provide either the sampling rate or \
-                              sampling period")
-    else:
-        if sampling_rate is None:
-            sampling_rate = 1.0 / sampling_period
-        else:
-            if sampling_period != 1.0 / sampling_rate:
-                raise ValueError('The sampling_rate has to be \
-                                  1/sampling_period')
+            raise ValueError("You must provide either the sampling rate or " +
+                             "sampling period")
+    elif sampling_rate is None:
+        sampling_rate = 1.0 / sampling_period
+    elif sampling_period != 1.0 / sampling_rate:
+        raise ValueError('The sampling_rate has to be 1/sampling_period')
     if not hasattr(sampling_rate, 'units'):
         raise TypeError("Sampling rate/sampling period must have units")
     return sampling_rate
 
 
 def _new_BaseAnalogSignal(cls, signal, units=None, dtype=None, copy=True,
-                          t_start=0*pq.s, sampling_rate=None, sampling_period=None,
-                          name=None, file_origin=None, description=None,
-                          channel_index=None, annotations=None):
-        """A function to map BaseAnalogSignal.__new__ to function that
-           does not do the unit checking. This is needed for pickle to work.
-        """
-        return cls(signal=signal, units=units, dtype=dtype, copy=copy,
-                   t_start=t_start, sampling_rate=sampling_rate,
-                   sampling_period=sampling_period, name=name,
-                   file_origin=file_origin, description=description,
-                   channel_index=channel_index,
-                   **annotations)
+                          t_start=0*pq.s, sampling_rate=None,
+                          sampling_period=None, name=None, file_origin=None,
+                          description=None, channel_index=None,
+                          annotations=None):
+    """A function to map BaseAnalogSignal.__new__ to function that
+        does not do the unit checking. This is needed for pickle to work.
+    """
+    return cls(signal=signal, units=units, dtype=dtype, copy=copy,
+                t_start=t_start, sampling_rate=sampling_rate,
+                sampling_period=sampling_period, name=name,
+                file_origin=file_origin, description=description,
+                channel_index=channel_index,
+                **annotations)
 
 
 class BaseAnalogSignal(BaseNeo, pq.Quantity):
     """
     Base class for AnalogSignal and AnalogSignalArray
     """
-
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
@@ -318,10 +316,11 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                           "x".join(map(str, self.shape)),
                           str(self.dtype),
                           "values",
-                         ]))
+                          ]))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
+
         def _pp(line):
             pp.breakable()
             with pp.group(indent=1):
@@ -331,15 +330,15 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         elif hasattr(self, "channel_indexes"):
             _pp("channel indices: %s" % self.channel_indexes)
         for line in ["sampling rate: {0}".format(self.sampling_rate),
-                     "time: {0} to {1}".format(self.t_start, self.t_stop),
-                    ]:
+                     "time: {0} to {1}".format(self.t_start, self.t_stop)
+                     ]:
             _pp(line)
 
 
 class AnalogSignal(BaseAnalogSignal):
     """
-    A representation of a continuous, analog signal acquired at time ``t_start``
-    at a certain sampling rate.
+    A representation of a continuous, analog signal acquired at time
+    ``t_start`` at a certain sampling rate.
 
     Inherits from :py:class:`quantities.Quantity`, which in turn inherits from
     :py:class:``numpy.ndarray``.
@@ -395,8 +394,8 @@ class AnalogSignal(BaseAnalogSignal):
                 t_start=0*pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
                 channel_index=None, **annotations):
-        obj = BaseAnalogSignal.__new__(cls, signal, units, dtype, copy, t_start,
-                                       sampling_rate, sampling_period, name,
-                                       file_origin, description,
+        obj = BaseAnalogSignal.__new__(cls, signal, units, dtype, copy,
+                                       t_start, sampling_rate, sampling_period,
+                                       name, file_origin, description,
                                        channel_index, **annotations)
         return obj

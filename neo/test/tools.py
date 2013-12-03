@@ -409,7 +409,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
                 # intercept exceptions and add more information
                 except BaseException as exc:
                     exc.args += ('from of %s %s of %s' %
-                               (childname, i, classname),)
+                                 (childname, i, classname),)
                     raise
 
 

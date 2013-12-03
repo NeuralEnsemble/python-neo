@@ -12,6 +12,7 @@ import numpy as np
 
 from neo.test.tools import assert_arrays_equal
 
+
 class TestRecordingChannelGroup(unittest.TestCase):
     def testInitDefaults(self):
         rcg = RecordingChannelGroup()
@@ -23,7 +24,8 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_arrays_equal(rcg.channel_indexes, np.array([]))
 
     def testInit(self):
-        rcg = RecordingChannelGroup(file_origin='temp.dat', channel_indexes=np.array([1]))
+        rcg = RecordingChannelGroup(file_origin='temp.dat',
+                                    channel_indexes=np.array([1]))
         self.assertEqual(rcg.file_origin, 'temp.dat')
         self.assertEqual(rcg.name, None)
         self.assertEqual(rcg.recordingchannels, [])

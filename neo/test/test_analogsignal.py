@@ -92,8 +92,9 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(a[3], 99*mV)
 
     def test__create_with_additional_argument(self):
-        a = AnalogSignal([1,2,3], units="mV", sampling_rate=1*kHz, file_origin='crack.txt', ratname='Nicolas')
-        self.assertEqual(a.annotations, {'ratname':'Nicolas'})
+        a = AnalogSignal([1, 2, 3], units="mV", sampling_rate=1*kHz,
+                         file_origin='crack.txt', ratname='Nicolas')
+        self.assertEqual(a.annotations, {'ratname': 'Nicolas'})
 
         # This one is universally recommended and handled by BaseNeo
         self.assertEqual(a.file_origin, 'crack.txt')
@@ -107,10 +108,13 @@ class TestProperties(unittest.TestCase):
         self.t_start = [0.0*ms, 100*ms, -200*ms]
         self.rates = [1*kHz, 420*Hz, 999*Hz]
         self.rates2 = [2*kHz, 290*Hz, 1111*Hz]
-        self.data = [numpy.arange(10.0)*nA, numpy.arange(-100.0, 100.0, 10.0)*mV,
+        self.data = [numpy.arange(10.0)*nA,
+                     numpy.arange(-100.0, 100.0, 10.0)*mV,
                      numpy.random.uniform(size=100)*uV]
         self.signals = [AnalogSignal(D, sampling_rate=r, t_start=t)
-                        for r,D,t in zip(self.rates, self.data, self.t_start)]
+                        for r, D, t in zip(self.rates,
+                                           self.data,
+                                           self.t_start)]
 
     def test__t_stop_getter(self):
         for i in range(3):
@@ -144,8 +148,8 @@ class TestProperties(unittest.TestCase):
             self.assertEqual(signal.sampling_period, 1 / rate)
 
     def test__sampling_rate_setter_None_ValueError(self):
-        signal = self.signals[0]
-        self.assertRaises(ValueError, setattr, self.signals[0], 'sampling_rate', None)
+        self.assertRaises(ValueError, setattr, self.signals[0],
+                          'sampling_rate', None)
 
     def test__sampling_period_setter_None_ValueError(self):
         signal = self.signals[0]
@@ -157,15 +161,18 @@ class TestProperties(unittest.TestCase):
 
     def test__times_getter(self):
         for i in range(3):
+            targ = numpy.arange(self.data[i].size)
+            targ = targ/self.rates[i] + self.t_start[i]
             assert_arrays_almost_equal(self.signals[i].times,
-                                       numpy.arange(self.data[i].size)/self.rates[i] + self.t_start[i],
+                                       targ,
                                        1e-12*ms)
 
 
 class TestArrayMethods(unittest.TestCase):
 
     def setUp(self):
-        self.signal = AnalogSignal(numpy.arange(10.0), units="nA", sampling_rate=1*kHz)
+        self.signal = AnalogSignal(numpy.arange(10.0), units="nA",
+                                   sampling_rate=1*kHz)
 
     def test__slice_should_return_AnalogSignal(self):
         sub = self.signal[3:8]
@@ -183,7 +190,6 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(sub.name, self.signal.name)
         self.assertEqual(sub.description, self.signal.description)
         self.assertEqual(sub.annotations, self.signal.annotations)
-
 
         sub = self.signal[3:8]
         self.assertEqual(sub.file_origin, self.signal.file_origin)
@@ -235,9 +241,11 @@ class TestArrayMethods(unittest.TestCase):
 
     def test_comparison_operators(self):
         assert_arrays_equal(self.signal >= 5*nA,
-                            numpy.array([False, False, False, False, False, True, True, True, True, True]))
+                            numpy.array([False, False, False, False, False,
+                                         True, True, True, True, True]))
         assert_arrays_equal(self.signal >= 5*pA,
-                            numpy.array([False, True, True, True, True, True, True, True, True, True]))
+                            numpy.array([False, True, True, True, True,
+                                         True, True, True, True, True]))
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal.__gt__, 5*mV)
@@ -247,18 +255,21 @@ class TestArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal.min(), 0*nA)
         self.assertEqual(self.signal.mean(), 4.5*nA)
 
+
 class TestEquality(unittest.TestCase):
 
     def test__signals_with_different_data_complement_should_be_non_equal(self):
-            signal1 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz)
-            signal2 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=2*kHz)
+            signal1 = AnalogSignal(numpy.arange(10.0), units="mV",
+                                   sampling_rate=1*kHz)
+            signal2 = AnalogSignal(numpy.arange(10.0), units="mV",
+                                   sampling_rate=2*kHz)
             self.assertNotEqual(signal1, signal2)
 
 
 class TestCombination(unittest.TestCase):
-
-    def test__adding_a_constant_to_a_signal_should_preserve_data_complement(self):
-        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+    def test__add_const_to_signal_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV",
+                              sampling_rate=1*kHz, name="foo")
         signal_with_offset = signal + 65*mV
         self.assertEqual(signal[9], 9*mV)
         self.assertEqual(signal_with_offset[9], 74*mV)
@@ -266,19 +277,25 @@ class TestCombination(unittest.TestCase):
             self.assertEqual(getattr(signal, attr),
                              getattr(signal_with_offset, attr))
 
-    def test__adding_two_consistent_signals_should_preserve_data_complement(self):
-        signal1 = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz)
-        signal2 = AnalogSignal(numpy.arange(10.0, 20.0), units="mV", sampling_rate=1*kHz)
+    def test__add_two_consistent_signals_should_preserve_data_complement(self):
+        signal1 = AnalogSignal(numpy.arange(10.0), units="mV",
+                               sampling_rate=1*kHz)
+        signal2 = AnalogSignal(numpy.arange(10.0, 20.0), units="mV",
+                               sampling_rate=1*kHz)
         sum = signal1 + signal2
-        assert_arrays_equal(sum, AnalogSignal(numpy.arange(10.0, 30.0, 2.0), units="mV", sampling_rate=1*kHz))
+        assert_arrays_equal(sum, AnalogSignal(numpy.arange(10.0, 30.0, 2.0),
+                                              units="mV", sampling_rate=1*kHz))
 
-    def test__adding_signals_with_inconsistent_data_complement_should_raise_Exception(self):
-        signal1 = AnalogSignal(numpy.arange(10.0), units="mV", t_start=0.0*ms, sampling_rate=1*kHz)
-        signal2 = AnalogSignal(numpy.arange(10.0), units="mV", t_start=100.0*ms, sampling_rate=0.5*kHz)
+    def test__add_signals_with_inconsistent_data_complement_Exception(self):
+        signal1 = AnalogSignal(numpy.arange(10.0), units="mV",
+                               t_start=0.0*ms, sampling_rate=1*kHz)
+        signal2 = AnalogSignal(numpy.arange(10.0), units="mV",
+                               t_start=100.0*ms, sampling_rate=0.5*kHz)
         self.assertRaises(Exception, signal1.__add__, signal2)
 
-    def test__subtracting_a_constant_from_a_signal_should_preserve_data_complement(self):
-        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+    def test__subtract_const_from_signal_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV",
+                              sampling_rate=1*kHz, name="foo")
         signal_with_offset = signal - 65*mV
         self.assertEqual(signal[9], 9*mV)
         self.assertEqual(signal_with_offset[9], -56*mV)
@@ -286,8 +303,9 @@ class TestCombination(unittest.TestCase):
             self.assertEqual(getattr(signal, attr),
                              getattr(signal_with_offset, attr))
 
-    def test__subtracting_a_signal_from_a_constant_should_return_a_signal(self):
-        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+    def test__subtract_signal_from_const_should_return_signal(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV",
+                              sampling_rate=1*kHz, name="foo")
         signal_with_offset = 10*mV - signal
         self.assertEqual(signal[9], 9*mV)
         self.assertEqual(signal_with_offset[9], 1*mV)
@@ -295,8 +313,9 @@ class TestCombination(unittest.TestCase):
             self.assertEqual(getattr(signal, attr),
                              getattr(signal_with_offset, attr))
 
-    def test__multiplying_a_signal_by_a_constant_should_preserve_data_complement(self):
-        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+    def test__mult_signal_by_const_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV",
+                              sampling_rate=1*kHz, name="foo")
         amplified_signal = signal * 2
         self.assertEqual(signal[9], 9*mV)
         self.assertEqual(amplified_signal[9], 18*mV)
@@ -304,8 +323,9 @@ class TestCombination(unittest.TestCase):
             self.assertEqual(getattr(signal, attr),
                              getattr(amplified_signal, attr))
 
-    def test__dividing_a_signal_by_a_constant_should_preserve_data_complement(self):
-        signal = AnalogSignal(numpy.arange(10.0), units="mV", sampling_rate=1*kHz, name="foo")
+    def test__divide_signal_by_const_should_preserve_data_complement(self):
+        signal = AnalogSignal(numpy.arange(10.0), units="mV",
+                              sampling_rate=1*kHz, name="foo")
         amplified_signal = signal/0.5
         self.assertEqual(signal[9], 9*mV)
         self.assertEqual(amplified_signal[9], 18*mV)
@@ -313,14 +333,14 @@ class TestCombination(unittest.TestCase):
             self.assertEqual(getattr(signal, attr),
                              getattr(amplified_signal, attr))
 
-class TestFunctions(unittest.TestCase):
 
+class TestFunctions(unittest.TestCase):
     def test__pickle(self):
-        a = AnalogSignal([1,2,3,4], sampling_period=1*pq.ms, units=pq.S,
+        a = AnalogSignal([1, 2, 3, 4], sampling_period=1*pq.ms, units=pq.S,
                          channel_index=42)
         a.annotations['index'] = 2
 
-        f = open('./pickle','wb')
+        f = open('./pickle', 'wb')
         pickle.dump(a, f)
         f.close()
 

@@ -9,6 +9,7 @@ except ImportError:
 
 from neo.core.eventarray import EventArray
 
+
 class TestEventArray(unittest.TestCase):
     pass
 

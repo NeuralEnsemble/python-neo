@@ -59,7 +59,7 @@ def create_many_to_one_relationship(ob):
             create_many_to_one_relationship(child)
 
 
-def populate_RecordingChannel(bl, remove_from_annotation = True):
+def populate_RecordingChannel(bl, remove_from_annotation=True):
     """
     When a Block is
     Block>Segment>AnalogSIgnal
@@ -74,15 +74,16 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     Usage:
     >>> populate_RecordingChannel(a_block)
     """
-    recordingchannels = { }
+    recordingchannels = {}
     for seg in bl.segments:
         for anasig in seg.analogsignals:
             if getattr(anasig, 'channel_index', None) is not None:
                 ind = int(anasig.channel_index)
-                if  ind not in recordingchannels:
-                    recordingchannels[ind] = RecordingChannel(index = ind)
+                if ind not in recordingchannels:
+                    recordingchannels[ind] = RecordingChannel(index=ind)
                     if 'channel_name' in anasig.annotations:
-                        recordingchannels[ind].name = anasig.annotations['channel_name']
+                        channel_name = anasig.annotations['channel_name']
+                        recordingchannels[ind].name = channel_name
                         if remove_from_annotation:
                             anasig.annotations.pop('channel_name')
                 recordingchannels[ind].analogsignals.append(anasig)
@@ -91,9 +92,11 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                     anasig.channel_index = None
 
     indexes = np.sort(list(recordingchannels.keys())).astype('i')
-    names = np.array([recordingchannels[idx].name for idx in indexes], dtype='S')
-    rcg = RecordingChannelGroup(name = 'all channels',
-        channel_indexes = indexes, channel_names=names)
+    names = np.array([recordingchannels[idx].name for idx in indexes],
+                     dtype='S')
+    rcg = RecordingChannelGroup(name='all channels',
+                                channel_indexes=indexes,
+                                channel_names=names)
     bl.recordingchannelgroups.append(rcg)
     for ind in indexes:
         # many to many relationship
@@ -103,9 +106,9 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
 
 def iteritems(D):
     try:
-        return D.iteritems() # Python 2
+        return D.iteritems()  # Python 2
     except AttributeError:
-        return D.items() # Python 3
+        return D.items()  # Python 3
 
 
 class LazyList(collections.MutableSequence):

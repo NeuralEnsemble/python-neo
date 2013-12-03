@@ -8,9 +8,11 @@ except ImportError:
     import unittest
 
 from neo.core.segment import Segment
-from neo.core import RecordingChannelGroup, Unit, Block, SpikeTrain, AnalogSignalArray
+from neo.core import (RecordingChannelGroup, Unit, Block,
+                      SpikeTrain, AnalogSignalArray)
 import numpy as np
 import quantities as pq
+
 
 class TestSegment(unittest.TestCase):
     def test_init(self):
@@ -18,7 +20,6 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(seg.name, 'a segment')
         self.assertEqual(seg.file_origin, None)
         self.assertEqual(seg.index, 3)
-
 
     def test__construct_subsegment_by_unit(self):
         nb_seg = 3
@@ -28,29 +29,36 @@ class TestSegment(unittest.TestCase):
         sig_len = 100
 
         #recordingchannelgroups
-        rcgs = [ RecordingChannelGroup(name = 'Vm', channel_indexes = unit_with_sig),
-                        RecordingChannelGroup(name = 'Conductance', channel_indexes = unit_with_sig), ]
+        rcgs = [RecordingChannelGroup(name='Vm',
+                                      channel_indexes=unit_with_sig),
+                RecordingChannelGroup(name='Conductance',
+                                      channel_indexes=unit_with_sig)]
 
         # Unit
-        all_unit = [ ]
+        all_unit = []
         for u in range(nb_unit):
-            un = Unit(name = 'Unit #%d' % u, channel_indexes = [u])
+            un = Unit(name='Unit #%d' % u, channel_indexes=[u])
             all_unit.append(un)
 
-        bl = Block()
+        blk = Block()
+        blk.recordingchannelgroups = rcgs
         for s in range(nb_seg):
-            seg = Segment(name = 'Simulation %s' % s)
+            seg = Segment(name='Simulation %s' % s)
             for j in range(nb_unit):
-                st = SpikeTrain([1, 2, 3], units = 'ms', t_start = 0., t_stop = 10)
+                st = SpikeTrain([1, 2, 3], units='ms',
+                                t_start=0., t_stop=10)
                 st.unit = all_unit[j]
 
             for t in signal_types:
-                anasigarr = AnalogSignalArray( np.zeros((sig_len, len(unit_with_sig)) ), units = 'nA',
-                                sampling_rate = 1000.*pq.Hz, channel_indexes = unit_with_sig )
+                anasigarr = AnalogSignalArray(np.zeros((sig_len,
+                                                        len(unit_with_sig))),
+                                              units='nA',
+                                              sampling_rate=1000.*pq.Hz,
+                                              channel_indexes=unit_with_sig)
                 seg.analogsignalarrays.append(anasigarr)
 
         # what you want
-        subseg = seg.construct_subsegment_by_unit(all_unit[:4])
+        seg.construct_subsegment_by_unit(all_unit[:4])
 
 
 if __name__ == "__main__":

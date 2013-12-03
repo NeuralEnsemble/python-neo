@@ -25,25 +25,25 @@ Classes:
 
 from __future__ import absolute_import
 
-from .block import Block
-from .segment import Segment
-from .recordingchannelgroup import RecordingChannelGroup
-from .recordingchannel import RecordingChannel
+from neo.core.block import Block
+from neo.core.segment import Segment
+from neo.core.recordingchannelgroup import RecordingChannelGroup
+from neo.core.recordingchannel import RecordingChannel
 
 
-from .analogsignal import AnalogSignal
-from .analogsignalarray import AnalogSignalArray
-from .irregularlysampledsignal import IrregularlySampledSignal
+from neo.core.analogsignal import AnalogSignal
+from neo.core.analogsignalarray import AnalogSignalArray
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
 
-from .event import Event
-from .eventarray import EventArray
-from .epoch import Epoch
-from .epocharray import EpochArray
+from neo.core.event import Event
+from neo.core.eventarray import EventArray
+from neo.core.epoch import Epoch
+from neo.core.epocharray import EpochArray
 
-from .unit import Unit
-from .spike import Spike
-from .spiketrain import SpikeTrain
+from neo.core.unit import Unit
+from neo.core.spike import Spike
+from neo.core.spiketrain import SpikeTrain
 
 
 objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,

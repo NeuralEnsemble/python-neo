@@ -54,9 +54,9 @@ def _check_annotations(value):
 def merge_annotation(a, b):
     """
     First attempt at a policy for merging annotations (intended for use with
-    parallel computations using MPI). This policy needs to be discussed further,
-    or we could allow the user to specify a policy.
-    
+    parallel computations using MPI). This policy needs to be discussed
+    further, or we could allow the user to specify a policy.
+
     Current policy:
         for arrays: concatenate the two arrays
         otherwise: fail if the annotations are not equal
@@ -74,7 +74,7 @@ def merge_annotation(a, b):
     else:
         assert a == b
         return a
-    
+
 
 def merge_annotations(A, B):
     """
@@ -89,7 +89,7 @@ def merge_annotations(A, B):
     for name in B:
         if name not in merged:
             merged[name] = B[name]
-    logger.debug("Merging annotations: A=%s B=%s merged=%s" % (A, B, merged))
+    logger.debug("Merging annotations: A=%s B=%s merged=%s", A, B, merged)
     return merged
 
 
