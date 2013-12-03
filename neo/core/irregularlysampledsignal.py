@@ -111,22 +111,23 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     @property
     def t_stop(self):
         return self.times[-1]
-    
+
     def __eq__(self, other):
-        return super(IrregularlySampledSignal, self).__eq__(other) and self.times == other.times
+        return (super(IrregularlySampledSignal, self).__eq__(other).all() and
+                (self.times == other.times).all())
 
     def __ne__(self, other):
         return not self.__eq__(other)
-    
+
     @property
     def sampling_intervals(self):
         return self.times[1:] - self.times[:-1]
-    
+
     def mean(self, interpolation=None):
         """
         Calculates the mean, optionally using interpolation between sampling
         times.
-        
+
         If interpolation is None, we assume that values change stepwise at
         sampling times.
         """
@@ -139,7 +140,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         Resample the signal, returning either an AnalogSignal object or another
         IrregularlySampledSignal object.
-        
+
         Arguments:
             :at:  either a Quantity array containing the times at which samples
                   should be created (times must be within the signal duration,
@@ -149,4 +150,4 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         # further interpolation methods could be added
         raise NotImplementedError
-        
+
