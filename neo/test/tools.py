@@ -22,8 +22,13 @@ def assert_arrays_equal(a, b):
     #                                                               b.dtype)
     try:
         assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
-    except ValueError:
-        assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
+    except (AttributeError, ValueError):
+        try:
+            ar = np.array(a)
+            br = np.array(b)
+            assert (ar.flatten() == br.flatten()).all(), "%s != %s" % (ar, br)
+        except (AttributeError, ValueError):
+            assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
 
 
 def assert_arrays_almost_equal(a, b, threshold):

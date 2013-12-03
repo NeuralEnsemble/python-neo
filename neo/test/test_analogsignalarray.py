@@ -10,90 +10,90 @@ except ImportError:
 from neo.core.analogsignalarray import AnalogSignalArray
 from neo.core.analogsignal import AnalogSignal
 
-import numpy
+import numpy as np
 import quantities as pq
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
+from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
+                            assert_neo_object_is_compliant,
+                            assert_same_sub_schema)
 
 import pickle
 import os
 
-V = pq.V
-mV = pq.mV
-uV = pq.uV
-Hz = pq.Hz
-kHz = pq.kHz
-ms = pq.ms
-nA = pq.nA
-pA = pq.pA
 
-
-class TestConstructor(unittest.TestCase):
-
+class TestAnalogSignalArrayConstructor(unittest.TestCase):
     def test__create_from_list(self):
         data = [(i, i, i) for i in range(10)]  # 3 signals each with 10 samples
-        rate = 1000*Hz
-        a = AnalogSignalArray(data, sampling_rate=rate, units="mV")
-        self.assertEqual(a.shape, (10, 3))
-        self.assertEqual(a.t_start, 0*ms)
-        self.assertEqual(a.t_stop, len(data)/rate)
-        self.assertEqual(a[9, 0], 9000*uV)
+        rate = 1000*pq.Hz
+        signal = AnalogSignalArray(data, sampling_rate=rate, units="mV")
+        assert_neo_object_is_compliant(signal)
+        self.assertEqual(signal.shape, (10, 3))
+        self.assertEqual(signal.t_start, 0*pq.ms)
+        self.assertEqual(signal.t_stop, len(data)/rate)
+        self.assertEqual(signal[9, 0], 9000*pq.uV)
 
     def test__create_from_numpy_array(self):
-        data = numpy.arange(20.0).reshape((10, 2))
-        rate = 1*kHz
-        a = AnalogSignalArray(data, sampling_rate=rate, units="uV")
-        self.assertEqual(a.t_start, 0*ms)
-        self.assertEqual(a.t_stop, data.shape[0]/rate)
-        self.assertEqual(a[9, 0], 0.018*mV)
-        self.assertEqual(a[9, 1], 19*uV)
+        data = np.arange(20.0).reshape((10, 2))
+        rate = 1*pq.kHz
+        signal = AnalogSignalArray(data, sampling_rate=rate, units="uV")
+        assert_neo_object_is_compliant(signal)
+        self.assertEqual(signal.t_start, 0*pq.ms)
+        self.assertEqual(signal.t_stop, data.shape[0]/rate)
+        self.assertEqual(signal[9, 0], 0.018*pq.mV)
+        self.assertEqual(signal[9, 1], 19*pq.uV)
 
     def test__create_from_quantities_array(self):
-        data = numpy.arange(20.0).reshape((10, 2)) * mV
-        rate = 5000*Hz
-        a = AnalogSignalArray(data, sampling_rate=rate)
-        self.assertEqual(a.t_start, 0*ms)
-        self.assertEqual(a.t_stop, data.shape[0]/rate)
-        self.assertEqual(a[9, 0], 18000*uV)
+        data = np.arange(20.0).reshape((10, 2)) * pq.mV
+        rate = 5000*pq.Hz
+        signal = AnalogSignalArray(data, sampling_rate=rate)
+        assert_neo_object_is_compliant(signal)
+        self.assertEqual(signal.t_start, 0*pq.ms)
+        self.assertEqual(signal.t_stop, data.shape[0]/rate)
+        self.assertEqual(signal[9, 0], 18000*pq.uV)
 
     def test__create_from_quantities_with_inconsistent_units_ValueError(self):
-        data = numpy.arange(20.0).reshape((10, 2)) * mV
+        data = np.arange(20.0).reshape((10, 2)) * pq.mV
         self.assertRaises(ValueError, AnalogSignalArray, data,
-                          sampling_rate=1*kHz, units="nA")
+                          sampling_rate=1*pq.kHz, units="nA")
 
     def test__create_with_copy_true_should_return_copy(self):
-        data = numpy.arange(20.0).reshape((10, 2)) * mV
-        rate = 5000*Hz
-        a = AnalogSignalArray(data, copy=True, sampling_rate=rate)
-        data[3, 0] = 0.099*V
-        self.assertNotEqual(a[3, 0], 99*mV)
+        data = np.arange(20.0).reshape((10, 2)) * pq.mV
+        rate = 5000*pq.Hz
+        signal = AnalogSignalArray(data, copy=True, sampling_rate=rate)
+        assert_neo_object_is_compliant(signal)
+        data[3, 0] = 0.099*pq.V
+        self.assertNotEqual(signal[3, 0], 99*pq.mV)
 
     def test__create_with_copy_false_should_return_view(self):
-        data = numpy.arange(20.0).reshape((10, 2)) * mV
-        rate = 5000*Hz
-        a = AnalogSignalArray(data, copy=False, sampling_rate=rate)
-        data[3, 0] = 99*mV
-        self.assertEqual(a[3, 0], 99000*uV)
+        data = np.arange(20.0).reshape((10, 2)) * pq.mV
+        rate = 5000*pq.Hz
+        signal = AnalogSignalArray(data, copy=False, sampling_rate=rate)
+        assert_neo_object_is_compliant(signal)
+        data[3, 0] = 99*pq.mV
+        self.assertEqual(signal[3, 0], 99000*pq.uV)
 
     # signal must not be 1D - should raise Exception if 1D
 
 
-class TestProperties(unittest.TestCase):
-
+class TestAnalogSignalArrayProperties(unittest.TestCase):
     def setUp(self):
-        self.t_start = [0.0*ms, 100*ms, -200*ms]
-        self.rates = [1*kHz, 420*Hz, 999*Hz]
-        self.data = [numpy.arange(10.0).reshape((5, 2))*nA,
-                     numpy.arange(-100.0, 100.0, 10.0).reshape((4, 5))*mV,
-                     numpy.random.uniform(size=(100, 4))*uV]
+        self.t_start = [0.0*pq.ms, 100*pq.ms, -200*pq.ms]
+        self.rates = [1*pq.kHz, 420*pq.Hz, 999*pq.Hz]
+        self.data = [np.arange(10.0).reshape((5, 2))*pq.nA,
+                     np.arange(-100.0, 100.0, 10.0).reshape((4, 5))*pq.mV,
+                     np.random.uniform(size=(100, 4))*pq.uV]
         self.signals = [AnalogSignalArray(D, sampling_rate=r, t_start=t)
                         for r, D, t in zip(self.rates,
                                            self.data,
                                            self.t_start)]
 
+    def test__compliant(self):
+        for signal in self.signals:
+            assert_neo_object_is_compliant(signal)
+
     def test__t_stop(self):
-        for i in range(3):
+        for i, signal in enumerate(self.signals):
             targ = self.t_start[i] + self.data[i].shape[0]/self.rates[i]
-            self.assertEqual(self.signals[i].t_stop, targ)
+            self.assertEqual(signal.t_stop, targ)
 
     def test__duration(self):
         for signal in self.signals:
@@ -106,244 +106,544 @@ class TestProperties(unittest.TestCase):
             self.assertEqual(signal.sampling_period, 1/rate)
 
     def test__times(self):
-        for i in range(3):
-            targ = numpy.arange(self.data[i].shape[0])
-            targ = targ/self.rates[i] + self.t_start[i],
-            assert_arrays_almost_equal(self.signals[i].times, targ, 1e-12*ms)
+        for i, signal in enumerate(self.signals):
+            targ = np.arange(self.data[i].shape[0])
+            targ = targ/self.rates[i] + self.t_start[i]
+            assert_arrays_almost_equal(signal.times, targ, 1e-12*pq.ms)
 
 
-class TestArrayMethods(unittest.TestCase):
-
+class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
     def setUp(self):
-        self.signal = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                        units="nA", sampling_rate=1*kHz)
+        self.data1 = np.arange(55.0).reshape((11, 5))
+        self.data1quant = self.data1 * pq.nA
+        self.signal1 = AnalogSignalArray(self.data1quant,
+                                         sampling_rate=1*pq.kHz,
+                                         name='spam', description='eggs',
+                                         file_origin='testfile.txt',
+                                         arg1='test')
+        self.data2 = np.array([[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]]).T
+        self.data2quant = self.data2 * pq.mV
+        self.signal2 = AnalogSignalArray(self.data2quant,
+                                         sampling_rate=1.0*pq.Hz,
+                                         name='spam', description='eggs',
+                                         file_origin='testfile.txt',
+                                         arg1='test')
+
+    def test__compliant(self):
+        assert_neo_object_is_compliant(self.signal1)
+        self.assertEqual(self.signal1.name, 'spam')
+        self.assertEqual(self.signal1.description, 'eggs')
+        self.assertEqual(self.signal1.file_origin, 'testfile.txt')
+        self.assertEqual(self.signal1.annotations, {'arg1': 'test'})
+
+        assert_neo_object_is_compliant(self.signal2)
+        self.assertEqual(self.signal2.name, 'spam')
+        self.assertEqual(self.signal2.description, 'eggs')
+        self.assertEqual(self.signal2.file_origin, 'testfile.txt')
+        self.assertEqual(self.signal2.annotations, {'arg1': 'test'})
 
     def test__index_dim1_should_return_analogsignal(self):
-        single_signal = self.signal[:, 0]
-        self.assertIsInstance(single_signal, AnalogSignal)
-        self.assertEqual(single_signal.t_stop, self.signal.t_stop)
-        self.assertEqual(single_signal.t_start, self.signal.t_start)
-        self.assertEqual(single_signal.sampling_rate,
-                         self.signal.sampling_rate)
+        result = self.signal1[:, 0]
+        self.assertIsInstance(result, AnalogSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, None)
+        self.assertEqual(result.description, None)
+        self.assertEqual(result.file_origin, None)
+        self.assertEqual(result.annotations, {})
+
+        self.assertEqual(result.t_stop, self.signal1.t_stop)
+        self.assertEqual(result.t_start, self.signal1.t_start)
+        self.assertEqual(result.sampling_rate,
+                         self.signal1.sampling_rate)
+        assert_arrays_equal(result, self.data1[:, 0])
 
     def test__index_dim1_and_slice_dim0_should_return_analogsignal(self):
-        single_signal = self.signal[2:7, 0]
-        self.assertIsInstance(single_signal, AnalogSignal)
-        self.assertEqual(single_signal.t_start,
-                         self.signal.t_start+2*self.signal.sampling_period)
-        self.assertEqual(single_signal.t_stop,
-                         self.signal.t_start+7*self.signal.sampling_period)
-        self.assertEqual(single_signal.sampling_rate,
-                         self.signal.sampling_rate)
+        result = self.signal1[2:7, 0]
+        self.assertIsInstance(result, AnalogSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, None)
+        self.assertEqual(result.description, None)
+        self.assertEqual(result.file_origin, None)
+        self.assertEqual(result.annotations, {})
+
+        self.assertEqual(result.t_start,
+                         self.signal1.t_start+2*self.signal1.sampling_period)
+        self.assertEqual(result.t_stop,
+                         self.signal1.t_start+7*self.signal1.sampling_period)
+        self.assertEqual(result.sampling_rate,
+                         self.signal1.sampling_rate)
+        assert_arrays_equal(result, self.data1[2:7, 0])
 
     def test__index_dim0_should_return_quantity_array(self):
         # i.e. values from all signals for a single point in time
-        values = self.signal[3, :]
-        self.assertNotIsInstance(values, AnalogSignalArray)
-        self.assertEqual(values.shape, (5,))
-        assert not hasattr(values, "t_start")
-        self.assertEqual(values.units, pq.nA)
+        result = self.signal1[3, :]
+        self.assertIsInstance(result, pq.Quantity)
+        self.assertFalse(hasattr(result, 'name'))
+        self.assertFalse(hasattr(result, 'description'))
+        self.assertFalse(hasattr(result, 'file_origin'))
+        self.assertFalse(hasattr(result, 'annotations'))
+
+        self.assertEqual(result.shape, (5,))
+        self.assertFalse(hasattr(result, "t_start"))
+        self.assertEqual(result.units, pq.nA)
+        assert_arrays_equal(result, self.data1[3, :])
 
     def test__index_dim0_and_slice_dim1_should_return_quantity_array(self):
         # i.e. values from a subset of signals for a single point in time
-        values = self.signal[3, 2:5]
-        self.assertNotIsInstance(values, AnalogSignalArray)
-        self.assertEqual(values.shape, (3,))
-        assert not hasattr(values, "t_start")
-        self.assertEqual(values.units, pq.nA)
+        result = self.signal1[3, 2:5]
+        self.assertIsInstance(result, pq.Quantity)
+        self.assertFalse(hasattr(result, 'name'))
+        self.assertFalse(hasattr(result, 'description'))
+        self.assertFalse(hasattr(result, 'file_origin'))
+        self.assertFalse(hasattr(result, 'annotations'))
+
+        self.assertEqual(result.shape, (3,))
+        self.assertFalse(hasattr(result, "t_start"))
+        self.assertEqual(result.units, pq.nA)
+        assert_arrays_equal(result, self.data1[3, 2:5])
+
+    def test__index_as_string_IndexError(self):
+        self.assertRaises(IndexError, self.signal1.__getitem__, 5.)
 
     def test__slice_both_dimensions_should_return_analogsignalarray(self):
-        values = self.signal[0:3, 0:3]
-        assert_arrays_equal(values, AnalogSignalArray([[0, 1, 2],
-                                                       [5, 6, 7],
-                                                       [10, 11, 12]],
-                            dtype=float, units="nA", sampling_rate=1*kHz))
+        result = self.signal1[0:3, 0:3]
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        targ = AnalogSignalArray([[0, 1, 2], [5, 6, 7], [10, 11, 12]],
+                                 dtype=float, units="nA",
+                                 sampling_rate=1*pq.kHz,
+                                 name='spam', description='eggs',
+                                 file_origin='testfile.txt', arg1='test')
+        assert_neo_object_is_compliant(targ)
+
+        self.assertEqual(result.t_stop, targ.t_stop)
+        self.assertEqual(result.t_start, targ.t_start)
+        self.assertEqual(result.sampling_rate, targ.sampling_rate)
+        self.assertEqual(result.shape, targ.shape)
+        assert_same_sub_schema(result, targ)
+        assert_arrays_equal(result, self.data1[0:3, 0:3])
 
     def test__slice_only_first_dimension_should_return_analogsignalarray(self):
-        signal2 = self.signal[2:7]
-        self.assertIsInstance(signal2, AnalogSignalArray)
-        self.assertEqual(signal2.shape, (5, 5))
-        self.assertEqual(signal2.t_start,
-                         self.signal.t_start+2*self.signal.sampling_period)
-        self.assertEqual(signal2.t_stop,
-                         self.signal.t_start+7*self.signal.sampling_period)
-        self.assertEqual(signal2.sampling_rate, self.signal.sampling_rate)
+        result = self.signal1[2:7]
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(result.shape, (5, 5))
+        self.assertEqual(result.t_start,
+                         self.signal1.t_start+2*self.signal1.sampling_period)
+        self.assertEqual(result.t_stop,
+                         self.signal1.t_start+7*self.signal1.sampling_period)
+        self.assertEqual(result.sampling_rate, self.signal1.sampling_rate)
+        assert_arrays_equal(result, self.data1[2:7])
 
     def test__getitem_should_return_single_quantity(self):
         # quantities drops the units in this case
-        self.assertEqual(self.signal[9, 3], 48000*pA)
-        self.assertEqual(self.signal[9][3], self.signal[9, 3])
-        assert hasattr(self.signal[9, 3], 'units')
-        self.assertRaises(IndexError, self.signal.__getitem__, (99, 73))
+        self.assertEqual(self.signal1[9, 3], 48000*pq.pA)
+        self.assertEqual(self.signal1[9][3], self.signal1[9, 3])
+        self.assertTrue(hasattr(self.signal1[9, 3], 'units'))
+        self.assertRaises(IndexError, self.signal1.__getitem__, (99, 73))
 
     def test_comparison_operators(self):
-        assert_arrays_equal(self.signal[0:3, 0:3] >= 5*nA,
-                            numpy.array([[False, False, False],
-                                         [True, True, True],
-                                         [True, True, True]]))
-        assert_arrays_equal(self.signal[0:3, 0:3] >= 5*pA,
-                            numpy.array([[False, True, True],
-                                         [True, True, True],
-                                         [True, True, True]]))
+        assert_arrays_equal(self.signal1[0:3, 0:3] >= 5*pq.nA,
+                            np.array([[False, False, False],
+                                      [True, True, True],
+                                      [True, True, True]]))
+        assert_arrays_equal(self.signal1[0:3, 0:3] >= 5*pq.pA,
+                            np.array([[False, True, True],
+                                      [True, True, True],
+                                      [True, True, True]]))
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
-        self.assertRaises(ValueError, self.signal.__gt__, 5*mV)
+        self.assertRaises(ValueError, self.signal1.__gt__, 5*pq.mV)
 
-    def test_simple_statistics(self):
-        self.assertEqual(self.signal.max(), 54000*pA)
-        self.assertEqual(self.signal.min(), 0*nA)
-        self.assertEqual(self.signal.mean(), 27*nA)
+    def test__simple_statistics(self):
+        self.assertEqual(self.signal1.max(), 54000*pq.pA)
+        self.assertEqual(self.signal1.min(), 0*pq.nA)
+        self.assertEqual(self.signal1.mean(), 27*pq.nA)
 
-    def test_time_slice(self):
-        #import numpy
-        av = AnalogSignalArray(numpy.array([[0, 1, 2, 3, 4, 5],
-                                            [0, 1, 2, 3, 4, 5]]).T,
-                               sampling_rate=1.0*pq.Hz, units='mV')
+    def test__rescale_same(self):
+        result = self.signal1.copy()
+        result = result.rescale(pq.nA)
+
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(result.units, 1*pq.nA)
+        assert_arrays_equal(result, self.data1)
+        assert_same_sub_schema(result, self.signal1)
+
+    def test__rescale_new(self):
+        result = self.signal1.copy()
+        result = result.rescale(pq.pA)
+
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(result.units, 1*pq.pA)
+        assert_arrays_almost_equal(np.array(result), self.data1*1000., 1e-10)
+
+    def test__time_slice(self):
         t_start = 2 * pq.s
         t_stop = 4 * pq.s
-        av2 = av.time_slice(t_start, t_stop)
-        correct = AnalogSignalArray(numpy.array([[2, 3], [2, 3]]).T,
-                                    sampling_rate=1.0*pq.Hz, units='mV')
-        ar = numpy.array([a == b for (a, b) in zip(av2.flatten(),
-                                                   correct.flatten())])
-        self.assertEqual(ar.all(), True)
-        self.assertIsInstance(av2, AnalogSignalArray)
-        self.assertEqual(av2.t_stop, t_stop)
-        self.assertEqual(av2.t_start, t_start)
-        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
 
-    def test_time_equal(self):
-        #import numpy
-        av = AnalogSignalArray(numpy.array([[0, 1, 2, 3, 4, 5],
-                                            [0, 1, 2, 3, 4, 5]]).T,
-                               sampling_rate=1.0*pq.Hz, units='mV')
+        result = self.signal2.time_slice(t_start, t_stop)
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+                                 sampling_rate=1.0*pq.Hz, units='mV',
+                                 t_start=t_start,
+                                 name='spam', description='eggs',
+                                 file_origin='testfile.txt', arg1='test')
+        assert_neo_object_is_compliant(result)
+
+        self.assertEqual(result.t_stop, t_stop)
+        self.assertEqual(result.t_start, t_start)
+        self.assertEqual(result.sampling_rate, targ.sampling_rate)
+        assert_arrays_equal(result, targ)
+        assert_same_sub_schema(result, targ)
+
+    def test__time_slice__out_of_bounds_ValueError(self):
+        t_start_good = 2 * pq.s
+        t_stop_good = 4 * pq.s
+        t_start_bad = -2 * pq.s
+        t_stop_bad = 40 * pq.s
+
+        self.assertRaises(ValueError, self.signal2.time_slice,
+                          t_start_good, t_stop_bad)
+        self.assertRaises(ValueError, self.signal2.time_slice,
+                          t_start_bad, t_stop_good)
+        self.assertRaises(ValueError, self.signal2.time_slice,
+                          t_start_bad, t_stop_bad)
+
+    def test__time_equal(self):
         t_start = 0 * pq.s
         t_stop = 6 * pq.s
-        av2 = av.time_slice(t_start, t_stop)
-        ar = numpy.array([a == b for (a, b) in zip(av2.flatten(),
-                                                   av.flatten())])
-        self.assertEqual(ar.all(), True)
-        self.assertIsInstance(av2, AnalogSignalArray)
-        self.assertEqual(av2.t_stop, t_stop)
-        self.assertEqual(av2.t_start, t_start)
 
-    def test_time_slice_offset(self):
-        #import numpy
-        av = AnalogSignalArray(numpy.array([[0, 1, 2, 3, 4, 5],
-                                            [0, 1, 2, 3, 4, 5]]).T,
-                               t_start=10.0 * pq.s, sampling_rate=1.0*pq.Hz,
-                               units='mV')
+        result = self.signal2.time_slice(t_start, t_stop)
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(result.t_stop, t_stop)
+        self.assertEqual(result.t_start, t_start)
+        assert_arrays_equal(result, self.signal2)
+        assert_same_sub_schema(result, self.signal2)
+
+    def test__time_slice__offset(self):
+        self.signal2.t_start = 10.0 * pq.s
+        assert_neo_object_is_compliant(self.signal2)
+
         t_start = 12 * pq.s
         t_stop = 14 * pq.s
-        av2 = av.time_slice(t_start, t_stop)
-        correct = AnalogSignalArray(numpy.array([[2, 3], [2, 3]]).T,
-                                    t_start=12.0*pq.ms,
-                                    sampling_rate=1.0*pq.Hz, units='mV')
-        ar = numpy.array([a == b for (a, b) in
-                          zip(av2.flatten(), correct.flatten())])
-        self.assertEqual(ar.all(), True)
-        self.assertIsInstance(av2, AnalogSignalArray)
-        self.assertEqual(av2.t_stop, t_stop)
-        self.assertEqual(av2.t_start, t_start)
-        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
 
-    def test_time_slice_different_units(self):
-        #import numpy
-        av = AnalogSignalArray(numpy.array([[0, 1, 2, 3, 4, 5],
-                                            [0, 1, 2, 3, 4, 5]]).T,
-                               t_start=10.0 * pq.ms,
-                               sampling_rate=1.0*pq.Hz, units='mV')
+        result = self.signal2.time_slice(t_start, t_stop)
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+                                 t_start=12.0*pq.ms,
+                                 sampling_rate=1.0*pq.Hz, units='mV',
+                                 name='spam', description='eggs',
+                                 file_origin='testfile.txt', arg1='test')
+        assert_neo_object_is_compliant(result)
+
+        self.assertEqual(self.signal2.t_start, 10.0 * pq.s)
+        self.assertEqual(result.t_stop, t_stop)
+        self.assertEqual(result.t_start, t_start)
+        self.assertEqual(result.sampling_rate, targ.sampling_rate)
+        assert_arrays_equal(result, targ)
+        assert_same_sub_schema(result, targ)
+
+    def test__time_slice__different_units(self):
+        self.signal2.t_start = 10.0 * pq.ms
+        assert_neo_object_is_compliant(self.signal2)
 
         t_start = 2 * pq.s + 10.0 * pq.ms
         t_stop = 4 * pq.s + 10.0 * pq.ms
-        av2 = av.time_slice(t_start, t_stop)
-        correct = AnalogSignalArray(numpy.array([[2, 3], [2, 3]]).T,
-                                    t_start=t_start,
-                                    sampling_rate=1.0*pq.Hz, units='mV')
 
-        self.assertIsInstance(av2, AnalogSignalArray)
-        self.assertAlmostEqual(av2.t_stop, t_stop, delta=1e-12*ms)
-        self.assertAlmostEqual(av2.t_start, t_start, delta=1e-12*ms)
-        assert_arrays_almost_equal(av2.times, correct.times, 1e-12*ms)
-        self.assertEqual(av2.sampling_rate, correct.sampling_rate)
+        result = self.signal2.time_slice(t_start, t_stop)
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+                                 t_start=t_start.rescale(pq.ms),
+                                 sampling_rate=1.0*pq.Hz, units='mV',
+                                 name='spam', description='eggs',
+                                 file_origin='testfile.txt', arg1='test')
+        assert_neo_object_is_compliant(result)
+
+        assert_neo_object_is_compliant(self.signal2)
+        self.assertEqual(self.signal2.t_start, 10.0 * pq.ms)
+        self.assertAlmostEqual(result.t_stop, t_stop, delta=1e-12*pq.ms)
+        self.assertAlmostEqual(result.t_start, t_start, delta=1e-12*pq.ms)
+        assert_arrays_almost_equal(result.times, targ.times, 1e-12*pq.ms)
+        self.assertEqual(result.sampling_rate, targ.sampling_rate)
+        assert_arrays_equal(result, targ)
+        assert_same_sub_schema(result, targ)
 
 
-class TestEquality(unittest.TestCase):
-
-    def test__signals_with_different_data_complement_should_be_non_equal(self):
-            signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                        units="mV", sampling_rate=1*kHz)
-            signal2 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                        units="mV", sampling_rate=2*kHz)
+class TestAnalogSignalArrayEquality(unittest.TestCase):
+    def test__signals_with_different_data_complement_should_be_not_equal(self):
+            signal1 = AnalogSignalArray(np.arange(55.0).reshape((11, 5)),
+                                        units="mV", sampling_rate=1*pq.kHz)
+            signal2 = AnalogSignalArray(np.arange(55.0).reshape((11, 5)),
+                                        units="mV", sampling_rate=2*pq.kHz)
             self.assertNotEqual(signal1, signal2)
+            assert_neo_object_is_compliant(signal1)
+            assert_neo_object_is_compliant(signal2)
 
 
-class TestCombination(unittest.TestCase):
+class TestAnalogSignalArrayCombination(unittest.TestCase):
+    def setUp(self):
+        self.data1 = np.arange(55.0).reshape((11, 5))
+        self.data1quant = self.data1 * pq.mV
+        self.signal1 = AnalogSignalArray(self.data1quant,
+                                         sampling_rate=1*pq.kHz,
+                                         name='spam', description='eggs',
+                                         file_origin='testfile.txt',
+                                         arg1='test')
+        self.data2 = np.arange(100.0, 155.0).reshape((11, 5))
+        self.data2quant = self.data2 * pq.mV
+        self.signal2 = AnalogSignalArray(self.data2quant,
+                                         sampling_rate=1*pq.kHz,
+                                         name='spam', description='eggs',
+                                         file_origin='testfile.txt',
+                                         arg1='test')
 
-    def test__add_a_constant_to_a_signal_should_preserve_data_complement(self):
-        signal = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                   units="mV", sampling_rate=1*kHz)
-        signal_with_offset = signal + 0.065*V
-        self.assertEqual(signal[0, 4], 4*mV)  # time zero, signal index 4
-        self.assertEqual(signal_with_offset[0, 4], 69000*uV)
-        for attr in "t_start", "sampling_rate":
-            self.assertEqual(getattr(signal, attr),
-                             getattr(signal_with_offset, attr))
+    def test__compliant(self):
+        assert_neo_object_is_compliant(self.signal1)
+        self.assertEqual(self.signal1.name, 'spam')
+        self.assertEqual(self.signal1.description, 'eggs')
+        self.assertEqual(self.signal1.file_origin, 'testfile.txt')
+        self.assertEqual(self.signal1.annotations, {'arg1': 'test'})
+
+        assert_neo_object_is_compliant(self.signal2)
+        self.assertEqual(self.signal2.name, 'spam')
+        self.assertEqual(self.signal2.description, 'eggs')
+        self.assertEqual(self.signal2.file_origin, 'testfile.txt')
+        self.assertEqual(self.signal2.annotations, {'arg1': 'test'})
+
+    def test__add_const_quantity_should_preserve_data_complement(self):
+        result = self.signal1 + 0.065*pq.V
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        # time zero, signal index 4
+        assert_arrays_equal(result, self.data1 + 65)
+        self.assertEqual(self.signal1[0, 4], 4*pq.mV)
+        self.assertEqual(result[0, 4], 69000*pq.uV)
+        self.assertEqual(self.signal1.t_start, result.t_start)
+        self.assertEqual(self.signal1.sampling_rate, result.sampling_rate)
 
     def test__add_two_consistent_signals_should_preserve_data_complement(self):
-        signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                    units="mV", sampling_rate=1*kHz)
-        signal2 = numpy.arange(100.0, 155.0).reshape((11, 5))
-        signal2 = AnalogSignalArray(signal2, units="mV", sampling_rate=1*kHz)
-        sum = signal1 + signal2
-        targ = numpy.arange(100.0, 210.0, 2.0).reshape((11, 5))
-        assert_arrays_equal(sum, AnalogSignalArray(targ, units="mV",
-                                                   sampling_rate=1*kHz))
+        result = self.signal1 + self.signal2
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
 
-    def test__add_signals_with_inconsistent_data_complement_Exception(self):
-        signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                    units="mV", sampling_rate=1*kHz)
-        signal2 = numpy.arange(100.0, 155.0).reshape((11, 5))
-        signal2 = AnalogSignalArray(signal2, units="mV", sampling_rate=0.5*kHz)
-        self.assertRaises(Exception, signal1.__add__, signal2)
+        targdata = np.arange(100.0, 210.0, 2.0).reshape((11, 5))
+        targ = AnalogSignalArray(targdata, units="mV",
+                                 sampling_rate=1*pq.kHz,
+                                 name='spam', description='eggs',
+                                 file_origin='testfile.txt', arg1='test')
+        assert_neo_object_is_compliant(targ)
+
+        assert_arrays_equal(result, targdata)
+        assert_same_sub_schema(result, targ)
+
+    def test__add_signals_with_inconsistent_data_complement_ValueError(self):
+        self.signal2.sampling_rate = 0.5*pq.kHz
+        assert_neo_object_is_compliant(self.signal2)
+
+        self.assertRaises(ValueError, self.signal1.__add__, self.signal2)
+
+    def test__subtract_const_should_preserve_data_complement(self):
+        result = self.signal1 - 65*pq.mV
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(np.array(self.signal1[1, 4]), 9)
+        self.assertEqual(np.array(result[1, 4]), -56)
+        assert_arrays_equal(result, self.data1 - 65)
+        self.assertEqual(self.signal1.sampling_rate, result.sampling_rate)
+
+    def test__subtract_from_const_should_return_signal(self):
+        result = 10*pq.mV - self.signal1
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(np.array(self.signal1[1, 4]), 9)
+        self.assertEqual(np.array(result[1, 4]), 1)
+        assert_arrays_equal(result, 10 - self.data1)
+        self.assertEqual(self.signal1.sampling_rate, result.sampling_rate)
+
+    def test__mult_by_const_float_should_preserve_data_complement(self):
+        result = self.signal1*2
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(np.array(self.signal1[1, 4]), 9)
+        self.assertEqual(np.array(result[1, 4]), 18)
+        assert_arrays_equal(result, self.data1*2)
+        self.assertEqual(self.signal1.sampling_rate, result.sampling_rate)
+
+    def test__divide_by_const_should_preserve_data_complement(self):
+        result = self.signal1/0.5
+        self.assertIsInstance(result, AnalogSignalArray)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+        self.assertEqual(np.array(self.signal1[1, 4]), 9)
+        self.assertEqual(np.array(result[1, 4]), 18)
+        assert_arrays_equal(result, self.data1/0.5)
+        self.assertEqual(self.signal1.sampling_rate, result.sampling_rate)
 
     def test__merge(self):
-        signal1 = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                                    units="mV", sampling_rate=1*kHz,
-                                    channel_index=range(5))
-        signal2 = numpy.arange(1000.0, 1066.0).reshape((11, 6))
-        signal2 = AnalogSignalArray(signal2,
-                                    units="uV", sampling_rate=1*kHz,
-                                    channel_index=range(5, 11))
-        merged = signal1.merge(signal2)
-        self.assertEqual(merged[0, 4], 4*mV)
-        self.assertEqual(merged[0, 5], 1*mV)
-        self.assertEqual(merged[10, 10], 1.065*mV)
-        self.assertEqual(merged.t_stop, signal1.t_stop)
-        assert_arrays_equal(merged.channel_indexes, numpy.arange(11))
+        self.signal1.description = None
+        self.signal1.file_origin = None
+        assert_neo_object_is_compliant(self.signal1)
+
+        data3 = np.arange(1000.0, 1066.0).reshape((11, 6)) * pq.uV
+        data3scale = data3.rescale(self.data1quant.units)
+
+        signal2 = AnalogSignalArray(self.data1quant,
+                                    sampling_rate=1*pq.kHz,
+                                    channel_index=np.arange(5),
+                                    name='signal2',
+                                    description='test signal',
+                                    file_origin='testfile.txt')
+        signal3 = AnalogSignalArray(data3,
+                                    units="uV", sampling_rate=1*pq.kHz,
+                                    channel_index=np.arange(5, 11),
+                                    name='signal3',
+                                    description='test signal',
+                                    file_origin='testfile.txt')
+        signal4 = AnalogSignalArray(data3,
+                                    units="uV", sampling_rate=1*pq.kHz,
+                                    name='signal4',
+                                    description='test signal',
+                                    file_origin='testfile.txt')
+
+        merged13 = self.signal1.merge(signal3)
+        merged23 = signal2.merge(signal3)
+        merged24 = signal2.merge(signal4)
+        mergeddata13 = np.array(merged13)
+        mergeddata23 = np.array(merged23)
+        mergeddata24 = np.array(merged24)
+
+        targdata13 = np.hstack([self.data1quant, data3scale])
+        targdata23 = np.hstack([self.data1quant, data3scale])
+        targdata24 = np.hstack([self.data1quant, data3scale])
+
+        assert_neo_object_is_compliant(signal2)
+        assert_neo_object_is_compliant(signal3)
+        assert_neo_object_is_compliant(merged13)
+        assert_neo_object_is_compliant(merged23)
+        assert_neo_object_is_compliant(merged24)
+
+        self.assertEqual(merged13[0, 4], 4*pq.mV)
+        self.assertEqual(merged23[0, 4], 4*pq.mV)
+        self.assertEqual(merged13[0, 5], 1*pq.mV)
+        self.assertEqual(merged23[0, 5], 1*pq.mV)
+        self.assertEqual(merged13[10, 10], 1.065*pq.mV)
+        self.assertEqual(merged23[10, 10], 1.065*pq.mV)
+        self.assertEqual(merged13.t_stop, self.signal1.t_stop)
+        self.assertEqual(merged23.t_stop, self.signal1.t_stop)
+
+        self.assertEqual(merged13.name, 'merge(spam, signal3)')
+        self.assertEqual(merged23.name, 'merge(signal2, signal3)')
+        self.assertEqual(merged13.description, 'merge(None, test signal)')
+        self.assertEqual(merged23.description, 'test signal')
+        self.assertEqual(merged13.file_origin, 'merge(None, testfile.txt)')
+        self.assertEqual(merged23.file_origin, 'testfile.txt')
+
+        assert_arrays_equal(mergeddata13, targdata13)
+        assert_arrays_equal(mergeddata23, targdata23)
+        assert_arrays_equal(mergeddata24, targdata24)
+
+        assert_arrays_equal(merged13.channel_indexes, np.arange(5, 11))
+        assert_arrays_equal(merged23.channel_indexes, np.arange(11))
+        assert_arrays_equal(merged24.channel_indexes, np.arange(5))
 
 
-class TestFunctions(unittest.TestCase):
-
+class TestAnalogSignalArrayFunctions(unittest.TestCase):
     def test__pickle(self):
-        a = AnalogSignalArray(numpy.arange(55.0).reshape((11, 5)),
-                              units="mV", sampling_rate=1*kHz,
-                              channel_index=range(5))
+        signal1 = AnalogSignalArray(np.arange(55.0).reshape((11, 5)),
+                                    units="mV", sampling_rate=1*pq.kHz,
+                                    channel_index=np.arange(5))
 
-        f = open('./pickle', 'wb')
-        pickle.dump(a, f)
-        f.close()
+        fobj = open('./pickle', 'wb')
+        pickle.dump(signal1, fobj)
+        fobj.close()
 
-        f = open('./pickle', 'rb')
+        fobj = open('./pickle', 'rb')
         try:
-            b = pickle.load(f)
+            signal2 = pickle.load(fobj)
         except ValueError:
-            b = None
+            signal2 = None
 
-        assert_arrays_equal(a, b)
-        self.assertEqual(list(a.channel_indexes), [0, 1, 2, 3, 4])
-        self.assertEqual(list(a.channel_indexes), list(b.channel_indexes))
-        f.close()
+        assert_arrays_equal(signal1, signal2)
+        assert_neo_object_is_compliant(signal1)
+        assert_neo_object_is_compliant(signal2)
+        self.assertEqual(list(signal1.channel_indexes), [0, 1, 2, 3, 4])
+        self.assertEqual(list(signal1.channel_indexes),
+                         list(signal2.channel_indexes))
+        fobj.close()
         os.remove('./pickle')
 
 
