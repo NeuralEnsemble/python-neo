@@ -20,7 +20,10 @@ def assert_arrays_equal(a, b):
     #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
-    assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    try:
+        assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    except ValueError:
+        assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
 
 
 def assert_arrays_almost_equal(a, b, threshold):
