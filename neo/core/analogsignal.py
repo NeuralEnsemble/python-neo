@@ -272,7 +272,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         if isinstance(other, BaseAnalogSignal):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
-                    raise Exception("Inconsistent values of %s" % attr)
+                    raise ValueError("Inconsistent values of %s" % attr)
             # how to handle name and annotations?
 
     def _copy_data_complement(self, other):
@@ -399,3 +399,6 @@ class AnalogSignal(BaseAnalogSignal):
                                        name, file_origin, description,
                                        channel_index, **annotations)
         return obj
+
+    def merge(self, other):
+        raise NotImplementedError('Cannot merge AnalogSignal objects')

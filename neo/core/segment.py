@@ -189,8 +189,8 @@ class Segment(BaseNeo):
                                                            obj.shape))
                 else:
                     lookup[obj.name] = obj
-            setattr(self, container, list(lookup.values()))
-        # need to handle annotations
+                    getattr(self, container).append(obj)
+        # TODO: merge annotations
 
     def size(self):
         return dict((name, len(getattr(self, name)))

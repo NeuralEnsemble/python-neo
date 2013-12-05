@@ -68,3 +68,13 @@ class RecordingChannel(BaseNeo):
         self.irregularlysampledsignals = []
         # Many to many relationship
         self.recordingchannelgroups = []
+
+    def merge(self, other):
+        """
+        Merge the contents of another RecordingChannel into this one.
+
+        Objects from the other RecordingChannel will be added to this one.
+        """
+        for container in ("analogsignals", "irregularlysampledsignals"):
+            getattr(self, container).extend(getattr(other, container))
+        # TODO: merge annotations

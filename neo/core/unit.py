@@ -54,3 +54,13 @@ class Unit(BaseNeo):
         self.spikes = []
 
         self.recordingchannelgroup = None
+
+    def merge(self, other):
+        """
+        Merge the contents of another Unit into this one.
+
+        Objects from the other Unit will be added to this one.
+        """
+        for container in ("spikes", "spiketrains"):
+            getattr(self, container).extend(getattr(other, container))
+        # TODO: merge annotations

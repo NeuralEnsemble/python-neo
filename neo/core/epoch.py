@@ -30,3 +30,6 @@ class Epoch(BaseNeo):
         self.label = label
 
         self.segment = None
+
+    def merge(self, other):
+        raise NotImplementedError('Cannot merge Epoch objects')

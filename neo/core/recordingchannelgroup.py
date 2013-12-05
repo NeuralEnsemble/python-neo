@@ -104,3 +104,43 @@ class RecordingChannelGroup(BaseNeo):
         self.recordingchannels = []
 
         self.block = None
+
+    def merge(self, other):
+        """
+        Merge the contents of another RecordingChannelGroup into this one.
+
+        For each :class:`RecordingChannel` in the other RecordingChannelGroup,
+        if its name matches that of a :class:`RecordingChannel` in this block,
+        the two RecordingChannels will be merged, otherwise it will be added as
+        a new RecordingChannel. The equivalent procedure is then applied to
+        each :class:`Unit`.
+
+        For each array-type object in the other RecordingChannelGroup, if its
+        name matches that of an object of the same type in this segment, the
+        two arrays will be joined by concatenation.
+        """
+        for container in ("recordingchannels", "units"):
+            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            for obj in getattr(other, container):
+                if obj.name in lookup:
+                    lookup[obj.name].merge(obj)
+                else:
+                    getattr(self, container).append(obj)
+        for container in ("analogsignalarrays",):
+            objs = getattr(self, container)
+            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
+            for obj in getattr(other, container):
+                if obj.name in lookup:
+                    ind = lookup[obj.name]
+                    try:
+                        newobj = getattr(self, container)[ind].merge(obj)
+                    except AttributeError as e:
+                        raise AttributeError("%s. container=%s, obj.name=%s, \
+                                              shape=%s" % (e, container,
+                                                           obj.name,
+                                                           obj.shape))
+                    getattr(self, container)[ind] = newobj
+                else:
+                    lookup[obj.name] = obj
+                    getattr(self, container).append(obj)
+        # TODO: merge annotations

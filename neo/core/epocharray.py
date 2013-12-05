@@ -1,4 +1,4 @@
-from neo.core.baseneo import BaseNeo
+from neo.core.baseneo import BaseNeo, merge_annotations
 
 import numpy as np
 import quantities as pq
@@ -40,3 +40,25 @@ class EpochArray(BaseNeo):
         self.labels = labels
 
         self.segment = None
+
+    def merge(self, other):
+        othertimes = other.times.rescale(self.times.units)
+        otherdurations = other.durations.rescale(self.durations.units)
+        times = np.hstack([self.times, othertimes]) * self.times.units
+        durations = np.hstack([self.durations,
+                               otherdurations]) * self.durations.units
+        labels = np.hstack([self.labels, other.labels])
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        kwargs.update(merged_annotations)
+        return EpochArray(times=times, durations=durations, labels=labels,
+                          **kwargs)
