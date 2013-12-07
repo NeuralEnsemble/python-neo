@@ -277,7 +277,7 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     def _copy_data_complement(self, other):
         for attr in ("t_start", "sampling_rate", "name", "file_origin",
-                     "description", "channel_index"):
+                     "description", "channel_index", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def _apply_operator(self, other, op):
