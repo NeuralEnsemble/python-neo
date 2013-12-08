@@ -205,3 +205,27 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         # further interpolation methods could be added
         raise NotImplementedError
+
+    def rescale(self, units):
+        """
+        Return a copy of the IrregularlySampledSignal converted to the
+        specified units
+        """
+        to_dims = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == to_dims:
+            to_u = self.units
+            signal = np.array(self)
+        else:
+            to_u = pq.Quantity(1.0, to_dims)
+            from_u = pq.Quantity(1.0, self.dimensionality)
+            try:
+                cf = pq.quantity.get_conversion_factor(from_u, to_u)
+            except AssertionError:
+                raise ValueError('Unable to convert between units of "%s" \
+                                 and "%s"' % (from_u._dimensionality,
+                                              to_u._dimensionality))
+            signal = cf * self.magnitude
+        new = self.__class__(times=self.times, signal=signal, units=to_u)
+        new._copy_data_complement(self)
+        new.annotations.update(self.annotations)
+        return new
