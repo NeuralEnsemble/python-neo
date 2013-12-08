@@ -3,6 +3,9 @@ from neo.core.baseneo import BaseNeo, merge_annotations
 import numpy as np
 import quantities as pq
 
+import sys
+PY_VER = sys.version_info[0]
+
 
 class EventArray(BaseNeo):
     """
@@ -38,8 +41,14 @@ class EventArray(BaseNeo):
         self.segment = None
 
     def __repr__(self):
-        return "<EventArray: %s>" % ", ".join('%s@%s' % item for item in
-                                              zip(self.labels, self.times))
+        # need to convert labels to unicode for python 3 or repr is messed up
+        if PY_VER == 3:
+            labels = self.labels.astype('U')
+        else:
+            labels = self.labels
+        objs = ['%s@%s' % (label, time) for label, time in zip(labels,
+                                                               self.times)]
+        return '<EventArray: %s>' % ', '.join(objs)
 
     def merge(self, other):
         othertimes = other.times.rescale(self.times.units)
