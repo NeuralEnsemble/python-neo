@@ -80,44 +80,90 @@ class Segment(BaseNeo):
                         if getattr(obj, key) == value]
         return results
 
-    def take_spiketrains_by_unit(self, unit_list=[]):
-        st_list = []
-        for st in self.spiketrains:
-            if st.unit in unit_list:
-                st_list.append(st)
-        return st_list
+    def take_spikes_by_unit(self, unit_list=None):
+        '''
+        Return Spikes in the segment that are also in a unit in the list
+        of units provided
+        '''
+        if unit_list is None:
+            return []
+        spike_list = []
+        for spike in self.spikes:
+            if spike.unit in unit_list:
+                spike_list.append(spike)
+        return spike_list
 
-    def take_analogsignal_by_unit(self, unit_list):
-        """
-        This assert that Unit.channel_index are the same than
-        AnalogSIgnal.channel_index
-        """
+    def take_spiketrains_by_unit(self, unit_list=None):
+        '''
+        Return SpikeTrains in the segment that are also in a unit in the list
+        of units provided
+        '''
+        if unit_list is None:
+            return []
+        spiketrain_list = []
+        for spiketrain in self.spiketrains:
+            if spiketrain.unit in unit_list:
+                spiketrain_list.append(spiketrain)
+        return spiketrain_list
+
+    def take_analogsignal_by_unit(self, unit_list=None):
+        '''
+        Return AnalogSignals in the segment that are from the same
+        channel_index as the units provided.
+        '''
+        if unit_list is None:
+            return []
         channel_indexes = []
         for unit in unit_list:
-            channel_indexes.extend(unit.channel_indexes)
+            if unit.channel_indexes is not None:
+                channel_indexes.extend(unit.channel_indexes)
         return self.take_analogsignal_by_channelindex(channel_indexes)
 
-    def take_analogsignal_by_channelindex(self, channel_indexes):
+    def take_analogsignal_by_channelindex(self, channel_indexes=None):
+        '''
+        Return AnalogSignals in the segment that have a channel_index
+        that is in the list indexes provided.
+        '''
+        if channel_indexes is None:
+            return []
         anasig_list = []
         for anasig in self.analogsignals:
             if anasig.channel_index in channel_indexes:
                 anasig_list.append(anasig)
         return anasig_list
 
-    def take_slice_of_analogsignalarray_by_unit(self, unit_list):
-        sub_indexes = []
+    def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
+        '''
+        Return slices of the AnalogSignalArrays in the segment that correspond
+        to the same channe_indexes as the units provided.
+        '''
+        if unit_list is None:
+            return []
+        indexes = []
         for unit in unit_list:
-            sub_indexes.extend(unit.channel_indexes)
+            if unit.channel_indexes is not None:
+                indexes.extend(unit.channel_indexes)
+
+        return self.take_slice_of_analogsignalarray_by_channelindex(indexes)
+
+    def take_slice_of_analogsignalarray_by_channelindex(self,
+                                                        channel_indexes=None):
+        '''
+        Return slices of the AnalogSignalArrays in the segment that correspond
+        to the channe_indexes provided.
+        '''
+        if channel_indexes is None:
+            return []
 
         sliced_sigarrays = []
         for sigarr in self.analogsignalarrays:
             if sigarr.channel_indexes is not None:
-                ind = np.in1d(sigarr.channel_indexes, sub_indexes)
+                ind = np.in1d(sigarr.channel_indexes, channel_indexes)
                 sliced_sigarrays.append(sigarr[:, ind])
 
         return sliced_sigarrays
 
-    def construct_subsegment_by_unit(self, unit_list):
+    def construct_subsegment_by_unit(self, unit_list=None):
         """
         Return AnalogSignal list in a given segment given there Unit parents.
 
@@ -177,16 +223,19 @@ class Segment(BaseNeo):
                           "spiketrains"):
             getattr(self, container).extend(getattr(other, container))
         for container in ("epocharrays", "eventarrays", "analogsignalarrays"):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            objs = getattr(self, container)
+            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
             for obj in getattr(other, container):
                 if obj.name in lookup:
+                    ind = lookup[obj.name]
                     try:
-                        lookup[obj.name] = lookup[obj.name].merge(obj)
+                        newobj = getattr(self, container)[ind].merge(obj)
                     except AttributeError as e:
                         raise AttributeError("%s. container=%s, obj.name=%s, \
                                               shape=%s" % (e, container,
                                                            obj.name,
                                                            obj.shape))
+                    getattr(self, container)[ind] = newobj
                 else:
                     lookup[obj.name] = obj
                     getattr(self, container).append(obj)
