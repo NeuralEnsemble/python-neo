@@ -1,5 +1,6 @@
 from neo.core.baseneo import BaseNeo
 
+import numpy as np
 import quantities as pq
 
 
@@ -119,6 +120,60 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def _apply_operator(self, other, op):
+        self._check_consistency(other)
+        f = getattr(super(IrregularlySampledSignal, self), op)
+        new_signal = f(other)
+        new_signal._copy_data_complement(self)
+        return new_signal
+
+    def _check_consistency(self, other):
+        # if not an array, then allow the calculation
+        if not hasattr(other, 'ndim'):
+            return
+        # if a scalar array, then allow the calculation
+        if not other.ndim:
+            return
+        # dimensionality should match
+        if self.ndim != other.ndim:
+            raise ValueError('Dimensionality does not match: %s vs %s' %
+                             (self.ndim, other.ndim))
+        # if if the other array does not have a times property,
+        # then it should be okay to add it directly
+        if not hasattr(other, 'times'):
+            return
+
+        # if there is a times property, the times need to be the same
+        if not (self.times == other.times).all():
+            raise ValueError('Times do not match: %s vs %s' %
+                             (self.times, other.times))
+
+    def _copy_data_complement(self, other):
+        for attr in ("times", "name", "file_origin",
+                     "description", "channel_index", "annotations"):
+            setattr(self, attr, getattr(other, attr, None))
+
+    def __add__(self, other):
+        return self._apply_operator(other, "__add__")
+
+    def __sub__(self, other):
+        return self._apply_operator(other, "__sub__")
+
+    def __mul__(self, other):
+        return self._apply_operator(other, "__mul__")
+
+    def __truediv__(self, other):
+        return self._apply_operator(other, "__truediv__")
+
+    def __div__(self, other):
+        return self._apply_operator(other, "__div__")
+
+    __radd__ = __add__
+    __rmul__ = __sub__
+
+    def __rsub__(self, other):
+        return self.__mul__(-1) + other
+
     @property
     def sampling_intervals(self):
         return self.times[1:] - self.times[:-1]
@@ -150,4 +205,3 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         # further interpolation methods could be added
         raise NotImplementedError
-
