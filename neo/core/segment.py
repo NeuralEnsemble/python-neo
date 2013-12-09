@@ -60,11 +60,10 @@ class Segment(BaseNeo):
 
     @property
     def all_data(self):
-        return reduce(operator.add,
-                      (self.epochs, self.epocharrays, self.events,
-                       self.eventarrays, self.analogsignals,
-                       self.analogsignalarrays, self.irregularlysampledsignals,
-                       self.spikes, self.spiketrains))
+        return sum((self.epochs, self.epocharrays, self.events,
+                    self.eventarrays, self.analogsignals,
+                    self.analogsignalarrays, self.irregularlysampledsignals,
+                    self.spikes, self.spiketrains), [])
 
     def filter(self, **kwargs):
         """
