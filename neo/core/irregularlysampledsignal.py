@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+'''
+This module implements :class:`IrregularlySampledSignal` an analog signal with
+samples taken at arbitrary time points.
+
+:class:`IrregularlySampledSignal` derives from :class:`BaseNeo`, from
+:module:`neo.core.baseneo`, and from :class:`quantites.Quantity`, which
+inherits from :class:`numpy.array`.
+
+Inheritance from :class:`numpy.array` is explained here:
+http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
+
+In brief:
+* Initialization of a new object from constructor happens in :meth:`__new__`.
+This is where user-specified attributes are set.
+
+* :meth:`__array_finalize__` is called for all new objects, including those
+created by slicing. This is where attributes are copied over from
+the old object.
+'''
+
 from neo.core.baseneo import BaseNeo
 
 import numpy as np
@@ -5,36 +26,75 @@ import quantities as pq
 
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
-    """
+    '''
+    An analog signal with samples taken at arbitrary time points.
+
     A representation of a continuous, analog signal acquired at time
-    ``t_start`` with a varying sampling interval.
+    :attr:`t_start` with a varying sampling interval.
 
-    *Usage*:
+    *Usage*::
 
-      >>> import quantities as pq
-      >>> a = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
-                                       units='mV', time_units='ms')
-      >>> b = IrregularlySampledSignal([0.01, 0.03, 0.12]*pq.s, [4,5,6]*pq.nA)
+        >>> from neo.core import IrregularlySampledSignal
+        >>> from quantities import s, nA
+        >>>
+        >>> irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
+        ...                                   units='mV', time_units='ms')
+        >>> irsig1 = IrregularlySampledSignal([0.01, 0.03, 0.12]*s,
+        ...                                   [4, 5, 6]*nA)
 
     *Required attributes/properties*:
-        :times:  NumPy array, Quantity array or list
-        :signal: Numpy array, Quantity array or list of the same size as times
-        :units:  required if the signal is a list or NumPy array, not if it is
-                 a :py:class:`Quantity`
-        :time_units:  required if `times` is a list or NumPy array, not if it
-                      is a :py:class:`Quantity`
+        :times: (quantity array 1D, numpy array 1D, or list) The data itself.
+        :signal: (quantity array 1D, numpy array 1D, or list) The time of each
+            data point. Must have the same size as :attr:`times`.
+        :units: (quantity units) Required if the signal is a list or NumPy
+            array, not if it is a :class:`Quantity`.
+        :time_units: (quantity units) Required if :attr`times` is a list or
+            NumPy array, not if it is a :class:`Quantity`.
 
-    *Optional arguments*:
-        :dtype:  Data type of the signal (times are always floats)
+    *Recommended attributes/properties*:.
+        :name: (str) A label for the dataset
+        :description: (str) Text description.
+        :file_origin: (str) Filesystem path or URL of the original data file.
 
-    *Recommended attributes/properties*:
-        :name:
-        :description:
-        :file_origin:
-    """
+    *Optional attributes/properties*:
+        :dtype: (numpy dtype or str) Override the dtype of the signal array.
+            (times are always floats).
+        :copy: (bool) True by default.
+
+    Note: Any other additional arguments are assumed to be user-specific
+            metadata and stored in :attr:`annotations`.
+
+    *Properties available on this object*:
+        :sampling_intervals: (quantity array 1D) Interval between each adjacent
+            pair of samples.
+            (:attr:`times[1:]` - :attr:`times`[:-1])
+        :duration: (quantity scalar) Signal duration, read-only.
+            (:attr:`times`[-1] - :attr:`times`[0])
+        :t_start: (quantity scalar) Time when signal begins, read-only.
+            (:attr:`times`[0])
+        :t_stop: (quantity scalar) Time when signal ends, read-only.
+            (:attr:`times`[-1])
+
+    *Slicing*:
+        :class:`IrregularlySampledSignal` objects can be sliced. When this
+        occurs, a new :class:`IrregularlySampledSignal` (actually a view) is
+        returned, with the same metadata, except that :attr:`times` is also
+        sliced in the same way.
+
+    *Operations available on this object*:
+        == != + * /
+
+    '''
+
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,
                 **annotations):
+        '''
+        Construct a new :class:`IrregularlySampledSignal` instance.
+
+        This is called whenever a new :class:`IrregularlySampledSignal` is
+        created from the constructor, but not when slicing.
+        '''
         if len(times) != len(signal):
             raise ValueError("times array and signal array must " +
                              "have same length")
@@ -68,11 +128,26 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
                  copy=True, name=None, description=None, file_origin=None,
                  **annotations):
-        """Initalize a new IrregularlySampledSignal."""
+        '''
+        Initializes a newly constructed :class:`IrregularlySampledSignal`
+        instance.
+        '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
     def __array_finalize__(self, obj):
+        '''
+        This is called every time a new :class:`IrregularlySampledSignal` is
+        created.
+
+        It is the appropriate place to set default values for attributes
+        for :class:`IrregularlySampledSignal` constructed by slicing or
+        viewing.
+
+        User-specified values are only relevant for construction from
+        constructor, and these are set in __new__. Then they are just
+        copied over here.
+        '''
         super(IrregularlySampledSignal, self).__array_finalize__(obj)
         self.times = getattr(obj, 'times', None)
 
@@ -85,17 +160,27 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         self.description = getattr(obj, 'description', None)
 
     def __repr__(self):
+        '''
+        Returns a string representing the :class:`IrregularlySampledSignal`.
+        '''
         return '<%s(%s at times %s)>' % (self.__class__.__name__,
                                          super(IrregularlySampledSignal,
                                                self).__repr__(), self.times)
 
     def __getslice__(self, i, j):
-        # doesn't get called in Python 3 - __getitem__ is called instead
+        '''
+        Get a slice from :attr:`i` to :attr:`j`.
+
+        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
+        '''
         obj = super(IrregularlySampledSignal, self).__getslice__(i, j)
         obj.times = self.times.__getslice__(i, j)
         return obj
 
     def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
         if isinstance(obj, IrregularlySampledSignal):
             obj.times = self.times.__getitem__(i)
@@ -103,24 +188,49 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     @property
     def duration(self):
+        '''
+        Signal duration.
+
+        (:attr:`times`[-1] - :attr:`times`[0])
+        '''
         return self.times[-1] - self.times[0]
 
     @property
     def t_start(self):
+        '''
+        Time when signal begins.
+
+        (:attr:`times`[0])
+        '''
         return self.times[0]
 
     @property
     def t_stop(self):
+        '''
+        Time when signal ends.
+
+        (:attr:`times`[-1])
+        '''
         return self.times[-1]
 
     def __eq__(self, other):
+        '''
+        Equality test (==)
+        '''
         return (super(IrregularlySampledSignal, self).__eq__(other).all() and
                 (self.times == other.times).all())
 
     def __ne__(self, other):
+        '''
+        Non-equality test (!=)
+        '''
         return not self.__eq__(other)
 
     def _apply_operator(self, other, op):
+        '''
+        Handle copying metadata to the new :class:`IrregularlySampledSignal`
+        after a mathematical operation.
+        '''
         self._check_consistency(other)
         f = getattr(super(IrregularlySampledSignal, self), op)
         new_signal = f(other)
@@ -128,6 +238,10 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         return new_signal
 
     def _check_consistency(self, other):
+        '''
+        Check if the attributes of another :class:`IrregularlySampledSignal`
+        are compatible with this one.
+        '''
         # if not an array, then allow the calculation
         if not hasattr(other, 'ndim'):
             return
@@ -149,68 +263,95 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                              (self.times, other.times))
 
     def _copy_data_complement(self, other):
+        '''
+        Copy the metadata from another :class:`IrregularlySampledSignal`.
+        '''
         for attr in ("times", "name", "file_origin",
                      "description", "channel_index", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __add__(self, other):
+        '''
+        Addition (+)
+        '''
         return self._apply_operator(other, "__add__")
 
     def __sub__(self, other):
+        '''
+        Subtraction (-)
+        '''
         return self._apply_operator(other, "__sub__")
 
     def __mul__(self, other):
+        '''
+        Multiplication (*)
+        '''
         return self._apply_operator(other, "__mul__")
 
     def __truediv__(self, other):
+        '''
+        Float division (/)
+        '''
         return self._apply_operator(other, "__truediv__")
 
     def __div__(self, other):
+        '''
+        Integer division (//)
+        '''
         return self._apply_operator(other, "__div__")
 
     __radd__ = __add__
     __rmul__ = __sub__
 
     def __rsub__(self, other):
+        '''
+        Backwards subtraction (other-self)
+        '''
         return self.__mul__(-1) + other
 
     @property
     def sampling_intervals(self):
+        '''
+        Interval between each adjacent pair of samples.
+
+        (:attr:`times[1:]` - :attr:`times`[:-1])
+        '''
         return self.times[1:] - self.times[:-1]
 
     def mean(self, interpolation=None):
-        """
+        '''
         Calculates the mean, optionally using interpolation between sampling
         times.
 
-        If interpolation is None, we assume that values change stepwise at
-        sampling times.
-        """
+        If :attr:`interpolation` is None, we assume that values change
+        stepwise at sampling times.
+        '''
         if interpolation is None:
             return (self[:-1]*self.sampling_intervals).sum()/self.duration
         else:
             raise NotImplementedError
 
     def resample(self, at=None, interpolation=None):
-        """
-        Resample the signal, returning either an AnalogSignal object or another
-        IrregularlySampledSignal object.
+        '''
+        Resample the signal, returning either an :class:`AnalogSignal` object
+        or another :class:`IrregularlySampledSignal` object.
 
         Arguments:
-            :at:  either a Quantity array containing the times at which samples
-                  should be created (times must be within the signal duration,
-                  there is no extrapolation), a sampling rate with dimensions
-                  (1/Time) or a sampling interval with dimensions (Time).
+            :at: either a :class:`Quantity` array containing the times at
+                 which samples should be created (times must be within the
+                 signal duration, there is no extrapolation), a sampling rate
+                 with dimensions (1/Time) or a sampling interval
+                 with dimensions (Time).
             :interpolation: one of: None, 'linear'
-        """
+        '''
         # further interpolation methods could be added
         raise NotImplementedError
 
     def rescale(self, units):
-        """
-        Return a copy of the IrregularlySampledSignal converted to the
+        '''
+        Return a copy of the :class:`IrregularlySampledSignal` converted to the
         specified units
-        """
+        '''
         to_dims = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == to_dims:
             to_u = self.units

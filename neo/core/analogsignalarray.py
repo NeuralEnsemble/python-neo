@@ -1,3 +1,24 @@
+# -*- coding: utf-8 -*-
+'''
+This module implements :class:`AnalogSignalArray`, an array of analog signals.
+
+:class:`AnalogSignalArray` derives from :class:`BaseAnalogSignal`, from
+:module:`neo.core.analogsignal`.
+
+:class:`BaseAnalogSignal` inherits from :class:`quantites.Quantity`, which
+inherits from :class:`numpy.array`.
+Inheritance from :class:`numpy.array` is explained here:
+http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
+
+In brief:
+* Initialization of a new object from constructor happens in :meth:`__new__`.
+This is where user-specified attributes are set.
+
+* :meth:`__array_finalize__` is called for all new objects, including those
+created by slicing. This is where attributes are copied over from
+the old object.
+'''
+
 from __future__ import division
 import numpy as np
 import quantities as pq
@@ -10,7 +31,9 @@ logger = logging.getLogger("Neo")
 
 
 class AnalogSignalArray(BaseAnalogSignal):
-    """
+    '''
+    Several continuous analog signals
+
     A representation of several continuous, analog signals that
     have the same duration, sampling rate and start time.
     Basically, it is a 2D array like AnalogSignal: dim 0 is time, dim 1 is
@@ -19,36 +42,91 @@ class AnalogSignalArray(BaseAnalogSignal):
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
     :class:`numpy.ndarray`.
 
-    *Usage*:
-        TODO
+    *Usage*::
+
+        >>> from neo.core import AnalogSignalArray
+        >>> import quantities as pq
+        >>>
+        >>> sigarr = AnalogSignalArray([[1, 2, 3], [4, 5, 6]], units='V',
+        ...                            sampling_rate=1*pq.Hz)
+        >>>
+        >>> sigarr
+        <AnalogSignalArray(array([[1, 2, 3],
+              [4, 5, 6]]) * mV, [0.0 s, 2.0 s], sampling rate: 1.0 Hz)>
+        >>> sigarr[:,1]
+        <AnalogSignal(array([2, 5]) * V, [0.0 s, 2.0 s],
+            sampling rate: 1.0 Hz)>
+        >>> sigarr[1, 1]
+        array(5) * V
 
     *Required attributes/properties*:
-        :t_start:         time when signal begins
-        :sampling_rate: *or* :sampling_period: Quantity, number of samples per
-                                               unit time or interval between
-                                               two samples. If both are
-                                               specified, they are checked for
-                                               consistency.
-
-    *Properties*:
-        :sampling_period: interval between two samples (1/sampling_rate)
-        :duration:        signal duration (size * sampling_period)
-        :t_stop:          time when signal ends (t_start + duration)
+        :signal: (quantity array 2D, numpy array 2D, or list (data, chanel))
+            The data itself.
+        :units: (quantity units) Required if the signal is a list or NumPy
+                array, not if it is a :class:`Quantity`
+        :t_start: (quantity scalar) Time when signal begins
+        :sampling_rate: *or* :sampling_period: (quantity scalar) Number of
+                                               samples per unit time or
+                                               interval between two samples.
+                                               If both are specified, they are
+                                               checked for consistency.
 
     *Recommended attributes/properties*:
-        :name:
-        :description:
-        :file_origin:
+        :name: (str) A label for the dataset.
+        :description: (str) Text description.
+        :file_origin: (str) Filesystem path or URL of the original data file.
+        :channel_index: (numpy array 1D dtype='i') You can use this to order
+            the columns of the signal in any way you want. It should have the
+            same number of elements as the signal has columns.
+            :class:`AnalogSignal` and :class:`Unit` objects can be given
+            indexes as well so related objects can be linked together.
 
-    """
+    *Optional attributes/properties*:
+        :dtype: (numpy dtype or str) Override the dtype of the signal array.
+        :copy: (bool) True by default.
+
+    Note: Any other additional arguments are assumed to be user-specific
+            metadata and stored in :attr:`annotations`.
+
+    *Properties available on this object*:
+        :sampling_rate: (quantity scalar) Number of samples per unit time.
+            (1/:attr:`sampling_period`)
+        :sampling_period: (quantity scalar) Interval between two samples.
+            (1/:attr:`quantity scalar`)
+        :duration: (Quantity) Signal duration, read-only.
+            (size * :attr:`sampling_period`)
+        :t_stop: (quantity scalar) Time when signal ends, read-only.
+            (:attr:`t_start` + :attr:`duration`)
+        :times: (quantity 1D) The time points of each sample of the signal,
+            read-only.
+            (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
+        :channel_indexes: (numpy array 1D dtype='i') The same as
+            :attr:`channel_index`, read-only.
+
+    *Slicing*:
+        :class:`AnalogSignalArray` objects can be sliced. When taking a single
+        row (dimension 1, e.g. [:, 0]), a :class:`AnalogSignal` is returned.
+        When taking a single element, a :class:`~quantities.Quantity` is
+        returned.  Otherwise a :class:`AnalogSignalArray` (actually a view) is
+        returned, with the same metadata, except that :attr:`t_start`
+        is changed if the start index along dimension 1 is greater than 1.
+        Getting a single item returns a :class:`~quantity.Quantity` scalar.
+
+    *Operations available on this object*:
+        == != + * /
+
+    '''
+
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
                 channel_index=None, **annotations):
-        """
-        Create a new :class:`AnalogSignalArray` instance from a list or numpy
-        array of numerical values, or from a Quantity array.
-        """
+        '''
+        Constructs new :class:`AnalogSignalArray` from data.
+
+        This is called whenever a new class:`AnalogSignalArray` is created from
+        the constructor, but not when slicing.
+        '''
         if (isinstance(signal, pq.Quantity)
                 and units is not None
                 and units != signal.units):
@@ -71,17 +149,31 @@ class AnalogSignalArray(BaseAnalogSignal):
                  t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                  name=None, file_origin=None, description=None,
                  channel_index=None, **annotations):
+        '''
+        Initializes a newly constructed :class:`AnalogSignalArray` instance.
+        '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
     @property
     def channel_indexes(self):
+        '''
+        The same as :attr:`channel_index`.
+        '''
         return self.channel_index
 
     def __getslice__(self, i, j):
+        '''
+        Get a slice from :attr:`i` to :attr:`j`.
+
+        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
+        '''
         return self.__getitem__(slice(i, j))
 
     def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
         obj = super(BaseAnalogSignal, self).__getitem__(i)
         if isinstance(i, int):
             return obj
@@ -112,13 +204,13 @@ class AnalogSignalArray(BaseAnalogSignal):
             raise IndexError("index should be an integer, tuple or slice")
 
     def time_slice(self, t_start, t_stop):
-        """
+        '''
         Creates a new AnalogSignal corresponding to the time slice of the
         original AnalogSignal between times t_start, t_stop. Note, that for
         numerical stability reasons if t_start, t_stop do not fall exactly on
         the time bins defined by the sampling_period they will be rounded to
         the nearest sampling bins.
-        """
+        '''
 
         t_start = t_start.rescale(self.sampling_period.units)
         t_stop = t_stop.rescale(self.sampling_period.units)
@@ -139,6 +231,15 @@ class AnalogSignalArray(BaseAnalogSignal):
         return obj
 
     def merge(self, other):
+        '''
+        Merge the another :class:`AnalogSignalArray` into this one.
+
+        The :class:`AnalogSignalArray` objects are concatenated horizontally
+        (column-wise, :func:`np.hstack`).
+
+        If the attributes of the two :class:`AnalogSignalArray` are not
+        compatible, and Exception is raised.
+        '''
         assert self.sampling_rate == other.sampling_rate
         assert self.t_start == other.t_start
         other.units = self.units
