@@ -67,7 +67,8 @@ class Segment(BaseNeo):
 
     def filter(self, **kwargs):
         """
-        Return a list of data objects matching *any* of the search terms.
+        Return a list of data objects matching *any* of the search terms
+        in either their attributes or annotations.
 
         Examples::
 
@@ -75,8 +76,11 @@ class Segment(BaseNeo):
         """
         results = []
         for key, value in kwargs.items():
-            results += [obj for obj in self.all_data
-                        if getattr(obj, key) == value]
+            for obj in self.all_data:
+                if hasattr(obj, key) and getattr(obj, key) == value:
+                    results.append(obj)
+                elif key in obj.annotations and obj.annotations[key] == value:
+                    results.append(obj)
         return results
 
     def take_spikes_by_unit(self, unit_list=None):
