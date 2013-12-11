@@ -20,7 +20,15 @@ def assert_arrays_equal(a, b):
     #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
-    assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    try:
+        assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    except (AttributeError, ValueError):
+        try:
+            ar = np.array(a)
+            br = np.array(b)
+            assert (ar.flatten() == br.flatten()).all(), "%s != %s" % (ar, br)
+        except (AttributeError, ValueError):
+            assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
 
 
 def assert_arrays_almost_equal(a, b, threshold):
@@ -409,7 +417,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
                 # intercept exceptions and add more information
                 except BaseException as exc:
                     exc.args += ('from of %s %s of %s' %
-                               (childname, i, classname),)
+                                 (childname, i, classname),)
                     raise
 
 

@@ -1,3 +1,3 @@
-from .core import *
-from .io import *
-from .version import version as __version__ 
+from neo.core import *
+from neo.io import *
+from neo.version import version as __version__

@@ -2,13 +2,15 @@
 """
 Tools for IO coder:
   * For creating parent (many_to_one_relationship)
-  * Creating RecordingChannel and making links with AnalogSignals and SPikeTrains
+  * Creating RecordingChannel and making links with AnalogSignals and
+    SPikeTrains
 """
+
 import collections
 import numpy as np
 
-from ..core import *
-from ..description import one_to_many_relationship, many_to_one_relationship
+from neo.core import *
+from neo.description import one_to_many_relationship, many_to_one_relationship
 
 
 #def finalize_block(block):
@@ -22,44 +24,49 @@ from ..description import one_to_many_relationship, many_to_one_relationship
 #            create_many_to_one_relationship(rc)
 
 
-def create_many_to_one_relationship(ob):
+def create_many_to_one_relationship(ob, force=False):
     """
-    When many_to_one relationship when one_to_many exists.
-    Ex: when block.segments it create segment.block
-    It is a utility at the end of creating a Block for IO.
+    Create many_to_one relationship when one_to_many relationships exist.
+    Ex: For each Segment in block.segments it sets segment.block to the
+    parent Block. It is a utility at the end of creating a Block for IO.
 
     Note:
-        this is recursive. It work on Block but also work on others neo objects.
+        This is recursive.
+        It works on Block but also work on others neo objects.
 
     Usage:
     >>> create_many_to_one_relationship(a_block)
+    >>> create_many_to_one_relationship(a_block, force=True)
 
     You want to run populate_RecordingChannel first, because this will create
     new objects that this method will link up.
 
+    If force is True overwrite any existing relationships
+
     """
     # Determine what class was passed, and whether it has children
-    classname =ob.__class__.__name__
-    if classname not in  one_to_many_relationship:
+    classname = ob.__class__.__name__
+    if classname not in one_to_many_relationship:
         # No children
         return
 
     # Iterate through children and build backward links
     for childname in one_to_many_relationship[classname]:
         # Doesn't have links to children
-        if not hasattr(ob, childname.lower()+'s'): continue
+        if not hasattr(ob, childname.lower()+'s'):
+            continue
 
         # get a list of children of type childname and iterate through
         sub = getattr(ob, childname.lower()+'s')
         for child in sub:
             # set a link to parent `ob`, of class `classname`
-            if getattr(child, classname.lower()) is None:
+            if getattr(child, classname.lower()) is None or force:
                 setattr(child, classname.lower(), ob)
             # recursively:
-            create_many_to_one_relationship(child)
+            create_many_to_one_relationship(child, force=force)
 
 
-def populate_RecordingChannel(bl, remove_from_annotation = True):
+def populate_RecordingChannel(bl, remove_from_annotation=True):
     """
     When a Block is
     Block>Segment>AnalogSIgnal
@@ -74,15 +81,16 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
     Usage:
     >>> populate_RecordingChannel(a_block)
     """
-    recordingchannels = { }
+    recordingchannels = {}
     for seg in bl.segments:
         for anasig in seg.analogsignals:
             if getattr(anasig, 'channel_index', None) is not None:
                 ind = int(anasig.channel_index)
-                if  ind not in recordingchannels:
-                    recordingchannels[ind] = RecordingChannel(index = ind)
+                if ind not in recordingchannels:
+                    recordingchannels[ind] = RecordingChannel(index=ind)
                     if 'channel_name' in anasig.annotations:
-                        recordingchannels[ind].name = anasig.annotations['channel_name']
+                        channel_name = anasig.annotations['channel_name']
+                        recordingchannels[ind].name = channel_name
                         if remove_from_annotation:
                             anasig.annotations.pop('channel_name')
                 recordingchannels[ind].analogsignals.append(anasig)
@@ -91,9 +99,11 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
                     anasig.channel_index = None
 
     indexes = np.sort(list(recordingchannels.keys())).astype('i')
-    names = np.array([recordingchannels[idx].name for idx in indexes], dtype='S')
-    rcg = RecordingChannelGroup(name = 'all channels',
-        channel_indexes = indexes, channel_names=names)
+    names = np.array([recordingchannels[idx].name for idx in indexes],
+                     dtype='S')
+    rcg = RecordingChannelGroup(name='all channels',
+                                channel_indexes=indexes,
+                                channel_names=names)
     bl.recordingchannelgroups.append(rcg)
     for ind in indexes:
         # many to many relationship
@@ -103,9 +113,9 @@ def populate_RecordingChannel(bl, remove_from_annotation = True):
 
 def iteritems(D):
     try:
-        return D.iteritems() # Python 2
+        return D.iteritems()  # Python 2
     except AttributeError:
-        return D.items() # Python 3
+        return D.items()  # Python 3
 
 
 class LazyList(collections.MutableSequence):

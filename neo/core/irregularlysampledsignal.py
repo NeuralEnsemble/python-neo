@@ -6,43 +6,46 @@ import quantities as pq
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     """
-    A representation of a continuous, analog signal acquired at time ``t_start``
-    with a varying sampling interval.
+    A representation of a continuous, analog signal acquired at time
+    ``t_start`` with a varying sampling interval.
 
     *Usage*:
 
-      >>> from quantities import ms, nA, uV
-      >>> import numpy as np
-      >>> a = IrregularlySampledSignal([0.0, 1.23, 6.78], [1,2,3], units='mV', time_units='ms')
-      >>> b = IrregularlySampledSignal([0.01, 0.03, 0.12]*s, [4,5,6]*nA)
+      >>> import quantities as pq
+      >>> a = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
+                                       units='mV', time_units='ms')
+      >>> b = IrregularlySampledSignal([0.01, 0.03, 0.12]*pq.s, [4,5,6]*pq.nA)
 
     *Required attributes/properties*:
         :times:  NumPy array, Quantity array or list
         :signal: Numpy array, Quantity array or list of the same size as times
-        :units:  required if the signal is a list or NumPy array, not if it is a :py:class:`Quantity`
-        :time_units:  required if `times` is a list or NumPy array, not if it is a :py:class:`Quantity`
+        :units:  required if the signal is a list or NumPy array, not if it is
+                 a :py:class:`Quantity`
+        :time_units:  required if `times` is a list or NumPy array, not if it
+                      is a :py:class:`Quantity`
 
     *Optional arguments*:
         :dtype:  Data type of the signal (times are always floats)
-    
+
     *Recommended attributes/properties*:
         :name:
         :description:
         :file_origin:
     """
-    
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,
                 **annotations):
         if len(times) != len(signal):
-            raise ValueError("times array and signal array must have same length")
+            raise ValueError("times array and signal array must " +
+                             "have same length")
         if units is None:
             if hasattr(signal, "units"):
                 units = signal.units
             else:
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
-            if units != signal.units: # could improve this test, what if units is a string?
+             # could improve this test, what if units is a string?
+            if units != signal.units:
                 signal = signal.rescale(units)
         if time_units is None:
             if hasattr(times, "units"):
@@ -50,15 +53,18 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
             else:
                 raise ValueError("Time units must be specified")
         elif isinstance(times, pq.Quantity):
-            if time_units != times.units: # could improve this test, what if units is a string?
+            # could improve this test, what if units is a string?
+            if time_units != times.units:
                 times = times.rescale(time_units)
         # should check time units have correct dimensions
-        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
-        obj.times = pq.Quantity(times, units=time_units, dtype=float, copy=copy)
+        obj = pq.Quantity.__new__(cls, signal, units=units,
+                                  dtype=dtype, copy=copy)
+        obj.times = pq.Quantity(times, units=time_units,
+                                dtype=float, copy=copy)
         obj.segment = None
         obj.recordingchannel = None
         return obj
-    
+
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
                  copy=True, name=None, description=None, file_origin=None,
                  **annotations):
@@ -80,8 +86,9 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     def __repr__(self):
         return '<%s(%s at times %s)>' % (self.__class__.__name__,
-             super(IrregularlySampledSignal, self).__repr__(), self.times)
-    
+                                         super(IrregularlySampledSignal,
+                                               self).__repr__(), self.times)
+
     def __getslice__(self, i, j):
         # doesn't get called in Python 3 - __getitem__ is called instead
         obj = super(IrregularlySampledSignal, self).__getslice__(i, j)
@@ -93,7 +100,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         if isinstance(obj, IrregularlySampledSignal):
             obj.times = self.times.__getitem__(i)
         return obj
-    
+
     @property
     def duration(self):
         return self.times[-1] - self.times[0]
@@ -105,22 +112,79 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     @property
     def t_stop(self):
         return self.times[-1]
-    
+
     def __eq__(self, other):
-        return super(IrregularlySampledSignal, self).__eq__(other) and self.times == other.times
+        return (super(IrregularlySampledSignal, self).__eq__(other).all() and
+                (self.times == other.times).all())
 
     def __ne__(self, other):
         return not self.__eq__(other)
-    
+
+    def _apply_operator(self, other, op):
+        self._check_consistency(other)
+        f = getattr(super(IrregularlySampledSignal, self), op)
+        new_signal = f(other)
+        new_signal._copy_data_complement(self)
+        return new_signal
+
+    def _check_consistency(self, other):
+        # if not an array, then allow the calculation
+        if not hasattr(other, 'ndim'):
+            return
+        # if a scalar array, then allow the calculation
+        if not other.ndim:
+            return
+        # dimensionality should match
+        if self.ndim != other.ndim:
+            raise ValueError('Dimensionality does not match: %s vs %s' %
+                             (self.ndim, other.ndim))
+        # if if the other array does not have a times property,
+        # then it should be okay to add it directly
+        if not hasattr(other, 'times'):
+            return
+
+        # if there is a times property, the times need to be the same
+        if not (self.times == other.times).all():
+            raise ValueError('Times do not match: %s vs %s' %
+                             (self.times, other.times))
+
+    def _copy_data_complement(self, other):
+        for attr in ("times", "name", "file_origin",
+                     "description", "channel_index", "annotations"):
+            setattr(self, attr, getattr(other, attr, None))
+
+    def __add__(self, other):
+        return self._apply_operator(other, "__add__")
+
+    def __sub__(self, other):
+        return self._apply_operator(other, "__sub__")
+
+    def __mul__(self, other):
+        return self._apply_operator(other, "__mul__")
+
+    def __truediv__(self, other):
+        return self._apply_operator(other, "__truediv__")
+
+    def __div__(self, other):
+        return self._apply_operator(other, "__div__")
+
+    __radd__ = __add__
+    __rmul__ = __sub__
+
+    def __rsub__(self, other):
+        return self.__mul__(-1) + other
+
     @property
     def sampling_intervals(self):
         return self.times[1:] - self.times[:-1]
-    
+
     def mean(self, interpolation=None):
         """
-        Calculates the mean, optionally using interpolation between sampling times.
-        
-        If interpolation is None, we assume that values change stepwise at sampling times.
+        Calculates the mean, optionally using interpolation between sampling
+        times.
+
+        If interpolation is None, we assume that values change stepwise at
+        sampling times.
         """
         if interpolation is None:
             return (self[:-1]*self.sampling_intervals).sum()/self.duration
@@ -131,7 +195,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         Resample the signal, returning either an AnalogSignal object or another
         IrregularlySampledSignal object.
-        
+
         Arguments:
             :at:  either a Quantity array containing the times at which samples
                   should be created (times must be within the signal duration,
@@ -141,4 +205,27 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         """
         # further interpolation methods could be added
         raise NotImplementedError
-        
+
+    def rescale(self, units):
+        """
+        Return a copy of the IrregularlySampledSignal converted to the
+        specified units
+        """
+        to_dims = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == to_dims:
+            to_u = self.units
+            signal = np.array(self)
+        else:
+            to_u = pq.Quantity(1.0, to_dims)
+            from_u = pq.Quantity(1.0, self.dimensionality)
+            try:
+                cf = pq.quantity.get_conversion_factor(from_u, to_u)
+            except AssertionError:
+                raise ValueError('Unable to convert between units of "%s" \
+                                 and "%s"' % (from_u._dimensionality,
+                                              to_u._dimensionality))
+            signal = cf * self.magnitude
+        new = self.__class__(times=self.times, signal=signal, units=to_u)
+        new._copy_data_complement(self)
+        new.annotations.update(self.annotations)
+        return new

@@ -66,5 +66,4 @@ class Spike(BaseNeo):
         if period is None:
             self.sampling_rate = None
         else:
-            self.sampling_rate =  1.0 / period
-
+            self.sampling_rate = 1.0 / period

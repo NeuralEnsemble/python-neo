@@ -1,8 +1,9 @@
 from __future__ import division
 import numpy as np
 import quantities as pq
-from .analogsignal import BaseAnalogSignal, AnalogSignal, _get_sampling_rate
-from .baseneo import BaseNeo, merge_annotations
+from neo.core.analogsignal import (BaseAnalogSignal, AnalogSignal,
+                                   _get_sampling_rate)
+from neo.core.baseneo import BaseNeo, merge_annotations
 import logging
 
 logger = logging.getLogger("Neo")
@@ -56,6 +57,7 @@ class AnalogSignalArray(BaseAnalogSignal):
             units = signal.units
         obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype,
                                   copy=copy)
+
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
@@ -156,7 +158,8 @@ class AnalogSignalArray(BaseAnalogSignal):
         else:
             channel_index = np.append(self.channel_index,
                                       other.channel_index)
-        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
         kwargs.update(merged_annotations)
         return AnalogSignalArray(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
