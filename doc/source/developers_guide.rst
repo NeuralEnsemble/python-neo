@@ -30,8 +30,9 @@ If you have an idea for an improvement to Neo, create a ticket with type
 "enhancement". If you already have an implementation of the idea, create a patch
 (see below) and attach it to the ticket.
 
-To keep track of changes to the code and to tickets, you can follow the
-`RSS feed`_.
+To keep track of changes to the code and to tickets, you can register for
+a GitHub account and then set to watch the repository at `GitHub Repository`_
+(see https://help.github.com/articles/watching-repositories/).
 
 Requirements
 ------------
@@ -52,7 +53,7 @@ Getting the source code
 
 We use the Git version control system. The best way to contribute is through
 GitHub_. You will first need a GitHub account, and you should then fork the
-repository at https://github.com/NeuralEnsemble/python-neo
+repository at `GitHub Repository`_
 (see http://help.github.com/fork-a-repo/).
 
 To get a local copy of the repository::
@@ -230,10 +231,9 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 .. _tox: http://codespeak.net/tox/
 .. _coverage: http://nedbatchelder.com/code/coverage/
 .. _`PEP 8`: http://www.python.org/dev/peps/pep-0008/
-.. _`issue tracker`: http://neuralensemble.org/trac/neo
+.. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues
 .. _`Porting to Python 3`: http://python3porting.com/
 .. _`NeuralEnsemble Google group`: http://groups.google.com/group/neuralensemble
-.. _`RSS feed`: https://neuralensemble.org/trac/neo/timeline?changeset=on&milestone=on&ticket=on&wiki=on&max=50&daysback=90&format=rss
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
 .. _Sphinx: http://sphinx.pocoo.org/
 .. _numpy: http://numpy.scipy.org/
@@ -241,3 +241,4 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 .. _PEP394: http://www.python.org/dev/peps/pep-0394/
 .. _PyPI: http://pypi.python.org
 .. _GitHub: http://github.com
+.. _`GitHub Repository`: https://github.com/NeuralEnsemble/python-neo/
