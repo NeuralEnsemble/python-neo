@@ -40,7 +40,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Neo'
-copyright = u'2010-2012, ' + AUTHORS
+copyright = u'2010-2013, ' + AUTHORS
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

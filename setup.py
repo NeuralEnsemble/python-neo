@@ -20,7 +20,7 @@ setup(
     author_email = "sgarcia at olfac.univ-lyon1.fr",
     description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats",
     long_description = long_description,
-    license = "BSD",
+    license = "BSD-3-Clause",
     url='http://neuralensemble.org/neo',
     classifiers = [
         'Development Status :: 4 - Beta',
@@ -32,6 +32,3 @@ setup(
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering']
 )
-
-
-

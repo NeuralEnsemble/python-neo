@@ -45,7 +45,7 @@ Documentation
 License
 -------
 
-Neo is distributed under a BSD licence.
+Neo is distributed under a 3-clause Revised BSD licence (BSD-3-Clause).
 
 
 Contributing

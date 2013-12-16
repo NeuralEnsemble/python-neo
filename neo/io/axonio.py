@@ -9,7 +9,7 @@ files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 
 This code is a port of abfload and abf2load
-written in Matlab (BSD licence) by :
+written in Matlab (BSD-2-Clause licence) by :
  - Copyright (c) 2009, Forrest Collman, fcollman@princeton.edu
  - Copyright (c) 2004, Harald Hentschke
 and available here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load

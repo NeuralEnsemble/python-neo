@@ -89,7 +89,7 @@ packaging:
     account for more
 
 licence: 
-    BSD
+    BSD-3-Clause
 
 copyright:
     CNRS, GNode, University of Provence
