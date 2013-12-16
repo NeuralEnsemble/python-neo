@@ -10,7 +10,11 @@ import collections
 
 import numpy as np
 
-from neo.core import *
+from neo.core import (AnalogSignal, AnalogSignalArray, Block,
+                      Epoch, EpochArray, Event, EventArray,
+                      IrregularlySampledSignal,
+                      RecordingChannel, RecordingChannelGroup,
+                      Segment, Spike, SpikeTrain, Unit)
 from neo.description import one_to_many_relationship, many_to_one_relationship
 
 

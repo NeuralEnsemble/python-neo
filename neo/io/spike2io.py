@@ -30,7 +30,7 @@ from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import *
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 from neo.io.tools import create_many_to_one_relationship
 
 PY3K = (sys.version_info[0] == 3)

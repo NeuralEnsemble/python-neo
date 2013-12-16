@@ -27,7 +27,8 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, RecordingChannel,  RecordingChannelGroup
+from neo.core import (Block, Segment, RecordingChannel,  RecordingChannelGroup,
+                      AnalogSignal, SpikeTrain, EventArray)
 from neo.io.tools import create_many_to_one_relationship
 
 

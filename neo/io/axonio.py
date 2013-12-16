@@ -49,7 +49,7 @@ from numpy import memmap, dtype
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import *
+from neo.core import Block, Segment, AnalogSignal, EventArray
 from neo.io.tools import create_many_to_one_relationship, iteritems
 
 

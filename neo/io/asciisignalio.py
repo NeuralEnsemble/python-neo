@@ -18,7 +18,7 @@ from numpy import newaxis
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import *
+from neo.core import AnalogSignal, Segment
 from neo.io.tools import create_many_to_one_relationship
 
 

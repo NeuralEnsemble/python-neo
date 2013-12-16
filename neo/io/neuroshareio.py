@@ -18,16 +18,9 @@ Author: sgarcia
 """
 
 import ctypes
-from ctypes import byref, c_char_p, c_uint32, c_char, c_double, c_int16, c_int32 , c_ulong
+from ctypes import (byref, c_char_p, c_uint32, c_char,
+                    c_double, c_int16, c_int32, c_ulong)
 import os
-
-import numpy as np
-import quantities as pq
-
-from neo.io.baseio import BaseIO
-from neo.core import *
-from neo.io.tools import create_many_to_one_relationship
-
 
 # file no longer exists in Python3
 try:
@@ -35,6 +28,14 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+import numpy as np
+from numpy import empty, zeros
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroshareIO(BaseIO):

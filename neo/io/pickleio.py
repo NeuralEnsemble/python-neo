@@ -15,12 +15,13 @@ Authors: Andrew Davison
 from __future__ import with_statement
 
 try:
-    import cPickle as pickle # Python 2
+    import cPickle as pickle  # Python 2
 except ImportError:
-    import pickle            # Python 3
+    import pickle  # Python 3
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+from neo.core import (Block, Segment,
+                      AnalogSignal, AnalogSignalArray, SpikeTrain)
 
 
 class PickleIO(BaseIO):

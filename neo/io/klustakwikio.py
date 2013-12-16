@@ -27,8 +27,7 @@ import matplotlib.mlab as mlab
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-from neo.core import *
+from neo.core import (Block, Segment, Unit, AnalogSignal, SpikeTrain)
 from neo.io.tools import create_many_to_one_relationship
 
 # Pasted version of feature file format spec

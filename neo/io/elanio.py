@@ -29,7 +29,7 @@ from numpy import dtype, zeros, fromstring, empty, log, fromfile
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import *
+from neo.core import Segment, AnalogSignal, EventArray
 from neo.io.tools import create_many_to_one_relationship
 
 

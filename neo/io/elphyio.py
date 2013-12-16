@@ -94,10 +94,12 @@ from quantities import s, ms, Hz, kHz
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Block, Segment, RecordingChannelGroup, RecordingChannel, AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain
+from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
+                      AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
 
 # some tools to finalize the hierachy
-from neo.io.tools import populate_RecordingChannel, create_many_to_one_relationship
+from neo.io.tools import (populate_RecordingChannel,
+                          create_many_to_one_relationship)
 
 # --------------------------------------------------------
 # OBJECTS

@@ -10,7 +10,8 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import *
+from neo.core import (Block, Segment,
+                      RecordingChannel, RecordingChannelGroup, AnalogSignal)
 from neo.io import tools
 
 

@@ -14,7 +14,11 @@ If you want a model for developing a new IO start from exampleIO.
 
 import collections
 
-from neo.core import *
+from neo.core import (AnalogSignal, AnalogSignalArray, Block,
+                      Epoch, EpochArray, Event, EventArray,
+                      IrregularlySampledSignal,
+                      RecordingChannel, RecordingChannelGroup,
+                      Segment, Spike, SpikeTrain, Unit)
 from neo.io.tools import create_many_to_one_relationship
 
 read_error = "This type is not supported by this file format for reading"
