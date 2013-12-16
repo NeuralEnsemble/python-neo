@@ -14,9 +14,9 @@ localfile = './File_plexon_3.plx'
 urllib.urlretrieve(distantfile, localfile)
 
 #create a reader
-reader = neo.io.PlexonIO(filename = 'File_plexon_3.plx')
+reader = neo.io.PlexonIO(filename='File_plexon_3.plx')
 # read the block
-bl = reader.read(cascade = True, lazy = False)
+bl = reader.read(cascade=True, lazy=False)
 print bl
 # acces to segments
 for seg in bl.segments:
@@ -33,9 +33,9 @@ localfile = './File_spike2_1.smr'
 urllib.urlretrieve(distantfile, localfile)
 
 #create a reader
-reader = neo.io.Spike2IO(filename = 'File_spike2_1.smr')
+reader = neo.io.Spike2IO(filename='File_spike2_1.smr')
 # read the block
-bl = reader.read(cascade = True, lazy = False)[0]
+bl = reader.read(cascade=True, lazy=False)[0]
 print bl
 # acces to segments
 for seg in bl.segments:
@@ -44,4 +44,3 @@ for seg in bl.segments:
         print asig
     for st in seg.spiketrains:
         print st
-
