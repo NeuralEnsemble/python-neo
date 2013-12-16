@@ -19,13 +19,17 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
+# needed for python 3 compatibility
 from __future__ import division
+
+import logging
+
 import numpy as np
 import quantities as pq
+
 from neo.core.analogsignal import (BaseAnalogSignal, AnalogSignal,
                                    _get_sampling_rate)
 from neo.core.baseneo import BaseNeo, merge_annotations
-import logging
 
 logger = logging.getLogger("Neo")
 

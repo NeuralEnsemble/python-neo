@@ -3,10 +3,9 @@
 This is an example for reading files with neo.io
 """
 
-import neo
 import urllib
 
-
+import neo
 
 
 # Plexon files

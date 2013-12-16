@@ -5,17 +5,18 @@ used by all :module:`neo.core` classes.
 '''
 
 from datetime import datetime, date, time, timedelta
-from numbers import Number
 from decimal import Decimal
-import numpy
 import logging
+from numbers import Number
+
+import numpy as np
 
 ALLOWED_ANNOTATION_TYPES = (int, float, complex,
                             str, bytes,
                             type(None),
                             datetime, date, time, timedelta,
                             Number, Decimal,
-                            numpy.number, numpy.bool_)
+                            np.number, np.bool_)
 
 # handle both Python 2 and Python 3
 try:
@@ -37,7 +38,7 @@ def _check_annotations(value):
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
     '''
-    if isinstance(value, numpy.ndarray):
+    if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
             raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
                              "are not allowed" % value.dtype.type)
@@ -65,8 +66,8 @@ def merge_annotation(a, b):
     assert type(a) == type(b)
     if isinstance(a, dict):
         return merge_annotations(a, b)
-    elif isinstance(a, numpy.ndarray):  # concatenate b to a
-        return numpy.append(a, b)
+    elif isinstance(a, np.ndarray):  # concatenate b to a
+        return np.append(a, b)
     elif isinstance(a, basestring):
         if a == b:
             return a

@@ -187,25 +187,28 @@ objects, containing quantities.
 Author: asobolev
 """
 
+# needed for python 3 compatibility
 from __future__ import absolute_import
-from ..core import *
-from ..description import *
-from .baseio import BaseIO
-from .tools import create_many_to_one_relationship, LazyList
-from tables import NoSuchNodeError as NSNE
-import tables as tb
-import numpy as np
+
 import logging
 import uuid
-
-import tables
-
-logger = logging.getLogger("Neo")
 
 #version checking
 from distutils import version
 if version.LooseVersion(tables.__version__) < '2.2':
     raise ImportError("your pytables version is too old to support NeoHdf5IO, you need at least 2.2 you have %s"%tables.__version__)
+
+import numpy as np
+import tables
+from tables import NoSuchNodeError as NSNE
+import tables as tb
+
+from neo.core import *
+from neo.description import *
+from neo.io.baseio import BaseIO
+from neo.io.tools import create_many_to_one_relationship, LazyList
+
+logger = logging.getLogger("Neo")
 
 
 def _func_wrapper(func):

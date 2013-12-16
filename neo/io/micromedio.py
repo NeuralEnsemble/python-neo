@@ -5,24 +5,14 @@ Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
 
 Completed with matlab Guillaume BECQ code.
 
-
 Supported : Read
 
-
 Author: sgarcia
-
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-
-
+import datetime
 import os
 import struct
-import datetime
 
 # file no longer exists in Python3
 try:
@@ -30,6 +20,13 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship
 
 
 class struct_file(file):

@@ -1,16 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Tests of the neo.core.spiketrain.SpikeTrain class and related functions
+"""
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import sys
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
+
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain,
                                  _check_time_in_range, _new_spiketrain)
-import quantities as pq
-import numpy as np
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
-import sys
 
 
 class Testcheck_has_dimensions_time(unittest.TestCase):

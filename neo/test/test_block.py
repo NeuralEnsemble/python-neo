@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of the Block class
+Tests of the neo.core.block.Block class
 """
 
 try:
@@ -10,13 +10,11 @@ except ImportError:
     import unittest
 
 from neo.core.block import Block
-
 from neo.core.recordingchannelgroup import RecordingChannelGroup
 from neo.core.recordingchannel import RecordingChannel
 from neo.core.segment import Segment
 from neo.core.unit import Unit
 from neo.io.tools import create_many_to_one_relationship
-
 from neo.test.tools import assert_neo_object_is_compliant
 
 

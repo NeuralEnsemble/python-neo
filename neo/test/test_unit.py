@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of the UnitGroup class
+Tests of the neo.core.unit.Unit class
 """
 
 try:
@@ -9,14 +9,14 @@ try:
 except ImportError:
     import unittest
 
+import numpy as np
+import quantities as pq
+
 from neo.core.unit import Unit
 from neo.core.spiketrain import SpikeTrain
 from neo.core.spike import Spike
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
 from neo.io.tools import create_many_to_one_relationship
-
-import numpy as np
-import quantities as pq
 
 
 class TestUnit(unittest.TestCase):

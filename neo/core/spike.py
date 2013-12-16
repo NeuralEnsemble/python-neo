@@ -5,9 +5,9 @@ This module defines :class:`Spike`, a single spike with an optional waveform.
 :class:`Spike` derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`.
 '''
 
-from neo.core.baseneo import BaseNeo
-
 import quantities as pq
+
+from neo.core.baseneo import BaseNeo
 
 
 class Spike(BaseNeo):

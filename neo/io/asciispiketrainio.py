@@ -10,16 +10,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-
-
 import csv
 import os
+
+import numpy as np
 from numpy import newaxis
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship
 
 
 class AsciiSpikeTrainIO(BaseIO):

@@ -14,21 +14,21 @@ EventArray  '.ext.evt'  or '.evt.ext'
 Author: sgarcia
 
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
-from .baseio import BaseIO
-from .rawbinarysignalio import RawBinarySignalIO
-from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, RecordingChannel,  RecordingChannelGroup
-from .tools import create_many_to_one_relationship
+import datetime
+import os
+import xml.etree.ElementTree as ElementTree
 
 import numpy as np
 import quantities as pq
 
-
-import os
-import datetime
-
-import xml.etree.ElementTree as ElementTree
+from neo.io.baseio import BaseIO
+from neo.io.rawbinarysignalio import RawBinarySignalIO
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, RecordingChannel,  RecordingChannelGroup
+from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroScopeIO(BaseIO):

@@ -63,18 +63,13 @@ Supported : Read
 #   this IO very painful and long).
 
 
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
-from .baseio import BaseIO
-from ..core import Block, Segment, AnalogSignal
-from .tools import create_many_to_one_relationship, populate_RecordingChannel
-
-# note neo.core need only numpy and quantities
-import numpy as np
-import quantities as pq
 
 # specific imports
-import struct, os
 import datetime
+import os
+import struct
 
 # file no longer exists in Python3
 try:
@@ -82,6 +77,14 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+# note neo.core need only numpy and quantities
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal
+from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
 
 class AlphaOmegaIO(BaseIO):
     """

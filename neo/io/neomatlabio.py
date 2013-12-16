@@ -5,38 +5,34 @@ This module is a bridge for matlab users who want to adopote neo object reprenst
 Nomenclature is the same but use Matlab struct and cell arrays.
 With this modules Matlab users can use neo.io to read a format and convert it to .mat.
 
-
 Supported : Read/Write
 
-
 Author: sgarcia
-
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-from .. import description
-classname_lower_to_upper = { }
-for k in description.class_by_name.keys():
-    classname_lower_to_upper[k.lower()] = k
-
-
-
 from datetime import datetime
+from distutils import version
 import os
 import re
 
+import numpy as np
+import quantities as pq
+
 # check if version scipy
 import scipy
-from distutils import version
 if version.LooseVersion(scipy.version.version) < '0.8':
     raise ImportError("your scipy version is too old to support MatlabIO, you need at least 0.8 you have %s"%scipy.version.version)
-
 from scipy import io as sio
 
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship
+from neo import description
+
+
+classname_lower_to_upper = { }
+for k in description.class_by_name.keys():
+    classname_lower_to_upper[k.lower()] = k
 
 
 class NeoMatlabIO(BaseIO):

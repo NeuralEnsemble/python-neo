@@ -3,15 +3,16 @@
 Module for reading binary file from Blackrock format.
 """
 
-from .baseio import BaseIO
-from ..core import *
-import numpy as np
+import logging
 import struct
+
+import numpy as np
 import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import *
 from neo.io import tools
 
-
-import logging
 
 class BlackrockIO(BaseIO):
     """

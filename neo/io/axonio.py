@@ -33,18 +33,9 @@ abf files - would be good to cross-check
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
-import numpy as np
-import quantities as pq
-
-import struct
 import datetime
 import os
-
-
-from numpy import memmap, dtype
+import struct
 
 # file no longer exists in Python3
 try:
@@ -52,6 +43,15 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+import numpy as np
+from numpy import memmap, dtype
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship, iteritems
+
 
 
 class struct_file(file):

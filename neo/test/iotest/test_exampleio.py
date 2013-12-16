@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of io.base
+Tests of neo.io.exampleio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -10,14 +12,13 @@ try:
 except ImportError:
     import unittest
 
-from neo.io import ExampleIO
-
 try:
     import scipy
     have_scipy = True
 except ImportError:
     have_scipy = False
 
+from neo.io import ExampleIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 

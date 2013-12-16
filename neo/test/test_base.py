@@ -1,25 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of the BaseNeo class
+Tests of the neo.core.baseneo.BaseNeo class and related functions
 """
+
+from datetime import datetime, date, time, timedelta
+from decimal import Decimal
+from fractions import Fraction
+from platform import python_version
+import sys
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.core.baseneo import (BaseNeo, _check_annotations,
-                              merge_annotation, merge_annotations)
-from neo.test.tools import assert_arrays_equal
-from datetime import datetime, date, time, timedelta
-from fractions import Fraction
-from decimal import Decimal
 import numpy as np
 import quantities as pq
 
-import sys
-from platform import python_version
+from neo.core.baseneo import (BaseNeo, _check_annotations,
+                              merge_annotation, merge_annotations)
+from neo.test.tools import assert_arrays_equal
 
 
 if sys.version_info[0] >= 3:

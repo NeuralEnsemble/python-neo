@@ -7,9 +7,9 @@ time basis.
 from :module:`neo.core.baseneo`.
 '''
 
-from neo.core.baseneo import BaseNeo
-
 import numpy as np
+
+from neo.core.baseneo import BaseNeo
 
 
 class Segment(BaseNeo):

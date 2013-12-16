@@ -7,6 +7,10 @@ This generate diagram in .png and .svg from neo.description
 Author: sgarcia
 """
 
+from datetime import datetime
+
+import numpy as np
+import quantities as pq
 from matplotlib import pyplot
 from matplotlib.patches import Rectangle , ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
@@ -15,14 +19,11 @@ from neo.description import class_by_name, one_to_many_relationship, many_to_man
         property_relationship, classes_necessary_attributes, classes_recommended_attributes,\
         classes_inheriting_quantities
 
-import quantities as pq
-from datetime import datetime
-import numpy as np
-
 line_heigth = .22
 fontsize = 10.5
 left_text_shift = .1
 dpi = 100
+
 
 def generate_diagram(filename, rect_pos,rect_width,  figsize ):
     rw = rect_width

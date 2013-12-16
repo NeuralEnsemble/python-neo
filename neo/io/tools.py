@@ -7,6 +7,7 @@ Tools for IO coder:
 """
 
 import collections
+
 import numpy as np
 
 from neo.core import *

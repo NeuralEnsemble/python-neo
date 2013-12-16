@@ -16,24 +16,28 @@ Supported: Read
 Author: sgarcia
 
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
-# I need to subclass BaseIO
-from .baseio import BaseIO
 
-# to import from core
-from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
-
-# some tools to finalize the hierachy
-from .tools import create_many_to_one_relationship
+import datetime
 
 # note neo.core needs only numpy and quantities
 import numpy as np
+from numpy import pi, newaxis
 import quantities as pq
 
+# I need to subclass BaseIO
+from neo.io.baseio import BaseIO
+
+# to import from core
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+
+# some tools to finalize the hierachy
+from neo.io.tools import create_many_to_one_relationship
+
 # but my specific IO can depend on many other packages
-from numpy import pi, newaxis
-import datetime
 try:
     have_scipy = True
     from scipy import stats

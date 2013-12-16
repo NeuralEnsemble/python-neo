@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+Tests of neo.io.hdf5io
+
 Usually I run these tests like that. I add neo root folder to the pythonpath
 (usually by adding the neo.pth with the path to the cloned repository to, say,
 /usr/lib/python2.6/dist-packages/) and run
@@ -9,22 +11,25 @@ python <path to the neo repo>/test/io/test_hdf5io.py
 
 For the moment only basic tests are active.
 
+#TODO add performance testing!!
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
-#TODO add performance testing!!
+from datetime import datetime
+from hashlib import md5
+import logging
+import os
+import sys
 
-import numpy as np
-import quantities as pq
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-from hashlib import md5
-from datetime import datetime
-import os
-import sys
-import logging
+
+import numpy as np
+import quantities as pq
 
 from neo.core import SpikeTrain, Segment, Block
 from neo.test.tools import (assert_neo_object_is_compliant,

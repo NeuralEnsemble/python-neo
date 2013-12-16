@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of io.elanio
+Tests of neo.io.brainvisionio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:

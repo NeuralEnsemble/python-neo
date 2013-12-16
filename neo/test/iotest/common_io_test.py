@@ -14,6 +14,8 @@ The private url for writing is
 ssh://gate.g-node.org/groups/neo/io_test_files/
 
 '''
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
 __test__ = False
@@ -22,33 +24,26 @@ url_for_tests = "https://portal.g-node.org/neo/"
 
 import os
 
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
 from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
                             assert_sub_schema_is_lazy_loaded,
                             assert_lazy_sub_schema_can_be_loaded,
                             assert_children_empty)
-
-from neo.test.iotest.tools import (can_use_network,
-                                   cleanup_test_file,
-                                   close_object_safe,
-                                   create_generic_io_object,
-                                   create_generic_reader,
-                                   create_generic_writer,
-                                   create_local_temp_dir,
-                                   download_test_file,
+from neo.test.iotest.tools import (can_use_network, cleanup_test_file,
+                                   close_object_safe, create_generic_io_object,
+                                   create_generic_reader, create_generic_writer,
+                                   create_local_temp_dir, download_test_file,
                                    iter_generic_io_objects,
-                                   iter_generic_readers,
-                                   iter_read_objects,
-                                   make_all_directories,
-                                   read_generic,
+                                   iter_generic_readers, iter_read_objects,
+                                   make_all_directories, read_generic,
                                    write_generic)
 from neo.test.iotest.generate_datasets import generate_from_supported_objects
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
 
 
 class BaseTestIO(object):

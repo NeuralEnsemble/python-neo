@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Generate datasets for testing
+'''
 
-"""
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import numpy as np
+from numpy.random import rand
+import quantities as pq
 
 from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
                       RecordingChannel, Segment, SpikeTrain)
 from neo.io.tools import (create_many_to_one_relationship,
                           populate_RecordingChannel, iteritems)
-import numpy as np
-import quantities as pq
-from numpy.random import rand
 
 
 def generate_one_simple_block(block_name='block_0', nb_segment=3,

@@ -36,11 +36,12 @@ The notation is the same as classes_necessary_attributes.
 
 """
 
-from neo.core import objectlist
-
-import quantities as pq
 from datetime import datetime
+
 import numpy as np
+import quantities as pq
+
+from neo.core import objectlist
 
 
 class_by_name = {}

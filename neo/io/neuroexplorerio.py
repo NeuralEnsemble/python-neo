@@ -14,18 +14,16 @@ Author: sgarcia,luc estebanez
 
 """
 
-
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import datetime
+import os
+import struct
 
 import numpy as np
 import quantities as pq
 
-import struct
-import datetime
-import os
-
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroExplorerIO(BaseIO):

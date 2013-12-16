@@ -1,22 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Tests of neo.io.blackrockio
+"""
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import os
+import struct
 import sys
+import tempfile
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-import neo.io.blackrockio
-import os
 import numpy as np
 import quantities as pq
 
+import neo.io.blackrockio
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io import tools
 from neo.test.tools import assert_arrays_almost_equal
-import struct
-import tempfile
 
 
 #~ class testRead(unittest.TestCase):

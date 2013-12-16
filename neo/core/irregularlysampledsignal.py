@@ -19,10 +19,10 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-from neo.core.baseneo import BaseNeo
-
 import numpy as np
 import quantities as pq
+
+from neo.core.baseneo import BaseNeo
 
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):

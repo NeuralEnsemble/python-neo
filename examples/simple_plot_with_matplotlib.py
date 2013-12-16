@@ -3,10 +3,12 @@
 This is an example for plotting neo object with maplotlib.
 """
 
-import neo
 import urllib
-from matplotlib import pyplot
+
 import numpy
+from matplotlib import pyplot
+
+import neo
 
 distantfile = 'https://portal.g-node.org/neo/neuroexplorer/File_neuroexplorer_2.nex'
 localfile = 'File_neuroexplorer_2.nex'

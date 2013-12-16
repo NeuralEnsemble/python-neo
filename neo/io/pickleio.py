@@ -11,13 +11,16 @@ Supported: Read/Write
 Authors: Andrew Davison
 """
 
+# needed for python 3 compatibility
 from __future__ import with_statement
-from .baseio import BaseIO
-from ..core import Block, Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+
 try:
     import cPickle as pickle # Python 2
 except ImportError:
     import pickle            # Python 3
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
 
 
 class PickleIO(BaseIO):

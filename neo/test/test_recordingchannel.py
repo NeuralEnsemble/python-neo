@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of the RecordingChannelGroup class
+Tests of the neo.core.recordingchannel.RecordingChannel class
 """
 
 try:
@@ -9,11 +9,12 @@ try:
 except ImportError:
     import unittest
 
+import numpy as np
+import quantities as pq
+
 from neo.core.recordingchannel import RecordingChannel
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-import numpy as np
-import quantities as pq
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
 from neo.io.tools import create_many_to_one_relationship
 

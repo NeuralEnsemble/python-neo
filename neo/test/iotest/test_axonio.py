@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of io.axonio
+Tests of neo.io.axonio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
 import sys
+
 try:
     import unittest2 as unittest
 except ImportError:

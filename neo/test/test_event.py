@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of the Event class
+Tests of the neo.core.event.Event class
 """
 
 try:
@@ -9,8 +9,9 @@ try:
 except ImportError:
     import unittest
 
-from neo.core.event import Event
 import quantities as pq
+
+from neo.core.event import Event
 from neo.test.tools import assert_neo_object_is_compliant
 
 

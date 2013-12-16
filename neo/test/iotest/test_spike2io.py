@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Tests of io.asciisignalio
+Tests of neo.io.spike2io
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -11,7 +13,6 @@ except ImportError:
     import unittest
 
 from neo.io import Spike2IO
-
 from neo.test.iotest.common_io_test import BaseTestIO
 
 

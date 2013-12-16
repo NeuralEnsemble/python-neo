@@ -18,9 +18,10 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-from neo.core.baseneo import BaseNeo
-import quantities as pq
 import numpy as np
+import quantities as pq
+
+from neo.core.baseneo import BaseNeo
 
 
 def check_has_dimensions_time(*values):

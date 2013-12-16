@@ -16,16 +16,17 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
+import os
+import struct
+import sys
 
 import numpy as np
 from numpy import dtype
 import quantities as pq
 
-import struct
-import os, sys
+from neo.io.baseio import BaseIO
+from neo.core import *
+from neo.io.tools import create_many_to_one_relationship, iteritems
 
 PY3K = (sys.version_info[0] == 3)
 

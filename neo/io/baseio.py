@@ -11,6 +11,7 @@ BaseIO        - abstract class which should be overridden, managing how a
 
 If you want a model for developing a new IO start from exampleIO.
 """
+
 import collections
 
 from neo.core import *
