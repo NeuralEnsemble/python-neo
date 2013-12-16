@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 neo.io provides classes for reading and/or writing
 electrophysiological data files.

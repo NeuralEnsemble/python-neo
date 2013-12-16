@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Classe for reading data from WinEdr, a software tool written by
 John Dempster.

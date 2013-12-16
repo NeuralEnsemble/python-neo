@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 
 Classe for reading data from pCLAMP and AxoScope

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This is an example for reading files with neo.io
 """

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 NeuroshareIO is a wrap with ctypes of neuroshare DLLs.
 Neuroshare is a C API for reading neural data.

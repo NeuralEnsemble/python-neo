@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Tools for IO coder:
   * For creating parent (many_to_one_relationship)

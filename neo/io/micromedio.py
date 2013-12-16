@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing data from micromed (.trc).
 Inspired by the Matlab code for EEGLAB from Rami K. Niazy.

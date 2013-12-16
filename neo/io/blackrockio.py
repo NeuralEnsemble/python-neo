@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Module for reading binary file from Blackrock format.
+"""
+Module for reading binary file from Blackrock format.
 """
 
 from .baseio import BaseIO

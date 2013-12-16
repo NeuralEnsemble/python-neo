@@ -1,6 +1,5 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-
 Class for reading data from NeuroExplorer (.nex)
 
 Documentation for dev :

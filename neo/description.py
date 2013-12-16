@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 This file is a bundle of utilities to describe Neo object representation
 (attributes and relationships).

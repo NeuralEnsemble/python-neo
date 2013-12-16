@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Usually I run these tests like that. I add neo root folder to the pythonpath
 (usually by adding the neo.pth with the path to the cloned repository to, say,

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing neo objects in matlab format 5 to 7.2 (.mat).
 This module is a bridge for matlab users who want to adopote neo object reprenstation.

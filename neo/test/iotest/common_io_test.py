@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 '''
 Common tests for IOs:
  * check presence of all necessary attr

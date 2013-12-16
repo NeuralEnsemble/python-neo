@@ -1,4 +1,5 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
+
 """
 This generate diagram in .png and .svg from neo.description
 

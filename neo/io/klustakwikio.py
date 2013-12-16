@@ -1,4 +1,6 @@
-"""Reading and writing from KlustaKwik-format files.
+# -*- coding: utf-8 -*-
+"""
+Reading and writing from KlustaKwik-format files.
 Ref: http://klusters.sourceforge.net/UserManual/data-files.html
 
 Supported : Read, Write
