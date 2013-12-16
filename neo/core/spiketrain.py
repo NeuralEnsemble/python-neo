@@ -18,6 +18,9 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
 import quantities as pq
 

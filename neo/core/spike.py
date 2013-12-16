@@ -5,6 +5,9 @@ This module defines :class:`Spike`, a single spike with an optional waveform.
 :class:`Spike` derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`.
 '''
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo

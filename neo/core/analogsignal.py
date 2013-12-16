@@ -24,7 +24,7 @@ the old object.
 '''
 
 # needed for python 3 compatibility
-from __future__ import division
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import quantities as pq
