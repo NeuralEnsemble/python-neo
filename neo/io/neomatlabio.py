@@ -1,9 +1,10 @@
 # encoding: utf-8
 """
-Class for reading/writing neo objects in matlab format 5 to 7.2 (.mat).
-This module is a bridge for matlab users who want to adopote neo object reprenstation.
-Nomenclature is the same but use Matlab struct and cell arrays.
-With this modules Matlab users can use neo.io to read a format and convert it to .mat.
+Module for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
+
+This module is a bridge for MATLAB users who want to adopt the Neo object representation.
+The nomenclature is the same but using Matlab structs and cell arrays.
+With this module MATLAB users can use neo.io to read a format and convert it to .mat.
 
 
 Supported : Read/Write
@@ -41,7 +42,7 @@ from scipy import io as sio
 
 class NeoMatlabIO(BaseIO):
     """
-    Class for reading/writting Neo objects in MATLAB format (.mat) versions 5 to 7.2.
+    Class for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
 
     This module is a bridge for MATLAB users who want to adopt the Neo object representation.
     The nomenclature is the same but using Matlab structs and cell arrays.
