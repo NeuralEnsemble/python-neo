@@ -1,5 +1,4 @@
-# encoding: utf-8
-
+# -*- coding: utf-8 -*-
 """
 README
 =====================================================================================
@@ -73,35 +72,34 @@ Author: Thierry Brizzi
         Domenico Guarino
 """
 
-#encoding:utf-8
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
 # python commons:
-import struct
+from datetime import datetime
+from fractions import gcd
 from os import path
 from os.path import split
-from datetime import datetime
-from time import time
 from re import search
-from fractions import gcd
-
-# I need to subclass BaseIO
-from .baseio import BaseIO
-
-# to import from core
-from ..core import Block, Segment, RecordingChannelGroup, RecordingChannel, AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain
-
-# some tools to finalize the hierachy
-from .tools import populate_RecordingChannel, create_many_to_one_relationship
+import struct
+from time import time
 
 # note neo.core needs only numpy and quantities
 import numpy as np
-import quantities as pq
-
-# ElphyIO depends on:
 import numpy
+import quantities as pq
 from quantities import s, ms, Hz, kHz
-import struct
+
+# I need to subclass BaseIO
+from neo.io.baseio import BaseIO
+
+# to import from core
+from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
+                      AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
+
+# some tools to finalize the hierachy
+from neo.io.tools import (populate_RecordingChannel,
+                          create_many_to_one_relationship)
 
 # --------------------------------------------------------
 # OBJECTS

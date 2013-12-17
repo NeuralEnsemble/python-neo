@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the IrregularySampledSignal class
+Tests of the neo.core.irregularlysampledsignal.IrregularySampledSignal class
 """
 
 try:
@@ -7,9 +9,10 @@ try:
 except ImportError:
     import unittest
 
-from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-import quantities as pq
 import numpy as np
+import quantities as pq
+
+from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)

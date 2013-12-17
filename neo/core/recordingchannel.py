@@ -7,6 +7,9 @@ coming from a single data channel.
 :module:`neo.core.baseneo`.
 '''
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 from neo.core.baseneo import BaseNeo
 
 

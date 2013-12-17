@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading data from Plexion acquisition system (.plx)
 
@@ -17,16 +17,17 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
+import datetime
+from datetime import time
+import struct
+import os
+
 import numpy as np
 import quantities as pq
 
-import struct
-import datetime
-import os
-
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
+from neo.io.tools import create_many_to_one_relationship, iteritems
 
 
 class PlexonIO(BaseIO):

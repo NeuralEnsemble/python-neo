@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Module for reading/writing data from/to legacy PyNN formats.
 
@@ -13,13 +13,15 @@ Supported: Read/Write
 Authors: Andrew Davison, Pierre Yger
 """
 
+# needed for python 3 compatibility
 from __future__ import with_statement
-from .baseio import BaseIO
-from ..core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
-from .tools import create_many_to_one_relationship
 
 import numpy
 import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+from neo.io.tools import create_many_to_one_relationship
 
 UNITS_MAP = {
     'spikes': pq.ms,

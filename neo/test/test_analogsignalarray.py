@@ -1,23 +1,25 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the AnalogSignalArrayArray class
+Tests of the neo.core.analogsignalarray.AnalogSignalArrayArray class
 """
+
+import os
+import pickle
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.core.analogsignalarray import AnalogSignalArray
-from neo.core.analogsignal import AnalogSignal
-
 import numpy as np
 import quantities as pq
+
+from neo.core.analogsignalarray import AnalogSignalArray
+from neo.core.analogsignal import AnalogSignal
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
-
-import pickle
-import os
 
 
 class TestAnalogSignalArrayConstructor(unittest.TestCase):

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 
 Classe for reading data from pCLAMP and AxoScope
@@ -9,7 +9,7 @@ files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 
 This code is a port of abfload and abf2load
-written in Matlab (BSD licence) by :
+written in Matlab (BSD-2-Clause licence) by :
  - Copyright (c) 2009, Forrest Collman, fcollman@princeton.edu
  - Copyright (c) 2004, Harald Hentschke
 and available here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
@@ -33,18 +33,9 @@ abf files - would be good to cross-check
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
-import numpy as np
-import quantities as pq
-
-import struct
 import datetime
 import os
-
-
-from numpy import memmap, dtype
+import struct
 
 # file no longer exists in Python3
 try:
@@ -52,6 +43,15 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+import numpy as np
+from numpy import memmap, dtype
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal, EventArray
+from neo.io.tools import create_many_to_one_relationship, iteritems
+
 
 
 class struct_file(file):

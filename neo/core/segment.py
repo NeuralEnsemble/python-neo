@@ -7,9 +7,12 @@ time basis.
 from :module:`neo.core.baseneo`.
 '''
 
-from neo.core.baseneo import BaseNeo
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
+
+from neo.core.baseneo import BaseNeo
 
 
 class Segment(BaseNeo):

@@ -1,31 +1,24 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading data from BrainVision product.
 
 This code was originally made by L. Pezard (2010), modified B. Burle and S. More.
 
-
-
 Supported : Read
 
 Author: sgarcia
-
-
-
-
-
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import datetime
+import os
+import re
 
 import numpy as np
 import quantities as pq
 
-import os
-import datetime
-import re
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, EventArray
+from neo.io.tools import create_many_to_one_relationship
 
 
 class BrainVisionIO(BaseIO):

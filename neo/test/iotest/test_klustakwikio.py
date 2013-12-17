@@ -1,11 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Tests of neo.io.klustakwikio
+"""
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import glob
+import os.path
+import sys
+import tempfile
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
+
 import neo
-import sys
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.test.tools import assert_arrays_almost_equal
 try:
     from neo.io.klustakwikio import KlustaKwikIO
 except ImportError:
@@ -14,16 +31,6 @@ except ImportError:
 else:
     # not python 3 compatible
     can_run = sys.version_info[0] == 2
-
-
-import os.path
-import numpy as np
-import quantities as pq
-import glob
-import tempfile
-
-from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.tools import assert_arrays_almost_equal
 
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")

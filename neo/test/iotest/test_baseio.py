@@ -1,7 +1,10 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.base
+Tests of neo.io.baseio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:

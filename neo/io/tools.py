@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Tools for IO coder:
   * For creating parent (many_to_one_relationship)
@@ -7,9 +7,14 @@ Tools for IO coder:
 """
 
 import collections
+
 import numpy as np
 
-from neo.core import *
+from neo.core import (AnalogSignal, AnalogSignalArray, Block,
+                      Epoch, EpochArray, Event, EventArray,
+                      IrregularlySampledSignal,
+                      RecordingChannel, RecordingChannelGroup,
+                      Segment, Spike, SpikeTrain, Unit)
 from neo.description import one_to_many_relationship, many_to_one_relationship
 
 

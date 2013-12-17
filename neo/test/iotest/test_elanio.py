@@ -1,16 +1,20 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.elanio
+Tests of neo.io.elanio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
+
 import sys
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
 from neo.io import ElanIO
-
 from neo.test.iotest.common_io_test import BaseTestIO
 
 

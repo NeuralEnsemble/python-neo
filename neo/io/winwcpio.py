@@ -12,19 +12,20 @@ Author : sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import os
+import struct
+import sys
 
 import numpy as np
 from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
-import sys
-import os
-import struct
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal
+from neo.io.tools import create_many_to_one_relationship
 
 PY3K = (sys.version_info[0] == 3)
+
 
 class WinWcpIO(BaseIO):
     """

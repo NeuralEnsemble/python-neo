@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the Spike class
+Tests of the neo.core.spike.Spike class
 """
 
 try:
@@ -7,8 +9,9 @@ try:
 except ImportError:
     import unittest
 
-from neo.core.spike import Spike
 import quantities as pq
+
+from neo.core.spike import Spike
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
 
 

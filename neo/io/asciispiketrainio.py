@@ -1,4 +1,5 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
+
 """
 Classe for reading/writing SpikeTrains in a text file.
 It is the simple case where different spiketrains are written line by line.
@@ -9,16 +10,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-
-
 import csv
 import os
+
+import numpy as np
 from numpy import newaxis
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, SpikeTrain
+from neo.io.tools import create_many_to_one_relationship
 
 
 class AsciiSpikeTrainIO(BaseIO):

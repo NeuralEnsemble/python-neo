@@ -1,7 +1,10 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.wineedrio
+Tests of neo.io.wineedrio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -10,7 +13,6 @@ except ImportError:
     import unittest
 
 from neo.io import WinEdrIO
-
 from neo.test.iotest.common_io_test import BaseTestIO
 
 

@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the Epoch class
+Tests of the neo.core.epoch.Epoch class
 """
 
 try:
@@ -7,8 +9,9 @@ try:
 except ImportError:
     import unittest
 
-from neo.core.epoch import Epoch
 import quantities as pq
+
+from neo.core.epoch import Epoch
 from neo.test.tools import assert_neo_object_is_compliant
 
 

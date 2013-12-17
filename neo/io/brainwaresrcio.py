@@ -1,6 +1,4 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 '''
 Class for reading from Brainware SRC files
 
@@ -41,6 +39,10 @@ from datetime import datetime, timedelta
 from os import path
 from warnings import warn
 
+# numpy and quantities are already required by neo
+import numpy as np
+import quantities as pq
+
 # needed core neo modules
 from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
@@ -50,10 +52,6 @@ from neo.io.baseio import BaseIO
 
 # some tools to finalize the hierachy
 from neo.io.tools import create_many_to_one_relationship
-
-# numpy and quantities are already required by neo
-import numpy as np
-import quantities as pq
 
 
 class BrainwareSrcIO(BaseIO):

@@ -1,24 +1,28 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the AnalogSignal class
+Tests of the neo.core.analogsignal.AnalogSignal class and related functions
 """
 
+# needed for python 3 compatibility
 from __future__ import division
+
+import os
+import pickle
+from pprint import pformat
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 import numpy as np
 import quantities as pq
-import pickle
+
+from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
-import os
-from pprint import pformat
 
 
 class TestAnalogSignalConstructor(unittest.TestCase):

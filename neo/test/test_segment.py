@@ -1,11 +1,16 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the Segment class
+Tests of the neo.core.segment.Segment class
 """
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
 
 from neo.core.segment import Segment
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
@@ -14,8 +19,6 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       Spike, SpikeTrain, Unit)
 from neo.io.tools import create_many_to_one_relationship
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
-import numpy as np
-import quantities as pq
 
 
 class TestSegment(unittest.TestCase):

@@ -1,18 +1,60 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-neo.io provides classes for reading and/or writing
+:mod:`neo.io` provides classes for reading and/or writing
 electrophysiological data files.
 
 Note that if the package dependency is not satisfied for one io, it does not
 raise an error but a warning.
 
-neo.io.iolist provides the classes list of succesfully imported io.
+neo.io.iolist provides a list of succesfully imported io classes.
 
-.. autoclass:: neo.io.PlexonIO
+Classes:
+
+.. autoclass:: neo.io.AlphaOmegaIO
+
+.. autoclass:: neo.io.AsciiSignalIO
+
+.. autoclass:: neo.io.AsciiSpikeTrainIO
+
+.. autoclass:: neo.io.AxonIO
+
+.. autoclass:: neo.io.BlackrockIO
+
+.. autoclass:: neo.io.BrainVisionIO
+
+.. autoclass:: neo.io.BrainwareDamIO
+
+.. autoclass:: neo.io.BrainwareF32IO
+
+.. autoclass:: neo.io.BrainwareSrcIO
+
+.. autoclass:: neo.io.ElanIO
+
+.. autoclass:: neo.io.ElphyIO
+
+.. autoclass:: neo.io.KlustaKwikIO
+
+.. autoclass:: neo.io.MicromedIO
+
+.. autoclass:: neo.io.NeoHdf5IO
+
+.. autoclass:: neo.io.NeoMatlabIO
 
 .. autoclass:: neo.io.NeuroExplorerIO
 
-.. autoclass:: neo.io.AxonIO
+.. autoclass:: neo.io.NeuroScopeIO
+
+.. autoclass:: neo.io.NeuroshareIO
+
+.. autoclass:: neo.io.PickleIO
+
+.. autoclass:: neo.io.PlexonIO
+
+.. autoclass:: neo.io.PyNNNumpyIO
+
+.. autoclass:: neo.io.PyNNTextIO
+
+.. autoclass:: neo.io.RawBinarySignalIO
 
 .. autoclass:: neo.io.TdtIO
 
@@ -20,45 +62,6 @@ neo.io.iolist provides the classes list of succesfully imported io.
 
 .. autoclass:: neo.io.WinWcpIO
 
-.. autoclass:: neo.io.ElanIO
-
-.. autoclass:: neo.io.AsciiSignalIO
-
-.. autoclass:: neo.io.AsciiSpikeTrainIO
-
-.. autoclass:: neo.io.RawBinarySignalIO
-
-.. autoclass:: neo.io.MicromedIO
-
-.. autoclass:: neo.io.NeuroshareIO
-
-.. autoclass:: neo.io.NeoMatlabIO
-
-.. autoclass:: neo.io.PyNNNumpyIO
-
-.. autoclass:: neo.io.PyNNTextIO
-
-.. autoclass:: neo.io.KlustaKwikIO
-
-.. autoclass:: neo.io.BlackrockIO
-
-.. autoclass:: neo.io.AlphaOmegaIO
-
-.. autoclass:: neo.io.PickleIO
-
-.. autoclass:: neo.io.NeoHdf5IO
-
-.. autoclass:: neo.io.BrainVisionIO
-
-.. autoclass:: neo.io.ElphyIO
-
-.. autoclass:: neo.io.NeuroScopeIO
-
-.. autoclass:: neo.io.BrainwareDamIO
-
-.. autoclass:: neo.io.BrainwareF32IO
-
-.. autoclass:: neo.io.BrainwareSrcIO
 """
 
 import warnings
@@ -68,93 +71,12 @@ iolist = []
 
 
 try:
-    from neo.io.exampleio import ExampleIO
+    from neo.io.alphaomegaio import AlphaOmegaIO
 except ImportError:
-    warnings.warn("ExampleIO not available, check dependencies",
+    warnings.warn("AlphaOmegaIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(ExampleIO)
-
-
-try:
-    from neo.io.hdf5io import NeoHdf5IO
-except ImportError:
-    warnings.warn("NeoHdf5IO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(NeoHdf5IO)
-
-
-try:
-    from neo.io.plexonio import PlexonIO
-except ImportError:
-    warnings.warn("PlexonIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(PlexonIO)
-
-
-try:
-    from neo.io.neuroexplorerio import NeuroExplorerIO
-except ImportError:
-    warnings.warn("NeuroExplorerIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(NeuroExplorerIO)
-
-
-try:
-    from neo.io.axonio import AxonIO
-except ImportError:
-    warnings.warn("AxonIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(AxonIO)
-
-
-try:
-    from neo.io.tdtio import TdtIO
-except ImportError:
-    warnings.warn("TdtIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(TdtIO)
-
-
-try:
-    from neo.io.spike2io import Spike2IO
-except ImportError:
-    warnings.warn("Spike2IO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(Spike2IO)
-
-
-try:
-    from neo.io.winedrio import WinEdrIO
-except ImportError:
-    warnings.warn("WinEdrIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(WinEdrIO)
-
-
-try:
-    from neo.io.winwcpio import WinWcpIO
-except ImportError:
-    warnings.warn("WinWcpIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(WinWcpIO)
-
-
-try:
-    from neo.io.elanio import ElanIO
-except ImportError:
-    warnings.warn("ElanIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(ElanIO)
+    iolist.append(AlphaOmegaIO)
 
 
 try:
@@ -176,12 +98,93 @@ else:
 
 
 try:
-    from neo.io.rawbinarysignalio import RawBinarySignalIO
+    from neo.io.axonio import AxonIO
 except ImportError:
-    warnings.warn("RawBinarySignalIO not available, check dependencies",
+    warnings.warn("AxonIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(RawBinarySignalIO)
+    iolist.append(AxonIO)
+
+
+try:
+    from neo.io.blackrockio import BlackrockIO
+except ImportError:
+    warnings.warn("BlackrockIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BlackrockIO)
+
+
+try:
+    from neo.io.brainvisionio import BrainVisionIO
+except ImportError:
+    warnings.warn("BrainVisionIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BrainVisionIO)
+
+
+try:
+    from neo.io.brainwaredamio import BrainwareDamIO
+except ImportError:
+    warnings.warn("BrainwareDamIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BrainwareDamIO)
+
+
+try:
+    from neo.io.brainwaref32io import BrainwareF32IO
+except ImportError:
+    warnings.warn("BrainwareF32IO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BrainwareF32IO)
+
+
+try:
+    from neo.io.brainwaresrcio import BrainwareSrcIO
+except ImportError:
+    warnings.warn("BrainwareSrcIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(BrainwareSrcIO)
+
+
+try:
+    from neo.io.elanio import ElanIO
+except ImportError:
+    warnings.warn("ElanIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(ElanIO)
+
+
+try:
+    from neo.io.elphyio import ElphyIO
+except ImportError:
+    warnings.warn("ElphyIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(ElphyIO)
+
+
+try:
+    from neo.io.exampleio import ExampleIO
+except ImportError:
+    warnings.warn("ExampleIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(ExampleIO)
+
+
+try:
+    from neo.io.klustakwikio import KlustaKwikIO
+except ImportError:
+    warnings.warn("KlustaKwikIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(KlustaKwikIO)
 
 
 try:
@@ -194,12 +197,12 @@ else:
 
 
 try:
-    from neo.io.neuroshareio import NeuroshareIO
+    from neo.io.hdf5io import NeoHdf5IO
 except ImportError:
-    warnings.warn("NeuroshareIO not available, check dependencies",
+    warnings.warn("NeoHdf5IO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(NeuroshareIO)
+    iolist.append(NeoHdf5IO)
 
 
 try:
@@ -209,6 +212,47 @@ except ImportError:
                   ImportWarning)
 else:
     iolist.append(NeoMatlabIO)
+
+
+try:
+    from neo.io.neuroexplorerio import NeuroExplorerIO
+except ImportError:
+    warnings.warn("NeuroExplorerIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(NeuroExplorerIO)
+
+
+try:
+    from neo.io.neuroscopeio import NeuroScopeIO
+except ImportError:
+    warnings.warn("NeuroScopeIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(NeuroScopeIO)
+
+
+try:
+    from neo.io.neuroshareio import NeuroshareIO
+except ImportError:
+    warnings.warn("NeuroshareIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(NeuroshareIO)
+
+
+# should be always available, so no need for try...except
+from neo.io.pickleio import PickleIO
+iolist.append(PickleIO)
+
+
+try:
+    from neo.io.plexonio import PlexonIO
+except ImportError:
+    warnings.warn("PlexonIO not available, check dependencies",
+                  ImportWarning)
+else:
+    iolist.append(PlexonIO)
 
 
 try:
@@ -230,89 +274,48 @@ else:
 
 
 try:
-    from neo.io.klustakwikio import KlustaKwikIO
+    from neo.io.rawbinarysignalio import RawBinarySignalIO
 except ImportError:
-    warnings.warn("KlustaKwikIO not available, check dependencies",
+    warnings.warn("RawBinarySignalIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(KlustaKwikIO)
+    iolist.append(RawBinarySignalIO)
 
 
 try:
-    from neo.io.blackrockio import BlackrockIO
+    from neo.io.spike2io import Spike2IO
 except ImportError:
-    warnings.warn("BlackrockIO not available, check dependencies",
+    warnings.warn("Spike2IO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(BlackrockIO)
+    iolist.append(Spike2IO)
 
 
 try:
-    from neo.io.alphaomegaio import AlphaOmegaIO
+    from neo.io.tdtio import TdtIO
 except ImportError:
-    warnings.warn("AlphaOmegaIO not available, check dependencies",
+    warnings.warn("TdtIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(AlphaOmegaIO)
-
-
-# should be always available, so no need for try...except
-from neo.io.pickleio import PickleIO
-iolist.append(PickleIO)
+    iolist.append(TdtIO)
 
 
 try:
-    from neo.io.brainvisionio import BrainVisionIO
+    from neo.io.winedrio import WinEdrIO
 except ImportError:
-    warnings.warn("BrainVisionIO not available, check dependencies",
+    warnings.warn("WinEdrIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(BrainVisionIO)
+    iolist.append(WinEdrIO)
 
 
 try:
-    from neo.io.elphyio import ElphyIO
+    from neo.io.winwcpio import WinWcpIO
 except ImportError:
-    warnings.warn("ElphyIO not available, check dependencies",
+    warnings.warn("WinWcpIO not available, check dependencies",
                   ImportWarning)
 else:
-    iolist.append(ElphyIO)
-
-
-try:
-    from neo.io.neuroscopeio import NeuroScopeIO
-except ImportError:
-    warnings.warn("NeuroScopeIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(NeuroScopeIO)
-
-
-try:
-    from neo.io.brainwaresrcio import BrainwareSrcIO
-except ImportError:
-    warnings.warn("BrainwareSrcIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(BrainwareSrcIO)
-
-
-try:
-    from neo.io.brainwaredamio import BrainwareDamIO
-except ImportError:
-    warnings.warn("BrainwareDamIO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(BrainwareDamIO)
-
-
-try:
-    from neo.io.brainwaref32io import BrainwareF32IO
-except ImportError:
-    warnings.warn("BrainwareF32IO not available, check dependencies",
-                  ImportWarning)
-else:
-    iolist.append(BrainwareF32IO)
+    iolist.append(WinWcpIO)
 
 
 def get_io(filename):

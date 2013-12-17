@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the EventArray class
+Tests of the neo.core.eventarray.EventArray class
 """
 
 try:
@@ -7,9 +9,10 @@ try:
 except ImportError:
     import unittest
 
-from neo.core.eventarray import EventArray
-import quantities as pq
 import numpy as np
+import quantities as pq
+
+from neo.core.eventarray import EventArray
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal, assert_same_sub_schema)
 

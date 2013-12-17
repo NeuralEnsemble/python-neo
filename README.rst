@@ -33,8 +33,9 @@ More information
 - Home page: http://neuralensemble.org/neo
 - Mailing list: https://groups.google.com/forum/?fromgroups#!forum/neuralensemble
 - Documentation: http://packages.python.org/neo/
+- Bug reports: https://github.com/NeuralEnsemble/python-neo/issues
 
 For installation instructions, see doc/source/install.rst
 
-:copyright: Copyright 2010-2012 by the Neo team, see AUTHORS.
-:license: Modified BSD License, see LICENSE.txt for details.
+:copyright: Copyright 2010-2013 by the Neo team, see AUTHORS.
+:license: 3-Clause Revised BSD License, see LICENSE.txt for details.

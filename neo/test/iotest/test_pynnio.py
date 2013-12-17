@@ -1,28 +1,31 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the PyNNNumpyIO and PyNNTextIO classes
+Tests of the neo.io.pynnio.PyNNNumpyIO and neo.io.pynnio.PyNNTextIO classes
+"""
 
-"""
+# needed for python 3 compatibility
 from __future__ import absolute_import, with_statement, division
-import numpy as np
-import quantities as pq
+
 import os
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
+
 from neo.core import Segment, AnalogSignal, SpikeTrain
 from neo.io import PyNNNumpyIO, PyNNTextIO
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
-
-
-NCELLS = 5
-
-
 #TODO: common test fails.
 from neo.test.iotest.common_io_test import BaseTestIO
 #class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
+
+NCELLS = 5
 
 
 class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase):

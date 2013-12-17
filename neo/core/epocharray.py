@@ -7,12 +7,16 @@ performance reasons.
 :module:`neo.core.baseneo`.
 '''
 
-from neo.core.baseneo import BaseNeo, merge_annotations
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
+import sys
 
 import numpy as np
 import quantities as pq
 
-import sys
+from neo.core.baseneo import BaseNeo, merge_annotations
+
 PY_VER = sys.version_info[0]
 
 

@@ -1,36 +1,34 @@
-#!/usr/bin/python
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.brainwaresrcio
+Tests of neo.io.brainwaresrcio
 """
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+
+import os.path
+import sys
+import warnings
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-import sys
-PY_VER = sys.version_info[0]
-
-import warnings
-
-import os.path
 import numpy as np
 import quantities as pq
 
 from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
-
 from neo.io.tools import create_many_to_one_relationship
-
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
+
+PY_VER = sys.version_info[0]
 
 
 def proc_src(filename):
