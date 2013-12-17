@@ -236,9 +236,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
 
     def test_python_unicode(self):
         '''test to make sure unicode type data is accepted'''
-        # the eval is needed because otherwise
-        # it is a SyntaxError in Python 3.2
-        value = eval("u'this is also a test'")
+        value = u'this is also a test'
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
