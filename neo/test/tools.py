@@ -378,8 +378,9 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     'Lazy loaded error %s.%s.size = %s' % \
                     (classname, attrname, getattr(ob, attrname).size)
                 assert hasattr(ob,  'lazy_shape'), \
-                    'Lazy loaded error %s should have lazy_shape attribute ' +\
-                    'because of %s attribute' % (classname, attrname, )
+                    'Lazy loaded error ' +\
+                    '%s should have lazy_shape attribute ' % classname +\
+                    'because of %s attribute' % attrname
 
 
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
