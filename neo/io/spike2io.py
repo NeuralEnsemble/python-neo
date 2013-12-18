@@ -426,14 +426,14 @@ class HeaderReader(object):
             array = np.fromstring( fid.read(dtype.itemsize) , dtype)[0]
         else :
             array = np.zeros( (1) , dtype = dtype)[0]
-        object.__setattr__(self, 'dtype' , dtype)
-        object.__setattr__(self, 'array' , array)
+        super(HeaderReader, self).__setattr__('dtype', dtype)
+        super(HeaderReader, self).__setattr__('array', array)
 
     def __setattr__(self, name , val):
         if name in self.dtype.names :
             self.array[name] = val
         else :
-            object.__setattr__(self, name , val)
+            super(HeaderReader, self).__setattr__(name, val)
 
     def __getattr__(self , name):
         #~ print name
@@ -446,8 +446,7 @@ class HeaderReader(object):
                 return self.array[name][1:l+1]
             else:
                 return self.array[name]
-        else :
-            object.__getattr__(self, name )
+
     def names(self):
         return self.array.dtype.names
 
@@ -456,7 +455,7 @@ class HeaderReader(object):
         for name in self.dtype.names :
             #~ if self.dtype[name].kind != 'S' :
                 #~ s += name + self.__getattr__(name)
-                s += '{}: {}\n'.format(name,self.__getattr__(name))
+                s += '{}: {}\n'.format(name, getattr(self, name))
         return s
 
 
