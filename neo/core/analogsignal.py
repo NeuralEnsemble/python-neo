@@ -437,8 +437,6 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 pp.text(line)
         if hasattr(self, "channel_index"):
             _pp("channel index: {0}".format(self.channel_index))
-        elif hasattr(self, "channel_indexes"):
-            _pp("channel indices: %s" % self.channel_indexes)
         for line in ["sampling rate: {0}".format(self.sampling_rate),
                      "time: {0} to {1}".format(self.t_start, self.t_stop)
                      ]:
