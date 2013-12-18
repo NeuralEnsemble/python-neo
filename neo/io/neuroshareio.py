@@ -230,6 +230,7 @@ class NeuroshareIO(BaseIO):
                     pdwSampleCount = ctypes.c_uint32(0)
                     pdwUnitID= ctypes.c_uint32(0)
 
+                    nsample  = pdwSampleCount.value
                     times = np.empty( (entityInfo.dwItemCount), drtype = 'f')
                     waveforms = np.empty( (entityInfo.dwItemCount, nsource, nsample), drtype = 'f')
                     for dwIndex in range(entityInfo.dwItemCount ):
@@ -237,7 +238,6 @@ class NeuroshareIO(BaseIO):
                             ctypes.byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             dwDataBufferSize * 8, ctypes.byref(pdwSampleCount),
                                 ctypes.byref(pdwUnitID ) )
-                        nsample  = pdwSampleCount.value
                         #print 'dwDataBufferSize' , dwDataBufferSize,pdwSampleCount , pdwUnitID
 
                         times[dwIndex] = pdTimeStamp.value
