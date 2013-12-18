@@ -195,7 +195,7 @@ class ExampleIO(BaseIO):
 
             # read nested spiketrain
             for i in range(num_analogsignal):
-                for j in range(num_spiketrain_by_channel):
+                for _ in range(num_spiketrain_by_channel):
                     sptr = self.read_spiketrain(lazy = lazy , cascade = cascade ,
                                                             segment_duration = segment_duration, t_start = t_start , channel_index = i)
                     seg.spiketrains += [ sptr ]

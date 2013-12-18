@@ -301,26 +301,26 @@ class Spike2IO(BaseIO):
         ## Step 1 : type of blocks
         if channelHeader.kind in [2, 3, 4]:
             # Event data
-            format = [('tick' , 'i4') ]
+            fmt = [('tick' , 'i4') ]
         elif channelHeader.kind in [5]:
             # Marker data
-            format = [('tick' , 'i4') , ('marker' , 'i4') ]
+            fmt = [('tick' , 'i4') , ('marker' , 'i4') ]
         elif channelHeader.kind in [6]:
             # AdcMark data
-            format = [('tick' , 'i4') , ('marker' , 'i4')  , ('adc' , 'S%d' %channelHeader.n_extra   )]
+            fmt = [('tick' , 'i4') , ('marker' , 'i4')  , ('adc' , 'S%d' %channelHeader.n_extra   )]
         elif channelHeader.kind in [7]:
             #  RealMark data
-            format = [('tick' , 'i4') , ('marker' , 'i4')  , ('real' , 'S%d' %channelHeader.n_extra   )]
+            fmt = [('tick' , 'i4') , ('marker' , 'i4')  , ('real' , 'S%d' %channelHeader.n_extra   )]
         elif channelHeader.kind in [8]:
             # TextMark data
-            format = [('tick' , 'i4') , ('marker' , 'i4')  ,  ('label' , 'S%d'%channelHeader.n_extra)]
-        dt = np.dtype(format)
+            fmt = [('tick' , 'i4') , ('marker' , 'i4')  ,  ('label' , 'S%d'%channelHeader.n_extra)]
+        dt = np.dtype(fmt)
 
 
         ## Step 2 : first read for allocating mem
         fid.seek(channelHeader.firstblock)
         totalitems = 0
-        for b in range(channelHeader.blocks) :
+        for _ in range(channelHeader.blocks) :
             blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
             totalitems += blockHeader.items
             if blockHeader.succ_block > 0 :
@@ -345,7 +345,7 @@ class Spike2IO(BaseIO):
             ## Step 3 : read
             fid.seek(channelHeader.firstblock)
             pos = 0
-            for b in range(channelHeader.blocks) :
+            for _ in range(channelHeader.blocks) :
                 blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
                 # read all events in block
                 trigs = np.fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)

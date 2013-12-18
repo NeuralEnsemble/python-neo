@@ -361,15 +361,15 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = struct.unpack(fmt , buf)
             if len(val) == 1:
                 val = val[0]
             else :
                 val = list(val)
-            #~ if 's' in format :
+            #~ if 's' in fmt :
                 #~ val = val.replace('\x00','')
             d[key] = val
         return d

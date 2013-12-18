@@ -54,15 +54,15 @@ from neo.io.tools import create_many_to_one_relationship, iteritems
 
 
 class struct_file(file):
-    def read_f(self, format , offset = None):
+    def read_f(self, fmt , offset = None):
         if offset is not None:
             self.seek(offset)
-        return struct.unpack(format , self.read(struct.calcsize(format)))
+        return struct.unpack(fmt , self.read(struct.calcsize(fmt)))
 
-    def write_f(self, format , offset = None , *args ):
+    def write_f(self, fmt , offset = None , *args ):
         if offset is not None:
             self.seek(offset)
-        self.write( struct.pack( format , *args ) )
+        self.write( struct.pack( fmt , *args ) )
 
 
 def reformat_integer_V1(data, nbchannel , header):
@@ -352,8 +352,8 @@ class AxonIO(BaseIO):
 
         # construct dict
         header = { }
-        for key, offset , format in headerDescription :
-            val = fid.read_f(format , offset = offset)
+        for key, offset , fmt in headerDescription :
+            val = fid.read_f(fmt , offset = offset)
             if len(val) == 1:
                 header[key] = val[0]
             else :
@@ -373,8 +373,8 @@ class AxonIO(BaseIO):
             for i in range(header['lNumTagEntries']) :
                 fid.seek(header['lTagSectionPtr']+i*64)
                 tag = { }
-                for key, format in TagInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in TagInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         tag[key] = val[0]
                     else :
@@ -415,8 +415,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['ADCSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['ADCSection']['uBytes']*i)
                 ADCInfo = { }
-                for key, format in ADCInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in ADCInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         ADCInfo[key] = val[0]
                     else :
@@ -429,8 +429,8 @@ class AxonIO(BaseIO):
             # protocol sections
             protocol = { }
             fid.seek(sections['ProtocolSection']['uBlockIndex']*BLOCKSIZE)
-            for key, format in protocolInfoDescription :
-                val = fid.read_f(format )
+            for key, fmt in protocolInfoDescription :
+                val = fid.read_f(fmt )
                 if len(val) == 1:
                     protocol[key] = val[0]
                 else :
@@ -443,8 +443,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['TagSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['TagSection']['uBytes']*i)
                 tag = { }
-                for key, format in TagInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in TagInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         tag[key] = val[0]
                     else :
@@ -460,8 +460,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['DACSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['DACSection']['uBytes']*i)
                 DACInfo = { }
-                for key, format in DACInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in DACInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         DACInfo[key] = val[0]
                     else :
@@ -483,8 +483,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['EpochPerDACSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['EpochPerDACSection']['uBytes']*i)
                 EpochInfoPerDAC = { }
-                for key, format in EpochInfoPerDACDescription :
-                    val = fid.read_f(format )
+                for key, fmt in EpochInfoPerDACDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         EpochInfoPerDAC[key] = val[0]
                     else :
@@ -513,7 +513,7 @@ class AxonIO(BaseIO):
         header = self.read_header()
 
         if header['fFileVersionNumber'] < 2. :
-            raise "Protocol is only present in ABF2 files."
+            raise IOError("Protocol is only present in ABF2 files.")
 
         nADC = header['sections']['ADCSection']['llNumEntries'] # Number of ADC channels
         nDAC = header['sections']['DACSection']['llNumEntries'] # Number of DAC channels

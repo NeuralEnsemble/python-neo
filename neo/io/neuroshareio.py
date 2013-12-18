@@ -221,6 +221,7 @@ class NeuroshareIO(BaseIO):
 
                 if lazy:
                     sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel))
+                    sptr.lazy_shape = entityInfo.dwItemCount
                 else:
                     pdTimeStamp  = ctypes.c_double(0.)
                     dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount*pdwSegmentInfo.dwSourceCount
@@ -247,9 +248,7 @@ class NeuroshareIO(BaseIO):
                                         sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
                                         name = str(entityInfo.szEntityLabel),
                                         )
-                    if lazy:
-                        sptr.lazy_shape = entityInfo.dwItemCount
-                    seg.spiketrains.append(sptr)
+                seg.spiketrains.append(sptr)
 
 
             # neuralevent

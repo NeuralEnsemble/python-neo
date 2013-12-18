@@ -670,7 +670,7 @@ class NeoHdf5IO(BaseIO):
                     if not lazy or sum(arr.shape) <= 1:
                         nattr = pq.Quantity(arr.read(), units)
                     else:  # making an empty array
-                        nattr = pq.Quantity(np.empty(tuple([0 for x in range(attr[2])])), units)
+                        nattr = pq.Quantity(np.empty(tuple([0 for _ in range(attr[2])])), units)
                 elif attr[1] == np.ndarray:
                     arr = self._data.getNode(node, attr_name)
                     if not lazy:

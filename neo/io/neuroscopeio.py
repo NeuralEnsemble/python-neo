@@ -90,7 +90,7 @@ class NeuroScopeIO(BaseIO):
         nbchannel = int(acq.find('nChannels').text)
         sampling_rate = float(acq.find('samplingRate').text)*pq.Hz
         voltage_range = float(acq.find('voltageRange').text)
-        offset = int(acq.find('offset').text)
+        #offset = int(acq.find('offset').text)
         amplification = float(acq.find('amplification').text)
         
         bl = Block(file_origin = os.path.basename(self.filename).replace('.xml', ''))

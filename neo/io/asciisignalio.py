@@ -200,6 +200,9 @@ class AsciiSignalIO(BaseIO):
             delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
             writetimecolumn :  True or Flase write time vector as first column
         """
+        if skiprows:
+            raise NotImplementedError('skiprows values other than 0 are not ' +
+                                      'supported')
         l = [ ]
         if writetimecolumn is not None:
             l.append(segment.analogsignals[0].times[:, np.newaxis])

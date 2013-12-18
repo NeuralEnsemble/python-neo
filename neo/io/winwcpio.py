@@ -91,7 +91,7 @@ class WinWcpIO(BaseIO):
             key,val = line.split('=')
             if key in ['NC', 'NR','NBH','NBA','NBD','ADCMAX','NP','NZ', ] :
                 val = int(val)
-            if key in ['AD', 'DT', ] :
+            elif key in ['AD', 'DT', ] :
                 val = val.replace(',','.')
                 val = float(val)
             header[key] = val
@@ -174,8 +174,8 @@ class HeaderReader():
     def read_f(self, offset =0):
         self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            val = struct.unpack(format , self.fid.read(struct.calcsize(format)))
+        for key, fmt in self.description :
+            val = struct.unpack(fmt , self.fid.read(struct.calcsize(fmt)))
             if len(val) == 1:
                 val = val[0]
             else :

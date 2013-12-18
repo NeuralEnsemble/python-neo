@@ -111,7 +111,7 @@ class PlexonIO(BaseIO):
         dspChannelHeaders = { }
         maxunit=0
         maxchan = 0
-        for i in range(globalHeader['NumDSPChannels']):
+        for _ in range(globalHeader['NumDSPChannels']):
             # channel is 1 based
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
             channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
@@ -122,13 +122,13 @@ class PlexonIO(BaseIO):
 
        # event channel header
         eventHeaders = { }
-        for i in range(globalHeader['NumEventChannels']):
+        for _ in range(globalHeader['NumEventChannels']):
             eventHeader = HeaderReader(fid , EventHeader ).read_f(offset = None)
             eventHeaders[eventHeader['Channel']] = eventHeader
 
         # slow channel header = signal
         slowChannelHeaders = { }
-        for i in range(globalHeader['NumSlowChannels']):
+        for _ in range(globalHeader['NumSlowChannels']):
             slowChannelHeader = HeaderReader(fid , SlowChannelHeader ).read_f(offset = None)
             slowChannelHeaders[slowChannelHeader['Channel']] = slowChannelHeader
 
@@ -185,7 +185,7 @@ class PlexonIO(BaseIO):
             # allocating mem for SpikeTrain
             stimearrays = np.zeros((maxchan+1, maxunit+1) ,dtype=object)
             swfarrays = np.zeros((maxchan+1, maxunit+1) ,dtype=object)
-            for (chan, unit), value in np.ndenumerate(nb_spikes):
+            for (chan, unit), _ in np.ndenumerate(nb_spikes):
                 stimearrays[chan,unit] = np.zeros(nb_spikes[chan,unit], dtype = 'f')
                 if load_spike_waveform:
                     n1,n2 = wf_sizes[chan, unit,:]
@@ -426,15 +426,13 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = list(struct.unpack(fmt , buf))
             if len(val) == 1:
                 val = val[0]
-            else :
-                val = list(val)
-            if 's' in format :
+            if 's' in fmt :
                 val = val.replace('\x00','')
             d[key] = val
         return d

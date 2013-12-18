@@ -688,16 +688,14 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            format = '<' + format # insures use of standard sizes
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            fmt = '<' + fmt # insures use of standard sizes
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = list(struct.unpack(fmt , buf))
             if len(val) == 1:
                 val = val[0]
-            else :
-                val = list(val)
-            if 's' in format :
+            if 's' in fmt :
                 val = val.split('\x00',1)[0]
             d[key] = val
         return d

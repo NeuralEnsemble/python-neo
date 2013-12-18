@@ -255,14 +255,13 @@ class BlackrockIO(BaseIO):
             channel_indexes = channel_indexes_in_segment(block.segments[0])
         else:
             channel_indexes = []
-            seg = block.segments[0]
 
         # type of file
         fi.write('NEURALSG')
 
         # sampling rate, in text and integer
         fi.write('30 kS/s\0')
-        for n in range(8): fi.write('\0')
+        for _ in range(8): fi.write('\0')
         fi.write(struct.pack('<I', 1))
 
         # channel count: one for each analogsignal, and then also for
@@ -400,7 +399,7 @@ class Loader(object):
             self.file_handle.read(4))
         self.header.Channel_ID = [struct.unpack('<I',
             self.file_handle.read(4))[0]
-            for n in xrange(self.header.Channel_Count)]
+            for _ in xrange(self.header.Channel_Count)]
 
         # Compute total header length
         self.header.Header = 8 + 16 + 4 + 4 + \

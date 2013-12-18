@@ -317,7 +317,7 @@ class KlustaKwikIO(BaseIO):
                 except KeyError:
                     # Use empty
                     all_features = [
-                        [] for n in range(len(spike_times_in_samples))]
+                        [] for _ in range(len(spike_times_in_samples))]
                 all_features = np.asarray(all_features)
                 if all_features.ndim != 2:
                     raise ValueError("waveform features should be 2d array")
