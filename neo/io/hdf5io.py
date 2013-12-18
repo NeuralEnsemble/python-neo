@@ -399,7 +399,7 @@ class NeoHdf5IO(BaseIO):
         cascade: True/False process downstream relationships
         lazy: True/False process any quantity/ndarray attributes """
 
-        def assign_attribute(obj_attr, attr_name):
+        def assign_attribute(obj_attr, attr_name, path, node):
             """ subfunction to serialize a given attribute """
             if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
                 if not lazy:
@@ -453,10 +453,10 @@ class NeoHdf5IO(BaseIO):
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
-                assign_attribute(getattr(obj, attr[0]), attr[0])
+                assign_attribute(getattr(obj, attr[0]), attr[0], path, node)
             # not forget to save AS, ASA or ST - NEO "stars"
         if obj_type in classes_inheriting_quantities.keys():
-            assign_attribute(obj, classes_inheriting_quantities[obj_type])
+            assign_attribute(obj, classes_inheriting_quantities[obj_type], path, node)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         node._f_setAttr("object_ref", uuid.uuid4().hex)
@@ -657,7 +657,7 @@ class NeoHdf5IO(BaseIO):
         """ Returns a requested NEO object as instance of NEO class.
         Set lazy_loaded to True to load a previously lazily loaded object
         (cache is ignored in this case)."""
-        def fetch_attribute(attr_name):
+        def fetch_attribute(attr_name, attr, node):
             """ fetch required attribute from the corresp. node in the file """
             try:
                 if attr[1] == pq.Quantity:
@@ -687,7 +687,7 @@ class NeoHdf5IO(BaseIO):
                 nattr = None
             return nattr
 
-        def get_lazy_shape(obj):
+        def get_lazy_shape(obj, node):
             attr = lazy_shape_arrays[type(obj).__name__]
             arr = self._data.getNode(node, attr)
             return arr.shape
@@ -730,12 +730,12 @@ class NeoHdf5IO(BaseIO):
             attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
             for i, attr in enumerate(attrs):
                 attr_name = attr[0]
-                nattr = fetch_attribute(attr_name)
+                nattr = fetch_attribute(attr_name, attr, node)
                 if nattr is not None:
                     kwargs[attr_name] = nattr
             obj = class_by_name[obj_type](**kwargs)  # instantiate new object
             if lazy and obj_type in lazy_shape_arrays:
-                obj.lazy_shape = get_lazy_shape(obj)
+                obj.lazy_shape = get_lazy_shape(obj, node)
             self._update_path(obj, node)  # set up HDF attributes: name, path
             try:
                 setattr(obj, "annotations", node._f_getAttr("annotations"))
