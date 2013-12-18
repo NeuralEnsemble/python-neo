@@ -45,14 +45,16 @@ class RawBinarySignalIO(BaseIO):
                                         ('nbchannel' , { 'value' : 16 } ),
                                         ('bytesoffset' , { 'value' : 0 } ),
                                         ('t_start' , { 'value' : 0. } ),
-                                        ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
+                                        ('dtype' , { 'value' : 'float32' , 'possible' : ['float32' , 'float64',
+                                                                                                'int16' , 'uint16', 'int32' , 'uint32',  ] } ),
                                         ('rangemin' , { 'value' : -10 } ),
                                         ('rangemax' , { 'value' : 10 } ),
                                     ]
                         }
     write_params       = { Segment : [
                                         ('bytesoffset' , { 'value' : 0 } ),
-                                        ('dtype' , { 'value' : 'f4' , 'possible' : ['f4' , 'i2' , 'i4' , 'f8' ] } ),
+                                        ('dtype' , { 'value' : 'float32' , 'possible' :  ['float32' , 'float64',
+                                                                                                    'int16' , 'uint16', 'int32' , 'uint32',  ] } ),
                                         ('rangemin' , { 'value' : -10 } ),
                                         ('rangemax' , { 'value' : 10 } ),
                                     ]
@@ -126,8 +128,14 @@ class RawBinarySignalIO(BaseIO):
             sig = sig.reshape((sig.size/nbchannel,nbchannel))
             if dtype.kind == 'i' :
                 sig = sig.astype('f')
-                sig /= 2**(8*dtype.itemsize-1)
+                sig /= 2**(8*dtype.itemsize)
                 sig *= ( rangemax-rangemin )
+                sig += ( rangemax+rangemin )/2.
+            elif dtype.kind == 'u' :
+                sig = sig.astype('f')
+                sig /= 2**(8*dtype.itemsize)
+                sig *= ( rangemax-rangemin )
+                sig += rangemin
             sig_with_units =  pq.Quantity(sig, units=unit, copy = False)
         
         for i in range(nbchannel) :
@@ -170,11 +178,15 @@ class RawBinarySignalIO(BaseIO):
             sigs[:, i] = anasig.magnitude
 
         if dtype.kind == 'i':
+            sigs -= ( rangemax+rangemin )/2.
             sigs /= (rangemax - rangemin)
-            sigs *= 2 ** (8 * dtype.itemsize - 1)
-            sigs = sigs.astype(dtype)
-        else:
-            sigs = sigs.astype(dtype)
+            sigs *= 2 ** (8 * dtype.itemsize )
+        elif dtype.kind == 'u' :
+            sigs -= rangemin
+            sigs /= (rangemax - rangemin)
+            sigs *= 2 ** (8 * dtype.itemsize)
+        sigs = sigs.astype(dtype)
+            
         f = open(self.filename, 'wb')
         f.write(sigs.tostring())
         f.close()
