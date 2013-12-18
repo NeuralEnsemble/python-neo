@@ -45,7 +45,6 @@ except NameError:
     file = io.BufferedReader
 
 import numpy as np
-from numpy import memmap, dtype
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -190,9 +189,9 @@ class AxonIO(BaseIO):
 
         # file format
         if header['nDataFormat'] == 0 :
-            dt = dtype('i2')
+            dt = np.dtype('i2')
         elif header['nDataFormat'] == 1 :
-            dt = dtype('f4')
+            dt = np.dtype('f4')
 
         if version <2. :
             nbchannel = header['nADCNumChannels']
@@ -203,8 +202,8 @@ class AxonIO(BaseIO):
             headOffset = header['sections']['DataSection']['uBlockIndex']*BLOCKSIZE
             totalsize = header['sections']['DataSection']['llNumEntries']
 
-        data = memmap(self.filename , dt  , 'r',
-                      shape = (totalsize,) , offset = headOffset)
+        data = np.memmap(self.filename , dt  , 'r',
+                         shape = (totalsize,) , offset = headOffset)
 
         # 3 possible modes
         if version <2. :
@@ -226,7 +225,7 @@ class AxonIO(BaseIO):
                 nbepisod = header['sections']['SynchArraySection']['llNumEntries']
                 offsetEpisod = header['sections']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
             if nbepisod>0:
-                episodArray = memmap(self.filename , [('offset','i4'), ('len', 'i4') ] , 'r',
+                episodArray = np.memmap(self.filename , [('offset','i4'), ('len', 'i4') ] , 'r',
                                             shape = (nbepisod),
                                             offset = offsetEpisod )
             else:
@@ -259,7 +258,7 @@ class AxonIO(BaseIO):
                 subdata  = data[pos:pos+length]
                 pos += length
                 subdata = subdata.reshape( (subdata.size/nbchannel, nbchannel )).astype('f')
-                if dt == dtype('i2'):
+                if dt == np.dtype('i2'):
                     if version <2. :
                         reformat_integer_V1(subdata, nbchannel , header)
                     elif version >=2. :

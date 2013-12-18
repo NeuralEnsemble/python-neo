@@ -19,7 +19,6 @@ import struct
 import sys
 
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -100,7 +99,7 @@ class WinEdrIO(BaseIO):
             header[key] = val
 
         if not lazy:
-            data = np.memmap(self.filename , dtype('i2')  , 'r',
+            data = np.memmap(self.filename , np.dtype('i2')  , 'r',
                   #shape = (header['NC'], header['NP']) ,
                   shape = (header['NP']/header['NC'],header['NC'], ) ,
                   offset = header['NBH'])

@@ -13,7 +13,6 @@ Author: sgarcia
 
 from datetime import datetime
 from distutils import version
-import os
 import re
 
 import numpy as np

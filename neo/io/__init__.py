@@ -64,7 +64,6 @@ Classes:
 
 """
 
-import warnings
 import os.path
 
 

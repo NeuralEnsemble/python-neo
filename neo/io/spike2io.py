@@ -26,7 +26,6 @@ import os
 import sys
 
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -150,7 +149,7 @@ class Spike2IO(BaseIO):
     def read_header(self , filename = ''):
 
         fid = open(filename, 'rb')
-        header = HeaderReader(fid,   dtype(headerDescription))
+        header = HeaderReader(fid,   np.dtype(headerDescription))
         #~ print 'chan_size' , header.chan_size
 
 
@@ -163,29 +162,29 @@ class Spike2IO(BaseIO):
         for i in range(header.channels):
             # read global channel header
             fid.seek(512 + 140*i) # TODO verifier i ou i-1
-            channelHeader = HeaderReader(fid, dtype(channelHeaderDesciption1))
+            channelHeader = HeaderReader(fid, np.dtype(channelHeaderDesciption1))
             if channelHeader.kind in [1, 6]:
                 dt = [('scale' , 'f4'),
                       ('offset' , 'f4'),
                       ('unit' , 'S6'),]
-                channelHeader += HeaderReader(fid, dtype(dt))
+                channelHeader += HeaderReader(fid, np.dtype(dt))
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, dtype([ ('divide' , 'i4')]) )#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i4')]) )#i8
                 else :
-                    channelHeader +=HeaderReader(fid, dtype([ ('interleave' , 'i4')]) )#i8
+                    channelHeader +=HeaderReader(fid, np.dtype([ ('interleave' , 'i4')]) )#i8
             if channelHeader.kind in [7, 9]:
                 dt = [('min' , 'f4'),
                       ('max' , 'f4'),
                       ('unit' , 'S6'),]
-                channelHeader += HeaderReader(fid, dtype(dt))
+                channelHeader += HeaderReader(fid, np.dtype(dt))
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, dtype([ ('divide' , 'i4')]))#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i4')]))#i8
                 else :
-                    channelHeader += HeaderReader(fid, dtype([ ('interleave' , 'i4')]) )#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('interleave' , 'i4')]) )#i8
             if channelHeader.kind in [4]:
                 dt = [('init_low' , 'u1'),
                       ('next_low' , 'u1'),]
-                channelHeader += HeaderReader(fid, dtype(dt))
+                channelHeader += HeaderReader(fid, np.dtype(dt))
 
             channelHeader.type = dict_kind[channelHeader.kind]
             #~ print i, channelHeader
@@ -224,7 +223,7 @@ class Spike2IO(BaseIO):
         blocksize = [ 0 ]
         starttimes = [ ]
         for b in range(channelHeader.blocks) :
-            blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
             if len(blocksize) > len(starttimes):
                 starttimes.append(blockHeader.start_time)
             blocksize[-1] += blockHeader.items
@@ -232,7 +231,7 @@ class Spike2IO(BaseIO):
             if blockHeader.succ_block > 0 :
                 # this is ugly but CED do not garanty continuity in AnalogSignal
                 fid.seek(blockHeader.succ_block)
-                nextBlockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+                nextBlockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
                 sample_interval = (blockHeader.end_time-blockHeader.start_time)/(blockHeader.items-1)
                 interval_with_next = nextBlockHeader.start_time - blockHeader.end_time
                 if interval_with_next > sample_interval:
@@ -253,7 +252,7 @@ class Spike2IO(BaseIO):
             if lazy:
                 signal = [ ]*unit
             else:
-                signal = pq.Quantity(empty( bs , dtype = 'f4'), units=unit)
+                signal = pq.Quantity(np.empty( bs , dtype = 'f4'), units=unit)
             anaSig = AnalogSignal(signal,
                                   sampling_rate=sampling_rate,
                                   t_start=(starttimes[b] *
@@ -272,9 +271,9 @@ class Spike2IO(BaseIO):
             pos = 0
             numblock = 0
             for b in range(channelHeader.blocks) :
-                blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+                blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
                 # read data
-                sig = fromstring( fid.read(blockHeader.items*dt.itemsize) , dtype = dt)
+                sig = np.fromstring( fid.read(blockHeader.items*dt.itemsize) , dtype = dt)
                 anaSigs[numblock][pos:pos+sig.size] = sig.astype('f4')*unit
                 pos += sig.size
                 if pos >= blocksize[numblock] :
@@ -315,14 +314,14 @@ class Spike2IO(BaseIO):
         elif channelHeader.kind in [8]:
             # TextMark data
             format = [('tick' , 'i4') , ('marker' , 'i4')  ,  ('label' , 'S%d'%channelHeader.n_extra)]
-        dt = dtype(format)
+        dt = np.dtype(format)
 
 
         ## Step 2 : first read for allocating mem
         fid.seek(channelHeader.firstblock)
         totalitems = 0
         for b in range(channelHeader.blocks) :
-            blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+            blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
             totalitems += blockHeader.items
             if blockHeader.succ_block > 0 :
                 fid.seek(blockHeader.succ_block)
@@ -342,14 +341,14 @@ class Spike2IO(BaseIO):
                 return sptr
 
         else:
-            alltrigs = zeros( totalitems , dtype = dt)
+            alltrigs = np.zeros( totalitems , dtype = dt)
             ## Step 3 : read
             fid.seek(channelHeader.firstblock)
             pos = 0
             for b in range(channelHeader.blocks) :
-                blockHeader = HeaderReader(fid, dtype(blockHeaderDesciption))
+                blockHeader = HeaderReader(fid, np.dtype(blockHeaderDesciption))
                 # read all events in block
-                trigs = fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)
+                trigs = np.fromstring( fid.read( blockHeader.items*dt.itemsize)  , dtype = dt)
 
                 alltrigs[pos:pos+trigs.size] = trigs
                 pos += trigs.size
@@ -376,10 +375,10 @@ class Spike2IO(BaseIO):
 
                 # waveforms
                 if channelHeader.kind == 6 :
-                    waveforms = fromstring(alltrigs['adc'].tostring() , dtype = 'i2')
+                    waveforms = np.fromstring(alltrigs['adc'].tostring() , dtype = 'i2')
                     waveforms = waveforms.astype('f4') *channelHeader.scale/ 6553.6 + channelHeader.offset
                 elif channelHeader.kind == 7 :
-                    waveforms = fromstring(alltrigs['real'].tostring() , dtype = 'f4')
+                    waveforms = np.fromstring(alltrigs['real'].tostring() , dtype = 'f4')
 
 
                 if header.system_id>=6 and channelHeader.interleave>1:
@@ -426,7 +425,7 @@ class HeaderReader(object):
         if fid is not None :
             array = np.fromstring( fid.read(dtype.itemsize) , dtype)[0]
         else :
-            array = zeros( (1) , dtype = dtype)[0]
+            array = np.zeros( (1) , dtype = dtype)[0]
         object.__setattr__(self, 'dtype' , dtype)
         object.__setattr__(self, 'array' , array)
 
@@ -469,9 +468,9 @@ class HeaderReader(object):
             newdtype.append( (name , self.dtype[name].str) )
         for name in header2.dtype.names :
             newdtype.append( (name , header2.dtype[name].str) )
-        newdtype = dtype(newdtype)
+        newdtype = np.dtype(newdtype)
         newHeader = HeaderReader(None , newdtype )
-        newHeader.array = fromstring( self.array.tostring()+header2.array.tostring() , newdtype)[0]
+        newHeader.array = np.fromstring( self.array.tostring()+header2.array.tostring() , newdtype)[0]
         return newHeader
 
 # headers structures :

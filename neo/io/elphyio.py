@@ -79,16 +79,13 @@ from __future__ import absolute_import
 from datetime import datetime
 from fractions import gcd
 from os import path
-from os.path import split
-from re import search
+import re
 import struct
 from time import time
 
 # note neo.core needs only numpy and quantities
 import numpy as np
-import numpy
 import quantities as pq
-from quantities import s, ms, Hz, kHz
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -98,8 +95,7 @@ from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
                       AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
 
 # some tools to finalize the hierachy
-from neo.io.tools import (populate_RecordingChannel,
-                          create_many_to_one_relationship)
+from neo.io.tools import create_many_to_one_relationship
 
 # --------------------------------------------------------
 # OBJECTS
@@ -525,8 +521,8 @@ class ClassicFileInfo(FileInfoBlock):
             'f':'flashbar',
             'm':'multistim' # here just for assertion
         }
-        filename = split(path)[1]
-        match = search(pattern, path)
+        filename = path.split(path)[1]
+        match = re.search(pattern, path)
         if hasattr(match, 'end') :
             code = codes.get(path[match.end() - 1].lower(), None)
             assert code != 'm', "multistim file detected"
@@ -1593,18 +1589,18 @@ type_dict = {
 #a dictionary liking python.struct
 #formats to numpy formats
 numpy_map = {
-    'b':numpy.int8,
-    'B':numpy.uint8,
-    'h':numpy.int16,
-    'H':numpy.uint16,
-    'i':numpy.int32,
-    'I':numpy.uint32,
-    'l':numpy.int32,
-    'L':numpy.uint32,
-    'q':numpy.int64,
-    'Q':numpy.uint64,
-    'f':numpy.float32,
-    'd':numpy.float64,
+    'b':np.int8,
+    'B':np.uint8,
+    'h':np.int16,
+    'H':np.uint16,
+    'i':np.int32,
+    'I':np.uint32,
+    'l':np.int32,
+    'L':np.uint32,
+    'q':np.int64,
+    'Q':np.uint64,
+    'f':np.float32,
+    'd':np.float64,
     'H+l':6,
     'ext':10,
     'real48':6,
@@ -1816,7 +1812,7 @@ class ElphyLayout(object):
             val = 1 if _ch == ch else 0 
             for i in xrange(0, size) :
                 _mask.append(val)
-        return numpy.array(_mask)
+        return np.array(_mask)
     
     def load_bytes(self, data_blocks, dtype='<i1', start=None, end=None, expected_size=None):
         """
@@ -1834,12 +1830,12 @@ class ElphyLayout(object):
         for data_block in blocks :
             self.file.seek(data_block.start)
             raw = self.file.read(data_block.size)[0:expected_size]
-            bytes = numpy.frombuffer(raw, dtype=dtype)
+            bytes = np.frombuffer(raw, dtype=dtype)
             chunks.append(bytes)
         # concatenate all chunks and return
         # the specified slice
         if len(chunks)>0 :
-            bytes = numpy.concatenate(chunks)
+            bytes = np.concatenate(chunks)
             return bytes[start:end]
         else :
             return []
@@ -1866,16 +1862,16 @@ class ElphyLayout(object):
             for value in shape_mask :
                 bit = 1 if (value == shape) else 0
                 bit_mask.append(bit)
-            bit_masks.append(numpy.array(bit_mask))
+            bit_masks.append(np.array(bit_mask))
          
         #extract data
         
-        n_samples = l_bytes / numpy.sum(reshape)
-        data = numpy.empty([len(reshape), n_samples], dtype=(int, int))
+        n_samples = l_bytes / np.sum(reshape)
+        data = np.empty([len(reshape), n_samples], dtype=(int, int))
         for index, bit_mask in enumerate(bit_masks) :
             tmp = self.filter_bytes(bytes, bit_mask)
             tp = '%s%s%s' % (order, types[index], reshape[index])
-            data[index] = numpy.frombuffer(tmp, dtype=tp)
+            data[index] = np.frombuffer(tmp, dtype=tp)
         
         return data.T
 
@@ -1885,9 +1881,9 @@ class ElphyLayout(object):
         to keep to recompose the signal.
         """
         n_bytes = len(bytes)
-        mask = numpy.ones(n_bytes, dtype=int)
-        numpy.putmask(mask, mask, bit_mask)
-        to_keep = numpy.where(mask > 0)[0]
+        mask = np.ones(n_bytes, dtype=int)
+        np.putmask(mask, mask, bit_mask)
+        to_keep = np.where(mask > 0)[0]
         return bytes.take(to_keep)
     
     def load_channel_data(self, ep, ch):
@@ -1910,9 +1906,9 @@ class ElphyLayout(object):
         raw = self.filter_bytes(bytes, bit_mask)
         
         #reshape bytes from the sample size
-        dt = numpy.dtype(numpy_map[sample_symbol])
+        dt = np.dtype(numpy_map[sample_symbol])
         dt.newbyteorder('<')
-        return numpy.frombuffer(raw.reshape([len(raw) / sample_size, sample_size]), dt)
+        return np.frombuffer(raw.reshape([len(raw) / sample_size, sample_size]), dt)
     
     def apply_op(self, np_array, value, op_type):
         """
@@ -1936,9 +1932,9 @@ class ElphyLayout(object):
         if  tag_mode == 1 :
             tag_mask = 0b01 if (tag_ch == 1) else 0b10
         elif tag_mode in [2, 3] :
-            ar_mask = numpy.zeros(16, dtype=int)
+            ar_mask = np.zeros(16, dtype=int)
             ar_mask[tag_ch - 1] = 1
-            st = "0b" + ''.join(numpy.array(numpy.flipud(ar_mask), dtype=str))
+            st = "0b" + ''.join(np.array(np.flipud(ar_mask), dtype=str))
             tag_mask = eval(st)
         return tag_mask
         
@@ -1975,8 +1971,8 @@ class ElphyLayout(object):
             #how many times a value is maintained
             #and necessary to reconstruct the 
             #compressed signal ... 
-            repeats = numpy.array(numpy.diff(raw[:, 0]), dtype=int)
-            data = numpy.repeat(raw[:-1, 1], repeats, axis=0)
+            repeats = np.array(np.diff(raw[:, 0]), dtype=int)
+            data = np.repeat(raw[:-1, 1], repeats, axis=0)
             
             # ... note that there is always
             #a transition at t=0 for synchronisation
@@ -2005,10 +2001,10 @@ class ElphyLayout(object):
         """
         #get data from the file
         y_data = self.load_encoded_data(ep, ch)
-        x_data = numpy.arange(0, len(y_data))
+        x_data = np.arange(0, len(y_data))
         
         #create a recarray
-        data = numpy.recarray(len(y_data), dtype=[('x', b_float), ('y', b_float)])
+        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_float)])
         
         #put in the recarray the scaled data
         x_factors = self.x_scale_factors(ep, ch)
@@ -2026,10 +2022,10 @@ class ElphyLayout(object):
         """
         #get data from the file
         y_data = self.load_encoded_tags(ep, tag_ch)
-        x_data = numpy.arange(0, len(y_data))
+        x_data = np.arange(0, len(y_data))
         
         #create a recarray
-        data = numpy.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
+        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
         
         #put in the recarray the scaled data
         factors = self.x_tag_scale_factors(ep)
@@ -2150,7 +2146,7 @@ class Acquis1Layout(ElphyLayout):
         return None
     
     def create_channel_mask(self, ep):
-        return numpy.arange(1, self.header.n_channels + 1)
+        return np.arange(1, self.header.n_channels + 1)
 
 class DAC2GSLayout(ElphyLayout):
     """
@@ -2318,29 +2314,29 @@ class DAC2GSLayout(ElphyLayout):
         data_block = self.data_blocks[episode - 1]
         n_bytes = data_block.size
         self.file.seek(data_block.start)
-        bytes = numpy.frombuffer(self.file.read(n_bytes), '<i1')
+        bytes = np.frombuffer(self.file.read(n_bytes), '<i1')
         
         #detect which bits keep to recompose the tag
-        ep_mask = numpy.ones(n_bytes, dtype=int)
-        numpy.putmask(ep_mask, ep_mask, bit_mask)
-        to_keep = numpy.where(ep_mask > 0)[0]
+        ep_mask = np.ones(n_bytes, dtype=int)
+        np.putmask(ep_mask, ep_mask, bit_mask)
+        to_keep = np.where(ep_mask > 0)[0]
         raw = bytes.take(to_keep)
         raw = raw.reshape([len(raw) / sample_size, sample_size])
         
         #create a recarray containing data
-        dt = numpy.dtype(numpy_map[sample_symbol])
+        dt = np.dtype(numpy_map[sample_symbol])
         dt.newbyteorder('<')
         tag_mask = 0b01 if (tag_channel == 1) else 0b10
-        y_data = numpy.frombuffer(raw, dt) & tag_mask
-        x_data = numpy.arange(0, len(y_data)) * block.dX + block.X0
-        data = numpy.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
+        y_data = np.frombuffer(raw, dt) & tag_mask
+        x_data = np.arange(0, len(y_data)) * block.dX + block.X0
+        data = np.recarray(len(y_data), dtype=[('x', b_float), ('y', b_int)])
         data['x'] = x_data
         data['y'] = y_data
         
         return data
     
     def create_channel_mask(self, ep):
-        return numpy.arange(1, self.main_block.n_channels + 1)
+        return np.arange(1, self.main_block.n_channels + 1)
 
 
 
@@ -2441,7 +2437,7 @@ class DAC2Layout(ElphyLayout):
         """
         block = self.episode_block(episode)
         tag_mode = block.ep_block.tag_mode
-        an_index = numpy.where(numpy.array(block.ks_block.k_sampling) > 0)
+        an_index = np.where(np.array(block.ks_block.k_sampling) > 0)
         if tag_mode == 2 :
             an_index = an_index[:-1]
         return an_index
@@ -2502,7 +2498,7 @@ class DAC2Layout(ElphyLayout):
             # in the file that contains the number of 
             # samples unlike the episode case ...
             data_blocks = self.get_data_blocks(ep)
-            total_size = numpy.sum([k.size for k in data_blocks])
+            total_size = np.sum([k.size for k in data_blocks])
             
             # count the number of samples in an
             # aggregate and compute its size in order
@@ -2586,8 +2582,8 @@ class DAC2Layout(ElphyLayout):
         block = self.episode_block(ep)
         tag_mode = self.tag_mode(ep)
         if tag_mode == 1 :
-            ks = numpy.array(block.ks_block.k_sampling)
-            mins = numpy.where(ks == ks.min())[0] + 1
+            ks = np.array(block.ks_block.k_sampling)
+            mins = np.where(ks == ks.min())[0] + 1
             return mins[0]
         elif tag_mode == 2 :
             return block.ep_block.n_channels
@@ -2629,7 +2625,7 @@ class DAC2Layout(ElphyLayout):
         
         block = self.episode_block(ep)
         ag_count = self.aggregate_sample_count(block)
-        mask_ar = numpy.zeros(ag_count, dtype='i')
+        mask_ar = np.zeros(ag_count, dtype='i')
         ag_size = 0
         i = 0
         k = 0
@@ -2646,8 +2642,8 @@ class DAC2Layout(ElphyLayout):
     
     def get_signal(self, episode, channel):
         block = self.episode_block(episode)
-        k_sampling = numpy.array(block.ks_block.k_sampling)
-        evt_channels = numpy.where(k_sampling == 0)[0]
+        k_sampling = np.array(block.ks_block.k_sampling)
+        evt_channels = np.where(k_sampling == 0)[0]
         if not channel in evt_channels :
             return super(DAC2Layout, self).get_signal(episode, channel)
         else :
@@ -2712,13 +2708,13 @@ class DAC2Layout(ElphyLayout):
         assert ch in range(1, self.n_channels + 1)
         
         # find the event channel number
-        evt_channel = numpy.where(marked_ks == -1)[0][0]
+        evt_channel = np.where(marked_ks == -1)[0][0]
         assert evt_channel in range(1, self.n_events(ep) + 1)
         
         block = self.episode_block(ep)
         ep_blocks = self.get_blocks_stored_in_episode(ep)
         evt_blocks = [k for k in ep_blocks if k.identifier == 'REVT']
-        n_events = numpy.sum([k.n_events[evt_channel - 1] for k in evt_blocks], dtype=int)
+        n_events = np.sum([k.n_events[evt_channel - 1] for k in evt_blocks], dtype=int)
         x_unit = block.ep_block.x_unit
         
         return ElphyEvent(self, ep, evt_channel, x_unit, n_events, ch_number=ch)
@@ -2733,11 +2729,11 @@ class DAC2Layout(ElphyLayout):
         evt_blocks = [k for k in ep_blocks if k.identifier == identifier]
         
         #compute events on each channel
-        n_events = numpy.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
-        pre_events = numpy.sum(n_events[0:evt_channel - 1], dtype=int)
+        n_events = np.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
+        pre_events = np.sum(n_events[0:evt_channel - 1], dtype=int)
         start = pre_events
         end = start + n_events[evt_channel - 1]
-        expected_size = 4 * numpy.sum(n_events, dtype=int)
+        expected_size = 4 * np.sum(n_events, dtype=int)
         return self.load_bytes(data_blocks, dtype='<i4', start=start, end=end, expected_size=expected_size)
     
     def load_encoded_spikes(self, episode, evt_channel, identifier):
@@ -2753,13 +2749,13 @@ class DAC2Layout(ElphyLayout):
         rspk_block = all_rspk_blocks[episode-1]
         # RDATA(h?dI) REVT(NbVeV:I, NbEv:256I ... spike data are 4byte integers
         rspk_header = 4*( rspk_block.size - rspk_block.data_size-2 + len(rspk_block.n_events))
-        pre_events = numpy.sum(rspk_block.n_events[0:evt_channel-1], dtype=int, axis=0)
+        pre_events = np.sum(rspk_block.n_events[0:evt_channel-1], dtype=int, axis=0)
         # the real start is after header, preceeding events (which are 4byte) and preceeding labels (1byte)
         start = rspk_header + (4*pre_events) + pre_events
         end = start + 4*rspk_block.n_events[evt_channel-1]
         raw = self.load_bytes( [rspk_block], dtype='<i1', start=start, end=end, expected_size=rspk_block.size )
         # re-encoding after reading byte by byte
-        res = numpy.frombuffer(raw[0:(4*rspk_block.n_events[evt_channel-1])], dtype='<i4')
+        res = np.frombuffer(raw[0:(4*rspk_block.n_events[evt_channel-1])], dtype='<i4')
         res.sort() # sometimes timings are not sorted
         #print "load_encoded_data() - spikes:",res
         return res
@@ -2800,7 +2796,7 @@ class DAC2Layout(ElphyLayout):
         y_unit_wf = getattr(block.ep_block, 'y_unit_wf', None)
         # number of spikes in the entire episode
         spk_blocks = [k for k in self.blocks if k.identifier == 'RSPK']
-        n_events = numpy.sum([k.n_events[electrode_id - 1] for k in spk_blocks], dtype=int)
+        n_events = np.sum([k.n_events[electrode_id - 1] for k in spk_blocks], dtype=int)
         # number of samples in a waveform
         wf_sampling_frequency = 1.0 / block.ep_block.dX
         wf_blocks = [k for k in self.blocks if k.identifier == 'RspkWave']
@@ -2844,9 +2840,9 @@ class DAC2Layout(ElphyLayout):
         ep_blocks = self.get_blocks_stored_in_episode(episode)
         wf_blocks = [k for k in ep_blocks if k.identifier == identifier]
         wf_samples = wf_blocks[0].wavelength
-        events = numpy.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
+        events = np.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
         n_events = events[electrode_id - 1]
-        pre_events = numpy.sum(events[0:electrode_id - 1], dtype=int)
+        pre_events = np.sum(events[0:electrode_id - 1], dtype=int)
         start = pre_events
         end = start + n_events
         
@@ -2873,7 +2869,7 @@ class DAC2Layout(ElphyLayout):
         ]
         x_start = wf_blocks[0].pre_trigger
         x_stop = wf_samples - x_start
-        return numpy.arange(-x_start, x_stop), numpy.frombuffer(bytes, dtype=dtype)[start:end]
+        return np.arange(-x_start, x_stop), np.frombuffer(bytes, dtype=dtype)[start:end]
     
     def get_waveform_data(self, episode, electrode_id):
         """
@@ -2892,7 +2888,7 @@ class DAC2Layout(ElphyLayout):
             ('unit_id', int),
             ('waveform', float, (wf_samples, 2))
         ]
-        data = numpy.empty(n_events, dtype=dtype)
+        data = np.empty(n_events, dtype=dtype)
         data['electrode_id'] = bytes['channel_id'][:, 0]
         data['unit_id'] = bytes['unit_id'][:, 0]
         data['time'] = bytes['elphy_time'][:, 0] * block.ep_block.dX
@@ -2907,11 +2903,11 @@ class DAC2Layout(ElphyLayout):
         """
         evt_blocks = self.get_blocks_of_type('RSPK')
         #compute events on each channel
-        n_events = numpy.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
-        pre_events = numpy.sum(n_events[0:spk_channel], dtype=int) # sum of array values up to spk_channel-1!!!! 
+        n_events = np.sum([k.n_events for k in evt_blocks], dtype=int, axis=0)
+        pre_events = np.sum(n_events[0:spk_channel], dtype=int) # sum of array values up to spk_channel-1!!!!
         start = pre_events + (7 + len(n_events))# rspk header
         end = start + n_events[spk_channel]
-        expected_size = 4 * numpy.sum(n_events, dtype=int) # constant
+        expected_size = 4 * np.sum(n_events, dtype=int) # constant
         return self.load_bytes(evt_blocks, dtype='<i4', start=start, end=end, expected_size=expected_size)
 
 
@@ -2997,7 +2993,7 @@ class LayoutFactory(object):
         Return a boolean telling if the 
         specified file is a multistim one.
         """
-        match = search(self.pattern, path)
+        match = re.search(self.pattern, path)
         return hasattr(match, 'end') and path[match.end() - 1] in ['m', 'M']
     
     def select_file_info_subclass(self):
@@ -3866,12 +3862,12 @@ class ElphyIO(BaseIO):
                     aa_units.append( asigar.units )
                 Dxu = asigar.sampling_period
                 Rxu = asigar.sampling_rate
-                if isinstance(analogsignals, numpy.ndarray) :
-                    analogsignals = numpy.hstack( (analogsignals,asigar) )
+                if isinstance(analogsignals, np.ndarray) :
+                    analogsignals = np.hstack( (analogsignals,asigar) )
                 else :
                     analogsignals = asigar # first time
             # collect and reshape all analogsignals
-            if isinstance(analogsignals, numpy.ndarray) :
+            if isinstance(analogsignals, np.ndarray) :
                 # transpose matrix since in Neo channels are column-wise while in Elphy are row-wise
                 analogsignals = analogsignals.T
                 # get dimensions
@@ -3881,7 +3877,7 @@ class ElphyIO(BaseIO):
                 # serialized flattened numpy channels in 'F'ortran style
                 analog_data_64 = analogsignals.flatten('F')
                 # elphy normally uses float32 values (for performance reasons)
-                analog_data = numpy.array( analog_data_64, dtype=numpy.float32 )
+                analog_data = np.array( analog_data_64, dtype=np.float32 )
                 serialized_analog_data += struct.pack( analog_data_fmt, *analog_data )
             # SpikeTrains
             # Neo spiketrains are stored as a one-dimensional array of times
@@ -3933,7 +3929,7 @@ class ElphyIO(BaseIO):
                 fmt = ''
                 data = []
                 value = annotations[key]
-                if isinstance( value, (int,numpy.int32,numpy.int64) ) :
+                if isinstance( value, (int,np.int32,np.int64) ) :
                     # elphy type 2
                     fmt = '<Bq'
                     data = [2, value] 
@@ -4146,7 +4142,7 @@ class ElphyIO(BaseIO):
         """
         for (key,value) in items :
             #print "get_annotation_dict() - items[%s]" % (key)
-            if isinstance( value, (list,tuple,numpy.ndarray) ) :
+            if isinstance( value, (list,tuple,np.ndarray) ) :
                 for element in value :
                     annotations.update( dict( [(prefix+"-"+name+"-"+key+"-"+str(idx), element)] ) )
                     idx = idx+1
@@ -4176,7 +4172,7 @@ class ElphyIO(BaseIO):
                 units = signal.y_unit,
                 t_start = signal.t_start * getattr(pq, signal.x_unit.strip()),
                 t_stop = signal.t_stop * getattr(pq, signal.x_unit.strip()),
-                #sampling_rate = signal.sampling_frequency * kHz,
+                #sampling_rate = signal.sampling_frequency * pq.kHz,
                 sampling_period = signal.sampling_period * getattr(pq, signal.x_unit.strip()),
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
@@ -4249,7 +4245,7 @@ class ElphyIO(BaseIO):
         """
         event = self.elphy_file.get_event(episode, evt)
         event_array = EventArray(
-            times=event.times * s,
+            times=event.times * pq.s,
             channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
         )
         return event_array
@@ -4268,7 +4264,7 @@ class ElphyIO(BaseIO):
         """
         block = self.elphy_file.layout.episode_block(episode)
         spike = self.elphy_file.get_spiketrain(episode, spk)
-        spikes = spike.times * s
+        spikes = spike.times * pq.s
         #print "read_spiketrain() - spikes: %s" % (len(spikes))
         #print "read_spiketrain() - spikes:",spikes
         dct = {

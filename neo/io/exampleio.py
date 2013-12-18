@@ -20,12 +20,8 @@ Author: sgarcia
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-
-import datetime
-
 # note neo.core needs only numpy and quantities
 import numpy as np
-from numpy import pi, newaxis
 import quantities as pq
 
 # but my specific IO can depend on many other packages
@@ -42,7 +38,7 @@ else:
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
 # some tools to finalize the hierachy
 from neo.io.tools import create_many_to_one_relationship
@@ -322,7 +318,7 @@ class ExampleIO(BaseIO):
         if not lazy:
             # in the neo API the waveforms attr is 3 D in case tetrode
             # in our case it is mono electrode so dim 1 is size 1
-            waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
+            waveforms  = np.tile( w[np.newaxis,np.newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
             waveforms *=  np.random.randn(*waveforms.shape)/6+1
             spiketr.waveforms = waveforms*pq.mV
             spiketr.sampling_rate = sr * pq.Hz

@@ -7,7 +7,6 @@ Tests of the neo.core.baseneo.BaseNeo class and related functions
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from fractions import Fraction
-from platform import python_version
 import sys
 
 try:

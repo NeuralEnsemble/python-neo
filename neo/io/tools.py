@@ -15,7 +15,7 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
                       Segment, Spike, SpikeTrain, Unit)
-from neo.description import one_to_many_relationship, many_to_one_relationship
+from neo.description import one_to_many_relationship
 
 
 #def finalize_block(block):

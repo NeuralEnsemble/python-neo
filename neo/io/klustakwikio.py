@@ -21,7 +21,6 @@ import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
-import quantities as pq
 try:
     import matplotlib.mlab as mlab
 except ImportError as err:
@@ -35,7 +34,7 @@ else:
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-from neo.core import (Block, Segment, Unit, AnalogSignal, SpikeTrain)
+from neo.core import Block, Segment, Unit, SpikeTrain
 from neo.io.tools import create_many_to_one_relationship
 
 # Pasted version of feature file format spec

@@ -4,9 +4,6 @@
 Tools for use with neo tests.
 '''
 
-# needed for python 3 compatibility
-from __future__ import with_statement
-
 import hashlib
 import os
 

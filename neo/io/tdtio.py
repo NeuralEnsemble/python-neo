@@ -21,7 +21,6 @@ import struct
 import sys
 
 import numpy as np
-from numpy import dtype
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -210,7 +209,7 @@ class TdtIO(BaseIO):
                                               t_start=(h['timestamp'] -
                                                        global_t_start) * pq.s,
                                               channel_index=channel)
-                        anaSig.lazy_dtype = dtype(DataFormats[h['dataformat']])
+                        anaSig.lazy_dtype = np.dtype(DataFormats[h['dataformat']])
                         anaSig.pos = 0
 
                         # for counting:

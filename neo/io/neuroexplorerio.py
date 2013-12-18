@@ -14,7 +14,6 @@ Author: sgarcia,luc estebanez
 
 """
 
-import datetime
 import os
 import struct
 

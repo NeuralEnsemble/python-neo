@@ -25,7 +25,6 @@ import os
 import re
 
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty, log, fromfile
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -199,8 +198,8 @@ class ElanIO(BaseIO):
         f.close()
 
         #raw data
-        n = int(round(log(max_logic[0]-min_logic[0])/log(2))/8)
-        data = fromfile(self.filename,dtype = 'i'+str(n) )
+        n = int(round(np.log(max_logic[0]-min_logic[0])/np.log(2))/8)
+        data = np.fromfile(self.filename,dtype = 'i'+str(n) )
         data = data.byteswap().reshape( (data.size/(nbchannel+2) ,nbchannel+2) ).astype('f4')
         for c in range(nbchannel) :
             if lazy:

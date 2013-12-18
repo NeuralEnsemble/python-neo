@@ -13,9 +13,6 @@ Supported: Read/Write
 Authors: Andrew Davison, Pierre Yger
 """
 
-# needed for python 3 compatibility
-from __future__ import with_statement
-
 import numpy
 import quantities as pq
 

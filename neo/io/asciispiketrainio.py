@@ -10,11 +10,9 @@ Author: sgarcia
 
 """
 
-import csv
 import os
 
 import numpy as np
-from numpy import newaxis
 import quantities as pq
 
 from neo.io.baseio import BaseIO

@@ -5,7 +5,7 @@ Tests of the neo.io.pynnio.PyNNNumpyIO and neo.io.pynnio.PyNNTextIO classes
 """
 
 # needed for python 3 compatibility
-from __future__ import absolute_import, with_statement, division
+from __future__ import absolute_import, division
 
 import os
 

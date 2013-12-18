@@ -18,9 +18,8 @@ Author: sgarcia
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-import datetime
 import os
-import xml.etree.ElementTree as ElementTree
+from xml.etree import ElementTree
 
 import numpy as np
 import quantities as pq
@@ -28,7 +27,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.core import (Block, Segment, RecordingChannel,  RecordingChannelGroup,
-                      AnalogSignal, SpikeTrain, EventArray)
+                      AnalogSignal)
 from neo.io.tools import create_many_to_one_relationship
 
 

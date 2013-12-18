@@ -18,7 +18,6 @@ Author: sgarcia
 """
 
 import datetime
-from datetime import time
 import struct
 import os
 

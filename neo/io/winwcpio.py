@@ -17,7 +17,6 @@ import struct
 import sys
 
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -114,7 +113,7 @@ class WinWcpIO(BaseIO):
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
             if not lazy:
-                data = np.memmap(self.filename , dtype('i2')  , 'r',
+                data = np.memmap(self.filename , np.dtype('i2')  , 'r',
                               #shape = (header['NC'], header['NP']) ,
                               shape = (NP,header['NC'], ) ,
                               offset = offset+header['NBA']*SECTORSIZE)

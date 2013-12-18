@@ -9,7 +9,6 @@ Supported : Read
 Author: sgarcia
 """
 
-import datetime
 import os
 import re
 
