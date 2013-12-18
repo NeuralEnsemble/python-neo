@@ -1,4 +1,6 @@
-"""Reading and writing from KlustaKwik-format files.
+# -*- coding: utf-8 -*-
+"""
+Reading and writing from KlustaKwik-format files.
 Ref: http://klusters.sourceforge.net/UserManual/data-files.html
 
 Supported : Read, Write
@@ -12,16 +14,21 @@ weren't set. Consider removing those annotations if they are redundant.
 * Load features in addition to spiketimes.
 """
 
-# I need to subclass BaseIO
-from .baseio import BaseIO
-
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-from ..core import *
-from .tools import create_many_to_one_relationship
+import glob
+import logging
+import os.path
+import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
 import quantities as pq
+import matplotlib.mlab as mlab
+
+# I need to subclass BaseIO
+from neo.io.baseio import BaseIO
+
+from neo.core import (Block, Segment, Unit, AnalogSignal, SpikeTrain)
+from neo.io.tools import create_many_to_one_relationship
 
 # Pasted version of feature file format spec
 """
@@ -51,13 +58,6 @@ of the recording session.
 
 Notice that the last line must end with a newline or carriage return.
 """
-
-import numpy as np
-import glob
-import matplotlib.mlab as mlab
-import os.path
-import shutil
-import logging
 
 
 class KlustaKwikIO(BaseIO):

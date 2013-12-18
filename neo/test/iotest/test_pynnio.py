@@ -1,52 +1,54 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of the PyNNNumpyIO and PyNNTextIO classes
+Tests of the neo.io.pynnio.PyNNNumpyIO and neo.io.pynnio.PyNNTextIO classes
+"""
 
-"""
+# needed for python 3 compatibility
 from __future__ import absolute_import, with_statement, division
-import numpy
-import quantities as pq
+
 import os
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
+
 from neo.core import Segment, AnalogSignal, SpikeTrain
 from neo.io import PyNNNumpyIO, PyNNTextIO
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
-
-
-NCELLS = 5
-
-
 #TODO: common test fails.
 from neo.test.iotest.common_io_test import BaseTestIO
 #class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
+
+NCELLS = 5
+
 
 class CommonTestPyNNTextIO(BaseTestIO, unittest.TestCase):
     ioclass = PyNNTextIO
     read_and_write_is_bijective = False
 
 
-
-
 def read_test_file(filename):
-    contents = numpy.load(filename)
+    contents = np.load(filename)
     data = contents["data"]
     metadata = {}
-    for name,value in contents['metadata']:
+    for name, value in contents['metadata']:
         try:
             metadata[name] = eval(value)
         except Exception:
             metadata[name] = value
     return data, metadata
 read_test_file.__test__ = False
- 
+
 
 class BaseTestPyNNIO(object):
     __test__ = False
-    
+
     def tearDown(self):
         if os.path.exists(self.test_file):
             os.remove(self.test_file)
@@ -76,16 +78,17 @@ class BaseTestPyNNIO(object):
             metadata['units'] = 'mV'
         elif variable == 'spikes':
             metadata['units'] = 'ms'
-        data = numpy.empty((505, 2))
+        data = np.empty((505, 2))
         for i in range(NCELLS):
-            data[i*101:(i+1)*101, 0] = numpy.arange(i, i+101, dtype=float) # signal
-            data[i*101:(i+1)*101, 1] = i*numpy.ones((101,), dtype=float) # index
+            # signal
+            data[i*101:(i+1)*101, 0] = np.arange(i, i+101, dtype=float)
+            # index
+            data[i*101:(i+1)*101, 1] = i*np.ones((101,), dtype=float)
         return data, metadata
     build_test_data.__test__ = False
 
 
 class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
-
     def setUp(self):
         self.test_file = "test_file_v.%s" % self.file_extension
         self.write_test_file("v")
@@ -99,14 +102,14 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         as0 = segment.analogsignals[0]
         self.assertIsInstance(as0, AnalogSignal)
         assert_arrays_equal(as0,
-                            AnalogSignal(numpy.arange(0, 101, dtype=float),
+                            AnalogSignal(np.arange(0, 101, dtype=float),
                                          sampling_period=0.1*pq.ms,
                                          t_start=0*pq.s,
                                          units=pq.mV))
         as4 = segment.analogsignals[4]
         self.assertIsInstance(as4, AnalogSignal)
         assert_arrays_equal(as4,
-                            AnalogSignal(numpy.arange(4, 105, dtype=float),
+                            AnalogSignal(np.arange(4, 105, dtype=float),
                                          sampling_period=0.1*pq.ms,
                                          t_start=0*pq.s,
                                          units=pq.mV))
@@ -117,7 +120,7 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         as3 = io.read_analogsignal(lazy=False, channel_index=3)
         self.assertIsInstance(as3, AnalogSignal)
         assert_arrays_equal(as3,
-                            AnalogSignal(numpy.arange(3, 104, dtype=float),
+                            AnalogSignal(np.arange(3, 104, dtype=float),
                                          sampling_period=0.1*pq.ms,
                                          t_start=0*pq.s,
                                          units=pq.mV))
@@ -127,11 +130,8 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         io = self.io_cls(self.test_file)
         self.assertRaises(TypeError, io.read_spiketrain, channel_index=0)
 
-    
-
 
 class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
-    
     def setUp(self):
         self.test_file = "test_file_spikes.%s" % self.file_extension
         self.write_test_file("spikes")
@@ -144,14 +144,14 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         st0 = segment.spiketrains[0]
         self.assertIsInstance(st0, SpikeTrain)
         assert_arrays_equal(st0,
-                            SpikeTrain(numpy.arange(0, 101, dtype=float),
+                            SpikeTrain(np.arange(0, 101, dtype=float),
                                        t_start=0*pq.s,
                                        t_stop=101*pq.ms,
                                        units=pq.ms))
         st4 = segment.spiketrains[4]
         self.assertIsInstance(st4, SpikeTrain)
         assert_arrays_equal(st4,
-                            SpikeTrain(numpy.arange(4, 105, dtype=float),
+                            SpikeTrain(np.arange(4, 105, dtype=float),
                                        t_start=0*pq.s,
                                        t_stop=105*pq.ms,
                                        units=pq.ms))
@@ -162,7 +162,7 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         st3 = io.read_spiketrain(lazy=False, channel_index=3)
         self.assertIsInstance(st3, SpikeTrain)
         assert_arrays_equal(st3,
-                            SpikeTrain(numpy.arange(3, 104, dtype=float),
+                            SpikeTrain(np.arange(3, 104, dtype=float),
                                        t_start=0*pq.s,
                                        t_stop=104*pq.s,
                                        units=pq.ms))
@@ -176,15 +176,16 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
 class BaseTestPyNNNumpyIO(object):
     io_cls = PyNNNumpyIO
     file_extension = "npz"
-    
+
     def write_test_file(self, variable='v', check=False):
         data, metadata = self.build_test_data(variable)
-        metadata_array = numpy.array(sorted(metadata.items()))
-        numpy.savez(self.test_file, data=data, metadata=metadata_array)
+        metadata_array = np.array(sorted(metadata.items()))
+        np.savez(self.test_file, data=data, metadata=metadata_array)
         if check:
             data1, metadata1 = read_test_file(self.test_file)
             assert metadata == metadata1, "%s != %s" % (metadata, metadata1)
-            assert data.shape == data1.shape == (505, 2), "%s, %s, (505, 2)" % (data.shape, data1.shape)
+            assert data.shape == data1.shape == (505, 2), \
+                "%s, %s, (505, 2)" % (data.shape, data1.shape)
             assert (data == data1).all()
             assert metadata["n"] == 505
     write_test_file.__test__ = False
@@ -193,31 +194,35 @@ class BaseTestPyNNNumpyIO(object):
 class BaseTestPyNNTextIO(object):
     io_cls = PyNNTextIO
     file_extension = "txt"
-    
+
     def write_test_file(self, variable='v', check=False):
         data, metadata = self.build_test_data(variable)
         with open(self.test_file, 'wb') as f:
             for item in sorted(metadata.items()):
                 f.write(("# %s = %s\n" % item).encode('utf8'))
-            numpy.savetxt(f, data)
+            np.savetxt(f, data)
         if check:
             raise NotImplementedError
     write_test_file.__test__ = False
 
 
-class TestPyNNNumpyIO_Signals(BaseTestPyNNNumpyIO, BaseTestPyNNIO_Signals, unittest.TestCase):
-    __test__ = True
-    
-
-class TestPyNNNumpyIO_Spikes(BaseTestPyNNNumpyIO, BaseTestPyNNIO_Spikes, unittest.TestCase):
+class TestPyNNNumpyIO_Signals(BaseTestPyNNNumpyIO, BaseTestPyNNIO_Signals,
+                              unittest.TestCase):
     __test__ = True
 
 
-class TestPyNNTextIO_Signals(BaseTestPyNNTextIO, BaseTestPyNNIO_Signals, unittest.TestCase):
+class TestPyNNNumpyIO_Spikes(BaseTestPyNNNumpyIO, BaseTestPyNNIO_Spikes,
+                             unittest.TestCase):
     __test__ = True
 
 
-class TestPyNNTextIO_Spikes(BaseTestPyNNTextIO, BaseTestPyNNIO_Spikes, unittest.TestCase):
+class TestPyNNTextIO_Signals(BaseTestPyNNTextIO, BaseTestPyNNIO_Signals,
+                             unittest.TestCase):
+    __test__ = True
+
+
+class TestPyNNTextIO_Spikes(BaseTestPyNNTextIO, BaseTestPyNNIO_Spikes,
+                            unittest.TestCase):
     __test__ = True
 
 

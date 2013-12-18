@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 '''
 Class for reading from Brainware DAM files
 
@@ -35,6 +34,10 @@ from __future__ import absolute_import, division, print_function
 import os
 import os.path
 
+# numpy and quantities are already required by neo
+import numpy as np
+import quantities as pq
+
 # needed core neo modules
 from neo.core import (AnalogSignal, Block, RecordingChannel,
                       RecordingChannelGroup, Segment)
@@ -44,10 +47,6 @@ from neo.io.baseio import BaseIO
 
 # some tools to finalize the hierachy
 from neo.io.tools import create_many_to_one_relationship
-
-# numpy and quantities are already required by neo
-import numpy as np
-import quantities as pq
 
 
 class BrainwareDamIO(BaseIO):

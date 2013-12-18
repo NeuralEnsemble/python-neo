@@ -1,86 +1,130 @@
-from neo.core.baseneo import BaseNeo
+# -*- coding: utf-8 -*-
+'''
+This module defines :class:`RecordingChannelGroup`, a container for multiple
+data channels.
+
+:class:`RecordingChannelGroup` derives from :class:`BaseNeo`, from
+:module:`neo.core.baseneo`.
+'''
+
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 import numpy as np
+
+from neo.core.baseneo import BaseNeo
 
 
 class RecordingChannelGroup(BaseNeo):
-    """
+    '''
+    A container for multiple data channels.
+
     This container have sereval purpose:
-      * Grouping all :py:class:`AnalogSignalArray` inside a :py:class:`Block`
-        across :py:class:`Segment`
-      * Grouping :py:class:`RecordingChannel` inside a :py:class:`block`. This
+      * Grouping all :class:`AnalogSignalArray` inside a :class:`Block`
+        across :class:`Segment`
+      * Grouping :class:`RecordingChannel` inside a :class:`Block`. This
         case is *many to many* relation. It mean that a
-        :py:class:`RecordingChannel` can belong to several group. A typical use
-        case is tetrode (4 X :py:class:`RecordingChannel` inside a
-        :py:class:`RecordingChannelGroup`).
-      * Container of  :py:class:`Unit`. A neuron decharge (:py:class:`Unit`)
+        :class:`RecordingChannel` can belong to several group. A typical use
+        case is tetrode (4 X :class:`RecordingChannel` inside a
+        :class:`RecordingChannelGroup`).
+      * Container of  :class:`Unit`. A neuron decharge (:class:`Unit`)
         can be seen by several electrodes (4 in tetrode case).
 
-    *Usage 1* multi segment recording with 2 electrode array::
+    *Usage 1* multi :class:`Segment` recording with 2 electrode array::
 
-        bl = Block()
-        # create a block with 3 Segment and 2 RecordingChannelGroup
-        for s in range(3):
-            seg = Segment(name = 'segment %d' %s, index = s)
-            bl.segments.append(seg)
-
-        for r in range(2):
-            rcg = RecordingChannelGroup('Array probe %d' % r, channel_indexes =
-                                        arange(64) )
-            bl.recordingchannelgroups.append(rcg)
-
-        # populating AnalogSignalArray
-        for s in range(3):
-            for r in range(2):
-                a = AnalogSignalArray( randn(10000, 64), sampling_rate =
-                                      10*pq.kHz )
-                bl.recordingchannelgroups[r].append(a)
-                bl.segments[s].append(a)
-
+        >>> from neo.core import (Block, Segment, RecordingChannelGroup,
+        ...                       AnalogSignalArray)
+        >>> from quantities import nA, kHz
+        >>> import numpy as np
+        >>>
+        >>> # create a Block with 3 Segment and 2 RecordingChannelGroup objects
+        ,,, blk = Block()
+        >>> for ind in range(3):
+        ...     seg = Segment(name='segment %d' % ind, index=ind)
+        ...     blk.segments.append(seg)
+        ...
+        >>> for ind in range(2):
+        ...     rcg = RecordingChannelGroup(name='Array probe %d' % ind,
+        ...                                 channel_indexes=np.arange(64))
+        ...     blk.recordingchannelgroups.append(rcg)
+        ...
+        >>> # Populate the Block with AnalogSignalArray objects
+        ... for seg in blk.segments:
+        ...     for rcg in blk.recordingchannelgroups:
+        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
+        ...                               sampling_rate=10*kHz)
+        ...         rcg.analogsignalarrays.append(a)
+        ...         seg.analogsignalarrays.append(a)
 
     *Usage 2* grouping channel::
 
-        bl = Block()
-        # Create a new RecordingChannelGroup and add to current block
-        rcg = RecordingChannelGroup(channel_names=['ch0', 'ch1', 'ch2'])
-        rcg.channel_indexes = [0, 1, 2]
-        bl.recordingchannelgroups.append(rcg)
+        >>> from neo.core import (Block, RecordingChannelGroup,
+        ...                       RecordingChannel)
+        >>> import numpy as np
+        >>>
+        >>> # Create a Block
+        ,,, blk = Block()
+        >>>
+        >>> # Create a new RecordingChannelGroup and add it to the Block
+        ... rcg = RecordingChannelGroup(channel_names=np.array(['ch0',
+        ...                                                     'ch1',
+        ...                                                     'ch2']))
+        >>> rcg.channel_indexes = np.array([0, 1, 2])
+        >>> blk.recordingchannelgroups.append(rcg)
+        >>>
+        >>> # Create 3 RecordingChannel objects and add them to the Block
+        ... for ind in range(3):
+        ...     chan = RecordingChannel(index=ind)
+        ...     rcg.recordingchannels.append(chan)  # <- many to many
+        ,,,                                         # relationship
+        ...     chan.recordingchannelgroups.append(rcg)  # <- many to many
+        ...                                              #    relationship
 
-        for i in range(3):
-            rc = RecordingChannel(index=i)
-            rcg.recordingchannels.append(rc) # <- many to many relationship
-            rc.recordingchannelgroups.append(rcg) # <- many to many
-                                                       relationship
+    *Usage 3* dealing with :class:`Unit` objects::
 
-    *Usage 3* dealing with Units::
+        >>> from neo.core import Block, RecordingChannelGroup, Unit
+        >>>
+        >>> # Create a Block
+        ... blk = Block()
+        >>>
+        >>> # Create a new RecordingChannelGroup and add it to the Block
+        ... rcg = RecordingChannelGroup(name='octotrode A')
+        >>> blk.recordingchannelgroups.append(rcg)
+        >>>
+        >>> # create several Unit objects and add them to the
+        >>> # RecordingChannelGroup
+        ... for ind in range(5):
+        ...     unit = Unit(name = 'unit %d' % ind, description=
+        ...                 'after a long and hard spike sorting')
+        ...     rcg.units.append(unit)
 
-        bl = Block()
-        rcg = RecordingChannelGroup( name = 'octotrode A')
-        bl.recordingchannelgroups.append(rcg)
-
-        # create several Units
-        for i in range(5):
-            u = Unit(name = 'unit %d' % i, description =
-                     'after a long and hard spike sorting')
-            rcg.append(u)
-
-    *Required attributes*:
+    *Required attributes/properties*:
         None
 
-    *Recommended attributes*:
-        :channel_names: List of strings naming each channel
-        :channel_indexes: List of integer indexes of each channel
-        :name: string
-        :description: string
-        :file_origin: string
+    *Recommended attributes/properties*:
+        :name: (str) A label for the dataset.
+        :description: (str) Text description.
+        :file_origin: (str) Filesystem path or URL of the original data file.
+        :channel_names: (numpy.array 1D dtype='S')
+            Names for each :class:`RecordingChannel`.
+        :channel_indexes: (numpy.array 1D dtype='i')
+            Index of each :class:`RecordingChannel`.
+
+    Note: Any other additional arguments are assumed to be user-specific
+            metadata and stored in :attr:`annotations`.
 
     *Container of*:
-        :py:class:`RecordingChannel`
-        :py:class:`AnalogSignalArray`
-        :py:class:`Unit`
-    """
+        :class:`RecordingChannel`
+        :class:`AnalogSignalArray`
+        :class:`Unit`
+
+    '''
+
     def __init__(self, channel_names=None, channel_indexes=None, name=None,
                  description=None, file_origin=None, **annotations):
-        """Initialize a new RecordingChannelGroup."""
+        '''
+        Initialize a new :class:`RecordingChannelGroup` instance.
+        '''
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
@@ -89,9 +133,9 @@ class RecordingChannelGroup(BaseNeo):
 
         # Defaults
         if channel_indexes is None:
-            channel_indexes = np.array([])
+            channel_indexes = np.array([], dtype=np.int)
         if channel_names is None:
-            channel_names = np.array([])
+            channel_names = np.array([], dtype='S')
 
         # Store recommended attributes
         self.channel_names = channel_names
@@ -104,3 +148,43 @@ class RecordingChannelGroup(BaseNeo):
         self.recordingchannels = []
 
         self.block = None
+
+    def merge(self, other):
+        '''
+        Merge the contents of another RecordingChannelGroup into this one.
+
+        For each :class:`RecordingChannel` in the other RecordingChannelGroup,
+        if its name matches that of a :class:`RecordingChannel` in this block,
+        the two RecordingChannels will be merged, otherwise it will be added as
+        a new RecordingChannel. The equivalent procedure is then applied to
+        each :class:`Unit`.
+
+        For each array-type object in the other :class:`RecordingChannelGroup`,
+        if its name matches that of an object of the same type in this segment,
+        the two arrays will be joined by concatenation.
+        '''
+        for container in ("recordingchannels", "units"):
+            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            for obj in getattr(other, container):
+                if obj.name in lookup:
+                    lookup[obj.name].merge(obj)
+                else:
+                    getattr(self, container).append(obj)
+        for container in ("analogsignalarrays",):
+            objs = getattr(self, container)
+            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
+            for obj in getattr(other, container):
+                if obj.name in lookup:
+                    ind = lookup[obj.name]
+                    try:
+                        newobj = getattr(self, container)[ind].merge(obj)
+                    except AttributeError as e:
+                        raise AttributeError("%s. container=%s, obj.name=%s, \
+                                              shape=%s" % (e, container,
+                                                           obj.name,
+                                                           obj.shape))
+                    getattr(self, container)[ind] = newobj
+                else:
+                    lookup[obj.name] = obj
+                    getattr(self, container).append(obj)
+        # TODO: merge annotations

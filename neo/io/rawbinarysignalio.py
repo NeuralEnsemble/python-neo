@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing data in a raw binary interleaved compact file.
 Sampling rate, units, number of channel and dtype must be externally known.
@@ -11,13 +11,15 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import os
 
 import numpy as np
 import quantities as pq
-import os
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal
+from neo.io.tools import create_many_to_one_relationship
+
 
 class RawBinarySignalIO(BaseIO):
     """

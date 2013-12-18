@@ -1,7 +1,10 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.winwcp
+Tests of neo.io.winwcpio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -10,17 +13,12 @@ except ImportError:
     import unittest
 
 from neo.io import WinWcpIO
-import numpy
-
-
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-
-class TestRawBinarySignalIO(BaseTestIO , unittest.TestCase, ):
-    ioclass =  WinWcpIO
-    files_to_test = [   'File_winwcp_1.wcp',
-                            ]
+class TestRawBinarySignalIO(BaseTestIO, unittest.TestCase, ):
+    ioclass = WinWcpIO
+    files_to_test = ['File_winwcp_1.wcp']
     files_to_download = files_to_test
 
 

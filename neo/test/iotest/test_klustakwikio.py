@@ -1,11 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Tests of neo.io.klustakwikio
+"""
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import glob
+import os.path
+import sys
+import tempfile
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+import numpy as np
+import quantities as pq
+
 import neo
-import sys
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.test.tools import assert_arrays_almost_equal
 try:
     from neo.io.klustakwikio import KlustaKwikIO
 except ImportError:
@@ -15,15 +32,6 @@ else:
     # not python 3 compatible
     can_run = sys.version_info[0] == 2
 
-
-import os.path
-import numpy as np
-import quantities as pq
-import glob
-import tempfile
-
-from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.tools import assert_arrays_almost_equal, assert_arrays_equal
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testFilenameParser(unittest.TestCase):
@@ -41,16 +49,18 @@ class testFilenameParser(unittest.TestCase):
 
     def test1(self):
         """Tests that files can be loaded by basename"""
-        kio = KlustaKwikIO(filename=os.path.join(self.dirname,'basename'))
+        kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'basename'))
         if not BaseTestIO.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
         fetfiles = kio._fp.read_filenames('fet')
 
         self.assertEqual(len(fetfiles), 2)
         self.assertEqual(os.path.abspath(fetfiles[0]),
-            os.path.abspath(os.path.join(self.dirname, 'basename.fet.0')))
+                         os.path.abspath(os.path.join(self.dirname,
+                                                      'basename.fet.0')))
         self.assertEqual(os.path.abspath(fetfiles[1]),
-            os.path.abspath(os.path.join(self.dirname, 'basename.fet.1')))
+                         os.path.abspath(os.path.join(self.dirname,
+                                                      'basename.fet.1')))
 
     def test2(self):
         """Tests that files are loaded even without basename"""
@@ -75,7 +85,8 @@ class testFilenameParser(unittest.TestCase):
 
         self.assertEqual(len(clufiles), 1)
         self.assertEqual(os.path.abspath(clufiles[1]),
-            os.path.abspath(os.path.join(self.dirname, 'basename2.clu.1')))
+                         os.path.abspath(os.path.join(self.dirname,
+                                                      'basename2.clu.1')))
 
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
@@ -92,7 +103,7 @@ class testRead(unittest.TestCase):
     def test1(self):
         """Tests that data and metadata are read correctly"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base'),
-            sampling_rate=1000.)
+                           sampling_rate=1000.)
         block = kio.read()[0]
         seg = block.segments[0]
         self.assertEqual(len(seg.spiketrains), 4)
@@ -101,12 +112,11 @@ class testRead(unittest.TestCase):
             self.assertEqual(st.units, np.array(1.0) * pq.s)
             self.assertEqual(st.t_start, 0.0)
 
-
         self.assertEqual(seg.spiketrains[0].name, 'unit 1 from group 0')
         self.assertEqual(seg.spiketrains[0].annotations['cluster'], 1)
         self.assertEqual(seg.spiketrains[0].annotations['group'], 0)
-        self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
-            [.100, .200])))
+        self.assertTrue(np.all(seg.spiketrains[0].times == np.array([.100,
+                                                                     .200])))
 
         self.assertEqual(seg.spiketrains[1].name, 'unit 2 from group 0')
         self.assertEqual(seg.spiketrains[1].annotations['cluster'], 2)
@@ -124,13 +134,13 @@ class testRead(unittest.TestCase):
         self.assertEqual(seg.spiketrains[3].annotations['cluster'], 2)
         self.assertEqual(seg.spiketrains[3].annotations['group'], 1)
         self.assertEqual(seg.spiketrains[3].t_start, 0.0)
-        self.assertTrue(np.all(seg.spiketrains[3].times == np.array(
-            [.050, .152])))
+        self.assertTrue(np.all(seg.spiketrains[3].times == np.array([.050,
+                                                                     .152])))
 
     def test2(self):
         """Checks that cluster id autosets to 0 without clu file"""
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
-            sampling_rate=1000.)
+                           sampling_rate=1000.)
         block = kio.read()[0]
         seg = block.segments[0]
         self.assertEqual(len(seg.spiketrains), 1)
@@ -138,8 +148,10 @@ class testRead(unittest.TestCase):
         self.assertEqual(seg.spiketrains[0].annotations['cluster'], 0)
         self.assertEqual(seg.spiketrains[0].annotations['group'], 5)
         self.assertEqual(seg.spiketrains[0].t_start, 0.0)
-        self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
-            [0.026, 0.122, 0.228])))
+        self.assertTrue(np.all(seg.spiketrains[0].times == np.array([0.026,
+                                                                     0.122,
+                                                                     0.228])))
+
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWrite(unittest.TestCase):
@@ -201,13 +213,13 @@ class testWrite(unittest.TestCase):
 
         # Create writer with default sampling rate
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base1'),
-            sampling_rate=1000.)
+                           sampling_rate=1000.)
         kio.write_block(block)
 
         # Check files were created
         for fn in ['.fet.0', '.fet.1', '.clu.0', '.clu.1']:
             self.assertTrue(os.path.exists(os.path.join(self.dirname,
-                'base1' + fn)))
+                                                        'base1' + fn)))
 
         # Check files contain correct content
         # Spike times on group 0
@@ -242,6 +254,7 @@ class testWrite(unittest.TestCase):
 
         # Empty out test session again
         delete_test_session()
+
 
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
 class testWriteWithFeatures(unittest.TestCase):
@@ -287,13 +300,13 @@ class testWriteWithFeatures(unittest.TestCase):
 
         # Create writer
         kio = KlustaKwikIO(filename=os.path.join(self.dirname, 'base2'),
-            sampling_rate=1000.)
+                           sampling_rate=1000.)
         kio.write_block(block)
 
         # Check files were created
         for fn in ['.fet.0', '.clu.0']:
             self.assertTrue(os.path.exists(os.path.join(self.dirname,
-                'base2' + fn)))
+                                                        'base2' + fn)))
 
         # Check files contain correct content
         fi = file(os.path.join(self.dirname, 'base2.fet.0'))
@@ -319,15 +332,16 @@ class testWriteWithFeatures(unittest.TestCase):
 
         # Now read the features and test same
         block = kio.read_block()
-        assert_arrays_almost_equal(wff,
-            block.segments[0].spiketrains[0].annotations['waveform_features'],
-            .00001)
+        train = block.segments[0].spiketrains[0]
+        assert_arrays_almost_equal(wff, train.annotations['waveform_features'],
+                                   .00001)
 
         # Empty out test session again
         delete_test_session(self.dirname)
 
+
 @unittest.skipUnless(can_run, "KlustakwikIO not available")
-class CommonTests(BaseTestIO, unittest.TestCase ):
+class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = KlustaKwikIO
 
     # These are the files it tries to read and test for compliance
@@ -366,7 +380,7 @@ def delete_test_session(dirname=None):
     """Removes all file in directory so we can test writing to it"""
     if dirname is None:
         dirname = os.path.join(os.path.dirname(__file__),
-            'files_for_tests/klustakwik/test3')
+                               'files_for_tests/klustakwik/test3')
     for fi in glob.glob(os.path.join(dirname, '*')):
         os.remove(fi)
 

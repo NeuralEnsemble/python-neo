@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing analog signals in a text file.
 Each columns represents a AnalogSignal. All AnalogSignal have the same sampling rate.
@@ -10,16 +10,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-
-
 import csv
 import os
+
+import numpy as np
 from numpy import newaxis
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import AnalogSignal, Segment
+from neo.io.tools import create_many_to_one_relationship
 
 
 class AsciiSignalIO(BaseIO):

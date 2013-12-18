@@ -1,69 +1,65 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Class for reading/writing neo objects in matlab format 5 to 7.2 (.mat).
-This module is a bridge for matlab users who want to adopote neo object reprenstation.
-Nomenclature is the same but use Matlab struct and cell arrays.
-With this modules Matlab users can use neo.io to read a format and convert it to .mat.
+Module for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
 
+This module is a bridge for MATLAB users who want to adopt the Neo object representation.
+The nomenclature is the same but using Matlab structs and cell arrays.
+With this module MATLAB users can use neo.io to read a format and convert it to .mat.
 
 Supported : Read/Write
 
-
 Author: sgarcia
-
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+from datetime import datetime
+from distutils import version
+import os
+import re
+
 import numpy as np
 import quantities as pq
-from .. import description
+
+# check if version scipy
+import scipy
+if version.LooseVersion(scipy.version.version) < '0.8':
+    raise ImportError("your scipy version is too old to support MatlabIO, you need at least 0.8 you have %s"%scipy.version.version)
+from scipy import io as sio
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal, EventArray, SpikeTrain
+from neo.io.tools import create_many_to_one_relationship
+from neo import description
+
+
 classname_lower_to_upper = { }
 for k in description.class_by_name.keys():
     classname_lower_to_upper[k.lower()] = k
 
 
-
-from datetime import datetime
-import os
-import re
-
-# check if version scipy
-import scipy
-from distutils import version
-if version.LooseVersion(scipy.version.version) < '0.8':
-    raise ImportError("your scipy version is too old to support MatlabIO, you need at least 0.8 you have %s"%scipy.version.version)
-
-from scipy import io as sio
-
-
-
 class NeoMatlabIO(BaseIO):
     """
-    Class for reading/writting neo objects in mat matlab format (.mat) 5 to 7.2.
+    Class for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
 
-    This module is a bridge for matlab users who want to adopote neo object reprenstation.
-    Nomenclature is the same but use Matlab struct and cell arrays.
-    With this modules Matlab users can use neo.io to read a format and convert it to .mat.
+    This module is a bridge for MATLAB users who want to adopt the Neo object representation.
+    The nomenclature is the same but using Matlab structs and cell arrays.
+    With this module MATLAB users can use neo.io to read a format and convert it to .mat.
 
     Rules of conversion:
-      * neo classes are converted to matlab struct.
-        Ex: Block in neo will be a struct with name, file_datetime, ...
-      * neo one_to_many relationship are cellarray in matlab.
-        Ex: seg.analogsignals[2] in neo will be seg.analogsignals{3} in matlab.
-        Note the one based in matlab and braket vs singleton.
-      * Quantity attributes in neo in will be 2 fields in mallab?
-         Ex: anasig.t_start = 1.5 * s  (pq.Quantiy) in neo
-         will be anasig.t_start = 1.5 and anasig.t_start_unit = 's' in matlab
-      * classes that inherits Quantity (AnalogSIgnal, SpikeTrain, ...) in neo will
-         have 2 fields (array and units) in matlab struct.
-         Ex: AnalogSignal( [1., 2., 3.], 'V') in neo will be
-         anasig.array = [1. 2. 3] and anasig.units = 'V' in matlab
+      * Neo classes are converted to MATLAB structs.
+        e.g., a Block is a struct with attributes "name", "file_datetime", ...
+      * Neo one_to_many relationships are cellarrays in MATLAB.
+        e.g., ``seg.analogsignals[2]`` in Python Neo will be ``seg.analogsignals{3}`` in MATLAB.
+      * Quantity attributes are represented by 2 fields in MATLAB.
+        e.g., ``anasig.t_start = 1.5 * s`` in Python
+        will be ``anasig.t_start = 1.5`` and ``anasig.t_start_unit = 's'`` in MATLAB.
+      * classes that inherit from Quantity (AnalogSignal, SpikeTrain, ...) in Python will
+        have 2 fields (array and units) in the MATLAB struct.
+        e.g.: ``AnalogSignal( [1., 2., 3.], 'V')`` in Python will be
+        ``anasig.array = [1. 2. 3]`` and ``anasig.units = 'V'`` in MATLAB.
 
-    1 - **Senario 1: create data in matlab and read them in neo**
+    1 - **Scenario 1: create data in MATLAB and read them in Python**
 
-        This matlab code generate a block::
+        This MATLAB code generates a block::
 
             block = struct();
             block.segments = { };
@@ -99,40 +95,39 @@ class NeoMatlabIO(BaseIO):
             save 'myblock.mat' block -V7
 
 
-        This code read it in python::
+        This code reads it in Python::
 
             import neo
-            r = neo.io.NeoMatlabIO(filename = 'myblock.mat')
+            r = neo.io.NeoMatlabIO(filename='myblock.mat')
             bl = r.read_block()
             print bl.segments[1].analogsignals[2]
             print bl.segments[1].spiketrains[4]
 
 
-    2 - **Senario 2: create data in python with neo and read them in matlab**
+    2 - **Scenario 2: create data in Python and read them in MATLAB**
 
-        This python code generate the same block as previous (yes, it is more elegant, it is pyhton)::
+        This Python code generates the same block as in the previous scenario::
 
             import neo
             import quantities as pq
             from scipy import rand
 
-            bl = neo.Block(name = 'my block with neo')
+            bl = neo.Block(name='my block with neo')
             for s in range(3):
-                seg = neo.Segment( name = 'segment'+str(s))
+                seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal( rand(100), units = 'mV', t_start = 0 * pq.s, sampling_rate = 100*pq.Hz)
+                    anasig = neo.AnalogSignal(rand(100), units='mV', t_start=0*pq.s, sampling_rate=100*pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
-                    sptr = neo.SpikeTrain( rand(30), units = 'ms', t_start = 0*pq.ms, t_stop = 10*pq.ms)
+                    sptr = neo.SpikeTrain(rand(30), units='ms', t_start=0*pq.ms, t_stop=10*pq.ms)
                     seg.spiketrains.append(sptr)
 
-
-        w = neo.io.NeoMatlabIO(filename = 'myblock.mat')
+        w = neo.io.NeoMatlabIO(filename='myblock.mat')
         w.write_block(bl)
 
 
-        This matlab code read it ::
+        This MATLAB code reads it::
 
             load 'myblock.mat'
             block.name
@@ -142,19 +137,19 @@ class NeoMatlabIO(BaseIO):
             block.segments{2}.analogsignals{3}.t_start_units
 
 
-    3 - **Senario 3: convertion**
+    3 - **Scenario 3: conversion**
 
-        This python code convert a spike2 file to matlab::
+        This Python code converts a Spike2 file to MATLAB::
 
-            from neo import *
+            from neo import Block
+            from neo.io import Spike2IO, NeoMatlabIO
 
-            r = Spike2IO(filename = 'myspike2file.smr')
-            w = NeoMatlabIO(filename ='convertedfile.mat')
+            r = Spike2IO(filename='myspike2file.smr')
+            w = NeoMatlabIO(filename='convertedfile.mat')
             seg = r.read_segment()
-            bl = Block(name = 'a block')
+            bl = Block(name='a block')
             bl.segments.append(seg)
             w.write_block(bl)
-
 
     """
     is_readable        = True

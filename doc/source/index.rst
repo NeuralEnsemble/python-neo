@@ -45,7 +45,7 @@ Documentation
 License
 -------
 
-Neo is distributed under a BSD licence.
+Neo is distributed under a 3-clause Revised BSD licence (BSD-3-Clause).
 
 
 Contributing
@@ -58,14 +58,14 @@ Discussion of Neo takes place on the
     
 `Source code <https://github.com/NeuralEnsemble/python-neo>`_ is on GitHub.
 
-The `bug tracker <http://neuralensemble.org/trac/neo/report>`_ is at::
+The `bug tracker <https://github.com/NeuralEnsemble/python-neo/issues>`_ is at::
 
-    http://neuralensemble.org/trac/neo
-
-
+    https://github.com/NeuralEnsemble/python-neo/issues
 
 
-.. _OpenElectrophy: http://neuralensemble.org/trac/OpenElectrophy
+
+
+.. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
 .. _NeuroTools: http://neuralensemble.org/NeuroTools
 .. _G-node: http://www.g-node.org/
 .. _Neuroshare: http://neuroshare.org/

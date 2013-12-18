@@ -1,7 +1,10 @@
-# encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-Tests of io.asciisignalio
+Tests of neo.io.neuroshareio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -9,8 +12,7 @@ try:
 except ImportError:
     import unittest
 
-from neo.io import NeuroshareIO
-import numpy
+#from neo.io import NeuroshareIO
 
 #~ class TestNeuroshareIO(unittest.TestCase):
     #~ pass
