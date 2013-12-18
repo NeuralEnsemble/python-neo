@@ -96,7 +96,8 @@ class NeuroshareIO(BaseIO):
 
 
 
-    def read_segment(self, import_neuroshare_segment = True):
+    def read_segment(self, import_neuroshare_segment = True,
+                     lazy=False, cascade=True):
         """
         Arguments:
             import_neuroshare_segment: import neuroshare segment as SpikeTrain with associated waveforms or not imported at all.
@@ -178,7 +179,7 @@ class NeuroshareIO(BaseIO):
                 else:
                     pdwContCount = ctypes.c_uint32(0)
                     pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'f8')
-                    ns_RESULT = neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
+                    neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
                                      dwIndexCount, ctypes.byref( pdwContCount) , pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
                     pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
                     neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
@@ -205,7 +206,7 @@ class NeuroshareIO(BaseIO):
 
                 pdwSegmentInfo = ns_SEGMENTINFO()
 
-                ns_RESULT = neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
+                neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
                                              ctypes.byref(pdwSegmentInfo), ctypes.sizeof(pdwSegmentInfo) )
                 nsource = pdwSegmentInfo.dwSourceCount
 
@@ -232,7 +233,7 @@ class NeuroshareIO(BaseIO):
                     times = np.empty( (entityInfo.dwItemCount), drtype = 'f')
                     waveforms = np.empty( (entityInfo.dwItemCount, nsource, nsample), drtype = 'f')
                     for dwIndex in range(entityInfo.dwItemCount ):
-                        ns_RESULT = neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
+                        neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
                             ctypes.byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
                             dwDataBufferSize * 8, ctypes.byref(pdwSampleCount),
                                 ctypes.byref(pdwUnitID ) )
