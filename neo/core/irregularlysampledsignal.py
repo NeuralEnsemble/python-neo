@@ -229,14 +229,14 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         '''
         return not self.__eq__(other)
 
-    def _apply_operator(self, other, op):
+    def _apply_operator(self, other, op, *args):
         '''
         Handle copying metadata to the new :class:`IrregularlySampledSignal`
         after a mathematical operation.
         '''
         self._check_consistency(other)
         f = getattr(super(IrregularlySampledSignal, self), op)
-        new_signal = f(other)
+        new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         return new_signal
 
@@ -273,40 +273,40 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                      "description", "channel_index", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
-    def __add__(self, other):
+    def __add__(self, other, *args):
         '''
         Addition (+)
         '''
-        return self._apply_operator(other, "__add__")
+        return self._apply_operator(other, "__add__", *args)
 
-    def __sub__(self, other):
+    def __sub__(self, other, *args):
         '''
         Subtraction (-)
         '''
-        return self._apply_operator(other, "__sub__")
+        return self._apply_operator(other, "__sub__", *args)
 
-    def __mul__(self, other):
+    def __mul__(self, other, *args):
         '''
         Multiplication (*)
         '''
-        return self._apply_operator(other, "__mul__")
+        return self._apply_operator(other, "__mul__", *args)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other, *args):
         '''
         Float division (/)
         '''
-        return self._apply_operator(other, "__truediv__")
+        return self._apply_operator(other, "__truediv__", *args)
 
-    def __div__(self, other):
+    def __div__(self, other, *args):
         '''
         Integer division (//)
         '''
-        return self._apply_operator(other, "__div__")
+        return self._apply_operator(other, "__div__", *args)
 
     __radd__ = __add__
     __rmul__ = __sub__
 
-    def __rsub__(self, other):
+    def __rsub__(self, other, *args):
         '''
         Backwards subtraction (other-self)
         '''
