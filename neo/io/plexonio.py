@@ -430,10 +430,11 @@ class HeaderReader():
             buf = self.fid.read(struct.calcsize(fmt))
             if len(buf) != struct.calcsize(fmt) : return None
             val = list(struct.unpack(fmt , buf))
+            for i, ival in enumerate(val):
+                if hasattr(ival, 'replace'):
+                    val[i] = ival.replace('\x00','')
             if len(val) == 1:
                 val = val[0]
-            if 's' in fmt :
-                val = val.replace('\x00','')
             d[key] = val
         return d
 
