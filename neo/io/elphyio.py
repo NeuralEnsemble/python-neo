@@ -1633,7 +1633,7 @@ def read_from_char(data, type_char):
             value = None    
     else :
         try :
-            value = extended_to_double(ascii)
+            value = float(ascii) # in python maps on C double
         except :
             value = None
     return value
