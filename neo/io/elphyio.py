@@ -1839,7 +1839,7 @@ class ElphyLayout(object):
             databytes = np.concatenate(chunks)
             return databytes[start:end]
         else :
-            return []
+            return np.array([])
         
     
     def reshape_bytes(self, databytes, reshape, datatypes, order='<'):
