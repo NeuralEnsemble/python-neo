@@ -137,7 +137,6 @@ class PlexonIO(BaseIO):
         nb_samples = np.zeros(len(slowChannelHeaders))
         sample_positions = np.zeros(len(slowChannelHeaders))
         t_starts = np.zeros(len(slowChannelHeaders), dtype = 'f')
-        unit_per_channel = { }
 
         #spiketimes and waveform
         nb_spikes = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
@@ -158,7 +157,9 @@ class PlexonIO(BaseIO):
             chan = dataBlockHeader['Channel']
             unit = dataBlockHeader['Unit']
             n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
-            
+            time = (dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 +
+                    dataBlockHeader['TimeStamp'])
+
             if dataBlockHeader['Type'] == 1:
                 nb_spikes[chan,unit] +=1
                 wf_sizes[chan,unit,:] = [n1,n2]
