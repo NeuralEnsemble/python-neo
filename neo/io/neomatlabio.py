@@ -19,11 +19,23 @@ import re
 import numpy as np
 import quantities as pq
 
-# check if version scipy
-import scipy
-if version.LooseVersion(scipy.version.version) < '0.8':
-    raise ImportError("your scipy version is too old to support MatlabIO, you need at least 0.8 you have %s"%scipy.version.version)
-from scipy import io as sio
+# check scipy
+try:
+    import scipy.io
+    import scipy.version
+except ImportError as err:
+    HAVE_SCIPY = False
+    SCIPY_ERR = err
+else:
+    if version.LooseVersion(scipy.version.version) < '0.8':
+        HAVE_SCIPY = False
+        SCIPY_ERR = ImportError("your scipy version is too old to support " +
+                                "MatlabIO, you need at least 0.8. " +
+                                "You have %s" % scipy.version.version)
+    else:
+        HAVE_SCIPY = True
+        SCIPY_ERR = None
+
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, EventArray, SpikeTrain
@@ -176,6 +188,8 @@ class NeoMatlabIO(BaseIO):
         Arguments:
             filename : the filename to read
         """
+        if not HAVE_SCIPY:
+            raise SCIPY_ERR
         BaseIO.__init__(self)
         self.filename = filename
 
@@ -185,7 +199,8 @@ class NeoMatlabIO(BaseIO):
         Arguments:
 
         """
-        d = sio.loadmat(self.filename, struct_as_record=False, squeeze_me=True)
+        d = scipy.io.loadmat(self.filename, struct_as_record=False,
+                             squeeze_me=True)
         assert'block' in d, 'no block in'+self.filename
         bl_struct = d['block']
         bl =  self.create_ob_from_struct(bl_struct, 'Block', cascade = cascade, lazy = lazy)
@@ -216,7 +231,7 @@ class NeoMatlabIO(BaseIO):
                 sptr_struct = self.create_struct_from_obj(sptr)
                 seg_struct['spiketrains'].append(sptr_struct)
 
-        sio.savemat(self.filename, {'block':bl_struct}, oned_as = 'row')
+        scipy.io.savemat(self.filename, {'block':bl_struct}, oned_as = 'row')
 
 
 

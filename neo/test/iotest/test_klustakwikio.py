@@ -23,17 +23,11 @@ import quantities as pq
 import neo
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import assert_arrays_almost_equal
-try:
-    from neo.io.klustakwikio import KlustaKwikIO
-except ImportError:
-    can_run = False
-    KlustaKwikIO = None
-else:
-    # not python 3 compatible
-    can_run = sys.version_info[0] == 2
+from neo.io.klustakwikio import KlustaKwikIO, HAVE_MLAB
 
 
-@unittest.skipUnless(can_run, "KlustakwikIO not available")
+@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
 
@@ -89,7 +83,8 @@ class testFilenameParser(unittest.TestCase):
                                                       'basename2.clu.1')))
 
 
-@unittest.skipUnless(can_run, "KlustakwikIO not available")
+@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
     def setUp(self):
@@ -153,7 +148,8 @@ class testRead(unittest.TestCase):
                                                                      0.228])))
 
 
-@unittest.skipUnless(can_run, "KlustakwikIO not available")
+@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWrite(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -256,7 +252,8 @@ class testWrite(unittest.TestCase):
         delete_test_session()
 
 
-@unittest.skipUnless(can_run, "KlustakwikIO not available")
+@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -340,7 +337,8 @@ class testWriteWithFeatures(unittest.TestCase):
         delete_test_session(self.dirname)
 
 
-@unittest.skipUnless(can_run, "KlustakwikIO not available")
+@unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
+@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = KlustaKwikIO
 

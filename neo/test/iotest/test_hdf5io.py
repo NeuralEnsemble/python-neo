@@ -41,14 +41,8 @@ from neo.description import (class_by_name, classes_necessary_attributes,
                              implicit_relationship, many_to_many_relationship,
                              name_by_class, one_to_many_relationship)
 
-try:
-    from neo.io.hdf5io import NeoHdf5IO
-except ImportError:
-    NeoHdf5IO = None
-    have_hdf5 = False
-else:
-    # not python 3 compatible
-    have_hdf5 = sys.version_info[0] == 2
+from neo.io.hdf5io import NeoHdf5IO, HAVE_TABLES
+
 
 #==============================================================================
 
@@ -136,7 +130,8 @@ class HDF5Commontests(BaseTestIO, unittest.TestCase):
     files_to_test = ['test.h5']
     files_to_download = files_to_test
 
-    @unittest.skipUnless(have_hdf5, "requires PyTables")
+    @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
+    @unittest.skipUnless(HAVE_TABLES, "requires PyTables")
     def setUp(self):
         BaseTestIO.setUp(self)
 
@@ -146,7 +141,8 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
     Tests for the hdf5 library.
     """
 
-    #@unittest.skipUnless(have_hdf5, "requires PyTables")
+    #@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
+    #@unittest.skipUnless(HAVE_TABLES, "requires PyTables")
     def setUp(self):
         self.test_file = "test.h5"
 
@@ -245,7 +241,8 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
         # same segment
 
 class HDF5MoreTests(unittest.TestCase):
-    @unittest.skipUnless(have_hdf5, "requires PyTables")
+    @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
+    @unittest.skipUnless(HAVE_TABLES, "requires PyTables")
     def test_store_empty_spike_train(self):
         spiketrain0 = SpikeTrain([], t_start=0.0, t_stop=100.0, units="ms")
         spiketrain1 = SpikeTrain([23.4, 45.6, 67.8],

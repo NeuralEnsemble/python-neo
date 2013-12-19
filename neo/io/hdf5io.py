@@ -198,8 +198,22 @@ from distutils import version
 
 import numpy as np
 import quantities as pq
-from tables import NoSuchNodeError as NSNE
-import tables as tb
+
+# check tables
+try:
+    import tables as tb
+except ImportError as err:
+    HAVE_TABLES = False
+    TABLES_ERR = err
+else:
+    if version.LooseVersion(tb.__version__) < '2.2':
+        HAVE_TABLES = False
+        TABLES_ERR = ImportError("your pytables version is too old to " +
+                                 "support NeoHdf5IO, you need at least 2.2. " +
+                                 "You have %s" % tb.__version__)
+    else:
+        HAVE_TABLES = True
+        TABLES_ERR = None
 
 from neo.core import Block
 from neo.description import (class_by_name, name_by_class,
@@ -211,9 +225,6 @@ from neo.description import (class_by_name, name_by_class,
                              one_to_many_relationship)
 from neo.io.baseio import BaseIO
 from neo.io.tools import create_many_to_one_relationship, LazyList
-
-if version.LooseVersion(tb.__version__) < '2.2':
-    raise ImportError("your pytables version is too old to support NeoHdf5IO, you need at least 2.2 you have %s" % tb.__version__)
 
 logger = logging.getLogger("Neo")
 
@@ -268,6 +279,8 @@ class NeoHdf5IO(BaseIO):
     is_writable = True
 
     def __init__(self, filename=None, **kwargs):
+        if not HAVE_TABLES:
+            raise TABLES_ERR
         BaseIO.__init__(self, filename=filename)
         self.connected = False
         self.objects_by_ref = {}  # Loaded objects by reference id
@@ -423,7 +436,7 @@ class NeoHdf5IO(BaseIO):
             path = str(obj.hdf5_path)
             try:
                 node = self._data.getNode(obj.hdf5_path)
-            except NSNE:  # create a new node?
+            except tb.NoSuchNodeError:  # create a new node?
                 raise LookupError("A given object has a path %s attribute, \
                     but such an object does not exist in the file. Please \
                     correct these values or delete this attribute \
@@ -456,7 +469,7 @@ class NeoHdf5IO(BaseIO):
                 container = child_name.lower() + "s"  # like "units"
                 try:
                     ch = self._data.getNode(node, container)
-                except NSNE:
+                except tb.NoSuchNodeError:
                     ch = self._data.createGroup(node, container)
                 saved = []  # keeps track of saved object names for removal
                 for child in getattr(obj, container):
@@ -471,7 +484,7 @@ class NeoHdf5IO(BaseIO):
                                     name_by_class[child.__class__], ch._v_pathname)
                                 if not hasattr(ch, new_name):  # Only link if path does not exist
                                     child_node = self._data.createHardLink(ch._v_pathname, new_name, target)
-                            except NSNE:
+                            except tb.NoSuchNodeError:
                                 pass
                     if child_node is None:
                         child_node = self.save(child, where=ch._v_pathname)
@@ -670,7 +683,7 @@ class NeoHdf5IO(BaseIO):
                     nattr = node._f_getAttr(attr_name)
                     if attr[1] == str or attr[1] == int:
                         nattr = attr[1](nattr)  # compliance with NEO attr types
-            except (AttributeError, NSNE):  # not assigned, continue
+            except (AttributeError, tb.NoSuchNodeError):  # not assigned, continue
                 nattr = None
             return nattr
 
@@ -692,7 +705,7 @@ class NeoHdf5IO(BaseIO):
             if path == "/":
                 raise ValueError()  # root is not a NEO object
             node = self._data.getNode(path)
-        except (NSNE, ValueError):  # create a new node?
+        except (tb.NoSuchNodeError, ValueError):  # create a new node?
             raise LookupError("There is no valid object with a given path " +
                               str(path) + ' . Please give correct path or just browse the file '
                               '(e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an '
