@@ -60,7 +60,7 @@ class Spike2IO(BaseIO):
 
     has_header         = False
     is_streameable     = False
-    read_params        = {   Segment : [ ], }
+    read_params        = {   Segment : [ ('take_ideal_sampling_rate' , { 'value' : False })] }
     write_params       = None
 
     name               = 'Spike 2 CED'
@@ -79,6 +79,7 @@ class Spike2IO(BaseIO):
         self.filename = filename
 
     def read_segment(self ,
+                                            take_ideal_sampling_rate = False,
                                             lazy = False,
                                             cascade = True,
 
@@ -119,7 +120,7 @@ class Spike2IO(BaseIO):
 
             if channelHeader.kind in [1, 9]:
                 #~ print 'analogChanel'
-                anaSigs = self.readOneChannelContinuous( fid, i, header ,lazy = lazy)
+                anaSigs = self.readOneChannelContinuous( fid, i, header, take_ideal_sampling_rate, lazy = lazy)
                 #~ print 'nb sigs', len(anaSigs) , ' sizes : ',
                 for anaSig in anaSigs :
                     addannotations(anaSig, channelHeader)
@@ -196,11 +197,11 @@ class Spike2IO(BaseIO):
         return header
 
 
-    def readOneChannelContinuous(self , fid, channel_num, header ,lazy = True):
+    def readOneChannelContinuous(self , fid, channel_num, header, take_ideal_sampling_rate, lazy = True):
         # read AnalogSignal
         channelHeader = header.channelHeaders[channel_num]
 
-
+        
         # data type
         if channelHeader.kind == 1:
             dt = np.dtype('i2')
@@ -208,12 +209,15 @@ class Spike2IO(BaseIO):
             dt = np.dtype('f4')
 
         # sample rate
-        if header.system_id in [1,2,3,4,5]: # Before version 5
-            #~ print channel_num, channelHeader.divide, header.us_per_time, header.time_per_adc
-            sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
-        else :
-            sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
-        sampling_rate = (1./sample_interval)*pq.Hz
+        if take_ideal_sampling_rate:
+            sampling_rate = channelHeader.ideal_rate*pq.Hz
+        else:
+            if header.system_id in [1,2,3,4,5]: # Before version 5
+                #~ print channel_num, channelHeader.divide, header.us_per_time, header.time_per_adc
+                sample_interval = (channelHeader.divide*header.us_per_time*header.time_per_adc)*1e-6
+            else :
+                sample_interval = (channelHeader.l_chan_dvd*header.us_per_time*header.dtime_base)
+            sampling_rate = (1./sample_interval)*pq.Hz
 
         # read blocks header to preallocate memory by jumping block to block
         fid.seek(channelHeader.firstblock)
