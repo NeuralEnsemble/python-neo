@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Tests of the neo.core.analogsignal.AnalogSignal class and related functions
