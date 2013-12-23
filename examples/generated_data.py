@@ -21,17 +21,17 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     feature_len = feature_samples / data_samples
 
     # Create container and grouping objects
-    segments = [neo.Segment(index=i) for i in xrange(n_segments)]
+    segments = [neo.Segment(index=i) for i in range(n_segments)]
 
     rcg = neo.RecordingChannelGroup(name='T0')
     rcs = []
-    for i in xrange(n_channels):
+    for i in range(n_channels):
         rc = neo.RecordingChannel(name='C%d' % i, index=i)
         rc.recordingchannelgroups = [rcg]
         rcs.append(rc)
     rcg.recordingchannels = rcs
 
-    units = [neo.Unit('U%d' % i) for i in xrange(n_units)]
+    units = [neo.Unit('U%d' % i) for i in range(n_units)]
     rcg.units = units
 
     block = neo.Block()
