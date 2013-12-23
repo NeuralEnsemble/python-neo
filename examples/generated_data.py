@@ -19,10 +19,10 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     and spike trains.
     """
     feature_len = feature_samples / data_samples
-    
+
     # Create container and grouping objects
     segments = [neo.Segment(index=i) for i in xrange(n_segments)]
-        
+
     rcg = neo.RecordingChannelGroup(name='T0')
     rcs = []
     for i in xrange(n_channels):
@@ -30,18 +30,18 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
         rc.recordingchannelgroups = [rcg]
         rcs.append(rc)
     rcg.recordingchannels = rcs
-    
+
     units = [neo.Unit('U%d' % i) for i in xrange(n_units)]
     rcg.units = units
-    
+
     block = neo.Block()
     block.segments = segments
     block.recordingchannelgroups = [rcg]
-    
+
     # Create synthetic data
     for i, seg in enumerate(segments):
         feature_pos = np.random.randint(0, data_samples - feature_samples)
-        
+
         # Analog signals: Noise with a single sinewave feature
         for rc in rcs:
             sig = np.random.randn(data_samples)
@@ -50,21 +50,21 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
             signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
             seg.analogsignals.append(signal)
             rc.analogsignals.append(signal)
-        
+
         # Spike trains: Random spike times with elevated rate in short period
         feature_time = feature_pos / data_samples
         for u in units:
             spikes = np.hstack(
-                [np.random.rand(20), 
+                [np.random.rand(20),
                  np.random.rand(5) * feature_len + feature_time])
-            
+
             train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
             seg.spiketrains.append(train)
             u.spiketrains.append(train)
-    
+
     neo.io.tools.create_many_to_one_relationship(block)
     return block
-    
+
 block = generate_block()
 
 
@@ -72,37 +72,37 @@ block = generate_block()
 # in each:
 for seg in block.segments:
     print("Analysing segment %d" % seg.index)
-    
+
     siglist = seg.analogsignals
     time_points = siglist[0].times
     avg = np.mean(siglist, axis=0)
-    
+
     plt.figure()
     plt.plot(time_points.magnitude, avg)
     plt.title("Peak response in segment %d: %f" % (seg.index, avg.max()))
 
-# The second alternative is spatial traversal of the data (by channel), with 
-# averaging over trials. For example, perhaps you wish to see which physical 
+# The second alternative is spatial traversal of the data (by channel), with
+# averaging over trials. For example, perhaps you wish to see which physical
 # location produces the strongest response, and each stimulus was the same:
 
 # We assume that our block has only 1 RecordingChannelGroup
 rcg = block.recordingchannelgroups[0]
 for rc in rcg.recordingchannels:
     print("Analysing channel %d: %s" % (rc.index, rc.name))
-    
+
     siglist = rc.analogsignals
     time_points = siglist[0].times
     avg = np.mean(siglist, axis=0)
-    
+
     plt.figure()
     plt.plot(time_points.magnitude, avg)
     plt.title("Average response on channel %d" % rc.index)
 
-# There are three ways to access the spike train data: by segment, 
+# There are three ways to access the spike train data: by segment,
 # by recording channel or by unit.
 
-# By Segment. In this example, each Segment represents data from one trial, 
-# and we want a peristimulus time histogram (PSTH) for each trial from all 
+# By Segment. In this example, each Segment represents data from one trial,
+# and we want a peristimulus time histogram (PSTH) for each trial from all
 # units combined:
 for seg in block.segments:
     print("Analysing segment %d" % seg.index)
@@ -119,8 +119,8 @@ for unit in block.list_units:
     plt.figure()
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
     plt.title("PSTH of unit %s" % unit.name)
-    
-# By RecordingChannelGroup. Here we calculate a PSTH averaged over trials by 
+
+# By RecordingChannelGroup. Here we calculate a PSTH averaged over trials by
 # channel location, blending all units:
 for rcg in block.recordingchannelgroups:
     stlist = []
