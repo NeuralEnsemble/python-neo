@@ -197,7 +197,7 @@ Python 3
 
 Neo core should work with both recent versions of Python 2 (versions 2.6 and 2.7)
 and Python 3. Neo IO modules should ideally work with both Python 2 and 3, but
-certain modules may only work with one or the other (see :doc:install).
+certain modules may only work with one or the other (see :doc:`install`).
 
 So far, we have managed to write code that works with both Python 2 and 3.
 Mainly this involves avoiding the ``print`` statement (use ``logging.info``
