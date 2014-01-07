@@ -11,9 +11,6 @@ Supported: Read/Write
 Authors: Andrew Davison
 """
 
-# needed for python 3 compatibility
-from __future__ import with_statement
-
 try:
     import cPickle as pickle  # Python 2
 except ImportError:

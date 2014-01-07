@@ -21,7 +21,6 @@ import struct
 import sys
 
 import numpy as np
-from numpy import dtype
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -210,7 +209,7 @@ class TdtIO(BaseIO):
                                               t_start=(h['timestamp'] -
                                                        global_t_start) * pq.s,
                                               channel_index=channel)
-                        anaSig.lazy_dtype = dtype(DataFormats[h['dataformat']])
+                        anaSig.lazy_dtype = np.dtype(DataFormats[h['dataformat']])
                         anaSig.pos = 0
 
                         # for counting:
@@ -362,15 +361,15 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = struct.unpack(fmt , buf)
             if len(val) == 1:
                 val = val[0]
             else :
                 val = list(val)
-            #~ if 's' in format :
+            #~ if 's' in fmt :
                 #~ val = val.replace('\x00','')
             d[key] = val
         return d

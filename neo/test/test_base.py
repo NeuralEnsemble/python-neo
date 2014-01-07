@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Tests of the neo.core.baseneo.BaseNeo class and related functions
@@ -7,7 +6,6 @@ Tests of the neo.core.baseneo.BaseNeo class and related functions
 from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from fractions import Fraction
-from platform import python_version
 import sys
 
 try:
@@ -234,13 +232,9 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
         self.assertEqual(value, self.base.annotations['data'])
         self.assertDictEqual(result, self.base.annotations)
 
-    @unittest.skipIf(sys.version_info[0] >= 3,
-                     "not supported in python %s" % python_version())
     def test_python_unicode(self):
         '''test to make sure unicode type data is accepted'''
-        # the eval is needed because otherwise
-        # it is a SyntaxError in Python 3.2
-        value = eval("u'this is also a test'")
+        value = u'this is also a test'
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -558,11 +552,13 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    @unittest.skipIf(sys.version_info[0] >= 3,
-                     "not supported in python %s" % python_version())
     def test_numpy_array_string0(self):
         '''test to make sure string0 type numpy arrays are accepted'''
-        value = np.array([1, 2, 3, 4, 5], dtype=np.string0)
+        if sys.version_info[0] >= 3:
+            dtype = np.str0
+        else:
+            dtype = np.string0
+        value = np.array([1, 2, 3, 4, 5], dtype=dtype)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -753,11 +749,13 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
-    @unittest.skipIf(sys.version_info[0] >= 3,
-                     "not supported in python %s" % python_version())
     def test_numpy_scalar_string0(self):
         '''test to make sure string0 type numpy scalars are rejected'''
-        value = np.array(99, dtype=np.string0)
+        if sys.version_info[0] >= 3:
+            dtype = np.str0
+        else:
+            dtype = np.string0
+        value = np.array(99, dtype=dtype)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)

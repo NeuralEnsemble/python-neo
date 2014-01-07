@@ -1,11 +1,7 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
 Tools for use with neo tests.
 '''
-
-# needed for python 3 compatibility
-from __future__ import with_statement
 
 import hashlib
 import os
@@ -381,8 +377,9 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     'Lazy loaded error %s.%s.size = %s' % \
                     (classname, attrname, getattr(ob, attrname).size)
                 assert hasattr(ob,  'lazy_shape'), \
-                    'Lazy loaded error %s should have lazy_shape attribute ' +\
-                    'because of %s attribute' % (classname, attrname, )
+                    'Lazy loaded error ' +\
+                    '%s should have lazy_shape attribute ' % classname +\
+                    'because of %s attribute' % attrname
 
 
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',

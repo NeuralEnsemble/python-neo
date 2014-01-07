@@ -198,8 +198,22 @@ from distutils import version
 
 import numpy as np
 import quantities as pq
-from tables import NoSuchNodeError as NSNE
-import tables as tb
+
+# check tables
+try:
+    import tables as tb
+except ImportError as err:
+    HAVE_TABLES = False
+    TABLES_ERR = err
+else:
+    if version.LooseVersion(tb.__version__) < '2.2':
+        HAVE_TABLES = False
+        TABLES_ERR = ImportError("your pytables version is too old to " +
+                                 "support NeoHdf5IO, you need at least 2.2. " +
+                                 "You have %s" % tb.__version__)
+    else:
+        HAVE_TABLES = True
+        TABLES_ERR = None
 
 from neo.core import Block
 from neo.description import (class_by_name, name_by_class,
@@ -211,9 +225,6 @@ from neo.description import (class_by_name, name_by_class,
                              one_to_many_relationship)
 from neo.io.baseio import BaseIO
 from neo.io.tools import create_many_to_one_relationship, LazyList
-
-if version.LooseVersion(tb.__version__) < '2.2':
-    raise ImportError("your pytables version is too old to support NeoHdf5IO, you need at least 2.2 you have %s" % tb.__version__)
 
 logger = logging.getLogger("Neo")
 
@@ -268,6 +279,8 @@ class NeoHdf5IO(BaseIO):
     is_writable = True
 
     def __init__(self, filename=None, **kwargs):
+        if not HAVE_TABLES:
+            raise TABLES_ERR
         BaseIO.__init__(self, filename=filename)
         self.connected = False
         self.objects_by_ref = {}  # Loaded objects by reference id
@@ -386,7 +399,7 @@ class NeoHdf5IO(BaseIO):
         cascade: True/False process downstream relationships
         lazy: True/False process any quantity/ndarray attributes """
 
-        def assign_attribute(obj_attr, attr_name):
+        def assign_attribute(obj_attr, attr_name, path, node):
             """ subfunction to serialize a given attribute """
             if isinstance(obj_attr, pq.Quantity) or isinstance(obj_attr, np.ndarray):
                 if not lazy:
@@ -423,7 +436,7 @@ class NeoHdf5IO(BaseIO):
             path = str(obj.hdf5_path)
             try:
                 node = self._data.getNode(obj.hdf5_path)
-            except NSNE:  # create a new node?
+            except tb.NoSuchNodeError:  # create a new node?
                 raise LookupError("A given object has a path %s attribute, \
                     but such an object does not exist in the file. Please \
                     correct these values or delete this attribute \
@@ -440,10 +453,10 @@ class NeoHdf5IO(BaseIO):
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
-                assign_attribute(getattr(obj, attr[0]), attr[0])
+                assign_attribute(getattr(obj, attr[0]), attr[0], path, node)
             # not forget to save AS, ASA or ST - NEO "stars"
         if obj_type in classes_inheriting_quantities.keys():
-            assign_attribute(obj, classes_inheriting_quantities[obj_type])
+            assign_attribute(obj, classes_inheriting_quantities[obj_type], path, node)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         node._f_setAttr("object_ref", uuid.uuid4().hex)
@@ -456,7 +469,7 @@ class NeoHdf5IO(BaseIO):
                 container = child_name.lower() + "s"  # like "units"
                 try:
                     ch = self._data.getNode(node, container)
-                except NSNE:
+                except tb.NoSuchNodeError:
                     ch = self._data.createGroup(node, container)
                 saved = []  # keeps track of saved object names for removal
                 for child in getattr(obj, container):
@@ -471,7 +484,7 @@ class NeoHdf5IO(BaseIO):
                                     name_by_class[child.__class__], ch._v_pathname)
                                 if not hasattr(ch, new_name):  # Only link if path does not exist
                                     child_node = self._data.createHardLink(ch._v_pathname, new_name, target)
-                            except NSNE:
+                            except tb.NoSuchNodeError:
                                 pass
                     if child_node is None:
                         child_node = self.save(child, where=ch._v_pathname)
@@ -644,7 +657,7 @@ class NeoHdf5IO(BaseIO):
         """ Returns a requested NEO object as instance of NEO class.
         Set lazy_loaded to True to load a previously lazily loaded object
         (cache is ignored in this case)."""
-        def fetch_attribute(attr_name):
+        def fetch_attribute(attr_name, attr, node):
             """ fetch required attribute from the corresp. node in the file """
             try:
                 if attr[1] == pq.Quantity:
@@ -657,7 +670,7 @@ class NeoHdf5IO(BaseIO):
                     if not lazy or sum(arr.shape) <= 1:
                         nattr = pq.Quantity(arr.read(), units)
                     else:  # making an empty array
-                        nattr = pq.Quantity(np.empty(tuple([0 for x in range(attr[2])])), units)
+                        nattr = pq.Quantity(np.empty(tuple([0 for _ in range(attr[2])])), units)
                 elif attr[1] == np.ndarray:
                     arr = self._data.getNode(node, attr_name)
                     if not lazy:
@@ -670,11 +683,11 @@ class NeoHdf5IO(BaseIO):
                     nattr = node._f_getAttr(attr_name)
                     if attr[1] == str or attr[1] == int:
                         nattr = attr[1](nattr)  # compliance with NEO attr types
-            except (AttributeError, NSNE):  # not assigned, continue
+            except (AttributeError, tb.NoSuchNodeError):  # not assigned, continue
                 nattr = None
             return nattr
 
-        def get_lazy_shape(obj):
+        def get_lazy_shape(obj, node):
             attr = lazy_shape_arrays[type(obj).__name__]
             arr = self._data.getNode(node, attr)
             return arr.shape
@@ -692,7 +705,7 @@ class NeoHdf5IO(BaseIO):
             if path == "/":
                 raise ValueError()  # root is not a NEO object
             node = self._data.getNode(path)
-        except (NSNE, ValueError):  # create a new node?
+        except (tb.NoSuchNodeError, ValueError):  # create a new node?
             raise LookupError("There is no valid object with a given path " +
                               str(path) + ' . Please give correct path or just browse the file '
                               '(e.g. NeoHdf5IO()._data.root.<Block>._segments...) to find an '
@@ -717,12 +730,12 @@ class NeoHdf5IO(BaseIO):
             attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
             for i, attr in enumerate(attrs):
                 attr_name = attr[0]
-                nattr = fetch_attribute(attr_name)
+                nattr = fetch_attribute(attr_name, attr, node)
                 if nattr is not None:
                     kwargs[attr_name] = nattr
             obj = class_by_name[obj_type](**kwargs)  # instantiate new object
             if lazy and obj_type in lazy_shape_arrays:
-                obj.lazy_shape = get_lazy_shape(obj)
+                obj.lazy_shape = get_lazy_shape(obj, node)
             self._update_path(obj, node)  # set up HDF attributes: name, path
             try:
                 setattr(obj, "annotations", node._f_getAttr("annotations"))

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Tests of neo.io.exampleio
@@ -12,13 +11,7 @@ try:
 except ImportError:
     import unittest
 
-try:
-    import scipy
-    have_scipy = True
-except ImportError:
-    have_scipy = False
-
-from neo.io import ExampleIO
+from neo.io.exampleio import ExampleIO, HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
@@ -31,7 +24,7 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
 
 
 class TestExample2IO(unittest.TestCase):
-    @unittest.skipUnless(have_scipy, "requires scipy")
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)
         seg = r.read_segment(cascade=True, lazy=True)
@@ -48,7 +41,7 @@ class TestExample2IO(unittest.TestCase):
         for st in seg.spiketrains:
             self.assertNotEqual(st.size, 0)
 
-    @unittest.skipUnless(have_scipy, "requires scipy")
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_read_segment_cascade(self):
         r = ExampleIO(filename=None)
         seg = r.read_segment(cascade=False)
@@ -56,12 +49,12 @@ class TestExample2IO(unittest.TestCase):
         seg = r.read_segment(cascade=True, num_analogsignal=4)
         self.assertEqual(len(seg.analogsignals), 4)
 
-    @unittest.skipUnless(have_scipy, "requires scipy")
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_read_analogsignal(self):
         r = ExampleIO(filename=None)
         r.read_analogsignal(lazy=False, segment_duration=15., t_start=-1)
 
-    @unittest.skipUnless(have_scipy, "requires scipy")
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def read_spiketrain(self):
         r = ExampleIO(filename=None)
         r.read_spiketrain(lazy=False,)

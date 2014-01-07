@@ -10,11 +10,9 @@ Author: sgarcia
 
 """
 
-import csv
 import os
 
 import numpy as np
-from numpy import newaxis
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -100,19 +98,19 @@ class AsciiSpikeTrainIO(BaseIO):
 
         f = open(self.filename, 'Ur')
         for i,line in enumerate(f) :
-            all = line[:-1].split(delimiter)
-            if all[-1] == '': all = all[:-1]
-            if all[0] == '': all = all[1:]
+            alldata = line[:-1].split(delimiter)
+            if alldata[-1] == '': alldata = alldata[:-1]
+            if alldata[0] == '': alldata = alldata[1:]
             if lazy:
                 spike_times = [ ]
                 t_stop = t_start
             else:
-                spike_times = np.array(all).astype('f')
+                spike_times = np.array(alldata).astype('f')
                 t_stop = spike_times.max()*unit
 
             sptr = SpikeTrain(spike_times*unit, t_start=t_start, t_stop=t_stop)
             if lazy:
-                sptr.lazy_shape = len(all)
+                sptr.lazy_shape = len(alldata)
 
             sptr.annotate(channel_index = i)
             seg.spiketrains.append(sptr)

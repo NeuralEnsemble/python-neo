@@ -9,7 +9,6 @@ Supported : Read
 Author: sgarcia
 """
 
-import datetime
 import os
 import re
 
@@ -74,10 +73,10 @@ class BrainVisionIO(BaseIO):
         nb_channel = int(header['Common Infos']['NumberOfChannels'])
         sampling_rate = 1.e6/float(header['Common Infos']['SamplingInterval']) * pq.Hz
 
-        format = header['Binary Infos']['BinaryFormat']
-        formats = { 'INT_16':np.int16, 'IEEE_FLOAT_32':np.float32,}
-        assert format in formats, NotImplementedError
-        dt = formats[format]
+        fmt = header['Binary Infos']['BinaryFormat']
+        fmts = { 'INT_16':np.int16, 'IEEE_FLOAT_32':np.float32,}
+        assert fmt in fmts, NotImplementedError
+        dt = fmts[fmt]
 
         seg = Segment(file_origin = os.path.basename(self.filename), )
         if not cascade : return seg
@@ -109,12 +108,12 @@ class BrainVisionIO(BaseIO):
 
         # read marker
         marker_file = os.path.splitext(self.filename)[0]+'.vmrk'
-        all = readBrainSoup(marker_file)['Marker Infos']
+        all_info = readBrainSoup(marker_file)['Marker Infos']
         all_types = [ ]
         times = [ ]
         labels = [ ]
-        for i in range(len(all)):
-            type_, label, pos, size, channel = all['Mk%d' % (i+1,)].split(',')[:5]
+        for i in range(len(all_info)):
+            type_, label, pos, size, channel = all_info['Mk%d' % (i+1,)].split(',')[:5]
             all_types.append(type_)
             times.append(float(pos)/sampling_rate.magnitude)
             labels.append(label)
@@ -144,19 +143,19 @@ class BrainVisionIO(BaseIO):
 
 def readBrainSoup(filename):
     section = None
-    all = { }
+    all_info = { }
     for line in open(filename , 'rU'):
         line = line.strip('\n').strip('\r')
         if line.startswith('['):
             section = re.findall('\[([\S ]+)\]', line)[0]
-            all[section] = { }
+            all_info[section] = { }
             continue
         if line.startswith(';'):
             continue
         if '=' in line and len(line.split('=')) ==2:
             k,v = line.split('=')
-            all[section][k] = v
-    return all
+            all_info[section][k] = v
+    return all_info
 
 
 

@@ -365,55 +365,55 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                      "description", "channel_index", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
-    def _apply_operator(self, other, op):
+    def _apply_operator(self, other, op, *args):
         '''
         Handle copying metadata to the new :class:`BaseAnalogSignal`
         after a mathematical operation.
         '''
         self._check_consistency(other)
         f = getattr(super(BaseAnalogSignal, self), op)
-        new_signal = f(other)
+        new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         return new_signal
 
-    def __add__(self, other):
+    def __add__(self, other, *args):
         '''
         Addition (+)
         '''
-        return self._apply_operator(other, "__add__")
+        return self._apply_operator(other, "__add__", *args)
 
-    def __sub__(self, other):
+    def __sub__(self, other, *args):
         '''
         Subtraction (-)
         '''
-        return self._apply_operator(other, "__sub__")
+        return self._apply_operator(other, "__sub__", *args)
 
-    def __mul__(self, other):
+    def __mul__(self, other, *args):
         '''
         Multiplication (*)
         '''
-        return self._apply_operator(other, "__mul__")
+        return self._apply_operator(other, "__mul__", *args)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other, *args):
         '''
         Float division (/)
         '''
-        return self._apply_operator(other, "__truediv__")
+        return self._apply_operator(other, "__truediv__", *args)
 
-    def __div__(self, other):
+    def __div__(self, other, *args):
         '''
         Integer division (//)
         '''
-        return self._apply_operator(other, "__div__")
+        return self._apply_operator(other, "__div__", *args)
 
     __radd__ = __add__
     __rmul__ = __sub__
 
-    def __rsub__(self, other):
+    def __rsub__(self, other, *args):
         '''
         Backwards subtraction (other-self)
         '''
-        return self.__mul__(-1) + other
+        return self.__mul__(-1, *args) + other
 
     def _repr_pretty_(self, pp, cycle):
         '''
@@ -437,8 +437,6 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
                 pp.text(line)
         if hasattr(self, "channel_index"):
             _pp("channel index: {0}".format(self.channel_index))
-        elif hasattr(self, "channel_indexes"):
-            _pp("channel indices: %s" % self.channel_indexes)
         for line in ["sampling rate: {0}".format(self.sampling_rate),
                      "time: {0} to {1}".format(self.t_start, self.t_stop)
                      ]:

@@ -15,16 +15,17 @@ urllib.urlretrieve(distantfile, localfile)
 
 #create a reader
 reader = neo.io.PlexonIO(filename='File_plexon_3.plx')
-# read the block
-bl = reader.read(cascade=True, lazy=False)
-print bl
+# read the blocks
+blks = reader.read(cascade=True, lazy=False)
+print blks
 # acces to segments
-for seg in bl.segments:
-    print seg
-    for asig in seg.analogsignals:
-        print asig
-    for st in seg.spiketrains:
-        print st
+for blk in blks:
+    for seg in blk.segments:
+        print seg
+        for asig in seg.analogsignals:
+            print asig
+        for st in seg.spiketrains:
+            print st
 
 
 # CED Spike2 files

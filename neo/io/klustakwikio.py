@@ -21,13 +21,20 @@ import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
-import quantities as pq
-import matplotlib.mlab as mlab
+try:
+    import matplotlib.mlab as mlab
+except ImportError as err:
+    HAVE_MLAB = False
+    MLAB_ERR = err
+else:
+    HAVE_MLAB = True
+    MLAB_ERR = None
+
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-from neo.core import (Block, Segment, Unit, AnalogSignal, SpikeTrain)
+from neo.core import Block, Segment, Unit, SpikeTrain
 from neo.io.tools import create_many_to_one_relationship
 
 # Pasted version of feature file format spec
@@ -100,6 +107,8 @@ class KlustaKwikIO(BaseIO):
         sampling_rate : in Hz, necessary because the KlustaKwik files
             stores data in samples.
         """
+        if not HAVE_MLAB:
+            raise MLAB_ERR
         BaseIO.__init__(self)
         #self.filename = os.path.normpath(filename)
         self.filename, self.basename = os.path.split(os.path.abspath(filename))
@@ -308,7 +317,7 @@ class KlustaKwikIO(BaseIO):
                 except KeyError:
                     # Use empty
                     all_features = [
-                        [] for n in range(len(spike_times_in_samples))]
+                        [] for _ in range(len(spike_times_in_samples))]
                 all_features = np.asarray(all_features)
                 if all_features.ndim != 2:
                     raise ValueError("waveform features should be 2d array")

@@ -17,7 +17,6 @@ import struct
 import sys
 
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty
 import quantities as pq
 
 from neo.io.baseio import BaseIO
@@ -92,7 +91,7 @@ class WinWcpIO(BaseIO):
             key,val = line.split('=')
             if key in ['NC', 'NR','NBH','NBA','NBD','ADCMAX','NP','NZ', ] :
                 val = int(val)
-            if key in ['AD', 'DT', ] :
+            elif key in ['AD', 'DT', ] :
                 val = val.replace(',','.')
                 val = float(val)
             header[key] = val
@@ -114,7 +113,7 @@ class WinWcpIO(BaseIO):
             NP = NP - NP%header['NC']
             NP = NP/header['NC']
             if not lazy:
-                data = np.memmap(self.filename , dtype('i2')  , 'r',
+                data = np.memmap(self.filename , np.dtype('i2')  , 'r',
                               #shape = (header['NC'], header['NP']) ,
                               shape = (NP,header['NC'], ) ,
                               offset = offset+header['NBA']*SECTORSIZE)
@@ -175,8 +174,8 @@ class HeaderReader():
     def read_f(self, offset =0):
         self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            val = struct.unpack(format , self.fid.read(struct.calcsize(format)))
+        for key, fmt in self.description :
+            val = struct.unpack(fmt , self.fid.read(struct.calcsize(fmt)))
             if len(val) == 1:
                 val = val[0]
             else :

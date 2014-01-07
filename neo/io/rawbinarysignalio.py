@@ -168,6 +168,9 @@ class RawBinarySignalIO(BaseIO):
             rangemin , rangemax : if the dtype is integer, range can give in volt the min and the max of the range
 
         """
+        if bytesoffset:
+            raise NotImplementedError('bytesoffset values other than 0 ' +
+                                      'not supported')
 
         dtype = np.dtype(dtype)
 

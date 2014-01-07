@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Tests of neo.io.neomatlabio
@@ -13,15 +12,10 @@ except ImportError:
     import unittest
 
 from neo.test.iotest.common_io_test import BaseTestIO
-try:
-    from neo.io import NeoMatlabIO
-    can_run = True
-except ImportError:
-    can_run = False
-    NeoMatlabIO = None
+from neo.io.neomatlabio import NeoMatlabIO, HAVE_SCIPY
 
 
-@unittest.skipUnless(can_run, "NeoMatlabIO not available")
+@unittest.skipUnless(HAVE_SCIPY, "requires scipy")
 class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     ioclass = NeoMatlabIO
     files_to_test = []

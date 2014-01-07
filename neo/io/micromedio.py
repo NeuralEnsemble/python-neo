@@ -30,8 +30,8 @@ from neo.io.tools import create_many_to_one_relationship
 
 
 class struct_file(file):
-    def read_f(self, format):
-        return struct.unpack(format , self.read(struct.calcsize(format)))
+    def read_f(self, fmt):
+        return struct.unpack(fmt , self.read(struct.calcsize(fmt)))
 
 
 class MicromedIO(BaseIO):
@@ -93,8 +93,8 @@ class MicromedIO(BaseIO):
 
         #Date
         f.seek(128,0)
-        day, month, year, hour, min, sec = f.read_f('bbbbbb')
-        rec_datetime = datetime.datetime(year+1900 , month , day, hour, min, sec)
+        day, month, year, hour, minute, sec = f.read_f('bbbbbb')
+        rec_datetime = datetime.datetime(year+1900 , month , day, hour, minute, sec)
 
         f.seek(138,0)
         Data_Start_Offset , Num_Chan , Multiplexer , Rate_Min , Bytes = f.read_f('IHHHH')
