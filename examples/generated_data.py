@@ -75,7 +75,7 @@ for seg in block.segments:
 
     siglist = seg.analogsignals
     time_points = siglist[0].times
-    avg = np.mean(siglist, axis=0)
+    avg = np.mean(siglist, axis=0)  # Average over signals of Segment
 
     plt.figure()
     plt.plot(time_points, avg)
@@ -85,14 +85,15 @@ for seg in block.segments:
 # averaging over trials. For example, perhaps you wish to see which physical
 # location produces the strongest response, and each stimulus was the same:
 
-# We assume that our block has only 1 RecordingChannelGroup
+# We assume that our block has only 1 RecordingChannelGroup and each
+# RecordingChannel only has 1 AnalogSignal.
 rcg = block.recordingchannelgroups[0]
 for rc in rcg.recordingchannels:
     print("Analysing channel %d: %s" % (rc.index, rc.name))
 
     siglist = rc.analogsignals
     time_points = siglist[0].times
-    avg = np.mean(siglist, axis=0)
+    avg = np.mean(siglist, axis=0)  # Average over signals of RecordingChannel
 
     plt.figure()
     plt.plot(time_points, avg)
@@ -129,6 +130,6 @@ for rcg in block.recordingchannelgroups:
     count, bins = np.histogram(np.hstack(stlist))
     plt.figure()
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
-    plt.title("PSTH blend of tetrode %s" % rcg.name)
+    plt.title("PSTH blend of recording channel group %s" % rcg.name)
 
 plt.show()
