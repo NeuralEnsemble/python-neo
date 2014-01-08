@@ -3,12 +3,13 @@
 This is an example for creating simple plots from various Neo structures.
 It includes a function that generates toy data.
 """
-from __future__ import division
+from __future__ import division  # Use same division in Python 2 and 3
 
 import numpy as np
 import quantities as pq
-import neo
 from matplotlib import pyplot as plt
+
+import neo
 
 
 def generate_block(n_segments=3, n_channels=8, n_units=3,
@@ -24,12 +25,10 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     segments = [neo.Segment(index=i) for i in range(n_segments)]
 
     rcg = neo.RecordingChannelGroup(name='T0')
-    rcs = []
     for i in range(n_channels):
         rc = neo.RecordingChannel(name='C%d' % i, index=i)
         rc.recordingchannelgroups = [rcg]
-        rcs.append(rc)
-    rcg.recordingchannels = rcs
+        rcg.recordingchannels.append(rc)
 
     units = [neo.Unit('U%d' % i) for i in range(n_units)]
     rcg.units = units
@@ -39,14 +38,15 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     block.recordingchannelgroups = [rcg]
 
     # Create synthetic data
-    for i, seg in enumerate(segments):
+    for _, seg in enumerate(segments):
         feature_pos = np.random.randint(0, data_samples - feature_samples)
 
         # Analog signals: Noise with a single sinewave feature
-        for rc in rcs:
+        wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
+        for rc in rcg.recordingchannels:
             sig = np.random.randn(data_samples)
-            sig[feature_pos:feature_pos + feature_samples] += \
-                3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
+            sig[feature_pos:feature_pos + feature_samples] += wave
+
             signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
             seg.analogsignals.append(signal)
             rc.analogsignals.append(signal)
@@ -54,9 +54,9 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
         # Spike trains: Random spike times with elevated rate in short period
         feature_time = feature_pos / data_samples
         for u in units:
-            spikes = np.hstack(
-                [np.random.rand(20),
-                 np.random.rand(5) * feature_len + feature_time])
+            random_spikes = np.random.rand(20)
+            feature_spikes = np.random.rand(5) * feature_len + feature_time
+            spikes = np.hstack([random_spikes, feature_spikes])
 
             train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
             seg.spiketrains.append(train)
@@ -78,7 +78,7 @@ for seg in block.segments:
     avg = np.mean(siglist, axis=0)
 
     plt.figure()
-    plt.plot(time_points.magnitude, avg)
+    plt.plot(time_points, avg)
     plt.title("Peak response in segment %d: %f" % (seg.index, avg.max()))
 
 # The second alternative is spatial traversal of the data (by channel), with
@@ -95,7 +95,7 @@ for rc in rcg.recordingchannels:
     avg = np.mean(siglist, axis=0)
 
     plt.figure()
-    plt.plot(time_points.magnitude, avg)
+    plt.plot(time_points, avg)
     plt.title("Average response on channel %d" % rc.index)
 
 # There are three ways to access the spike train data: by segment,
@@ -130,3 +130,5 @@ for rcg in block.recordingchannelgroups:
     plt.figure()
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
     plt.title("PSTH blend of tetrode %s" % rcg.name)
+
+plt.show()
