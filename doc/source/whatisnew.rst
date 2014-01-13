@@ -3,6 +3,10 @@ Release notes
 *************
 
 
+What's new in version 0.4.0?
+----------------------------
+
+
 What's new in version 0.3.2?
 ----------------------------
 
