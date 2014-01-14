@@ -24,8 +24,10 @@ checks for dimensional consistency and automatic unit conversion.
 Code status
 -----------
 
-.. image:: https://secure.travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
-   :target: https://travis-ci.org/NeuralEnsemble/python-neo.png
+.. image:: https://travis-ci.org/NeuralEnsemble/python-neo.png?branch=master
+   :target: https://travis-ci.org/NeuralEnsemble/python-neo
+.. image:: https://coveralls.io/repos/NeuralEnsemble/python-neo/badge.png
+   :target: https://coveralls.io/r/NeuralEnsemble/python-neo
 
 More information
 ----------------
