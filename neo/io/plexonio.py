@@ -224,7 +224,7 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    evarrays[pos] = time
+                    evarrays[chan][pos] = time
                     eventpositions[chan]+= 1
 
                 elif dataBlockHeader['Type'] == 5:
