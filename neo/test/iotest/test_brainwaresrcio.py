@@ -71,7 +71,7 @@ def proc_src(filename):
         chan_names.append(name)
         chan = RecordingChannel(file_origin='filename',
                                 name=name,
-                                index=i)
+                                index=int(i))
         rcg.recordingchannels.append(chan)
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
