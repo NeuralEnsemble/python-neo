@@ -29,6 +29,8 @@ TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]
 
 def generate_one_simple_block(block_name='block_0', nb_segment=3,
                               supported_objects=[], **kws):
+    if supported_objects and Block not in supported_objects:
+        raise ValueError('Block must be in supported_objects')
     bl = Block()  # name = block_name)
 
     objects = supported_objects
@@ -41,6 +43,7 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
     if RecordingChannel in objects:
         populate_RecordingChannel(bl)
 
+    create_many_to_one_relationship(bl)
     return bl
 
 
@@ -73,6 +76,8 @@ def generate_one_simple_segment(seg_name='segment 0',
                                 epoch_array_duration_range=[.5, 3.],
 
                                 ):
+    if supported_objects and Segment not in supported_objects:
+        raise ValueError('Segment must be in supported_objects')
     seg = Segment(name=seg_name)
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
@@ -128,13 +133,16 @@ def generate_one_simple_segment(seg_name='segment 0',
 
     # TODO : Spike, Event, Epoch
 
+    create_many_to_one_relationship(seg)
     return seg
 
 
 def generate_from_supported_objects(supported_objects):
     #~ create_many_to_one_relationship
+    if not supported_objects:
+        raise ValueError('No objects specified')
     objects = supported_objects
-    if Block in objects:
+    if Block in supported_objects:
         higher = generate_one_simple_block(supported_objects=objects)
 
         # Chris we do not create RC and RCG if it is not in objects
@@ -151,28 +159,56 @@ def generate_from_supported_objects(supported_objects):
     return higher
 
 
-def get_fake_value(attr):  # attr = (name, type, [dim, [dtype]])
-    """ returns default value for a given attribute based on description.py """
-    if attr[1] == pq.Quantity or attr[1] == np.ndarray:
-        size = []
-        for i in range(int(attr[2])):
-            size.append(np.random.randint(100) + 1)
-        to_set = np.random.random(size) * pq.millisecond  # let it be ms
-        if attr[0] == 't_start':
-            to_set = 0.0 * pq.millisecond
-        if attr[0] == 't_stop':
-            to_set = 1.0 * pq.millisecond
-        if attr[0] == 'sampling_rate':
-            to_set = 10000.0 * pq.Hz
-    if attr[1] == np.ndarray:
-        to_set = np.array(to_set, dtype=attr[3])
-    if attr[1] == str:
-        to_set = str(np.random.randint(100000))
-    if attr[1] == int:
-        to_set = np.random.randint(100)
-    if attr[1] == datetime:
-        to_set = datetime.now()
-    return to_set
+def get_fake_value(name, datatype, dim=0, dtype='float', seed=None):
+    """
+    Returns default value for a given attribute based on description.py
+
+    If seed is not None, use the seed to set the random number generator.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+
+    if datatype == str:
+        return str(np.random.randint(100000))
+    if datatype == int:
+        return np.random.randint(100)
+    if datatype == float:
+        return 1000. * np.random.random()
+    if datatype == datetime:
+        return datetime.now()
+
+    if name == 't_start':
+        if datatype != pq.Quantity or dim:
+            raise ValueError('t_start must be a 0D Quantity, ' +
+                             'not a %sD %s' % (dim, datatype))
+        return 0.0 * pq.millisecond
+
+    if name == 't_stop':
+        if datatype != pq.Quantity or dim:
+            raise ValueError('t_stop must be a 0D Quantity, ' +
+                             'not a %sD %s' % (dim, datatype))
+        return 1.0 * pq.millisecond
+
+    if name == 'sampling_rate':
+        if datatype != pq.Quantity or dim:
+            raise ValueError('sampling_rate must be a 0D Quantity, ' +
+                             'not a %sD %s' % (dim, datatype))
+        return 10000.0 * pq.Hz
+
+    # only put array types below here
+    size = []
+    for i in range(int(dim)):
+        size.append(np.random.randint(100) + 1)
+    arr = np.random.random(size)
+
+    if datatype == pq.Quantity:
+        return arr * pq.millisecond  # let it be ms
+    if datatype == np.ndarray:
+        return np.array(arr, dtype=dtype)
+
+    # we have gone through everything we know, so it must be something invalid
+    raise ValueError('Unknown name/datatype combination %s %s' % (name,
+                                                                  datatype))
 
 
 def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
@@ -183,16 +219,22 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
     _follow_links - an internal variable, indicates whether to create objects
     with 'implicit' relationships, to avoid duplications. Do not use it. """
     kwargs = {}  # assign attributes
-    attrs = classes_necessary_attributes[obj_type] + \
-        classes_recommended_attributes[obj_type]
+
+    attrs = (classes_necessary_attributes[obj_type] +
+             classes_recommended_attributes[obj_type])
     for attr in attrs:
-        kwargs[attr[0]] = get_fake_value(attr)
+        kwargs[attr[0]] = get_fake_value(*attr)
+    if 'times' in kwargs and 'signal' in kwargs:
+        kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
+        kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]
+
     obj = class_by_name[obj_type](**kwargs)
+
     if cascade:
         if obj_type == "Block":
             _follow_links = False
         if obj_type in one_to_many_relationship:
-            rels = one_to_many_relationship[obj_type]
+            rels = one_to_many_relationship[obj_type][:]
             if obj_type == "RecordingChannelGroup":
                 rels += many_to_many_relationship[obj_type]
             if not _follow_links and obj_type in implicit_relationship:
@@ -204,7 +246,8 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
                 setattr(obj, child.lower() + "s", [fake_neo(child, cascade,
                         _follow_links)])
 
-    if obj_type == "Block":  # need to manually create 'implicit' connections
+    # need to manually create 'implicit' connections
+    if obj_type == "Block" and cascade:
         # connect a unit to the spike and spike train
         u = obj.recordingchannelgroups[0].units[0]
         st = obj.segments[0].spiketrains[0]
@@ -220,8 +263,12 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
         rc.analogsignals.append(obj.segments[0].analogsignals[0])
         seg = obj.segments[0]
         rc.irregularlysampledsignals.append(seg.irregularlysampledsignals[0])
+
     # add some annotations, 80%
     at = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
                range(len(TEST_ANNOTATIONS))])
     obj.annotate(**at)
+
+    create_many_to_one_relationship(obj)
+
     return obj

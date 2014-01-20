@@ -146,7 +146,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
                      classes_recommended_attributes[obj_type])
             for attr in attrs:
                 if hasattr(orig_obj, attr[0]):
-                    setattr(obj, attr[0], get_fake_value(attr))
+                    setattr(obj, attr[0], get_fake_value(*attr))
             iom.save(orig_obj)
             test_obj = iom.get(orig_obj.hdf5_path)
             assert_objects_equivalent(orig_obj, test_obj)
