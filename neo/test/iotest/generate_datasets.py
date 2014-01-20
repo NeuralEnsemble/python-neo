@@ -6,6 +6,9 @@ Generate datasets for testing
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
+from datetime import datetime
+import logging
+
 import numpy as np
 from numpy.random import rand
 import quantities as pq
@@ -14,6 +17,14 @@ from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
                       RecordingChannel, Segment, SpikeTrain)
 from neo.io.tools import (create_many_to_one_relationship,
                           populate_RecordingChannel, iteritems)
+from neo.description import (classes_necessary_attributes,
+                             classes_recommended_attributes,
+                             class_by_name, implicit_relationship,
+                             many_to_many_relationship,
+                             one_to_many_relationship)
+
+
+TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]
 
 
 def generate_one_simple_block(block_name='block_0', nb_segment=3,
@@ -138,3 +149,79 @@ def generate_from_supported_objects(supported_objects):
 
     create_many_to_one_relationship(higher)
     return higher
+
+
+def get_fake_value(attr):  # attr = (name, type, [dim, [dtype]])
+    """ returns default value for a given attribute based on description.py """
+    if attr[1] == pq.Quantity or attr[1] == np.ndarray:
+        size = []
+        for i in range(int(attr[2])):
+            size.append(np.random.randint(100) + 1)
+        to_set = np.random.random(size) * pq.millisecond  # let it be ms
+        if attr[0] == 't_start':
+            to_set = 0.0 * pq.millisecond
+        if attr[0] == 't_stop':
+            to_set = 1.0 * pq.millisecond
+        if attr[0] == 'sampling_rate':
+            to_set = 10000.0 * pq.Hz
+    if attr[1] == np.ndarray:
+        to_set = np.array(to_set, dtype=attr[3])
+    if attr[1] == str:
+        to_set = str(np.random.randint(100000))
+    if attr[1] == int:
+        to_set = np.random.randint(100)
+    if attr[1] == datetime:
+        to_set = datetime.now()
+    return to_set
+
+
+def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
+    """ Create a fake NEO object of a given type. Follows one-to-many
+    and many-to-many relationships if cascade. RC, when requested cascade, will
+    not create RGCs to avoid dead-locks.
+
+    _follow_links - an internal variable, indicates whether to create objects
+    with 'implicit' relationships, to avoid duplications. Do not use it. """
+    kwargs = {}  # assign attributes
+    attrs = classes_necessary_attributes[obj_type] + \
+        classes_recommended_attributes[obj_type]
+    for attr in attrs:
+        kwargs[attr[0]] = get_fake_value(attr)
+    obj = class_by_name[obj_type](**kwargs)
+    if cascade:
+        if obj_type == "Block":
+            _follow_links = False
+        if obj_type in one_to_many_relationship:
+            rels = one_to_many_relationship[obj_type]
+            if obj_type == "RecordingChannelGroup":
+                rels += many_to_many_relationship[obj_type]
+            if not _follow_links and obj_type in implicit_relationship:
+                for i in implicit_relationship[obj_type]:
+                    if not i in rels:
+                        logging.debug("LOOK HERE!!!" + str(obj_type))
+                    rels.remove(i)
+            for child in rels:
+                setattr(obj, child.lower() + "s", [fake_neo(child, cascade,
+                        _follow_links)])
+
+    if obj_type == "Block":  # need to manually create 'implicit' connections
+        # connect a unit to the spike and spike train
+        u = obj.recordingchannelgroups[0].units[0]
+        st = obj.segments[0].spiketrains[0]
+        sp = obj.segments[0].spikes[0]
+        u.spiketrains.append(st)
+        u.spikes.append(sp)
+        # connect RCG with ASA
+        asa = obj.segments[0].analogsignalarrays[0]
+        obj.recordingchannelgroups[0].analogsignalarrays.append(asa)
+        # connect RC to AS, IrSAS and back to RGC
+        rc = obj.recordingchannelgroups[0].recordingchannels[0]
+        rc.recordingchannelgroups.append(obj.recordingchannelgroups[0])
+        rc.analogsignals.append(obj.segments[0].analogsignals[0])
+        seg = obj.segments[0]
+        rc.irregularlysampledsignals.append(seg.irregularlysampledsignals[0])
+    # add some annotations, 80%
+    at = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+               range(len(TEST_ANNOTATIONS))])
+    obj.annotate(**at)
+    return obj
