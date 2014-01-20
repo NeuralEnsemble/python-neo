@@ -172,7 +172,7 @@ classes_recommended_attributes = {
 
     'Unit': [('channel_indexes', np.ndarray, 1, np.dtype('i'))],
 
-    'AnalogSignalArray': [('channel_indexes', np.ndarray, 1, np.dtype('i'))],
+    'AnalogSignalArray': [('channel_index', np.ndarray, 1, np.dtype('i'))],
 
     'IrregularlySampledSignal': [],
 
