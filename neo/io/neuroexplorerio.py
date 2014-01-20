@@ -22,7 +22,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
-from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroExplorerIO(BaseIO):
@@ -270,7 +269,7 @@ class NeuroExplorerIO(BaseIO):
                 seg.eventarrays.append(ea)
 
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

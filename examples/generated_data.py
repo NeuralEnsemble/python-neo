@@ -62,7 +62,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
             seg.spiketrains.append(train)
             u.spiketrains.append(train)
 
-    neo.io.tools.create_many_to_one_relationship(block)
+    block.create_many_to_one_relationship()
     return block
 
 block = generate_block()

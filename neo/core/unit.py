@@ -77,6 +77,9 @@ class Unit(BaseNeo):
 
         self.recordingchannelgroup = None
 
+        self._data_child_objects = ['Spike', 'SpikeTrain']
+        self._single_parent_objects = ['RecordingChannelGroup']
+
     def merge(self, other):
         '''
         Merge the contents of another :class:`Unit` into this one.

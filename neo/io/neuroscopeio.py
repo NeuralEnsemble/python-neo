@@ -28,7 +28,6 @@ from neo.io.baseio import BaseIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.core import (Block, Segment, RecordingChannel,  RecordingChannelGroup,
                       AnalogSignal)
-from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroScopeIO(BaseIO):
@@ -128,6 +127,6 @@ class NeuroScopeIO(BaseIO):
                 seg.analogsignals.append(sig)
                 rc_list[s].analogsignals.append(sig)
             
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 

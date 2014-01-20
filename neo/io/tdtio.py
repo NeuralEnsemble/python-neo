@@ -25,7 +25,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
-from neo.io.tools import create_many_to_one_relationship, iteritems
+from neo.io.tools import iteritems
 
 PY3K = (sys.version_info[0] == 3)
 
@@ -315,7 +315,7 @@ class TdtIO(BaseIO):
                     for sortcode, sptr in iteritems(allsorted):
                         seg.spiketrains.append( sptr )
 
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 
 

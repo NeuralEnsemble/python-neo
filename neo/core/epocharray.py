@@ -82,6 +82,8 @@ class EpochArray(BaseNeo):
 
         self.segment = None
 
+        self._single_parent_objects = ['Segment']
+
     def __repr__(self):
         '''
         Returns a string representing the :class:`EpochArray`.

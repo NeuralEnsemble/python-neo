@@ -18,7 +18,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal
-from neo.io.tools import create_many_to_one_relationship
 
 
 class RawBinarySignalIO(BaseIO):
@@ -154,7 +153,7 @@ class RawBinarySignalIO(BaseIO):
                 anaSig.lazy_shape = None
             seg.analogsignals.append(anaSig)
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment, dtype='f4', rangemin=-10,

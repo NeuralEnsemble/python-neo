@@ -40,9 +40,6 @@ from neo.io.baseio import BaseIO
 # to import from core
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
 
 # I need to subclass BaseIO
 class ExampleIO(BaseIO):
@@ -226,7 +223,7 @@ class ExampleIO(BaseIO):
 
             seg.eventarrays += [ eva ]
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

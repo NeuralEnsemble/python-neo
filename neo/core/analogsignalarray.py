@@ -158,6 +158,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+        self._single_parent_objects = ['Segment', 'RecordingChannelGroup']
 
     @property
     def channel_indexes(self):

@@ -143,7 +143,7 @@ class BlackrockIO(BaseIO):
 
         # Create hardware view, and bijectivity
         tools.populate_RecordingChannel(block)
-        tools.create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
 
         return block
 

@@ -126,6 +126,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                 dtype=float, copy=copy)
         obj.segment = None
         obj.recordingchannel = None
+
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
@@ -137,6 +138,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+
+        self._single_parent_objects = ['Segment', 'RecordingChannel']
 
     def __array_finalize__(self, obj):
         '''
@@ -161,6 +164,13 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
+        self._container_child_objects = getattr(obj,
+                                                '_container_child_objects', [])
+        self._data_child_objects = getattr(obj, '_data_child_objects', [])
+        self._single_parent_objects = getattr(obj,
+                                              '_single_parent_objects', [])
+        self._multi_child_objects = getattr(obj, '_multi_child_objects', [])
+        self._multi_parent_objects = getattr(obj, '_multi_parent_objects', [])
 
     def __repr__(self):
         '''

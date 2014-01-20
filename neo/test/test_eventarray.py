@@ -12,6 +12,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.eventarray import EventArray
+from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal, assert_same_sub_schema)
 
@@ -98,6 +99,52 @@ class TestEventArray(unittest.TestCase):
         epcares = epca1.merge(epca2)
         assert_neo_object_is_compliant(epcares)
         assert_same_sub_schema(epcatarg, epcares)
+
+    def test__children(self):
+        params = {'testarg2': 'yes', 'testarg3': True}
+        evta = EventArray([1.1, 1.5, 1.7]*pq.ms,
+                          labels=np.array(['test event 1',
+                                           'test event 2',
+                                           'test event 3'], dtype='S'),
+                          name='test', description='tester',
+                          file_origin='test.file',
+                          testarg1=1, **params)
+        evta.annotate(testarg1=1.1, testarg0=[1, 2, 3])
+        assert_neo_object_is_compliant(evta)
+
+        segment = Segment(name='seg1')
+        segment.eventarrays = [evta]
+        segment.create_many_to_one_relationship()
+
+        self.assertEqual(evta._container_child_objects, [])
+        self.assertEqual(evta._data_child_objects, [])
+        self.assertEqual(evta._single_parent_objects, ['Segment'])
+        self.assertEqual(evta._multi_child_objects, [])
+        self.assertEqual(evta._multi_parent_objects, [])
+        self.assertEqual(evta._child_properties, [])
+
+        self.assertEqual(evta._single_child_objects, [])
+
+        self.assertEqual(evta._container_child_containers, [])
+        self.assertEqual(evta._data_child_containers, [])
+        self.assertEqual(evta._single_child_containers, [])
+        self.assertEqual(evta._single_parent_containers, ['segment'])
+        self.assertEqual(evta._multi_child_containers, [])
+        self.assertEqual(evta._multi_parent_containers, [])
+
+        self.assertEqual(evta._child_objects, [])
+        self.assertEqual(evta._child_containers, [])
+        self.assertEqual(evta._parent_objects, ['Segment'])
+        self.assertEqual(evta._parent_containers, ['segment'])
+
+        self.assertEqual(evta.children, [])
+        self.assertEqual(len(evta.parents), 1)
+        self.assertEqual(evta.parents[0].name, 'seg1')
+
+        evta.create_many_to_one_relationship()
+        evta.create_many_to_many_relationship()
+        evta.create_relationship()
+        assert_neo_object_is_compliant(evta)
 
 
 if __name__ == "__main__":

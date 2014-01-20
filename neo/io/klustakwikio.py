@@ -35,7 +35,6 @@ else:
 from neo.io.baseio import BaseIO
 
 from neo.core import Block, Segment, Unit, SpikeTrain
-from neo.io.tools import create_many_to_one_relationship
 
 # Pasted version of feature file format spec
 """
@@ -197,7 +196,7 @@ class KlustaKwikIO(BaseIO):
                 u.spiketrains.append(st)
                 seg.spiketrains.append(st)
 
-        create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
         return block
 
     # Helper hidden functions for reading

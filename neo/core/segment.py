@@ -100,6 +100,13 @@ class Segment(BaseNeo):
 
         self.block = None
 
+        self._data_child_objects = ['AnalogSignal', 'AnalogSignalArray',
+                                    'Epoch', 'EpochArray',
+                                    'Event', 'EventArray',
+                                    'IrregularlySampledSignal',
+                                    'Spike', 'SpikeTrain']
+        self._single_parent_objects = ['Block']
+
     @property
     def all_data(self):
         '''

@@ -94,6 +94,10 @@ class Block(BaseNeo):
         self.segments = []
         self.recordingchannelgroups = []
 
+        self._container_child_objects = ['Segment', 'RecordingChannelGroup']
+
+        self._child_properties = ['Unit', 'RecordingChannel']
+
     @property
     def list_units(self):
         '''

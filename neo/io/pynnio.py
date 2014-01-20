@@ -18,7 +18,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
-from neo.io.tools import create_many_to_one_relationship
 
 UNITS_MAP = {
     'spikes': pq.ms,
@@ -112,7 +111,7 @@ class BasePyNNIO(BaseIO):
                     signal = self._extract_signal(data, metadata, i, lazy)
                     if signal is not None:
                         seg.analogsignals.append(signal)
-            create_many_to_one_relationship(seg)
+            seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment):

@@ -72,6 +72,8 @@ class Spike(BaseNeo):
         self.segment = None
         self.unit = None
 
+        self._single_parent_objects = ['Segment', 'Unit']
+
     @property
     def duration(self):
         '''

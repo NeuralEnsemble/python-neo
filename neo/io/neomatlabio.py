@@ -38,7 +38,6 @@ else:
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, EventArray, SpikeTrain
-from neo.io.tools import create_many_to_one_relationship
 from neo import description
 
 
@@ -203,7 +202,7 @@ class NeoMatlabIO(BaseIO):
         assert'block' in d, 'no block in'+self.filename
         bl_struct = d['block']
         bl =  self.create_ob_from_struct(bl_struct, 'Block', cascade = cascade, lazy = lazy)
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 
     def write_block(self, bl,):
@@ -239,11 +238,11 @@ class NeoMatlabIO(BaseIO):
         struct = { }
 
         # relationship
-        rel = description.one_to_many_relationship
-        if classname in rel:
-            for childname in rel[classname]:
-                if description.class_by_name[childname] in self.supported_objects:
-                    struct[childname.lower()+'s'] = [ ]
+        for childname in getattr(ob, '_single_child_containers', []):
+            supported_containers = [subob.__name__.lower() + 's' for subob in
+                                    self.supported_objects]
+            if childname in supported_containers:
+                struct[childname] = []
         # attributes
         necess = description.classes_necessary_attributes[classname]
         recomm = description.classes_recommended_attributes[classname]
@@ -317,8 +316,7 @@ class NeoMatlabIO(BaseIO):
             ob = cl()
         for attrname in struct._fieldnames:
             # check children
-            rel = description.one_to_many_relationship
-            if classname in rel and attrname[:-1] in [ r.lower() for r in rel[classname] ]:
+            if attrname in getattr(ob, '_single_child_containers', []):
                 try:
                     for c in range(len(getattr(struct,attrname))):
                         if cascade:

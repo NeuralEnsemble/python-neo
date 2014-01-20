@@ -219,12 +219,9 @@ from neo.core import Block
 from neo.description import (class_by_name, name_by_class,
                              classes_inheriting_quantities,
                              classes_necessary_attributes,
-                             classes_recommended_attributes,
-                             many_to_many_relationship,
-                             many_to_one_relationship,
-                             one_to_many_relationship)
+                             classes_recommended_attributes)
 from neo.io.baseio import BaseIO
-from neo.io.tools import create_many_to_one_relationship, LazyList
+from neo.io.tools import LazyList
 
 logger = logging.getLogger("Neo")
 
@@ -247,12 +244,6 @@ all_objects = [Block] + all_objects
 # Types where an object might have to be loaded multiple times to create
 # all realtionships
 complex_relationships = ["Unit", "Segment", "RecordingChannel"]
-
-# Data objects which have multiple parents (Segment and one other)
-multi_parent = {'AnalogSignal': 'RecordingChannel',
-                'AnalogSignalArray': 'RecordingChannelGroup',
-                'IrregularlySampledSignal': 'RecordingChannel',
-                'Spike': 'Unit', 'SpikeTrain': 'Unit'}
 
 # Arrays node names for lazy shapes
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
@@ -295,7 +286,7 @@ class NeoHdf5IO(BaseIO):
         """
         ob = self.get(path, cascade, lazy)
         if cascade and cascade != 'lazy':
-            create_many_to_one_relationship(ob)
+            ob.create_many_to_one_relationship()
         return ob
 
     def _write_entity(self, obj, where="/", cascade=True, lazy=False):
@@ -447,9 +438,10 @@ class NeoHdf5IO(BaseIO):
             node._f_setAttr("_type", obj_type)
             path = node._v_pathname
             # processing attributes
-        if obj_type in multi_parent: # Initialize empty parent paths
-            node._f_setAttr('segment', '')
-            node._f_setAttr(multi_parent[obj_type].lower(), '')
+         # Initialize empty parent paths
+        if len(getattr(obj, '_single_parent_containers', [])) > 1:
+            for par_cont in obj._single_parent_containers:
+                node._f_setAttr(par_cont, '')
         attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
         for attr in attrs: # we checked already obj is compliant, loop over all safely
             if hasattr(obj, attr[0]): # save an attribute if exists
@@ -460,13 +452,9 @@ class NeoHdf5IO(BaseIO):
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         node._f_setAttr("object_ref", uuid.uuid4().hex)
-        if one_to_many_relationship.has_key(obj_type) and cascade:
-            rels = list(one_to_many_relationship[obj_type])
-            if obj_type == "RecordingChannelGroup":
-                rels += many_to_many_relationship[obj_type]
-
-            for child_name in rels:  # child_name like "Segment", "Event" etc.
-                container = child_name.lower() + "s"  # like "units"
+        if cascade:
+            # container is like segments, spiketrains, etc.
+            for container in getattr(obj, '_child_containers', []):
                 try:
                     ch = self._data.getNode(node, container)
                 except tb.NoSuchNodeError:
@@ -489,14 +477,14 @@ class NeoHdf5IO(BaseIO):
                     if child_node is None:
                         child_node = self.save(child, where=ch._v_pathname)
 
-                    if child_name in multi_parent: # Save parent for multiparent objects
+                    if len(child._single_parent_containers) > 1:
                         child_node._f_setAttr(obj_type.lower(), path)
-                    elif child_name == 'RecordingChannel':
+                    for par_cont in child._multi_parent_containers:
                         parents = []
-                        if 'recordingchannelgroups' in child_node._v_attrs:
-                            parents = child_node._v_attrs['recordingchannelgroups']
+                        if par_cont in child_node._v_attrs:
+                            parents = child_node._v_attrs[par_cont]
                         parents.append(path)
-                        child_node._f_setAttr('recordingchannelgroups', parents)
+                        child_node._f_setAttr(par_cont, parents)
                     if not new_name:
                         new_name = child.hdf5_path.split('/')[-1]
                     saved.append(new_name)
@@ -513,7 +501,8 @@ class NeoHdf5IO(BaseIO):
         """
         parts = path.split('/')
 
-        if parent_type == 'Block' or parts[-4] == parent_type.lower() + 's':
+        if (parent_type.lower() == 'block' or
+                parts[-4] == parent_type.lower() + 's'):
             return '/'.join(parts[:-2])
 
         object_folder = parts[-2]
@@ -523,7 +512,7 @@ class NeoHdf5IO(BaseIO):
         else:
             block_path = '/'.join(parts[:-4])
 
-        if parent_type in ('RecordingChannel', 'Unit'):
+        if parent_type.lower() in ('recordingchannel', 'unit'):
             # We need to search all recording channels
             path = block_path + '/recordingchannelgroups'
             for n in self._data.iterNodes(path):
@@ -536,9 +525,10 @@ class NeoHdf5IO(BaseIO):
                     return p
             return ''
 
-        if parent_type == 'Segment':
+        if parent_type.lower() == 'segment':
             path = block_path + '/segments'
-        elif parent_type == 'RecordingChannelGroup':
+        elif parent_type.lower() in ('recordingchannelgroup',
+                                     'recordingchannelgroups'):
             path = block_path + '/recordingchannelgroups'
         else:
             return ''
@@ -596,16 +586,16 @@ class NeoHdf5IO(BaseIO):
         t = type(o).__name__
         node = self._data.getNode(path)
 
-        if t in multi_parent:  # Try to read parent objects from attributes
-            if not path in self.parent_paths:
-                ppaths = [None, None]
-                if 'segment' in node._v_attrs:
-                    ppaths[0] = node._f_getAttr('segment')
-                if multi_parent[t] in node._v_attrs:
-                    ppaths[1] = node._f_getAttr(multi_parent[t])
+        if not path in self.parent_paths:
+            ppaths = []
+            if len(getattr(o, '_single_parent_containers', [])) > 1:
+                for par_cont in o._single_parent_containers:
+                    if par_cont in node._v_attrs:
+                        ppaths.append(node._f_getAttr(par_cont))
+                    else:
+                        ppaths.append(None)
                 self.parent_paths[path] = ppaths
-        elif  t == 'RecordingChannel':
-            if not path in self.parent_paths:
+            elif  t == 'RecordingChannel':
                 if 'recordingchannelgroups' in node._v_attrs:
                     self.parent_paths[path] = node._f_getAttr('recordingchannelgroups')
 
@@ -640,7 +630,7 @@ class NeoHdf5IO(BaseIO):
                     o.recordingchannelgroups.append(self.get(rcg, cascade='lazy', lazy=lazy))
                 self.parent_paths[path] = rcg_paths
             else:
-                for p in many_to_one_relationship[t]:
+                for p in o._single_parent_containers:
                     parent = self._get_parent(path, ref, p)
                     if parent:
                         setattr(o, p.lower(), self.get(parent, cascade='lazy', lazy=lazy))
@@ -746,35 +736,33 @@ class NeoHdf5IO(BaseIO):
             self.objects_by_ref[object_ref] = obj
         # load relationships
         if cascade:
-            if obj_type in one_to_many_relationship:
-                rels = list(one_to_many_relationship[obj_type])
-                if obj_type == "RecordingChannelGroup":
-                    rels += many_to_many_relationship[obj_type]
-                for child in rels:  # 'child' is like 'Segment', 'Event' etc.
+            # container is like segments, spiketrains, etc.
+            for containername in getattr(obj, '_child_containers', []):
+                if cascade == 'lazy':
+                    relatives = LazyList(self, lazy)
+                else:
+                    relatives = []
+                container = self._data.getNode(node, containername)
+                for n in self._data.iterNodes(container):
                     if cascade == 'lazy':
-                        relatives = LazyList(self, lazy)
+                        relatives.append(n._v_pathname)
                     else:
-                        relatives = []
-                    container = self._data.getNode(node, child.lower() + "s")
-                    for n in self._data.iterNodes(container):
-                        if cascade == 'lazy':
-                            relatives.append(n._v_pathname)
-                        else:
-                            try:
-                                if n._f_getAttr("_type") == child:
-                                    relatives.append(self.get(n._v_pathname, lazy=lazy))
-                            except AttributeError:  # alien node
-                                pass  # not an error
-                    setattr(obj, child.lower() + "s", relatives)
-                    if not cascade == 'lazy':
-                        # RC -> AnalogSignal relationship will not be created later, do it now
-                        if obj_type == "RecordingChannel" and child == "AnalogSignal":
-                            for r in relatives:
-                                r.recordingchannel = obj
-                        # Cannot create Many-to-Many relationship with old format, create at least One-to-Many
-                        if obj_type == "RecordingChannelGroup" and not object_ref:
-                            for r in relatives:
-                                r.recordingchannelgroups = [obj]
+                        try:
+                            typename = n._f_getAttr("_type").lower()+'s'
+                            if typename == containername:
+                                relatives.append(self.get(n._v_pathname, lazy=lazy))
+                        except AttributeError:  # alien node
+                            pass  # not an error
+                setattr(obj, containername, relatives)
+                if not cascade == 'lazy':
+                    # RC -> AnalogSignal relationship will not be created later, do it now
+                    if obj_type == "RecordingChannel" and containername == "analogsignals":
+                        for r in relatives:
+                            r.recordingchannel = obj
+                    # Cannot create Many-to-Many relationship with old format, create at least One-to-Many
+                    if obj_type == "RecordingChannelGroup" and not object_ref:
+                        for r in relatives:
+                            r.recordingchannelgroups = [obj]
             # special processor for RC -> RCG
             if obj_type == "RecordingChannel":
                 if hasattr(node, '_v_parent'):

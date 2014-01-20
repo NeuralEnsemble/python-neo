@@ -137,42 +137,34 @@ def assert_neo_object_is_compliant(ob):
                         '%s.%s dtype.kind is %s should be %s' % \
                         (classname, attrname, obattr.dtype.kind, dtp.kind)
 
-    # test bijectivity : one_to_many_relationship and many_to_one_relationship
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                assert hasattr(child, classname.lower()), \
-                    '%s should have %s attribute (2 way relationship)' % \
-                    (childname, classname.lower())
-                if hasattr(child, classname.lower()):
-                    assert getattr(child, classname.lower()) == ob, \
-                        '%s.%s %s is not symetric with %s.%s s' % \
-                        (childname, classname.lower(), i,
-                         classname, childname.lower())
+    # test bijectivity : parents and children
+    for container in getattr(ob, '_single_child_containers', []):
+        for i, child in enumerate(getattr(ob, container, [])):
+            assert hasattr(child, classname.lower()), \
+                '%s should have %s attribute (2 way relationship)' % \
+                (container, classname.lower())
+            if hasattr(child, classname.lower()):
+                parent = getattr(child, classname.lower())
+                assert parent == ob, \
+                    '%s.%s %s is not symetric with %s.%s' % \
+                    (container, classname.lower(), i,
+                     classname, container)
 
     # recursive on one to many rel
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                try:
-                    assert_neo_object_is_compliant(child)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from %s %s of %s' % (childname, i,
-                                                       classname),)
-                    raise
+    for i, child in enumerate(getattr(ob, 'children', [])):
+        try:
+            assert_neo_object_is_compliant(child)
+        # intercept exceptions and add more information
+        except BaseException as exc:
+            exc.args += ('from %s %s of %s' % (child.__class__.__name__, i,
+                                               classname),)
+            raise
 
 
 def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
     '''
     Test if ob1 and ob2 has the same sub schema.
-    Explore all one_to_many_relationship.
+    Explore all parent/child relationships.
     Many_to_many_relationship is not tested
     because of infinite recursive loops.
 
@@ -199,33 +191,34 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 raise
         return
 
-    if classname in description.one_to_many_relationship:
-        # test one_to_many_relationship
-        for child in description.one_to_many_relationship[classname]:
-            if not hasattr(ob1, child.lower()+'s'):
-                assert not hasattr(ob2, child.lower()+'s'), \
-                    '%s 2 does have %s but not %s 1' % (classname, child,
-                                                        classname)
-                continue
-            else:
-                assert hasattr(ob2, child.lower()+'s'), \
-                    '%s 1 has %s but not %s 2' % (classname, child, classname)
+    # test parent/child relationship
+    for container in getattr(ob1, '_single_child_containers', []):
+        if not hasattr(ob1, container):
+            assert not hasattr(ob2, container), \
+                '%s 2 does have %s but not %s 1' % (classname, container,
+                                                    classname)
+            continue
+        else:
+            assert hasattr(ob2, container), \
+                '%s 1 has %s but not %s 2' % (classname, container,
+                                                classname)
 
-            sub1 = getattr(ob1, child.lower()+'s')
-            sub2 = getattr(ob2, child.lower()+'s')
+        sub1 = getattr(ob1, container)
+        sub2 = getattr(ob2, container)
 
-            assert len(sub1) == len(sub2), \
-                'theses two %s do not have the same %s number: %s and %s' % \
-                (classname, child, len(sub1), len(sub2))
-            for i in range(len(getattr(ob1, child.lower()+'s'))):
-                # previously lacking parameter
-                try:
-                    assert_same_sub_schema(sub1[i], sub2[i],
-                                           equal_almost, threshold)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from %s[%s] of %s' % (child, i, classname),)
-                    raise
+        assert len(sub1) == len(sub2), \
+            'theses two %s do not have the same %s number: %s and %s' % \
+            (classname, container, len(sub1), len(sub2))
+        for i in range(len(getattr(ob1, container))):
+            # previously lacking parameter
+            try:
+                assert_same_sub_schema(sub1[i], sub2[i],
+                                        equal_almost, threshold)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from %s[%s] of %s' % (container, i,
+                                                    classname),)
+                raise
 
     # check if all attributes are equal
     if equal_almost:
@@ -328,19 +321,17 @@ def assert_sub_schema_is_lazy_loaded(ob):
     '''
     classname = ob.__class__.__name__
 
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                try:
-                    assert_sub_schema_is_lazy_loaded(child)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from %s %s of %s' % (childname, i,
-                                                       classname),)
-                    raise
+    for container in getattr(ob, '_single_child_containers', []):
+        if not hasattr(ob, container):
+            continue
+        sub = getattr(ob, container)
+        for i, child in enumerate(sub):
+            try:
+                assert_sub_schema_is_lazy_loaded(child)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from %s %s of %s' % (container, i, classname),)
+                raise
 
     necess = description.classes_necessary_attributes[classname]
     recomm = description.classes_recommended_attributes[classname]
@@ -410,19 +401,20 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
                 getattr(new_load, lazy_shape_arrays[classname]).shape, \
                 'Shape of loaded object %s not equal to lazy shape' %\
                 classname
-    elif classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower() + 's'):
-                continue
-            sub = getattr(ob, childname.lower() + 's')
-            for i, child in enumerate(sub):
-                try:
-                    assert_lazy_sub_schema_can_be_loaded(child, io)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from of %s %s of %s' %
-                                 (childname, i, classname),)
-                    raise
+        return
+
+    for container in getattr(ob, '_single_child_containers', []):
+        if not hasattr(ob, container):
+            continue
+        sub = getattr(ob, container)
+        for i, child in enumerate(sub):
+            try:
+                assert_lazy_sub_schema_can_be_loaded(child, io)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from of %s %s of %s' %
+                                (container, i, classname),)
+                raise
 
 
 def assert_objects_equivalent(obj1, obj2):
@@ -462,10 +454,5 @@ def assert_children_empty(obj, parent):
     classname = obj.__class__.__name__
     errmsg = '''%s reader with cascade=False should return
         empty children''' % parent.__name__
-    try:
-        childlist = description.one_to_many_relationship[classname]
-    except KeyError:
-        childlist = []
-    for childname in childlist:
-        children = getattr(obj, childname.lower() + 's')
-        assert len(children) == 0, errmsg
+    if hasattr(obj, 'children'):
+        assert not obj.children, errmsg

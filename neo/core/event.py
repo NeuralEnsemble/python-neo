@@ -56,6 +56,8 @@ class Event(BaseNeo):
 
         self.segment = None
 
+        self._single_parent_objects = ['Segment']
+
     def merge(self, other):
         '''
         Merging is not supported in :class:`Epoch`.

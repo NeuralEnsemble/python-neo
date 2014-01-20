@@ -12,6 +12,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.epocharray import EpochArray
+from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal, assert_same_sub_schema)
 
@@ -103,6 +104,52 @@ class TestEpochArray(unittest.TestCase):
         epcares = epca1.merge(epca2)
         assert_neo_object_is_compliant(epcares)
         assert_same_sub_schema(epcatarg, epcares)
+
+    def test__children(self):
+        params = {'testarg2': 'yes', 'testarg3': True}
+        epca = EpochArray([1.1, 1.5, 1.7]*pq.ms, durations=[20, 40, 60]*pq.ns,
+                          labels=np.array(['test epoch 1',
+                                           'test epoch 2',
+                                           'test epoch 3'], dtype='S'),
+                          name='test', description='tester',
+                          file_origin='test.file',
+                          testarg1=1, **params)
+        epca.annotate(testarg1=1.1, testarg0=[1, 2, 3])
+        assert_neo_object_is_compliant(epca)
+
+        segment = Segment(name='seg1')
+        segment.epocharrays = [epca]
+        segment.create_many_to_one_relationship()
+
+        self.assertEqual(epca._container_child_objects, [])
+        self.assertEqual(epca._data_child_objects, [])
+        self.assertEqual(epca._single_parent_objects, ['Segment'])
+        self.assertEqual(epca._multi_child_objects, [])
+        self.assertEqual(epca._multi_parent_objects, [])
+        self.assertEqual(epca._child_properties, [])
+
+        self.assertEqual(epca._single_child_objects, [])
+
+        self.assertEqual(epca._container_child_containers, [])
+        self.assertEqual(epca._data_child_containers, [])
+        self.assertEqual(epca._single_child_containers, [])
+        self.assertEqual(epca._single_parent_containers, ['segment'])
+        self.assertEqual(epca._multi_child_containers, [])
+        self.assertEqual(epca._multi_parent_containers, [])
+
+        self.assertEqual(epca._child_objects, [])
+        self.assertEqual(epca._child_containers, [])
+        self.assertEqual(epca._parent_objects, ['Segment'])
+        self.assertEqual(epca._parent_containers, ['segment'])
+
+        self.assertEqual(epca.children, [])
+        self.assertEqual(len(epca.parents), 1)
+        self.assertEqual(epca.parents[0].name, 'seg1')
+
+        epca.create_many_to_one_relationship()
+        epca.create_many_to_many_relationship()
+        epca.create_relationship()
+        assert_neo_object_is_compliant(epca)
 
 
 if __name__ == "__main__":

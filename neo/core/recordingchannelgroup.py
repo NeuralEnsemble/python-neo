@@ -149,6 +149,11 @@ class RecordingChannelGroup(BaseNeo):
 
         self.block = None
 
+        self._container_child_objects = ['Unit']
+        self._data_child_objects = ['AnalogSignalArray']
+        self._multi_child_objects = ['RecordingChannel']
+        self._single_parent_objects = ['Block']
+
     def merge(self, other):
         '''
         Merge the contents of another RecordingChannelGroup into this one.

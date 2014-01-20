@@ -174,6 +174,37 @@ class TestBaseNeo(unittest.TestCase):
         self.assertNotEqual(base.annotations['test1'], result1['test1'])
         self.assertNotEqual(base.annotations['test2'], result1['test2'])
 
+    def test__children(self):
+        base = BaseNeo()
+
+        self.assertEqual(base._container_child_objects, [])
+        self.assertEqual(base._data_child_objects, [])
+        self.assertEqual(base._single_parent_objects, [])
+        self.assertEqual(base._multi_child_objects, [])
+        self.assertEqual(base._multi_parent_objects, [])
+        self.assertEqual(base._child_properties, [])
+
+        self.assertEqual(base._single_child_objects, [])
+
+        self.assertEqual(base._container_child_containers, [])
+        self.assertEqual(base._data_child_containers, [])
+        self.assertEqual(base._single_child_containers, [])
+        self.assertEqual(base._single_parent_containers, [])
+        self.assertEqual(base._multi_child_containers, [])
+        self.assertEqual(base._multi_parent_containers, [])
+
+        self.assertEqual(base._child_objects, [])
+        self.assertEqual(base._child_containers, [])
+        self.assertEqual(base._parent_objects, [])
+        self.assertEqual(base._parent_containers, [])
+
+        self.assertEqual(base.children, [])
+        self.assertEqual(base.parents, [])
+
+        base.create_many_to_one_relationship()
+        base.create_many_to_many_relationship()
+        base.create_relationship()
+
 
 class TestBaseNeoCoreTypes(unittest.TestCase):
     '''

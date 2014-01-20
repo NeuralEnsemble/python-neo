@@ -15,13 +15,10 @@ import quantities as pq
 
 from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
                       RecordingChannel, Segment, SpikeTrain)
-from neo.io.tools import (create_many_to_one_relationship,
-                          populate_RecordingChannel, iteritems)
+from neo.io.tools import populate_RecordingChannel, iteritems
 from neo.description import (classes_necessary_attributes,
                              classes_recommended_attributes,
-                             class_by_name, implicit_relationship,
-                             many_to_many_relationship,
-                             one_to_many_relationship)
+                             class_by_name)
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]
@@ -43,7 +40,7 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
     if RecordingChannel in objects:
         populate_RecordingChannel(bl)
 
-    create_many_to_one_relationship(bl)
+    bl.create_many_to_one_relationship()
     return bl
 
 
@@ -133,7 +130,7 @@ def generate_one_simple_segment(seg_name='segment 0',
 
     # TODO : Spike, Event, Epoch
 
-    create_many_to_one_relationship(seg)
+    seg.create_many_to_one_relationship()
     return seg
 
 
@@ -155,7 +152,7 @@ def generate_from_supported_objects(supported_objects):
         #TODO
         return None
 
-    create_many_to_one_relationship(higher)
+    higher.create_many_to_one_relationship()
     return higher
 
 
@@ -233,18 +230,11 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
     if cascade:
         if obj_type == "Block":
             _follow_links = False
-        if obj_type in one_to_many_relationship:
-            rels = one_to_many_relationship[obj_type][:]
-            if obj_type == "RecordingChannelGroup":
-                rels += many_to_many_relationship[obj_type]
-            if not _follow_links and obj_type in implicit_relationship:
-                for i in implicit_relationship[obj_type]:
-                    if not i in rels:
-                        logging.debug("LOOK HERE!!!" + str(obj_type))
-                    rels.remove(i)
-            for child in rels:
-                setattr(obj, child.lower() + "s", [fake_neo(child, cascade,
-                        _follow_links)])
+        for childname in getattr(obj, '_child_objects', []):
+            child = fake_neo(childname, cascade, _follow_links)
+            if not _follow_links and obj_type in child._parent_objects[1:]:
+                continue
+            setattr(obj, childname.lower()+"s", [child])
 
     # need to manually create 'implicit' connections
     if obj_type == "Block" and cascade:
@@ -269,6 +259,6 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
                range(len(TEST_ANNOTATIONS))])
     obj.annotate(**at)
 
-    create_many_to_one_relationship(obj)
+    obj.create_many_to_one_relationship()
 
     return obj

@@ -101,6 +101,10 @@ class RecordingChannel(BaseNeo):
         # Many to many relationship
         self.recordingchannelgroups = []
 
+        self._data_child_objects = ['AnalogSignal',
+                                    'IrregularlySampledSignal']
+        self._multi_parent_objects = ['RecordingChannelGroup']
+
     def merge(self, other):
         '''
         Merge the contents of another RecordingChannel into this one.

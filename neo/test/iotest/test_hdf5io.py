@@ -36,8 +36,7 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.iotest.generate_datasets import fake_neo, get_fake_value
 from neo.description import (class_by_name, classes_necessary_attributes,
                              classes_recommended_attributes,
-                             many_to_many_relationship,
-                             name_by_class, one_to_many_relationship)
+                             name_by_class)
 
 from neo.io.hdf5io import NeoHdf5IO, HAVE_TABLES
 
@@ -105,16 +104,12 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
             obj_type = name_by_class[obj]
             self.assertEqual(md5(str(obj)).hexdigest(),
                              md5(str(replica)).hexdigest())
-            if obj_type in one_to_many_relationship:
-                rels = one_to_many_relationship[obj_type]
-                if obj_type == "RecordingChannelGroup":
-                    rels += many_to_many_relationship[obj_type]
-                for child_type in rels:
-                    ch1 = getattr(obj, child_type.lower() + "s")
-                    ch2 = getattr(replica, child_type.lower() + "s")
-                    self.assertEqual(len(ch1), len(ch2))
-                    for i, v in enumerate(ch1):
-                        self.assert_children(ch1[i], ch2[i])
+            for container in getattr(obj, '_child_containers', []):
+                ch1 = getattr(obj, container)
+                ch2 = getattr(replica, container)
+                self.assertEqual(len(ch1), len(ch2))
+                for i, v in enumerate(ch1):
+                    self.assert_children(ch1[i], ch2[i])
         iom = NeoHdf5IO(filename=self.test_file)
         for obj_type in class_by_name.keys():
             obj = fake_neo(obj_type, cascade=True)

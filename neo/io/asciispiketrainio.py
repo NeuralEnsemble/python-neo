@@ -17,7 +17,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, SpikeTrain
-from neo.io.tools import create_many_to_one_relationship
 
 
 class AsciiSpikeTrainIO(BaseIO):
@@ -116,7 +115,7 @@ class AsciiSpikeTrainIO(BaseIO):
             seg.spiketrains.append(sptr)
         f.close()
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment,

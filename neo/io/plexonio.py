@@ -26,7 +26,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
-from neo.io.tools import create_many_to_one_relationship, iteritems
+from neo.io.tools import iteritems
 
 
 class PlexonIO(BaseIO):
@@ -297,9 +297,9 @@ class PlexonIO(BaseIO):
             if lazy:
                 sptr.lazy_shape = nb_spikes[chan,unit]
             seg.spiketrains.append(sptr)
-        
-        create_many_to_one_relationship(seg)
-        return seg                          
+
+        seg.create_many_to_one_relationship()
+        return seg
 
 
 

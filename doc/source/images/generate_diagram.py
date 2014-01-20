@@ -15,18 +15,53 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.description import (class_by_name,
-                             one_to_many_relationship,
-                             many_to_many_relationship,
-                             property_relationship,
-                             classes_necessary_attributes,
+from neo.description import (classes_necessary_attributes,
                              classes_recommended_attributes,
                              classes_inheriting_quantities)
+from neo.test.iotest.generate_datasets import fake_neo
 
 line_heigth = .22
 fontsize = 10.5
 left_text_shift = .1
 dpi = 100
+
+
+def get_rect_height(name, obj):
+    '''
+    calculate rectangle height
+    '''
+    nlines = 1.5
+    nlines += len(classes_necessary_attributes[name])
+    nlines += len(classes_recommended_attributes[name])
+    nlines += len(getattr(obj, '_single_child_objects', []))
+    nlines += len(getattr(obj, '_multi_child_objects', []))
+    nlines += len(getattr(obj, '_multi_parent_objects', []))
+    return nlines*line_heigth
+
+
+def annotate(ax, coord1, coord2, connectionstyle, color, alpha):
+    arrowprops = dict(arrowstyle='fancy',
+                      #~ patchB=p,
+                      shrinkA=.3, shrinkB=.3,
+                      fc=color, ec=color,
+                      connectionstyle=connectionstyle,
+                      alpha=alpha)
+    bbox = dict(boxstyle="square", fc="w")
+    a = ax.annotate('', coord1, coord2,
+                    #xycoords="figure fraction",
+                    #textcoords="figure fraction",
+                    ha="right", va="center",
+                    size=fontsize,
+                    arrowprops=arrowprops,
+                    bbox=bbox)
+    a.set_zorder(-4)
+
+
+def calc_coordinates(pos, height):
+    x = pos[0]
+    y = pos[1] + height - line_heigth*.5
+
+    return pos[0], y
 
 
 def generate_diagram(filename, rect_pos, rect_width, figsize):
@@ -35,88 +70,46 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     fig = pyplot.figure(figsize=figsize)
     ax = fig.add_axes([0, 0, 1, 1])
 
-    #calculate height
     all_h = {}
-    for name in rect_pos.keys():
-        # rectangles
-        htotal = (1.5+len(classes_necessary_attributes[name]) +
-                  len(classes_recommended_attributes[name]))*line_heigth
-        if name in one_to_many_relationship:
-            htotal += len(one_to_many_relationship[name])*line_heigth
-        if name in many_to_many_relationship:
-            htotal += len(many_to_many_relationship[name])*line_heigth
-        all_h[name] = htotal
+    objs = {}
+    for name in rect_pos:
+        objs[name] = fake_neo(name)
+        all_h[name] = get_rect_height(name, objs[name])
 
     # draw connections
-    for name in rect_pos.keys():
-        #~ pos = rect_pos[name]
-        #~ htotal = all_h[name]
-        #~ if name not in one_to_many_relationship.keys(): continue
+    color = ['c', 'm', 'y']
+    alpha = [1., 1., 0.3]
+    for name, pos in rect_pos.items():
+        obj = objs[name]
+        relationships = [getattr(obj, '_single_child_objects', []),
+                         getattr(obj, '_multi_child_objects', []),
+                         getattr(obj, '_child_properties', [])]
+
         for r in range(3):
-            relationship = []
-            if r == 0 and name in one_to_many_relationship:
-                relationship = one_to_many_relationship[name]
-                color = 'c'
-                alpha = 1.
-            elif r == 1 and name in many_to_many_relationship:
-                relationship = many_to_many_relationship[name]
-                color = 'm'
-                alpha = 1.
-            elif r == 2 and name in property_relationship:
-                relationship = property_relationship[name]
-                color = 'y'
-                alpha = .3
+            for ch_name in relationships[r]:
+                x1, y1 = calc_coordinates(rect_pos[ch_name], all_h[ch_name])
+                x2, y2 = calc_coordinates(pos, all_h[name])
 
-            for c, children in enumerate(relationship):
-                if children not in rect_pos.keys():
-                    continue
-                if r == 0 or r == 2:
-                    x = rect_pos[children][0]
-                    y = (rect_pos[children][1] + all_h[children] -
-                         line_heigth*.5)
-                    x2 = rect_pos[name][0] + rect_width
-                    #~ y2 = (rect_pos[name][1] + all_h[name] -
-                    #~       line_heigth*1.5 - line_heigth*c)
-                    #~ x2 = rect_pos[name][0]
-                    y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
+                if r in [0, 2]:
+                    x2 += rect_width
                     connectionstyle = "arc3,rad=-0.2"
-                elif r == 1:
-                    x = rect_pos[children][0]  # + rect_width
-                    y = (rect_pos[children][1] + all_h[children] -
-                         line_heigth*.5)
-                    x2 = rect_pos[name][0]  # + rect_width
-                    y2 = rect_pos[name][1] + all_h[name] - line_heigth*.5
-                    if y2 >= y:
-                        connectionstyle = "arc3,rad=0.7"
-                    else:
-                        connectionstyle = "arc3,rad=-0.7"
+                elif y2 >= y1:
+                    connectionstyle = "arc3,rad=0.7"
+                else:
+                    connectionstyle = "arc3,rad=-0.7"
 
-                a = ax.annotate('', (x, y), (x2, y2),
-                                #xycoords="figure fraction",
-                                #textcoords="figure fraction",
-                                ha="right", va="center",
-                                size=fontsize,
-                                arrowprops=dict(arrowstyle='fancy',
-                                                #~ patchB=p,
-                                                shrinkA=.3, shrinkB=.3,
-                                                fc=color, ec=color,
-                                                connectionstyle=
-                                                connectionstyle,
-                                                alpha=alpha),
-                                bbox=dict(boxstyle="square", fc="w"))
-                a.set_zorder(-4)
+                annotate(ax=ax, coord1=(x1, y1), coord2=(x2, y2),
+                         connectionstyle=connectionstyle,
+                         color=color[r], alpha=alpha[r])
 
     # draw boxes
-    for name in rect_pos.keys():
-        pos = rect_pos[name]
+    for name, pos in rect_pos.items():
         htotal = all_h[name]
+        obj = objs[name]
         attributes = (classes_necessary_attributes[name] +
                       classes_recommended_attributes[name])
-        allrelationship = []
-        if name in one_to_many_relationship:
-            allrelationship += one_to_many_relationship[name]
-        if name in many_to_many_relationship:
-            allrelationship += many_to_many_relationship[name]
+        allrelationship = (getattr(obj, '_child_containers', []) +
+                           getattr(obj, '_multi_parent_containers', []))
 
         rect = Rectangle(pos, rect_width, htotal,
                          facecolor='w', edgecolor='k', linewidth=2.)
@@ -128,34 +121,31 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
                          facecolor='g', edgecolor='k', alpha=.5, linewidth=2.)
         ax.add_patch(rect)
 
-        #relationship
-        for r in range(2):
-            relationship = []
-            if r == 0:
-                if name in one_to_many_relationship:
-                    relationship = one_to_many_relationship[name]
-                color = 'c'
-                pos2 = (pos[0],
-                        pos[1] + htotal - line_heigth*(1.5+len(relationship)))
-                n = len(relationship)
-            elif r == 1:
-                if name in many_to_many_relationship:
-                    relationship = many_to_many_relationship[name]
-                color = 'm'
-                pos2 = (pos[0],
-                        pos[1]+htotal - line_heigth*(1.5+len(relationship)+n))
-                n = len(relationship)
+        # single relationship
+        relationship = getattr(obj, '_single_child_objects', [])
+        pos2 = pos[1] + htotal - line_heigth*(1.5+len(relationship))
+        rect_height = len(relationship)*line_heigth
 
-            rect = Rectangle(pos2, rect_width, line_heigth*n,
-                             facecolor=color, edgecolor='k', alpha=.5)
-            ax.add_patch(rect)
+        rect = Rectangle((pos[0], pos2), rect_width, rect_height,
+                         facecolor='c', edgecolor='k', alpha=.5)
+        ax.add_patch(rect)
+
+        # multi relationship
+        relationship = (getattr(obj, '_multi_child_objects', []) +
+                        getattr(obj, '_multi_parent_containers', []))
+        pos2 = (pos[1]+htotal - line_heigth*(1.5+len(relationship)) -
+                rect_height)
+        rect_height = len(relationship)*line_heigth
+
+        rect = Rectangle((pos[0], pos2), rect_width, rect_height,
+                         facecolor='m', edgecolor='k', alpha=.5)
+        ax.add_patch(rect)
 
         # necessary attr
-        pos2 = (pos[0],
-                pos[1]+htotal -
+        pos2 = (pos[1]+htotal -
                 line_heigth*(1.5+len(allrelationship) +
                              len(classes_necessary_attributes[name])))
-        rect = Rectangle(pos2, rect_width,
+        rect = Rectangle((pos[0], pos2), rect_width,
                          line_heigth*len(classes_necessary_attributes[name]),
                          facecolor='r', edgecolor='k', alpha=.5)
         ax.add_patch(rect)
@@ -175,7 +165,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         #relationship
         for i, relat in enumerate(allrelationship):
             ax.text(pos[0]+left_text_shift, pos[1]+htotal - line_heigth*(i+2),
-                    relat.lower()+'s: list',
+                    relat+': list',
                     horizontalalignment='left', verticalalignment='center',
                     fontsize=fontsize,
                     )

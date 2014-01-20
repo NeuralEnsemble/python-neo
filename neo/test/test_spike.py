@@ -11,6 +11,7 @@ except ImportError:
 import quantities as pq
 
 from neo.core.spike import Spike
+from neo.core import Segment, Unit
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
 
 
@@ -109,6 +110,50 @@ class TestSpike(unittest.TestCase):
         self.assertEqual(result2, None)
         self.assertEqual(result3, None)
         self.assertEqual(result4, None)
+
+    def test__children(self):
+        segment = Segment(name='seg1')
+        segment.spikes = [self.spike1]
+        segment.create_many_to_one_relationship()
+
+        unit = Unit(name='unit1')
+        unit.spikes = [self.spike1]
+        unit.create_many_to_one_relationship()
+
+        self.assertEqual(self.spike1._container_child_objects, [])
+        self.assertEqual(self.spike1._data_child_objects, [])
+        self.assertEqual(self.spike1._single_parent_objects,
+                         ['Segment', 'Unit'])
+        self.assertEqual(self.spike1._multi_child_objects, [])
+        self.assertEqual(self.spike1._multi_parent_objects, [])
+        self.assertEqual(self.spike1._child_properties, [])
+
+        self.assertEqual(self.spike1._single_child_objects, [])
+
+        self.assertEqual(self.spike1._container_child_containers, [])
+        self.assertEqual(self.spike1._data_child_containers, [])
+        self.assertEqual(self.spike1._single_child_containers, [])
+        self.assertEqual(self.spike1._single_parent_containers,
+                         ['segment', 'unit'])
+        self.assertEqual(self.spike1._multi_child_containers, [])
+        self.assertEqual(self.spike1._multi_parent_containers, [])
+
+        self.assertEqual(self.spike1._child_objects, [])
+        self.assertEqual(self.spike1._child_containers, [])
+        self.assertEqual(self.spike1._parent_objects,
+                         ['Segment', 'Unit'])
+        self.assertEqual(self.spike1._parent_containers,
+                         ['segment', 'unit'])
+
+        self.assertEqual(self.spike1.children, [])
+        self.assertEqual(len(self.spike1.parents), 2)
+        self.assertEqual(self.spike1.parents[0].name, 'seg1')
+        self.assertEqual(self.spike1.parents[1].name, 'unit1')
+
+        self.spike1.create_many_to_one_relationship()
+        self.spike1.create_many_to_many_relationship()
+        self.spike1.create_relationship()
+        assert_neo_object_is_compliant(self.spike1)
 
 
 if __name__ == "__main__":
