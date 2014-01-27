@@ -109,7 +109,10 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
 
     # These are the files it tries to read and test for compliance
     files_to_test = ['block_300ms_4rep_1clust_part_ch1.f32',
+                     'block_500ms_5rep_empty_fullclust_ch1.f32',
+                     'block_500ms_5rep_empty_partclust_ch1.f32',
                      'interleaved_500ms_5rep_ch2.f32',
+                     'interleaved_500ms_5rep_nospikes_ch1.f32',
                      'multi_500ms_mulitrep_ch1.f32',
                      'random_500ms_12rep_noclust_part_ch2.f32',
                      'sequence_500ms_5rep_ch2.f32']

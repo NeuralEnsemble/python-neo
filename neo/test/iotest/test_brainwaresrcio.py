@@ -267,7 +267,10 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
     # These are the files it tries to read and test for compliance
     files_to_test = ['block_300ms_4rep_1clust_part_ch1.src',
+                     'block_500ms_5rep_empty_fullclust_ch1.src',
+                     'block_500ms_5rep_empty_partclust_ch1.src',
                      'interleaved_500ms_5rep_ch2.src',
+                     'interleaved_500ms_5rep_nospikes_ch1.src',
                      'interleaved_500ms_7rep_noclust_ch1.src',
                      'long_170s_1rep_1clust_ch2.src',
                      'multi_500ms_mulitrep_ch1.src',
@@ -276,7 +279,10 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
     # these are reference files to compare to
     files_to_compare = ['block_300ms_4rep_1clust_part_ch1',
+                        'block_500ms_5rep_empty_fullclust_ch1',
+                        'block_500ms_5rep_empty_partclust_ch1',
                         'interleaved_500ms_5rep_ch2',
+                        'interleaved_500ms_5rep_nospikes_ch1',
                         'interleaved_500ms_7rep_noclust_ch1',
                         '',
                         'multi_500ms_mulitrep_ch1',
@@ -294,6 +300,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
     def setUp(self):
         warnings.filterwarnings('ignore', message='Negative sequence count.*')
+        warnings.filterwarnings('ignore', message='unknown ID:*')
         super(BrainwareSrcIOTestCase, self).setUp()
 
     def test_reading_same(self):

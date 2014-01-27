@@ -903,7 +903,18 @@ class BrainwareSrcIO(BaseIO):
         # the first Segment
         trains = self._read_by_id()
         if not trains:
-            trains = zip(unassigned_spikes)
+            if unassigned_spikes:
+                # if there are no assigned spikes,
+                # just use the unassigned spikes
+                trains = zip(unassigned_spikes)
+            else:
+                # if there are no spiketrains at all,
+                # create an empty spike train
+                train = self._default_spiketrain.copy()
+                train.file_origin = self.__file_origin
+                if self.__lazy:
+                    train.lazy_shape = (0,)
+                trains = [[train]]
         elif hasattr(trains[0], 'dtype'):
             #workaround for some broken files
             trains = [unassigned_spikes +
