@@ -7,6 +7,13 @@ What's new in version 0.4.0?
 ----------------------------
 
 
+What's new in version 0.3.3?
+----------------------------
+
+  * fix a bug in PlexonIO where some EventArrays only load 1 element.
+  * fix a bug in BrainwareSrcIo for segments with no spikes.
+
+
 What's new in version 0.3.2?
 ----------------------------
 
