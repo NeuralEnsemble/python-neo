@@ -1,220 +1,194 @@
-from __future__ import absolute_import
-import sys
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+'''
+Tests of BlackrockIO
+'''
 
-import neo.io.blackrockio
-import os
+import unittest
 import numpy as np
+import scipy.io
 import quantities as pq
-import glob
-
-from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io import tools
-from neo.test.tools import assert_arrays_almost_equal
-import struct
-import tempfile
+import neo.io.blackrockio as blr
 
 
+class BlackrockIOTestCase(unittest.TestCase):
 
-#~ class testRead(unittest.TestCase):
-    #~ """Tests that data can be read from KlustaKwik files"""
-    #~ def test1(self):
-        #~ """Tests that data and metadata are read correctly"""
-        #~ pass
-    #~ def test2(self):
-        #~ """Checks that cluster id autosets to 0 without clu file"""
-        #~ pass
-        #~ dirname = os.path.normpath('./files_for_tests/klustakwik/test2')
-        #~ kio = neo.io.KlustaKwikIO(filename=os.path.join(dirname, 'base2'),
-            #~ sampling_rate=1000.)
-        #~ block = kio.read()
-        #~ seg = block.segments[0]
-        #~ self.assertEqual(len(seg.spiketrains), 1)
-        #~ self.assertEqual(seg.spiketrains[0].name, 'unit 0 from group 5')
-        #~ self.assertEqual(seg.spiketrains[0].annotations['cluster'], 0)
-        #~ self.assertEqual(seg.spiketrains[0].annotations['group'], 5)
-        #~ self.assertEqual(seg.spiketrains[0].t_start, 0.0)
-        #~ self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
-            #~ [0.026, 0.122, 0.228])))
+    def test_inputs_V23(self):
+        """
+        Test various inputs to BlackrockIO.read_block with version 2.3 file to check for parsing errors.
+        """
 
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
-class testWrite(unittest.TestCase):
-    def setUp(self):
-        self.datadir = os.path.join(tempfile.gettempdir(),
-                                    'files_for_testing_neo',
-                                    'blackrock/test2/')
-        self.fn = os.path.join(self.datadir, 'test.write.ns5')
-        if not os.path.exists(self.datadir):
-            raise unittest.SkipTest('data directory does not exist: ' +
-                                    self.datadir)
+        # Turns false on error
+        allok = True
 
-    def test1(self):
-        """Write data to binary file, then read it back in and verify"""
-        # delete temporary file before trying to write to it
-        if os.path.exists(self.fn):
-            os.remove(self.fn)
+        try:
+            b = blr.BlackrockIO("blackrock/FileSpec2.3001", print_diagnostic=False)
 
-        block = neo.Block()
-        full_range = 234 * pq.mV
+            # Load data to maximum extent, one None is not given as list
+            block = b.read_block(n_starts=[None], n_stops=None, channel_list=range(1, 9), nsx=5, units=[], events=True, waveforms=False)
+            lena = len(block.segments[0].analogsignals[0])
+            numspa = len(block.segments[0].spiketrains[0])
 
-        # Create segment1 with analogsignals
-        segment1 = neo.Segment()
-        sig1 = neo.AnalogSignal([3,4,5], units='mV', channel_index=3,
-            sampling_rate=30000.*pq.Hz)
-        sig2 = neo.AnalogSignal([6,-4,-5], units='mV', channel_index=4,
-            sampling_rate=30000.*pq.Hz)
-        segment1.analogsignals.append(sig1)
-        segment1.analogsignals.append(sig2)
+            # Load data with very long extent using a negative time and the get_max_time() method
+            block = b.read_block(n_starts=[-100 * pq.ms], n_stops=[b.get_max_time()], channel_list=range(1, 9), nsx=[5], units=[], events=False, waveforms=False)
+            lenb = len(block.segments[0].analogsignals[0])
+            numspb = len(block.segments[0].spiketrains[0])
 
-        # Create segment2 with analogsignals
-        segment2 = neo.Segment()
-        sig3 = neo.AnalogSignal([-3,-4,-5], units='mV', channel_index=3,
-            sampling_rate=30000.*pq.Hz)
-        sig4 = neo.AnalogSignal([-6,4,5], units='mV', channel_index=4,
-            sampling_rate=30000.*pq.Hz)
-        segment2.analogsignals.append(sig3)
-        segment2.analogsignals.append(sig4)
+            # Same length of analog signal? Both should have read the complete data set!
+            if lena != lenb :
+                allok = False
+            # Same length of spike train? Both should have read the complete data set!
+            if numspa != numspb:
+                allok = False
 
+            # Load data with very long extent, n_starts and n_stops not given as list
+            block = b.read_block(n_starts=100 * b.nsx_unit[5], n_stops=200 * b.nsx_unit[5], channel_list=range(1, 9), nsx=5, units=[], events=False, waveforms=False)
+            lena = len(block.segments[0].analogsignals[0])
 
-        # Link segments to block
-        block.segments.append(segment1)
-        block.segments.append(segment2)
+            block = b.read_block(n_starts=301 * b.nsx_unit[5], n_stops=401 * b.nsx_unit[5], channel_list=range(1, 9), nsx=5, units=[], events=False, waveforms=False)
+            lenb = len(block.segments[0].analogsignals[0])
 
-        # Create hardware view, and bijectivity
-        #tools.populate_RecordingChannel(block)
-        #print "problem happening"
-        #print block.recordingchannelgroups[0].recordingchannels
-        #print block.recordingchannelgroups[0].recordingchannels[0].analogsignals
-        #tools.create_many_to_one_relationship(block)
-        #print "here: "
-        #print block.segments[0].analogsignals[0].recordingchannel
+            # Same length?
+            if lena != lenb:
+                allok = False
 
-        # Chris I prefer that:
-        #tools.finalize_block(block)
-        tools.populate_RecordingChannel(block)
-        tools.create_many_to_one_relationship(block)
+            # Length should be 100 samples exactly
+            if lena != 100:
+                allok = False
 
+            # Load partial data types and check if this is selection is made
+            block = b.read_block(n_starts=None, n_stops=None, channel_list=range(1, 9), nsx=5, units=None, events=False, waveforms=True)
+            if len(block.segments) != 1:
+                allok = False
+            if len(block.segments[0].analogsignals) != 8:
+                allok = False
+            if len(block.recordingchannelgroups) != 8:
+                allok = False
+            if len(block.recordingchannelgroups[0].units) != 0:
+                allok = False
+            if len(block.segments[0].eventarrays) != 0:
+                allok = False
+            if len(block.segments[0].spiketrains) != 0:
+                allok = False
 
-        # Check that blackrockio is correctly extracting channel indexes
-        self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
-            segment1), [3,4])
-        self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
-            segment2), [3,4])
+            block = b.read_block(n_starts=[None, 3000 * pq.ms], n_stops=[1000 * pq.ms, None], channel_list=range(1, 9), nsx=None, units={1:0, 5:0, 6:0}, events=True, waveforms=True)
+            if len(block.segments) != 2:
+                allok = False
+            if len(block.segments[0].analogsignals) != 0:
+                allok = False
+            if len(block.recordingchannelgroups) != 8:
+                allok = False
+            if len(block.recordingchannelgroups[0].units) != 1:
+                allok = False
+            # if len(block.recordingchannelgroups[4].units) != 0:  # only one of two neurons on channel 78, and only one unit for two segments!
+            #    allok = False
+            if len(block.segments[0].eventarrays) == 0:
+                allok = False
+            if len(block.segments[0].spiketrains[0].waveforms) == 0:
+                allok = False
 
-        # Create writer. Write block, then read back in.
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
-        bio.write_block(block)
-        fi = file(self.fn)
+        except:
+            allok = False
 
-        # Text header
-        self.assertEqual(fi.read(16), 'NEURALSG30 kS/s\x00')
-        self.assertEqual(fi.read(8), '\x00\x00\x00\x00\x00\x00\x00\x00')
-
-        # Integers: period, channel count, channel index1, channel index2
-        self.assertEqual(struct.unpack('<4I', fi.read(16)), (1,2,3,4))
-
-        # What should the signals be after conversion?
-        conv = float(full_range) / 2**16
-        sigs = np.array(\
-            [np.concatenate((sig1,sig3)), np.concatenate((sig2, sig4))])
-        sigs_converted = np.rint(sigs / conv).astype(np.int)
-
-        # Check that each time point is the same
-        for time_slc in sigs_converted.transpose():
-            written_data = struct.unpack('<2h', fi.read(4))
-            self.assertEqual(list(time_slc), list(written_data))
-
-        # Check that we read to the end
-        currentpos = fi.tell()
-        fi.seek(0, 2)
-        truelen = fi.tell()
-        self.assertEqual(currentpos, truelen)
-        fi.close()
-
-        # Empty out test session again
-        #~ delete_test_session()
-
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
-class testRead(unittest.TestCase):
-    def setUp(self):
-        self.fn = os.path.join(tempfile.gettempdir(),
-                               'files_for_testing_neo',
-                               'blackrock/test2/test.ns5')
-        if not os.path.exists(self.fn):
-            raise unittest.SkipTest('data file does not exist:' + self.fn)
-
-    def test1(self):
-        """Read data into one big segment (default)"""
-        full_range = 8192 * pq.mV
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
-        block = bio.read_block(n_starts=[0], n_stops=[6])
-        self.assertEqual(bio.header.Channel_Count, 2)
-        self.assertEqual(bio.header.n_samples, 6)
-
-        # Everything put in one segment
-        self.assertEqual(len(block.segments), 1)
-        seg = block.segments[0]
-        self.assertEqual(len(seg.analogsignals), 2)
-
-        assert_arrays_almost_equal(seg.analogsignals[0],
-            [3., 4., 5., -3., -4., -5.] * pq.mV, .0001)
-        assert_arrays_almost_equal(seg.analogsignals[1],
-            [6., -4., -5., -6., 4., 5.] * pq.mV, .0001)
-
-    def test2(self):
-        """Read data into two segments instead of just one"""
-        full_range = 8192 * pq.mV
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
-        block = bio.read_block(n_starts=[0, 3], n_stops=[2, 6])
-        self.assertEqual(bio.header.Channel_Count, 2)
-        self.assertEqual(bio.header.n_samples, 6)
-
-        # Everything in two segments
-        self.assertEqual(len(block.segments), 2)
-
-        # Test first seg
-        seg = block.segments[0]
-        self.assertEqual(len(seg.analogsignals), 2)
-        assert_arrays_almost_equal(seg.analogsignals[0],
-            [3., 4.] * pq.mV, .0001)
-        assert_arrays_almost_equal(seg.analogsignals[1],
-            [6., -4.] * pq.mV, .0001)
-
-        # Test second seg
-        seg = block.segments[1]
-        self.assertEqual(len(seg.analogsignals), 2)
-        assert_arrays_almost_equal(seg.analogsignals[0],
-            [-3., -4., -5.] * pq.mV, .0001)
-        assert_arrays_almost_equal(seg.analogsignals[1],
-            [-6., 4., 5.] * pq.mV, .0001)
+        self.assertTrue(allok)
 
 
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
-class CommonTests(BaseTestIO, unittest.TestCase ):
-    ioclass = neo.io.BlackrockIO
-    read_and_write_is_bijective = False
+    def test_compare_blackrockio_with_matlabloader_V23(self):
+        """
+        This test compares the output of BlackrockIO.read_block() with the
+        output generated by a Matlab implementation of a Blackrock file reader
+        provided by the company. The output for comparison is provided in a .mat
+        file created by the script create_data_matlab_blackrock.m in the
+        blackrock subfolder based on a V2.3 file.
 
-    # These are the files it tries to read and test for compliance
-    files_to_test = [
-        'test2/test.ns5'
-        ]
+        The function tests LFPs, spike times, and digital events on channels
+        1-8 and spike waveforms on channel 1, unit 0.
+        
+        For details on the file contents, refer to FileSpec2.3.txt
+        """
 
-    # Will fetch from g-node if they don't already exist locally
-    # How does it know to do this before any of the other tests?
-    files_to_download = [
-        'test2/test.ns5'
-        ]
+        # Turns false on error
+        allok = True
+
+        # Load data from Matlab generated files
+        ml = scipy.io.loadmat('blackrock/testdata.mat')
+        lfp_ml = ml['lfp']  # (channel x time) LFP matrix
+        ts_ml = ml['ts']  # spike time stamps
+        elec_ml = ml['el']  # spike electrodes
+        unit_ml = ml['un']  # spike unit IDs
+        wf_ml = ml['wf']  # waveform unit 1 channel 1
+        mts_ml = ml['mts']  # marker time stamps
+        mid_ml = ml['mid']  # marker IDs
+
+        # Load data in channels 1-3 from original data files using neo framework
+        # try:
+        session = blr.BlackrockIO("blackrock/FileSpec2.3001",
+                                    print_diagnostic=False)
+        block = session.read_block(n_starts=[None], n_stops=[None],
+                                   channel_list=range(1, 9), nsx=5, units=[],
+                                   events=True, waveforms=True)
+        # except:
+        #    allok = False
+
+        # Check if analog data on channels 1-8 are equal
+        for rcg_i in block.recordingchannelgroups:
+            # Should only have one recording channel per group
+            if len(rcg_i.recordingchannels) != 1:
+                allok = False
+
+            rc = rcg_i.recordingchannels[0]
+            idx = rc.index
+            if idx in range(1, 9):
+                if np.any(rc.analogsignals[0].base - lfp_ml[idx - 1, :]):
+                    allok = False
+
+        # Should only have one segment
+        if len(block.segments) != 1:
+            allok = False
+
+        # Check if spikes in channels 1,3,5,7 are equal
+        for st_i in block.segments[0].spiketrains:
+            channelid = st_i.annotations['channel_id']
+            if channelid in range(1, 7, 2):
+                unitid = st_i.annotations['unit_id']
+                matlab_spikes = ts_ml[np.nonzero(np.logical_and(elec_ml == channelid, unit_ml == unitid))]
+                if np.any(st_i.base - matlab_spikes):
+                    allok = False
+
+                # Check waveforms of channel 1, unit 0
+                if channelid == 1 and unitid == 0:
+                    if np.any(st_i.waveforms - wf_ml):
+                        allok = False
+
+        # Check if digital marker events are equal
+        for ea_i in block.segments[0].eventarrays:
+            if 'digital_marker' in ea_i.annotations.keys() and ea_i.annotations['digital_marker'] == True:
+                markerid = ea_i.annotations['marker_id']
+                matlab_digievents = mts_ml[np.nonzero(mid_ml == markerid)]
+                if np.any(ea_i.times.base - matlab_digievents):
+                    allok = False
+
+        # Check if analog marker events are equal
+        # Currently not implemented by the Matlab loader
+        for ea_i in block.segments[0].eventarrays:
+            if 'analog_marker' in ea_i.annotations.keys() and ea_i.annotations['analog_marker'] == True:
+                markerid = ea_i.annotations['marker_id']
+                matlab_anaevents = mts_ml[np.nonzero(mid_ml == markerid)]
+                if np.any(ea_i.times.base - matlab_anaevents):
+                    allok = False
+
+        # Final result
+        self.assertTrue(allok)
 
 
-#~ def delete_test_session():
-    #~ """Removes all file in directory so we can test writing to it"""
-    #~ for fi in glob.glob(os.path.join(
-        #~ './files_for_tests/klustakwik/test3', '*')):
-        #~ os.remove(fi)
+def suite():
+    suite = unittest.makeSuite(BlackrockIOTestCase, 'test')
+    return suite
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__ == "__main__":
+    runner = unittest.TextTestRunner(verbosity=2)
+    runner.run(suite())
+
+
+# if __name__ == "__main__":
+    # import sys;sys.argv = ['', 'Test.testName']
+#    unittest.main()
