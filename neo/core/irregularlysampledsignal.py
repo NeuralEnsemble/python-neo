@@ -89,6 +89,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     '''
 
+    _single_parent_objects = ('Segment', 'RecordingChannel')
+
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,
                 **annotations):
@@ -139,8 +141,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
-        self._single_parent_objects = ['Segment', 'RecordingChannel']
-
     def __array_finalize__(self, obj):
         '''
         This is called every time a new :class:`IrregularlySampledSignal` is
@@ -164,13 +164,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
-        self._container_child_objects = getattr(obj,
-                                                '_container_child_objects', [])
-        self._data_child_objects = getattr(obj, '_data_child_objects', [])
-        self._single_parent_objects = getattr(obj,
-                                              '_single_parent_objects', [])
-        self._multi_child_objects = getattr(obj, '_multi_child_objects', [])
-        self._multi_parent_objects = getattr(obj, '_multi_parent_objects', [])
 
     def __repr__(self):
         '''

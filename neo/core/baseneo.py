@@ -130,6 +130,22 @@ class BaseNeo(object):
     are specified in :module:`neo.description` and the documentation for the
     child object.
     '''
+
+    # these attributes control relationships, they need to be
+    # specified in each child class
+    # Child objects that are a container and have a single parent
+    _container_child_objects = ()
+    # Child objects that have data and have a single parent
+    _data_child_objects = ()
+    # Parent objects whose children can have a single parent
+    _single_parent_objects = ()
+    # Child objects that can have multiple parents
+    _multi_child_objects = ()
+    # Parent objects whose children can have multiple parents
+    _multi_parent_objects = ()
+    # Properties returning children of children [of children...]
+    _child_properties = ()
+
     def __init__(self, name=None, file_origin=None, description=None,
                  **annotations):
         '''
@@ -147,21 +163,6 @@ class BaseNeo(object):
         self.name = name
         self.description = description
         self.file_origin = file_origin
-
-        # these attributes control relationships, they need to be
-        # specified in each child class
-        # Child objects that are a container and have a single parent
-        self._container_child_objects = []
-        # Child objects that have data and have a single parent
-        self._data_child_objects = []
-        # Parent objects whose children can have a single parent
-        self._single_parent_objects = []
-        # Child objects that can have multiple parents
-        self._multi_child_objects = []
-        # Parent objects whose children can have multiple parents
-        self._multi_parent_objects = []
-        # Properties returning children of children [of children...]
-        self._child_properties = []
 
     def annotate(self, **annotations):
         '''
@@ -216,42 +217,48 @@ class BaseNeo(object):
         Containers for child objects that are a container and
         have a single parent.
         '''
-        return [child.lower() + 's' for child in self._container_child_objects]
+        return tuple([child.lower() + 's' for child in
+                      self._container_child_objects])
 
     @property
     def _data_child_containers(self):
         '''
         Containers for child objects that have data and have a single parent.
         '''
-        return [child.lower() + 's' for child in self._data_child_objects]
+        return tuple([child.lower() + 's' for child in
+                      self._data_child_objects])
 
     @property
     def _single_child_containers(self):
         '''
         Containers for child objects with a single parent.
         '''
-        return [child.lower() + 's' for child in self._single_child_objects]
+        return tuple([child.lower() + 's' for child in
+                      self._single_child_objects])
 
     @property
     def _single_parent_containers(self):
         '''
         Containers for parent objects whose children can have a single parent.
         '''
-        return [parent.lower() for parent in self._single_parent_objects]
+        return tuple([parent.lower() for parent in
+                      self._single_parent_objects])
 
     @property
     def _multi_child_containers(self):
         '''
         Containers for child objects that can have multiple parents.
         '''
-        return [child.lower() + 's' for child in self._multi_child_objects]
+        return tuple([child.lower() + 's' for child in
+                      self._multi_child_objects])
 
     @property
     def _multi_parent_containers(self):
         '''
         Containers for parent objects whose children can have multiple parents.
         '''
-        return [parent.lower() + 's' for parent in self._multi_parent_objects]
+        return tuple([parent.lower() + 's' for parent in
+                      self._multi_parent_objects])
 
     @property
     def _child_objects(self):
@@ -287,7 +294,7 @@ class BaseNeo(object):
         All child objects stored in the current object.
         '''
         childs = [list(getattr(self, attr)) for attr in self._child_containers]
-        return sum(childs, [])
+        return tuple(sum(childs, []))
 
     @property
     def parents(self):
@@ -298,7 +305,7 @@ class BaseNeo(object):
                   self._single_parent_containers]
         multi = [list(getattr(self, attr)) for attr in
                  self._multi_parent_containers]
-        return single + sum(multi, [])
+        return tuple(single + sum(multi, []))
 
     def create_many_to_one_relationship(self, force=False, recursive=True):
         """

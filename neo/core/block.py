@@ -78,6 +78,9 @@ class Block(BaseNeo):
 
     '''
 
+    _container_child_objects = ('Segment', 'RecordingChannelGroup')
+    _child_properties = ('Unit', 'RecordingChannel')
+
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
                  **annotations):
@@ -93,10 +96,6 @@ class Block(BaseNeo):
 
         self.segments = []
         self.recordingchannelgroups = []
-
-        self._container_child_objects = ['Segment', 'RecordingChannelGroup']
-
-        self._child_properties = ['Unit', 'RecordingChannel']
 
     @property
     def list_units(self):

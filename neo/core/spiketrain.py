@@ -173,6 +173,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     '''
 
+    _single_parent_objects = ('Segment', 'Unit')
+
     def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,
@@ -284,7 +286,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # attributes and sets up self.annotations
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
-        self._single_parent_objects = ['Segment', 'Unit']
 
     def rescale(self, units):
         '''
@@ -348,13 +349,6 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
         self.segment = getattr(obj, 'segment', None)
         self.unit = getattr(obj, 'unit', None)
-        self._container_child_objects = getattr(obj,
-                                                '_container_child_objects', [])
-        self._data_child_objects = getattr(obj, '_data_child_objects', [])
-        self._single_parent_objects = getattr(obj,
-                                              '_single_parent_objects', [])
-        self._multi_child_objects = getattr(obj, '_multi_child_objects', [])
-        self._multi_parent_objects = getattr(obj, '_multi_parent_objects', [])
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', None)

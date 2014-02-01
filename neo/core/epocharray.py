@@ -61,6 +61,8 @@ class EpochArray(BaseNeo):
 
     '''
 
+    _single_parent_objects = ('Segment',)
+
     def __init__(self, times=None, durations=None, labels=None,
                  name=None, description=None, file_origin=None, **annotations):
         '''
@@ -81,8 +83,6 @@ class EpochArray(BaseNeo):
         self.labels = labels
 
         self.segment = None
-
-        self._single_parent_objects = ['Segment']
 
     def __repr__(self):
         '''

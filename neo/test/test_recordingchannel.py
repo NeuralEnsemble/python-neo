@@ -203,36 +203,36 @@ class TestRecordingChannel(unittest.TestCase):
         rcg.recordingchannels = [self.rchan1]
         rcg.create_many_to_many_relationship()
 
-        self.assertEqual(self.rchan1._container_child_objects, [])
+        self.assertEqual(self.rchan1._container_child_objects, ())
         self.assertEqual(self.rchan1._data_child_objects,
-                         ['AnalogSignal', 'IrregularlySampledSignal'])
-        self.assertEqual(self.rchan1._single_parent_objects, [])
-        self.assertEqual(self.rchan1._multi_child_objects, [])
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
+        self.assertEqual(self.rchan1._single_parent_objects, ())
+        self.assertEqual(self.rchan1._multi_child_objects, ())
         self.assertEqual(self.rchan1._multi_parent_objects,
-                         ['RecordingChannelGroup'])
-        self.assertEqual(self.rchan1._child_properties, [])
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.rchan1._child_properties, ())
 
         self.assertEqual(self.rchan1._single_child_objects,
-                         ['AnalogSignal', 'IrregularlySampledSignal'])
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
 
-        self.assertEqual(self.rchan1._container_child_containers, [])
+        self.assertEqual(self.rchan1._container_child_containers, ())
         self.assertEqual(self.rchan1._data_child_containers,
-                         ['analogsignals', 'irregularlysampledsignals'])
+                         ('analogsignals', 'irregularlysampledsignals',))
         self.assertEqual(self.rchan1._single_child_containers,
-                         ['analogsignals', 'irregularlysampledsignals'])
-        self.assertEqual(self.rchan1._single_parent_containers, [])
-        self.assertEqual(self.rchan1._multi_child_containers, [])
+                         ('analogsignals', 'irregularlysampledsignals',))
+        self.assertEqual(self.rchan1._single_parent_containers, ())
+        self.assertEqual(self.rchan1._multi_child_containers, ())
         self.assertEqual(self.rchan1._multi_parent_containers,
-                         ['recordingchannelgroups'])
+                         ('recordingchannelgroups',))
 
         self.assertEqual(self.rchan1._child_objects,
-                         ['AnalogSignal', 'IrregularlySampledSignal'])
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
         self.assertEqual(self.rchan1._child_containers,
-                         ['analogsignals', 'irregularlysampledsignals'])
+                         ('analogsignals', 'irregularlysampledsignals',))
         self.assertEqual(self.rchan1._parent_objects,
-                         ['RecordingChannelGroup'])
+                         ('RecordingChannelGroup',))
         self.assertEqual(self.rchan1._parent_containers,
-                         ['recordingchannelgroups'])
+                         ('recordingchannelgroups',))
 
         self.assertEqual(len(self.rchan1.children),
                          len(self.sig1) + len(self.irsig1))

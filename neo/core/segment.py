@@ -76,6 +76,13 @@ class Segment(BaseNeo):
 
     '''
 
+    _data_child_objects = ('AnalogSignal', 'AnalogSignalArray',
+                           'Epoch', 'EpochArray',
+                           'Event', 'EventArray',
+                           'IrregularlySampledSignal',
+                           'Spike', 'SpikeTrain')
+    _single_parent_objects = ('Block',)
+
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
                  **annotations):
@@ -99,13 +106,6 @@ class Segment(BaseNeo):
         self.spiketrains = []
 
         self.block = None
-
-        self._data_child_objects = ['AnalogSignal', 'AnalogSignalArray',
-                                    'Epoch', 'EpochArray',
-                                    'Event', 'EventArray',
-                                    'IrregularlySampledSignal',
-                                    'Spike', 'SpikeTrain']
-        self._single_parent_objects = ['Block']
 
     @property
     def all_data(self):

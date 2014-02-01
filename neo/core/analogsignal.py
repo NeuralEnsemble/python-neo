@@ -71,6 +71,9 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
     '''
     Base class for AnalogSignal and AnalogSignalArray
     '''
+
+    _single_parent_objects = ('Segment', 'RecordingChannel')
+
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
@@ -123,7 +126,6 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         # attributes and sets up self.annotations
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
-        self._single_parent_objects = ['Segment', 'RecordingChannel']
 
     def __reduce__(self):
         '''
@@ -167,13 +169,6 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
         self.channel_index = getattr(obj, 'channel_index', None)
-        self._container_child_objects = getattr(obj,
-                                                '_container_child_objects', [])
-        self._data_child_objects = getattr(obj, '_data_child_objects', [])
-        self._single_parent_objects = getattr(obj,
-                                              '_single_parent_objects', [])
-        self._multi_child_objects = getattr(obj, '_multi_child_objects', [])
-        self._multi_parent_objects = getattr(obj, '_multi_parent_objects', [])
 
     def __repr__(self):
         '''

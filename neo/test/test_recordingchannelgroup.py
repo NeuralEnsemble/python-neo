@@ -238,32 +238,32 @@ class TestRecordingChannelGroup(unittest.TestCase):
         blk.recordingchannelgroups = [self.rcg1]
         blk.create_many_to_one_relationship()
 
-        self.assertEqual(self.rcg1._container_child_objects, ['Unit'])
-        self.assertEqual(self.rcg1._data_child_objects, ['AnalogSignalArray'])
-        self.assertEqual(self.rcg1._single_parent_objects, ['Block'])
-        self.assertEqual(self.rcg1._multi_child_objects, ['RecordingChannel'])
-        self.assertEqual(self.rcg1._multi_parent_objects, [])
-        self.assertEqual(self.rcg1._child_properties, [])
+        self.assertEqual(self.rcg1._container_child_objects, ('Unit',))
+        self.assertEqual(self.rcg1._data_child_objects, ('AnalogSignalArray',))
+        self.assertEqual(self.rcg1._single_parent_objects, ('Block',))
+        self.assertEqual(self.rcg1._multi_child_objects, ('RecordingChannel',))
+        self.assertEqual(self.rcg1._multi_parent_objects, ())
+        self.assertEqual(self.rcg1._child_properties, ())
 
         self.assertEqual(self.rcg1._single_child_objects,
-                         ['Unit', 'AnalogSignalArray'])
+                         ('Unit', 'AnalogSignalArray',))
 
-        self.assertEqual(self.rcg1._container_child_containers, ['units'])
+        self.assertEqual(self.rcg1._container_child_containers, ('units',))
         self.assertEqual(self.rcg1._data_child_containers,
-                         ['analogsignalarrays'])
+                         ('analogsignalarrays',))
         self.assertEqual(self.rcg1._single_child_containers,
-                         ['units', 'analogsignalarrays'])
-        self.assertEqual(self.rcg1._single_parent_containers, ['block'])
+                         ('units', 'analogsignalarrays'))
+        self.assertEqual(self.rcg1._single_parent_containers, ('block',))
         self.assertEqual(self.rcg1._multi_child_containers,
-                         ['recordingchannels'])
-        self.assertEqual(self.rcg1._multi_parent_containers, [])
+                         ('recordingchannels',))
+        self.assertEqual(self.rcg1._multi_parent_containers, ())
 
         self.assertEqual(self.rcg1._child_objects,
-                         ['Unit', 'AnalogSignalArray', 'RecordingChannel'])
+                         ('Unit', 'AnalogSignalArray', 'RecordingChannel'))
         self.assertEqual(self.rcg1._child_containers,
-                         ['units', 'analogsignalarrays', 'recordingchannels'])
-        self.assertEqual(self.rcg1._parent_objects, ['Block'])
-        self.assertEqual(self.rcg1._parent_containers, ['block'])
+                         ('units', 'analogsignalarrays', 'recordingchannels'))
+        self.assertEqual(self.rcg1._parent_objects, ('Block',))
+        self.assertEqual(self.rcg1._parent_containers, ('block',))
 
         self.assertEqual(len(self.rcg1.children),
                          (len(self.units1) +

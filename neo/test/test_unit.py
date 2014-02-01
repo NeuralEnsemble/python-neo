@@ -176,36 +176,36 @@ class TestUnit(unittest.TestCase):
         rcg.units = [self.unit1]
         rcg.create_many_to_one_relationship()
 
-        self.assertEqual(self.unit1._container_child_objects, [])
+        self.assertEqual(self.unit1._container_child_objects, ())
         self.assertEqual(self.unit1._data_child_objects,
-                         ['Spike', 'SpikeTrain'])
+                         ('Spike', 'SpikeTrain'))
         self.assertEqual(self.unit1._single_parent_objects,
-                         ['RecordingChannelGroup'])
-        self.assertEqual(self.unit1._multi_child_objects, [])
-        self.assertEqual(self.unit1._multi_parent_objects, [])
-        self.assertEqual(self.unit1._child_properties, [])
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.unit1._multi_child_objects, ())
+        self.assertEqual(self.unit1._multi_parent_objects, ())
+        self.assertEqual(self.unit1._child_properties, ())
 
         self.assertEqual(self.unit1._single_child_objects,
-                         ['Spike', 'SpikeTrain'])
+                         ('Spike', 'SpikeTrain'))
 
-        self.assertEqual(self.unit1._container_child_containers, [])
+        self.assertEqual(self.unit1._container_child_containers, ())
         self.assertEqual(self.unit1._data_child_containers,
-                         ['spikes', 'spiketrains'])
+                         ('spikes', 'spiketrains'))
         self.assertEqual(self.unit1._single_child_containers,
-                         ['spikes', 'spiketrains'])
+                         ('spikes', 'spiketrains'))
         self.assertEqual(self.unit1._single_parent_containers,
-                         ['recordingchannelgroup'])
-        self.assertEqual(self.unit1._multi_child_containers, [])
-        self.assertEqual(self.unit1._multi_parent_containers, [])
+                         ('recordingchannelgroup',))
+        self.assertEqual(self.unit1._multi_child_containers, ())
+        self.assertEqual(self.unit1._multi_parent_containers, ())
 
         self.assertEqual(self.unit1._child_objects,
-                         ['Spike', 'SpikeTrain'])
+                         ('Spike', 'SpikeTrain'))
         self.assertEqual(self.unit1._child_containers,
-                         ['spikes', 'spiketrains'])
+                         ('spikes', 'spiketrains'))
         self.assertEqual(self.unit1._parent_objects,
-                         ['RecordingChannelGroup'])
+                         ('RecordingChannelGroup',))
         self.assertEqual(self.unit1._parent_containers,
-                         ['recordingchannelgroup'])
+                         ('recordingchannelgroup',))
 
         self.assertEqual(len(self.unit1.children),
                          len(self.spike1) + len(self.train1))

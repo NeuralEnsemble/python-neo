@@ -54,6 +54,8 @@ class Spike(BaseNeo):
 
     '''
 
+    _single_parent_objects = ('Segment', 'Unit')
+
     def __init__(self, time=0 * pq.s, waveform=None, sampling_rate=None,
                  left_sweep=None, name=None, description=None,
                  file_origin=None, **annotations):
@@ -71,8 +73,6 @@ class Spike(BaseNeo):
 
         self.segment = None
         self.unit = None
-
-        self._single_parent_objects = ['Segment', 'Unit']
 
     @property
     def duration(self):

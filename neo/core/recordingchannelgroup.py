@@ -120,6 +120,11 @@ class RecordingChannelGroup(BaseNeo):
 
     '''
 
+    _container_child_objects = ('Unit',)
+    _data_child_objects = ('AnalogSignalArray',)
+    _multi_child_objects = ('RecordingChannel',)
+    _single_parent_objects = ('Block',)
+
     def __init__(self, channel_names=None, channel_indexes=None, name=None,
                  description=None, file_origin=None, **annotations):
         '''
@@ -148,11 +153,6 @@ class RecordingChannelGroup(BaseNeo):
         self.recordingchannels = []
 
         self.block = None
-
-        self._container_child_objects = ['Unit']
-        self._data_child_objects = ['AnalogSignalArray']
-        self._multi_child_objects = ['RecordingChannel']
-        self._single_parent_objects = ['Block']
 
     def merge(self, other):
         '''

@@ -898,56 +898,56 @@ class TestSegment(unittest.TestCase):
         blk.segments = [self.segment1]
         blk.create_many_to_one_relationship()
 
-        self.assertEqual(self.segment1._container_child_objects, [])
+        self.assertEqual(self.segment1._container_child_objects, ())
         self.assertEqual(self.segment1._data_child_objects,
-                         ['AnalogSignal', 'AnalogSignalArray',
+                         ('AnalogSignal', 'AnalogSignalArray',
                           'Epoch', 'EpochArray',
                           'Event', 'EventArray',
                           'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'])
-        self.assertEqual(self.segment1._single_parent_objects, ['Block'])
-        self.assertEqual(self.segment1._multi_child_objects, [])
-        self.assertEqual(self.segment1._multi_parent_objects, [])
-        self.assertEqual(self.segment1._child_properties, [])
+                          'Spike', 'SpikeTrain'))
+        self.assertEqual(self.segment1._single_parent_objects, ('Block',))
+        self.assertEqual(self.segment1._multi_child_objects, ())
+        self.assertEqual(self.segment1._multi_parent_objects, ())
+        self.assertEqual(self.segment1._child_properties, ())
 
         self.assertEqual(self.segment1._single_child_objects,
-                         ['AnalogSignal', 'AnalogSignalArray',
+                         ('AnalogSignal', 'AnalogSignalArray',
                           'Epoch', 'EpochArray',
                           'Event', 'EventArray',
                           'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'])
+                          'Spike', 'SpikeTrain'))
 
-        self.assertEqual(self.segment1._container_child_containers, [])
+        self.assertEqual(self.segment1._container_child_containers, ())
         self.assertEqual(self.segment1._data_child_containers,
-                         ['analogsignals', 'analogsignalarrays',
+                         ('analogsignals', 'analogsignalarrays',
                           'epochs', 'epocharrays',
                           'events', 'eventarrays',
                           'irregularlysampledsignals',
-                          'spikes', 'spiketrains'])
+                          'spikes', 'spiketrains'))
         self.assertEqual(self.segment1._single_child_containers,
-                         ['analogsignals', 'analogsignalarrays',
+                         ('analogsignals', 'analogsignalarrays',
                           'epochs', 'epocharrays',
                           'events', 'eventarrays',
                           'irregularlysampledsignals',
-                          'spikes', 'spiketrains'])
-        self.assertEqual(self.segment1._single_parent_containers, ['block'])
-        self.assertEqual(self.segment1._multi_child_containers, [])
-        self.assertEqual(self.segment1._multi_parent_containers, [])
+                          'spikes', 'spiketrains'))
+        self.assertEqual(self.segment1._single_parent_containers, ('block',))
+        self.assertEqual(self.segment1._multi_child_containers, ())
+        self.assertEqual(self.segment1._multi_parent_containers, ())
 
         self.assertEqual(self.segment1._child_objects,
-                         ['AnalogSignal', 'AnalogSignalArray',
+                         ('AnalogSignal', 'AnalogSignalArray',
                           'Epoch', 'EpochArray',
                           'Event', 'EventArray',
                           'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'])
+                          'Spike', 'SpikeTrain'))
         self.assertEqual(self.segment1._child_containers,
-                         ['analogsignals', 'analogsignalarrays',
+                         ('analogsignals', 'analogsignalarrays',
                           'epochs', 'epocharrays',
                           'events', 'eventarrays',
                           'irregularlysampledsignals',
-                          'spikes', 'spiketrains'])
-        self.assertEqual(self.segment1._parent_objects, ['Block'])
-        self.assertEqual(self.segment1._parent_containers, ['block'])
+                          'spikes', 'spiketrains'))
+        self.assertEqual(self.segment1._parent_objects, ('Block',))
+        self.assertEqual(self.segment1._parent_containers, ('block',))
 
         self.assertEqual(len(self.segment1.children),
                          (len(self.sig1) +

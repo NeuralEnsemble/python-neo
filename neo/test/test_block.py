@@ -170,33 +170,33 @@ class TestBlock(unittest.TestCase):
         blk.create_many_to_one_relationship()
 
         self.assertEqual(blk._container_child_objects,
-                         ['Segment', 'RecordingChannelGroup'])
-        self.assertEqual(blk._data_child_objects, [])
-        self.assertEqual(blk._single_parent_objects, [])
-        self.assertEqual(blk._multi_child_objects, [])
-        self.assertEqual(blk._multi_parent_objects, [])
-        self.assertEqual(blk._child_properties, ['Unit', 'RecordingChannel'])
+                         ('Segment', 'RecordingChannelGroup'))
+        self.assertEqual(blk._data_child_objects, ())
+        self.assertEqual(blk._single_parent_objects, ())
+        self.assertEqual(blk._multi_child_objects, ())
+        self.assertEqual(blk._multi_parent_objects, ())
+        self.assertEqual(blk._child_properties, ('Unit', 'RecordingChannel'))
 
         self.assertEqual(blk._single_child_objects,
-                         ['Segment', 'RecordingChannelGroup'])
+                         ('Segment', 'RecordingChannelGroup'))
 
         self.assertEqual(blk._container_child_containers,
-                         ['segments', 'recordingchannelgroups'])
-        self.assertEqual(blk._data_child_containers, [])
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._data_child_containers, ())
         self.assertEqual(blk._single_child_containers,
-                         ['segments', 'recordingchannelgroups'])
-        self.assertEqual(blk._single_parent_containers, [])
-        self.assertEqual(blk._multi_child_containers, [])
-        self.assertEqual(blk._multi_parent_containers, [])
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._single_parent_containers, ())
+        self.assertEqual(blk._multi_child_containers, ())
+        self.assertEqual(blk._multi_parent_containers, ())
 
         self.assertEqual(blk._child_objects,
-                         ['Segment', 'RecordingChannelGroup'])
+                         ('Segment', 'RecordingChannelGroup'))
         self.assertEqual(blk._child_containers,
-                         ['segments', 'recordingchannelgroups'])
-        self.assertEqual(blk._parent_objects, [])
-        self.assertEqual(blk._parent_containers, [])
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._parent_objects, ())
+        self.assertEqual(blk._parent_containers, ())
 
-        self.assertEqual(blk.parents, [])
+        self.assertEqual(blk.parents, ())
         self.assertEqual(len(blk.children), len(self.seg) + len(self.rcg))
         self.assertEqual(blk.children[0].name, self.segnames[0])
         self.assertEqual(blk.children[1].name, self.segnames[1])
