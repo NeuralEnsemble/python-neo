@@ -84,7 +84,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
-from neo.io.tools import create_many_to_one_relationship, populate_RecordingChannel
+from neo.io.tools import populate_RecordingChannel
 
 class AlphaOmegaIO(BaseIO):
     """
@@ -387,7 +387,7 @@ class AlphaOmegaIO(BaseIO):
                 seg.annotate(alphamap_version = version)
         if cascade:
             populate_RecordingChannel(blck, remove_from_annotation = True)
-            create_many_to_one_relationship(blck)
+            blck.create_many_to_one_relationship()
 
         return blck
 

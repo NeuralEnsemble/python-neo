@@ -41,9 +41,6 @@ from neo.core import Block, RecordingChannelGroup, Segment, SpikeTrain, Unit
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
 
 class BrainwareF32IO(BaseIO):
     '''
@@ -186,7 +183,7 @@ class BrainwareF32IO(BaseIO):
             while res:
                 res = self.__read_id()
 
-        create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
 
         # cleanup attributes
         self._fsrc = None

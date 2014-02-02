@@ -19,7 +19,6 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
                       Segment, Spike, SpikeTrain, Unit)
-from neo.io.tools import create_many_to_one_relationship
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -108,7 +107,7 @@ class BaseIO(object):
                 return bl
             seg = self.read_segment(lazy=lazy, cascade=cascade,  **kargs)
             bl.segments.append(seg)
-            create_many_to_one_relationship(bl)
+            bl.create_many_to_one_relationship()
             return [bl]
         else:
             raise NotImplementedError

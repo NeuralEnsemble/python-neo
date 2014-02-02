@@ -173,6 +173,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     '''
 
+    _single_parent_objects = ('Segment', 'Unit')
+
     def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,

@@ -13,7 +13,6 @@ from neo.core.recordingchannelgroup import RecordingChannelGroup
 from neo.core.recordingchannel import RecordingChannel
 from neo.core.segment import Segment
 from neo.core.unit import Unit
-from neo.io.tools import create_many_to_one_relationship
 from neo.test.tools import assert_neo_object_is_compliant
 
 
@@ -36,6 +35,7 @@ class TestBlock(unittest.TestCase):
 
         self.rcgname1 = 'rcg 1'
         self.rcgname2 = 'rcg 2'
+        self.rcgnames = [self.rcgname1, self.rcgname2]
 
         self.unitnames1 = [unitname11, unitname12]
         self.unitnames2 = [unitname21, unitname22, unitname11]
@@ -81,6 +81,7 @@ class TestBlock(unittest.TestCase):
 
         self.rcg1 = RecordingChannelGroup(name=self.rcgname1)
         self.rcg2 = RecordingChannelGroup(name=self.rcgname2)
+        self.rcg = [self.rcg1, self.rcg2]
 
         self.rcg1.units = self.units1
         self.rcg2.units = self.units2
@@ -96,7 +97,7 @@ class TestBlock(unittest.TestCase):
     def test_block_list_units(self):
         blk = Block(name='a block')
         blk.recordingchannelgroups = [self.rcg1, self.rcg2]
-        create_many_to_one_relationship(blk)
+        blk.create_many_to_one_relationship()
         #assert_neo_object_is_compliant(blk)
 
         unitres1 = [unit.name for unit in blk.recordingchannelgroups[0].units]
@@ -110,7 +111,7 @@ class TestBlock(unittest.TestCase):
     def test_block_list_recordingchannel(self):
         blk = Block(name='a block')
         blk.recordingchannelgroups = [self.rcg1, self.rcg2]
-        create_many_to_one_relationship(blk)
+        blk.create_many_to_one_relationship()
         #assert_neo_object_is_compliant(blk)
 
         chanres1 = [chan.name for chan in
@@ -161,6 +162,48 @@ class TestBlock(unittest.TestCase):
 
         self.assertEqual(unitres1, self.unitnames)
         self.assertEqual(unitres2, self.unitnames2[:-1] + self.unitnames1)
+
+    def test__children(self):
+        blk = Block(name='a block')
+        blk.recordingchannelgroups = self.rcg
+        blk.segments = self.seg
+        blk.create_many_to_one_relationship()
+
+        self.assertEqual(blk._container_child_objects,
+                         ('Segment', 'RecordingChannelGroup'))
+        self.assertEqual(blk._data_child_objects, ())
+        self.assertEqual(blk._single_parent_objects, ())
+        self.assertEqual(blk._multi_child_objects, ())
+        self.assertEqual(blk._multi_parent_objects, ())
+        self.assertEqual(blk._child_properties, ('Unit', 'RecordingChannel'))
+
+        self.assertEqual(blk._single_child_objects,
+                         ('Segment', 'RecordingChannelGroup'))
+
+        self.assertEqual(blk._container_child_containers,
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._data_child_containers, ())
+        self.assertEqual(blk._single_child_containers,
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._single_parent_containers, ())
+        self.assertEqual(blk._multi_child_containers, ())
+        self.assertEqual(blk._multi_parent_containers, ())
+
+        self.assertEqual(blk._child_objects,
+                         ('Segment', 'RecordingChannelGroup'))
+        self.assertEqual(blk._child_containers,
+                         ('segments', 'recordingchannelgroups'))
+        self.assertEqual(blk._parent_objects, ())
+        self.assertEqual(blk._parent_containers, ())
+
+        self.assertEqual(blk.parents, ())
+        self.assertEqual(len(blk.children), len(self.seg) + len(self.rcg))
+        self.assertEqual(blk.children[0].name, self.segnames[0])
+        self.assertEqual(blk.children[1].name, self.segnames[1])
+        self.assertEqual(blk.children[2].name, self.segnames[2])
+        self.assertEqual(blk.children[3].name, self.segnames[3])
+        self.assertEqual(blk.children[4].name, self.rcgnames[0])
+        self.assertEqual(blk.children[5].name, self.rcgnames[1])
 
 
 if __name__ == "__main__":

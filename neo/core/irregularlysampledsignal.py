@@ -89,6 +89,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     '''
 
+    _single_parent_objects = ('Segment', 'RecordingChannel')
+
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,
                 **annotations):
@@ -126,6 +128,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                 dtype=float, copy=copy)
         obj.segment = None
         obj.recordingchannel = None
+
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,

@@ -12,11 +12,8 @@ import numpy as np
 import quantities as pq
 
 from neo.core.recordingchannelgroup import RecordingChannelGroup
-from neo.core.analogsignalarray import AnalogSignalArray
-from neo.core.recordingchannel import RecordingChannel
-from neo.core.unit import Unit
+from neo.core import AnalogSignalArray, RecordingChannel, Unit, Block
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
-from neo.io.tools import create_many_to_one_relationship
 
 
 class TestRecordingChannelGroup(unittest.TestCase):
@@ -44,8 +41,8 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.rcg1.analogsignalarrays = self.sigarr1
         self.rcg2.analogsignalarrays = self.sigarr2
 
-        create_many_to_one_relationship(self.rcg1)
-        create_many_to_one_relationship(self.rcg2)
+        self.rcg1.create_many_to_one_relationship()
+        self.rcg2.create_many_to_one_relationship()
 
     def setup_unit(self):
         unitname11 = 'unit 1 1'
@@ -235,6 +232,56 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
         for res, targ in zip(self.rcg2.analogsignalarrays,  self.sigarr2):
             assert_arrays_equal(res, targ)
+
+    def test__children(self):
+        blk = Block(name='block1')
+        blk.recordingchannelgroups = [self.rcg1]
+        blk.create_many_to_one_relationship()
+
+        self.assertEqual(self.rcg1._container_child_objects, ('Unit',))
+        self.assertEqual(self.rcg1._data_child_objects, ('AnalogSignalArray',))
+        self.assertEqual(self.rcg1._single_parent_objects, ('Block',))
+        self.assertEqual(self.rcg1._multi_child_objects, ('RecordingChannel',))
+        self.assertEqual(self.rcg1._multi_parent_objects, ())
+        self.assertEqual(self.rcg1._child_properties, ())
+
+        self.assertEqual(self.rcg1._single_child_objects,
+                         ('Unit', 'AnalogSignalArray',))
+
+        self.assertEqual(self.rcg1._container_child_containers, ('units',))
+        self.assertEqual(self.rcg1._data_child_containers,
+                         ('analogsignalarrays',))
+        self.assertEqual(self.rcg1._single_child_containers,
+                         ('units', 'analogsignalarrays'))
+        self.assertEqual(self.rcg1._single_parent_containers, ('block',))
+        self.assertEqual(self.rcg1._multi_child_containers,
+                         ('recordingchannels',))
+        self.assertEqual(self.rcg1._multi_parent_containers, ())
+
+        self.assertEqual(self.rcg1._child_objects,
+                         ('Unit', 'AnalogSignalArray', 'RecordingChannel'))
+        self.assertEqual(self.rcg1._child_containers,
+                         ('units', 'analogsignalarrays', 'recordingchannels'))
+        self.assertEqual(self.rcg1._parent_objects, ('Block',))
+        self.assertEqual(self.rcg1._parent_containers, ('block',))
+
+        self.assertEqual(len(self.rcg1.children),
+                         (len(self.units1) +
+                          len(self.rchan1) +
+                          len(self.sigarr1)))
+        self.assertEqual(self.rcg1.children[0].name, self.unitnames1[0])
+        self.assertEqual(self.rcg1.children[1].name, self.unitnames1[1])
+        self.assertEqual(self.rcg1.children[2].name, self.sigarrnames1[0])
+        self.assertEqual(self.rcg1.children[3].name, self.sigarrnames1[1])
+        self.assertEqual(self.rcg1.children[4].name, self.rchannames1[0])
+        self.assertEqual(self.rcg1.children[5].name, self.rchannames1[1])
+        self.assertEqual(len(self.rcg1.parents), 1)
+        self.assertEqual(self.rcg1.parents[0].name, 'block1')
+
+        self.rcg1.create_many_to_one_relationship()
+        self.rcg1.create_many_to_many_relationship()
+        self.rcg1.create_relationship()
+        assert_neo_object_is_compliant(self.rcg1)
 
 
 if __name__ == '__main__':

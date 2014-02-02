@@ -12,6 +12,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
+from neo.core import Segment, RecordingChannel
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -151,6 +152,52 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
                 'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
+
+    def test__children(self):
+        signal = self.signals[0]
+
+        segment = Segment(name='seg1')
+        segment.analogsignals = [signal]
+        segment.create_many_to_one_relationship()
+
+        rchan = RecordingChannel(name='rchan1')
+        rchan.analogsignals = [signal]
+        rchan.create_many_to_one_relationship()
+
+        self.assertEqual(signal._container_child_objects, ())
+        self.assertEqual(signal._data_child_objects, ())
+        self.assertEqual(signal._single_parent_objects,
+                         ('Segment', 'RecordingChannel'))
+        self.assertEqual(signal._multi_child_objects, ())
+        self.assertEqual(signal._multi_parent_objects, ())
+        self.assertEqual(signal._child_properties, ())
+
+        self.assertEqual(signal._single_child_objects, ())
+
+        self.assertEqual(signal._container_child_containers, ())
+        self.assertEqual(signal._data_child_containers, ())
+        self.assertEqual(signal._single_child_containers, ())
+        self.assertEqual(signal._single_parent_containers,
+                         ('segment', 'recordingchannel'))
+        self.assertEqual(signal._multi_child_containers, ())
+        self.assertEqual(signal._multi_parent_containers, ())
+
+        self.assertEqual(signal._child_objects, ())
+        self.assertEqual(signal._child_containers, ())
+        self.assertEqual(signal._parent_objects,
+                         ('Segment', 'RecordingChannel'))
+        self.assertEqual(signal._parent_containers,
+                         ('segment', 'recordingchannel'))
+
+        self.assertEqual(signal.children, ())
+        self.assertEqual(len(signal.parents), 2)
+        self.assertEqual(signal.parents[0].name, 'seg1')
+        self.assertEqual(signal.parents[1].name, 'rchan1')
+
+        signal.create_many_to_one_relationship()
+        signal.create_many_to_many_relationship()
+        signal.create_relationship()
+        assert_neo_object_is_compliant(signal)
 
 
 class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):

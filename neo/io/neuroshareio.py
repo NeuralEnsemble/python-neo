@@ -32,7 +32,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
-from neo.io.tools import create_many_to_one_relationship
 
 
 class NeuroshareIO(BaseIO):
@@ -276,7 +275,7 @@ class NeuroshareIO(BaseIO):
         # close
         neuroshare.ns_CloseFile(hFile)
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

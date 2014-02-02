@@ -121,6 +121,8 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     '''
 
+    _single_parent_objects = ('Segment', 'RecordingChannelGroup')
+
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,

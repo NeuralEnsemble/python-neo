@@ -16,7 +16,6 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       Epoch, EpochArray, Event, EventArray,
                       IrregularlySampledSignal, RecordingChannelGroup,
                       Spike, SpikeTrain, Unit)
-from neo.io.tools import create_many_to_one_relationship
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
 
 
@@ -73,8 +72,8 @@ class TestSegment(unittest.TestCase):
         self.segment1.spiketrains = self.train1
         self.segment2.spiketrains = self.train2
 
-        create_many_to_one_relationship(self.segment1)
-        create_many_to_one_relationship(self.segment2)
+        self.segment1.create_many_to_one_relationship()
+        self.segment2.create_many_to_one_relationship()
 
     def setup_units(self):
         params = {'testarg2': 'yes', 'testarg3': True}
@@ -101,8 +100,8 @@ class TestSegment(unittest.TestCase):
         self.unit1.spikes = self.unit1spike
         self.unit2.spikes = self.unit2spike
 
-        create_many_to_one_relationship(self.unit1)
-        create_many_to_one_relationship(self.unit2)
+        self.unit1.create_many_to_one_relationship()
+        self.unit2.create_many_to_one_relationship()
 
     def setup_analogsignals(self):
         signame11 = 'analogsignal 1 1'
@@ -433,7 +432,7 @@ class TestSegment(unittest.TestCase):
                                               channel_indexes=unit_with_sig)
                 seg.analogsignalarrays.append(anasigarr)
 
-        create_many_to_one_relationship(blk)
+        blk.create_many_to_one_relationship()
         for unit in all_unit:
             assert_neo_object_is_compliant(unit)
         for rcg in rcgs:
@@ -606,7 +605,7 @@ class TestSegment(unittest.TestCase):
 
     def test_segment_merge(self):
         self.segment1.merge(self.segment2)
-        create_many_to_one_relationship(self.segment1, force=True)
+        self.segment1.create_many_to_one_relationship(force=True)
         assert_neo_object_is_compliant(self.segment1)
 
         self.assertEqual(self.segment1.name, 'test')
@@ -893,6 +892,102 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(len(result3), 2)
         self.assertEqual(result3[0], self.epoch1[0])
         self.assertEqual(result3[1], self.event1[0])
+
+    def test__children(self):
+        blk = Block(name='block1')
+        blk.segments = [self.segment1]
+        blk.create_many_to_one_relationship()
+
+        self.assertEqual(self.segment1._container_child_objects, ())
+        self.assertEqual(self.segment1._data_child_objects,
+                         ('AnalogSignal', 'AnalogSignalArray',
+                          'Epoch', 'EpochArray',
+                          'Event', 'EventArray',
+                          'IrregularlySampledSignal',
+                          'Spike', 'SpikeTrain'))
+        self.assertEqual(self.segment1._single_parent_objects, ('Block',))
+        self.assertEqual(self.segment1._multi_child_objects, ())
+        self.assertEqual(self.segment1._multi_parent_objects, ())
+        self.assertEqual(self.segment1._child_properties, ())
+
+        self.assertEqual(self.segment1._single_child_objects,
+                         ('AnalogSignal', 'AnalogSignalArray',
+                          'Epoch', 'EpochArray',
+                          'Event', 'EventArray',
+                          'IrregularlySampledSignal',
+                          'Spike', 'SpikeTrain'))
+
+        self.assertEqual(self.segment1._container_child_containers, ())
+        self.assertEqual(self.segment1._data_child_containers,
+                         ('analogsignals', 'analogsignalarrays',
+                          'epochs', 'epocharrays',
+                          'events', 'eventarrays',
+                          'irregularlysampledsignals',
+                          'spikes', 'spiketrains'))
+        self.assertEqual(self.segment1._single_child_containers,
+                         ('analogsignals', 'analogsignalarrays',
+                          'epochs', 'epocharrays',
+                          'events', 'eventarrays',
+                          'irregularlysampledsignals',
+                          'spikes', 'spiketrains'))
+        self.assertEqual(self.segment1._single_parent_containers, ('block',))
+        self.assertEqual(self.segment1._multi_child_containers, ())
+        self.assertEqual(self.segment1._multi_parent_containers, ())
+
+        self.assertEqual(self.segment1._child_objects,
+                         ('AnalogSignal', 'AnalogSignalArray',
+                          'Epoch', 'EpochArray',
+                          'Event', 'EventArray',
+                          'IrregularlySampledSignal',
+                          'Spike', 'SpikeTrain'))
+        self.assertEqual(self.segment1._child_containers,
+                         ('analogsignals', 'analogsignalarrays',
+                          'epochs', 'epocharrays',
+                          'events', 'eventarrays',
+                          'irregularlysampledsignals',
+                          'spikes', 'spiketrains'))
+        self.assertEqual(self.segment1._parent_objects, ('Block',))
+        self.assertEqual(self.segment1._parent_containers, ('block',))
+
+        self.assertEqual(len(self.segment1.children),
+                         (len(self.sig1) +
+                          len(self.sigarr1) +
+                          len(self.epoch1) +
+                          len(self.epocharr1) +
+                          len(self.event1) +
+                          len(self.eventarr1) +
+                          len(self.irsig1) +
+                          len(self.spike1) +
+                          len(self.train1)))
+        self.assertEqual(self.segment1.children[0].name, self.signames1[0])
+        self.assertEqual(self.segment1.children[1].name, self.signames1[1])
+        self.assertEqual(self.segment1.children[2].name, self.sigarrnames1[0])
+        self.assertEqual(self.segment1.children[3].name, self.sigarrnames1[1])
+        self.assertEqual(self.segment1.children[4].name, self.epochnames1[0])
+        self.assertEqual(self.segment1.children[5].name, self.epochnames1[1])
+        self.assertEqual(self.segment1.children[6].name,
+                         self.epocharrnames1[0])
+        self.assertEqual(self.segment1.children[7].name,
+                         self.epocharrnames1[1])
+        self.assertEqual(self.segment1.children[8].name, self.eventnames1[0])
+        self.assertEqual(self.segment1.children[9].name, self.eventnames1[1])
+        self.assertEqual(self.segment1.children[10].name,
+                         self.eventarrnames1[0])
+        self.assertEqual(self.segment1.children[11].name,
+                         self.eventarrnames1[1])
+        self.assertEqual(self.segment1.children[12].name, self.irsignames1[0])
+        self.assertEqual(self.segment1.children[13].name, self.irsignames1[1])
+        self.assertEqual(self.segment1.children[14].name, self.spikenames1[0])
+        self.assertEqual(self.segment1.children[15].name, self.spikenames1[1])
+        self.assertEqual(self.segment1.children[16].name, self.trainnames1[0])
+        self.assertEqual(self.segment1.children[17].name, self.trainnames1[1])
+        self.assertEqual(len(self.segment1.parents), 1)
+        self.assertEqual(self.segment1.parents[0].name, 'block1')
+
+        self.segment1.create_many_to_one_relationship()
+        self.segment1.create_many_to_many_relationship()
+        self.segment1.create_relationship()
+        assert_neo_object_is_compliant(self.segment1)
 
 
 if __name__ == "__main__":

@@ -12,10 +12,9 @@ import numpy as np
 import quantities as pq
 
 from neo.core.recordingchannel import RecordingChannel
-from neo.core.analogsignal import AnalogSignal
-from neo.core.irregularlysampledsignal import IrregularlySampledSignal
+from neo.core import (AnalogSignal, IrregularlySampledSignal,
+                      RecordingChannelGroup)
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
-from neo.io.tools import create_many_to_one_relationship
 
 
 class TestRecordingChannel(unittest.TestCase):
@@ -45,8 +44,8 @@ class TestRecordingChannel(unittest.TestCase):
         self.rchan1.irregularlysampledsignals = self.irsig1
         self.rchan2.irregularlysampledsignals = self.irsig2
 
-        create_many_to_one_relationship(self.rchan1)
-        create_many_to_one_relationship(self.rchan2)
+        self.rchan1.create_many_to_one_relationship()
+        self.rchan2.create_many_to_one_relationship()
 
     def setup_analogsignals(self):
         signame11 = 'analogsignal 1 1'
@@ -198,6 +197,56 @@ class TestRecordingChannel(unittest.TestCase):
         for res, targ in zip(self.rchan2.irregularlysampledsignals,
                              self.irsig2):
             assert_arrays_equal(res, targ)
+
+    def test__children(self):
+        rcg = RecordingChannelGroup(name='rcg1')
+        rcg.recordingchannels = [self.rchan1]
+        rcg.create_many_to_many_relationship()
+
+        self.assertEqual(self.rchan1._container_child_objects, ())
+        self.assertEqual(self.rchan1._data_child_objects,
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
+        self.assertEqual(self.rchan1._single_parent_objects, ())
+        self.assertEqual(self.rchan1._multi_child_objects, ())
+        self.assertEqual(self.rchan1._multi_parent_objects,
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.rchan1._child_properties, ())
+
+        self.assertEqual(self.rchan1._single_child_objects,
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
+
+        self.assertEqual(self.rchan1._container_child_containers, ())
+        self.assertEqual(self.rchan1._data_child_containers,
+                         ('analogsignals', 'irregularlysampledsignals',))
+        self.assertEqual(self.rchan1._single_child_containers,
+                         ('analogsignals', 'irregularlysampledsignals',))
+        self.assertEqual(self.rchan1._single_parent_containers, ())
+        self.assertEqual(self.rchan1._multi_child_containers, ())
+        self.assertEqual(self.rchan1._multi_parent_containers,
+                         ('recordingchannelgroups',))
+
+        self.assertEqual(self.rchan1._child_objects,
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
+        self.assertEqual(self.rchan1._child_containers,
+                         ('analogsignals', 'irregularlysampledsignals',))
+        self.assertEqual(self.rchan1._parent_objects,
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.rchan1._parent_containers,
+                         ('recordingchannelgroups',))
+
+        self.assertEqual(len(self.rchan1.children),
+                         len(self.sig1) + len(self.irsig1))
+        self.assertEqual(self.rchan1.children[0].name, self.signames1[0])
+        self.assertEqual(self.rchan1.children[1].name, self.signames1[1])
+        self.assertEqual(self.rchan1.children[2].name, self.irsignames1[0])
+        self.assertEqual(self.rchan1.children[3].name, self.irsignames1[1])
+        self.assertEqual(len(self.rchan1.parents), 1)
+        self.assertEqual(self.rchan1.parents[0].name, 'rcg1')
+
+        self.rchan1.create_many_to_one_relationship()
+        self.rchan1.create_many_to_many_relationship()
+        self.rchan1.create_relationship()
+        assert_neo_object_is_compliant(self.rchan1)
 
 
 if __name__ == "__main__":

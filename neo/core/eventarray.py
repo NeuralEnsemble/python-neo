@@ -56,6 +56,8 @@ class EventArray(BaseNeo):
 
     '''
 
+    _single_parent_objects = ('Segment',)
+
     def __init__(self, times=None, labels=None, name=None, description=None,
                  file_origin=None, **annotations):
         '''

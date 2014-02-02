@@ -12,10 +12,8 @@ import numpy as np
 import quantities as pq
 
 from neo.core.unit import Unit
-from neo.core.spiketrain import SpikeTrain
-from neo.core.spike import Spike
+from neo.core import SpikeTrain, Spike, RecordingChannelGroup
 from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
-from neo.io.tools import create_many_to_one_relationship
 
 
 class TestUnit(unittest.TestCase):
@@ -41,8 +39,8 @@ class TestUnit(unittest.TestCase):
         self.unit1.spikes = self.spike1
         self.unit2.spikes = self.spike2
 
-        create_many_to_one_relationship(self.unit1)
-        create_many_to_one_relationship(self.unit2)
+        self.unit1.create_many_to_one_relationship()
+        self.unit2.create_many_to_one_relationship()
 
     def setup_spikes(self):
         spikename11 = 'spike 1 1'
@@ -172,6 +170,54 @@ class TestUnit(unittest.TestCase):
 
         for res, targ in zip(self.unit2.spiketrains, self.train2):
             assert_arrays_equal(res, targ)
+
+    def test__children(self):
+        rcg = RecordingChannelGroup(name='rcg1')
+        rcg.units = [self.unit1]
+        rcg.create_many_to_one_relationship()
+
+        self.assertEqual(self.unit1._container_child_objects, ())
+        self.assertEqual(self.unit1._data_child_objects,
+                         ('Spike', 'SpikeTrain'))
+        self.assertEqual(self.unit1._single_parent_objects,
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.unit1._multi_child_objects, ())
+        self.assertEqual(self.unit1._multi_parent_objects, ())
+        self.assertEqual(self.unit1._child_properties, ())
+
+        self.assertEqual(self.unit1._single_child_objects,
+                         ('Spike', 'SpikeTrain'))
+
+        self.assertEqual(self.unit1._container_child_containers, ())
+        self.assertEqual(self.unit1._data_child_containers,
+                         ('spikes', 'spiketrains'))
+        self.assertEqual(self.unit1._single_child_containers,
+                         ('spikes', 'spiketrains'))
+        self.assertEqual(self.unit1._single_parent_containers,
+                         ('recordingchannelgroup',))
+        self.assertEqual(self.unit1._multi_child_containers, ())
+        self.assertEqual(self.unit1._multi_parent_containers, ())
+
+        self.assertEqual(self.unit1._child_objects,
+                         ('Spike', 'SpikeTrain'))
+        self.assertEqual(self.unit1._child_containers,
+                         ('spikes', 'spiketrains'))
+        self.assertEqual(self.unit1._parent_objects,
+                         ('RecordingChannelGroup',))
+        self.assertEqual(self.unit1._parent_containers,
+                         ('recordingchannelgroup',))
+
+        self.assertEqual(len(self.unit1.children),
+                         len(self.spike1) + len(self.train1))
+        self.assertEqual(self.unit1.children[0].name, self.spikenames1[0])
+        self.assertEqual(self.unit1.children[1].name, self.spikenames1[1])
+        self.assertEqual(self.unit1.children[2].name, self.trainnames1[0])
+        self.assertEqual(self.unit1.children[3].name, self.trainnames1[1])
+        self.assertEqual(len(self.unit1.parents), 1)
+        self.assertEqual(self.unit1.parents[0].name, 'rcg1')
+
+        self.unit1.create_many_to_one_relationship()
+        assert_neo_object_is_compliant(self.unit1)
 
 
 if __name__ == "__main__":

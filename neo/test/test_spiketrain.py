@@ -18,6 +18,7 @@ import quantities as pq
 
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain,
                                  _check_time_in_range, _new_spiketrain)
+from neo.core import Segment, Unit
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
 
 
@@ -1363,6 +1364,50 @@ class TestPropertiesMethods(unittest.TestCase):
         self.assertEqual(result2, None)
         self.assertEqual(result3, None)
         self.assertEqual(result4, None)
+
+    def test__children(self):
+        segment = Segment(name='seg1')
+        segment.spiketrains = [self.train1]
+        segment.create_many_to_one_relationship()
+
+        unit = Unit(name='unit1')
+        unit.spikes = [self.train1]
+        unit.create_many_to_one_relationship()
+
+        self.assertEqual(self.train1._container_child_objects, ())
+        self.assertEqual(self.train1._data_child_objects, ())
+        self.assertEqual(self.train1._single_parent_objects,
+                         ('Segment', 'Unit'))
+        self.assertEqual(self.train1._multi_child_objects, ())
+        self.assertEqual(self.train1._multi_parent_objects, ())
+        self.assertEqual(self.train1._child_properties, ())
+
+        self.assertEqual(self.train1._single_child_objects, ())
+
+        self.assertEqual(self.train1._container_child_containers, ())
+        self.assertEqual(self.train1._data_child_containers, ())
+        self.assertEqual(self.train1._single_child_containers, ())
+        self.assertEqual(self.train1._single_parent_containers,
+                         ('segment', 'unit'))
+        self.assertEqual(self.train1._multi_child_containers, ())
+        self.assertEqual(self.train1._multi_parent_containers, ())
+
+        self.assertEqual(self.train1._child_objects, ())
+        self.assertEqual(self.train1._child_containers, ())
+        self.assertEqual(self.train1._parent_objects,
+                         ('Segment', 'Unit'))
+        self.assertEqual(self.train1._parent_containers,
+                         ('segment', 'unit'))
+
+        self.assertEqual(self.train1.children, ())
+        self.assertEqual(len(self.train1.parents), 2)
+        self.assertEqual(self.train1.parents[0].name, 'seg1')
+        self.assertEqual(self.train1.parents[1].name, 'unit1')
+
+        self.train1.create_many_to_one_relationship()
+        self.train1.create_many_to_many_relationship()
+        self.train1.create_relationship()
+        assert_neo_object_is_compliant(self.train1)
 
 
 class TestMiscellaneous(unittest.TestCase):

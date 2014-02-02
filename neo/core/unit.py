@@ -62,6 +62,9 @@ class Unit(BaseNeo):
 
     '''
 
+    _data_child_objects = ('Spike', 'SpikeTrain')
+    _single_parent_objects = ('RecordingChannelGroup',)
+
     def __init__(self, name=None, description=None, file_origin=None,
                  channel_indexes=None, **annotations):
         '''

@@ -94,9 +94,6 @@ from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
                       AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
 # --------------------------------------------------------
 # OBJECTS
 
@@ -4174,7 +4171,7 @@ class ElphyIO(BaseIO):
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
-            create_many_to_one_relationship( analog_signal )
+            analog_signal.create_many_to_one_relationship()
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
         # spike channel in the episode
@@ -4186,7 +4183,7 @@ class ElphyIO(BaseIO):
             for spk in range(1, n_spikes+1) :
                 spiketrain = self.read_spiketrain(episode, spk)
                 spiketrain.segment = segment
-                create_many_to_one_relationship( spiketrain )
+                spiketrain.create_many_to_one_relationship()
                 segment.spiketrains.append( spiketrain )
         # segment
         return segment

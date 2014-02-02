@@ -26,7 +26,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, EpochArray, EventArray
-from neo.io.tools import create_many_to_one_relationship
 
 
 class struct_file(file):
@@ -206,7 +205,7 @@ class MicromedIO(BaseIO):
             seg.epocharrays.append(ep)
         
         
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

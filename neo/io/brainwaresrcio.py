@@ -50,9 +50,6 @@ from neo.core import (Block, Event, RecordingChannel,
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
 
 class BrainwareSrcIO(BaseIO):
     '''
@@ -361,7 +358,7 @@ class BrainwareSrcIO(BaseIO):
         self.__rcg.channel_names = chan_names
 
         # since we read at a Block level we always do this
-        create_many_to_one_relationship(self.__blk)
+        self.__blk.create_many_to_one_relationship()
 
         # put the Block in a local object so it can be gargabe collected
         blockobj = self.__blk

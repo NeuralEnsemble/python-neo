@@ -18,7 +18,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import AnalogSignal, Segment
-from neo.io.tools import create_many_to_one_relationship
 
 
 class AsciiSignalIO(BaseIO):
@@ -183,7 +182,7 @@ class AsciiSignalIO(BaseIO):
                 anaSig.lazy_shape = sig.shape
             seg.analogsignals.append( anaSig )
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment,

@@ -131,6 +131,21 @@ class BaseNeo(object):
     child object.
     '''
 
+    # these attributes control relationships, they need to be
+    # specified in each child class
+    # Child objects that are a container and have a single parent
+    _container_child_objects = ()
+    # Child objects that have data and have a single parent
+    _data_child_objects = ()
+    # Parent objects whose children can have a single parent
+    _single_parent_objects = ()
+    # Child objects that can have multiple parents
+    _multi_child_objects = ()
+    # Parent objects whose children can have multiple parents
+    _multi_parent_objects = ()
+    # Properties returning children of children [of children...]
+    _child_properties = ()
+
     def __init__(self, name=None, file_origin=None, description=None,
                  **annotations):
         '''
@@ -188,3 +203,165 @@ class BaseNeo(object):
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
+
+    @property
+    def _single_child_objects(self):
+        '''
+        Child objects that have a single parent.
+        '''
+        return self._container_child_objects + self._data_child_objects
+
+    @property
+    def _container_child_containers(self):
+        '''
+        Containers for child objects that are a container and
+        have a single parent.
+        '''
+        return tuple([child.lower() + 's' for child in
+                      self._container_child_objects])
+
+    @property
+    def _data_child_containers(self):
+        '''
+        Containers for child objects that have data and have a single parent.
+        '''
+        return tuple([child.lower() + 's' for child in
+                      self._data_child_objects])
+
+    @property
+    def _single_child_containers(self):
+        '''
+        Containers for child objects with a single parent.
+        '''
+        return tuple([child.lower() + 's' for child in
+                      self._single_child_objects])
+
+    @property
+    def _single_parent_containers(self):
+        '''
+        Containers for parent objects whose children can have a single parent.
+        '''
+        return tuple([parent.lower() for parent in
+                      self._single_parent_objects])
+
+    @property
+    def _multi_child_containers(self):
+        '''
+        Containers for child objects that can have multiple parents.
+        '''
+        return tuple([child.lower() + 's' for child in
+                      self._multi_child_objects])
+
+    @property
+    def _multi_parent_containers(self):
+        '''
+        Containers for parent objects whose children can have multiple parents.
+        '''
+        return tuple([parent.lower() + 's' for parent in
+                      self._multi_parent_objects])
+
+    @property
+    def _child_objects(self):
+        '''
+        All types for child objects.
+        '''
+        return self._single_child_objects + self._multi_child_objects
+
+    @property
+    def _child_containers(self):
+        '''
+        All containers for child objects.
+        '''
+        return self._single_child_containers + self._multi_child_containers
+
+    @property
+    def _parent_objects(self):
+        '''
+        All types for parent objects.
+        '''
+        return self._single_parent_objects + self._multi_parent_objects
+
+    @property
+    def _parent_containers(self):
+        '''
+        All containers for parent objects.
+        '''
+        return self._single_parent_containers + self._multi_parent_containers
+
+    @property
+    def children(self):
+        '''
+        All child objects stored in the current object.
+        '''
+        childs = [list(getattr(self, attr)) for attr in self._child_containers]
+        return tuple(sum(childs, []))
+
+    @property
+    def parents(self):
+        '''
+        All parent objects storing the current object.
+        '''
+        single = [getattr(self, attr) for attr in
+                  self._single_parent_containers]
+        multi = [list(getattr(self, attr)) for attr in
+                 self._multi_parent_containers]
+        return tuple(single + sum(multi, []))
+
+    def create_many_to_one_relationship(self, force=False, recursive=True):
+        """
+        For each child of the current object, set its parent to be the current
+        object.
+
+        Usage:
+        >>> a_block.create_many_to_one_relationship()
+        >>> a_block.create_many_to_one_relationship(force=True)
+
+        You want to run populate_RecordingChannel first, because this will
+        create new objects that this method will link up.
+
+        If force is True overwrite any existing relationships
+        If recursive is True desecend into child objects and create
+        relationships there
+
+        """
+        classname = self.__class__.__name__.lower()
+        for child in self.children:
+            if (hasattr(child, classname) and
+                    getattr(child, classname) is None or force):
+                setattr(child, classname, self)
+
+            if recursive:
+                child.create_many_to_one_relationship(force=force,
+                                                      recursive=True)
+
+    def create_many_to_many_relationship(self, append=True, recursive=True):
+        '''
+        For children of the current object that can have more than one parent
+        of this type, put the current object in the parent list.
+
+        If append is True add it to the list, otherwise overwrite the list.
+        If recursive is True desecend into child objects and create
+        relationships there
+        '''
+        classname = self.__class__.__name__.lower() + 's'
+        for child in self.children:
+            if not hasattr(child, classname):
+                pass
+            elif append:
+                target = getattr(child, classname)
+                if not self in target:
+                    target.append(self)
+            else:
+                setattr(child, classname, [self])
+
+            if recursive:
+                child.create_many_to_many_relationship(append=append,
+                                                       recursive=True)
+
+    def create_relationship(self, force=False, append=True, recursive=True):
+        self.create_many_to_one_relationship(force=force, recursive=False)
+        self.create_many_to_many_relationship(append=append, recursive=False)
+        if recursive:
+            for child in self.children:
+                child.create_relationship(force=force, append=append,
+                                          recursive=True)

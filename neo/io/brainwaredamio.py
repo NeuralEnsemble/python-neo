@@ -44,9 +44,6 @@ from neo.core import (AnalogSignal, Block, RecordingChannel,
 # need to subclass BaseI
 from neo.io.baseio import BaseIO
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
 
 class BrainwareDamIO(BaseIO):
     """
@@ -175,7 +172,7 @@ class BrainwareDamIO(BaseIO):
         # remove the file object
         self._fsrc = None
 
-        create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
         return block
 
     # -------------------------------------------------------------------------

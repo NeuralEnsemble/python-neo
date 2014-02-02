@@ -20,7 +20,6 @@ import quantities as pq
 from neo.core import (AnalogSignal, Block, RecordingChannel,
                       RecordingChannelGroup, Segment)
 from neo.io import BrainwareDamIO
-from neo.io.tools import create_many_to_one_relationship
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
@@ -85,7 +84,7 @@ def proc_dam(filename):
         segment.analogsignals = [sig]
         block.segments.append(segment)
 
-    create_many_to_one_relationship(block)
+    block.create_many_to_one_relationship()
 
     return block
 

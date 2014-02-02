@@ -80,6 +80,9 @@ class RecordingChannel(BaseNeo):
 
     '''
 
+    _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
+    _multi_parent_objects = ('RecordingChannelGroup',)
+
     def __init__(self, index=0, coordinate=None, name=None, description=None,
                  file_origin=None, **annotations):
         '''

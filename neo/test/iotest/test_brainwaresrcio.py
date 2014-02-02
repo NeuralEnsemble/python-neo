@@ -21,7 +21,6 @@ import quantities as pq
 from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
-from neo.io.tools import create_many_to_one_relationship
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
@@ -71,7 +70,7 @@ def proc_src(filename):
         chan_names.append(name)
         chan = RecordingChannel(file_origin='filename',
                                 name=name,
-                                index=i)
+                                index=int(i))
         rcg.recordingchannels.append(chan)
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
@@ -80,7 +79,7 @@ def proc_src(filename):
     for rep in srcfile['sets'][0, 0].flatten():
         proc_src_condition(rep, filename, ADperiod, side, block)
 
-    create_many_to_one_relationship(block)
+    block.create_many_to_one_relationship()
 
     return block
 

@@ -30,7 +30,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
-from neo.io.tools import create_many_to_one_relationship
 
 PY3K = (sys.version_info[0] == 3)
 
@@ -142,7 +141,7 @@ class Spike2IO(BaseIO):
 
         fid.close()
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 
