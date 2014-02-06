@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This generate diagram in .png and .svg from neo.description
+This generate diagram in .png and .svg from neo.core
 
 
 Author: sgarcia
@@ -15,8 +15,6 @@ from matplotlib import pyplot
 from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
-from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes)
 from neo.test.iotest.generate_datasets import fake_neo
 
 line_heigth = .22
@@ -30,8 +28,7 @@ def get_rect_height(name, obj):
     calculate rectangle height
     '''
     nlines = 1.5
-    nlines += len(classes_necessary_attributes[name])
-    nlines += len(classes_recommended_attributes[name])
+    nlines += len(getattr(obj, '_all_attrs', []))
     nlines += len(getattr(obj, '_single_child_objects', []))
     nlines += len(getattr(obj, '_multi_child_objects', []))
     nlines += len(getattr(obj, '_multi_parent_objects', []))
@@ -105,8 +102,6 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     for name, pos in rect_pos.items():
         htotal = all_h[name]
         obj = objs[name]
-        attributes = (classes_necessary_attributes[name] +
-                      classes_recommended_attributes[name])
         allrelationship = (getattr(obj, '_child_containers', []) +
                            getattr(obj, '_multi_parent_containers', []))
 
@@ -143,9 +138,9 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         # necessary attr
         pos2 = (pos[1]+htotal -
                 line_heigth*(1.5+len(allrelationship) +
-                             len(classes_necessary_attributes[name])))
+                             len(obj._necessary_attrs)))
         rect = Rectangle((pos[0], pos2), rect_width,
-                         line_heigth*len(classes_necessary_attributes[name]),
+                         line_heigth*len(obj._necessary_attrs),
                          facecolor='r', edgecolor='k', alpha=.5)
         ax.add_patch(rect)
 
@@ -169,7 +164,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
                     fontsize=fontsize,
                     )
         # attributes
-        for i, attr in enumerate(attributes):
+        for i, attr in enumerate(obj._all_attrs):
             attrname, attrtype = attr[0], attr[1]
             t1 = attrname
             if (hasattr(obj, '_quantity_attr') and

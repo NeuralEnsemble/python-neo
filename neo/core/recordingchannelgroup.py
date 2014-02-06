@@ -124,6 +124,9 @@ class RecordingChannelGroup(BaseNeo):
     _data_child_objects = ('AnalogSignalArray',)
     _multi_child_objects = ('RecordingChannel',)
     _single_parent_objects = ('Block',)
+    _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),
+                           ('channel_names', np.ndarray, 1, np.dtype('S'))) +
+                          BaseNeo._recommended_attrs)
 
     def __init__(self, channel_names=None, channel_indexes=None, name=None,
                  description=None, file_origin=None, **annotations):

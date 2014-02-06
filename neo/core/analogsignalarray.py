@@ -123,6 +123,11 @@ class AnalogSignalArray(BaseAnalogSignal):
 
     _single_parent_objects = ('Segment', 'RecordingChannelGroup')
     _quantity_attr = 'signal'
+    _necessary_attrs = (('signal', pq.Quantity, 2),
+                       ('sampling_rate', pq.Quantity, 0),
+                       ('t_start', pq.Quantity, 0))
+    _recommended_attrs = ((('channel_index', np.ndarray, 1, np.dtype('i')),) +
+                          BaseNeo._recommended_attrs)
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,

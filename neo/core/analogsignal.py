@@ -74,6 +74,11 @@ class BaseAnalogSignal(BaseNeo, pq.Quantity):
 
     _single_parent_objects = ('Segment', 'RecordingChannel')
     _quantity_attr = 'signal'
+    _necessary_attrs = (('signal', pq.Quantity, 1),
+                       ('sampling_rate', pq.Quantity, 0),
+                       ('t_start', pq.Quantity, 0))
+    _recommended_attrs = ((('channel_index', int),) +
+                          BaseNeo._recommended_attrs)
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,

@@ -9,6 +9,8 @@ This module defines :class:`Unit`, a container of :class:`Spike` and
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import numpy as np
+
 from neo.core.baseneo import BaseNeo
 
 
@@ -64,6 +66,8 @@ class Unit(BaseNeo):
 
     _data_child_objects = ('Spike', 'SpikeTrain')
     _single_parent_objects = ('RecordingChannelGroup',)
+    _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),)
+                          + BaseNeo._recommended_attrs)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  channel_indexes=None, **annotations):

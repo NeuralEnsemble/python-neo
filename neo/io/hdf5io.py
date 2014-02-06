@@ -216,8 +216,6 @@ else:
         TABLES_ERR = None
 
 from neo.core import Block, objectlist, objectnames, class_by_name
-from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes)
 from neo.io.baseio import BaseIO
 from neo.io.tools import LazyList
 
@@ -437,8 +435,8 @@ class NeoHdf5IO(BaseIO):
         if len(getattr(obj, '_single_parent_containers', [])) > 1:
             for par_cont in obj._single_parent_containers:
                 node._f_setAttr(par_cont, '')
-        attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for attr in attrs: # we checked already obj is compliant, loop over all safely
+        # we checked already obj is compliant, loop over all safely
+        for attr in obj._all_attrs:
             if hasattr(obj, attr[0]): # save an attribute if exists
                 assign_attribute(getattr(obj, attr[0]), attr[0], path, node)
             # not forget to save AS, ASA or ST - NEO "stars"
@@ -712,7 +710,7 @@ class NeoHdf5IO(BaseIO):
         else:
             kwargs = {}
             # load attributes (inherited *-ed attrs are also here)
-            attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
+            attrs = classname._necessary_attrs + classname._recommended_attrs
             for i, attr in enumerate(attrs):
                 attr_name = attr[0]
                 nattr = fetch_attribute(attr_name, attr, node)

@@ -9,6 +9,8 @@ time.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import quantities as pq
+
 from neo.core.baseneo import BaseNeo
 
 
@@ -45,6 +47,8 @@ class Event(BaseNeo):
     '''
 
     _single_parent_objects = ('Segment',)
+    _necessary_attrs = (('time', pq.Quantity, 0),
+                       ('label', str))
 
     def __init__(self, time, label, name=None, description=None,
                  file_origin=None, **annotations):

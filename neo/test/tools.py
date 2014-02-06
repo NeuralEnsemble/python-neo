@@ -11,7 +11,6 @@ import quantities as pq
 
 import neo
 from neo.core import objectlist
-from neo import description
 
 
 def assert_arrays_equal(a, b):
@@ -89,12 +88,9 @@ def assert_neo_object_is_compliant(ob):
     assert type(ob) in objectlist, \
         '%s is not a neo object' % (type(ob))
     classname = ob.__class__.__name__
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
 
     # test presence of necessary attributes
-    attributes = necess
-    for ioattr in attributes:
+    for ioattr in ob._necessary_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname != '':
         if not hasattr(ob, '_quantity_attr'):
@@ -102,8 +98,7 @@ def assert_neo_object_is_compliant(ob):
                 (classname, attrname)
 
     # test attributes types
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
 
         if (hasattr(ob, '_quantity_attr') and
@@ -234,10 +229,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 #"%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
         assert_eg = assert_arrays_almost_and_dtype
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob1._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
@@ -331,10 +323,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
                 exc.args += ('from %s %s of %s' % (container, i, classname),)
                 raise
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ print 'xdsd', classname, attrname
         #~ if attrname == '':
@@ -430,9 +419,9 @@ def assert_objects_equivalent(obj1, obj2):
             (attr_name, obj1.__class__.__name__)
     obj_type = obj1.__class__.__name__
     assert obj_type == obj2.__class__.__name__
-    for ioattr in description.classes_necessary_attributes[obj_type]:
+    for ioattr in obj1._necessary_attrs:
         assert_attr(obj1, obj2, ioattr[0])
-    for ioattr in description.classes_recommended_attributes[obj_type]:
+    for ioattr in obj1._recommended_attrs:
         if hasattr(obj1, ioattr[0]) or hasattr(obj2, ioattr[0]):
             assert_attr(obj1, obj2, ioattr[0])
     if hasattr(obj1, "annotations"):

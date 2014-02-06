@@ -127,8 +127,8 @@ class BaseNeo(object):
     Non-keyword arguments should only be used for required arguments.
 
     The required and recommended arguments for each child class (Neo object)
-    are specified in :module:`neo.description` and the documentation for the
-    child object.
+    are specified in the _necessary_attrs and _recommended_attrs attributes and
+    documentation for the child object.
     '''
 
     # these attributes control relationships, they need to be
@@ -145,6 +145,13 @@ class BaseNeo(object):
     _multi_parent_objects = ()
     # Properties returning children of children [of children...]
     _child_properties = ()
+
+    # Attributes that an instance is requires to have defined
+    _necessary_attrs = ()
+    # Attributes that an instance may or may have defined
+    _recommended_attrs = (('name', str),
+                          ('description', str),
+                          ('file_origin', str))
 
     def __init__(self, name=None, file_origin=None, description=None,
                  **annotations):
@@ -365,3 +372,11 @@ class BaseNeo(object):
             for child in self.children:
                 child.create_relationship(force=force, append=append,
                                           recursive=True)
+
+    @property
+    def _all_attrs(self):
+        '''
+        Returns a combination of all required and recommended
+        attributes.
+        '''
+        return self._necessary_attrs + self._recommended_attrs

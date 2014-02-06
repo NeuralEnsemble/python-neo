@@ -39,7 +39,6 @@ else:
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, AnalogSignal, EventArray, SpikeTrain,
                       objectnames, class_by_name)
-from neo import description
 
 
 classname_lower_to_upper = {}
@@ -245,10 +244,7 @@ class NeoMatlabIO(BaseIO):
             if childname in supported_containers:
                 struct[childname] = []
         # attributes
-        necess = description.classes_necessary_attributes[classname]
-        recomm = description.classes_recommended_attributes[classname]
-        attributes = necess + recomm
-        for i, attr in enumerate(attributes):
+        for i, attr in enumerate(ob._all_attrs):
 
             attrname, attrtype = attr[0], attr[1]
 
@@ -282,7 +278,7 @@ class NeoMatlabIO(BaseIO):
         cl = class_by_name[classname]
         # check if hinerits Quantity
         #~ is_quantity = False
-        #~ for attr in description.classes_necessary_attributes[classname]:
+        #~ for attr in cl._necessary_attrs:
             #~ if attr[0] == '' and attr[1] == pq.Quantity:
                 #~ is_quantity = True
                 #~ break
@@ -295,14 +291,14 @@ class NeoMatlabIO(BaseIO):
             arr = getattr(struct,quantity_attr)
             #~ data_complement = dict(units=str(struct.units))
             data_complement = dict(units=str(getattr(struct,quantity_attr+'_units')))
-            if "sampling_rate" in (at[0] for at in description.classes_necessary_attributes[classname]):
+            if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
                 data_complement["sampling_rate"] = 0*pq.kHz  # put fake value for now, put correct value later
-            if "t_stop" in (at[0] for at in description.classes_necessary_attributes[classname]):
+            if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_stop"] =arr.max()
                 else:
                     data_complement["t_stop"] = 0.0
-            if "t_start" in (at[0] for at in description.classes_necessary_attributes[classname]):
+            if "t_start" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_start"] =arr.min()
                 else:
@@ -341,12 +337,9 @@ class NeoMatlabIO(BaseIO):
                 continue
 
             item = getattr(struct, attrname)
-            # put the good type
-            necess = description.classes_necessary_attributes[classname]
-            recomm = description.classes_recommended_attributes[classname]
-            attributes = necess + recomm
 
-            dict_attributes = dict( [ (a[0], a[1:]) for a in attributes])
+            attributes = cl._necessary_attrs + cl._recommended_attrs
+            dict_attributes = dict([(a[0], a[1:]) for a in attributes])
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:

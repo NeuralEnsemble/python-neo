@@ -62,6 +62,9 @@ class EpochArray(BaseNeo):
     '''
 
     _single_parent_objects = ('Segment',)
+    _necessary_attrs = (('times', pq.Quantity, 1),
+                       ('durations', pq.Quantity, 1),
+                       ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __init__(self, times=None, durations=None, labels=None,
                  name=None, description=None, file_origin=None, **annotations):

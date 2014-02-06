@@ -91,6 +91,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     _single_parent_objects = ('Segment', 'RecordingChannel')
     _quantity_attr = 'signal'
+    _necessary_attrs = (('times', pq.Quantity, 1),
+                       ('signal', pq.Quantity, 1))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,

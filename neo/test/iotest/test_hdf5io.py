@@ -34,8 +34,6 @@ from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_same_sub_schema)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.iotest.generate_datasets import fake_neo, get_fake_value
-from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes)
 
 from neo.io.hdf5io import NeoHdf5IO, HAVE_TABLES
 
@@ -136,9 +134,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
             obj = fake_neo(obj_type=obj_type, cascade=False)
             iom.save(obj)
             orig_obj = iom.get(obj.hdf5_path)
-            attrs = (classes_necessary_attributes[obj_type] +
-                     classes_recommended_attributes[obj_type])
-            for attr in attrs:
+            for attr in obj._all_attrs:
                 if hasattr(orig_obj, attr[0]):
                     setattr(obj, attr[0], get_fake_value(*attr))
             iom.save(orig_obj)

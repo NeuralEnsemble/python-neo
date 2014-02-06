@@ -10,6 +10,8 @@ used by all :module:`neo.core` classes.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+from datetime import datetime
+
 from neo.core.baseneo import BaseNeo
 
 
@@ -80,6 +82,10 @@ class Block(BaseNeo):
 
     _container_child_objects = ('Segment', 'RecordingChannelGroup')
     _child_properties = ('Unit', 'RecordingChannel')
+    _recommended_attrs = ((('file_datetime', datetime),
+                           ('rec_datetime', datetime),
+                           ('index', int)) +
+                          BaseNeo._recommended_attrs)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
