@@ -16,8 +16,7 @@ from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
 
 from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes,
-                             classes_inheriting_quantities)
+                             classes_recommended_attributes)
 from neo.test.iotest.generate_datasets import fake_neo
 
 line_heigth = .22
@@ -151,7 +150,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # name
-        if name in classes_inheriting_quantities:
+        if hasattr(obj, '_quantity_attr'):
             post = '* '
         else:
             post = ''
@@ -173,8 +172,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         for i, attr in enumerate(attributes):
             attrname, attrtype = attr[0], attr[1]
             t1 = attrname
-            if (name in classes_inheriting_quantities and
-                    classes_inheriting_quantities[name] == attrname):
+            if (hasattr(obj, '_quantity_attr') and
+                    obj._quantity_attr == attrname):
                 t1 = attrname+'(object itself)'
             else:
                 t1 = attrname

@@ -90,6 +90,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     '''
 
     _single_parent_objects = ('Segment', 'RecordingChannel')
+    _quantity_attr = 'signal'
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, description=None, file_origin=None,

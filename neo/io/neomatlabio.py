@@ -257,8 +257,8 @@ class NeoMatlabIO(BaseIO):
                 #~ struct['units'] = ob.dimensionality.string
                 #~ continue
 
-            if  classname in description.classes_inheriting_quantities and \
-                    description.classes_inheriting_quantities[classname] == attrname:
+            if (hasattr(ob, '_quantity_attr') and
+                    ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname+'_units'] = ob.dimensionality.string
                 continue
@@ -286,12 +286,12 @@ class NeoMatlabIO(BaseIO):
             #~ if attr[0] == '' and attr[1] == pq.Quantity:
                 #~ is_quantity = True
                 #~ break
-        #~ is_quantiy = classname in description.classes_inheriting_quantities
+        #~ is_quantiy = hasattr(cl, '_quantity_attr')
 
         #~ if is_quantity:
-        if  classname in description.classes_inheriting_quantities:
+        if hasattr(cl, '_quantity_attr'):
 
-            quantity_attr = description.classes_inheriting_quantities[classname]
+            quantity_attr = cl._quantity_attr
             arr = getattr(struct,quantity_attr)
             #~ data_complement = dict(units=str(struct.units))
             data_complement = dict(units=str(getattr(struct,quantity_attr+'_units')))
@@ -336,8 +336,8 @@ class NeoMatlabIO(BaseIO):
             if attrname.endswith('_units')  or attrname =='units' :#or attrname == 'array':
                 # linked with another field
                 continue
-            if  classname in description.classes_inheriting_quantities and \
-                    description.classes_inheriting_quantities[classname] == attrname:
+            if (hasattr(cl, '_quantity_attr') and
+                    cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)

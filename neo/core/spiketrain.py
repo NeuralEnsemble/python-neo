@@ -174,6 +174,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     '''
 
     _single_parent_objects = ('Segment', 'Unit')
+    _quantity_attr = 'times'
 
     def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,

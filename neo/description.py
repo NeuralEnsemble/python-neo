@@ -21,13 +21,6 @@ ndim is the dimensionaly of the array: 1=vector, 2=matrix, 3=cube, ...
 Special case: ndim=0 means that neo expects a scalar, so Quantity.shape=(1,).
 That is in fact a vector (ndim=1) with one element only in Quantities package.
 
-For some neo.object, the data is not held by a field, but by the object itself.
-This is the case for AnalogSignal, SpikeTrain: they inherit from Quantity,
-which itself inherits from numpy.array.
-In theses cases, the classes_inheriting_quantities dict provide a list of
-classes inhiriting Quantity and there attribute that will become Quantity
-itself.
-
 
 **classes_recommended_attributes**
 This dict describes recommended attributes, which are optional at
@@ -125,15 +118,6 @@ classes_recommended_attributes = {
                                1, np.dtype('S'))],
 
     'RecordingChannel': [('coordinate', pq.Quantity, 1)],
-    }
-
-# this list classes inheriting quantities with arguments that will become
-# the quantity array
-classes_inheriting_quantities = {
-    'SpikeTrain': 'times',
-    'AnalogSignal': 'signal',
-    'AnalogSignalArray': 'signal',
-    'IrregularlySampledSignal':  'signal',
     }
 
 

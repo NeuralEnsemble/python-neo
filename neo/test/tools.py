@@ -97,7 +97,7 @@ def assert_neo_object_is_compliant(ob):
     for ioattr in attributes:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname != '':
-        if classname not in description.classes_inheriting_quantities:
+        if not hasattr(ob, '_quantity_attr'):
             assert hasattr(ob, attrname), '%s neo obect does not have %s' % \
                 (classname, attrname)
 
@@ -106,9 +106,8 @@ def assert_neo_object_is_compliant(ob):
     for ioattr in attributes:
         attrname, attrtype = ioattr[0], ioattr[1]
 
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname and
+        if (hasattr(ob, '_quantity_attr') and
+                ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             ndim = ioattr[2]
@@ -241,9 +240,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
     for ioattr in attributes:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             try:
                 assert_eg(ob1.magnitude, ob2.magnitude)
@@ -341,9 +338,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ print 'xdsd', classname, attrname
         #~ if attrname == '':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
             assert ob.size == 0, \
                 'Lazy loaded error %s.size = %s' % (classname, ob.size)
             assert hasattr(ob, 'lazy_shape'), \
@@ -393,7 +388,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
             'Object %s was not lazy loaded' % classname
         assert not hasattr(new_load, 'lazy_shape'), \
             'Newly loaded object from %s was also lazy loaded' % classname
-        if classname in description.classes_inheriting_quantities:
+        if hasattr(ob, '_quantity_attr'):
             assert ob.lazy_shape == new_load.shape, \
                 'Shape of loaded object %sis not equal to lazy shape' % \
                 classname

@@ -216,8 +216,7 @@ else:
         TABLES_ERR = None
 
 from neo.core import Block, objectlist, objectnames, class_by_name
-from neo.description import (classes_inheriting_quantities,
-                             classes_necessary_attributes,
+from neo.description import (classes_necessary_attributes,
                              classes_recommended_attributes)
 from neo.io.baseio import BaseIO
 from neo.io.tools import LazyList
@@ -443,8 +442,8 @@ class NeoHdf5IO(BaseIO):
             if hasattr(obj, attr[0]): # save an attribute if exists
                 assign_attribute(getattr(obj, attr[0]), attr[0], path, node)
             # not forget to save AS, ASA or ST - NEO "stars"
-        if obj_type in classes_inheriting_quantities.keys():
-            assign_attribute(obj, classes_inheriting_quantities[obj_type], path, node)
+        if hasattr(obj, '_quantity_attr'):
+            assign_attribute(obj, obj._quantity_attr, path, node)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         node._f_setAttr("object_ref", uuid.uuid4().hex)
