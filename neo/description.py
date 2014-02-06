@@ -41,15 +41,6 @@ from datetime import datetime
 import numpy as np
 import quantities as pq
 
-from neo.core import objectlist
-
-
-class_by_name = {}
-name_by_class = {}
-
-for ob in objectlist:
-    class_by_name[ob.__name__] = ob
-    name_by_class[ob] = ob.__name__
 
 classes_necessary_attributes = {
     'Block': [],

@@ -14,11 +14,11 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
-                      RecordingChannel, Segment, SpikeTrain)
+                      RecordingChannel, Segment, SpikeTrain,
+                      class_by_name)
 from neo.io.tools import populate_RecordingChannel, iteritems
 from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes,
-                             class_by_name)
+                             classes_recommended_attributes)
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]

@@ -51,8 +51,11 @@ from neo.core.epocharray import EpochArray
 from neo.core.spike import Spike
 from neo.core.spiketrain import SpikeTrain
 
-
+# Block should always be first in this list
 objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,
               AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
               Event, EventArray, Epoch, EpochArray, Unit, Spike, SpikeTrain
               ]
+
+objectnames = [ob.__name__ for ob in objectlist]
+class_by_name = dict(zip(objectnames, objectlist))

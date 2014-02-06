@@ -10,6 +10,7 @@ import numpy as np
 import quantities as pq
 
 import neo
+from neo.core import objectlist
 from neo import description
 
 
@@ -85,7 +86,7 @@ def assert_neo_object_is_compliant(ob):
       * If attribute is Quantities or numpy.ndarray it also check ndim.
       * If attribute is numpy.ndarray also check dtype.kind.
     '''
-    assert type(ob) in description.objectlist, \
+    assert type(ob) in objectlist, \
         '%s is not a neo object' % (type(ob))
     classname = ob.__class__.__name__
     necess = description.classes_necessary_attributes[classname]
@@ -431,9 +432,9 @@ def assert_objects_equivalent(obj1, obj2):
         assert hasattr(obj2, attr_name)
         attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
         assert attr1 == attr2, "Attribute %s for class %s is not equal." % \
-            (attr_name, description.name_by_class[obj1.__class__])
-    obj_type = description.name_by_class[obj1.__class__]
-    assert obj_type == description.name_by_class[obj2.__class__]
+            (attr_name, obj1.__class__.__name__)
+    obj_type = obj1.__class__.__name__
+    assert obj_type == obj2.__class__.__name__
     for ioattr in description.classes_necessary_attributes[obj_type]:
         assert_attr(obj1, obj2, ioattr[0])
     for ioattr in description.classes_recommended_attributes[obj_type]:

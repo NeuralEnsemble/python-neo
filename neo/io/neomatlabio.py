@@ -37,12 +37,13 @@ else:
 
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, EventArray, SpikeTrain
+from neo.core import (Block, Segment, AnalogSignal, EventArray, SpikeTrain,
+                      objectnames, class_by_name)
 from neo import description
 
 
-classname_lower_to_upper = { }
-for k in description.class_by_name.keys():
+classname_lower_to_upper = {}
+for k in objectnames:
     classname_lower_to_upper[k.lower()] = k
 
 
@@ -278,7 +279,7 @@ class NeoMatlabIO(BaseIO):
         return struct
 
     def create_ob_from_struct(self, struct, classname, cascade = True, lazy = False,):
-        cl = description.class_by_name[classname]
+        cl = class_by_name[classname]
         # check if hinerits Quantity
         #~ is_quantity = False
         #~ for attr in description.classes_necessary_attributes[classname]:

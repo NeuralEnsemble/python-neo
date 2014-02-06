@@ -28,15 +28,14 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import SpikeTrain, Segment, Block
+from neo.core import SpikeTrain, Segment, Block, objectnames
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_objects_equivalent,
                             assert_same_sub_schema)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.iotest.generate_datasets import fake_neo, get_fake_value
-from neo.description import (class_by_name, classes_necessary_attributes,
-                             classes_recommended_attributes,
-                             name_by_class)
+from neo.description import (classes_necessary_attributes,
+                             classes_recommended_attributes)
 
 from neo.io.hdf5io import NeoHdf5IO, HAVE_TABLES
 
@@ -88,7 +87,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
         """ Make sure all attributes are saved properly after the change,
         including quantities, units, types etc."""
         iom = NeoHdf5IO(filename=self.test_file)
-        for obj_type in class_by_name.keys():
+        for obj_type in objectnames:
             obj = fake_neo(obj_type, cascade=False)
             iom.save(obj)
             self.assertTrue(hasattr(obj, "hdf5_path"))
@@ -101,7 +100,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
         including correct M2M, no redundancy etc. RC -> RCG not tested.
         """
         def assert_children(self, obj, replica):
-            obj_type = name_by_class[obj]
+            obj_type = obj.__name__
             self.assertEqual(md5(str(obj)).hexdigest(),
                              md5(str(replica)).hexdigest())
             for container in getattr(obj, '_child_containers', []):
@@ -111,7 +110,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
                 for i, v in enumerate(ch1):
                     self.assert_children(ch1[i], ch2[i])
         iom = NeoHdf5IO(filename=self.test_file)
-        for obj_type in class_by_name.keys():
+        for obj_type in objectnames:
             obj = fake_neo(obj_type, cascade=True)
             iom.save(obj)
             self.assertTrue(hasattr(obj, "hdf5_path"))
@@ -133,7 +132,7 @@ class hdf5ioTest:  # inherit this class from unittest.TestCase when ready
         """ gets an object, changes its attributes, saves it, then compares how
         good the changes were saved. """
         iom = NeoHdf5IO(filename=self.test_file)
-        for obj_type in class_by_name.keys():
+        for obj_type in objectnames:
             obj = fake_neo(obj_type=obj_type, cascade=False)
             iom.save(obj)
             orig_obj = iom.get(obj.hdf5_path)
