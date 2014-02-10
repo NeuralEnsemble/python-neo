@@ -215,11 +215,7 @@ else:
         HAVE_TABLES = True
         TABLES_ERR = None
 
-from neo.core import Block
-from neo.description import (class_by_name, name_by_class,
-                             classes_inheriting_quantities,
-                             classes_necessary_attributes,
-                             classes_recommended_attributes)
+from neo.core import Block, objectlist, objectnames, class_by_name
 from neo.io.baseio import BaseIO
 from neo.io.tools import LazyList
 
@@ -237,9 +233,6 @@ def _func_wrapper(func):
 #---------------------------------------------------------------
 # Basic I/O manager, implementing basic I/O functionality
 #---------------------------------------------------------------
-all_objects = list(class_by_name.values())
-all_objects.remove(Block)  # the order is important
-all_objects = [Block] + all_objects
 
 # Types where an object might have to be loaded multiple times to create
 # all realtionships
@@ -258,11 +251,11 @@ class NeoHdf5IO(BaseIO):
     connection with the HDF5 file, and uses PyTables for data operations. Use
     this class to get (load), insert or delete NEO objects to HDF5 file.
     """
-    supported_objects = all_objects
-    readable_objects = all_objects
-    writeable_objects = all_objects
-    read_params = dict(zip(all_objects, [] * len(all_objects)))
-    write_params = dict(zip(all_objects, [] * len(all_objects)))
+    supported_objects = objectlist
+    readable_objects = objectlist
+    writeable_objects = objectlist
+    read_params = dict(zip(objectlist, [] * len(objectlist)))
+    write_params = dict(zip(objectlist, [] * len(objectlist)))
     name = 'NeoHdf5 IO'
     extensions = ['h5']
     mode = 'file'
@@ -422,7 +415,7 @@ class NeoHdf5IO(BaseIO):
                 node._f_setAttr(attr_name, obj_attr)
 
         #assert_neo_object_is_compliant(obj)
-        obj_type = name_by_class[obj.__class__]
+        obj_type = obj.__class__.__name__
         if self._data.mode != 'w' and hasattr(obj, "hdf5_path"): # this is an update case
             path = str(obj.hdf5_path)
             try:
@@ -442,13 +435,13 @@ class NeoHdf5IO(BaseIO):
         if len(getattr(obj, '_single_parent_containers', [])) > 1:
             for par_cont in obj._single_parent_containers:
                 node._f_setAttr(par_cont, '')
-        attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
-        for attr in attrs: # we checked already obj is compliant, loop over all safely
+        # we checked already obj is compliant, loop over all safely
+        for attr in obj._all_attrs:
             if hasattr(obj, attr[0]): # save an attribute if exists
                 assign_attribute(getattr(obj, attr[0]), attr[0], path, node)
             # not forget to save AS, ASA or ST - NEO "stars"
-        if obj_type in classes_inheriting_quantities.keys():
-            assign_attribute(obj, classes_inheriting_quantities[obj_type], path, node)
+        if hasattr(obj, '_quantity_attr'):
+            assign_attribute(obj, obj._quantity_attr, path, node)
         if hasattr(obj, "annotations"): # annotations should be just a dict
             node._f_setAttr("annotations", getattr(obj, "annotations"))
         node._f_setAttr("object_ref", uuid.uuid4().hex)
@@ -469,7 +462,7 @@ class NeoHdf5IO(BaseIO):
                             try:
                                 target = self._data.getNode(child.hdf5_path)
                                 new_name = self._get_next_name(
-                                    name_by_class[child.__class__], ch._v_pathname)
+                                    child.__class__.__name__, ch._v_pathname)
                                 if not hasattr(ch, new_name):  # Only link if path does not exist
                                     child_node = self._data.createHardLink(ch._v_pathname, new_name, target)
                             except tb.NoSuchNodeError:
@@ -685,7 +678,7 @@ class NeoHdf5IO(BaseIO):
         if path == "/":  # this is just for convenience. Try to return any object
             found = False
             for n in self._data.iterNodes(path):
-                for obj_type in class_by_name.keys():
+                for obj_type in objectnames:
                     if obj_type.lower() in str(n._v_name).lower():
                         path = n._v_pathname
                         found = True
@@ -705,7 +698,7 @@ class NeoHdf5IO(BaseIO):
             raise LookupError("The requested object with the path " + str(path) +
                               " exists, but is not of a NEO type. Please check the '_type' attribute.")
 
-        obj_type = name_by_class[classname]
+        obj_type = classname.__name__
         try:
             object_ref = self._data.getNodeAttr(node, 'object_ref')
         except AttributeError:  # Object does not have reference, e.g. because this is an old file format
@@ -717,7 +710,7 @@ class NeoHdf5IO(BaseIO):
         else:
             kwargs = {}
             # load attributes (inherited *-ed attrs are also here)
-            attrs = classes_necessary_attributes[obj_type] + classes_recommended_attributes[obj_type]
+            attrs = classname._necessary_attrs + classname._recommended_attrs
             for i, attr in enumerate(attrs):
                 attr_name = attr[0]
                 nattr = fetch_attribute(attr_name, attr, node)
@@ -815,7 +808,7 @@ class NeoHdf5IO(BaseIO):
         """
         logger.info("This is a neo.HDF5 file. it contains:")
         info = {}
-        info = info.fromkeys(class_by_name.keys(), 0)
+        info = info.fromkeys(objectnames, 0)
         for node in self._data.walkNodes():
             try:
                 t = node._f_getAttr("_type")

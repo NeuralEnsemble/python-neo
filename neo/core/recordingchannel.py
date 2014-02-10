@@ -10,6 +10,8 @@ coming from a single data channel.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import quantities as pq
+
 from neo.core.baseneo import BaseNeo
 
 
@@ -82,6 +84,9 @@ class RecordingChannel(BaseNeo):
 
     _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
     _multi_parent_objects = ('RecordingChannelGroup',)
+    _necessary_attrs = (('index', int),)
+    _recommended_attrs = ((('coordinate', pq.Quantity, 1),) +
+                          BaseNeo._recommended_attrs)
 
     def __init__(self, index=0, coordinate=None, name=None, description=None,
                  file_origin=None, **annotations):

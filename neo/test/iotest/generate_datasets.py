@@ -14,11 +14,9 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
-                      RecordingChannel, Segment, SpikeTrain)
+                      RecordingChannel, Segment, SpikeTrain,
+                      class_by_name)
 from neo.io.tools import populate_RecordingChannel, iteritems
-from neo.description import (classes_necessary_attributes,
-                             classes_recommended_attributes,
-                             class_by_name)
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]
@@ -158,7 +156,7 @@ def generate_from_supported_objects(supported_objects):
 
 def get_fake_value(name, datatype, dim=0, dtype='float', seed=None):
     """
-    Returns default value for a given attribute based on description.py
+    Returns default value for a given attribute based on neo.core
 
     If seed is not None, use the seed to set the random number generator.
     """
@@ -217,15 +215,15 @@ def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
     with 'implicit' relationships, to avoid duplications. Do not use it. """
     kwargs = {}  # assign attributes
 
-    attrs = (classes_necessary_attributes[obj_type] +
-             classes_recommended_attributes[obj_type])
+    cl = class_by_name[obj_type]
+    attrs = cl._necessary_attrs + cl._recommended_attrs
     for attr in attrs:
         kwargs[attr[0]] = get_fake_value(*attr)
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
         kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]
 
-    obj = class_by_name[obj_type](**kwargs)
+    obj = cl(**kwargs)
 
     if cascade:
         if obj_type == "Block":

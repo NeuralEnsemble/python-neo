@@ -10,7 +10,7 @@ import numpy as np
 import quantities as pq
 
 import neo
-from neo import description
+from neo.core import objectlist
 
 
 def assert_arrays_equal(a, b):
@@ -85,29 +85,24 @@ def assert_neo_object_is_compliant(ob):
       * If attribute is Quantities or numpy.ndarray it also check ndim.
       * If attribute is numpy.ndarray also check dtype.kind.
     '''
-    assert type(ob) in description.objectlist, \
+    assert type(ob) in objectlist, \
         '%s is not a neo object' % (type(ob))
     classname = ob.__class__.__name__
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
 
     # test presence of necessary attributes
-    attributes = necess
-    for ioattr in attributes:
+    for ioattr in ob._necessary_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname != '':
-        if classname not in description.classes_inheriting_quantities:
+        if not hasattr(ob, '_quantity_attr'):
             assert hasattr(ob, attrname), '%s neo obect does not have %s' % \
                 (classname, attrname)
 
     # test attributes types
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
 
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname and
+        if (hasattr(ob, '_quantity_attr') and
+                ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             ndim = ioattr[2]
@@ -234,15 +229,10 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 #"%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
         assert_eg = assert_arrays_almost_and_dtype
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob1._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             try:
                 assert_eg(ob1.magnitude, ob2.magnitude)
@@ -333,16 +323,11 @@ def assert_sub_schema_is_lazy_loaded(ob):
                 exc.args += ('from %s %s of %s' % (container, i, classname),)
                 raise
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for ioattr in attributes:
+    for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ print 'xdsd', classname, attrname
         #~ if attrname == '':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
             assert ob.size == 0, \
                 'Lazy loaded error %s.size = %s' % (classname, ob.size)
             assert hasattr(ob, 'lazy_shape'), \
@@ -392,7 +377,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
             'Object %s was not lazy loaded' % classname
         assert not hasattr(new_load, 'lazy_shape'), \
             'Newly loaded object from %s was also lazy loaded' % classname
-        if classname in description.classes_inheriting_quantities:
+        if hasattr(ob, '_quantity_attr'):
             assert ob.lazy_shape == new_load.shape, \
                 'Shape of loaded object %sis not equal to lazy shape' % \
                 classname
@@ -431,12 +416,12 @@ def assert_objects_equivalent(obj1, obj2):
         assert hasattr(obj2, attr_name)
         attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
         assert attr1 == attr2, "Attribute %s for class %s is not equal." % \
-            (attr_name, description.name_by_class[obj1.__class__])
-    obj_type = description.name_by_class[obj1.__class__]
-    assert obj_type == description.name_by_class[obj2.__class__]
-    for ioattr in description.classes_necessary_attributes[obj_type]:
+            (attr_name, obj1.__class__.__name__)
+    obj_type = obj1.__class__.__name__
+    assert obj_type == obj2.__class__.__name__
+    for ioattr in obj1._necessary_attrs:
         assert_attr(obj1, obj2, ioattr[0])
-    for ioattr in description.classes_recommended_attributes[obj_type]:
+    for ioattr in obj1._recommended_attrs:
         if hasattr(obj1, ioattr[0]) or hasattr(obj2, ioattr[0]):
             assert_attr(obj1, obj2, ioattr[0])
     if hasattr(obj1, "annotations"):

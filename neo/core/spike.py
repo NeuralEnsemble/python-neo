@@ -55,6 +55,11 @@ class Spike(BaseNeo):
     '''
 
     _single_parent_objects = ('Segment', 'Unit')
+    _necessary_attrs = (('time', pq.Quantity, 0),)
+    _recommended_attrs = ((('waveform', pq.Quantity, 2),
+                           ('left_sweep', pq.Quantity, 0),
+                           ('sampling_rate', pq.Quantity, 0)) +
+                          BaseNeo._recommended_attrs)
 
     def __init__(self, time=0 * pq.s, waveform=None, sampling_rate=None,
                  left_sweep=None, name=None, description=None,

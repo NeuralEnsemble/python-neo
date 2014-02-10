@@ -10,6 +10,8 @@ from :module:`neo.core.baseneo`.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+from datetime import datetime
+
 import numpy as np
 
 from neo.core.baseneo import BaseNeo
@@ -82,6 +84,10 @@ class Segment(BaseNeo):
                            'IrregularlySampledSignal',
                            'Spike', 'SpikeTrain')
     _single_parent_objects = ('Block',)
+    _recommended_attrs = ((('file_datetime', datetime),
+                           ('rec_datetime', datetime),
+                           ('index', int)) +
+                          BaseNeo._recommended_attrs)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
