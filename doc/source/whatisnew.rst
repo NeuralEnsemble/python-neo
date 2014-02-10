@@ -6,6 +6,7 @@ Release notes
 What's new in version 0.4.0?
 ----------------------------
 
+  * added StimfitIO
 
 What's new in version 0.3.3?
 ----------------------------
