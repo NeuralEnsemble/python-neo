@@ -1,7 +1,6 @@
 # coding=utf-8
 """
 Module for reading binary files in the Blackrock format.
-
 Authors: Michael Denker, Lyuba Zehl
 
 blackrockio
@@ -620,7 +619,6 @@ class BlackrockIO(BaseIO):
         Returns:
             -
         """
-
 
         # If already associated, disassociate first
         if self.associated:
@@ -1476,8 +1474,6 @@ class BlackrockIO(BaseIO):
 
         #----------------------------------------------------- Load nsX data
 
-        # TODO: Check behavior of this part of the reader if the start point of
-        # the NSX is not zero -- are spikes and LFP aligned in this case?
         for nsx_i in nsx:
             # Construct the filename of the .nsX file
             filename_nsx = self.nsx_fileprefix + '.ns' + str(nsx_i)
@@ -1486,31 +1482,36 @@ class BlackrockIO(BaseIO):
             if not os.path.isfile(filename_nsx):
                 raise IOError(".ns" + str(nsx_i) + " file for session " + self.associated_fileset + " not found.")
 
-            try:
-                # Open the .nev file
-                filehandle_nsx = open(filename_nsx, 'rb')
 
-                # Read all data bytes
-                fileoffset = self.__file_nsx_header_end_pos[nsx_i]
-                filehandle_nsx.seek(fileoffset , os.SEEK_SET)
+            # Determine position where analog data starts
+            fileoffset = self.__file_nsx_header_end_pos[nsx_i]
 
-                if float(self.parameters_nsx[nsx_i]['Version']) > 2.1:
-                    # For 2.3 files, check that only one header block follows (i.e., no gaps)
-                    # TODO: Implement this functionality instead of raising an exception
+            # From version 2.2+, there is a header block to consider
+            if float(self.parameters_nsx[nsx_i]['Version']) > 2.1:
+                try:
+                    # Open the .nev file
+                    filehandle_nsx = open(filename_nsx, 'rb')
+
+                    # Read all header data bytes
+                    filehandle_nsx.seek(fileoffset , os.SEEK_SET)
                     temp1 = np.fromfile(filehandle_nsx, count=1, dtype='b')  # should be 1
                     temp2 = np.fromfile(filehandle_nsx, count=2, dtype='i')  # number of data points that follow (per channel!)
                     #TODO: temp2[0] is the time stamp of the first sample -> should be recognized!!!
                     if temp1[0] != 1 or temp2[1] != (self.__num_packets_nsx[nsx_i] + 1):
                         raise Exception('blackrockio cannot handle files with gaps (available in version 2.2+).')
 
-                # Pre-read buffer for faster input
-                # Explicitely mention the number of bytes to read from the
-                # file using count=... because we disregard the last sample
-                # point (see definition of self.__num_packets_nsx above)
-                analogbuf = np.fromfile(filehandle_nsx, count=self.__num_packets_nsx[nsx_i] * self.num_channels_nsx[nsx_i], dtype='<h').reshape((self.__num_packets_nsx[nsx_i], self.num_channels_nsx[nsx_i]), order='C')
+                    # For 2.3 files, check that only one header block follows (i.e., no gaps)
+                    # or, even better, deal with having more than one block of LFP data!
+                    # TODO: Implement this functionality instead of raising an exception
+                finally:
+                    filehandle_nsx.close()
+                    # add the 9 bytes (b+2*i) to fileoffset to
+                    fileoffset = fileoffset + 9
 
-            finally:
-                filehandle_nsx.close()
+            # Explicitely mention the number of bytes to read from the
+            # file using count=... because we disregard the last sample
+            # point (see definition of self.__num_packets_nsx above)
+            analogbuf = np.memmap(filename_nsx, dtype='<h', mode='r', offset=fileoffset, shape=(self.__num_packets_nsx[nsx_i], self.num_channels_nsx[nsx_i]))
 
             # Go through all time periods
             for (seg_i, n_start_i, n_stop_i) in zip(range(len(n_starts)), n_starts, n_stops):
@@ -1534,7 +1535,7 @@ class BlackrockIO(BaseIO):
                     end_packet = self.__num_packets_nsx[nsx_i]
 
                 # Calculate the sequential signal number in the file
-                el_idx = [self.channel_id_nsx[nsx_i].index(i) for i in channel_list]
+                el_idx = [self.channel_id_nsx[nsx_i].index(i) for i in channel_list if i in self.channel_id_nsx[nsx_i]]
 
                 # Load individual channels
                 for (channel_i, el_idx_i) in zip(channel_list, el_idx):
