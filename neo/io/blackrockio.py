@@ -322,8 +322,10 @@ class BlackrockIO(BaseIO):
                 (self.channel_id_nsx[nsx][channel_i],) = struct.unpack('<H', filehandle.read(2))
 
                 # Read label string and remove 0's
+                # TODO: Transform this into a real dict
                 self.parameters_nsx[nsx]['ChannelLabel'].append(filehandle.read(16).replace('\x00', ''))
 
+                # TODO: Add info from CC ext header!
                 # 47 bytes ignored for now
                 dummy = filehandle.read(46)
 
