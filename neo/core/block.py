@@ -155,7 +155,7 @@ class Block(BaseNeo):
         '''
         Handle pretty-printing the :class:`Block`.
         '''
-        pp.text("{0} with {1} segments and {1} groups".format(
+        pp.text("{0} with {1} segments and {2} groups".format(
             self.__class__.__name__,
             len(self.segments),
             len(self.recordingchannelgroups),
