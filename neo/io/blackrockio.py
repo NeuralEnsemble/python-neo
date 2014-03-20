@@ -1173,7 +1173,6 @@ class BlackrockIO(BaseIO):
         elif type(n_starts) == pq.Quantity:
             n_starts = [n_starts]
         elif type(n_starts) != list or any([(type(i) != pq.Quantity and i != None) for i in n_starts]):
-            print n_starts[0]
             raise ValueError('Invalid specification of n_starts.')
         if n_stops == None:
             n_stops = [None]
