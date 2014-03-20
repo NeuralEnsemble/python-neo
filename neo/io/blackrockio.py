@@ -45,7 +45,12 @@ class BlackrockIO(BaseIO):
         associated (bool):
             True if the object is successfully associated to a set of Blackrock files
         associated_fileset (string):
-            Name of the associated file set.
+            Name of the associated file set, which is the base file name (i.e.,
+            without .nev or .nsX extensions) determined when constructing the
+            object.
+        filename (string):
+            The file name passed when constructing the object (including any
+            extensions given).
         nev_fileprefix (string):
             File name of the requested .nev file (without extension).
         nsx_fileprefix (string):
@@ -155,9 +160,10 @@ class BlackrockIO(BaseIO):
 
         Args:
             filename (string):
-                Name of a Blackrock file set to associate with. The file
-                extension(s) should not be included. This name is used as default
-                filename for .nsX and .nev files.
+                Base file name of the set of Blackrock files to associate with,
+                i.e., the file name of the .nev and .nsX files without the
+                extension. Any .nsX or .nev extensions are ignored when parsing
+                this parameter.
             nsx_override (string):
                 File name of the .nsX files (without extension). If None,
                 filename is used.
@@ -639,6 +645,10 @@ class BlackrockIO(BaseIO):
         # dictionary that holds different parameters about the patient read from the sif file
         self.parameters_patient = {}
 
+        # If session name contains a known file extension, remove it
+        if sessionname[-4:].lower() in self.extensions:
+            sessionname = sessionname[0:-4]
+
         # Save session to be associated to
         self.associated_fileset = sessionname
         self.parameters_nev["SessionName"] = sessionname
@@ -989,11 +999,12 @@ class BlackrockIO(BaseIO):
 
         Args:
             lazy (bool):
-                Loads the neo block structure without the following data:
+                If True, loads the neo block structure without the following data:
                     signal of AnalogSignal objects 
                     times of SpikeTrain objects
                     channelindexes of RecordingChannelGroup and Unit objects
             cascade (bool):
+                If False, loads only the Block object without children.
             n_starts (list):
                 List of starting times as Quantity objects of each Segment, where
                 the beginning of the file is time 0. If a list entry is specified as
