@@ -20,6 +20,7 @@ class BlackrockIOTestCase(unittest.TestCase):
         allok = True
 
         try:
+            # TODO insert here the path to the file on the GNode portal
             b = blr.BlackrockIO("blackrock/FileSpec2.3001", print_diagnostic=False)
 
             # Load data to maximum extent, one None is not given as list
@@ -109,7 +110,8 @@ class BlackrockIOTestCase(unittest.TestCase):
         allok = True
 
         # Load data from Matlab generated files
-        ml = scipy.io.loadmat('blackrock/testdata.mat')
+        # TODO: insert here the path to the file on the GNode portal
+        ml = scipy.io.loadmat('blackrock/FileSpec2.3001.mat')
         lfp_ml = ml['lfp']  # (channel x time) LFP matrix
         ts_ml = ml['ts']  # spike time stamps
         elec_ml = ml['el']  # spike electrodes
@@ -119,14 +121,15 @@ class BlackrockIOTestCase(unittest.TestCase):
         mid_ml = ml['mid']  # marker IDs
 
         # Load data in channels 1-3 from original data files using neo framework
-        # try:
-        session = blr.BlackrockIO("blackrock/FileSpec2.3001",
-                                    print_diagnostic=False)
-        block = session.read_block(n_starts=[None], n_stops=[None],
-                                   channel_list=range(1, 9), nsx=5, units=[],
-                                   events=True, waveforms=True)
-        # except:
-        #    allok = False
+        try:
+        # TODO: insert here the path to the file on the GNode portal
+            session = blr.BlackrockIO("blackrock/FileSpec2.3001",
+                                        print_diagnostic=False)
+            block = session.read_block(n_starts=[None], n_stops=[None],
+                                       channel_list=range(1, 9), nsx=5, units=[],
+                                       events=True, waveforms=True)
+        except:
+            allok = False
 
         # Check if analog data on channels 1-8 are equal
         for rcg_i in block.recordingchannelgroups:
