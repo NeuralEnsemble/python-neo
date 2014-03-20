@@ -1,15 +1,34 @@
 '''
 Tests of BlackrockIO
 '''
+# needed for python 3 compatibility
+from __future__ import absolute_import, division
 
-import unittest
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
+from neo.io.blackrockio import BlackrockIO
+from neo.test.iotest.common_io_test import BaseTestIO
+
+import os.path
+import tempfile
 import numpy as np
 import scipy.io
 import quantities as pq
-import neo.io.blackrockio as blr
 
 
-class BlackrockIOTestCase(unittest.TestCase):
+class BlackrockIOTestCase(BaseTestIO, unittest.TestCase):
+
+    files_to_test = ['FileSpec2.3001']
+
+    files_to_download = ['FileSpec2.3001.nev',
+                     'FileSpec2.3001.ns5',
+                     'FileSpec2.3001.ccf',
+                     'FileSpec2.3001.mat']
+    ioclass = BlackrockIO
+
 
     def test_inputs_V23(self):
         """
@@ -20,8 +39,7 @@ class BlackrockIOTestCase(unittest.TestCase):
         allok = True
 
         try:
-            # TODO insert here the path to the file on the GNode portal
-            b = blr.BlackrockIO("blackrock/FileSpec2.3001", print_diagnostic=False)
+            b = BlackrockIO(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001'), print_diagnostic=False)
 
             # Load data to maximum extent, one None is not given as list
             block = b.read_block(n_starts=[None], n_stops=None, channel_list=range(1, 9), nsx=5, units=[], events=True, waveforms=False)
@@ -110,8 +128,7 @@ class BlackrockIOTestCase(unittest.TestCase):
         allok = True
 
         # Load data from Matlab generated files
-        # TODO: insert here the path to the file on the GNode portal
-        ml = scipy.io.loadmat('blackrock/FileSpec2.3001.mat')
+        ml = scipy.io.loadmat(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001.mat'))
         lfp_ml = ml['lfp']  # (channel x time) LFP matrix
         ts_ml = ml['ts']  # spike time stamps
         elec_ml = ml['el']  # spike electrodes
@@ -122,8 +139,7 @@ class BlackrockIOTestCase(unittest.TestCase):
 
         # Load data in channels 1-3 from original data files using neo framework
         try:
-        # TODO: insert here the path to the file on the GNode portal
-            session = blr.BlackrockIO("blackrock/FileSpec2.3001",
+            session = BlackrockIO(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001'),
                                         print_diagnostic=False)
             block = session.read_block(n_starts=[None], n_stops=[None],
                                        channel_list=range(1, 9), nsx=5, units=[],
