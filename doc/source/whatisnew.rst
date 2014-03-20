@@ -3,6 +3,27 @@ Release notes
 *************
 
 
+What's new in version 0.4.0?
+----------------------------
+
+  * added StimfitIO
+
+What's new in version 0.3.3?
+----------------------------
+
+  * fix a bug in PlexonIO where some EventArrays only load 1 element.
+  * fix a bug in BrainwareSrcIo for segments with no spikes.
+
+
+What's new in version 0.3.2?
+----------------------------
+
+  * cleanup ot io test code, with additional helper functions and methods
+  * added BrainwareDamIo
+  * added BrainwareF32Io
+  * added BrainwareSrcIo
+
+
 What's new in version 0.3.1?
 ----------------------------
 

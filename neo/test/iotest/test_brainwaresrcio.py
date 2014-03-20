@@ -1,54 +1,52 @@
-#!/usr/bin/python
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.brainwaresrcio
+Tests of neo.io.brainwaresrcio
 """
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+
+import os.path
+import sys
+import warnings
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-import sys
-PY_VER = sys.version_info[0]
-
-import warnings
-
-import os.path
 import numpy as np
 import quantities as pq
 
-from neo.core import (AnalogSignal, Block, Event, RecordingChannel,
+from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
-
-from neo.io.tools import create_many_to_one_relationship
-
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
 
+PY_VER = sys.version_info[0]
+
 
 def proc_src(filename):
     '''Load an src file that has already been processed by the official matlab
     file converter.  That matlab data is saved to an m-file, which is then
-    converted to a numpy file.  This numpy file is the file actually loaded,
-    can be compared to the block produced by brainwaresrcio to make sure
-    brainwaresrcio is working properly
+    converted to a numpy '.npz' file.  This numpy file is the file actually
+    loaded.  This function converts it to a neo block and returns the block.
+    This block can be compared to the block produced by BrainwareSrcIO to
+    make sure BrainwareSrcIO is working properly
 
-    block = proc_src(key, ext='npz')
+    block = proc_src(filename)
 
-    key: The file name of the origin file without the '.src' extension
-         This is also the name of the numpy file without the '_src' suffix or
-         extension '.npz' extension.
+    filename: The file name of the numpy file to load.  It should end with
+    '*_src_py?.npz'. This will be converted to a neo 'file_origin' property
+    with the value '*.src', so the filename to compare should fit that pattern.
+    'py?' should be 'py2' for the python 2 version of the numpy file or 'py3'
+    for the python 3 version of the numpy file.
 
-    example: key = 'file1'
+    example: filename = 'file1_src_py2.npz'
              src file name = 'file1.src'
-             numpy file name = 'file1_src.npz'
     '''
     with np.load(filename) as srcobj:
         srcfile = srcobj.items()[0][1]
@@ -72,7 +70,7 @@ def proc_src(filename):
         chan_names.append(name)
         chan = RecordingChannel(file_origin='filename',
                                 name=name,
-                                index=i)
+                                index=int(i))
         rcg.recordingchannels.append(chan)
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
@@ -81,7 +79,7 @@ def proc_src(filename):
     for rep in srcfile['sets'][0, 0].flatten():
         proc_src_condition(rep, filename, ADperiod, side, block)
 
-    create_many_to_one_relationship(block)
+    block.create_many_to_one_relationship()
 
     return block
 
@@ -125,7 +123,6 @@ def proc_src_units(srcfile, filename):
     cluster = timeslice['cluster'][0, 0]
     if len(cluster):
         maxValid = maxValid[0, 0]
-        numChans = [res[0, 0] for res in cluster['numChans'].flatten()]
         elliptic = [res.flatten() for res in cluster['elliptic'].flatten()]
         boundaries = [res.flatten() for res in cluster['boundaries'].flatten()]
         fullclust = zip(elliptic, boundaries)
@@ -260,13 +257,19 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen,
     return train
 
 
-class src_testcase(BaseTestIO, unittest.TestCase):
+class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
+    '''
+    Unit test testcase for neo.io.BrainwareSrcIO
+    '''
     ioclass = BrainwareSrcIO
     read_and_write_is_bijective = False
 
     # These are the files it tries to read and test for compliance
     files_to_test = ['block_300ms_4rep_1clust_part_ch1.src',
+                     'block_500ms_5rep_empty_fullclust_ch1.src',
+                     'block_500ms_5rep_empty_partclust_ch1.src',
                      'interleaved_500ms_5rep_ch2.src',
+                     'interleaved_500ms_5rep_nospikes_ch1.src',
                      'interleaved_500ms_7rep_noclust_ch1.src',
                      'long_170s_1rep_1clust_ch2.src',
                      'multi_500ms_mulitrep_ch1.src',
@@ -275,7 +278,10 @@ class src_testcase(BaseTestIO, unittest.TestCase):
 
     # these are reference files to compare to
     files_to_compare = ['block_300ms_4rep_1clust_part_ch1',
+                        'block_500ms_5rep_empty_fullclust_ch1',
+                        'block_500ms_5rep_empty_partclust_ch1',
                         'interleaved_500ms_5rep_ch2',
+                        'interleaved_500ms_5rep_nospikes_ch1',
                         'interleaved_500ms_7rep_noclust_ch1',
                         '',
                         'multi_500ms_mulitrep_ch1',
@@ -292,46 +298,47 @@ class src_testcase(BaseTestIO, unittest.TestCase):
     files_to_download = files_to_test + files_to_compare
 
     def setUp(self):
-        warnings.filterwarnings('ignore', message='Negative object count.*')
-        super(src_testcase, self).setUp()
+        warnings.filterwarnings('ignore', message='Negative sequence count.*')
+        warnings.filterwarnings('ignore', message='unknown ID:*')
+        super(BrainwareSrcIOTestCase, self).setUp()
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):
-            ob_reader_all = create_generic_reader(ioobj, readall=True)
-            ob_reader_base = create_generic_reader(ioobj, target=False)
-            ob_reader_next = create_generic_reader(ioobj, target='next_block')
-            ob_reader_single = create_generic_reader(ioobj)
+            obj_reader_all = create_generic_reader(ioobj, readall=True)
+            obj_reader_base = create_generic_reader(ioobj, target=False)
+            obj_reader_next = create_generic_reader(ioobj, target='next_block')
+            obj_reader_single = create_generic_reader(ioobj)
 
-            ob_all = ob_reader_all()
-            ob_base = ob_reader_base()
-            ob_single = ob_reader_single()
-            ob_next = [ob_reader_next(warnlast=False)]
+            obj_all = obj_reader_all()
+            obj_base = obj_reader_base()
+            obj_single = obj_reader_single()
+            obj_next = [obj_reader_next(warnlast=False)]
             while ioobj.isopen:
-                ob_next.append(ob_reader_next(warnlast=False))
+                obj_next.append(obj_reader_next(warnlast=False))
 
             try:
-                assert_same_sub_schema(ob_all[0], ob_base)
-                assert_same_sub_schema(ob_all[0], ob_single)
-                assert_same_sub_schema(ob_all, ob_next)
-            except BaseException as e:
-                e.args += ('from ' + os.path.basename(path),)
+                assert_same_sub_schema(obj_all[0], obj_base)
+                assert_same_sub_schema(obj_all[0], obj_single)
+                assert_same_sub_schema(obj_all, obj_next)
+            except BaseException as exc:
+                exc.args += ('from ' + os.path.basename(path),)
                 raise
 
-            self.assertEqual(len(ob_all), len(ob_next))
+            self.assertEqual(len(obj_all), len(obj_next))
 
     def test_against_reference(self):
         for filename, refname in zip(self.files_to_test,
                                      self.files_to_compare):
             if not refname:
                 continue
-            ob = self.read_file(filename=filename, readall=True)[0]
-            refob = proc_src(self.get_filename_path(refname))
+            obj = self.read_file(filename=filename, readall=True)[0]
+            refobj = proc_src(self.get_filename_path(refname))
             try:
-                assert_neo_object_is_compliant(ob)
-                assert_neo_object_is_compliant(refob)
-                assert_same_sub_schema(ob, refob)
-            except BaseException as e:
-                e.args += ('from ' + filename,)
+                assert_neo_object_is_compliant(obj)
+                assert_neo_object_is_compliant(refobj)
+                assert_same_sub_schema(obj, refobj)
+            except BaseException as exc:
+                exc.args += ('from ' + filename,)
                 raise
 
 

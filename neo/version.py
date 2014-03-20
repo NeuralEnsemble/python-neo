@@ -1,1 +1,3 @@
-version = '0.3.2dev'
+# -*- coding: utf-8 -*-
+
+version = '0.4.0dev'

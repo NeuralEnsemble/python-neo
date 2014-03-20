@@ -1,6 +1,6 @@
 To run all tests:
 
-With Python 2.7 or 3.2:
+With Python 2.7 or 3.3:
 
     $ python -m unittest discover
 

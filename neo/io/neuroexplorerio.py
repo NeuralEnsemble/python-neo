@@ -1,6 +1,5 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-
 Class for reading data from NeuroExplorer (.nex)
 
 Documentation for dev :
@@ -15,18 +14,14 @@ Author: sgarcia,luc estebanez
 
 """
 
-
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import os
+import struct
 
 import numpy as np
 import quantities as pq
 
-import struct
-import datetime
-import os
-
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
 
 
 class NeuroExplorerIO(BaseIO):
@@ -274,7 +269,7 @@ class NeuroExplorerIO(BaseIO):
                 seg.eventarrays.append(ea)
 
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 
@@ -333,8 +328,8 @@ class HeaderReader():
     def read_f(self, offset =0):
         self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            val = struct.unpack(format , self.fid.read(struct.calcsize(format)))
+        for key, fmt in self.description :
+            val = struct.unpack(fmt , self.fid.read(struct.calcsize(fmt)))
             if len(val) == 1:
                 val = val[0]
             else :

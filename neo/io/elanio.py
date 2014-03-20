@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing data from Elan.
 
@@ -20,16 +20,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import datetime
+import os
+import re
+
 import numpy as np
-from numpy import dtype, zeros, fromstring, empty, log, fromfile
 import quantities as pq
 
-import os
-import datetime
-import re
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, EventArray
+
 
 class VersionError(Exception):
 
@@ -197,8 +197,8 @@ class ElanIO(BaseIO):
         f.close()
 
         #raw data
-        n = int(round(log(max_logic[0]-min_logic[0])/log(2))/8)
-        data = fromfile(self.filename,dtype = 'i'+str(n) )
+        n = int(round(np.log(max_logic[0]-min_logic[0])/np.log(2))/8)
+        data = np.fromfile(self.filename,dtype = 'i'+str(n) )
         data = data.byteswap().reshape( (data.size/(nbchannel+2) ,nbchannel+2) ).astype('f4')
         for c in range(nbchannel) :
             if lazy:
@@ -249,7 +249,7 @@ class ElanIO(BaseIO):
 
         f.close()
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

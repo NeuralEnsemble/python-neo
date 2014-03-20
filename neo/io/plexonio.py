@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading data from Plexion acquisition system (.plx)
 
@@ -17,16 +17,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
+import datetime
+import struct
+import os
+
 import numpy as np
 import quantities as pq
 
-import struct
-import datetime
-import os
-
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
+from neo.io.tools import iteritems
 
 
 class PlexonIO(BaseIO):
@@ -111,7 +111,7 @@ class PlexonIO(BaseIO):
         dspChannelHeaders = { }
         maxunit=0
         maxchan = 0
-        for i in range(globalHeader['NumDSPChannels']):
+        for _ in range(globalHeader['NumDSPChannels']):
             # channel is 1 based
             channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
             channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
@@ -122,13 +122,13 @@ class PlexonIO(BaseIO):
 
        # event channel header
         eventHeaders = { }
-        for i in range(globalHeader['NumEventChannels']):
+        for _ in range(globalHeader['NumEventChannels']):
             eventHeader = HeaderReader(fid , EventHeader ).read_f(offset = None)
             eventHeaders[eventHeader['Channel']] = eventHeader
 
         # slow channel header = signal
         slowChannelHeaders = { }
-        for i in range(globalHeader['NumSlowChannels']):
+        for _ in range(globalHeader['NumSlowChannels']):
             slowChannelHeader = HeaderReader(fid , SlowChannelHeader ).read_f(offset = None)
             slowChannelHeaders[slowChannelHeader['Channel']] = slowChannelHeader
 
@@ -137,7 +137,6 @@ class PlexonIO(BaseIO):
         nb_samples = np.zeros(len(slowChannelHeaders))
         sample_positions = np.zeros(len(slowChannelHeaders))
         t_starts = np.zeros(len(slowChannelHeaders), dtype = 'f')
-        unit_per_channel = { }
 
         #spiketimes and waveform
         nb_spikes = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
@@ -158,7 +157,9 @@ class PlexonIO(BaseIO):
             chan = dataBlockHeader['Channel']
             unit = dataBlockHeader['Unit']
             n1,n2 = dataBlockHeader['NumberOfWaveforms'] , dataBlockHeader['NumberOfWordsInWaveform']
-            
+            time = (dataBlockHeader['UpperByteOf5ByteTimestamp']*2.**32 +
+                    dataBlockHeader['TimeStamp'])
+
             if dataBlockHeader['Type'] == 1:
                 nb_spikes[chan,unit] +=1
                 wf_sizes[chan,unit,:] = [n1,n2]
@@ -185,7 +186,7 @@ class PlexonIO(BaseIO):
             # allocating mem for SpikeTrain
             stimearrays = np.zeros((maxchan+1, maxunit+1) ,dtype=object)
             swfarrays = np.zeros((maxchan+1, maxunit+1) ,dtype=object)
-            for (chan, unit), value in np.ndenumerate(nb_spikes):
+            for (chan, unit), _ in np.ndenumerate(nb_spikes):
                 stimearrays[chan,unit] = np.zeros(nb_spikes[chan,unit], dtype = 'f')
                 if load_spike_waveform:
                     n1,n2 = wf_sizes[chan, unit,:]
@@ -223,7 +224,7 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    evarrays[pos] = time
+                    evarrays[chan][pos] = time
                     eventpositions[chan]+= 1
 
                 elif dataBlockHeader['Type'] == 5:
@@ -296,9 +297,9 @@ class PlexonIO(BaseIO):
             if lazy:
                 sptr.lazy_shape = nb_spikes[chan,unit]
             seg.spiketrains.append(sptr)
-        
-        create_many_to_one_relationship(seg)
-        return seg                          
+
+        seg.create_many_to_one_relationship()
+        return seg
 
 
 
@@ -426,16 +427,15 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = list(struct.unpack(fmt , buf))
+            for i, ival in enumerate(val):
+                if hasattr(ival, 'replace'):
+                    val[i] = ival.replace('\x00','')
             if len(val) == 1:
                 val = val[0]
-            else :
-                val = list(val)
-            if 's' in format :
-                val = val.replace('\x00','')
             d[key] = val
         return d
 

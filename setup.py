@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
@@ -13,14 +14,14 @@ if os.environ.get('TRAVIS') == 'true' and \
 
 setup(
     name = "neo",
-    version = '0.3.2dev',
+    version = '0.4.0dev',
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
     install_requires=install_requires,
     author = "Neo authors and contributors",
     author_email = "sgarcia at olfac.univ-lyon1.fr",
     description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats",
     long_description = long_description,
-    license = "BSD",
+    license = "BSD-3-Clause",
     url='http://neuralensemble.org/neo',
     classifiers = [
         'Development Status :: 4 - Beta',
@@ -29,9 +30,9 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
+                   'Programming Language :: Python :: 2.6',
+                   'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
+                   'Programming Language :: Python :: 3.3',
         'Topic :: Scientific/Engineering']
 )
-
-
-

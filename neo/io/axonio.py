@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 
 Classe for reading data from pCLAMP and AxoScope
@@ -9,7 +9,7 @@ files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 
 This code is a port of abfload and abf2load
-written in Matlab (BSD licence) by :
+written in Matlab (BSD-2-Clause licence) by :
  - Copyright (c) 2009, Forrest Collman, fcollman@princeton.edu
  - Copyright (c) 2004, Harald Hentschke
 and available here : http://www.mathworks.com/matlabcentral/fileexchange/22114-abf2load
@@ -33,18 +33,9 @@ abf files - would be good to cross-check
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
-import numpy as np
-import quantities as pq
-
-import struct
 import datetime
 import os
-
-
-from numpy import memmap, dtype
+import struct
 
 # file no longer exists in Python3
 try:
@@ -53,17 +44,25 @@ except NameError:
     import io
     file = io.BufferedReader
 
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal, EventArray
+from neo.io.tools import iteritems
+
+
 
 class struct_file(file):
-    def read_f(self, format , offset = None):
+    def read_f(self, fmt , offset = None):
         if offset is not None:
             self.seek(offset)
-        return struct.unpack(format , self.read(struct.calcsize(format)))
+        return struct.unpack(fmt , self.read(struct.calcsize(fmt)))
 
-    def write_f(self, format , offset = None , *args ):
+    def write_f(self, fmt , offset = None , *args ):
         if offset is not None:
             self.seek(offset)
-        self.write( struct.pack( format , *args ) )
+        self.write( struct.pack( fmt , *args ) )
 
 
 def reformat_integer_V1(data, nbchannel , header):
@@ -190,9 +189,9 @@ class AxonIO(BaseIO):
 
         # file format
         if header['nDataFormat'] == 0 :
-            dt = dtype('i2')
+            dt = np.dtype('i2')
         elif header['nDataFormat'] == 1 :
-            dt = dtype('f4')
+            dt = np.dtype('f4')
 
         if version <2. :
             nbchannel = header['nADCNumChannels']
@@ -203,8 +202,8 @@ class AxonIO(BaseIO):
             headOffset = header['sections']['DataSection']['uBlockIndex']*BLOCKSIZE
             totalsize = header['sections']['DataSection']['llNumEntries']
 
-        data = memmap(self.filename , dt  , 'r',
-                      shape = (totalsize,) , offset = headOffset)
+        data = np.memmap(self.filename , dt  , 'r',
+                         shape = (totalsize,) , offset = headOffset)
 
         # 3 possible modes
         if version <2. :
@@ -226,7 +225,7 @@ class AxonIO(BaseIO):
                 nbepisod = header['sections']['SynchArraySection']['llNumEntries']
                 offsetEpisod = header['sections']['SynchArraySection']['uBlockIndex']*BLOCKSIZE
             if nbepisod>0:
-                episodArray = memmap(self.filename , [('offset','i4'), ('len', 'i4') ] , 'r',
+                episodArray = np.memmap(self.filename , [('offset','i4'), ('len', 'i4') ] , 'r',
                                             shape = (nbepisod),
                                             offset = offsetEpisod )
             else:
@@ -259,7 +258,7 @@ class AxonIO(BaseIO):
                 subdata  = data[pos:pos+length]
                 pos += length
                 subdata = subdata.reshape( (subdata.size/nbchannel, nbchannel )).astype('f')
-                if dt == dtype('i2'):
+                if dt == np.dtype('i2'):
                     if version <2. :
                         reformat_integer_V1(subdata, nbchannel , header)
                     elif version >=2. :
@@ -319,7 +318,7 @@ class AxonIO(BaseIO):
                 seg.eventarrays.append(ea)
 
 
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 
 
@@ -353,8 +352,8 @@ class AxonIO(BaseIO):
 
         # construct dict
         header = { }
-        for key, offset , format in headerDescription :
-            val = fid.read_f(format , offset = offset)
+        for key, offset , fmt in headerDescription :
+            val = fid.read_f(fmt , offset = offset)
             if len(val) == 1:
                 header[key] = val[0]
             else :
@@ -374,8 +373,8 @@ class AxonIO(BaseIO):
             for i in range(header['lNumTagEntries']) :
                 fid.seek(header['lTagSectionPtr']+i*64)
                 tag = { }
-                for key, format in TagInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in TagInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         tag[key] = val[0]
                     else :
@@ -416,8 +415,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['ADCSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['ADCSection']['uBytes']*i)
                 ADCInfo = { }
-                for key, format in ADCInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in ADCInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         ADCInfo[key] = val[0]
                     else :
@@ -430,8 +429,8 @@ class AxonIO(BaseIO):
             # protocol sections
             protocol = { }
             fid.seek(sections['ProtocolSection']['uBlockIndex']*BLOCKSIZE)
-            for key, format in protocolInfoDescription :
-                val = fid.read_f(format )
+            for key, fmt in protocolInfoDescription :
+                val = fid.read_f(fmt )
                 if len(val) == 1:
                     protocol[key] = val[0]
                 else :
@@ -444,8 +443,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['TagSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['TagSection']['uBytes']*i)
                 tag = { }
-                for key, format in TagInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in TagInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         tag[key] = val[0]
                     else :
@@ -461,8 +460,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['DACSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['DACSection']['uBytes']*i)
                 DACInfo = { }
-                for key, format in DACInfoDescription :
-                    val = fid.read_f(format )
+                for key, fmt in DACInfoDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         DACInfo[key] = val[0]
                     else :
@@ -484,8 +483,8 @@ class AxonIO(BaseIO):
                 fid.seek(sections['EpochPerDACSection']['uBlockIndex']*\
                             BLOCKSIZE+sections['EpochPerDACSection']['uBytes']*i)
                 EpochInfoPerDAC = { }
-                for key, format in EpochInfoPerDACDescription :
-                    val = fid.read_f(format )
+                for key, fmt in EpochInfoPerDACDescription :
+                    val = fid.read_f(fmt )
                     if len(val) == 1:
                         EpochInfoPerDAC[key] = val[0]
                     else :
@@ -514,7 +513,7 @@ class AxonIO(BaseIO):
         header = self.read_header()
 
         if header['fFileVersionNumber'] < 2. :
-            raise "Protocol is only present in ABF2 files."
+            raise IOError("Protocol is only present in ABF2 files.")
 
         nADC = header['sections']['ADCSection']['llNumEntries'] # Number of ADC channels
         nDAC = header['sections']['DACSection']['llNumEntries'] # Number of DAC channels

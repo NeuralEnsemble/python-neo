@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Module for reading/writing data from/to Python pickle format.
 
@@ -11,13 +11,14 @@ Supported: Read/Write
 Authors: Andrew Davison
 """
 
-from __future__ import with_statement
-from .baseio import BaseIO
-from ..core import Block, Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
 try:
-    import cPickle as pickle # Python 2
+    import cPickle as pickle  # Python 2
 except ImportError:
-    import pickle            # Python 3
+    import pickle  # Python 3
+
+from neo.io.baseio import BaseIO
+from neo.core import (Block, Segment,
+                      AnalogSignal, AnalogSignalArray, SpikeTrain)
 
 
 class PickleIO(BaseIO):

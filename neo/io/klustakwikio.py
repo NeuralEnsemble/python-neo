@@ -1,4 +1,6 @@
-"""Reading and writing from KlustaKwik-format files.
+# -*- coding: utf-8 -*-
+"""
+Reading and writing from KlustaKwik-format files.
 Ref: http://klusters.sourceforge.net/UserManual/data-files.html
 
 Supported : Read, Write
@@ -12,16 +14,27 @@ weren't set. Consider removing those annotations if they are redundant.
 * Load features in addition to spiketimes.
 """
 
-# I need to subclass BaseIO
-from .baseio import BaseIO
-
-# to import : Block, Segment, AnalogSignal, SpikeTrain, SpikeTrainList
-from ..core import *
-from .tools import create_many_to_one_relationship
+import glob
+import logging
+import os.path
+import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
-import quantities as pq
+try:
+    import matplotlib.mlab as mlab
+except ImportError as err:
+    HAVE_MLAB = False
+    MLAB_ERR = err
+else:
+    HAVE_MLAB = True
+    MLAB_ERR = None
+
+
+# I need to subclass BaseIO
+from neo.io.baseio import BaseIO
+
+from neo.core import Block, Segment, Unit, SpikeTrain
 
 # Pasted version of feature file format spec
 """
@@ -51,13 +64,6 @@ of the recording session.
 
 Notice that the last line must end with a newline or carriage return.
 """
-
-import numpy as np
-import glob
-import matplotlib.mlab as mlab
-import os.path
-import shutil
-import logging
 
 
 class KlustaKwikIO(BaseIO):
@@ -100,6 +106,8 @@ class KlustaKwikIO(BaseIO):
         sampling_rate : in Hz, necessary because the KlustaKwik files
             stores data in samples.
         """
+        if not HAVE_MLAB:
+            raise MLAB_ERR
         BaseIO.__init__(self)
         #self.filename = os.path.normpath(filename)
         self.filename, self.basename = os.path.split(os.path.abspath(filename))
@@ -188,7 +196,7 @@ class KlustaKwikIO(BaseIO):
                 u.spiketrains.append(st)
                 seg.spiketrains.append(st)
 
-        create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
         return block
 
     # Helper hidden functions for reading
@@ -308,7 +316,7 @@ class KlustaKwikIO(BaseIO):
                 except KeyError:
                     # Use empty
                     all_features = [
-                        [] for n in range(len(spike_times_in_samples))]
+                        [] for _ in range(len(spike_times_in_samples))]
                 all_features = np.asarray(all_features)
                 if all_features.ndim != 2:
                     raise ValueError("waveform features should be 2d array")

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Reading from neuroscope format files.
 Ref: http://neuroscope.sourceforge.net/
@@ -14,21 +14,20 @@ EventArray  '.ext.evt'  or '.evt.ext'
 Author: sgarcia
 
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
-from .baseio import BaseIO
-from .rawbinarysignalio import RawBinarySignalIO
-from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, RecordingChannel,  RecordingChannelGroup
-from .tools import create_many_to_one_relationship
+import os
+from xml.etree import ElementTree
 
 import numpy as np
 import quantities as pq
 
-
-import os
-import datetime
-
-import xml.etree.ElementTree as ElementTree
+from neo.io.baseio import BaseIO
+from neo.io.rawbinarysignalio import RawBinarySignalIO
+from neo.core import (Block, Segment, RecordingChannel,  RecordingChannelGroup,
+                      AnalogSignal)
 
 
 class NeuroScopeIO(BaseIO):
@@ -90,7 +89,7 @@ class NeuroScopeIO(BaseIO):
         nbchannel = int(acq.find('nChannels').text)
         sampling_rate = float(acq.find('samplingRate').text)*pq.Hz
         voltage_range = float(acq.find('voltageRange').text)
-        offset = int(acq.find('offset').text)
+        #offset = int(acq.find('offset').text)
         amplification = float(acq.find('amplification').text)
         
         bl = Block(file_origin = os.path.basename(self.filename).replace('.xml', ''))
@@ -128,6 +127,6 @@ class NeuroScopeIO(BaseIO):
                 seg.analogsignals.append(sig)
                 rc_list[s].analogsignals.append(sig)
             
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 

@@ -1,28 +1,18 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing data from micromed (.trc).
 Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
 
 Completed with matlab Guillaume BECQ code.
 
-
 Supported : Read
 
-
 Author: sgarcia
-
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-import numpy as np
-import quantities as pq
-
-
+import datetime
 import os
 import struct
-import datetime
 
 # file no longer exists in Python3
 try:
@@ -31,10 +21,16 @@ except NameError:
     import io
     file = io.BufferedReader
 
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, EpochArray, EventArray
+
 
 class struct_file(file):
-    def read_f(self, format):
-        return struct.unpack(format , self.read(struct.calcsize(format)))
+    def read_f(self, fmt):
+        return struct.unpack(fmt , self.read(struct.calcsize(fmt)))
 
 
 class MicromedIO(BaseIO):
@@ -96,8 +92,8 @@ class MicromedIO(BaseIO):
 
         #Date
         f.seek(128,0)
-        day, month, year, hour, min, sec = f.read_f('bbbbbb')
-        rec_datetime = datetime.datetime(year+1900 , month , day, hour, min, sec)
+        day, month, year, hour, minute, sec = f.read_f('bbbbbb')
+        rec_datetime = datetime.datetime(year+1900 , month , day, hour, minute, sec)
 
         f.seek(138,0)
         Data_Start_Offset , Num_Chan , Multiplexer , Rate_Min , Bytes = f.read_f('IHHHH')
@@ -209,7 +205,7 @@ class MicromedIO(BaseIO):
             seg.epocharrays.append(ep)
         
         
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 

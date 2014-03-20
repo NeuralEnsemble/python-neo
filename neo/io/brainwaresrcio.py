@@ -1,6 +1,4 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 '''
 Class for reading from Brainware SRC files
 
@@ -38,9 +36,12 @@ from __future__ import absolute_import, division, print_function
 
 # import needed core python modules
 from datetime import datetime, timedelta
-import time
 from os import path
 from warnings import warn
+
+# numpy and quantities are already required by neo
+import numpy as np
+import quantities as pq
 
 # needed core neo modules
 from neo.core import (Block, Event, RecordingChannel,
@@ -49,20 +50,13 @@ from neo.core import (Block, Event, RecordingChannel,
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
-# some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
-
-# numpy and quantities are already required by neo
-import numpy as np
-import quantities as pq
-
 
 class BrainwareSrcIO(BaseIO):
     '''
     Class for reading Brainware Spike ReCord files with the extension '.src'
 
-    The read_block returns the first Block of the file.  It will automatically
-    close the file after reading.
+    The read_block method returns the first Block of the file.  It will
+    automatically close the file after reading.
     The read method is the same as read_block.
 
     The read_all_blocks method automatically reads all Blocks.  It will
@@ -103,7 +97,6 @@ class BrainwareSrcIO(BaseIO):
         >>> blk1 = srcfile.read()
         >>> blk2 = srcfile.read_block()
         >>> blks = srcfile.read_all_blocks()
-        >>> print blk
         >>> print blk1.segments
         >>> print blk1.segments[0].spiketrains
         >>> print blk1.units
@@ -145,6 +138,7 @@ class BrainwareSrcIO(BaseIO):
                              'label': 'The time of the comment', }
                             )
                            ],
+                   RecordingChannel: [],
                    RecordingChannelGroup: [],
                    Segment: [('feature_type',
                               {'value': -1, 'type': int}),
@@ -207,6 +201,9 @@ class BrainwareSrcIO(BaseIO):
         # provided when the instance is initialized.
         self.__filename = filename
 
+        # this store the filename without the path
+        self.__file_origin = filename
+
         # This stores the file object for the current file
         self.__fsrc = None
 
@@ -217,23 +214,36 @@ class BrainwareSrcIO(BaseIO):
         # It is equivalent to self.__blk.recordingchannelgroups[0]
         self.__rcg = None
 
+        # This stores the current Segment for easy access
+        # It is equivalent to self.__blk.segments[-1]
+        self.__seg = None
+
         # this stores a dictionary of the Block's Units by name,
         # making it easier and faster to retrieve Units by name later
         # UnassignedSpikes and Units accessed by index are not stored here
         self.__unitdict = {}
+
+        # this stores the current Unit
+        self.__unit = None
 
         # if the file has a list with negative length, the rest of the file's
         # list lengths are unreliable, so we need to store this value for the
         # whole file
         self.__damaged = False
 
+        # this stores whether the current file is lazy loaded
         self.__lazy = False
 
+        # this stores whether the current file is cascading
         # this is false by default so if we use read_block on its own it works
         self.__cascade = False
 
     @property
     def isopen(self):
+        '''
+        This property tells whether the SRC file associated with the IO object
+        is open.
+        '''
         return self.__fsrc is not None
 
     def opensrc(self):
@@ -257,6 +267,7 @@ class BrainwareSrcIO(BaseIO):
         # we also need to reset all per-file attributes
         self.__damaged = False
         self.__fsrc = None
+        self.__seg = None
         self.__cascade = False
         self.__file_origin = None
         self.__lazy = False
@@ -277,6 +288,14 @@ class BrainwareSrcIO(BaseIO):
 
         If you wish to read more than one Block, please use read_all_blocks.
         '''
+
+        # there are no keyargs implemented to so far.  If someone tries to pass
+        # them they are expecting them to do something or making a mistake,
+        # neither of which should pass silently
+        if kargs:
+            raise NotImplementedError('This method does not have any '
+                                      'argument implemented yet')
+
         blockobj = self.read_next_block(cascade=cascade, lazy=lazy,
                                         warnlast=False)
         self.close()
@@ -339,7 +358,7 @@ class BrainwareSrcIO(BaseIO):
         self.__rcg.channel_names = chan_names
 
         # since we read at a Block level we always do this
-        create_many_to_one_relationship(self.__blk)
+        self.__blk.create_many_to_one_relationship()
 
         # put the Block in a local object so it can be gargabe collected
         blockobj = self.__blk
@@ -426,10 +445,10 @@ class BrainwareSrcIO(BaseIO):
         '''
         Reader for generic data
 
-        BrainWare is broken up into data sequences that are identified by an
-        ID code.  This method determines the ID code and calls the method
-        to read the data sequence with that ID code.  See the __ID_DICT
-        attribute for a dictionary of code/method pairs.
+        BrainWare SRC files are broken up into data sequences that are
+        identified by an ID code.  This method determines the ID code and calls
+        the method to read the data sequence with that ID code.  See the
+        __ID_DICT attribute for a dictionary of code/method pairs.
 
         IMPORTANT!!!
         This is the only private method that can be called directly.
@@ -439,18 +458,18 @@ class BrainwareSrcIO(BaseIO):
         '''
 
         try:
-            # uint16 -- the ID code of the next object
-            objid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
+            # uint16 -- the ID code of the next sequence
+            seqid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
         except IndexError:
             # return a None if at EOF.  Other methods use None to recognize
             # an EOF
             return None
 
-        # using the objid, get the reader function from the reader dict
-        readfunc = self.__ID_DICT.get(objid)
+        # using the seqid, get the reader function from the reader dict
+        readfunc = self.__ID_DICT.get(seqid)
         if readfunc is None:
-            if objid <= 0:
-                # return if end-of-object ID code.  This has to be 0.
+            if seqid <= 0:
+                # return if end-of-sequence ID code.  This has to be 0.
                 # just calling "return" will return a None which is used as an
                 # EOF indicator
                 return 0
@@ -460,7 +479,7 @@ class BrainwareSrcIO(BaseIO):
                 # even the official reference files have invalid keys
                 # when using the official reference reader matlab
                 # scripts
-                warn('unknown ID: %s' % objid)
+                warn('unknown ID: %s' % seqid)
                 return []
 
         try:
@@ -482,9 +501,9 @@ class BrainwareSrcIO(BaseIO):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
 
-    def _assign_object(self, data_obj):
+    def _assign_sequence(self, data_obj):
         '''
-        _assign_object(data_obj) - Try to guess where an unknown object
+        _assign_sequence(data_obj) - Try to guess where an unknown sequence
         should go based on its class.  Warning are issued if this method is
         used since manual reorganization may be needed.
         '''
@@ -505,9 +524,9 @@ class BrainwareSrcIO(BaseIO):
             self.__rcg.units[0].spiketrains.append(data_obj)
         elif hasattr(data_obj, '__iter__') and not isinstance(data_obj, str):
             for sub_obj in data_obj:
-                self._assign_object(sub_obj)
+                self._assign_sequence(sub_obj)
         else:
-            warn('Unrecognized object of type %s found, skipping',
+            warn('Unrecognized sequence of type %s found, skipping',
                  type(data_obj))
 
     _default_datetime = datetime(1, 1, 1)
@@ -544,24 +563,23 @@ class BrainwareSrcIO(BaseIO):
         if hasattr(spiketrains[0], 'waveforms') and len(spiketrains) == 1:
             train = spiketrains[0]
             if self.__lazy and not hasattr(train, 'lazy_shape'):
-                trainshape = train.shape
                 train.lazy_shape = train.shape
                 train = train[:0]
             return train
 
         if hasattr(spiketrains[0], 't_stop'):
             # workaround for bug in some broken files
-            istrain = [hasattr(train, 'waveforms') for train in spiketrains]
+            istrain = [hasattr(utrain, 'waveforms') for utrain in spiketrains]
             if not all(istrain):
-                goodtrains = [train for i, train in enumerate(spiketrains)
+                goodtrains = [itrain for i, itrain in enumerate(spiketrains)
                               if istrain[i]]
-                badtrains = [train for i, train in enumerate(spiketrains)
+                badtrains = [itrain for i, itrain in enumerate(spiketrains)
                              if not istrain[i]]
 
                 spiketrains = (goodtrains +
                                [self._combine_spiketrains(badtrains)])
 
-            spiketrains = [train for train in spiketrains if train.size > 0]
+            spiketrains = [itrain for itrain in spiketrains if itrain.size > 0]
             if not spiketrains:
                 train = self._default_spiketrain.copy()
                 train.file_origin = self.__file_origin
@@ -570,7 +588,7 @@ class BrainwareSrcIO(BaseIO):
                 return train
 
             # get the times of the spiketrains and combine them
-            waveforms = [train.waveforms for train in spiketrains]
+            waveforms = [itrain.waveforms for itrain in spiketrains]
             rawtrains = np.array(np.hstack(spiketrains))
             times = pq.Quantity(rawtrains, units=pq.ms, copy=False)
             lens1 = np.array([wave.shape[1] for wave in waveforms])
@@ -588,8 +606,8 @@ class BrainwareSrcIO(BaseIO):
             waveforms = np.vstack(waveforms)
 
             # extract the trig2 annotation
-            trig2 = np.array(np.hstack([train.annotations['trig2'] for train in
-                             spiketrains]))
+            trig2 = np.array(np.hstack([itrain.annotations['trig2'] for itrain
+                             in spiketrains]))
             trig2 = pq.Quantity(trig2, units=pq.ms)
         elif hasattr(spiketrains[0], 'units'):
             return self._combine_spiketrains([spiketrains])
@@ -667,7 +685,7 @@ class BrainwareSrcIO(BaseIO):
         if not numelements:
             return {}
 
-        # [data object] * numelements -- parameter names
+        # [data sequence] * numelements -- parameter names
         names = []
         for i in range(numelements):
             # {skip} = byte (char) -- skip one byte
@@ -776,7 +794,7 @@ class BrainwareSrcIO(BaseIO):
 
     def __read_list(self):
         '''
-        Read a list of arbitrary data objects
+        Read a list of arbitrary data sequences
 
         It only says how many data sequences should be read.  These sequences
         are then read by their ID number.
@@ -804,7 +822,7 @@ class BrainwareSrcIO(BaseIO):
         ID: 29093
         '''
 
-        # int16 -- number of objects to read
+        # int16 -- number of sequences to read
         numelements = np.fromfile(self.__fsrc, dtype=np.int16, count=1)[0]
 
         # {skip} = bytes * 4 (int16 * 2) -- skip four bytes
@@ -815,38 +833,38 @@ class BrainwareSrcIO(BaseIO):
 
         if not self.__damaged and numelements < 0:
             self.__damaged = True
-            warn('Negative object count, file may be damaged')
+            warn('Negative sequence count, file may be damaged')
 
         if not self.__damaged:
-            # read the objects into a list
-            obj_list = [self._read_by_id() for _ in range(numelements)]
+            # read the sequences into a list
+            seq_list = [self._read_by_id() for _ in range(numelements)]
         else:
             # read until we get some indication we should stop
-            obj_list = []
+            seq_list = []
 
-            # uint16 -- the ID of the next object
-            objidinit = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
+            # uint16 -- the ID of the next sequence
+            seqidinit = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
 
             # {rewind} = byte * 2 (int16) -- move back 2 bytes, i.e. go back to
-            # before the beginning of the objid
+            # before the beginning of the seqid
             self.__fsrc.seek(-2, 1)
             while 1:
-                # uint16 -- the ID of the next object
-                objid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
+                # uint16 -- the ID of the next sequence
+                seqid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
 
                 # {rewind} = byte * 2 (int16) -- move back 2 bytes, i.e. go
-                # back to before the beginning of the objid
+                # back to before the beginning of the seqid
                 self.__fsrc.seek(-2, 1)
 
-                # if we come across a new object, we are at the end of the list
-                # so we should stop
-                if objidinit != objid:
+                # if we come across a new sequence, we are at the end of the
+                # list so we should stop
+                if seqidinit != seqid:
                     break
 
-                # otherwise read the next object
-                obj_list.append(self._read_by_id())
+                # otherwise read the next sequence
+                seq_list.append(self._read_by_id())
 
-        return obj_list
+        return seq_list
 
     def __read_segment(self):
         '''
@@ -882,7 +900,18 @@ class BrainwareSrcIO(BaseIO):
         # the first Segment
         trains = self._read_by_id()
         if not trains:
-            trains = zip(unassigned_spikes)
+            if unassigned_spikes:
+                # if there are no assigned spikes,
+                # just use the unassigned spikes
+                trains = zip(unassigned_spikes)
+            else:
+                # if there are no spiketrains at all,
+                # create an empty spike train
+                train = self._default_spiketrain.copy()
+                train.file_origin = self.__file_origin
+                if self.__lazy:
+                    train.lazy_shape = (0,)
+                trains = [[train]]
         elif hasattr(trains[0], 'dtype'):
             #workaround for some broken files
             trains = [unassigned_spikes +
@@ -934,7 +963,7 @@ class BrainwareSrcIO(BaseIO):
         # uint8 --  number of electrode channels in the Segment
         numchannels = np.fromfile(self.__fsrc, dtype=np.uint8, count=1)[0]
 
-        # [list of objects] -- individual Segments
+        # [list of sequences] -- individual Segments
         segments = self.__read_list()
         while not hasattr(segments[0], 'spiketrains'):
             segments = sum(segments, [])
@@ -972,9 +1001,9 @@ class BrainwareSrcIO(BaseIO):
         This is version 8 of the data sequence.
 
         This is the same as __read_segment_list_var, but can also contain
-        one or more arbitrary objects.  The class makes an attempt to assign
-        the objects when possible, and warns the user when this happens
-        (see the _assign_object method)
+        one or more arbitrary sequences.  The class makes an attempt to assign
+        the sequences when possible, and warns the user when this happens
+        (see the _assign_sequence method)
 
         --------------------------------------------------------
         Returns a list of the Segments created with this method.
@@ -987,17 +1016,17 @@ class BrainwareSrcIO(BaseIO):
         # segment_collection_var -- this is based off a segment_collection_var
         segments = self.__read_segment_list_var()
 
-        # uint16 -- the ID of the next object
-        objid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
+        # uint16 -- the ID of the next sequence
+        seqid = np.fromfile(self.__fsrc, dtype=np.uint16, count=1)[0]
 
         # {rewind} = byte * 2 (int16) -- move back 2 bytes, i.e. go back to
-        # before the beginning of the objid
+        # before the beginning of the seqid
         self.__fsrc.seek(-2, 1)
 
-        if objid in self.__ID_DICT:
-            # if it is a valid objid, read it and try to figure out where
+        if seqid in self.__ID_DICT:
+            # if it is a valid seqid, read it and try to figure out where
             # to put it
-            self._assign_object(self._read_by_id())
+            self._assign_sequence(self._read_by_id())
         else:
             # otherwise it is a Unit list
             self.__read_unit_list()
@@ -1205,7 +1234,7 @@ class BrainwareSrcIO(BaseIO):
         # convert to datetime object
         timestamp = self.convert_timestamp(timestamp)
 
-        # obj_list -- spike list
+        # seq_list -- spike list
         # combine the spikes into a single SpikeTrain
         spiketrain = self._combine_spiketrains(self.__read_list())
 
@@ -1267,7 +1296,7 @@ class BrainwareSrcIO(BaseIO):
         # int16 -- number of time slices
         numelements = np.fromfile(self.__fsrc, dtype=np.int16, count=1)[0]
 
-        # {object} * numelements1 -- the number of lists of Units to read
+        # {sequence} * numelements1 -- the number of lists of Units to read
         self.__rcg.annotations['max_valid'] = []
         for _ in range(numelements):
 
@@ -1447,7 +1476,7 @@ class BrainwareSrcIO(BaseIO):
 
     def __skip_information(self):
         '''
-        Read an information object.
+        Read an information sequence.
 
         This is data sequence is skipped both here and in the Matlab reference
         implementation.
@@ -1467,7 +1496,7 @@ class BrainwareSrcIO(BaseIO):
 
     def __skip_information_old(self):
         '''
-        Read an nformation object
+        Read an information sequence
 
         This is data sequence is skipped both here and in the Matlab reference
         implementation
@@ -1542,8 +1571,3 @@ def convert_brainwaresrc_timestamp(timestamp,
         warn(str(err))
 
     return timestamp
-
-
-if __name__ == "__main__":
-    TESTFILE = BrainwareSrcIO('c3_178G1_6_sorted.src')
-    TESTFILE.read_all_blocks()

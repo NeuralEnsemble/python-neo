@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 '''
-Common tools that are useful for Neo io object tests
+Common tools that are useful for neo.io object tests
 '''
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
 
-import os
 import logging
+import os
 import shutil
 import tempfile
 
@@ -18,6 +21,9 @@ from neo.test.iotest.generate_datasets import generate_from_supported_objects
 
 
 def can_use_network():
+    '''
+    Return True if network access is allowed
+    '''
     if os.environ.get('NOSETESTS_NO_NETWORK', False):
         return False
     if os.environ.get('TRAVIS') == 'true':
@@ -62,7 +68,7 @@ def download_test_file(filename, localdir, url):
     distantfile = url + '/' + filename
 
     if not os.path.exists(localfile):
-        logging.info('Downloading %s here %s' % (distantfile, localfile))
+        logging.info('Downloading %s here %s', distantfile, localfile)
         urlretrieve(distantfile, localfile)
 
 
@@ -329,13 +335,13 @@ def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
     Default is False.
 
     If return_reader is True, yield the io reader function as well as the
-    object. yield ob, reader.  Default is False.
+    object. yield obj, reader.  Default is False.
     '''
-    ob_reader = create_generic_reader(ioobj, target=target, readall=readall)
-    ob = ob_reader(cascade=cascade, lazy=lazy)
+    obj_reader = create_generic_reader(ioobj, target=target, readall=readall)
+    obj = obj_reader(cascade=cascade, lazy=lazy)
     if return_reader:
-        return ob, ob_reader
-    return ob
+        return obj, obj_reader
+    return obj
 
 
 def iter_read_objects(ioclass, filenames, directory=None, target=None,
@@ -355,16 +361,16 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
     use the file from the given directory.
 
     If return_path is True, yield the full path of the file along with
-    the object.  yield ob, path.
+    the object.  yield obj, path.
 
     If return_ioobj is True, yield the io object as well as the object.
-    yield ob, ioobj.  Default is False.
+    yield obj, ioobj.  Default is False.
 
     If return_reader is True, yield the io reader function as well as the
-    object. yield ob, reader.  Default is False.
+    object. yield obj, reader.  Default is False.
 
     If some combination of return_path, return_ioobj, and return_reader
-    is True, they are yielded in the order: ob, path, ioobj, reader.
+    is True, they are yielded in the order: obj, path, ioobj, reader.
 
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
@@ -375,28 +381,29 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
     '''
-    for ob_reader, path, ioobj in iter_generic_readers(ioclass, filenames,
-                                                       directory=directory,
-                                                       target=target,
-                                                       return_path=True,
-                                                       return_ioobj=True,
-                                                       clean=clean, readall=readall):
-        ob = ob_reader(cascade=cascade, lazy=lazy)
+    for obj_reader, path, ioobj in iter_generic_readers(ioclass, filenames,
+                                                        directory=directory,
+                                                        target=target,
+                                                        return_path=True,
+                                                        return_ioobj=True,
+                                                        clean=clean,
+                                                        readall=readall):
+        obj = obj_reader(cascade=cascade, lazy=lazy)
         if not return_path and not return_ioobj and not return_reader:
-            yield ob
+            yield obj
         else:
-            ob = (ob, )
+            obj = (obj, )
 
         if return_path:
-            ob = ob + (path,)
+            obj = obj + (path,)
         if return_ioobj:
-            ob = ob + (ioobj,)
+            obj = obj + (ioobj,)
         if return_reader:
-            ob = ob + (ob_reader,)
-        yield ob
+            obj = obj + (obj_reader,)
+        yield obj
 
 
-def write_generic(ioobj, target=None, ob=None, return_writer=False):
+def write_generic(ioobj, target=None, obj=None, return_writer=False):
     '''
     Write the target object to a file using the given neo io object ioobj.
 
@@ -406,17 +413,17 @@ def write_generic(ioobj, target=None, ob=None, return_writer=False):
     respectively.
     If target is a string, use 'write_'+target.
 
-    ob is the object to write.  If ob is None, an object is created
+    obj is the object to write.  If obj is None, an object is created
     automatically for the io class.
 
     If return_writer is True, yield the io writer function as well as the
-    object. yield ob, writer.  Default is False.
+    object. yield obj, writer.  Default is False.
     '''
-    if ob is None:
+    if obj is None:
         supported_objects = ioobj.supported_objects
-        ob = generate_from_supported_objects(supported_objects)
-    ob_writer = create_generic_writer(ioobj, target=None)
-    ob_writer(ob)
+        obj = generate_from_supported_objects(supported_objects)
+    obj_writer = create_generic_writer(ioobj, target=target)
+    obj_writer(obj)
     if return_writer:
-        return ob, ob_writer
-    return ob
+        return obj, obj_writer
+    return obj

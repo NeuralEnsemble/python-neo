@@ -1,4 +1,7 @@
-from __future__ import with_statement
+# -*- coding: utf-8 -*-
+'''
+Tools for use with neo tests.
+'''
 
 import hashlib
 import os
@@ -7,20 +10,35 @@ import numpy as np
 import quantities as pq
 
 import neo
-from neo import description
+from neo.core import objectlist
 
 
 def assert_arrays_equal(a, b):
+    '''
+    Check if two arrays have the same shape and contents
+    '''
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a, b)
     #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
-    assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    try:
+        assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    except (AttributeError, ValueError):
+        try:
+            ar = np.array(a)
+            br = np.array(b)
+            assert (ar.flatten() == br.flatten()).all(), "%s != %s" % (ar, br)
+        except (AttributeError, ValueError):
+            assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
 
 
 def assert_arrays_almost_equal(a, b, threshold):
+    '''
+    Check if two arrays have the same shape and contents that differ
+    by abs(a - b) <= threshold for all elements.
+    '''
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a, b)
@@ -34,12 +52,21 @@ def assert_arrays_almost_equal(a, b, threshold):
 
 
 def file_digest(filename):
-    with open(filename, 'rb') as f:
-        return hashlib.sha1(f.read()).hexdigest()
+    '''
+    Get the sha1 hash of the file with the given filename.
+    '''
+    with open(filename, 'rb') as fobj:
+        return hashlib.sha1(fobj.read()).hexdigest()
 
 
 def assert_file_contents_equal(a, b):
+    '''
+    Assert that two files have the same size and hash.
+    '''
     def generate_error_message(a, b):
+        '''
+        This creates the error message for the assertion error
+        '''
         size_a = os.stat(a).st_size
         size_b = os.stat(b).st_size
         if size_a == size_b:
@@ -51,100 +78,88 @@ def assert_file_contents_equal(a, b):
 
 
 def assert_neo_object_is_compliant(ob):
-    """
+    '''
     Test neo compliance of one object and sub objects
     (one_to_many_relation only):
       * check types and/or presence of necessary and recommended attribute.
       * If attribute is Quantities or numpy.ndarray it also check ndim.
       * If attribute is numpy.ndarray also check dtype.kind.
-    """
-    assert type(ob) in description.objectlist, \
+    '''
+    assert type(ob) in objectlist, \
         '%s is not a neo object' % (type(ob))
     classname = ob.__class__.__name__
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
 
     # test presence of necessary attributes
-    attributes = necess
-    for attr in attributes:
-        attrname, attrtype = attr[0], attr[1]
+    for ioattr in ob._necessary_attrs:
+        attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname != '':
-        if classname not in description.classes_inheriting_quantities:
+        if not hasattr(ob, '_quantity_attr'):
             assert hasattr(ob, attrname), '%s neo obect does not have %s' % \
                 (classname, attrname)
 
     # test attributes types
-    attributes = necess + recomm
-    for attr in attributes:
-        attrname, attrtype = attr[0], attr[1]
+    for ioattr in ob._all_attrs:
+        attrname, attrtype = ioattr[0], ioattr[1]
 
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname and
+        if (hasattr(ob, '_quantity_attr') and
+                ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
-            ndim = attr[2]
+            ndim = ioattr[2]
             assert ob.ndim == ndim, \
                 '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
             if attrtype == np.ndarray:
-                dt = attr[3]
-                assert ob.dtype.kind == dt.kind, \
+                dtp = ioattr[3]
+                assert ob.dtype.kind == dtp.kind, \
                     '%s dtype.kind is %s should be %s' % (classname,
                                                           ob.dtype.kind,
-                                                          dt.kind)
+                                                          dtp.kind)
 
         elif hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
-                at = getattr(ob, attrname)
-                assert issubclass(type(at), attrtype), \
+                obattr = getattr(ob, attrname)
+                assert issubclass(type(obattr), attrtype), \
                     '%s in %s is %s should be %s' % \
-                    (attrname, classname, type(at), attrtype)
+                    (attrname, classname, type(obattr), attrtype)
                 if attrtype == pq.Quantity or attrtype == np.ndarray:
-                    ndim = attr[2]
-                    assert at.ndim == ndim,  \
+                    ndim = ioattr[2]
+                    assert obattr.ndim == ndim,  \
                         '%s.%s dimension is %d should be %d' % \
-                        (classname, attrname, at.ndim, ndim)
+                        (classname, attrname, obattr.ndim, ndim)
                 if attrtype == np.ndarray:
-                    dt = attr[3]
-                    assert at.dtype.kind == dt.kind, \
+                    dtp = ioattr[3]
+                    assert obattr.dtype.kind == dtp.kind, \
                         '%s.%s dtype.kind is %s should be %s' % \
-                        (classname, attrname, at.dtype.kind, dt.kind)
+                        (classname, attrname, obattr.dtype.kind, dtp.kind)
 
-    # test bijectivity : one_to_many_relationship and many_to_one_relationship
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                assert hasattr(child, classname.lower()), \
-                    '%s should have %s attribute (2 way relationship)' % \
-                    (childname, classname.lower())
-                if hasattr(child, classname.lower()):
-                    assert getattr(child, classname.lower()) == ob, \
-                        '%s.%s %s is not symetric with %s.%s s' % \
-                        (childname, classname.lower(), i,
-                         classname, childname.lower())
+    # test bijectivity : parents and children
+    for container in getattr(ob, '_single_child_containers', []):
+        for i, child in enumerate(getattr(ob, container, [])):
+            assert hasattr(child, classname.lower()), \
+                '%s should have %s attribute (2 way relationship)' % \
+                (container, classname.lower())
+            if hasattr(child, classname.lower()):
+                parent = getattr(child, classname.lower())
+                assert parent == ob, \
+                    '%s.%s %s is not symetric with %s.%s' % \
+                    (container, classname.lower(), i,
+                     classname, container)
 
     # recursive on one to many rel
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                try:
-                    assert_neo_object_is_compliant(child)
-                # intercept exceptions and add more information
-                except BaseException as e:
-                    e.args += ('from %s %s of %s' % (childname, i, classname),)
-                    raise
+    for i, child in enumerate(getattr(ob, 'children', [])):
+        try:
+            assert_neo_object_is_compliant(child)
+        # intercept exceptions and add more information
+        except BaseException as exc:
+            exc.args += ('from %s %s of %s' % (child.__class__.__name__, i,
+                                               classname),)
+            raise
 
 
 def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
-    """
+    '''
     Test if ob1 and ob2 has the same sub schema.
-    Explore all one_to_many_relationship.
+    Explore all parent/child relationships.
     Many_to_many_relationship is not tested
     because of infinite recursive loops.
 
@@ -152,7 +167,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
         equal_almost: if False do a strict arrays_equal if
                       True do arrays_almost_equal
 
-    """
+    '''
     assert type(ob1) == type(ob2), 'type(%s) != type(%s)' % (type(ob1),
                                                              type(ob2))
     classname = ob1.__class__.__name__
@@ -166,38 +181,39 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 assert_same_sub_schema(sub1, sub2, equal_almost=equal_almost,
                                        threshold=threshold)
             # intercept exceptions and add more information
-            except BaseException as e:
-                e.args += ('%s[%s]' % (classname, i),)
+            except BaseException as exc:
+                exc.args += ('%s[%s]' % (classname, i),)
                 raise
         return
 
-    if classname in description.one_to_many_relationship:
-        # test one_to_many_relationship
-        for child in description.one_to_many_relationship[classname]:
-            if not hasattr(ob1, child.lower()+'s'):
-                assert not hasattr(ob2, child.lower()+'s'), \
-                    '%s 2 does have %s but not %s 1' % (classname, child,
-                                                        classname)
-                continue
-            else:
-                assert hasattr(ob2, child.lower()+'s'), \
-                    '%s 1 has %s but not %s 2' % (classname, child, classname)
+    # test parent/child relationship
+    for container in getattr(ob1, '_single_child_containers', []):
+        if not hasattr(ob1, container):
+            assert not hasattr(ob2, container), \
+                '%s 2 does have %s but not %s 1' % (classname, container,
+                                                    classname)
+            continue
+        else:
+            assert hasattr(ob2, container), \
+                '%s 1 has %s but not %s 2' % (classname, container,
+                                                classname)
 
-            sub1 = getattr(ob1, child.lower()+'s')
-            sub2 = getattr(ob2, child.lower()+'s')
+        sub1 = getattr(ob1, container)
+        sub2 = getattr(ob2, container)
 
-            assert len(sub1) == len(sub2), \
-                'theses two %s do not have the same %s number: %s and %s' % \
-                (classname, child, len(sub1), len(sub2))
-            for i in range(len(getattr(ob1, child.lower()+'s'))):
-                # previously lacking parameter
-                try:
-                    assert_same_sub_schema(sub1[i], sub2[i],
-                                           equal_almost, threshold)
-                # intercept exceptions and add more information
-                except BaseException as e:
-                    e.args += ('from %s[%s] of %s' % (child, i, classname),)
-                    raise
+        assert len(sub1) == len(sub2), \
+            'theses two %s do not have the same %s number: %s and %s' % \
+            (classname, container, len(sub1), len(sub2))
+        for i in range(len(getattr(ob1, container))):
+            # previously lacking parameter
+            try:
+                assert_same_sub_schema(sub1[i], sub2[i],
+                                        equal_almost, threshold)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from %s[%s] of %s' % (container, i,
+                                                    classname),)
+                raise
 
     # check if all attributes are equal
     if equal_almost:
@@ -213,21 +229,16 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 #"%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
         assert_eg = assert_arrays_almost_and_dtype
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for attr in attributes:
-        attrname, attrtype = attr[0], attr[1]
+    for ioattr in ob1._all_attrs:
+        attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             try:
                 assert_eg(ob1.magnitude, ob2.magnitude)
             # intercept exceptions and add more information
-            except BaseException as e:
-                e.args += ('from %s' % classname,)
+            except BaseException as exc:
+                exc.args += ('from %s' % classname,)
                 raise
             assert ob1.dimensionality.string == ob2.dimensionality.string, \
                 'Units of %s are not the same: %s and %s' % \
@@ -266,8 +277,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
             try:
                 assert_eg(mag1, mag2)
             # intercept exceptions and add more information
-            except BaseException as e:
-                e.args += ('from %s of %s' % (attrname, classname),)
+            except BaseException as exc:
+                exc.args += ('from %s of %s' % (attrname, classname),)
                 raise
             # Compare dimensionalities
             dim1 = getattr(ob1, attrname).dimensionality.simplified
@@ -281,8 +292,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
             try:
                 assert_eg(getattr(ob1, attrname), getattr(ob2, attrname))
             # intercept exceptions and add more information
-            except BaseException as e:
-                e.args += ('from %s of %s' % (attrname, classname),)
+            except BaseException as exc:
+                exc.args += ('from %s of %s' % (attrname, classname),)
                 raise
         else:
             #~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
@@ -294,35 +305,29 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
 
 
 def assert_sub_schema_is_lazy_loaded(ob):
-    """
+    '''
     This is util for testing lazy load. All object must load with ndarray.size
     or Quantity.size ==0
-    """
+    '''
     classname = ob.__class__.__name__
 
-    if classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower()+'s'):
-                continue
-            sub = getattr(ob, childname.lower()+'s')
-            for i, child in enumerate(sub):
-                try:
-                    assert_sub_schema_is_lazy_loaded(child)
-                # intercept exceptions and add more information
-                except BaseException as e:
-                    e.args += ('from %s %s of %s' % (childname, i, classname),)
-                    raise
+    for container in getattr(ob, '_single_child_containers', []):
+        if not hasattr(ob, container):
+            continue
+        sub = getattr(ob, container)
+        for i, child in enumerate(sub):
+            try:
+                assert_sub_schema_is_lazy_loaded(child)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from %s %s of %s' % (container, i, classname),)
+                raise
 
-    necess = description.classes_necessary_attributes[classname]
-    recomm = description.classes_recommended_attributes[classname]
-    attributes = necess + recomm
-    for attr in attributes:
-        attrname, attrtype = attr[0], attr[1]
+    for ioattr in ob._all_attrs:
+        attrname, attrtype = ioattr[0], ioattr[1]
         #~ print 'xdsd', classname, attrname
         #~ if attrname == '':
-        if (classname in description.classes_inheriting_quantities and
-                description.classes_inheriting_quantities[classname] ==
-                attrname):
+        if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
             assert ob.size == 0, \
                 'Lazy loaded error %s.size = %s' % (classname, ob.size)
             assert hasattr(ob, 'lazy_shape'), \
@@ -340,7 +345,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
             if ob.__class__ == neo.RecordingChannelGroup:
                 continue
 
-            ndim = attr[2]
+            ndim = ioattr[2]
             #~ print 'ndim', ndim
             #~ print getattr(ob, attrname).size
             if ndim >= 1:
@@ -348,8 +353,9 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     'Lazy loaded error %s.%s.size = %s' % \
                     (classname, attrname, getattr(ob, attrname).size)
                 assert hasattr(ob,  'lazy_shape'), \
-                    'Lazy loaded error %s should have lazy_shape attribute ' +\
-                    'because of %s attribute' % (classname, attrname, )
+                    'Lazy loaded error ' +\
+                    '%s should have lazy_shape attribute ' % classname +\
+                    'because of %s attribute' % attrname
 
 
 lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
@@ -359,10 +365,10 @@ lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
 
 
 def assert_lazy_sub_schema_can_be_loaded(ob, io):
-    """
+    '''
     This is util for testing lazy load. All object must load with ndarray.size
     or Quantity.size ==0
-    """
+    '''
     classname = ob.__class__.__name__
 
     if classname in lazy_shape_arrays:
@@ -371,7 +377,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
             'Object %s was not lazy loaded' % classname
         assert not hasattr(new_load, 'lazy_shape'), \
             'Newly loaded object from %s was also lazy loaded' % classname
-        if classname in description.classes_inheriting_quantities:
+        if hasattr(ob, '_quantity_attr'):
             assert ob.lazy_shape == new_load.shape, \
                 'Shape of loaded object %sis not equal to lazy shape' % \
                 classname
@@ -380,43 +386,49 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
                 getattr(new_load, lazy_shape_arrays[classname]).shape, \
                 'Shape of loaded object %s not equal to lazy shape' %\
                 classname
-    elif classname in description.one_to_many_relationship:
-        for childname in description.one_to_many_relationship[classname]:
-            if not hasattr(ob, childname.lower() + 's'):
-                continue
-            sub = getattr(ob, childname.lower() + 's')
-            for i, child in enumerate(sub):
-                try:
-                    assert_lazy_sub_schema_can_be_loaded(child, io)
-                # intercept exceptions and add more information
-                except BaseException as e:
-                    e.args += ('from of %s %s of %s' %
-                               (childname, i, classname),)
-                    raise
+        return
+
+    for container in getattr(ob, '_single_child_containers', []):
+        if not hasattr(ob, container):
+            continue
+        sub = getattr(ob, container)
+        for i, child in enumerate(sub):
+            try:
+                assert_lazy_sub_schema_can_be_loaded(child, io)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from of %s %s of %s' %
+                                (container, i, classname),)
+                raise
 
 
 def assert_objects_equivalent(obj1, obj2):
-    """ compares two NEO objects by looping over the attributes and annotations
-    and asserting their hashes. No relationships involved. """
+    '''
+    Compares two NEO objects by looping over the attributes and annotations
+    and asserting their hashes. No relationships involved.
+    '''
     def assert_attr(obj1, obj2, attr_name):
+        '''
+        Assert a single attribute and annotation are the same
+        '''
         assert hasattr(obj1, attr_name)
-        a1 = hashlib.md5(getattr(obj1, attr_name)).hexdigest()
+        attr1 = hashlib.md5(getattr(obj1, attr_name)).hexdigest()
         assert hasattr(obj2, attr_name)
-        a2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
-        assert a1 == a2, "Attribute %s for class %s is not equal." % \
-            (attr_name, description.name_by_class[obj1.__class__])
-    obj_type = description.name_by_class[obj1.__class__]
-    assert obj_type == description.name_by_class[obj2.__class__]
-    for attr in description.classes_necessary_attributes[obj_type]:
-        assert_attr(obj1, obj2, attr[0])
-    for attr in description.classes_recommended_attributes[obj_type]:
-        if hasattr(obj1, attr[0]) or hasattr(obj2, attr[0]):
-            assert_attr(obj1, obj2, attr[0])
+        attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
+        assert attr1 == attr2, "Attribute %s for class %s is not equal." % \
+            (attr_name, obj1.__class__.__name__)
+    obj_type = obj1.__class__.__name__
+    assert obj_type == obj2.__class__.__name__
+    for ioattr in obj1._necessary_attrs:
+        assert_attr(obj1, obj2, ioattr[0])
+    for ioattr in obj1._recommended_attrs:
+        if hasattr(obj1, ioattr[0]) or hasattr(obj2, ioattr[0]):
+            assert_attr(obj1, obj2, ioattr[0])
     if hasattr(obj1, "annotations"):
         assert hasattr(obj2, "annotations")
-        for k, v in obj1.annotations:
-            assert hasattr(obj2.annotations, k)
-            assert obj2.annotations[k] == v
+        for key, value in obj1.annotations:
+            assert hasattr(obj2.annotations, key)
+            assert obj2.annotations[key] == value
 
 
 def assert_children_empty(obj, parent):
@@ -425,12 +437,7 @@ def assert_children_empty(obj, parent):
     to check the cascade is implemented properly
     '''
     classname = obj.__class__.__name__
-    errmsg = """%s reader with cascade=False should return
-        empty children""" % parent.__name__
-    try:
-        childlist = description.one_to_many_relationship[classname]
-    except KeyError:
-        childlist = []
-    for childname in childlist:
-        children = getattr(obj, childname.lower() + 's')
-        assert len(children) == 0, errmsg
+    errmsg = '''%s reader with cascade=False should return
+        empty children''' % parent.__name__
+    if hasattr(obj, 'children'):
+        assert not obj.children, errmsg

@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Module for reading binary file from Blackrock format.
+"""
+Module for reading binary file from Blackrock format.
 """
 
-from .baseio import BaseIO
-from ..core import *
-import numpy as np
+import logging
 import struct
+
+import numpy as np
 import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import (Block, Segment,
+                      RecordingChannel, RecordingChannelGroup, AnalogSignal)
 from neo.io import tools
 
-
-import logging
 
 class AnalogBlackrockIO(BaseIO):
     """
@@ -140,7 +143,7 @@ class AnalogBlackrockIO(BaseIO):
 
         # Create hardware view, and bijectivity
         tools.populate_RecordingChannel(block)
-        tools.create_many_to_one_relationship(block)
+        block.create_many_to_one_relationship()
 
         return block
 
@@ -252,14 +255,13 @@ class AnalogBlackrockIO(BaseIO):
             channel_indexes = channel_indexes_in_segment(block.segments[0])
         else:
             channel_indexes = []
-            seg = block.segments[0]
 
         # type of file
         fi.write('NEURALSG')
 
         # sampling rate, in text and integer
         fi.write('30 kS/s\0')
-        for n in range(8): fi.write('\0')
+        for _ in range(8): fi.write('\0')
         fi.write(struct.pack('<I', 1))
 
         # channel count: one for each analogsignal, and then also for
@@ -397,7 +399,7 @@ class Loader(object):
             self.file_handle.read(4))
         self.header.Channel_ID = [struct.unpack('<I',
             self.file_handle.read(4))[0]
-            for n in xrange(self.header.Channel_Count)]
+            for _ in xrange(self.header.Channel_Count)]
 
         # Compute total header length
         self.header.Header = 8 + 16 + 4 + 4 + \

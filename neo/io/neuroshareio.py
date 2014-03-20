@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 NeuroshareIO is a wrap with ctypes of neuroshare DLLs.
 Neuroshare is a C API for reading neural data.
@@ -17,19 +17,8 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
-
-import numpy as np
-import quantities as pq
-
-
-import os
 import ctypes
-from ctypes import byref, c_char_p, c_uint32, c_char, c_double, c_int16, c_int32 , c_ulong
-
-
+import os
 
 # file no longer exists in Python3
 try:
@@ -37,6 +26,12 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
 
 class NeuroshareIO(BaseIO):
@@ -100,7 +95,8 @@ class NeuroshareIO(BaseIO):
 
 
 
-    def read_segment(self, import_neuroshare_segment = True):
+    def read_segment(self, import_neuroshare_segment = True,
+                     lazy=False, cascade=True):
         """
         Arguments:
             import_neuroshare_segment: import neuroshare segment as SpikeTrain with associated waveforms or not imported at all.
@@ -113,7 +109,7 @@ class NeuroshareIO(BaseIO):
 
         # API version
         info = ns_LIBRARYINFO()
-        neuroshare.ns_GetLibraryInfo(byref(info) , ctypes.sizeof(info))
+        neuroshare.ns_GetLibraryInfo(ctypes.byref(info) , ctypes.sizeof(info))
         seg.annotate(neuroshare_version = str(info.dwAPIVersionMaj)+'.'+str(info.dwAPIVersionMin))
 
         if not cascade:
@@ -121,22 +117,22 @@ class NeuroshareIO(BaseIO):
 
 
         # open file
-        hFile = c_uint32(0)
-        neuroshare.ns_OpenFile(c_char_p(self.filename) ,byref(hFile))
+        hFile = ctypes.c_uint32(0)
+        neuroshare.ns_OpenFile(ctypes.c_char_p(self.filename) ,ctypes.byref(hFile))
         fileinfo = ns_FILEINFO()
-        neuroshare.ns_GetFileInfo(hFile, byref(fileinfo) , ctypes.sizeof(fileinfo))
+        neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo) , ctypes.sizeof(fileinfo))
 
         # read all entities
         for dwEntityID in range(fileinfo.dwEntityCount):
             entityInfo = ns_ENTITYINFO()
-            neuroshare.ns_GetEntityInfo( hFile, dwEntityID, byref(entityInfo), ctypes.sizeof(entityInfo))
+            neuroshare.ns_GetEntityInfo( hFile, dwEntityID, ctypes.byref(entityInfo), ctypes.sizeof(entityInfo))
             #~ print 'type', entityInfo.dwEntityType,entity_types[entityInfo.dwEntityType], 'count', entityInfo.dwItemCount
             #~ print  entityInfo.szEntityLabel
 
             # EVENT
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_EVENT':
                 pEventInfo = ns_EVENTINFO()
-                neuroshare.ns_GetEventInfo ( hFile,  dwEntityID,  byref(pEventInfo), ctypes.sizeof(pEventInfo))
+                neuroshare.ns_GetEventInfo ( hFile,  dwEntityID,  ctypes.byref(pEventInfo), ctypes.sizeof(pEventInfo))
                 #~ print pEventInfo.szCSVDesc, pEventInfo.dwEventType, pEventInfo.dwMinDataLength, pEventInfo.dwMaxDataLength
 
                 if pEventInfo.dwEventType == 0: #TEXT
@@ -149,8 +145,8 @@ class NeuroshareIO(BaseIO):
                     pData = ctypes.c_int16(0)
                 elif pEventInfo.dwEventType == 4:# 32bit
                     pData = ctypes.c_int32(0)
-                pdTimeStamp  = c_double(0.)
-                pdwDataRetSize = c_uint32(0)
+                pdTimeStamp  = ctypes.c_double(0.)
+                pdwDataRetSize = ctypes.c_uint32(0)
 
                 ea = EventArray(name = str(entityInfo.szEntityLabel),)
                 if not lazy:
@@ -158,8 +154,8 @@ class NeuroshareIO(BaseIO):
                     labels = [ ]
                     for dwIndex in range(entityInfo.dwItemCount ):
                         neuroshare.ns_GetEventData ( hFile, dwEntityID, dwIndex,
-                                            byref(pdTimeStamp), byref(pData),
-                                            ctypes.sizeof(pData), byref(pdwDataRetSize) )
+                                            ctypes.byref(pdTimeStamp), ctypes.byref(pData),
+                                            ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize) )
                         times.append(pdTimeStamp.value)
                         labels.append(str(pData))
                     ea.times = times*pq.s
@@ -172,27 +168,27 @@ class NeuroshareIO(BaseIO):
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_ANALOG':
                 pAnalogInfo = ns_ANALOGINFO()
 
-                neuroshare.ns_GetAnalogInfo( hFile, dwEntityID,byref(pAnalogInfo),ctypes.sizeof(pAnalogInfo) )
+                neuroshare.ns_GetAnalogInfo( hFile, dwEntityID,ctypes.byref(pAnalogInfo),ctypes.sizeof(pAnalogInfo) )
                 #~ print 'dSampleRate' , pAnalogInfo.dSampleRate , pAnalogInfo.szUnits
-                dwStartIndex = c_uint32(0)
+                dwStartIndex = ctypes.c_uint32(0)
                 dwIndexCount = entityInfo.dwItemCount
 
                 if lazy:
                     signal = [ ]*pq.Quantity(1, pAnalogInfo.szUnits)
                 else:
-                    pdwContCount = c_uint32(0)
-                    pData = zeros( (entityInfo.dwItemCount,), dtype = 'f8')
-                    ns_RESULT = neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
-                                     dwIndexCount, byref( pdwContCount) , pData.ctypes.data_as(ctypes.POINTER(c_double)))
+                    pdwContCount = ctypes.c_uint32(0)
+                    pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'f8')
+                    neuroshare.ns_GetAnalogData ( hFile,  dwEntityID,  dwStartIndex,
+                                     dwIndexCount, ctypes.byref( pdwContCount) , pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
                     pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
-                    neuroshare.ns_GetLastErrorMsg(byref(pszMsgBuffer), 256)
+                    neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
                     #~ print 'pszMsgBuffer' , pszMsgBuffer.value
                     signal = pData[:pdwContCount.value]*pq.Quantity(1, pAnalogInfo.szUnits)
 
                 #t_start
                 dwIndex = 0
-                pdTime = c_double(0)
-                neuroshare.ns_GetTimeByIndex( hFile,  dwEntityID,  dwIndex, byref(pdTime))
+                pdTime = ctypes.c_double(0)
+                neuroshare.ns_GetTimeByIndex( hFile,  dwEntityID,  dwIndex, ctypes.byref(pdTime))
 
                 anaSig = AnalogSignal(signal,
                                                     sampling_rate = pAnalogInfo.dSampleRate*pq.Hz,
@@ -209,37 +205,38 @@ class NeuroshareIO(BaseIO):
 
                 pdwSegmentInfo = ns_SEGMENTINFO()
 
-                ns_RESULT = neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
-                                                 byref(pdwSegmentInfo), ctypes.sizeof(pdwSegmentInfo) )
+                neuroshare.ns_GetSegmentInfo( hFile,  dwEntityID,
+                                             ctypes.byref(pdwSegmentInfo), ctypes.sizeof(pdwSegmentInfo) )
                 nsource = pdwSegmentInfo.dwSourceCount
 
                 pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
-                neuroshare.ns_GetLastErrorMsg(byref(pszMsgBuffer), 256)
+                neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
                 #~ print 'pszMsgBuffer' , pszMsgBuffer.value
 
                 #~ print 'pdwSegmentInfo.dwSourceCount' , pdwSegmentInfo.dwSourceCount
                 for dwSourceID in range(pdwSegmentInfo.dwSourceCount) :
                     pSourceInfo = ns_SEGSOURCEINFO()
                     neuroshare.ns_GetSegmentSourceInfo( hFile,  dwEntityID, dwSourceID,
-                                    byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
+                                    ctypes.byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
 
                 if lazy:
                     sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel))
+                    sptr.lazy_shape = entityInfo.dwItemCount
                 else:
-                    pdTimeStamp  = c_double(0.)
+                    pdTimeStamp  = ctypes.c_double(0.)
                     dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount*pdwSegmentInfo.dwSourceCount
-                    pData = zeros( (dwDataBufferSize), dtype = 'f8')
-                    pdwSampleCount = c_uint32(0)
-                    pdwUnitID= c_uint32(0)
+                    pData = np.zeros( (dwDataBufferSize), dtype = 'f8')
+                    pdwSampleCount = ctypes.c_uint32(0)
+                    pdwUnitID= ctypes.c_uint32(0)
 
-                    times = empty( (entityInfo.dwItemCount), drtype = 'f')
-                    waveforms = empty( (entityInfo.dwItemCount, nsource, nsample), drtype = 'f')
+                    nsample  = pdwSampleCount.value
+                    times = np.empty( (entityInfo.dwItemCount), drtype = 'f')
+                    waveforms = np.empty( (entityInfo.dwItemCount, nsource, nsample), drtype = 'f')
                     for dwIndex in range(entityInfo.dwItemCount ):
-                        ns_RESULT = neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
-                            byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(c_double)),
-                            dwDataBufferSize * 8, byref(pdwSampleCount),
-                                byref(pdwUnitID ) )
-                        nsample  = pdwSampleCount.value
+                        neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
+                            ctypes.byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                            dwDataBufferSize * 8, ctypes.byref(pdwSampleCount),
+                                ctypes.byref(pdwUnitID ) )
                         #print 'dwDataBufferSize' , dwDataBufferSize,pdwSampleCount , pdwUnitID
 
                         times[dwIndex] = pdTimeStamp.value
@@ -251,9 +248,7 @@ class NeuroshareIO(BaseIO):
                                         sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
                                         name = str(entityInfo.szEntityLabel),
                                         )
-                    if lazy:
-                        sptr.lazy_shape = entityInfo.dwItemCount
-                    seg.spiketrains.append(sptr)
+                seg.spiketrains.append(sptr)
 
 
             # neuralevent
@@ -261,16 +256,16 @@ class NeuroshareIO(BaseIO):
 
                 pNeuralInfo = ns_NEURALINFO()
                 neuroshare.ns_GetNeuralInfo ( hFile,  dwEntityID,
-                                 byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
+                                 ctypes.byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
                 #print pNeuralInfo.dwSourceUnitID , pNeuralInfo.szProbeInfo
                 if lazy:
                     times = [ ]*pq.s
                 else:
-                    pData = zeros( (entityInfo.dwItemCount,), dtype = 'f8')
+                    pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'f8')
                     dwStartIndex = 0
                     dwIndexCount = entityInfo.dwItemCount
                     neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
-                        dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(c_double)))
+                        dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
                     times = pData*pq.s
                 sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel),)
                 if lazy:
@@ -280,7 +275,7 @@ class NeuroshareIO(BaseIO):
         # close
         neuroshare.ns_CloseFile(hFile)
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 
@@ -288,50 +283,50 @@ class NeuroshareIO(BaseIO):
 
 # neuroshare structures
 class ns_FILEDESC(ctypes.Structure):
-    _fields_ = [('szDescription', c_char*32),
-                ('szExtension', c_char*8),
-                ('szMacCodes', c_char*8),
-                ('szMagicCode', c_char*16),
+    _fields_ = [('szDescription', ctypes.c_char*32),
+                ('szExtension', ctypes.c_char*8),
+                ('szMacCodes', ctypes.c_char*8),
+                ('szMagicCode', ctypes.c_char*16),
                 ]
 
 
 class ns_LIBRARYINFO(ctypes.Structure):
-    _fields_ = [('dwLibVersionMaj', c_uint32),
-                ('dwLibVersionMin', c_uint32),
-                ('dwAPIVersionMaj', c_uint32),
-                ('dwAPIVersionMin', c_uint32),
-                ('szDescription', c_char*64),
-                ('szCreator',c_char*64),
-                ('dwTime_Year',c_uint32),
-                ('dwTime_Month',c_uint32),
-                ('dwTime_Day',c_uint32),
-                ('dwFlags',c_uint32),
-                ('dwMaxFiles',c_uint32),
-                ('dwFileDescCount',c_uint32),
+    _fields_ = [('dwLibVersionMaj', ctypes.c_uint32),
+                ('dwLibVersionMin', ctypes.c_uint32),
+                ('dwAPIVersionMaj', ctypes.c_uint32),
+                ('dwAPIVersionMin', ctypes.c_uint32),
+                ('szDescription', ctypes.c_char*64),
+                ('szCreator',ctypes.c_char*64),
+                ('dwTime_Year',ctypes.c_uint32),
+                ('dwTime_Month',ctypes.c_uint32),
+                ('dwTime_Day',ctypes.c_uint32),
+                ('dwFlags',ctypes.c_uint32),
+                ('dwMaxFiles',ctypes.c_uint32),
+                ('dwFileDescCount',ctypes.c_uint32),
                 ('FileDesc',ns_FILEDESC*16),
                 ]
 
 class ns_FILEINFO(ctypes.Structure):
-    _fields_ = [('szFileType', c_char*32),
-                ('dwEntityCount', c_uint32),
-                ('dTimeStampResolution', c_double),
-                ('dTimeSpan', c_double),
-                ('szAppName', c_char*64),
-                ('dwTime_Year',c_uint32),
-                ('dwTime_Month',c_uint32),
-                ('dwReserved',c_uint32),
-                ('dwTime_Day',c_uint32),
-                ('dwTime_Hour',c_uint32),
-                ('dwTime_Min',c_uint32),
-                ('dwTime_Sec',c_uint32),
-                ('dwTime_MilliSec',c_uint32),
-                ('szFileComment',c_char*256),
+    _fields_ = [('szFileType', ctypes.c_char*32),
+                ('dwEntityCount', ctypes.c_uint32),
+                ('dTimeStampResolution', ctypes.c_double),
+                ('dTimeSpan', ctypes.c_double),
+                ('szAppName', ctypes.c_char*64),
+                ('dwTime_Year',ctypes.c_uint32),
+                ('dwTime_Month',ctypes.c_uint32),
+                ('dwReserved',ctypes.c_uint32),
+                ('dwTime_Day',ctypes.c_uint32),
+                ('dwTime_Hour',ctypes.c_uint32),
+                ('dwTime_Min',ctypes.c_uint32),
+                ('dwTime_Sec',ctypes.c_uint32),
+                ('dwTime_MilliSec',ctypes.c_uint32),
+                ('szFileComment',ctypes.c_char*256),
                 ]
 
 class ns_ENTITYINFO(ctypes.Structure):
-    _fields_ = [('szEntityLabel', c_char*32),
-                ('dwEntityType',c_uint32),
-                ('dwItemCount',c_uint32),
+    _fields_ = [('szEntityLabel', ctypes.c_char*32),
+                ('dwEntityType',ctypes.c_uint32),
+                ('dwItemCount',ctypes.c_uint32),
                 ]
 
 entity_types = { 0 : 'ns_ENTITY_UNKNOWN' ,
@@ -343,66 +338,66 @@ entity_types = { 0 : 'ns_ENTITY_UNKNOWN' ,
 
 class ns_EVENTINFO(ctypes.Structure):
     _fields_ = [
-                ('dwEventType',c_uint32),
-                ('dwMinDataLength',c_uint32),
-                ('dwMaxDataLength',c_uint32),
-                ('szCSVDesc', c_char*128),
+                ('dwEventType',ctypes.c_uint32),
+                ('dwMinDataLength',ctypes.c_uint32),
+                ('dwMaxDataLength',ctypes.c_uint32),
+                ('szCSVDesc', ctypes.c_char*128),
                 ]
 
 class ns_ANALOGINFO(ctypes.Structure):
     _fields_ = [
-                ('dSampleRate',c_double),
-                ('dMinVal',c_double),
-                ('dMaxVal',c_double),
-                ('szUnits', c_char*16),
-                ('dResolution',c_double),
-                ('dLocationX',c_double),
-                ('dLocationY',c_double),
-                ('dLocationZ',c_double),
-                ('dLocationUser',c_double),
-                ('dHighFreqCorner',c_double),
-                ('dwHighFreqOrder',c_uint32),
-                ('szHighFilterType', c_char*16),
-                ('dLowFreqCorner',c_double),
-                ('dwLowFreqOrder',c_uint32),
-                ('szLowFilterType', c_char*16),
-                ('szProbeInfo', c_char*128),
+                ('dSampleRate',ctypes.c_double),
+                ('dMinVal',ctypes.c_double),
+                ('dMaxVal',ctypes.c_double),
+                ('szUnits', ctypes.c_char*16),
+                ('dResolution',ctypes.c_double),
+                ('dLocationX',ctypes.c_double),
+                ('dLocationY',ctypes.c_double),
+                ('dLocationZ',ctypes.c_double),
+                ('dLocationUser',ctypes.c_double),
+                ('dHighFreqCorner',ctypes.c_double),
+                ('dwHighFreqOrder',ctypes.c_uint32),
+                ('szHighFilterType', ctypes.c_char*16),
+                ('dLowFreqCorner',ctypes.c_double),
+                ('dwLowFreqOrder',ctypes.c_uint32),
+                ('szLowFilterType', ctypes.c_char*16),
+                ('szProbeInfo', ctypes.c_char*128),
             ]
 
 
 class ns_SEGMENTINFO(ctypes.Structure):
     _fields_ = [
-                ('dwSourceCount',c_uint32),
-                ('dwMinSampleCount',c_uint32),
-                ('dwMaxSampleCount',c_uint32),
-                ('dSampleRate',c_double),
-                ('szUnits', c_char*32),
+                ('dwSourceCount',ctypes.c_uint32),
+                ('dwMinSampleCount',ctypes.c_uint32),
+                ('dwMaxSampleCount',ctypes.c_uint32),
+                ('dSampleRate',ctypes.c_double),
+                ('szUnits', ctypes.c_char*32),
                 ]
 
 class ns_SEGSOURCEINFO(ctypes.Structure):
     _fields_ = [
-                ('dMinVal',c_double),
-                ('dMaxVal',c_double),
-                ('dResolution',c_double),
-                ('dSubSampleShift',c_double),
-                ('dLocationX',c_double),
-                ('dLocationY',c_double),
-                ('dLocationZ',c_double),
-                ('dLocationUser',c_double),
-                ('dHighFreqCorner',c_double),
-                ('dwHighFreqOrder',c_uint32),
-                ('szHighFilterType', c_char*16),
-                ('dLowFreqCorner',c_double),
-                ('dwLowFreqOrder',c_uint32),
-                ('szLowFilterType', c_char*16),
-                ('szProbeInfo', c_char*128),
+                ('dMinVal',ctypes.c_double),
+                ('dMaxVal',ctypes.c_double),
+                ('dResolution',ctypes.c_double),
+                ('dSubSampleShift',ctypes.c_double),
+                ('dLocationX',ctypes.c_double),
+                ('dLocationY',ctypes.c_double),
+                ('dLocationZ',ctypes.c_double),
+                ('dLocationUser',ctypes.c_double),
+                ('dHighFreqCorner',ctypes.c_double),
+                ('dwHighFreqOrder',ctypes.c_uint32),
+                ('szHighFilterType', ctypes.c_char*16),
+                ('dLowFreqCorner',ctypes.c_double),
+                ('dwLowFreqOrder',ctypes.c_uint32),
+                ('szLowFilterType', ctypes.c_char*16),
+                ('szProbeInfo', ctypes.c_char*128),
                 ]
 
 class ns_NEURALINFO(ctypes.Structure):
     _fields_ = [
-                ('dwSourceEntityID',c_uint32),
-                ('dwSourceUnitID',c_uint32),
-                ('szProbeInfo',c_char*128),
+                ('dwSourceEntityID',ctypes.c_uint32),
+                ('dwSourceUnitID',ctypes.c_uint32),
+                ('szProbeInfo',ctypes.c_char*128),
                 ]
 
 

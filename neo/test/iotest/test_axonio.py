@@ -1,9 +1,13 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.axonio
+Tests of neo.io.axonio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
 import sys
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -11,6 +15,7 @@ except ImportError:
 
 from neo.io import AxonIO
 from neo.test.iotest.common_io_test import BaseTestIO
+
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestAxonIO(BaseTestIO, unittest.TestCase):
@@ -20,9 +25,7 @@ class TestAxonIO(BaseTestIO, unittest.TestCase):
                      'File_axon_4.abf',
                      'File_axon_5.abf',
                      'File_axon_6.abf',
-                     
-                     
-                        ]
+                     ]
     files_to_download = files_to_test
     ioclass = AxonIO
 
