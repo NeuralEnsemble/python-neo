@@ -989,6 +989,10 @@ class BlackrockIO(BaseIO):
 
         Args:
             lazy (bool):
+                Loads the neo block structure without the following data:
+                    signal of AnalogSignal objects 
+                    times of SpikeTrain objects
+                    channelindexes of RecordingChannelGroup and Unit objects
             cascade (bool):
             n_starts (list):
                 List of starting times as Quantity objects of each Segment, where
@@ -1330,16 +1334,26 @@ class BlackrockIO(BaseIO):
                                                  file_origin=self.associated_fileset,
                                                  rec_datetime=recdatetime)
 
+            if not lazy:
+                data = np.array([channel_i], dtype=int)
+            else:
+                data = np.array([], dtype=int)
             rcg[channel_i] = neo.RecordingChannelGroup(name="Channel " + str(channel_i),
-                                                       channel_indexes=np.array([channel_i]),
+                                                       channel_indexes=data,
                                                        file_origin=self.associated_fileset,
                                                        rec_datetime=recdatetime)
+            if lazy:
+                rcg[channel_i].lazy_shape = True
+
             for unit_i in units[channel_i]:
-                un[channel_i][unit_i] = neo.Unit(channel_indexes=np.array([channel_i]),
+                un[channel_i][unit_i] = neo.Unit(channel_indexes=data,
                                                  name="Channel " + str(channel_i) + ", Unit " + str(unit_i),
                                                  file_origin=self.associated_fileset,
                                                  channel_id=channel_i,
                                                  unit_id=unit_i)
+                if lazy:
+                    un[channel_i][unit_i].lazy_shape = True
+
                 rcg[channel_i].units.append(un[channel_i][unit_i])
                 un[channel_i][unit_i].recordingchannelgroup = rcg[channel_i]
 
@@ -1359,7 +1373,7 @@ class BlackrockIO(BaseIO):
 
 
         # If spike waveforms are requested, pre-read the nev file packets for speed reasons
-        if waveforms:
+        if waveforms and not lazy:
             # Construct file name of .nev file
             filename_nev = self.nev_fileprefix + '.nev'
             # The .nev must still exist
@@ -1420,8 +1434,13 @@ class BlackrockIO(BaseIO):
                     # Extract all time stamps of that neuron on that electrode
                     combi_idx = ch_idx & t_idx[seg_i] & u_idx[unit_i]
 
+                    if not lazy:
+                        data = pq.Quantity(self._event_timestamps[combi_idx], units=self.nev_unit)
+                    else:
+                        data = pq.Quantity([], units=self.nev_unit)
+
                     # Create SpikeTrain object
-                    st = neo.SpikeTrain(times=self._event_timestamps[combi_idx] * self.nev_unit,
+                    st = neo.SpikeTrain(times=data,
                                         dtype='int',
                                         t_start=tstart[seg_i],
                                         t_stop=tstop[seg_i],
@@ -1431,13 +1450,16 @@ class BlackrockIO(BaseIO):
                                         unit_id=unit_i,
                                         channel_id=channel_i)
 
+                    if lazy:
+                        st.lazy_shape = True
+
                     # Attach spike train and unit to neo object
                     un[channel_i][unit_i].spiketrains.append(st)
                     st.unit = un[channel_i][unit_i]
                     seg[seg_i].spiketrains.append(st)
                     st.segment = seg[seg_i]
 
-                    if waveforms and len(combi_idx) > 0:
+                    if waveforms and len(combi_idx) > 0 and not lazy:
                         # Collect all waveforms of the specific unit
                         # For computational reasons: no units, no time axis
                         st.waveforms = wfbuf[combi_idx, :].copy()
@@ -1570,7 +1592,12 @@ class BlackrockIO(BaseIO):
                         LFPunit = pq.dimensionless
                         self._diagnostic_print("Warning: Channel " + str(channel_i) + " does not have a digitization factor -- data is dimensionless.")
 
-                    asig = neo.AnalogSignal(signal=pq.Quantity(analogbuf[start_packet:end_packet, el_idx_i].T, units=LFPunit),
+                    if not lazy:
+                        data = pq.Quantity(analogbuf[start_packet:end_packet, el_idx_i].T, units=LFPunit)
+                    else:
+                        data = pq.Quantity([], units=LFPunit)
+
+                    asig = neo.AnalogSignal(signal=data,
                                             sampling_period=self.nsx_unit[nsx_i],
                                             # Alternative:
                                             # sampling_rate=pq.CompoundUnit(str(self.analog_res[nsx_i]) + ' * Hz'),
@@ -1579,6 +1606,10 @@ class BlackrockIO(BaseIO):
                                             file_origin=self.associated_fileset,
                                             channel_id=channel_i,
                                             file_nsx=nsx_i)
+
+                    if lazy:
+                        asig.lazy_shape = True
+
 
                     # Attach analog signal to segment and recording channel
                     seg[seg_i].analogsignals.append(asig)
