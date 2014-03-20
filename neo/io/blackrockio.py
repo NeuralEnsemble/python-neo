@@ -1066,7 +1066,7 @@ class BlackrockIO(BaseIO):
                         name: string of the form "Channel i"
                         file_origin: session name
                         rec_datetime: date and time
-                        channel_indexes: list of one element, which is the integer channel number
+                        channel_indexes: numpy array of one element, which is the integer channel number
 
                 RecordingChannel
                     For each recording channel, one RecordingChannel object is
@@ -1075,7 +1075,7 @@ class BlackrockIO(BaseIO):
                         name: string of the form "Channel i"
                         file_origin: session name
                         rec_datetime: date and time
-                        channel_indexes: list of one element, which is the integer channel number
+                        index: integer channel number
 
                 AnalogSignal
                     For each loaded analog signal, one AnalogSignal object is created per Segment.
@@ -1091,7 +1091,7 @@ class BlackrockIO(BaseIO):
                     Attributes:
                         name: string of the form "Channel j, Unit u"
                         file_origin: session name
-                        channel_indexes: list of one element, which is the integer channel number
+                        channel_indexes: numpy array of one element, which is the integer channel number
                     Annotations:
                         channel_id (int): channel number
                         unit_id (int): unit number
@@ -1331,16 +1331,17 @@ class BlackrockIO(BaseIO):
                                                  rec_datetime=recdatetime)
 
             rcg[channel_i] = neo.RecordingChannelGroup(name="Channel " + str(channel_i),
-                                                       channel_indexes=[channel_i],
+                                                       channel_indexes=np.array([channel_i]),
                                                        file_origin=self.associated_fileset,
                                                        rec_datetime=recdatetime)
             for unit_i in units[channel_i]:
-                un[channel_i][unit_i] = neo.Unit(channel_indexes=[channel_i],
+                un[channel_i][unit_i] = neo.Unit(channel_indexes=np.array([channel_i]),
                                                  name="Channel " + str(channel_i) + ", Unit " + str(unit_i),
                                                  file_origin=self.associated_fileset,
                                                  channel_id=channel_i,
                                                  unit_id=unit_i)
                 rcg[channel_i].units.append(un[channel_i][unit_i])
+                un[channel_i][unit_i].recordingchannelgroup = rcg[channel_i]
 
             # TODO: Is this reference from RCG to the BLOCK a neo specification
             # Seems to be required by spyke viewer?
@@ -1424,7 +1425,7 @@ class BlackrockIO(BaseIO):
                                         dtype='int',
                                         t_start=tstart[seg_i],
                                         t_stop=tstop[seg_i],
-                                        sampling_rate=self.waveform_res,
+                                        sampling_rate=self.nev_unit,
                                         name="Segment " + str(seg_i) + ", Channel " + str(channel_i) + ", Unit " + str(unit_i),
                                         file_origin=self.associated_fileset,
                                         unit_id=unit_i,
@@ -1432,7 +1433,9 @@ class BlackrockIO(BaseIO):
 
                     # Attach spike train and unit to neo object
                     un[channel_i][unit_i].spiketrains.append(st)
+                    st.unit = un[channel_i][unit_i]
                     seg[seg_i].spiketrains.append(st)
+                    st.segment = seg[seg_i]
 
                     if waveforms and len(combi_idx) > 0:
                         # Collect all waveforms of the specific unit
@@ -1580,6 +1583,8 @@ class BlackrockIO(BaseIO):
                     # Attach analog signal to segment and recording channel
                     seg[seg_i].analogsignals.append(asig)
                     rc[channel_i].analogsignals.append(asig)
+                    asig.segment = seg[seg_i]
+                    asig.recordingchannel = rc[channel_i]
 
         return bl
 
