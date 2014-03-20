@@ -1285,6 +1285,10 @@ class BlackrockIO(BaseIO):
                        file_origin=self.associated_fileset,
                        rec_datetime=recdatetime)
 
+        # Cascade only returns the Block without children, so we are done here
+        if not cascade:
+            return bl
+
         # Create a dictionary of segments
         seg = {}
         for (seg_i, n_start_i, n_stop_i) in zip(range(len(n_starts)), n_starts, n_stops):
@@ -1366,11 +1370,9 @@ class BlackrockIO(BaseIO):
 
             bl.recordingchannelgroups.append(rcg[channel_i])
 
-
         # Precalculate indices of those unit IDs that are going to be loaded for speed-up
         for unit_i in complete_unit_ids:
             u_idx[unit_i] = self._event_class_or_reason == unit_i
-
 
         # If spike waveforms are requested, pre-read the nev file packets for speed reasons
         if waveforms and not lazy:
