@@ -128,6 +128,7 @@ class BlackrockIOTestCase(BaseTestIO, unittest.TestCase):
         self.assertTrue(allok)
 
 
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_V23(self):
         """
         This test compares the output of BlackrockIO.read_block() with the
@@ -141,78 +142,75 @@ class BlackrockIOTestCase(BaseTestIO, unittest.TestCase):
         For details on the file contents, refer to FileSpec2.3.txt
         """
 
-
         # Turns false on error
         allok = True
 
-        # If scipy.io is not installed, this test cannot be run and asserts
-        if HAVE_SCIPY:
-            # Load data from Matlab generated files
-            ml = scipy.io.loadmat(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001.mat'))
-            lfp_ml = ml['lfp']  # (channel x time) LFP matrix
-            ts_ml = ml['ts']  # spike time stamps
-            elec_ml = ml['el']  # spike electrodes
-            unit_ml = ml['un']  # spike unit IDs
-            wf_ml = ml['wf']  # waveform unit 1 channel 1
-            mts_ml = ml['mts']  # marker time stamps
-            mid_ml = ml['mid']  # marker IDs
+        # Load data from Matlab generated files
+        ml = scipy.io.loadmat(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001.mat'))
+        lfp_ml = ml['lfp']  # (channel x time) LFP matrix
+        ts_ml = ml['ts']  # spike time stamps
+        elec_ml = ml['el']  # spike electrodes
+        unit_ml = ml['un']  # spike unit IDs
+        wf_ml = ml['wf']  # waveform unit 1 channel 1
+        mts_ml = ml['mts']  # marker time stamps
+        mid_ml = ml['mid']  # marker IDs
 
-            # Load data in channels 1-3 from original data files using neo framework
-            try:
-                session = BlackrockIO(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001'),
-                                            print_diagnostic=False)
-                block = session.read_block(n_starts=[None], n_stops=[None],
-                                           channel_list=range(1, 9), nsx=5, units=[],
-                                           events=True, waveforms=True)
-            except:
+        # Load data in channels 1-3 from original data files using neo framework
+        try:
+            session = BlackrockIO(os.path.join(tempfile.gettempdir(), 'files_for_testing_neo', 'blackrock', 'FileSpec2.3001'),
+                                        print_diagnostic=False)
+            block = session.read_block(n_starts=[None], n_stops=[None],
+                                       channel_list=range(1, 9), nsx=5, units=[],
+                                       events=True, waveforms=True)
+        except:
+            allok = False
+
+        # Check if analog data on channels 1-8 are equal
+        for rcg_i in block.recordingchannelgroups:
+            # Should only have one recording channel per group
+            if len(rcg_i.recordingchannels) != 1:
                 allok = False
 
-            # Check if analog data on channels 1-8 are equal
-            for rcg_i in block.recordingchannelgroups:
-                # Should only have one recording channel per group
-                if len(rcg_i.recordingchannels) != 1:
+            rc = rcg_i.recordingchannels[0]
+            idx = rc.index
+            if idx in range(1, 9):
+                if np.any(rc.analogsignals[0].base - lfp_ml[idx - 1, :]):
                     allok = False
 
-                rc = rcg_i.recordingchannels[0]
-                idx = rc.index
-                if idx in range(1, 9):
-                    if np.any(rc.analogsignals[0].base - lfp_ml[idx - 1, :]):
+        # Should only have one segment
+        if len(block.segments) != 1:
+            allok = False
+
+        # Check if spikes in channels 1,3,5,7 are equal
+        for st_i in block.segments[0].spiketrains:
+            channelid = st_i.annotations['channel_id']
+            if channelid in range(1, 7, 2):
+                unitid = st_i.annotations['unit_id']
+                matlab_spikes = ts_ml[np.nonzero(np.logical_and(elec_ml == channelid, unit_ml == unitid))]
+                if np.any(st_i.base - matlab_spikes):
+                    allok = False
+
+                # Check waveforms of channel 1, unit 0
+                if channelid == 1 and unitid == 0:
+                    if np.any(st_i.waveforms - wf_ml):
                         allok = False
 
-            # Should only have one segment
-            if len(block.segments) != 1:
-                allok = False
+        # Check if digital marker events are equal
+        for ea_i in block.segments[0].eventarrays:
+            if 'digital_marker' in ea_i.annotations.keys() and ea_i.annotations['digital_marker'] == True:
+                markerid = ea_i.annotations['marker_id']
+                matlab_digievents = mts_ml[np.nonzero(mid_ml == markerid)]
+                if np.any(ea_i.times.base - matlab_digievents):
+                    allok = False
 
-            # Check if spikes in channels 1,3,5,7 are equal
-            for st_i in block.segments[0].spiketrains:
-                channelid = st_i.annotations['channel_id']
-                if channelid in range(1, 7, 2):
-                    unitid = st_i.annotations['unit_id']
-                    matlab_spikes = ts_ml[np.nonzero(np.logical_and(elec_ml == channelid, unit_ml == unitid))]
-                    if np.any(st_i.base - matlab_spikes):
-                        allok = False
-
-                    # Check waveforms of channel 1, unit 0
-                    if channelid == 1 and unitid == 0:
-                        if np.any(st_i.waveforms - wf_ml):
-                            allok = False
-
-            # Check if digital marker events are equal
-            for ea_i in block.segments[0].eventarrays:
-                if 'digital_marker' in ea_i.annotations.keys() and ea_i.annotations['digital_marker'] == True:
-                    markerid = ea_i.annotations['marker_id']
-                    matlab_digievents = mts_ml[np.nonzero(mid_ml == markerid)]
-                    if np.any(ea_i.times.base - matlab_digievents):
-                        allok = False
-
-            # Check if analog marker events are equal
-            # Currently not implemented by the Matlab loader
-            for ea_i in block.segments[0].eventarrays:
-                if 'analog_marker' in ea_i.annotations.keys() and ea_i.annotations['analog_marker'] == True:
-                    markerid = ea_i.annotations['marker_id']
-                    matlab_anaevents = mts_ml[np.nonzero(mid_ml == markerid)]
-                    if np.any(ea_i.times.base - matlab_anaevents):
-                        allok = False
+        # Check if analog marker events are equal
+        # Currently not implemented by the Matlab loader
+        for ea_i in block.segments[0].eventarrays:
+            if 'analog_marker' in ea_i.annotations.keys() and ea_i.annotations['analog_marker'] == True:
+                markerid = ea_i.annotations['marker_id']
+                matlab_anaevents = mts_ml[np.nonzero(mid_ml == markerid)]
+                if np.any(ea_i.times.base - matlab_anaevents):
+                    allok = False
 
         # Final result
         self.assertTrue(allok)
