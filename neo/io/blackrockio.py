@@ -217,7 +217,7 @@ class BlackrockIO(BaseIO):
         '''
 
         if self._print_diagnostic:
-            print 'BlackrockIO: ' + text
+            print('BlackrockIO: ' + text)
 
 
     def __read_nsx_header(self, filehandle, nsx):
@@ -1634,22 +1634,22 @@ class BlackrockIO(BaseIO):
 
 
     def __str__(self):
-        print self.associated_fileset
-        print " "
+        print(self.associated_fileset)
+        print(" ")
         if self.nev_avail:
             print(" ")
             print("Event Parameters (NEV)")
             print("====================================")
-            print "Timestamp resolution (Hz): ", str(self.timestamp_res)
-            print "Waveform resolution (Hz): ", str(self.timestamp_res)
-            print "Available electrode IDs: ", str(self.channel_id_nev)
+            print("Timestamp resolution (Hz): ", str(self.timestamp_res))
+            print("Waveform resolution (Hz): ", str(self.timestamp_res))
+            print("Available electrode IDs: ", str(self.channel_id_nev))
             for key_i in self.parameters_nev.keys():
                 print(key_i + ": " + str(self.parameters_nev[key_i]))
         for nsx_i in self.nsx_avail:
             print(" ")
             print("Analog Parameters (NS" + str(nsx_i) + ")")
             print("====================================")
-            print "Resolution (Hz): ", self.analog_res[nsx_i]
-            print "Available channel IDs: ", self.channel_id_nsx[nsx_i]
+            print("Resolution (Hz): ", self.analog_res[nsx_i])
+            print("Available channel IDs: ", self.channel_id_nsx[nsx_i])
             for key_i in self.parameters_nsx[nsx_i].keys():
                 print(key_i + ": " + str(self.parameters_nsx[nsx_i][key_i]))
