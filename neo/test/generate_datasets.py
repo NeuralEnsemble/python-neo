@@ -19,7 +19,8 @@ from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
 from neo.io.tools import populate_RecordingChannel, iteritems
 
 
-TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test", datetime.now(), None]
+TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
+                    datetime.fromtimestamp(424242424), None]
 
 
 def generate_one_simple_block(block_name='block_0', nb_segment=3,
