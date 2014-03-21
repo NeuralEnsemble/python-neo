@@ -63,10 +63,13 @@ def merge_annotation(a, b):
     further, or we could allow the user to specify a policy.
 
     Current policy:
-        for arrays: concatenate the two arrays
-        otherwise: fail if the annotations are not equal
+        For arrays: concatenate the two arrays
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: fail if the annotations are not equal
     '''
-    assert type(a) == type(b)
+    assert type(a) == type(b), 'type(%s) %s != type(%s) %s' % (a, type(a),
+                                                               b, type(b))
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
@@ -77,18 +80,30 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b
+        assert a == b, '%s != %s' % (a, b)
         return a
 
 
 def merge_annotations(A, B):
     '''
     Merge two sets of annotations.
+
+    Merging follows these rules:
+    All keys that are in A or B, but not both, are kept.
+    For keys that are present in both:
+        For arrays: concatenate the two arrays
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: fail if the annotations are not equal
     '''
     merged = {}
     for name in A:
         if name in B:
-            merged[name] = merge_annotation(A[name], B[name])
+            try:
+                merged[name] = merge_annotation(A[name], B[name])
+            except BaseException as exc:
+                exc.args += ('key %s' % name,)
+                raise
         else:
             merged[name] = A[name]
     for name in B:
@@ -380,3 +395,27 @@ class BaseNeo(object):
         attributes.
         '''
         return self._necessary_attrs + self._recommended_attrs
+
+    def merge_annotations(self, other):
+        '''
+        Merge annotations from the other object into this one.
+
+        Merging follows these rules:
+        All keys that are in the either object, but not both, are kept.
+        For keys that are present in both objects:
+            For arrays: concatenate the two arrays
+            For dicts: merge recursively
+            For strings: concatenate with ';'
+            Otherwise: fail if the annotations are not equal
+        '''
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        self.annotations.update(merged_annotations)
+
+    def merge(self, other):
+        '''
+        Merge the contents of another object into this one.
+
+        See :meth:`merge_annotations` for details of the merge operation.
+        '''
+        self.merge_annotations(other)

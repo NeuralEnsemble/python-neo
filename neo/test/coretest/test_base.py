@@ -73,75 +73,6 @@ class Test_check_annotations(unittest.TestCase):
         _check_annotations(values)
 
 
-class Test_merge_annotation_annotations(unittest.TestCase):
-    '''
-    TestCase to make sure merge_annotation and merge_annotations work
-    '''
-    def test_merge_annotation__different_type_AssertionError(self):
-        value1 = 'test'
-        value2 = 5.5
-        self.assertRaises(AssertionError, merge_annotation, value1, value2)
-
-    def test_merge_annotation__unmergable_unequal_AssertionError(self):
-        value1 = 5.6
-        value2 = 5.5
-        self.assertRaises(AssertionError, merge_annotation, value1, value2)
-
-    def test_merge_annotation__str_unequal(self):
-        value1 = 'test1'
-        value2 = 'test2'
-        targ = 'test1;test2'
-        res = merge_annotation(value1, value2)
-        self.assertEqual(targ, res)
-
-    def test_merge_annotation__str_equal(self):
-        value1 = 'test1'
-        value2 = 'test1'
-        targ = 'test1'
-        res = merge_annotation(value1, value2)
-        self.assertEqual(targ, res)
-
-    def test_merge_annotation__ndarray(self):
-        value1 = np.array([1, 2, 3])
-        value2 = np.array([4, 5])
-        targ = np.array([1, 2, 3, 4, 5])
-        res = merge_annotation(value1, value2)
-        assert_arrays_equal(targ, res)
-
-    def test_merge_annotation__float_equal(self):
-        value1 = 5.5
-        value2 = 5.5
-        targ = 5.5
-        res = merge_annotation(value1, value2)
-        self.assertEqual(targ, res)
-
-    def test_merge_annotation__dict(self):
-        value1 = {'val1': 1, 'val2': 2.2, 'val3': 'test1'}
-        value2 = {'val2': 2.2, 'val3': 'test2', 'val4': [4, 4.4], 'val5': True}
-        targ = {'val1': 1, 'val2': 2.2, 'val3': 'test1;test2',
-                'val4': [4, 4.4], 'val5': True}
-        res = merge_annotation(value1, value2)
-        self.assertEqual(targ, res)
-
-    def test_merge_annotations__dict(self):
-        value1 = {'val1': 1, 'val2': 2.2, 'val3': 'test1'}
-        value2 = {'val2': 2.2, 'val3': 'test2', 'val4': [4, 4.4], 'val5': True}
-        targ = {'val1': 1, 'val2': 2.2, 'val3': 'test1;test2',
-                'val4': [4, 4.4], 'val5': True}
-        res = merge_annotations(value1, value2)
-        self.assertEqual(targ, res)
-
-    def test_merge_annotations__different_type_AssertionError(self):
-        value1 = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
-        value2 = {'val3': False, 'val4': [4, 4.4], 'val5': True}
-        self.assertRaises(AssertionError, merge_annotations, value1, value2)
-
-    def test_merge_annotations__unmergable_unequal_AssertionError(self):
-        value1 = {'val1': 1, 'val2': 2.2, 'val3': True}
-        value2 = {'val3': False, 'val4': [4, 4.4], 'val5': True}
-        self.assertRaises(AssertionError, merge_annotation, value1, value2)
-
-
 class TestBaseNeo(unittest.TestCase):
     '''
     TestCase to make sure basic initialization and methods work
@@ -204,6 +135,93 @@ class TestBaseNeo(unittest.TestCase):
         base.create_many_to_one_relationship()
         base.create_many_to_many_relationship()
         base.create_relationship()
+
+
+class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
+    '''
+    TestCase to make sure merge_annotations and merge methods work
+    '''
+    def setUp(self):
+        self.name1 = 'a base 1'
+        self.name2 = 'a base 2'
+        self.description1 = 'this is a test 1'
+        self.description2 = 'this is a test 2'
+        self.base1 = BaseNeo(name=self.name1, description=self.description1)
+        self.base2 = BaseNeo(name=self.name2, description=self.description2)
+
+    def test_merge_annotations__dict(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'test1'}
+        self.base2.annotations = {'val2': 2.2, 'val3': 'test2',
+                                  'val4': [4, 4.4], 'val5': True}
+
+        ann1 = self.base1.annotations
+        ann1c = self.base1.annotations.copy()
+        ann2c = self.base2.annotations.copy()
+
+        targ = {'val1': 1, 'val2': 2.2, 'val3': 'test1;test2',
+                'val4': [4, 4.4], 'val5': True}
+
+        self.base1.merge_annotations(self.base2)
+
+        self.assertEqual(ann1, self.base1.annotations)
+        self.assertNotEqual(ann1c, self.base1.annotations)
+        self.assertEqual(ann2c, self.base2.annotations)
+        self.assertEqual(targ, self.base1.annotations)
+
+        self.assertEqual(self.name1, self.base1.name)
+        self.assertEqual(self.name2, self.base2.name)
+        self.assertEqual(self.description1, self.base1.description)
+        self.assertEqual(self.description2, self.base2.description)
+
+    def test_merge__dict(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'test1'}
+        self.base2.annotations = {'val2': 2.2, 'val3': 'test2',
+                                  'val4': [4, 4.4], 'val5': True}
+
+        ann1 = self.base1.annotations
+        ann1c = self.base1.annotations.copy()
+        ann2c = self.base2.annotations.copy()
+
+        targ = {'val1': 1, 'val2': 2.2, 'val3': 'test1;test2',
+                'val4': [4, 4.4], 'val5': True}
+
+        self.base1.merge(self.base2)
+
+        self.assertEqual(ann1, self.base1.annotations)
+        self.assertNotEqual(ann1c, self.base1.annotations)
+        self.assertEqual(ann2c, self.base2.annotations)
+        self.assertEqual(targ, self.base1.annotations)
+
+        self.assertEqual(self.name1, self.base1.name)
+        self.assertEqual(self.name2, self.base2.name)
+        self.assertEqual(self.description1, self.base1.description)
+        self.assertEqual(self.description2, self.base2.description)
+
+    def test_merge_annotations__different_type_AssertionError(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
+        self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
+                                  'val5': True}
+        self.assertRaises(AssertionError,
+                          self.base1.merge_annotations, self.base2)
+
+    def test_merge__different_type_AssertionError(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
+        self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
+                                  'val5': True}
+        self.assertRaises(AssertionError, self.base1.merge, self.base2)
+
+    def test_merge_annotations__unmergable_unequal_AssertionError(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': True}
+        self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
+                                  'val5': True}
+        self.assertRaises(AssertionError,
+                          self.base1.merge_annotations, self.base2)
+
+    def test_merge__unmergable_unequal_AssertionError(self):
+        self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': True}
+        self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
+                                  'val5': True}
+        self.assertRaises(AssertionError, self.base1.merge, self.base2)
 
 
 class TestBaseNeoCoreTypes(unittest.TestCase):
