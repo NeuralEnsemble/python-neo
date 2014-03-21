@@ -460,7 +460,7 @@ class BaseTestIO(object):
             # some formats (e.g. elphy) do not support double floating
             # point spiketrains
             try:
-                assert_same_sub_schema(ob1, ob2, False, 1e-8)
+                assert_same_sub_schema(ob1, ob2, True, 1e-8)
                 assert_neo_object_is_compliant(ob1)
                 assert_neo_object_is_compliant(ob2)
             # intercept exceptions and add more information

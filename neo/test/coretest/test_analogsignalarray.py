@@ -358,7 +358,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+        targ = AnalogSignalArray(np.array([[2., 3.], [2., 3.]]).T,
                                  sampling_rate=1.0*pq.Hz, units='mV',
                                  t_start=t_start,
                                  name='spam', description='eggs',
@@ -416,7 +416,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+        targ = AnalogSignalArray(np.array([[2., 3.], [2., 3.]]).T,
                                  t_start=12.0*pq.ms,
                                  sampling_rate=1.0*pq.Hz, units='mV',
                                  name='spam', description='eggs',
@@ -445,7 +445,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        targ = AnalogSignalArray(np.array([[2, 3], [2, 3]]).T,
+        targ = AnalogSignalArray(np.array([[2., 3.], [2., 3.]]).T,
                                  t_start=t_start.rescale(pq.ms),
                                  sampling_rate=1.0*pq.Hz, units='mV',
                                  name='spam', description='eggs',
