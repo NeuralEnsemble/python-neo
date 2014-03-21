@@ -7,14 +7,18 @@ Generate datasets for testing
 from __future__ import absolute_import
 
 from datetime import datetime
-import logging
 
 import numpy as np
 from numpy.random import rand
 import quantities as pq
 
-from neo.core import (AnalogSignal, Block, EpochArray, EventArray,
-                      RecordingChannel, Segment, SpikeTrain,
+from neo.core import (AnalogSignal, AnalogSignalArray,
+                      Block,
+                      Epoch, EpochArray, Event, EventArray,
+                      IrregularlySampledSignal,
+                      RecordingChannel, RecordingChannelGroup,
+                      Segment, SpikeTrain,
+                      Unit,
                       class_by_name)
 from neo.io.tools import populate_RecordingChannel, iteritems
 
@@ -155,12 +159,30 @@ def generate_from_supported_objects(supported_objects):
     return higher
 
 
-def get_fake_value(name, datatype, dim=0, dtype='float', seed=None):
+def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
+                   units=None, obj=None, n=None):
     """
     Returns default value for a given attribute based on neo.core
 
     If seed is not None, use the seed to set the random number generator.
     """
+    if not obj:
+        obj = 'TestObject'
+    elif not hasattr(obj, 'lower'):
+        obj = obj.__name__
+
+    if (name in ['name', 'file_origin', 'description'] and
+            (datatype != str or dim)):
+        raise ValueError('%s must be str, not a %sD %s' % (name, dim,
+                                                           datatype))
+
+    if name == 'file_origin':
+        return 'test_file.txt'
+    if name == 'name':
+        return '%s%s' % (obj, get_fake_value('', datatype, seed=seed))
+    if name == 'description':
+        return 'test %s %s' % (obj, get_fake_value('', datatype, seed=seed))
+
     if seed is not None:
         np.random.seed(seed)
 
@@ -171,93 +193,206 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None):
     if datatype == float:
         return 1000. * np.random.random()
     if datatype == datetime:
-        return datetime.now()
+        return datetime.fromtimestamp(1000000000*np.random.random())
 
-    if name == 't_start':
-        if datatype != pq.Quantity or dim:
-            raise ValueError('t_start must be a 0D Quantity, ' +
-                             'not a %sD %s' % (dim, datatype))
-        return 0.0 * pq.millisecond
-
-    if name == 't_stop':
-        if datatype != pq.Quantity or dim:
-            raise ValueError('t_stop must be a 0D Quantity, ' +
-                             'not a %sD %s' % (dim, datatype))
-        return 1.0 * pq.millisecond
-
-    if name == 'sampling_rate':
-        if datatype != pq.Quantity or dim:
-            raise ValueError('sampling_rate must be a 0D Quantity, ' +
-                             'not a %sD %s' % (dim, datatype))
-        return 10000.0 * pq.Hz
+    if (name in ['t_start', 't_stop', 'sampling_rate'] and
+            (datatype != pq.Quantity or dim)):
+        raise ValueError('%s must be a 0D Quantity, not a %sD %s' % (name, dim,
+                                                                     datatype))
 
     # only put array types below here
-    size = []
-    for i in range(int(dim)):
-        size.append(np.random.randint(100) + 1)
-    arr = np.random.random(size)
 
-    if datatype == pq.Quantity:
-        return arr * pq.millisecond  # let it be ms
+    if units is not None:
+        pass
+    elif name in ['t_start', 't_stop',
+                  'time', 'times',
+                  'duration', 'durations']:
+        units = pq.millisecond
+    elif name == 'sampling_rate':
+        units = pq.Hz
+    elif datatype == pq.Quantity:
+        units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
+        units = getattr(pq, units)
+
+    if name == 'sampling_rate':
+        data = np.array(10000.0)
+    elif name == 't_start':
+        data = np.array(0.0)
+    elif name == 't_stop':
+        data = np.array(1.0)
+    elif n and obj == 'AnalogSignalArray':
+        if name == 'channel_index':
+            data = np.random.random(n)*1000.
+        elif name == 'signal':
+            size = []
+            for _ in range(int(dim)):
+                size.append(np.random.randint(5) + 1)
+            size[1] = n
+            data = np.random.random(size)*1000.
+    else:
+        size = []
+        for _ in range(int(dim)):
+            size.append(np.random.randint(5) + 1)
+        data = np.random.random(size)
+        if name not in ['time', 'times']:
+            data *= 1000.
+    if np.dtype(dtype) != np.float64:
+        data = data.astype(dtype)
+
     if datatype == np.ndarray:
-        return np.array(arr, dtype=dtype)
+        return data
+    if datatype == list:
+        return data.tolist()
+    if datatype == pq.Quantity:
+        return data * units  # set the units
 
     # we have gone through everything we know, so it must be something invalid
     raise ValueError('Unknown name/datatype combination %s %s' % (name,
                                                                   datatype))
 
 
-def fake_neo(obj_type="Block", cascade=True, _follow_links=True):
-    """ Create a fake NEO object of a given type. Follows one-to-many
-    and many-to-many relationships if cascade. RC, when requested cascade, will
-    not create RGCs to avoid dead-locks.
+def get_fake_values(cls, annotate=True, seed=None, n=None):
+    """
+    Returns a dict containing the default values for all attribute for
+    a class from neo.core.
 
-    _follow_links - an internal variable, indicates whether to create objects
-    with 'implicit' relationships, to avoid duplications. Do not use it. """
+    If seed is not None, use the seed to set the random number generator.
+    The seed is incremented by 1 for each successive object.
+
+    If annotate is True (default), also add annotations to the values.
+    """
+
+    if hasattr(cls, 'lower'):
+        cls = class_by_name[cls]
+
     kwargs = {}  # assign attributes
-
-    cl = class_by_name[obj_type]
-    attrs = cl._necessary_attrs + cl._recommended_attrs
-    for attr in attrs:
-        kwargs[attr[0]] = get_fake_value(*attr)
+    for i, attr in enumerate(cls._necessary_attrs + cls._recommended_attrs):
+        if seed is not None:
+            iseed = seed + i
+        else:
+            iseed = None
+        kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
         kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]
 
-    obj = cl(**kwargs)
+    if annotate:
+        kwargs.update(get_annotations())
+        kwargs['seed'] = seed
 
-    if cascade:
-        if obj_type == "Block":
-            _follow_links = False
-        for childname in getattr(obj, '_child_objects', []):
-            child = fake_neo(childname, cascade, _follow_links)
-            if not _follow_links and obj_type in child._parent_objects[1:]:
+    return kwargs
+
+
+def get_annotations():
+    '''
+    Returns a dict containing the default values for annotations for
+    a class from neo.core.
+    '''
+    return dict([(str(i), ann) for i, ann in enumerate(TEST_ANNOTATIONS)])
+
+
+def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
+    '''
+    Create a fake NEO object of a given type. Follows one-to-many
+    and many-to-many relationships if cascade. RC, when requested cascade, will
+    not create RGCs to avoid dead-locks.
+
+    n (default=1) is the number of child objects of each type will be created.
+    In cases like segment.spiketrains, there will be more than this number
+    because there will be n for each unit, of which there will be n for
+    each recordingchannelgroup, of which there will be n.
+    '''
+
+    if hasattr(obj_type, 'lower'):
+        cls = class_by_name[obj_type]
+    else:
+        cls = obj_type
+        obj_type = obj_type.__name__
+
+    kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
+    obj = cls(**kwargs)
+
+    # if not cascading, we don't need to do any of the stuff after this
+    if not cascade:
+        return obj
+
+    # this is used to signal other containers that they shouldn't duplicate
+    # data
+    if obj_type == 'Block':
+        cascade = 'block'
+    for i, childname in enumerate(getattr(obj, '_child_objects', [])):
+        # we create a few of each class
+        for j in range(n):
+            if seed is not None:
+                iseed = 10*seed+100*i+1000*j
+            else:
+                iseed = None
+            child = fake_neo(obj_type=childname, cascade=cascade,
+                             seed=iseed, n=n)
+            child.annotate(i=i, j=j)
+
+            # if we are creating a block and this is the object's primary
+            # parent, don't create the object, we will import it from secondary
+            # containers later
+            if (cascade == 'block' and len(child._parent_objects) > 0 and
+                    obj_type != child._parent_objects[-1]):
                 continue
-            setattr(obj, childname.lower()+"s", [child])
+            getattr(obj, childname.lower()+"s").append(child)
 
     # need to manually create 'implicit' connections
-    if obj_type == "Block" and cascade:
-        # connect a unit to the spike and spike train
-        u = obj.recordingchannelgroups[0].units[0]
-        st = obj.segments[0].spiketrains[0]
-        sp = obj.segments[0].spikes[0]
-        u.spiketrains.append(st)
-        u.spikes.append(sp)
-        # connect RCG with ASA
-        asa = obj.segments[0].analogsignalarrays[0]
-        obj.recordingchannelgroups[0].analogsignalarrays.append(asa)
-        # connect RC to AS, IrSAS and back to RGC
-        rc = obj.recordingchannelgroups[0].recordingchannels[0]
-        rc.recordingchannelgroups.append(obj.recordingchannelgroups[0])
-        rc.analogsignals.append(obj.segments[0].analogsignals[0])
-        seg = obj.segments[0]
-        rc.irregularlysampledsignals.append(seg.irregularlysampledsignals[0])
+    if obj_type == 'Block':
+        # connect data objects to segment
+        for i, rcg in enumerate(obj.recordingchannelgroups):
+            for k, sigarr in enumerate(rcg.analogsignalarrays):
+                obj.segments[k].analogsignalarrays.append(sigarr)
+            for j, unit in enumerate(rcg.units):
+                for k, spike in enumerate(unit.spikes):
+                    obj.segments[k].spikes.append(spike)
+                for k, train in enumerate(unit.spiketrains):
+                    obj.segments[k].spiketrains.append(train)
+            for j, rchan in enumerate(rcg.recordingchannels):
+                for k, sig in enumerate(rchan.analogsignals):
+                    obj.segments[k].analogsignals.append(sig)
+                for k, irsig in enumerate(rchan.irregularlysampledsignals):
+                    obj.segments[k].irregularlysampledsignals.append(irsig)
+    elif obj_type == 'RecordingChannelGroup':
+        inds = []
+        names = []
+        chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
+        for sigarr in obj.analogsignalarrays:
+            sigarr.channel_index = chinds[:sigarr.shape[1]]
+        for i, rchan in enumerate(obj.recordingchannels):
+            for sig in rchan.analogsignals:
+                sig.channel_index = chinds[i].tolist()
+            inds.append(rchan.index)
+            names.append(rchan.name)
+            rchan.recordingchannelgroups.append(obj)
+        obj.channel_indexes = np.array(inds)
+        obj.channel_names = np.array(names).astype('S')
 
-    # add some annotations, 80%
-    at = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-               range(len(TEST_ANNOTATIONS))])
-    obj.annotate(**at)
-
-    obj.create_many_to_one_relationship()
+    if hasattr(obj, 'create_many_to_one_relationship'):
+        obj.create_many_to_one_relationship()
 
     return obj
+
+
+def clone_object(obj, n=None):
+    '''
+    Generate a new object and new objects with the same rules as the original.
+    '''
+    if hasattr(obj, '__iter__') and not hasattr(obj, 'ndim'):
+        return [clone_object(iobj, n=n) for iobj in obj]
+
+    cascade = hasattr(obj, 'children') and len(obj.children)
+    if n is not None:
+        pass
+    elif cascade:
+        n = min(len(getattr(obj, cont)) for cont in obj._child_containers)
+    else:
+        n = 0
+    seed = obj.annotations.get('seed', None)
+
+    newobj = fake_neo(obj.__class__, cascade=cascade, seed=seed, n=n)
+    if 'i' in obj.annotations:
+        newobj.annotate(i=obj.annotations['i'], j=obj.annotations['j'])
+    return newobj
