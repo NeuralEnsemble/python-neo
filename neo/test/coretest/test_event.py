@@ -123,34 +123,18 @@ class TestEvent(unittest.TestCase):
         segment.events = [evt]
         segment.create_many_to_one_relationship()
 
-        self.assertEqual(evt._container_child_objects, ())
-        self.assertEqual(evt._data_child_objects, ())
         self.assertEqual(evt._single_parent_objects, ('Segment',))
-        self.assertEqual(evt._multi_child_objects, ())
         self.assertEqual(evt._multi_parent_objects, ())
-        self.assertEqual(evt._child_properties, ())
 
-        self.assertEqual(evt._single_child_objects, ())
-
-        self.assertEqual(evt._container_child_containers, ())
-        self.assertEqual(evt._data_child_containers, ())
-        self.assertEqual(evt._single_child_containers, ())
         self.assertEqual(evt._single_parent_containers, ('segment',))
-        self.assertEqual(evt._multi_child_containers, ())
         self.assertEqual(evt._multi_parent_containers, ())
 
-        self.assertEqual(evt._child_objects, ())
-        self.assertEqual(evt._child_containers, ())
         self.assertEqual(evt._parent_objects, ('Segment',))
         self.assertEqual(evt._parent_containers, ('segment',))
 
-        self.assertEqual(evt.children, ())
         self.assertEqual(len(evt.parents), 1)
         self.assertEqual(evt.parents[0].name, 'seg1')
 
-        evt.create_many_to_one_relationship()
-        evt.create_many_to_many_relationship()
-        evt.create_relationship()
         assert_neo_object_is_compliant(evt)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")

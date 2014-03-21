@@ -197,34 +197,18 @@ class TestEpochArray(unittest.TestCase):
         segment.epocharrays = [epca]
         segment.create_many_to_one_relationship()
 
-        self.assertEqual(epca._container_child_objects, ())
-        self.assertEqual(epca._data_child_objects, ())
         self.assertEqual(epca._single_parent_objects, ('Segment',))
-        self.assertEqual(epca._multi_child_objects, ())
         self.assertEqual(epca._multi_parent_objects, ())
-        self.assertEqual(epca._child_properties, ())
 
-        self.assertEqual(epca._single_child_objects, ())
-
-        self.assertEqual(epca._container_child_containers, ())
-        self.assertEqual(epca._data_child_containers, ())
-        self.assertEqual(epca._single_child_containers, ())
         self.assertEqual(epca._single_parent_containers, ('segment',))
-        self.assertEqual(epca._multi_child_containers, ())
         self.assertEqual(epca._multi_parent_containers, ())
 
-        self.assertEqual(epca._child_objects, ())
-        self.assertEqual(epca._child_containers, ())
         self.assertEqual(epca._parent_objects, ('Segment',))
         self.assertEqual(epca._parent_containers, ('segment',))
 
-        self.assertEqual(epca.children, ())
         self.assertEqual(len(epca.parents), 1)
         self.assertEqual(epca.parents[0].name, 'seg1')
 
-        epca.create_many_to_one_relationship()
-        epca.create_many_to_many_relationship()
-        epca.create_relationship()
         assert_neo_object_is_compliant(epca)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")

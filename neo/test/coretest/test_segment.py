@@ -24,12 +24,11 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.segment import Segment
-from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, EpochArray, Event, EventArray,
-                      IrregularlySampledSignal, RecordingChannelGroup,
-                      Spike, SpikeTrain, Unit)
+from neo.core import (AnalogSignalArray, Block,
+                      Epoch, EpochArray,
+                      RecordingChannelGroup, SpikeTrain, Unit)
+from neo.core.container import filterdata
 from neo.test.tools import (assert_neo_object_is_compliant,
-                            assert_arrays_equal,
                             assert_same_sub_schema)
 from neo.test.generate_datasets import (fake_neo, get_fake_value,
                                         get_fake_values, get_annotations,
@@ -255,7 +254,6 @@ class TestSegment(unittest.TestCase):
         seg1a.annotate(seed=self.seed2)
         seg1a.merge(self.seg2)
         self.check_creation(self.seg2)
-        self.epcas2[0] = self.epcas2[0].merge(self.epcas2[0])
 
         assert_same_sub_schema(self.sigs1a + self.sigs2, seg1a.analogsignals)
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
@@ -268,8 +266,7 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(self.evts1 + self.evts2, seg1a.events)
         assert_same_sub_schema(self.evtas1 + self.evtas2, seg1a.eventarrays)
 
-        assert_same_sub_schema(self.spikes1 + self.spikes2[:1] + self.spikes2,
-                               seg1a.spikes)
+        assert_same_sub_schema(self.spikes1 + self.spikes2, seg1a.spikes)
         assert_same_sub_schema(self.trains1 + self.trains2, seg1a.spiketrains)
 
     def test__children(self):
@@ -313,17 +310,446 @@ class TestSegment(unittest.TestCase):
                        self.nchildren +  # analogsignalarray
                        2*(self.nchildren**2) +  # spike(train)
                        2*(self.nchildren**2))  # analog/irregsignal
+        self.assertEqual(len(self.seg1._single_children), totchildren)
+        self.assertEqual(len(self.seg1.data_children), totchildren)
         self.assertEqual(len(self.seg1.children), totchildren)
+        self.assertEqual(len(self.seg1.data_children_recur), totchildren)
+        self.assertEqual(len(self.seg1.children_recur), totchildren)
+
+        self.assertEqual(len(self.seg1._multi_children), 0)
+        self.assertEqual(len(self.seg1.container_children), 0)
+        self.assertEqual(len(self.seg1.container_children_recur), 0)
 
         children = (self.sigs1a + self.sigarrs1a +
                     self.epcs1a + self.epcas1a +
                     self.evts1a + self.evtas1a +
                     self.irsigs1a +
                     self.spikes1a + self.trains1a)
+        assert_same_sub_schema(list(self.seg1._single_children), children)
+        assert_same_sub_schema(list(self.seg1.data_children), children)
+        assert_same_sub_schema(list(self.seg1.data_children_recur), children)
         assert_same_sub_schema(list(self.seg1.children), children)
+        assert_same_sub_schema(list(self.seg1.children_recur), children)
 
         self.assertEqual(len(self.seg1.parents), 1)
         self.assertEqual(self.seg1.parents[0].name, 'block1')
+
+    def test__size(self):
+        targ1 = {"epochs": self.nchildren,  "events": self.nchildren,
+                 "analogsignals": self.nchildren**2,
+                 "irregularlysampledsignals": self.nchildren**2,
+                 "spikes": self.nchildren**2,
+                 "spiketrains": self.nchildren**2,
+                 "epocharrays": self.nchildren, "eventarrays": self.nchildren,
+                 "analogsignalarrays": self.nchildren}
+        self.assertEqual(self.targobj.size, targ1)
+
+    def test__filter_none(self):
+        targ = []
+
+        res0 = self.targobj.filter()
+        res1 = self.targobj.filter({})
+        res2 = self.targobj.filter([])
+        res3 = self.targobj.filter([{}])
+        res4 = self.targobj.filter([{}, {}])
+        res5 = self.targobj.filter([{}, {}])
+        res6 = self.targobj.filter(targdict={})
+        res7 = self.targobj.filter(targdict=[])
+        res8 = self.targobj.filter(targdict=[{}])
+        res9 = self.targobj.filter(targdict=[{}, {}])
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+        assert_same_sub_schema(res5, targ)
+        assert_same_sub_schema(res6, targ)
+        assert_same_sub_schema(res7, targ)
+        assert_same_sub_schema(res8, targ)
+        assert_same_sub_schema(res9, targ)
+
+    def test__filter_annotation_single(self):
+        targ = (self.sigs1a + self.sigarrs1a +
+                [self.epcs1a[0], self.epcas1a[0]] +
+                [self.evts1a[0], self.evtas1a[0]] +
+                self.irsigs1a +
+                self.spikes1a + self.trains1a)
+
+        res0 = self.targobj.filter(j=0)
+        res1 = self.targobj.filter({'j': 0})
+        res2 = self.targobj.filter(targdict={'j': 0})
+        res3 = self.targobj.filter([{'j': 0}])
+        res4 = self.targobj.filter(targdict=[{'j': 0}])
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+
+    def test__filter_single_annotation_nores(self):
+        targ = []
+
+        res0 = self.targobj.filter(j=5)
+        res1 = self.targobj.filter({'j': 5})
+        res2 = self.targobj.filter(targdict={'j': 5})
+        res3 = self.targobj.filter([{'j': 5}])
+        res4 = self.targobj.filter(targdict=[{'j': 5}])
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+
+    def test__filter_attribute_single(self):
+        targ = [self.epcs1a[1]]
+
+        res0 = self.targobj.filter(name=self.epcs1a[1].name)
+        res1 = self.targobj.filter({'name': self.epcs1a[1].name})
+        res2 = self.targobj.filter(targdict={'name': self.epcs1a[1].name})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+
+    def test__filter_attribute_single_nores(self):
+        targ = []
+
+        res0 = self.targobj.filter(name=self.epcs2[0].name)
+        res1 = self.targobj.filter({'name': self.epcs2[0].name})
+        res2 = self.targobj.filter(targdict={'name': self.epcs2[0].name})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+
+    def test__filter_multi(self):
+        targ = (self.sigs1a + self.sigarrs1a +
+                [self.epcs1a[0], self.epcas1a[0]] +
+                [self.evts1a[0], self.evtas1a[0]] +
+                self.irsigs1a +
+                self.spikes1a + self.trains1a +
+                [self.epcs1a[1]])
+
+        res0 = self.targobj.filter(name=self.epcs1a[1].name, j=0)
+        res1 = self.targobj.filter({'name': self.epcs1a[1].name, 'j': 0})
+        res2 = self.targobj.filter(targdict={'name': self.epcs1a[1].name,
+                                             'j': 0})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+
+    def test__filter_multi_nores(self):
+        targ = []
+
+        res0 = self.targobj.filter([{'j': 0}, {}])
+        res1 = self.targobj.filter({}, ttype=0)
+        res2 = self.targobj.filter([{}], ttype=0)
+        res3 = self.targobj.filter({'name': self.epcs1a[1].name}, j=0)
+        res4 = self.targobj.filter(targdict={'name': self.epcs1a[1].name},
+                                   j=0)
+        res5 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   targdict={'j': 0})
+        res6 = self.targobj.filter(name=self.epcs2[0].name, j=5)
+        res7 = self.targobj.filter({'name': self.epcs2[1].name, 'j': 5})
+        res8 = self.targobj.filter(targdict={'name': self.epcs2[1].name,
+                                             'j': 5})
+        res9 = self.targobj.filter({'name': self.epcs2[1].name}, j=5)
+        res10 = self.targobj.filter(targdict={'name': self.epcs2[1].name},
+                                    j=5)
+        res11 = self.targobj.filter(name=self.epcs2[1].name,
+                                    targdict={'j': 5})
+        res12 = self.targobj.filter({'name': self.epcs1a[1].name}, j=5)
+        res13 = self.targobj.filter(targdict={'name': self.epcs1a[1].name},
+                                    j=5)
+        res14 = self.targobj.filter(name=self.epcs1a[1].name,
+                                    targdict={'j': 5})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+        assert_same_sub_schema(res5, targ)
+        assert_same_sub_schema(res6, targ)
+        assert_same_sub_schema(res7, targ)
+        assert_same_sub_schema(res8, targ)
+        assert_same_sub_schema(res9, targ)
+        assert_same_sub_schema(res10, targ)
+        assert_same_sub_schema(res11, targ)
+        assert_same_sub_schema(res12, targ)
+        assert_same_sub_schema(res13, targ)
+        assert_same_sub_schema(res14, targ)
+
+    def test__filter_multi_partres(self):
+        targ = [self.epcs1a[1]]
+
+        res0 = self.targobj.filter(name=self.epcs1a[1].name, j=5)
+        res1 = self.targobj.filter({'name': self.epcs1a[1].name, 'j': 5})
+        res2 = self.targobj.filter(targdict={'name': self.epcs1a[1].name,
+                                             'j': 5})
+        res3 = self.targobj.filter([{'j': 1}, {'i': 2}])
+        res4 = self.targobj.filter({'j': 1}, i=2)
+        res5 = self.targobj.filter([{'j': 1}], i=2)
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+        assert_same_sub_schema(res5, targ)
+
+    def test__filter_single_annotation_obj_single(self):
+        targ = [self.epcs1a[1]]
+
+        res0 = self.targobj.filter(j=1, objects='Epoch')
+        res1 = self.targobj.filter(j=1, objects=Epoch)
+        res2 = self.targobj.filter(j=1, objects=['Epoch'])
+        res3 = self.targobj.filter(j=1, objects=[Epoch])
+        res4 = self.targobj.filter(j=1, objects=[Epoch,
+                                   RecordingChannelGroup])
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+
+    def test__filter_single_annotation_obj_multi(self):
+        targ = [self.epcs1a[1], self.epcas1a[1]]
+
+        res0 = self.targobj.filter(j=1, objects=['Epoch', EpochArray])
+
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_obj_none(self):
+        targ = []
+
+        res0 = self.targobj.filter(j=1, objects=RecordingChannelGroup)
+        res1 = self.targobj.filter(j=1, objects='RecordingChannelGroup')
+        res2 = self.targobj.filter(j=1, objects=[])
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+
+    def test__filter_single_annotation_norecur(self):
+        targ = [self.epcs1a[1], self.epcas1a[1],
+                self.evts1a[1], self.evtas1a[1]]
+        res0 = self.targobj.filter(j=1,
+                                   recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_norecur(self):
+        targ = [self.epcs1a[1]]
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_nodata(self):
+        targ = []
+        res0 = self.targobj.filter(j=0,
+                                   data=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_nodata(self):
+        targ = []
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   data=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_nodata_norecur(self):
+        targ = []
+        res0 = self.targobj.filter(j=0,
+                                   data=False, recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_nodata_norecur(self):
+        targ = []
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   data=False, recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_container(self):
+        targ = [self.epcs1a[1], self.epcas1a[1],
+                self.evts1a[1], self.evtas1a[1]]
+        res0 = self.targobj.filter(j=1,
+                                   container=True)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_container(self):
+        targ = [self.epcs1a[1]]
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   container=True)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_container_norecur(self):
+        targ = [self.epcs1a[1], self.epcas1a[1],
+                self.evts1a[1], self.evtas1a[1]]
+        res0 = self.targobj.filter(j=1,
+                                   container=True, recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_container_norecur(self):
+        targ = [self.epcs1a[1]]
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   container=True, recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_nodata_container(self):
+        targ = []
+        res0 = self.targobj.filter(j=0,
+                                   data=False, container=True)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_nodata_container(self):
+        targ = []
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   data=False, container=True)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_annotation_nodata_container_norecur(self):
+        targ = []
+        res0 = self.targobj.filter(j=0,
+                                   data=False, container=True,
+                                   recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    def test__filter_single_attribute_nodata_container_norecur(self):
+        targ = []
+        res0 = self.targobj.filter(name=self.epcs1a[1].name,
+                                   data=False, container=True,
+                                   recursive=False)
+        assert_same_sub_schema(res0, targ)
+
+    #def test__filterdata_multi(self):
+        data = self.targobj.children_recur
+
+        targ = (self.sigs1a + self.sigarrs1a +
+                [self.epcs1a[0], self.epcas1a[0]] +
+                [self.evts1a[0], self.evtas1a[0]] +
+                self.irsigs1a +
+                self.spikes1a + self.trains1a +
+                [self.epcs1a[1]])
+
+        res0 = filterdata(data, name=self.epcs1a[1].name, j=0)
+        res1 = filterdata(data, {'name': self.epcs1a[1].name, 'j': 0})
+        res2 = filterdata(data, targdict={'name': self.epcs1a[1].name, 'j': 0})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+
+    def test__filterdata_multi_nores(self):
+        data = self.targobj.children_recur
+
+        targ = []
+
+        res0 = filterdata(data, [{'j': 0}, {}])
+        res1 = filterdata(data, {}, ttype=0)
+        res2 = filterdata(data, [{}], ttype=0)
+        res3 = filterdata(data, {'name': self.epcs1a[1].name}, j=0)
+        res4 = filterdata(data, targdict={'name': self.epcs1a[1].name}, j=0)
+        res5 = filterdata(data, name=self.epcs1a[1].name, targdict={'j': 0})
+        res6 = filterdata(data, name=self.epcs2[0].name, j=5)
+        res7 = filterdata(data, {'name': self.epcs2[1].name, 'j': 5})
+        res8 = filterdata(data, targdict={'name': self.epcs2[1].name, 'j': 5})
+        res9 = filterdata(data, {'name': self.epcs2[1].name}, j=5)
+        res10 = filterdata(data, targdict={'name': self.epcs2[1].name}, j=5)
+        res11 = filterdata(data, name=self.epcs2[1].name, targdict={'j': 5})
+        res12 = filterdata(data, {'name': self.epcs1a[1].name}, j=5)
+        res13 = filterdata(data, targdict={'name': self.epcs1a[1].name}, j=5)
+        res14 = filterdata(data, name=self.epcs1a[1].name, targdict={'j': 5})
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+        assert_same_sub_schema(res5, targ)
+        assert_same_sub_schema(res6, targ)
+        assert_same_sub_schema(res7, targ)
+        assert_same_sub_schema(res8, targ)
+        assert_same_sub_schema(res9, targ)
+        assert_same_sub_schema(res10, targ)
+        assert_same_sub_schema(res11, targ)
+        assert_same_sub_schema(res12, targ)
+        assert_same_sub_schema(res13, targ)
+        assert_same_sub_schema(res14, targ)
+
+    def test__filterdata_multi_partres(self):
+        data = self.targobj.children_recur
+
+        targ = [self.epcs1a[1]]
+
+        res0 = filterdata(data, name=self.epcs1a[1].name, j=5)
+        res1 = filterdata(data, {'name': self.epcs1a[1].name, 'j': 5})
+        res2 = filterdata(data, targdict={'name': self.epcs1a[1].name, 'j': 5})
+        res3 = filterdata(data, [{'j': 1}, {'i': 2}])
+        res4 = filterdata(data, {'j': 1}, i=2)
+        res5 = filterdata(data, [{'j': 1}], i=2)
+
+        assert_same_sub_schema(res0, targ)
+        assert_same_sub_schema(res1, targ)
+        assert_same_sub_schema(res2, targ)
+        assert_same_sub_schema(res3, targ)
+        assert_same_sub_schema(res4, targ)
+        assert_same_sub_schema(res5, targ)
+
+    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    def test__pretty(self):
+        ann = get_annotations()
+        ann['seed'] = self.seed1
+        ann = pretty(ann).replace('\n ', '\n  ')
+        res = pretty(self.seg1)
+
+        sig0 = pretty(self.sigs1[0])
+        sig1 = pretty(self.sigs1[1])
+        sig2 = pretty(self.sigs1[2])
+        sig3 = pretty(self.sigs1[3])
+        sig0 = sig0.replace('\n', '\n   ')
+        sig1 = sig1.replace('\n', '\n   ')
+        sig2 = sig2.replace('\n', '\n   ')
+        sig3 = sig3.replace('\n', '\n   ')
+
+        sigarr0 = pretty(self.sigarrs1[0])
+        sigarr1 = pretty(self.sigarrs1[1])
+        sigarr0 = sigarr0.replace('\n', '\n   ')
+        sigarr1 = sigarr1.replace('\n', '\n   ')
+
+        targ = ("Segment with " +
+                ("%s analogsignals, %s analogsignalarrays, " %
+                 (len(self.sigs1a), len(self.sigarrs1a))) +
+                ("%s epochs, %s epocharrays, " %
+                 (len(self.epcs1a), len(self.epcas1a))) +
+                ("%s events, %s eventarrays, " %
+                 (len(self.evts1a), len(self.evtas1a))) +
+                ("%s irregularlysampledsignals, " %
+                 len(self.irsigs1a)) +
+                ("%s spikes, %s spiketrains\n" %
+                 (len(self.spikes1a), len(self.trains1a))) +
+                ("name: '%s'\ndescription: '%s'\n" %
+                 (self.seg1.name, self.seg1.description)
+                 ) +
+
+                ("annotations: %s\n" % ann) +
+
+                ("# analogsignals (N=%s)\n" % len(self.sigs1a)) +
+
+                ('%s: %s\n' % (0, sig0)) +
+                ('%s: %s\n' % (1, sig1)) +
+                ('%s: %s\n' % (2, sig2)) +
+                ('%s: %s\n' % (3, sig3)) +
+
+                ("# analogsignalarrays (N=%s)\n" % len(self.sigarrs1a)) +
+
+                ('%s: %s\n' % (0, sigarr0)) +
+                ('%s: %s' % (1, sigarr1)))
+
+        self.assertEqual(res, targ)
 
     def test__construct_subsegment_by_unit(self):
         nb_seg = 3

@@ -3,8 +3,8 @@
 This module defines :class:`RecordingChannelGroup`, a container for multiple
 data channels.
 
-:class:`RecordingChannelGroup` derives from :class:`BaseNeo`, from
-:module:`neo.core.baseneo`.
+:class:`RecordingChannelGroup` derives from :class:`Container`,
+from :module:`neo.core.container`.
 '''
 
 # needed for python 3 compatibility
@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from neo.core.baseneo import BaseNeo
+from neo.core.container import Container
 
 
-class RecordingChannelGroup(BaseNeo):
+class RecordingChannelGroup(Container):
     '''
     A container for multiple data channels.
 
@@ -126,7 +126,7 @@ class RecordingChannelGroup(BaseNeo):
     _single_parent_objects = ('Block',)
     _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),
                            ('channel_names', np.ndarray, 1, np.dtype('S'))) +
-                          BaseNeo._recommended_attrs)
+                          Container._recommended_attrs)
 
     def __init__(self, channel_names=None, channel_indexes=None, name=None,
                  description=None, file_origin=None, **annotations):
@@ -136,8 +136,10 @@ class RecordingChannelGroup(BaseNeo):
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        super(RecordingChannelGroup, self).__init__(name=name,
+                                                    description=description,
+                                                    file_origin=file_origin,
+                                                    **annotations)
 
         # Defaults
         if channel_indexes is None:
@@ -148,51 +150,3 @@ class RecordingChannelGroup(BaseNeo):
         # Store recommended attributes
         self.channel_names = channel_names
         self.channel_indexes = channel_indexes
-
-        # Initialize containers for child objects
-        self.analogsignalarrays = []
-        self.units = []
-        # Many to many relationship
-        self.recordingchannels = []
-
-        self.block = None
-
-    def merge(self, other):
-        '''
-        Merge the contents of another RecordingChannelGroup into this one.
-
-        For each :class:`RecordingChannel` in the other RecordingChannelGroup,
-        if its name matches that of a :class:`RecordingChannel` in this block,
-        the two RecordingChannels will be merged, otherwise it will be added as
-        a new RecordingChannel. The equivalent procedure is then applied to
-        each :class:`Unit`.
-
-        For each array-type object in the other :class:`RecordingChannelGroup`,
-        if its name matches that of an object of the same type in this segment,
-        the two arrays will be joined by concatenation.
-        '''
-        for container in ("recordingchannels", "units"):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
-            for obj in getattr(other, container):
-                if obj.name in lookup:
-                    lookup[obj.name].merge(obj)
-                else:
-                    getattr(self, container).append(obj)
-        for container in ("analogsignalarrays",):
-            objs = getattr(self, container)
-            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
-            for obj in getattr(other, container):
-                if obj.name in lookup:
-                    ind = lookup[obj.name]
-                    try:
-                        newobj = getattr(self, container)[ind].merge(obj)
-                    except AttributeError as e:
-                        raise AttributeError("%s. container=%s, obj.name=%s, \
-                                              shape=%s" % (e, container,
-                                                           obj.name,
-                                                           obj.shape))
-                    getattr(self, container)[ind] = newobj
-                else:
-                    lookup[obj.name] = obj
-                    getattr(self, container).append(obj)
-        # TODO: merge annotations

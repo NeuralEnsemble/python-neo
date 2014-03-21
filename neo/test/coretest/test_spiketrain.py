@@ -1475,39 +1475,23 @@ class TestPropertiesMethods(unittest.TestCase):
         unit.spikes = [self.train1]
         unit.create_many_to_one_relationship()
 
-        self.assertEqual(self.train1._container_child_objects, ())
-        self.assertEqual(self.train1._data_child_objects, ())
         self.assertEqual(self.train1._single_parent_objects,
                          ('Segment', 'Unit'))
-        self.assertEqual(self.train1._multi_child_objects, ())
         self.assertEqual(self.train1._multi_parent_objects, ())
-        self.assertEqual(self.train1._child_properties, ())
 
-        self.assertEqual(self.train1._single_child_objects, ())
-
-        self.assertEqual(self.train1._container_child_containers, ())
-        self.assertEqual(self.train1._data_child_containers, ())
-        self.assertEqual(self.train1._single_child_containers, ())
         self.assertEqual(self.train1._single_parent_containers,
                          ('segment', 'unit'))
-        self.assertEqual(self.train1._multi_child_containers, ())
         self.assertEqual(self.train1._multi_parent_containers, ())
 
-        self.assertEqual(self.train1._child_objects, ())
-        self.assertEqual(self.train1._child_containers, ())
         self.assertEqual(self.train1._parent_objects,
                          ('Segment', 'Unit'))
         self.assertEqual(self.train1._parent_containers,
                          ('segment', 'unit'))
 
-        self.assertEqual(self.train1.children, ())
         self.assertEqual(len(self.train1.parents), 2)
         self.assertEqual(self.train1.parents[0].name, 'seg1')
         self.assertEqual(self.train1.parents[1].name, 'unit1')
 
-        self.train1.create_many_to_one_relationship()
-        self.train1.create_many_to_many_relationship()
-        self.train1.create_relationship()
         assert_neo_object_is_compliant(self.train1)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")

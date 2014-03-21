@@ -186,34 +186,18 @@ class TestEventArray(unittest.TestCase):
         segment.eventarrays = [evta]
         segment.create_many_to_one_relationship()
 
-        self.assertEqual(evta._container_child_objects, ())
-        self.assertEqual(evta._data_child_objects, ())
         self.assertEqual(evta._single_parent_objects, ('Segment',))
-        self.assertEqual(evta._multi_child_objects, ())
         self.assertEqual(evta._multi_parent_objects, ())
-        self.assertEqual(evta._child_properties, ())
 
-        self.assertEqual(evta._single_child_objects, ())
-
-        self.assertEqual(evta._container_child_containers, ())
-        self.assertEqual(evta._data_child_containers, ())
-        self.assertEqual(evta._single_child_containers, ())
         self.assertEqual(evta._single_parent_containers, ('segment',))
-        self.assertEqual(evta._multi_child_containers, ())
         self.assertEqual(evta._multi_parent_containers, ())
 
-        self.assertEqual(evta._child_objects, ())
-        self.assertEqual(evta._child_containers, ())
         self.assertEqual(evta._parent_objects, ('Segment',))
         self.assertEqual(evta._parent_containers, ('segment',))
 
-        self.assertEqual(evta.children, ())
         self.assertEqual(len(evta.parents), 1)
         self.assertEqual(evta.parents[0].name, 'seg1')
 
-        evta.create_many_to_one_relationship()
-        evta.create_many_to_many_relationship()
-        evta.create_relationship()
         assert_neo_object_is_compliant(evta)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")

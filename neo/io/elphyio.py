@@ -4171,7 +4171,6 @@ class ElphyIO(BaseIO):
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
-            analog_signal.create_many_to_one_relationship()
             segment.analogsignals.append(analog_signal)
         # create a spiketrain for each
         # spike channel in the episode
@@ -4183,7 +4182,6 @@ class ElphyIO(BaseIO):
             for spk in range(1, n_spikes+1) :
                 spiketrain = self.read_spiketrain(episode, spk)
                 spiketrain.segment = segment
-                spiketrain.create_many_to_one_relationship()
                 segment.spiketrains.append( spiketrain )
         # segment
         return segment

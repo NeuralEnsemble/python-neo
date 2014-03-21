@@ -207,39 +207,23 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         rcg.analogsignalarrays = [signal]
         rcg.create_many_to_one_relationship()
 
-        self.assertEqual(signal._container_child_objects, ())
-        self.assertEqual(signal._data_child_objects, ())
         self.assertEqual(signal._single_parent_objects,
                          ('Segment', 'RecordingChannelGroup'))
-        self.assertEqual(signal._multi_child_objects, ())
         self.assertEqual(signal._multi_parent_objects, ())
-        self.assertEqual(signal._child_properties, ())
 
-        self.assertEqual(signal._single_child_objects, ())
-
-        self.assertEqual(signal._container_child_containers, ())
-        self.assertEqual(signal._data_child_containers, ())
-        self.assertEqual(signal._single_child_containers, ())
         self.assertEqual(signal._single_parent_containers,
                          ('segment', 'recordingchannelgroup'))
-        self.assertEqual(signal._multi_child_containers, ())
         self.assertEqual(signal._multi_parent_containers, ())
 
-        self.assertEqual(signal._child_objects, ())
-        self.assertEqual(signal._child_containers, ())
         self.assertEqual(signal._parent_objects,
                          ('Segment', 'RecordingChannelGroup'))
         self.assertEqual(signal._parent_containers,
                          ('segment', 'recordingchannelgroup'))
 
-        self.assertEqual(signal.children, ())
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')
         self.assertEqual(signal.parents[1].name, 'rcg1')
 
-        signal.create_many_to_one_relationship()
-        signal.create_many_to_many_relationship()
-        signal.create_relationship()
         assert_neo_object_is_compliant(signal)
 
     def test__repr(self):
