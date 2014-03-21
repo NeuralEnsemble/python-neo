@@ -3,6 +3,9 @@
 Tests of the neo.core.unit.Unit class
 """
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -11,170 +14,162 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.unit import Unit
 from neo.core import SpikeTrain, Spike, RecordingChannelGroup
-from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
+from neo.test.tools import (assert_neo_object_is_compliant,
+                            assert_arrays_equal,
+                            assert_same_sub_schema)
+from neo.test.generate_datasets import (fake_neo, get_fake_value,
+                                        get_fake_values, get_annotations,
+                                        clone_object, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        channel_indexes = get_fake_value('channel_indexes', np.ndarray, seed=0,
+                                         dim=1, dtype='i')
+        name = get_fake_value('name', str, seed=1, obj=Unit)
+        description = get_fake_value('description', str, seed=2, obj='Unit')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(Unit, annotate=False, seed=0)
+        res12 = get_fake_values('Unit', annotate=False, seed=0)
+        res21 = get_fake_values(Unit, annotate=True, seed=0)
+        res22 = get_fake_values('Unit', annotate=True, seed=0)
+
+        assert_arrays_equal(res11.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res12.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res21.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res22.pop('channel_indexes'), channel_indexes)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'Unit'
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, Unit))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        self.assertEqual(len(res.spiketrains), 1)
+        self.assertEqual(len(res.spikes), 1)
+
+        for child in res.children:
+            del child.annotations['i']
+            del child.annotations['j']
+        self.assertEqual(res.spiketrains[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.spikes[0].annotations,
+                         self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = Unit
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, Unit))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        self.assertEqual(len(res.spiketrains), 0)
+        self.assertEqual(len(res.spikes), 0)
 
 
 class TestUnit(unittest.TestCase):
     def setUp(self):
-        self.setup_spikes()
-        self.setup_spiketrains()
-        self.setup_units()
+        self.nchildren = 2
+        self.seed1 = 0
+        self.seed2 = 10000
+        self.unit1 = fake_neo(Unit, seed=self.seed1, n=self.nchildren)
+        self.unit2 = fake_neo(Unit, seed=self.seed2, n=self.nchildren)
+        self.targobj = self.unit1
 
-    def setup_units(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
-        self.unit1 = Unit(name='test', description='tester 1',
-                          file_origin='test.file', channels_indexes=[1],
-                          testarg1=1, **params)
-        self.unit2 = Unit(name='test', description='tester 2',
-                          file_origin='test.file', channels_indexes=[2],
-                          testarg1=1, **params)
-        self.unit1.annotate(testarg1=1.1, testarg0=[1, 2, 3])
-        self.unit2.annotate(testarg11=1.1, testarg10=[1, 2, 3])
+        self.spikes1 = self.unit1.spikes
+        self.spikes2 = self.unit2.spikes
+        self.trains1 = self.unit1.spiketrains
+        self.trains2 = self.unit2.spiketrains
 
-        self.unit1.spiketrains = self.train1
-        self.unit2.spiketrains = self.train2
+        self.spikes1a = clone_object(self.spikes1)
+        self.trains1a = clone_object(self.trains1)
 
-        self.unit1.spikes = self.spike1
-        self.unit2.spikes = self.spike2
+    def check_creation(self, unit):
+        assert_neo_object_is_compliant(unit)
 
-        self.unit1.create_many_to_one_relationship()
-        self.unit2.create_many_to_one_relationship()
+        seed = unit.annotations['seed']
 
-    def setup_spikes(self):
-        spikename11 = 'spike 1 1'
-        spikename12 = 'spike 1 2'
-        spikename21 = 'spike 2 1'
-        spikename22 = 'spike 2 2'
+        targ0 = get_fake_value('channel_indexes', np.ndarray, dim=1, dtype='i',
+                               seed=seed+0)
+        assert_arrays_equal(unit.channel_indexes, targ0)
 
-        spikedata11 = 10 * pq.ms
-        spikedata12 = 20 * pq.ms
-        spikedata21 = 30 * pq.s
-        spikedata22 = 40 * pq.s
+        targ1 = get_fake_value('name', str, seed=seed+1, obj=Unit)
+        self.assertEqual(unit.name, targ1)
 
-        self.spikenames1 = [spikename11, spikename12]
-        self.spikenames2 = [spikename21, spikename22]
-        self.spikenames = [spikename11, spikename12, spikename21, spikename22]
+        targ2 = get_fake_value('description', str,
+                               seed=seed+2, obj=Unit)
+        self.assertEqual(unit.description, targ2)
 
-        spike11 = Spike(spikedata11, t_stop=100*pq.s, name=spikename11)
-        spike12 = Spike(spikedata12, t_stop=100*pq.s, name=spikename12)
-        spike21 = Spike(spikedata21, t_stop=100*pq.s, name=spikename21)
-        spike22 = Spike(spikedata22, t_stop=100*pq.s, name=spikename22)
+        targ3 = get_fake_value('file_origin', str)
+        self.assertEqual(unit.file_origin, targ3)
 
-        self.spike1 = [spike11, spike12]
-        self.spike2 = [spike21, spike22]
-        self.spike = [spike11, spike12, spike21, spike22]
+        targ4 = get_annotations()
+        targ4['seed'] = seed
+        self.assertEqual(unit.annotations, targ4)
 
-    def setup_spiketrains(self):
-        trainname11 = 'spiketrain 1 1'
-        trainname12 = 'spiketrain 1 2'
-        trainname21 = 'spiketrain 2 1'
-        trainname22 = 'spiketrain 2 2'
+        self.assertTrue(hasattr(unit, 'spikes'))
+        self.assertTrue(hasattr(unit, 'spiketrains'))
 
-        traindata11 = np.arange(0, 10) * pq.ms
-        traindata12 = np.arange(10, 20) * pq.ms
-        traindata21 = np.arange(20, 30) * pq.s
-        traindata22 = np.arange(30, 40) * pq.s
+        self.assertEqual(len(unit.spikes), self.nchildren)
+        self.assertEqual(len(unit.spiketrains), self.nchildren)
 
-        self.trainnames1 = [trainname11, trainname12]
-        self.trainnames2 = [trainname21, trainname22]
-        self.trainnames = [trainname11, trainname12, trainname21, trainname22]
+    def test__creation(self):
+        self.check_creation(self.unit1)
+        self.check_creation(self.unit2)
 
-        train11 = SpikeTrain(traindata11, t_stop=100*pq.s, name=trainname11)
-        train12 = SpikeTrain(traindata12, t_stop=100*pq.s, name=trainname12)
-        train21 = SpikeTrain(traindata21, t_stop=100*pq.s, name=trainname21)
-        train22 = SpikeTrain(traindata22, t_stop=100*pq.s, name=trainname22)
+    def test__merge(self):
+        unit1a = fake_neo(Unit, seed=self.seed1, n=self.nchildren)
+        assert_same_sub_schema(self.unit1, unit1a)
+        unit1a.annotate(seed=self.seed2)
+        unit1a.spikes.append(self.spikes2[0])
+        unit1a.merge(self.unit2)
+        self.check_creation(self.unit2)
 
-        self.train1 = [train11, train12]
-        self.train2 = [train21, train22]
-        self.train = [train11, train12, train21, train22]
-
-    def test_unit_creation(self):
-        assert_neo_object_is_compliant(self.unit1)
-        assert_neo_object_is_compliant(self.unit2)
-
-        self.assertEqual(self.unit1.name, 'test')
-        self.assertEqual(self.unit2.name, 'test')
-
-        self.assertEqual(self.unit1.description, 'tester 1')
-        self.assertEqual(self.unit2.description, 'tester 2')
-
-        self.assertEqual(self.unit1.file_origin, 'test.file')
-        self.assertEqual(self.unit2.file_origin, 'test.file')
-
-        self.assertEqual(self.unit1.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(self.unit2.annotations['testarg10'], [1, 2, 3])
-
-        self.assertEqual(self.unit1.annotations['testarg1'], 1.1)
-        self.assertEqual(self.unit2.annotations['testarg1'], 1)
-        self.assertEqual(self.unit2.annotations['testarg11'], 1.1)
-
-        self.assertEqual(self.unit1.annotations['testarg2'], 'yes')
-        self.assertEqual(self.unit2.annotations['testarg2'], 'yes')
-
-        self.assertTrue(self.unit1.annotations['testarg3'])
-        self.assertTrue(self.unit2.annotations['testarg3'])
-
-        self.assertTrue(hasattr(self.unit1, 'spikes'))
-        self.assertTrue(hasattr(self.unit2, 'spikes'))
-
-        self.assertEqual(len(self.unit1.spikes), 2)
-        self.assertEqual(len(self.unit2.spikes), 2)
-
-        for res, targ in zip(self.unit1.spikes, self.spike1):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.unit2.spikes, self.spike2):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.unit1, 'spiketrains'))
-        self.assertTrue(hasattr(self.unit2, 'spiketrains'))
-
-        self.assertEqual(len(self.unit1.spiketrains), 2)
-        self.assertEqual(len(self.unit2.spiketrains), 2)
-
-        for res, targ in zip(self.unit1.spiketrains, self.train1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.unit2.spiketrains, self.train2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_unit_merge(self):
-        self.unit1.merge(self.unit2)
-
-        spikeres1 = [sig.name for sig in self.unit1.spikes]
-        spikeres2 = [sig.name for sig in self.unit2.spikes]
-
-        trainres1 = [sig.name for sig in self.unit1.spiketrains]
-        trainres2 = [sig.name for sig in self.unit2.spiketrains]
-
-        self.assertEqual(spikeres1, self.spikenames)
-        self.assertEqual(spikeres2, self.spikenames2)
-
-        self.assertEqual(trainres1, self.trainnames)
-        self.assertEqual(trainres2, self.trainnames2)
-
-        for res, targ in zip(self.unit1.spikes, self.spike):
-            self.assertEqual(res, targ)
-
-        for res, targ in zip(self.unit2.spikes, self.spike2):
-            self.assertEqual(res, targ)
-
-        for res, targ in zip(self.unit1.spiketrains, self.train):
-            assert_arrays_equal(res, targ)
-
-        for res, targ in zip(self.unit2.spiketrains, self.train2):
-            assert_arrays_equal(res, targ)
+        assert_same_sub_schema(self.spikes1a + self.spikes2[:1] + self.spikes2,
+                               unit1a.spikes)
+        assert_same_sub_schema(self.trains1a + self.trains2,
+                               unit1a.spiketrains)
 
     def test__children(self):
         rcg = RecordingChannelGroup(name='rcg1')
         rcg.units = [self.unit1]
         rcg.create_many_to_one_relationship()
+        assert_neo_object_is_compliant(self.unit1)
+        assert_neo_object_is_compliant(rcg)
+        targ = self.unit1
 
         self.assertEqual(self.unit1._container_child_objects, ())
         self.assertEqual(self.unit1._data_child_objects,
@@ -207,17 +202,13 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._parent_containers,
                          ('recordingchannelgroup',))
 
-        self.assertEqual(len(self.unit1.children),
-                         len(self.spike1) + len(self.train1))
-        self.assertEqual(self.unit1.children[0].name, self.spikenames1[0])
-        self.assertEqual(self.unit1.children[1].name, self.spikenames1[1])
-        self.assertEqual(self.unit1.children[2].name, self.trainnames1[0])
-        self.assertEqual(self.unit1.children[3].name, self.trainnames1[1])
+        self.assertEqual(len(self.unit1.children), self.nchildren*2)
+
+        assert_same_sub_schema(list(self.unit1.children),
+                               self.spikes1a+self.trains1a)
+
         self.assertEqual(len(self.unit1.parents), 1)
         self.assertEqual(self.unit1.parents[0].name, 'rcg1')
-
-        self.unit1.create_many_to_one_relationship()
-        assert_neo_object_is_compliant(self.unit1)
 
 
 if __name__ == "__main__":

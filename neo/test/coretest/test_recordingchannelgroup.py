@@ -3,6 +3,9 @@
 Tests of the neo.core.recordingchannelgroup.RecordingChannelGroup class
 """
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -11,118 +14,147 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.recordingchannelgroup import RecordingChannelGroup
 from neo.core import AnalogSignalArray, RecordingChannel, Unit, Block
-from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
+from neo.test.tools import (assert_neo_object_is_compliant,
+                            assert_arrays_equal,
+                            assert_same_sub_schema)
+from neo.test.generate_datasets import (fake_neo, get_fake_value,
+                                        get_fake_values, get_annotations,
+                                        clone_object, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        channel_indexes = get_fake_value('channel_indexes', np.ndarray, seed=0,
+                                         dim=1, dtype='i')
+        channel_names = get_fake_value('channel_names', np.ndarray, seed=1,
+                                       dim=1, dtype=np.dtype('S'))
+        name = get_fake_value('name', str, seed=2, obj=RecordingChannelGroup)
+        description = get_fake_value('description', str, seed=3,
+                                     obj='RecordingChannelGroup')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(RecordingChannelGroup, annotate=False, seed=0)
+        res12 = get_fake_values('RecordingChannelGroup',
+                                annotate=False, seed=0)
+        res21 = get_fake_values(RecordingChannelGroup, annotate=True, seed=0)
+        res22 = get_fake_values('RecordingChannelGroup', annotate=True, seed=0)
+
+        assert_arrays_equal(res11.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res12.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res21.pop('channel_indexes'), channel_indexes)
+        assert_arrays_equal(res22.pop('channel_indexes'), channel_indexes)
+
+        assert_arrays_equal(res11.pop('channel_names'), channel_names)
+        assert_arrays_equal(res12.pop('channel_names'), channel_names)
+        assert_arrays_equal(res21.pop('channel_names'), channel_names)
+        assert_arrays_equal(res22.pop('channel_names'), channel_names)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'RecordingChannelGroup'
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, RecordingChannelGroup))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        for child in res.children:
+            del child.annotations['i']
+            del child.annotations['j']
+            for subchild in child.children:
+                del subchild.annotations['i']
+                del subchild.annotations['j']
+
+        self.assertEqual(len(res.recordingchannels), 1)
+        rchan = res.recordingchannels[0]
+        self.assertEqual(rchan.annotations, self.annotations)
+
+        self.assertEqual(len(res.units), 1)
+        unit = res.units[0]
+        self.assertEqual(unit.annotations, self.annotations)
+
+        self.assertEqual(len(res.analogsignalarrays), 1)
+        self.assertEqual(res.analogsignalarrays[0].annotations,
+                         self.annotations)
+
+        self.assertEqual(len(rchan.analogsignals), 1)
+        self.assertEqual(len(rchan.irregularlysampledsignals), 1)
+        self.assertEqual(rchan.analogsignals[0].annotations,
+                         self.annotations)
+        self.assertEqual(rchan.irregularlysampledsignals[0].annotations,
+                         self.annotations)
+
+        self.assertEqual(len(unit.spiketrains), 1)
+        self.assertEqual(len(unit.spikes), 1)
+        self.assertEqual(unit.spiketrains[0].annotations,
+                         self.annotations)
+        self.assertEqual(unit.spikes[0].annotations,
+                         self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = RecordingChannelGroup
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, RecordingChannelGroup))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        self.assertEqual(len(res.recordingchannels), 0)
+        self.assertEqual(len(res.units), 0)
+        self.assertEqual(len(res.analogsignalarrays), 0)
 
 
 class TestRecordingChannelGroup(unittest.TestCase):
     def setUp(self):
-        self.setup_unit()
-        self.setup_analogsignalarrays()
-        self.setup_recordingchannels()
-        self.setup_recordingchannelgroups()
+        self.nchildren = 2
+        self.seed1 = 0
+        self.seed2 = 10000
+        self.rcg1 = fake_neo(RecordingChannelGroup,
+                             seed=self.seed1, n=self.nchildren)
+        self.rcg2 = fake_neo(RecordingChannelGroup,
+                             seed=self.seed2, n=self.nchildren)
+        self.targobj = self.rcg1
 
-    def setup_recordingchannelgroups(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
-        self.rcg1 = RecordingChannelGroup(name='test', description='tester 1',
-                                          file_origin='test.file',
-                                          testarg1=1, **params)
-        self.rcg2 = RecordingChannelGroup(name='test', description='tester 2',
-                                          file_origin='test.file',
-                                          testarg1=1, **params)
-        self.rcg1.annotate(testarg1=1.1, testarg0=[1, 2, 3])
-        self.rcg2.annotate(testarg11=1.1, testarg10=[1, 2, 3])
+        self.rchans1 = self.rcg1.recordingchannels
+        self.rchans2 = self.rcg2.recordingchannels
+        self.units1 = self.rcg1.units
+        self.units2 = self.rcg2.units
+        self.sigarrs1 = self.rcg1.analogsignalarrays
+        self.sigarrs2 = self.rcg2.analogsignalarrays
 
-        self.rcg1.units = self.units1
-        self.rcg2.units = self.units2
-        self.rcg1.recordingchannels = self.rchan1
-        self.rcg2.recordingchannels = self.rchan2
-        self.rcg1.analogsignalarrays = self.sigarr1
-        self.rcg2.analogsignalarrays = self.sigarr2
+        self.rchans1a = clone_object(self.rchans1)
+        self.units1a = clone_object(self.units1)
+        self.sigarrs1a = clone_object(self.sigarrs1, n=2)
 
-        self.rcg1.create_many_to_one_relationship()
-        self.rcg2.create_many_to_one_relationship()
-
-    def setup_unit(self):
-        unitname11 = 'unit 1 1'
-        unitname12 = 'unit 1 2'
-        unitname21 = 'unit 2 1'
-        unitname22 = 'unit 2 2'
-
-        self.unitnames1 = [unitname11, unitname12]
-        self.unitnames2 = [unitname21, unitname22, unitname11]
-        self.unitnames = [unitname11, unitname12, unitname21, unitname22]
-
-        unit11 = Unit(name=unitname11, channel_indexes=np.array([1]))
-        unit12 = Unit(name=unitname12, channel_indexes=np.array([2]))
-        unit21 = Unit(name=unitname21, channel_indexes=np.array([1]))
-        unit22 = Unit(name=unitname22, channel_indexes=np.array([2]))
-        unit23 = Unit(name=unitname11, channel_indexes=np.array([1]))
-
-        self.units1 = [unit11, unit12]
-        self.units2 = [unit21, unit22, unit23]
-        self.units = [unit11, unit12, unit21, unit22]
-
-    def setup_recordingchannels(self):
-        rchanname11 = 'chan 1 1'
-        rchanname12 = 'chan 1 2'
-        rchanname21 = 'chan 2 1'
-        rchanname22 = 'chan 2 2'
-
-        self.rchannames1 = [rchanname11, rchanname12]
-        self.rchannames2 = [rchanname21, rchanname22, rchanname11]
-        self.rchannames = [rchanname11, rchanname12, rchanname21, rchanname22]
-
-        rchan11 = RecordingChannel(name=rchanname11)
-        rchan12 = RecordingChannel(name=rchanname12)
-        rchan21 = RecordingChannel(name=rchanname21)
-        rchan22 = RecordingChannel(name=rchanname22)
-        rchan23 = RecordingChannel(name=rchanname11)
-
-        self.rchan1 = [rchan11, rchan12]
-        self.rchan2 = [rchan21, rchan22, rchan23]
-        self.rchan = [rchan11, rchan12, rchan21, rchan22]
-
-    def setup_analogsignalarrays(self):
-        sigarrname11 = 'analogsignalarray 1 1'
-        sigarrname12 = 'analogsignalarray 1 2'
-        sigarrname21 = 'analogsignalarray 2 1'
-        sigarrname22 = 'analogsignalarray 2 2'
-
-        sigarrdata11 = np.arange(0, 10).reshape(5, 2) * pq.mV
-        sigarrdata12 = np.arange(10, 20).reshape(5, 2) * pq.mV
-        sigarrdata21 = np.arange(20, 30).reshape(5, 2) * pq.V
-        sigarrdata22 = np.arange(30, 40).reshape(5, 2) * pq.V
-        sigarrdata112 = np.hstack([sigarrdata11, sigarrdata11]) * pq.mV
-
-        self.sigarrnames1 = [sigarrname11, sigarrname12]
-        self.sigarrnames2 = [sigarrname21, sigarrname22, sigarrname11]
-        self.sigarrnames = [sigarrname11, sigarrname12,
-                            sigarrname21, sigarrname22]
-
-        sigarr11 = AnalogSignalArray(sigarrdata11, name=sigarrname11,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1]))
-        sigarr12 = AnalogSignalArray(sigarrdata12, name=sigarrname12,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([2]))
-        sigarr21 = AnalogSignalArray(sigarrdata21, name=sigarrname21,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1]))
-        sigarr22 = AnalogSignalArray(sigarrdata22, name=sigarrname22,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([2]))
-        sigarr23 = AnalogSignalArray(sigarrdata11, name=sigarrname11,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1]))
-        sigarr112 = AnalogSignalArray(sigarrdata112, name=sigarrname11,
-                                      sampling_rate=1*pq.Hz,
-                                      channel_index=np.array([1]))
-
-        self.sigarr1 = [sigarr11, sigarr12]
-        self.sigarr2 = [sigarr21, sigarr22, sigarr23]
-        self.sigarr = [sigarr112, sigarr12, sigarr21, sigarr22]
+        self.targobj = self.rcg1
 
     def test__recordingchannelgroup__init_defaults(self):
         rcg = RecordingChannelGroup()
@@ -145,93 +177,64 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_arrays_equal(rcg.channel_names, np.array([], dtype='S'))
         assert_arrays_equal(rcg.channel_indexes, np.array([1]))
 
-    def test_recordingchannelgroup__compliance(self):
-        assert_neo_object_is_compliant(self.rcg1)
-        assert_neo_object_is_compliant(self.rcg2)
+    def check_creation(self, rcg):
+        assert_neo_object_is_compliant(rcg)
 
-        self.assertEqual(self.rcg1.name, 'test')
-        self.assertEqual(self.rcg2.name, 'test')
+        seed = rcg.annotations['seed']
 
-        self.assertEqual(self.rcg1.description, 'tester 1')
-        self.assertEqual(self.rcg2.description, 'tester 2')
+        for i, rchan in enumerate(rcg.recordingchannels):
+            self.assertEqual(rchan.name, rcg.channel_names[i].astype(str))
+            self.assertEqual(rchan.index, rcg.channel_indexes[i])
+        for i, unit in enumerate(rcg.units):
+            for sigarr in rcg.analogsignalarrays:
+                self.assertEqual(unit.channel_indexes[0],
+                                 sigarr.channel_index[i])
 
-        self.assertEqual(self.rcg1.file_origin, 'test.file')
-        self.assertEqual(self.rcg2.file_origin, 'test.file')
+        targ2 = get_fake_value('name', str, seed=seed+2,
+                               obj=RecordingChannelGroup)
+        self.assertEqual(rcg.name, targ2)
 
-        self.assertEqual(self.rcg1.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(self.rcg2.annotations['testarg10'], [1, 2, 3])
+        targ3 = get_fake_value('description', str,
+                               seed=seed+3, obj=RecordingChannelGroup)
+        self.assertEqual(rcg.description, targ3)
 
-        self.assertEqual(self.rcg1.annotations['testarg1'], 1.1)
-        self.assertEqual(self.rcg2.annotations['testarg1'], 1)
-        self.assertEqual(self.rcg2.annotations['testarg11'], 1.1)
+        targ4 = get_fake_value('file_origin', str)
+        self.assertEqual(rcg.file_origin, targ4)
 
-        self.assertEqual(self.rcg1.annotations['testarg2'], 'yes')
-        self.assertEqual(self.rcg2.annotations['testarg2'], 'yes')
+        targ5 = get_annotations()
+        targ5['seed'] = seed
+        self.assertEqual(rcg.annotations, targ5)
 
-        self.assertTrue(self.rcg1.annotations['testarg3'])
-        self.assertTrue(self.rcg2.annotations['testarg3'])
+        self.assertTrue(hasattr(rcg, 'recordingchannels'))
+        self.assertTrue(hasattr(rcg, 'units'))
+        self.assertTrue(hasattr(rcg, 'analogsignalarrays'))
 
-        self.assertTrue(hasattr(self.rcg1, 'units'))
-        self.assertTrue(hasattr(self.rcg2, 'units'))
+        self.assertEqual(len(rcg.recordingchannels), self.nchildren)
+        self.assertEqual(len(rcg.units), self.nchildren)
+        self.assertEqual(len(rcg.analogsignalarrays), self.nchildren)
 
-        self.assertEqual(len(self.rcg1.units), 2)
-        self.assertEqual(len(self.rcg2.units), 3)
+    def test__creation(self):
+        self.check_creation(self.rcg1)
+        self.check_creation(self.rcg2)
 
-        self.assertEqual(self.rcg1.units, self.units1)
-        self.assertEqual(self.rcg2.units, self.units2)
+    def test__merge(self):
+        rcg1a = fake_neo(RecordingChannelGroup,
+                         seed=self.seed1, n=self.nchildren)
+        assert_same_sub_schema(self.rcg1, rcg1a)
+        rcg1a.annotate(seed=self.seed2)
+        rcg1a.analogsignalarrays.append(self.sigarrs2[0])
+        rcg1a.merge(self.rcg2)
+        self.check_creation(self.rcg2)
+        sigarrm = self.sigarrs2[0].merge(self.sigarrs2[0])
 
-        self.assertTrue(hasattr(self.rcg1, 'recordingchannels'))
-        self.assertTrue(hasattr(self.rcg2, 'recordingchannels'))
-
-        self.assertEqual(len(self.rcg1.recordingchannels), 2)
-        self.assertEqual(len(self.rcg2.recordingchannels), 3)
-
-        for res, targ in zip(self.rcg1.recordingchannels, self.rchan1):
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.rcg2.recordingchannels, self.rchan2):
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.rcg1, 'analogsignalarrays'))
-        self.assertTrue(hasattr(self.rcg2, 'analogsignalarrays'))
-
-        self.assertEqual(len(self.rcg1.analogsignalarrays), 2)
-        self.assertEqual(len(self.rcg2.analogsignalarrays), 3)
-
-        for res, targ in zip(self.rcg1.analogsignalarrays, self.sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.rcg2.analogsignalarrays, self.sigarr2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_recordingchannelgroup__merge(self):
-        self.rcg1.merge(self.rcg2)
-
-        chanres1 = [chan.name for chan in self.rcg1.recordingchannels]
-        chanres2 = [chan.name for chan in self.rcg2.recordingchannels]
-
-        unitres1 = [unit.name for unit in self.rcg1.units]
-        unitres2 = [unit.name for unit in self.rcg2.units]
-
-        sigarrres1 = [sigarr.name for sigarr in self.rcg1.analogsignalarrays]
-        sigarrres2 = [sigarr.name for sigarr in self.rcg2.analogsignalarrays]
-
-        self.assertEqual(chanres1, self.rchannames)
-        self.assertEqual(chanres2, self.rchannames2)
-
-        self.assertEqual(unitres1, self.unitnames)
-        self.assertEqual(unitres2, self.unitnames2)
-
-        self.assertEqual(sigarrres1, self.sigarrnames)
-        self.assertEqual(sigarrres2, self.sigarrnames2)
-
-        for res, targ in zip(self.rcg1.analogsignalarrays, self.sigarr):
-            assert_arrays_equal(res, targ)
-
-        for res, targ in zip(self.rcg2.analogsignalarrays,  self.sigarr2):
-            assert_arrays_equal(res, targ)
+        assert_same_sub_schema(self.sigarrs1a + [sigarrm] + self.sigarrs2[1:],
+                               rcg1a.analogsignalarrays,
+                               exclude=['channel_index'])
+        assert_same_sub_schema(self.units1a + self.units2,
+                               rcg1a.units)
+        assert_same_sub_schema(self.rchans1a + self.rchans2,
+                               rcg1a.recordingchannels,
+                               exclude=['channel_index'])
 
     def test__children(self):
         blk = Block(name='block1')
@@ -265,23 +268,14 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(self.rcg1._parent_objects, ('Block',))
         self.assertEqual(self.rcg1._parent_containers, ('block',))
 
-        self.assertEqual(len(self.rcg1.children),
-                         (len(self.units1) +
-                          len(self.rchan1) +
-                          len(self.sigarr1)))
-        self.assertEqual(self.rcg1.children[0].name, self.unitnames1[0])
-        self.assertEqual(self.rcg1.children[1].name, self.unitnames1[1])
-        self.assertEqual(self.rcg1.children[2].name, self.sigarrnames1[0])
-        self.assertEqual(self.rcg1.children[3].name, self.sigarrnames1[1])
-        self.assertEqual(self.rcg1.children[4].name, self.rchannames1[0])
-        self.assertEqual(self.rcg1.children[5].name, self.rchannames1[1])
+        self.assertEqual(len(self.rcg1.children), self.nchildren*3)
+
+        assert_same_sub_schema(list(self.rcg1.children),
+                               self.units1a+self.sigarrs1a+self.rchans1a,
+                               exclude=['channel_index'])
+
         self.assertEqual(len(self.rcg1.parents), 1)
         self.assertEqual(self.rcg1.parents[0].name, 'block1')
-
-        self.rcg1.create_many_to_one_relationship()
-        self.rcg1.create_many_to_many_relationship()
-        self.rcg1.create_relationship()
-        assert_neo_object_is_compliant(self.rcg1)
 
 
 if __name__ == '__main__':

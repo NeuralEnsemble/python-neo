@@ -16,6 +16,13 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.baseneo import (BaseNeo, _check_annotations,
                               merge_annotation, merge_annotations)
 from neo.test.tools import assert_arrays_equal
@@ -89,19 +96,25 @@ class TestBaseNeo(unittest.TestCase):
         base = BaseNeo()
         base.annotate(test1=1, test2=1)
         result1 = {'test1': 1, 'test2': 1}
+
         self.assertDictEqual(result1, base.annotations)
+
         base.annotate(test3=2, test4=3)
         result2 = {'test3': 2, 'test4': 3}
         result2a = dict(list(result1.items()) + list(result2.items()))
+
         self.assertDictContainsSubset(result1, base.annotations)
         self.assertDictContainsSubset(result2, base.annotations)
         self.assertDictEqual(result2a, base.annotations)
+
         base.annotate(test1=5, test2=8)
         result3 = {'test1': 5, 'test2': 8}
         result3a = dict(list(result3.items()) + list(result2.items()))
+
         self.assertDictContainsSubset(result2, base.annotations)
         self.assertDictContainsSubset(result3, base.annotations)
         self.assertDictEqual(result3a, base.annotations)
+
         self.assertNotEqual(base.annotations['test1'], result1['test1'])
         self.assertNotEqual(base.annotations['test2'], result1['test2'])
 
@@ -909,6 +922,17 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
             pass
         value = [Foo(), Foo(), Foo()]
         self.assertRaises(ValueError, self.base.annotate, data=value)
+
+
+@unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+class Test_pprint(unittest.TestCase):
+    def test__pretty(self):
+        name = 'an object'
+        description = 'this is a test'
+        obj = BaseNeo(name=name, description=description)
+        res = pretty(obj)
+        targ = "BaseNeo name: '%s' description: '%s'" % (name, description)
+        self.assertEqual(res, targ)
 
 
 if __name__ == "__main__":

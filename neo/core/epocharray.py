@@ -99,7 +99,7 @@ class EpochArray(BaseNeo):
 
         objs = ['%s@%s for %s' % (label, time, dur) for
                 label, time, dur in zip(labels, self.times, self.durations)]
-        return '<EventArray: %s>' % ', '.join(objs)
+        return '<EpochArray: %s>' % ', '.join(objs)
 
     def merge(self, other):
         '''

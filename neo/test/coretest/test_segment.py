@@ -3,6 +3,11 @@
 Tests of the neo.core.segment.Segment class
 """
 
+# needed for python 3 compatibility
+from __future__ import absolute_import, division, print_function
+
+from datetime import datetime
+
 try:
     import unittest2 as unittest
 except ImportError:
@@ -11,382 +16,173 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.segment import Segment
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       Epoch, EpochArray, Event, EventArray,
                       IrregularlySampledSignal, RecordingChannelGroup,
                       Spike, SpikeTrain, Unit)
-from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
+from neo.test.tools import (assert_neo_object_is_compliant,
+                            assert_arrays_equal,
+                            assert_same_sub_schema)
+from neo.test.generate_datasets import (fake_neo, get_fake_value,
+                                        get_fake_values, get_annotations,
+                                        clone_object, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        file_datetime = get_fake_value('file_datetime', datetime, seed=0)
+        rec_datetime = get_fake_value('rec_datetime', datetime, seed=1)
+        index = get_fake_value('index', int, seed=2)
+        name = get_fake_value('name', str, seed=3, obj=Segment)
+        description = get_fake_value('description', str, seed=4, obj='Segment')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'file_datetime': file_datetime,
+                  'rec_datetime': rec_datetime,
+                  'index': index,
+                  'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(Segment, annotate=False, seed=0)
+        res12 = get_fake_values('Segment', annotate=False, seed=0)
+        res21 = get_fake_values(Segment, annotate=True, seed=0)
+        res22 = get_fake_values('Segment', annotate=True, seed=0)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = Segment
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, Segment))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        self.assertEqual(len(res.analogsignalarrays), 1)
+        self.assertEqual(len(res.analogsignals), 1)
+        self.assertEqual(len(res.irregularlysampledsignals), 1)
+        self.assertEqual(len(res.spiketrains), 1)
+        self.assertEqual(len(res.spikes), 1)
+        self.assertEqual(len(res.events), 1)
+        self.assertEqual(len(res.epochs), 1)
+        self.assertEqual(len(res.eventarrays), 1)
+        self.assertEqual(len(res.epocharrays), 1)
+        for child in res.children:
+            del child.annotations['i']
+            del child.annotations['j']
+
+        self.assertEqual(res.analogsignalarrays[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.analogsignals[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.irregularlysampledsignals[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.spiketrains[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.spikes[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.events[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.epochs[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.eventarrays[0].annotations,
+                         self.annotations)
+        self.assertEqual(res.epocharrays[0].annotations,
+                         self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'Segment'
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, Segment))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+        self.assertEqual(len(res.analogsignalarrays), 0)
+        self.assertEqual(len(res.analogsignals), 0)
+        self.assertEqual(len(res.irregularlysampledsignals), 0)
+        self.assertEqual(len(res.spiketrains), 0)
+        self.assertEqual(len(res.spikes), 0)
+        self.assertEqual(len(res.events), 0)
+        self.assertEqual(len(res.epochs), 0)
+        self.assertEqual(len(res.eventarrays), 0)
+        self.assertEqual(len(res.epocharrays), 0)
 
 
 class TestSegment(unittest.TestCase):
     def setUp(self):
-        self.setup_analogsignals()
-        self.setup_analogsignalarrays()
-        self.setup_epochs()
-        self.setup_epocharrays()
-        self.setup_events()
-        self.setup_eventarrays()
-        self.setup_irregularlysampledsignals()
-        self.setup_spikes()
-        self.setup_spiketrains()
-
-        self.setup_units()
-        self.setup_segments()
-
-    def setup_segments(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
-        self.segment1 = Segment(name='test', description='tester 1',
-                                file_origin='test.file',
-                                testarg1=1, **params)
-        self.segment2 = Segment(name='test', description='tester 2',
-                                file_origin='test.file',
-                                testarg1=1, **params)
-        self.segment1.annotate(testarg1=1.1, testarg0=[1, 2, 3])
-        self.segment2.annotate(testarg11=1.1, testarg10=[1, 2, 3])
-
-        self.segment1.analogsignals = self.sig1
-        self.segment2.analogsignals = self.sig2
-
-        self.segment1.analogsignalarrays = self.sigarr1
-        self.segment2.analogsignalarrays = self.sigarr2
-
-        self.segment1.epochs = self.epoch1
-        self.segment2.epochs = self.epoch2
-
-        self.segment1.epocharrays = self.epocharr1
-        self.segment2.epocharrays = self.epocharr2
-
-        self.segment1.events = self.event1
-        self.segment2.events = self.event2
-
-        self.segment1.eventarrays = self.eventarr1
-        self.segment2.eventarrays = self.eventarr2
-
-        self.segment1.irregularlysampledsignals = self.irsig1
-        self.segment2.irregularlysampledsignals = self.irsig2
-
-        self.segment1.spikes = self.spike1
-        self.segment2.spikes = self.spike2
-
-        self.segment1.spiketrains = self.train1
-        self.segment2.spiketrains = self.train2
-
-        self.segment1.create_many_to_one_relationship()
-        self.segment2.create_many_to_one_relationship()
-
-    def setup_units(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
-        self.unit1 = Unit(name='test', description='tester 1',
-                          file_origin='test.file',
-                          channel_indexes=np.array([1]),
-                          testarg1=1, **params)
-        self.unit2 = Unit(name='test', description='tester 2',
-                          file_origin='test.file',
-                          channel_indexes=np.array([2]),
-                          testarg1=1, **params)
-        self.unit1.annotate(testarg1=1.1, testarg0=[1, 2, 3])
-        self.unit2.annotate(testarg11=1.1, testarg10=[1, 2, 3])
-
-        self.unit1train = [self.train1[0], self.train2[1]]
-        self.unit2train = [self.train1[1], self.train2[0]]
-
-        self.unit1.spiketrains = self.unit1train
-        self.unit2.spiketrains = self.unit2train
-
-        self.unit1spike = [self.spike1[0], self.spike2[1]]
-        self.unit2spike = [self.spike1[1], self.spike2[0]]
-
-        self.unit1.spikes = self.unit1spike
-        self.unit2.spikes = self.unit2spike
-
-        self.unit1.create_many_to_one_relationship()
-        self.unit2.create_many_to_one_relationship()
-
-    def setup_analogsignals(self):
-        signame11 = 'analogsignal 1 1'
-        signame12 = 'analogsignal 1 2'
-        signame21 = 'analogsignal 2 1'
-        signame22 = 'analogsignal 2 2'
-
-        sigdata11 = np.arange(0, 10) * pq.mV
-        sigdata12 = np.arange(10, 20) * pq.mV
-        sigdata21 = np.arange(20, 30) * pq.V
-        sigdata22 = np.arange(30, 40) * pq.V
-
-        self.signames1 = [signame11, signame12]
-        self.signames2 = [signame21, signame22]
-        self.signames = [signame11, signame12, signame21, signame22]
-
-        sig11 = AnalogSignal(sigdata11, name=signame11,
-                             channel_index=1, sampling_rate=1*pq.Hz)
-        sig12 = AnalogSignal(sigdata12, name=signame12,
-                             channel_index=2, sampling_rate=1*pq.Hz)
-        sig21 = AnalogSignal(sigdata21, name=signame21,
-                             channel_index=1, sampling_rate=1*pq.Hz)
-        sig22 = AnalogSignal(sigdata22, name=signame22,
-                             channel_index=2, sampling_rate=1*pq.Hz)
-
-        self.sig1 = [sig11, sig12]
-        self.sig2 = [sig21, sig22]
-        self.sig = [sig11, sig12, sig21, sig22]
-
-        self.chan1sig = [self.sig1[0], self.sig2[0]]
-        self.chan2sig = [self.sig1[1], self.sig2[1]]
-
-    def setup_analogsignalarrays(self):
-        sigarrname11 = 'analogsignalarray 1 1'
-        sigarrname12 = 'analogsignalarray 1 2'
-        sigarrname21 = 'analogsignalarray 2 1'
-        sigarrname22 = 'analogsignalarray 2 2'
-
-        sigarrdata11 = np.arange(0, 10).reshape(5, 2) * pq.mV
-        sigarrdata12 = np.arange(10, 20).reshape(5, 2) * pq.mV
-        sigarrdata21 = np.arange(20, 30).reshape(5, 2) * pq.V
-        sigarrdata22 = np.arange(30, 40).reshape(5, 2) * pq.V
-        sigarrdata112 = np.hstack([sigarrdata11, sigarrdata11]) * pq.mV
-
-        self.sigarrnames1 = [sigarrname11, sigarrname12]
-        self.sigarrnames2 = [sigarrname21, sigarrname22, sigarrname11]
-        self.sigarrnames = [sigarrname11, sigarrname12,
-                            sigarrname21, sigarrname22]
-
-        sigarr11 = AnalogSignalArray(sigarrdata11, name=sigarrname11,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1, 2]))
-        sigarr12 = AnalogSignalArray(sigarrdata12, name=sigarrname12,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([2, 1]))
-        sigarr21 = AnalogSignalArray(sigarrdata21, name=sigarrname21,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1, 2]))
-        sigarr22 = AnalogSignalArray(sigarrdata22, name=sigarrname22,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([2, 1]))
-        sigarr23 = AnalogSignalArray(sigarrdata11, name=sigarrname11,
-                                     sampling_rate=1*pq.Hz,
-                                     channel_index=np.array([1, 2]))
-        sigarr112 = AnalogSignalArray(sigarrdata112, name=sigarrname11,
-                                      sampling_rate=1*pq.Hz,
-                                      channel_index=np.array([1, 2]))
-
-        self.sigarr1 = [sigarr11, sigarr12]
-        self.sigarr2 = [sigarr21, sigarr22, sigarr23]
-        self.sigarr = [sigarr112, sigarr12, sigarr21, sigarr22]
-
-        self.chan1sigarr1 = [sigarr11[:, 0:1], sigarr12[:, 1:2]]
-        self.chan2sigarr1 = [sigarr11[:, 1:2], sigarr12[:, 0:1]]
-        self.chan1sigarr2 = [sigarr21[:, 0:1], sigarr22[:, 1:2],
-                             sigarr23[:, 0:1]]
-        self.chan2sigarr2 = [sigarr21[:, 1:2], sigarr22[:, 0:1],
-                             sigarr23[:, 0:1]]
-
-    def setup_epochs(self):
-        epochname11 = 'epoch 1 1'
-        epochname12 = 'epoch 1 2'
-        epochname21 = 'epoch 2 1'
-        epochname22 = 'epoch 2 2'
-
-        epochtime11 = 10 * pq.ms
-        epochtime12 = 20 * pq.ms
-        epochtime21 = 30 * pq.s
-        epochtime22 = 40 * pq.s
-
-        epochdur11 = 11 * pq.s
-        epochdur12 = 21 * pq.s
-        epochdur21 = 31 * pq.ms
-        epochdur22 = 41 * pq.ms
-
-        self.epochnames1 = [epochname11, epochname12]
-        self.epochnames2 = [epochname21, epochname22]
-        self.epochnames = [epochname11, epochname12, epochname21, epochname22]
-
-        epoch11 = Epoch(epochtime11, epochdur11,
-                        label=epochname11, name=epochname11, channel_index=1,
-                        testattr=True)
-        epoch12 = Epoch(epochtime12, epochdur12,
-                        label=epochname12, name=epochname12, channel_index=2,
-                        testattr=False)
-        epoch21 = Epoch(epochtime21, epochdur21,
-                        label=epochname21, name=epochname21, channel_index=1)
-        epoch22 = Epoch(epochtime22, epochdur22,
-                        label=epochname22, name=epochname22, channel_index=2)
-
-        self.epoch1 = [epoch11, epoch12]
-        self.epoch2 = [epoch21, epoch22]
-        self.epoch = [epoch11, epoch12, epoch21, epoch22]
-
-    def setup_epocharrays(self):
-        epocharrname11 = 'epocharr 1 1'
-        epocharrname12 = 'epocharr 1 2'
-        epocharrname21 = 'epocharr 2 1'
-        epocharrname22 = 'epocharr 2 2'
-
-        epocharrtime11 = np.arange(0, 10) * pq.ms
-        epocharrtime12 = np.arange(10, 20) * pq.ms
-        epocharrtime21 = np.arange(20, 30) * pq.s
-        epocharrtime22 = np.arange(30, 40) * pq.s
-
-        epocharrdur11 = np.arange(1, 11) * pq.s
-        epocharrdur12 = np.arange(11, 21) * pq.s
-        epocharrdur21 = np.arange(21, 31) * pq.ms
-        epocharrdur22 = np.arange(31, 41) * pq.ms
-
-        self.epocharrnames1 = [epocharrname11, epocharrname12]
-        self.epocharrnames2 = [epocharrname21, epocharrname22]
-        self.epocharrnames = [epocharrname11,
-                              epocharrname12, epocharrname21, epocharrname22]
-
-        epocharr11 = EpochArray(epocharrtime11, epocharrdur11,
-                                label=epocharrname11, name=epocharrname11)
-        epocharr12 = EpochArray(epocharrtime12, epocharrdur12,
-                                label=epocharrname12, name=epocharrname12)
-        epocharr21 = EpochArray(epocharrtime21, epocharrdur21,
-                                label=epocharrname21, name=epocharrname21)
-        epocharr22 = EpochArray(epocharrtime22, epocharrdur22,
-                                label=epocharrname22, name=epocharrname22)
-
-        self.epocharr1 = [epocharr11, epocharr12]
-        self.epocharr2 = [epocharr21, epocharr22]
-        self.epocharr = [epocharr11, epocharr12, epocharr21, epocharr22]
-
-    def setup_events(self):
-        eventname11 = 'event 1 1'
-        eventname12 = 'event 1 2'
-        eventname21 = 'event 2 1'
-        eventname22 = 'event 2 2'
-
-        eventtime11 = 10 * pq.ms
-        eventtime12 = 20 * pq.ms
-        eventtime21 = 30 * pq.s
-        eventtime22 = 40 * pq.s
-
-        self.eventnames1 = [eventname11, eventname12]
-        self.eventnames2 = [eventname21, eventname22]
-        self.eventnames = [eventname11, eventname12, eventname21, eventname22]
-
-        params1 = {'testattr': True}
-        params2 = {'testattr': 5}
-        event11 = Event(eventtime11, label=eventname11, name=eventname11,
-                        **params1)
-        event12 = Event(eventtime12, label=eventname12, name=eventname12,
-                        **params2)
-        event21 = Event(eventtime21, label=eventname21, name=eventname21)
-        event22 = Event(eventtime22, label=eventname22, name=eventname22)
-
-        self.event1 = [event11, event12]
-        self.event2 = [event21, event22]
-        self.event = [event11, event12, event21, event22]
-
-    def setup_eventarrays(self):
-        eventarrname11 = 'eventarr 1 1'
-        eventarrname12 = 'eventarr 1 2'
-        eventarrname21 = 'eventarr 2 1'
-        eventarrname22 = 'eventarr 2 2'
-
-        eventarrtime11 = np.arange(0, 10) * pq.ms
-        eventarrtime12 = np.arange(10, 20) * pq.ms
-        eventarrtime21 = np.arange(20, 30) * pq.s
-        eventarrtime22 = np.arange(30, 40) * pq.s
-
-        self.eventarrnames1 = [eventarrname11, eventarrname12]
-        self.eventarrnames2 = [eventarrname21, eventarrname22]
-        self.eventarrnames = [eventarrname11,
-                              eventarrname12, eventarrname21, eventarrname22]
-
-        eventarr11 = EventArray(eventarrtime11,
-                                label=eventarrname11, name=eventarrname11)
-        eventarr12 = EventArray(eventarrtime12,
-                                label=eventarrname12, name=eventarrname12)
-        eventarr21 = EventArray(eventarrtime21,
-                                label=eventarrname21, name=eventarrname21)
-        eventarr22 = EventArray(eventarrtime22,
-                                label=eventarrname22, name=eventarrname22)
-
-        self.eventarr1 = [eventarr11, eventarr12]
-        self.eventarr2 = [eventarr21, eventarr22]
-        self.eventarr = [eventarr11, eventarr12, eventarr21, eventarr22]
-
-    def setup_irregularlysampledsignals(self):
-        irsigname11 = 'irregularsignal 1 1'
-        irsigname12 = 'irregularsignal 1 2'
-        irsigname21 = 'irregularsignal 2 1'
-        irsigname22 = 'irregularsignal 2 2'
-
-        irsigdata11 = np.arange(0, 10) * pq.mA
-        irsigdata12 = np.arange(10, 20) * pq.mA
-        irsigdata21 = np.arange(20, 30) * pq.A
-        irsigdata22 = np.arange(30, 40) * pq.A
-
-        irsigtimes11 = np.arange(0, 10) * pq.ms
-        irsigtimes12 = np.arange(10, 20) * pq.ms
-        irsigtimes21 = np.arange(20, 30) * pq.s
-        irsigtimes22 = np.arange(30, 40) * pq.s
-
-        self.irsignames1 = [irsigname11, irsigname12]
-        self.irsignames2 = [irsigname21, irsigname22]
-        self.irsignames = [irsigname11, irsigname12, irsigname21, irsigname22]
-
-        irsig11 = IrregularlySampledSignal(irsigtimes11, irsigdata11,
-                                           name=irsigname11)
-        irsig12 = IrregularlySampledSignal(irsigtimes12, irsigdata12,
-                                           name=irsigname12)
-        irsig21 = IrregularlySampledSignal(irsigtimes21, irsigdata21,
-                                           name=irsigname21)
-        irsig22 = IrregularlySampledSignal(irsigtimes22, irsigdata22,
-                                           name=irsigname22)
-
-        self.irsig1 = [irsig11, irsig12]
-        self.irsig2 = [irsig21, irsig22]
-        self.irsig = [irsig11, irsig12, irsig21, irsig22]
-
-    def setup_spikes(self):
-        spikename11 = 'spike 1 1'
-        spikename12 = 'spike 1 2'
-        spikename21 = 'spike 2 1'
-        spikename22 = 'spike 2 2'
-
-        spikedata11 = 10 * pq.ms
-        spikedata12 = 20 * pq.ms
-        spikedata21 = 30 * pq.s
-        spikedata22 = 40 * pq.s
-
-        self.spikenames1 = [spikename11, spikename12]
-        self.spikenames2 = [spikename21, spikename22]
-        self.spikenames = [spikename11, spikename12, spikename21, spikename22]
-
-        spike11 = Spike(spikedata11, t_stop=100*pq.s, name=spikename11)
-        spike12 = Spike(spikedata12, t_stop=100*pq.s, name=spikename12)
-        spike21 = Spike(spikedata21, t_stop=100*pq.s, name=spikename21)
-        spike22 = Spike(spikedata22, t_stop=100*pq.s, name=spikename22)
-
-        self.spike1 = [spike11, spike12]
-        self.spike2 = [spike21, spike22]
-        self.spike = [spike11, spike12, spike21, spike22]
-
-    def setup_spiketrains(self):
-        trainname11 = 'spiketrain 1 1'
-        trainname12 = 'spiketrain 1 2'
-        trainname21 = 'spiketrain 2 1'
-        trainname22 = 'spiketrain 2 2'
-
-        traindata11 = np.arange(0, 10) * pq.ms
-        traindata12 = np.arange(10, 20) * pq.ms
-        traindata21 = np.arange(20, 30) * pq.s
-        traindata22 = np.arange(30, 40) * pq.s
-
-        self.trainnames1 = [trainname11, trainname12]
-        self.trainnames2 = [trainname21, trainname22]
-        self.trainnames = [trainname11, trainname12, trainname21, trainname22]
-
-        train11 = SpikeTrain(traindata11, t_stop=100*pq.s, name=trainname11)
-        train12 = SpikeTrain(traindata12, t_stop=100*pq.s, name=trainname12)
-        train21 = SpikeTrain(traindata21, t_stop=100*pq.s, name=trainname21)
-        train22 = SpikeTrain(traindata22, t_stop=100*pq.s, name=trainname22)
-
-        self.train1 = [train11, train12]
-        self.train2 = [train21, train22]
-        self.train = [train11, train12, train21, train22]
+        self.nchildren = 2
+        blk = fake_neo(Block, seed=0, n=self.nchildren)
+        self.unit1, self.unit2, self.unit3, self.unit4 = blk.list_units
+        self.seg1, self.seg2 = blk.segments
+        self.targobj = self.seg1
+        self.seed1 = self.seg1.annotations['seed']
+        self.seed2 = self.seg2.annotations['seed']
+
+        del self.seg1.annotations['i']
+        del self.seg2.annotations['i']
+        del self.seg1.annotations['j']
+        del self.seg2.annotations['j']
+
+        self.sigs1 = self.seg1.analogsignals
+        self.sigs2 = self.seg2.analogsignals
+        self.sigarrs1 = self.seg1.analogsignalarrays
+        self.sigarrs2 = self.seg2.analogsignalarrays
+        self.irsigs1 = self.seg1.irregularlysampledsignals
+        self.irsigs2 = self.seg2.irregularlysampledsignals
+
+        self.spikes1 = self.seg1.spikes
+        self.spikes2 = self.seg2.spikes
+        self.trains1 = self.seg1.spiketrains
+        self.trains2 = self.seg2.spiketrains
+
+        self.epcs1 = self.seg1.epochs
+        self.epcs2 = self.seg2.epochs
+        self.epcas1 = self.seg1.epocharrays
+        self.epcas2 = self.seg2.epocharrays
+        self.evts1 = self.seg1.events
+        self.evts2 = self.seg2.events
+        self.evtas1 = self.seg1.eventarrays
+        self.evtas2 = self.seg2.eventarrays
+
+        self.sigs1a = clone_object(self.sigs1)
+        self.sigarrs1a = clone_object(self.sigarrs1, n=2)
+        self.irsigs1a = clone_object(self.irsigs1)
+
+        self.spikes1a = clone_object(self.spikes1)
+        self.trains1a = clone_object(self.trains1)
+
+        self.epcs1a = clone_object(self.epcs1)
+        self.epcas1a = clone_object(self.epcas1)
+        self.evts1a = clone_object(self.evts1)
+        self.evtas1a = clone_object(self.evtas1)
+
+        for obj, obja in zip(self.sigs1 + self.sigarrs1,
+                             self.sigs1a + self.sigarrs1a):
+            obja.channel_index = obj.channel_index
 
     def test_init(self):
         seg = Segment(name='a segment', index=3)
@@ -394,6 +190,140 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(seg.name, 'a segment')
         self.assertEqual(seg.file_origin, None)
         self.assertEqual(seg.index, 3)
+
+    def check_creation(self, seg):
+        assert_neo_object_is_compliant(seg)
+
+        seed = seg.annotations['seed']
+
+        targ0 = get_fake_value('file_datetime', datetime, seed=seed+0)
+        self.assertEqual(seg.file_datetime, targ0)
+
+        targ1 = get_fake_value('rec_datetime', datetime, seed=seed+1)
+        self.assertEqual(seg.rec_datetime, targ1)
+
+        targ2 = get_fake_value('index', int, seed=seed+2)
+        self.assertEqual(seg.index, targ2)
+
+        targ3 = get_fake_value('name', str, seed=seed+3, obj=Segment)
+        self.assertEqual(seg.name, targ3)
+
+        targ4 = get_fake_value('description', str,
+                               seed=seed+4, obj=Segment)
+        self.assertEqual(seg.description, targ4)
+
+        targ5 = get_fake_value('file_origin', str)
+        self.assertEqual(seg.file_origin, targ5)
+
+        targ6 = get_annotations()
+        targ6['seed'] = seed
+        self.assertEqual(seg.annotations, targ6)
+
+        self.assertTrue(hasattr(seg, 'analogsignals'))
+        self.assertTrue(hasattr(seg, 'analogsignalarrays'))
+        self.assertTrue(hasattr(seg, 'irregularlysampledsignals'))
+
+        self.assertTrue(hasattr(seg, 'epochs'))
+        self.assertTrue(hasattr(seg, 'epocharrays'))
+        self.assertTrue(hasattr(seg, 'events'))
+        self.assertTrue(hasattr(seg, 'eventarrays'))
+
+        self.assertTrue(hasattr(seg, 'spikes'))
+        self.assertTrue(hasattr(seg, 'spiketrains'))
+
+        self.assertEqual(len(seg.analogsignals), self.nchildren**2)
+        self.assertEqual(len(seg.analogsignalarrays), self.nchildren)
+        self.assertEqual(len(seg.irregularlysampledsignals), self.nchildren**2)
+
+        self.assertEqual(len(seg.epochs), self.nchildren)
+        self.assertEqual(len(seg.epocharrays), self.nchildren)
+        self.assertEqual(len(seg.events), self.nchildren)
+        self.assertEqual(len(seg.eventarrays), self.nchildren)
+
+        self.assertEqual(len(seg.spikes), self.nchildren**2)
+        self.assertEqual(len(seg.spiketrains), self.nchildren**2)
+
+    def test__creation(self):
+        self.check_creation(self.seg1)
+        self.check_creation(self.seg2)
+
+    def test__merge(self):
+        seg1a = fake_neo(Block, seed=self.seed1, n=self.nchildren).segments[0]
+        assert_same_sub_schema(self.seg1, seg1a)
+        seg1a.spikes.append(self.spikes2[0])
+        seg1a.epocharrays.append(self.epcas2[0])
+        seg1a.annotate(seed=self.seed2)
+        seg1a.merge(self.seg2)
+        self.check_creation(self.seg2)
+        self.epcas2[0] = self.epcas2[0].merge(self.epcas2[0])
+
+        assert_same_sub_schema(self.sigs1a + self.sigs2, seg1a.analogsignals)
+        assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
+                               seg1a.analogsignalarrays)
+        assert_same_sub_schema(self.irsigs1a + self.irsigs2,
+                               seg1a.irregularlysampledsignals)
+
+        assert_same_sub_schema(self.epcs1 + self.epcs2, seg1a.epochs)
+        assert_same_sub_schema(self.epcas1 + self.epcas2, seg1a.epocharrays)
+        assert_same_sub_schema(self.evts1 + self.evts2, seg1a.events)
+        assert_same_sub_schema(self.evtas1 + self.evtas2, seg1a.eventarrays)
+
+        assert_same_sub_schema(self.spikes1 + self.spikes2[:1] + self.spikes2,
+                               seg1a.spikes)
+        assert_same_sub_schema(self.trains1 + self.trains2, seg1a.spiketrains)
+
+    def test__children(self):
+        blk = Block(name='block1')
+        blk.segments = [self.seg1]
+        blk.create_many_to_one_relationship(force=True)
+        assert_neo_object_is_compliant(self.seg1)
+        assert_neo_object_is_compliant(blk)
+
+        childobjs = ('AnalogSignal', 'AnalogSignalArray',
+                     'Epoch', 'EpochArray',
+                     'Event', 'EventArray',
+                     'IrregularlySampledSignal',
+                     'Spike', 'SpikeTrain')
+        childconts = ('analogsignals', 'analogsignalarrays',
+                      'epochs', 'epocharrays',
+                      'events', 'eventarrays',
+                      'irregularlysampledsignals',
+                      'spikes', 'spiketrains')
+        self.assertEqual(self.seg1._container_child_objects, ())
+        self.assertEqual(self.seg1._data_child_objects, childobjs)
+        self.assertEqual(self.seg1._single_parent_objects, ('Block',))
+        self.assertEqual(self.seg1._multi_child_objects, ())
+        self.assertEqual(self.seg1._multi_parent_objects, ())
+        self.assertEqual(self.seg1._child_properties, ())
+
+        self.assertEqual(self.seg1._single_child_objects, childobjs)
+        self.assertEqual(self.seg1._container_child_containers, ())
+        self.assertEqual(self.seg1._data_child_containers, childconts)
+        self.assertEqual(self.seg1._single_child_containers, childconts)
+        self.assertEqual(self.seg1._single_parent_containers, ('block',))
+        self.assertEqual(self.seg1._multi_child_containers, ())
+        self.assertEqual(self.seg1._multi_parent_containers, ())
+
+        self.assertEqual(self.seg1._child_objects, childobjs)
+        self.assertEqual(self.seg1._child_containers, childconts)
+        self.assertEqual(self.seg1._parent_objects, ('Block',))
+        self.assertEqual(self.seg1._parent_containers, ('block',))
+
+        totchildren = (self.nchildren*2*2 +  # epoch/event(array)
+                       self.nchildren +  # analogsignalarray
+                       2*(self.nchildren**2) +  # spike(train)
+                       2*(self.nchildren**2))  # analog/irregsignal
+        self.assertEqual(len(self.seg1.children), totchildren)
+
+        children = (self.sigs1a + self.sigarrs1a +
+                    self.epcs1a + self.epcas1a +
+                    self.evts1a + self.evtas1a +
+                    self.irsigs1a +
+                    self.spikes1a + self.trains1a)
+        assert_same_sub_schema(list(self.seg1.children), children)
+
+        self.assertEqual(len(self.seg1.parents), 1)
+        self.assertEqual(self.seg1.parents[0].name, 'block1')
 
     def test__construct_subsegment_by_unit(self):
         nb_seg = 3
@@ -420,7 +350,7 @@ class TestSegment(unittest.TestCase):
         for s in range(nb_seg):
             seg = Segment(name='Simulation %s' % s)
             for j in range(nb_unit):
-                st = SpikeTrain([1, 2, 3], units='ms',
+                st = SpikeTrain([1, 2], units='ms',
                                 t_start=0., t_stop=10)
                 st.unit = all_unit[j]
 
@@ -443,551 +373,79 @@ class TestSegment(unittest.TestCase):
         newseg = seg.construct_subsegment_by_unit(all_unit[:4])
         assert_neo_object_is_compliant(newseg)
 
-    def test_segment_creation(self):
-        assert_neo_object_is_compliant(self.segment1)
-        assert_neo_object_is_compliant(self.segment2)
-        assert_neo_object_is_compliant(self.unit1)
-        assert_neo_object_is_compliant(self.unit2)
-
-        self.assertEqual(self.segment1.name, 'test')
-        self.assertEqual(self.segment2.name, 'test')
-
-        self.assertEqual(self.segment1.description, 'tester 1')
-        self.assertEqual(self.segment2.description, 'tester 2')
-
-        self.assertEqual(self.segment1.file_origin, 'test.file')
-        self.assertEqual(self.segment2.file_origin, 'test.file')
-
-        self.assertEqual(self.segment1.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(self.segment2.annotations['testarg10'], [1, 2, 3])
-
-        self.assertEqual(self.segment1.annotations['testarg1'], 1.1)
-        self.assertEqual(self.segment2.annotations['testarg1'], 1)
-        self.assertEqual(self.segment2.annotations['testarg11'], 1.1)
-
-        self.assertEqual(self.segment1.annotations['testarg2'], 'yes')
-        self.assertEqual(self.segment2.annotations['testarg2'], 'yes')
-
-        self.assertTrue(self.segment1.annotations['testarg3'])
-        self.assertTrue(self.segment2.annotations['testarg3'])
-
-        self.assertTrue(hasattr(self.segment1, 'analogsignals'))
-        self.assertTrue(hasattr(self.segment2, 'analogsignals'))
-
-        self.assertEqual(len(self.segment1.analogsignals), 2)
-        self.assertEqual(len(self.segment2.analogsignals), 2)
-
-        for res, targ in zip(self.segment1.analogsignals, self.sig1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.analogsignals, self.sig2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'analogsignalarrays'))
-        self.assertTrue(hasattr(self.segment2, 'analogsignalarrays'))
-
-        self.assertEqual(len(self.segment1.analogsignalarrays), 2)
-        self.assertEqual(len(self.segment2.analogsignalarrays), 3)
-
-        for res, targ in zip(self.segment1.analogsignalarrays, self.sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.analogsignalarrays, self.sigarr2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'epochs'))
-        self.assertTrue(hasattr(self.segment2, 'epochs'))
-
-        self.assertEqual(len(self.segment1.epochs), 2)
-        self.assertEqual(len(self.segment2.epochs), 2)
-
-        for res, targ in zip(self.segment1.epochs, self.epoch1):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.duration, targ.duration)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.epochs, self.epoch2):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.duration, targ.duration)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'epocharrays'))
-        self.assertTrue(hasattr(self.segment2, 'epocharrays'))
-
-        self.assertEqual(len(self.segment1.epocharrays), 2)
-        self.assertEqual(len(self.segment2.epocharrays), 2)
-
-        for res, targ in zip(self.segment1.epocharrays, self.epocharr1):
-            assert_arrays_equal(res.times, targ.times)
-            assert_arrays_equal(res.durations, targ.durations)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.epocharrays, self.epocharr2):
-            assert_arrays_equal(res.times, targ.times)
-            assert_arrays_equal(res.durations, targ.durations)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'events'))
-        self.assertTrue(hasattr(self.segment2, 'events'))
-
-        self.assertEqual(len(self.segment1.events), 2)
-        self.assertEqual(len(self.segment2.events), 2)
-
-        for res, targ in zip(self.segment1.events, self.event1):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.events, self.event2):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'eventarrays'))
-        self.assertTrue(hasattr(self.segment2, 'eventarrays'))
-
-        self.assertEqual(len(self.segment1.eventarrays), 2)
-        self.assertEqual(len(self.segment2.eventarrays), 2)
-
-        for res, targ in zip(self.segment1.eventarrays, self.eventarr1):
-            assert_arrays_equal(res.times, targ.times)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.eventarrays, self.eventarr2):
-            assert_arrays_equal(res.times, targ.times)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'irregularlysampledsignals'))
-        self.assertTrue(hasattr(self.segment2, 'irregularlysampledsignals'))
-
-        self.assertEqual(len(self.segment1.irregularlysampledsignals), 2)
-        self.assertEqual(len(self.segment2.irregularlysampledsignals), 2)
-
-        for res, targ in zip(self.segment1.irregularlysampledsignals,
-                             self.irsig1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.irregularlysampledsignals,
-                             self.irsig2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'spikes'))
-        self.assertTrue(hasattr(self.segment2, 'spikes'))
-
-        self.assertEqual(len(self.segment1.spikes), 2)
-        self.assertEqual(len(self.segment2.spikes), 2)
-
-        for res, targ in zip(self.segment1.spikes, self.spike1):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.spikes, self.spike2):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'spiketrains'))
-        self.assertTrue(hasattr(self.segment2, 'spiketrains'))
-
-        self.assertEqual(len(self.segment1.spiketrains), 2)
-        self.assertEqual(len(self.segment2.spiketrains), 2)
-
-        for res, targ in zip(self.segment1.spiketrains, self.train1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.spiketrains, self.train2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_segment_merge(self):
-        self.segment1.merge(self.segment2)
-        self.segment1.create_many_to_one_relationship(force=True)
-        assert_neo_object_is_compliant(self.segment1)
-
-        self.assertEqual(self.segment1.name, 'test')
-        self.assertEqual(self.segment2.name, 'test')
-
-        self.assertEqual(self.segment1.description, 'tester 1')
-        self.assertEqual(self.segment2.description, 'tester 2')
-
-        self.assertEqual(self.segment1.file_origin, 'test.file')
-        self.assertEqual(self.segment2.file_origin, 'test.file')
-
-        self.assertEqual(self.segment1.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(self.segment2.annotations['testarg10'], [1, 2, 3])
-
-        self.assertEqual(self.segment1.annotations['testarg1'], 1.1)
-        self.assertEqual(self.segment2.annotations['testarg1'], 1)
-        self.assertEqual(self.segment2.annotations['testarg11'], 1.1)
-
-        self.assertEqual(self.segment1.annotations['testarg2'], 'yes')
-        self.assertEqual(self.segment2.annotations['testarg2'], 'yes')
-
-        self.assertTrue(self.segment1.annotations['testarg3'])
-        self.assertTrue(self.segment2.annotations['testarg3'])
-
-        self.assertTrue(hasattr(self.segment1, 'analogsignals'))
-        self.assertTrue(hasattr(self.segment2, 'analogsignals'))
-
-        self.assertEqual(len(self.segment1.analogsignals), 4)
-        self.assertEqual(len(self.segment2.analogsignals), 2)
-
-        for res, targ in zip(self.segment1.analogsignals, self.sig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.analogsignals, self.sig2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'analogsignalarrays'))
-        self.assertTrue(hasattr(self.segment2, 'analogsignalarrays'))
-
-        self.assertEqual(len(self.segment1.analogsignalarrays), 4)
-        self.assertEqual(len(self.segment2.analogsignalarrays), 3)
-
-        for res, targ in zip(self.segment1.analogsignalarrays, self.sigarr):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.analogsignalarrays, self.sigarr2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'epochs'))
-        self.assertTrue(hasattr(self.segment2, 'epochs'))
-
-        self.assertEqual(len(self.segment1.epochs), 4)
-        self.assertEqual(len(self.segment2.epochs), 2)
-
-        for res, targ in zip(self.segment1.epochs, self.epoch):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.duration, targ.duration)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.epochs, self.epoch2):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.duration, targ.duration)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'epocharrays'))
-        self.assertTrue(hasattr(self.segment2, 'epocharrays'))
-
-        self.assertEqual(len(self.segment1.epocharrays), 4)
-        self.assertEqual(len(self.segment2.epocharrays), 2)
-
-        for res, targ in zip(self.segment1.epocharrays, self.epocharr):
-            assert_arrays_equal(res.times, targ.times)
-            assert_arrays_equal(res.durations, targ.durations)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.epocharrays, self.epocharr2):
-            assert_arrays_equal(res.times, targ.times)
-            assert_arrays_equal(res.durations, targ.durations)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'events'))
-        self.assertTrue(hasattr(self.segment2, 'events'))
-
-        self.assertEqual(len(self.segment1.events), 4)
-        self.assertEqual(len(self.segment2.events), 2)
-
-        for res, targ in zip(self.segment1.events, self.event):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.events, self.event2):
-            self.assertEqual(res.time, targ.time)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'eventarrays'))
-        self.assertTrue(hasattr(self.segment2, 'eventarrays'))
-
-        self.assertEqual(len(self.segment1.eventarrays), 4)
-        self.assertEqual(len(self.segment2.eventarrays), 2)
-
-        for res, targ in zip(self.segment1.eventarrays, self.eventarr):
-            assert_arrays_equal(res.times, targ.times)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.eventarrays, self.eventarr2):
-            assert_arrays_equal(res.times, targ.times)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'irregularlysampledsignals'))
-        self.assertTrue(hasattr(self.segment2, 'irregularlysampledsignals'))
-
-        self.assertEqual(len(self.segment1.irregularlysampledsignals), 4)
-        self.assertEqual(len(self.segment2.irregularlysampledsignals), 2)
-
-        for res, targ in zip(self.segment1.irregularlysampledsignals,
-                             self.irsig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.irregularlysampledsignals,
-                             self.irsig2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'spikes'))
-        self.assertTrue(hasattr(self.segment2, 'spikes'))
-
-        self.assertEqual(len(self.segment1.spikes), 4)
-        self.assertEqual(len(self.segment2.spikes), 2)
-
-        for res, targ in zip(self.segment1.spikes, self.spike):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.spikes, self.spike2):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        self.assertTrue(hasattr(self.segment1, 'spiketrains'))
-        self.assertTrue(hasattr(self.segment2, 'spiketrains'))
-
-        self.assertEqual(len(self.segment1.spiketrains), 4)
-        self.assertEqual(len(self.segment2.spiketrains), 2)
-
-        for res, targ in zip(self.segment1.spiketrains, self.train):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(self.segment2.spiketrains, self.train2):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_segment_all_data(self):
-        result1 = self.segment1.all_data
-        targs = (self.epoch1 + self.epocharr1 + self.event1 + self.eventarr1 +
-                 self.sig1 + self.sigarr1 + self.irsig1 +
-                 self.spike1 + self.train1)
-
-        for res, targ in zip(result1, targs):
-            if hasattr(res, 'ndim') and res.ndim:
-                assert_arrays_equal(res, targ)
-            else:
-                self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
     def test_segment_take_spikes_by_unit(self):
-        result1 = self.segment1.take_spikes_by_unit()
-        result21 = self.segment1.take_spikes_by_unit([self.unit1])
-        result22 = self.segment1.take_spikes_by_unit([self.unit2])
+        result1 = self.seg1.take_spikes_by_unit()
+        result21 = self.seg1.take_spikes_by_unit([self.unit1])
+        result22 = self.seg1.take_spikes_by_unit([self.unit2])
 
         self.assertEqual(result1, [])
 
-        for res, targ in zip(result21, self.unit1spike):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(result22, self.unit2spike):
-            self.assertEqual(res, targ)
-            self.assertEqual(res.name, targ.name)
+        assert_same_sub_schema(result21, [self.spikes1a[0]])
+        assert_same_sub_schema(result22, [self.spikes1a[1]])
 
     def test_segment_take_spiketrains_by_unit(self):
-        result1 = self.segment1.take_spiketrains_by_unit()
-        result21 = self.segment1.take_spiketrains_by_unit([self.unit1])
-        result22 = self.segment1.take_spiketrains_by_unit([self.unit2])
+        result1 = self.seg1.take_spiketrains_by_unit()
+        result21 = self.seg1.take_spiketrains_by_unit([self.unit1])
+        result22 = self.seg1.take_spiketrains_by_unit([self.unit2])
 
         self.assertEqual(result1, [])
 
-        for res, targ in zip(result21, self.unit1train):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(result22, self.unit2train):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
+        assert_same_sub_schema(result21, [self.trains1a[0]])
+        assert_same_sub_schema(result22, [self.trains1a[1]])
 
     def test_segment_take_analogsignal_by_unit(self):
-        result1 = self.segment1.take_analogsignal_by_unit()
-        result21 = self.segment1.take_analogsignal_by_unit([self.unit1])
-        result22 = self.segment1.take_analogsignal_by_unit([self.unit2])
+        result1 = self.seg1.take_analogsignal_by_unit()
+        result21 = self.seg1.take_analogsignal_by_unit([self.unit1])
+        result22 = self.seg1.take_analogsignal_by_unit([self.unit2])
 
         self.assertEqual(result1, [])
 
-        for res, targ in zip(result21, self.chan1sig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(result22, self.chan2sig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
+        assert_same_sub_schema(result21, [self.sigs1a[0]])
+        assert_same_sub_schema(result22, [self.sigs1a[1]])
 
     def test_segment_take_analogsignal_by_channelindex(self):
-        result1 = self.segment1.take_analogsignal_by_channelindex()
-        result21 = self.segment1.take_analogsignal_by_channelindex([1])
-        result22 = self.segment1.take_analogsignal_by_channelindex([2])
+        ind1 = self.unit1.channel_indexes[0]
+        ind2 = self.unit2.channel_indexes[0]
+        result1 = self.seg1.take_analogsignal_by_channelindex()
+        result21 = self.seg1.take_analogsignal_by_channelindex([ind1])
+        result22 = self.seg1.take_analogsignal_by_channelindex([ind2])
 
         self.assertEqual(result1, [])
 
-        for res, targ in zip(result21, self.chan1sig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
+        assert_same_sub_schema(result21, [self.sigs1a[0]])
+        assert_same_sub_schema(result22, [self.sigs1a[1]])
 
-        for res, targ in zip(result22, self.chan2sig):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_segment_take_slice_of_analogsignalarray_by_unit(self):
-        segment = self.segment1
-        unit1 = self.unit1
-        unit2 = self.unit2
-
-        result1 = segment.take_slice_of_analogsignalarray_by_unit()
-        result21 = segment.take_slice_of_analogsignalarray_by_unit([unit1])
-        result22 = segment.take_slice_of_analogsignalarray_by_unit([unit2])
+    def test_seg_take_slice_of_analogsignalarray_by_unit(self):
+        seg = self.seg1
+        result1 = seg.take_slice_of_analogsignalarray_by_unit()
+        result21 = seg.take_slice_of_analogsignalarray_by_unit([self.unit1])
+        result23 = seg.take_slice_of_analogsignalarray_by_unit([self.unit3])
 
         self.assertEqual(result1, [])
 
-        for res, targ in zip(result21, self.chan1sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
+        targ1 = [self.sigarrs1a[0][:, np.array([True])],
+                 self.sigarrs1a[1][:, np.array([False])]]
+        targ3 = [self.sigarrs1a[0][:, np.array([False])],
+                 self.sigarrs1a[1][:, np.array([True])]]
+        assert_same_sub_schema(result21, targ1)
+        assert_same_sub_schema(result23, targ3)
 
-        for res, targ in zip(result22, self.chan2sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_segment_take_slice_of_analogsignalarray_by_channelindex(self):
-        segment = self.segment1
-        result1 = segment.take_slice_of_analogsignalarray_by_channelindex()
-        result21 = segment.take_slice_of_analogsignalarray_by_channelindex([1])
-        result22 = segment.take_slice_of_analogsignalarray_by_channelindex([2])
-
-        self.assertEqual(result1, [])
-
-        for res, targ in zip(result21, self.chan1sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-        for res, targ in zip(result22, self.chan2sigarr1):
-            assert_arrays_equal(res, targ)
-            self.assertEqual(res.name, targ.name)
-
-    def test_segment_size(self):
-        result1 = self.segment1.size()
-        targ1 = {"epochs": 2,  "events": 2,  "analogsignals": 2,
-                 "irregularlysampledsignals": 2, "spikes": 2,
-                 "spiketrains": 2, "epocharrays": 2, "eventarrays": 2,
-                 "analogsignalarrays": 2}
-
-        self.assertEqual(result1, targ1)
-
-    def test_segment_filter(self):
-        result1 = self.segment1.filter()
-        result2 = self.segment1.filter(name='analogsignal 1 1')
-        result3 = self.segment1.filter(testattr=True)
+    def test_seg_take_slice_of_analogsignalarray_by_channelindex(self):
+        seg = self.seg1
+        ind1 = self.unit1.channel_indexes[0]
+        ind3 = self.unit3.channel_indexes[0]
+        result1 = seg.take_slice_of_analogsignalarray_by_channelindex()
+        result21 = seg.take_slice_of_analogsignalarray_by_channelindex([ind1])
+        result23 = seg.take_slice_of_analogsignalarray_by_channelindex([ind3])
 
         self.assertEqual(result1, [])
 
-        self.assertEqual(len(result2), 1)
-        assert_arrays_equal(result2[0], self.sig1[0])
-
-        self.assertEqual(len(result3), 2)
-        self.assertEqual(result3[0], self.epoch1[0])
-        self.assertEqual(result3[1], self.event1[0])
-
-    def test__children(self):
-        blk = Block(name='block1')
-        blk.segments = [self.segment1]
-        blk.create_many_to_one_relationship()
-
-        self.assertEqual(self.segment1._container_child_objects, ())
-        self.assertEqual(self.segment1._data_child_objects,
-                         ('AnalogSignal', 'AnalogSignalArray',
-                          'Epoch', 'EpochArray',
-                          'Event', 'EventArray',
-                          'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'))
-        self.assertEqual(self.segment1._single_parent_objects, ('Block',))
-        self.assertEqual(self.segment1._multi_child_objects, ())
-        self.assertEqual(self.segment1._multi_parent_objects, ())
-        self.assertEqual(self.segment1._child_properties, ())
-
-        self.assertEqual(self.segment1._single_child_objects,
-                         ('AnalogSignal', 'AnalogSignalArray',
-                          'Epoch', 'EpochArray',
-                          'Event', 'EventArray',
-                          'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'))
-
-        self.assertEqual(self.segment1._container_child_containers, ())
-        self.assertEqual(self.segment1._data_child_containers,
-                         ('analogsignals', 'analogsignalarrays',
-                          'epochs', 'epocharrays',
-                          'events', 'eventarrays',
-                          'irregularlysampledsignals',
-                          'spikes', 'spiketrains'))
-        self.assertEqual(self.segment1._single_child_containers,
-                         ('analogsignals', 'analogsignalarrays',
-                          'epochs', 'epocharrays',
-                          'events', 'eventarrays',
-                          'irregularlysampledsignals',
-                          'spikes', 'spiketrains'))
-        self.assertEqual(self.segment1._single_parent_containers, ('block',))
-        self.assertEqual(self.segment1._multi_child_containers, ())
-        self.assertEqual(self.segment1._multi_parent_containers, ())
-
-        self.assertEqual(self.segment1._child_objects,
-                         ('AnalogSignal', 'AnalogSignalArray',
-                          'Epoch', 'EpochArray',
-                          'Event', 'EventArray',
-                          'IrregularlySampledSignal',
-                          'Spike', 'SpikeTrain'))
-        self.assertEqual(self.segment1._child_containers,
-                         ('analogsignals', 'analogsignalarrays',
-                          'epochs', 'epocharrays',
-                          'events', 'eventarrays',
-                          'irregularlysampledsignals',
-                          'spikes', 'spiketrains'))
-        self.assertEqual(self.segment1._parent_objects, ('Block',))
-        self.assertEqual(self.segment1._parent_containers, ('block',))
-
-        self.assertEqual(len(self.segment1.children),
-                         (len(self.sig1) +
-                          len(self.sigarr1) +
-                          len(self.epoch1) +
-                          len(self.epocharr1) +
-                          len(self.event1) +
-                          len(self.eventarr1) +
-                          len(self.irsig1) +
-                          len(self.spike1) +
-                          len(self.train1)))
-        self.assertEqual(self.segment1.children[0].name, self.signames1[0])
-        self.assertEqual(self.segment1.children[1].name, self.signames1[1])
-        self.assertEqual(self.segment1.children[2].name, self.sigarrnames1[0])
-        self.assertEqual(self.segment1.children[3].name, self.sigarrnames1[1])
-        self.assertEqual(self.segment1.children[4].name, self.epochnames1[0])
-        self.assertEqual(self.segment1.children[5].name, self.epochnames1[1])
-        self.assertEqual(self.segment1.children[6].name,
-                         self.epocharrnames1[0])
-        self.assertEqual(self.segment1.children[7].name,
-                         self.epocharrnames1[1])
-        self.assertEqual(self.segment1.children[8].name, self.eventnames1[0])
-        self.assertEqual(self.segment1.children[9].name, self.eventnames1[1])
-        self.assertEqual(self.segment1.children[10].name,
-                         self.eventarrnames1[0])
-        self.assertEqual(self.segment1.children[11].name,
-                         self.eventarrnames1[1])
-        self.assertEqual(self.segment1.children[12].name, self.irsignames1[0])
-        self.assertEqual(self.segment1.children[13].name, self.irsignames1[1])
-        self.assertEqual(self.segment1.children[14].name, self.spikenames1[0])
-        self.assertEqual(self.segment1.children[15].name, self.spikenames1[1])
-        self.assertEqual(self.segment1.children[16].name, self.trainnames1[0])
-        self.assertEqual(self.segment1.children[17].name, self.trainnames1[1])
-        self.assertEqual(len(self.segment1.parents), 1)
-        self.assertEqual(self.segment1.parents[0].name, 'block1')
-
-        self.segment1.create_many_to_one_relationship()
-        self.segment1.create_many_to_many_relationship()
-        self.segment1.create_relationship()
-        assert_neo_object_is_compliant(self.segment1)
+        targ1 = [self.sigarrs1a[0][:, np.array([True])],
+                 self.sigarrs1a[1][:, np.array([False])]]
+        targ3 = [self.sigarrs1a[0][:, np.array([False])],
+                 self.sigarrs1a[1][:, np.array([True])]]
+        assert_same_sub_schema(result21, targ1)
+        assert_same_sub_schema(result23, targ3)
 
 
 if __name__ == "__main__":
