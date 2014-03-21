@@ -29,9 +29,12 @@ Receipe to develop an IO module for a new data format:
 Miscellaneous
 =============
 
-Notes:
-    * if your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
-    * :py:func:`neo.io.tools.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
+    * If you want to use logging in your IO, please use the standard
+      :mod:`logging` module: create your logger using
+      ``log = logging.getLogger('neo.io.my_io_name')`` or
+      ``log = logging.getLogger(__name__)``
+    * If your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
+    * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
     * :py:func:`neo.io.tools.populate_RecordingChannel` offers a utility to
       create inside a :class:`Block` all :class:`RecordingChannel` objects and links to :class:`AnalogSignal`, :class:`SpikeTrain`, ...
     * In the docstring, explain where you obtained the file format specification if it is a closed one.
