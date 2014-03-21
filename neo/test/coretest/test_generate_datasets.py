@@ -22,7 +22,7 @@ from neo.core import (Block, Segment,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, Spike,
                       EventArray, EpochArray)
-from neo.test.iotest.generate_datasets import (generate_one_simple_block,
+from neo.test.generate_datasets import (generate_one_simple_block,
                                                generate_one_simple_segment,
                                                generate_from_supported_objects,
                                                get_fake_value, fake_neo,

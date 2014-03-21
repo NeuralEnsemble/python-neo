@@ -43,7 +43,7 @@ from neo.test.iotest.tools import (can_use_network, cleanup_test_file,
                                    iter_generic_readers, iter_read_objects,
                                    make_all_directories, read_generic,
                                    write_generic)
-from neo.test.iotest.generate_datasets import generate_from_supported_objects
+from neo.test.generate_datasets import generate_from_supported_objects
 
 
 class BaseTestIO(object):
