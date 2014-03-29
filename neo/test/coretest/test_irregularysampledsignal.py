@@ -11,22 +11,97 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core import Segment, RecordingChannel
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
+from neo.test.generate_datasets import (get_fake_value, get_fake_values,
+                                        fake_neo, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
+        signal = get_fake_value('signal', pq.Quantity, seed=1, dim=1)
+        name = get_fake_value('name', str, seed=2,
+                              obj=IrregularlySampledSignal)
+        description = get_fake_value('description', str, seed=3,
+                                     obj='IrregularlySampledSignal')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(IrregularlySampledSignal,
+                                annotate=False, seed=0)
+        res12 = get_fake_values('IrregularlySampledSignal',
+                                annotate=False, seed=0)
+        res21 = get_fake_values(IrregularlySampledSignal,
+                                annotate=True, seed=0)
+        res22 = get_fake_values('IrregularlySampledSignal',
+                                annotate=True, seed=0)
+
+        assert_arrays_equal(res11.pop('times'), times)
+        assert_arrays_equal(res12.pop('times'), times)
+        assert_arrays_equal(res21.pop('times'), times)
+        assert_arrays_equal(res22.pop('times'), times)
+
+        assert_arrays_equal(res11.pop('signal'), signal)
+        assert_arrays_equal(res12.pop('signal'), signal)
+        assert_arrays_equal(res21.pop('signal'), signal)
+        assert_arrays_equal(res22.pop('signal'), signal)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = IrregularlySampledSignal
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, IrregularlySampledSignal))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'IrregularlySampledSignal'
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, IrregularlySampledSignal))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
 
 
 class TestIrregularlySampledSignalConstruction(unittest.TestCase):
     def test_IrregularlySampledSignal_creation_times_units_signal_units(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
+        params = {'test2': 'y1', 'test3': True}
         sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*pq.ms,
                                        signal=[20., 40., 60.]*pq.mV,
                                        name='test', description='tester',
                                        file_origin='test.file',
-                                       testarg1=1, **params)
-        sig.annotate(testarg1=1.1, testarg0=[1, 2, 3])
+                                       test1=1, **params)
+        sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
         assert_arrays_equal(sig.times, [1.1, 1.5, 1.7]*pq.ms)
@@ -35,20 +110,20 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
-        self.assertEqual(sig.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(sig.annotations['testarg1'], 1.1)
-        self.assertEqual(sig.annotations['testarg2'], 'yes')
-        self.assertTrue(sig.annotations['testarg3'])
+        self.assertEqual(sig.annotations['test0'], [1, 2])
+        self.assertEqual(sig.annotations['test1'], 1.1)
+        self.assertEqual(sig.annotations['test2'], 'y1')
+        self.assertTrue(sig.annotations['test3'])
 
     def test_IrregularlySampledSignal_creation_units_arg(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
+        params = {'test2': 'y1', 'test3': True}
         sig = IrregularlySampledSignal([1.1, 1.5, 1.7],
                                        signal=[20., 40., 60.],
                                        units=pq.V, time_units=pq.s,
                                        name='test', description='tester',
                                        file_origin='test.file',
-                                       testarg1=1, **params)
-        sig.annotate(testarg1=1.1, testarg0=[1, 2, 3])
+                                       test1=1, **params)
+        sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
         assert_arrays_equal(sig.times, [1.1, 1.5, 1.7]*pq.s)
@@ -57,20 +132,20 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
-        self.assertEqual(sig.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(sig.annotations['testarg1'], 1.1)
-        self.assertEqual(sig.annotations['testarg2'], 'yes')
-        self.assertTrue(sig.annotations['testarg3'])
+        self.assertEqual(sig.annotations['test0'], [1, 2])
+        self.assertEqual(sig.annotations['test1'], 1.1)
+        self.assertEqual(sig.annotations['test2'], 'y1')
+        self.assertTrue(sig.annotations['test3'])
 
     def test_IrregularlySampledSignal_creation_units_rescale(self):
-        params = {'testarg2': 'yes', 'testarg3': True}
+        params = {'test2': 'y1', 'test3': True}
         sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*pq.s,
                                        signal=[2., 4., 6.]*pq.V,
                                        units=pq.mV, time_units=pq.ms,
                                        name='test', description='tester',
                                        file_origin='test.file',
-                                       testarg1=1, **params)
-        sig.annotate(testarg1=1.1, testarg0=[1, 2, 3])
+                                       test1=1, **params)
+        sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
         assert_arrays_equal(sig.times, [1100, 1500, 1700]*pq.ms)
@@ -79,10 +154,10 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
-        self.assertEqual(sig.annotations['testarg0'], [1, 2, 3])
-        self.assertEqual(sig.annotations['testarg1'], 1.1)
-        self.assertEqual(sig.annotations['testarg2'], 'yes')
-        self.assertTrue(sig.annotations['testarg3'])
+        self.assertEqual(sig.annotations['test0'], [1, 2])
+        self.assertEqual(sig.annotations['test1'], 1.1)
+        self.assertEqual(sig.annotations['test2'], 'y1')
+        self.assertTrue(sig.annotations['test3'])
 
     def test_IrregularlySampledSignal_different_lens_ValueError(self):
         times = [1.1, 1.5, 1.7]*pq.ms
@@ -145,7 +220,7 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
                                        signal=[2., 4., 6.]*pq.V,
                                        name='test', description='tester',
                                        file_origin='test.file',
-                                       testarg1=1)
+                                       test1=1)
         assert_neo_object_is_compliant(sig)
 
         targ = ('<IrregularlySampledSignal(array([ 2.,  4.,  6.]) * V ' +
@@ -164,39 +239,23 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
         rchan.analogsignals = [signal]
         rchan.create_many_to_one_relationship()
 
-        self.assertEqual(signal._container_child_objects, ())
-        self.assertEqual(signal._data_child_objects, ())
         self.assertEqual(signal._single_parent_objects,
                          ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._multi_child_objects, ())
         self.assertEqual(signal._multi_parent_objects, ())
-        self.assertEqual(signal._child_properties, ())
 
-        self.assertEqual(signal._single_child_objects, ())
-
-        self.assertEqual(signal._container_child_containers, ())
-        self.assertEqual(signal._data_child_containers, ())
-        self.assertEqual(signal._single_child_containers, ())
         self.assertEqual(signal._single_parent_containers,
                          ('segment', 'recordingchannel'))
-        self.assertEqual(signal._multi_child_containers, ())
         self.assertEqual(signal._multi_parent_containers, ())
 
-        self.assertEqual(signal._child_objects, ())
-        self.assertEqual(signal._child_containers, ())
         self.assertEqual(signal._parent_objects,
                          ('Segment', 'RecordingChannel'))
         self.assertEqual(signal._parent_containers,
                          ('segment', 'recordingchannel'))
 
-        self.assertEqual(signal.children, ())
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')
         self.assertEqual(signal.parents[1].name, 'rchan1')
 
-        signal.create_many_to_one_relationship()
-        signal.create_many_to_many_relationship()
-        signal.create_relationship()
         assert_neo_object_is_compliant(signal)
 
 
@@ -447,6 +506,15 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result[9], 18*pq.mV)
         assert_arrays_equal(result, self.data1/0.5)
         assert_arrays_equal(result.times, self.time1quant)
+
+    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    def test__pretty(self):
+        res = pretty(self.signal1)
+        targ = ("IrregularlySampledSignal\n" +
+                "name: '%s'\ndescription: '%s'\nannotations: %s" %
+                (self.signal1.name, self.signal1.description,
+                 pretty(self.signal1.annotations)))
+        self.assertEqual(res, targ)
 
 
 class TestIrregularlySampledSignalEquality(unittest.TestCase):

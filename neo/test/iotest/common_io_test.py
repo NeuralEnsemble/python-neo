@@ -37,13 +37,14 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_children_empty)
 from neo.test.iotest.tools import (can_use_network, cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
-                                   create_generic_reader, create_generic_writer,
+                                   create_generic_reader,
+                                   create_generic_writer,
                                    create_local_temp_dir, download_test_file,
                                    iter_generic_io_objects,
                                    iter_generic_readers, iter_read_objects,
                                    make_all_directories, read_generic,
                                    write_generic)
-from neo.test.iotest.generate_datasets import generate_from_supported_objects
+from neo.test.generate_datasets import generate_from_supported_objects
 
 
 class BaseTestIO(object):
@@ -460,7 +461,7 @@ class BaseTestIO(object):
             # some formats (e.g. elphy) do not support double floating
             # point spiketrains
             try:
-                assert_same_sub_schema(ob1, ob2, False, 1e-8)
+                assert_same_sub_schema(ob1, ob2, True, 1e-8)
                 assert_neo_object_is_compliant(ob1)
                 assert_neo_object_is_compliant(ob2)
             # intercept exceptions and add more information

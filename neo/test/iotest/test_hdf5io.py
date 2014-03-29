@@ -33,7 +33,7 @@ from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_objects_equivalent,
                             assert_same_sub_schema)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.test.iotest.generate_datasets import fake_neo, get_fake_value
+from neo.test.generate_datasets import fake_neo, get_fake_value
 
 from neo.io.hdf5io import NeoHdf5IO, HAVE_TABLES
 

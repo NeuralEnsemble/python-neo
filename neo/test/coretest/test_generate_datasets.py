@@ -16,17 +16,17 @@ from datetime import datetime
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, Segment,
+from neo.core import (class_by_name, Block, Segment,
                       RecordingChannelGroup, RecordingChannel, Unit,
                       AnalogSignal, AnalogSignalArray,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, Spike,
                       EventArray, EpochArray)
-from neo.test.iotest.generate_datasets import (generate_one_simple_block,
-                                               generate_one_simple_segment,
-                                               generate_from_supported_objects,
-                                               get_fake_value, fake_neo,
-                                               TEST_ANNOTATIONS)
+from neo.test.generate_datasets import (generate_one_simple_block,
+                                        generate_one_simple_segment,
+                                        generate_from_supported_objects,
+                                        get_fake_value, get_fake_values,
+                                        fake_neo, TEST_ANNOTATIONS)
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
 
 
@@ -464,6 +464,44 @@ class Test__get_fake_value(unittest.TestCase):
         self.assertTrue(isinstance(res, str))
         self.assertEqual(targ, res)
 
+    def test__name(self):
+        name = 'name'
+        datatype = str
+        obj = 'Block'
+        targ = 'Block'+str(np.random.randint(100000))
+
+        res = get_fake_value(name, datatype, seed=0, obj=obj)
+        self.assertTrue(isinstance(res, str))
+        self.assertEqual(targ, res)
+
+        self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
+        self.assertRaises(ValueError, get_fake_value, name, np.ndarray)
+
+    def test__description(self):
+        name = 'description'
+        datatype = str
+        obj = Segment
+        targ = 'test Segment '+str(np.random.randint(100000))
+
+        res = get_fake_value(name, datatype, seed=0, obj=obj)
+        self.assertTrue(isinstance(res, str))
+        self.assertEqual(targ, res)
+
+        self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
+        self.assertRaises(ValueError, get_fake_value, name, np.ndarray)
+
+    def test__file_origin(self):
+        name = 'file_origin'
+        datatype = str
+        targ = 'test_file.txt'
+
+        res = get_fake_value(name, datatype, seed=0)
+        self.assertTrue(isinstance(res, str))
+        self.assertEqual(targ, res)
+
+        self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
+        self.assertRaises(ValueError, get_fake_value, name, np.ndarray)
+
     def test__int(self):
         name = 'test__int'
         datatype = int
@@ -485,9 +523,11 @@ class Test__get_fake_value(unittest.TestCase):
     def test__datetime(self):
         name = 'test__datetime'
         datatype = datetime
+        targ = datetime.fromtimestamp(1000000000*np.random.random())
 
-        res = get_fake_value(name, datatype)
+        res = get_fake_value(name, datatype, seed=0)
         self.assertTrue(isinstance(res, datetime))
+        self.assertEqual(res, targ)
 
     def test__quantity(self):
         name = 'test__quantity'
@@ -495,28 +535,58 @@ class Test__get_fake_value(unittest.TestCase):
         dim = 2
 
         size = []
+        units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
         for i in range(int(dim)):
-            size.append(np.random.randint(100) + 1)
-        targ = np.random.random(size) * pq.millisecond
+            size.append(np.random.randint(5) + 1)
+        targ = pq.Quantity(np.random.random(size)*1000, units=units)
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
         self.assertTrue(isinstance(res, pq.Quantity))
-        self.assertEqual(res.units, pq.millisecond)
+        self.assertEqual(res.units, getattr(pq, units))
+        assert_arrays_equal(targ, res)
+
+    def test__quantity_force_units(self):
+        name = 'test__quantity'
+        datatype = np.ndarray
+        dim = 2
+        units = pq.ohm
+
+        size = []
+        for i in range(int(dim)):
+            size.append(np.random.randint(5) + 1)
+        targ = pq.Quantity(np.random.random(size)*1000, units=units)
+
+        res = get_fake_value(name, datatype, dim=dim, seed=0, units=units)
+        self.assertTrue(isinstance(res, np.ndarray))
         assert_arrays_equal(targ, res)
 
     def test__ndarray(self):
-        name = 'test__quantity'
+        name = 'test__ndarray'
         datatype = np.ndarray
         dim = 2
 
         size = []
         for i in range(int(dim)):
-            size.append(np.random.randint(100) + 1)
-        targ = np.random.random(size) * pq.millisecond
+            size.append(np.random.randint(5) + 1)
+        targ = np.random.random(size)*1000
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
         self.assertTrue(isinstance(res, np.ndarray))
         assert_arrays_equal(targ, res)
+
+    def test__list(self):
+        name = 'test__list'
+        datatype = list
+        dim = 2
+
+        size = []
+        for i in range(int(dim)):
+            size.append(np.random.randint(5) + 1)
+        targ = (np.random.random(size)*1000).tolist()
+
+        res = get_fake_value(name, datatype, dim=dim, seed=0)
+        self.assertTrue(isinstance(res, list))
+        self.assertEqual(targ, res)
 
     def test__other_valueerror(self):
         name = 'test__other_fail'
@@ -525,415 +595,216 @@ class Test__get_fake_value(unittest.TestCase):
         self.assertRaises(ValueError, get_fake_value, name, datatype)
 
 
+class Test__get_fake_values(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations['seed'] = 0
+
+    def subcheck__get_fake_values(self, cls):
+        res1 = get_fake_values(cls, annotate=False, seed=0)
+        res2 = get_fake_values(cls, annotate=True, seed=0)
+
+        if hasattr(cls, 'lower'):
+            cls = class_by_name[cls]
+
+        attrs = cls._necessary_attrs + cls._recommended_attrs
+
+        attrnames = [attr[0] for attr in attrs]
+        attrtypes = [attr[1] for attr in attrs]
+
+        attritems = zip(attrnames, attrtypes)
+
+        attrannnames = attrnames + list(self.annotations.keys())
+
+        self.assertEqual(sorted(attrnames), sorted(res1.keys()))
+        self.assertEqual(sorted(attrannnames), sorted(res2.keys()))
+
+        items11 = [(name, type(value)) for name, value in res1.items()]
+        self.assertEqual(sorted(attritems), sorted(items11))
+        for name, value in res1.items():
+            try:
+                self.assertEqual(res2[name], value)
+            except ValueError:
+                assert_arrays_equal(res2[name], value)
+
+        for name, value in self.annotations.items():
+            self.assertFalse(name in res1)
+            self.assertEqual(res2[name], value)
+
+        for attr in attrs:
+            name = attr[0]
+            if len(attr) < 3:
+                continue
+
+            dim = attr[2]
+            self.assertEqual(dim, res1[name].ndim)
+            self.assertEqual(dim, res2[name].ndim)
+
+            if len(attr) < 4:
+                continue
+
+            dtype = attr[3]
+            self.assertEqual(dtype.kind, res1[name].dtype.kind)
+            self.assertEqual(dtype.kind, res2[name].dtype.kind)
+
+    def check__get_fake_values(self, cls):
+        self.subcheck__get_fake_values(cls)
+        self.subcheck__get_fake_values(cls.__name__)
+
+    def test__analogsignal(self):
+        self.check__get_fake_values(AnalogSignal)
+
+    def test__analogsignalarray(self):
+        self.check__get_fake_values(AnalogSignalArray)
+
+    def test__block(self):
+        self.check__get_fake_values(Block)
+
+    def test__epoch(self):
+        self.check__get_fake_values(Epoch)
+
+    def test__epocharray(self):
+        self.check__get_fake_values(EpochArray)
+
+    def test__event(self):
+        self.check__get_fake_values(Event)
+
+    def test__eventarray(self):
+        self.check__get_fake_values(EventArray)
+
+    def test__irregularlysampledsignal(self):
+        self.check__get_fake_values(IrregularlySampledSignal)
+
+    def test__recordingchannel(self):
+        self.check__get_fake_values(RecordingChannel)
+
+    def test__recordingchannelgroup(self):
+        self.check__get_fake_values(RecordingChannelGroup)
+
+    def test__segment(self):
+        self.check__get_fake_values(Segment)
+
+    def test__spike(self):
+        self.check__get_fake_values(Spike)
+
+    def test__spiketrain(self):
+        self.check__get_fake_values(SpikeTrain)
+
+    def test__unit(self):
+        self.check__get_fake_values(Unit)
+
+
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
                                  range(len(TEST_ANNOTATIONS))])
 
-    def test__block__cascade(self):
-        obj_type = 'Block'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
+    def check__generate_datasets(self, cls):
+        clsname = cls.__name__
 
-        self.assertTrue(isinstance(res, Block))
+        self.subcheck__generate_datasets(cls, cascade=True)
+        self.subcheck__generate_datasets(cls, cascade=True, seed=0)
+        self.subcheck__generate_datasets(cls, cascade=False)
+        self.subcheck__generate_datasets(cls, cascade=False, seed=0)
+        self.subcheck__generate_datasets(clsname, cascade=True)
+        self.subcheck__generate_datasets(clsname, cascade=True, seed=0)
+        self.subcheck__generate_datasets(clsname, cascade=False)
+        self.subcheck__generate_datasets(clsname, cascade=False, seed=0)
+
+    def subcheck__generate_datasets(self, cls, cascade, seed=None):
+        self.annotations['seed'] = seed
+
+        if seed is None:
+            res = fake_neo(obj_type=cls, cascade=cascade)
+        else:
+            res = fake_neo(obj_type=cls, cascade=cascade, seed=seed)
+
+        if not hasattr(cls, 'lower'):
+            self.assertTrue(isinstance(res, cls))
+        else:
+            self.assertEqual(res.__class__.__name__, cls)
+
         assert_neo_object_is_compliant(res)
         self.assertEqual(res.annotations, self.annotations)
 
-        self.assertEqual(len(res.segments), 1)
-        seg = res.segments[0]
-        self.assertEqual(seg.annotations, self.annotations)
-
-        self.assertEqual(len(res.recordingchannelgroups), 1)
-        rcg = res.recordingchannelgroups[0]
-        self.assertEqual(rcg.annotations, self.annotations)
-
-        self.assertEqual(len(seg.analogsignalarrays), 1)
-        self.assertEqual(len(seg.analogsignals), 1)
-        self.assertEqual(len(seg.irregularlysampledsignals), 1)
-        self.assertEqual(len(seg.spiketrains), 1)
-        self.assertEqual(len(seg.spikes), 1)
-        self.assertEqual(len(seg.events), 1)
-        self.assertEqual(len(seg.epochs), 1)
-        self.assertEqual(len(seg.eventarrays), 1)
-        self.assertEqual(len(seg.epocharrays), 1)
-        self.assertEqual(seg.analogsignalarrays[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.irregularlysampledsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.spikes[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.events[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.epochs[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.eventarrays[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.epocharrays[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(rcg.recordingchannels), 1)
-        rchan = rcg.recordingchannels[0]
-        self.assertEqual(rchan.annotations, self.annotations)
-
-        self.assertEqual(len(rcg.units), 1)
-        unit = rcg.units[0]
-        self.assertEqual(unit.annotations, self.annotations)
-
-        self.assertEqual(len(rcg.analogsignalarrays), 1)
-        self.assertEqual(rcg.analogsignalarrays[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(rchan.analogsignals), 1)
-        self.assertEqual(len(rchan.irregularlysampledsignals), 1)
-        self.assertEqual(rchan.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(rchan.irregularlysampledsignals[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(unit.spiketrains), 1)
-        self.assertEqual(len(unit.spikes), 1)
-        self.assertEqual(unit.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(unit.spikes[0].annotations,
-                         self.annotations)
-
-    def test__block__nocascade(self):
-        obj_type = 'Block'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Block))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.segments), 0)
-        self.assertEqual(len(res.recordingchannelgroups), 0)
-
-    def test__segment__cascade(self):
-        obj_type = 'Segment'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Segment))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.analogsignalarrays), 1)
-        self.assertEqual(len(res.analogsignals), 1)
-        self.assertEqual(len(res.irregularlysampledsignals), 1)
-        self.assertEqual(len(res.spiketrains), 1)
-        self.assertEqual(len(res.spikes), 1)
-        self.assertEqual(len(res.events), 1)
-        self.assertEqual(len(res.epochs), 1)
-        self.assertEqual(len(res.eventarrays), 1)
-        self.assertEqual(len(res.epocharrays), 1)
-
-        self.assertEqual(res.analogsignalarrays[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.irregularlysampledsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.spikes[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.events[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.epochs[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.eventarrays[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.epocharrays[0].annotations,
-                         self.annotations)
-
-    def test__segment__nocascade(self):
-        obj_type = 'Segment'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Segment))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.analogsignalarrays), 0)
-        self.assertEqual(len(res.analogsignals), 0)
-        self.assertEqual(len(res.irregularlysampledsignals), 0)
-        self.assertEqual(len(res.spiketrains), 0)
-        self.assertEqual(len(res.spikes), 0)
-        self.assertEqual(len(res.events), 0)
-        self.assertEqual(len(res.epochs), 0)
-        self.assertEqual(len(res.eventarrays), 0)
-        self.assertEqual(len(res.epocharrays), 0)
-
-    def test__recordingchannelgroup__cascade(self):
-        obj_type = 'RecordingChannelGroup'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, RecordingChannelGroup))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.recordingchannels), 1)
-        rchan = res.recordingchannels[0]
-        self.assertEqual(rchan.annotations, self.annotations)
-
-        self.assertEqual(len(res.units), 1)
-        unit = res.units[0]
-        self.assertEqual(unit.annotations, self.annotations)
-
-        self.assertEqual(len(res.analogsignalarrays), 1)
-        self.assertEqual(res.analogsignalarrays[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(rchan.analogsignals), 1)
-        self.assertEqual(len(rchan.irregularlysampledsignals), 1)
-        self.assertEqual(rchan.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(rchan.irregularlysampledsignals[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(unit.spiketrains), 1)
-        self.assertEqual(len(unit.spikes), 1)
-        self.assertEqual(unit.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(unit.spikes[0].annotations,
-                         self.annotations)
-
-    def test__recordingchannelgroup__nocascade(self):
-        obj_type = 'RecordingChannelGroup'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, RecordingChannelGroup))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.recordingchannels), 0)
-        self.assertEqual(len(res.units), 0)
-        self.assertEqual(len(res.analogsignalarrays), 0)
-
-    def test__recordingchannel__cascade(self):
-        obj_type = 'RecordingChannel'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, RecordingChannel))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.analogsignals), 1)
-        self.assertEqual(len(res.irregularlysampledsignals), 1)
-
-        self.assertEqual(res.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.irregularlysampledsignals[0].annotations,
-                         self.annotations)
-
-    def test__recordingchannel__nocascade(self):
-        obj_type = 'RecordingChannel'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, RecordingChannel))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.analogsignals), 0)
-        self.assertEqual(len(res.irregularlysampledsignals), 0)
-
-    def test__unit__cascade(self):
-        obj_type = 'Unit'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Unit))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.spiketrains), 1)
-        self.assertEqual(len(res.spikes), 1)
-
-        self.assertEqual(res.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.spikes[0].annotations,
-                         self.annotations)
-
-    def test__unit__nocascade(self):
-        obj_type = 'Unit'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Unit))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-        self.assertEqual(len(res.spiketrains), 0)
-        self.assertEqual(len(res.spikes), 0)
-
-    def test__analogsignal__cascade(self):
-        obj_type = 'AnalogSignal'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, AnalogSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__analogsignal__nocascade(self):
-        obj_type = 'AnalogSignal'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, AnalogSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__analogsignalarray__cascade(self):
-        obj_type = 'AnalogSignalArray'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, AnalogSignalArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__analogsignalarray__nocascade(self):
-        obj_type = 'AnalogSignalArray'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, AnalogSignalArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__irregularlysampledsignal__cascade(self):
-        obj_type = 'IrregularlySampledSignal'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, IrregularlySampledSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__irregularlysampledsignal__nocascade(self):
-        obj_type = 'IrregularlySampledSignal'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, IrregularlySampledSignal))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__spiketrain__cascade(self):
-        obj_type = 'SpikeTrain'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, SpikeTrain))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__spiketrain__nocascade(self):
-        obj_type = 'SpikeTrain'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, SpikeTrain))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__event__cascade(self):
-        obj_type = 'Event'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Event))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__event__nocascade(self):
-        obj_type = 'Event'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Event))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__epoch__cascade(self):
-        obj_type = 'Epoch'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Epoch))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__epoch__nocascade(self):
-        obj_type = 'Epoch'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Epoch))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__spike__cascade(self):
-        obj_type = 'Spike'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Spike))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__spike__nocascade(self):
-        obj_type = 'Spike'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, Spike))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__eventarray__cascade(self):
-        obj_type = 'EventArray'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, EventArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__eventarray__nocascade(self):
-        obj_type = 'EventArray'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, EventArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__epocharray__cascade(self):
-        obj_type = 'EpochArray'
-        cascade = True
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, EpochArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
-
-    def test__epocharray__nocascade(self):
-        obj_type = 'EpochArray'
-        cascade = False
-        res = fake_neo(obj_type=obj_type, cascade=cascade)
-
-        self.assertTrue(isinstance(res, EpochArray))
-        assert_neo_object_is_compliant(res)
-        self.assertEqual(res.annotations, self.annotations)
+        resattr = get_fake_values(cls, annotate=False, seed=0)
+        if seed is not None:
+            for name, value in resattr.items():
+                if name in ['channel_names',
+                            'channel_indexes',
+                            'channel_index']:
+                    continue
+                try:
+                    try:
+                        resvalue = getattr(res, name)
+                    except AttributeError:
+                        if name == 'signal':
+                            continue
+                        raise
+                    try:
+                        self.assertEqual(resvalue, value)
+                    except ValueError:
+                        assert_arrays_equal(resvalue, value)
+                except BaseException as exc:
+                    exc.args += ('from %s' % name,)
+                    raise
+
+        if not getattr(res, '_child_objects', ()):
+            pass
+        elif not cascade:
+            self.assertEqual(res.children, ())
+        else:
+            self.assertNotEqual(res.children, ())
+
+        if cls in ['RecordingChannelGroup', RecordingChannelGroup]:
+            for i, rchan in enumerate(res.recordingchannels):
+                self.assertEqual(rchan.name, res.channel_names[i].astype(str))
+                self.assertEqual(rchan.index, res.channel_indexes[i])
+            for i, unit in enumerate(res.units):
+                for sigarr in res.analogsignalarrays:
+                    self.assertEqual(unit.channel_indexes[0],
+                                     sigarr.channel_index[i])
+
+    def test__analogsignal(self):
+        self.check__generate_datasets(AnalogSignal)
+
+    def test__analogsignalarray(self):
+        self.check__generate_datasets(AnalogSignal)
+
+    def test__block(self):
+        self.check__generate_datasets(AnalogSignalArray)
+
+    def test__epoch(self):
+        self.check__generate_datasets(Epoch)
+
+    def test__epocharray(self):
+        self.check__generate_datasets(EpochArray)
+
+    def test__event(self):
+        self.check__generate_datasets(Event)
+
+    def test__eventarray(self):
+        self.check__generate_datasets(EventArray)
+
+    def test__irregularlysampledsignal(self):
+        self.check__generate_datasets(IrregularlySampledSignal)
+
+    def test__recordingchannel(self):
+        self.check__generate_datasets(RecordingChannel)
+
+    def test__recordingchannelgroup(self):
+        self.check__generate_datasets(RecordingChannelGroup)
+
+    def test__segment(self):
+        self.check__generate_datasets(Segment)
+
+    def test__spike(self):
+        self.check__generate_datasets(Spike)
+
+    def test__spiketrain(self):
+        self.check__generate_datasets(SpikeTrain)
+
+    def test__unit(self):
+        self.check__generate_datasets(Unit)
