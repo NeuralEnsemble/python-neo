@@ -128,60 +128,7 @@ class BrainwareSrcIO(BaseIO):
     # and 'label' (for a descriptive name).
     # Note that if the highest-level object requires parameters,
     # common_io_test will be skipped.
-    read_params = {Block: [],
-                   Event: [('sender',
-                            {'value': '', 'type': str,
-                             'label': 'The ones who sent the comments', }
-                            ),
-                           ('timestamp',
-                            {'value': datetime(1, 1, 1), 'type': datetime,
-                             'label': 'The time of the comment', }
-                            )
-                           ],
-                   RecordingChannel: [],
-                   RecordingChannelGroup: [],
-                   Segment: [('feature_type',
-                              {'value': -1, 'type': int}),
-                             ('go_by_closest_unit_center',
-                              {'value': False, 'type': bool}),
-                             ('include_unit_bounds',
-                              {'value': False, 'type': bool})
-                             ],
-                   SpikeTrain: [('dama_index',
-                                 {'value': -1, 'type': int,
-                                  'label': 'index of analogsignalarray in '
-                                           'corresponding .dam file, if any'}),
-                                ('respwin',
-                                 {'value': np.asarray([], dtype=np.int32),
-                                  'type': np.ndarray,
-                                  'label': 'response and spon period '
-                                           'boundaries'}),
-                                ('trig2',
-                                 {'value': pq.Quantity([], dtype=np.uint8,
-                                                       units=pq.ms),
-                                  'type': pq.quantity.Quantity,
-                                  'label': 'point of return to noise'}),
-                                ('side',
-                                 {'value': '', 'type': str,
-                                  'label': 'side of the brain'}),
-                                ('timestamp',
-                                 {'value': datetime(1, 1, 1),
-                                  'type': datetime,
-                                  'label': 'Start time of the SpikeTrain'})
-                                ],
-                   Unit: [('boundaries',
-                           {'value': [], 'type': list,
-                            'label': 'unit boundaries'}),
-                          ('elliptic',
-                           {'value': [], 'type': list,
-                            'label': 'elliptic feature'}),
-                          ('timestamp',
-                           {'value': [], 'type': list,
-                            'label': 'Start time of each unit list'}),
-                          ('max_valid',
-                           {'value': [], 'type': list})
-                          ]
-                   }
+    read_params = {Block: []}
 
     # does not support write so no GUI stuff
     write_params = None
