@@ -95,12 +95,7 @@ class BrainwareDamIO(BaseIO):
     # and 'label' (for a descriptive name).
     # Note that if the highest-level object requires parameters,
     # common_io_test will be skipped.
-    read_params = {Block: [],
-                   RecordingChannelGroup: [],
-                   RecordingChannel: [],
-                   Segment: [],
-                   AnalogSignal: [],
-                   }
+    read_params = {Block: []}
 
     # do not support write so no GUI stuff
     write_params = None
