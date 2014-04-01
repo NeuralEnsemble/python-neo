@@ -46,7 +46,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (Block, Event, RecordingChannel,
+from neo.core import (Block, EventArray, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 
 # need to subclass BaseIO
@@ -84,9 +84,7 @@ class BrainwareSrcIO(BaseIO):
 
     Note 2:
         The first Segment in each Block is always Comments, which stores all
-        comments as Event objects.  The Event times are the timestamps
-        of the comments as the number of days since dec 30th 1899, while the
-        timestamp attribute has the same value in python datetime format
+        comments as an EventArray object.
 
     Note 3:
         The parameters from the BrainWare table for each condition are stored
@@ -119,7 +117,7 @@ class BrainwareSrcIO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects = [Block, RecordingChannel, RecordingChannelGroup,
-                         Segment, SpikeTrain, Event, Unit]
+                         Segment, SpikeTrain, EventArray, Unit]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -186,7 +184,7 @@ class BrainwareSrcIO(BaseIO):
 
         # This stores the current Segment for easy access
         # It is equivalent to self._blk.segments[-1]
-        self._seg = None
+        self._seg0 = None
 
         # this stores a dictionary of the Block's Units by name,
         # making it easier and faster to retrieve Units by name later
@@ -194,7 +192,7 @@ class BrainwareSrcIO(BaseIO):
         self._unitdict = {}
 
         # this stores the current Unit
-        self._unit = None
+        self._unit0 = None
 
         # if the file has a list with negative length, the rest of the file's
         # list lengths are unreliable, so we need to store this value for the
@@ -241,7 +239,7 @@ class BrainwareSrcIO(BaseIO):
         # we also need to reset all per-file attributes
         self._damaged = False
         self._fsrc = None
-        self._seg = None
+        self._seg0 = None
         self._cascade = False
         self._file_origin = None
         self._lazy = False
@@ -307,14 +305,14 @@ class BrainwareSrcIO(BaseIO):
         if not cascade:
             return self._blk
         self._rcg = RecordingChannelGroup(file_origin=self._file_origin)
-        self._seg = Segment(name='Comments', file_origin=self._file_origin)
-        self._unit = Unit(name='UnassignedSpikes',
-                          file_origin=self._file_origin,
-                          elliptic=[], boundaries=[],
-                          timestamp=[], max_valid=[])
+        self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
+        self._unit0 = Unit(name='UnassignedSpikes',
+                           file_origin=self._file_origin,
+                           elliptic=[], boundaries=[],
+                           timestamp=[], max_valid=[])
         self._blk.recordingchannelgroups.append(self._rcg)
-        self._rcg.units.append(self._unit)
-        self._blk.segments.append(self._seg)
+        self._rcg.units.append(self._unit0)
+        self._blk.segments.append(self._seg0)
 
         # this actually reads the contents of the Block
         result = []
@@ -343,6 +341,9 @@ class BrainwareSrcIO(BaseIO):
         self._blk = None
         self._rcg = None
         self._unitdict = {}
+
+        # combine the comments into one big eventarray
+        self._combine_segment_eventarrays(self._seg0)
 
         # result is None iff the end of the file is reached, so we can
         # close the file
@@ -499,14 +500,14 @@ class BrainwareSrcIO(BaseIO):
             self._logger.warning('Unknown Segment found, '
                                  'adding to Segments list')
             self._blk.segments.append(data_obj)
-        elif isinstance(data_obj, Event):
-            self._logger.warning('Unknown Event found, '
+        elif isinstance(data_obj, EventArray):
+            self._logger.warning('Unknown EventArray found, '
                                  'adding to comment Events list')
-            self._blk.segments[0].events.append(data_obj)
+            self._seg0.eventarrays.append(data_obj)
         elif isinstance(data_obj, SpikeTrain):
             self._logger.warning('Unknown SpikeTrain found, '
                                  'adding to the UnassignedSpikes Unit')
-            self._rcg.units[0].spiketrains.append(data_obj)
+            self._unit0.spiketrains.append(data_obj)
         elif hasattr(data_obj, '__iter__') and not isinstance(data_obj, str):
             for sub_obj in data_obj:
                 self._assign_sequence(sub_obj)
@@ -534,6 +535,51 @@ class BrainwareSrcIO(BaseIO):
                                           trig2=pq.Quantity([], units=pq.ms,
                                                             dtype=np.uint8),
                                           side='')
+
+    def _combine_eventarrays(self, eventarrays):
+        """
+        _combine_eventarrays(eventarrays) - combine a list of EventArrays
+        with single events into one long EventArray
+        """
+        if not eventarrays or self._lazy:
+            eventarray = EventArray(times=pq.Quantity([], units=pq.s),
+                                    labels=np.array([], dtype='S'),
+                                    senders=np.array([], dtype='S'),
+                                    t_start=0)
+            if self._lazy:
+                eventarray.lazy_shape = len(eventarrays)
+            return eventarray
+
+        times = []
+        labels = []
+        senders = []
+        for event in eventarrays:
+            times.append(event.times.magnitude)
+            labels.append(event.labels)
+            senders.append(event.annotations['sender'])
+
+        times = np.array(times, dtype=np.float32)
+        t_start = times.min()
+        times = pq.Quantity(times-t_start, units=pq.d).rescale(pq.s)
+
+        labels = np.array(labels)
+        senders = np.array(senders)
+
+        eventarray = EventArray(times=times, labels=labels,
+                                t_start=t_start.tolist(), senders=senders)
+
+        return eventarray
+
+    def _combine_segment_eventarrays(self, segment):
+        """
+        _combine_segment_eventarrays(segment)
+        Combine all EventArrays in a segment.
+        """
+        eventarray = self._combine_eventarrays(segment.eventarrays)
+        eventarray_t_start = eventarray.annotations.pop('t_start')
+        segment.rec_datetime = self._convert_timestamp(eventarray_t_start)
+        segment.eventarrays = [eventarray]
+        eventarray.segment = segment
 
     def _combine_spiketrains(self, spiketrains):
         """
@@ -643,7 +689,7 @@ class BrainwareSrcIO(BaseIO):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
 
-    def __read_str(self, numchars=1):
+    def __read_str(self, numchars=1, utf=None):
         """
         Read a string of a specific length.
 
@@ -651,7 +697,7 @@ class BrainwareSrcIO(BaseIO):
         """
         rawstr = np.asscalar(np.fromfile(self._fsrc,
                                          dtype='S%s' % numchars, count=1))
-        if PY_VER == 3:
+        if utf or (utf is None and PY_VER == 3):
             return rawstr.decode('utf-8')
         return rawstr
 
@@ -737,7 +783,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Read a single comment.
 
-        The comment is stored as an Event in Segment 0, which is
+        The comment is stored as an EventArray in Segment 0, which is
         specifically for comments.
 
         ----------------------
@@ -763,20 +809,13 @@ class BrainwareSrcIO(BaseIO):
                                             dtype=np.int16, count=1))
 
         # char * numchars -- comment text
-        text = self.__read_str(numchars2)
+        text = self.__read_str(numchars2, utf=False)
 
-        # convert the timestamp to a python datetime object
-        # then convert that to a quantity containing a unix timestamp
-        timestamp = self._convert_timestamp(time)
-        time = pq.Quantity(time, units=pq.d)
+        comment = EventArray(times=pq.Quantity(time, units=pq.d), labels=text,
+                             sender=sender,
+                             file_origin=self._file_origin)
 
-        comment = Event(time=time, label=text,
-                        sender=sender, name='Comment',
-                        description='container for a comment',
-                        file_origin=self._file_origin,
-                        timestamp=timestamp)
-
-        self._blk.segments[0].events.append(comment)
+        self._seg0.eventarrays.append(comment)
 
         return []
 
@@ -881,7 +920,7 @@ class BrainwareSrcIO(BaseIO):
         # (data_obj) -- SpikeTrain list of unassigned spikes
         # these go in the first Unit since it is for unassigned spikes
         unassigned_spikes = self._read_by_id()
-        self._rcg.units[0].spiketrains.extend(unassigned_spikes)
+        self._unit0.spiketrains.extend(unassigned_spikes)
 
         # read a list of units and grab the second return value, which is the
         # SpikeTrains from this Segment (if we use the Unit we will get all the

@@ -18,7 +18,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, Event, RecordingChannel,
+from neo.core import (Block, EventArray, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -27,8 +27,6 @@ from neo.test.tools import (assert_same_sub_schema,
 from neo.test.iotest.tools import create_generic_reader
 
 PY_VER = sys.version_info[0]
-
-
 
 FILES_TO_TEST = ['block_300ms_4rep_1clust_part_ch1.src',
                  'block_500ms_5rep_empty_fullclust_ch1.src',
@@ -118,16 +116,18 @@ def proc_src_comments(srcfile, filename):
     texts = [res[0] for res in commentarray['text'].flatten()]
     timeStamps = [res[0, 0] for res in commentarray['timeStamp'].flatten()]
 
-    for sender, text, timeStamp in zip(senders, texts, timeStamps):
-        time = pq.Quantity(timeStamp, units=pq.d)
-        timeStamp = brainwaresrcio.convert_brainwaresrc_timestamp(timeStamp)
-        commentevent = Event(time=time,
-                             label=str(text),
-                             sender=str(sender),
-                             name='Comment', file_origin=filename,
-                             description='container for a comment',
-                             timestamp=timeStamp)
-        comm_seg.events.append(commentevent)
+    timeStamps = np.array(timeStamps, dtype=np.float32)
+    t_start = timeStamps.min()
+    timeStamps = pq.Quantity(timeStamps-t_start, units=pq.d).rescale(pq.s)
+    texts = np.array(texts, dtype='S')
+    senders = np.array(senders, dtype='S')
+    t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
+
+    comments = EventArray(times=timeStamps,
+                          labels=texts,
+                          senders=senders)
+    comm_seg.eventarrays = [comments]
+    comm_seg.rec_datetime = t_start
 
     return comm_seg
 
