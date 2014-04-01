@@ -366,6 +366,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
 
+        if hasattr(obj, 'lazy_shape'):
+            self.lazy_shape = obj.lazy_shape
+
     def __repr__(self):
         '''
         Returns a string representing the :class:`SpikeTrain`.
