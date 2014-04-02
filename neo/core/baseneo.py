@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 This module defines :class:`BaseNeo`, the abstract base class
 used by all :module:`neo.core` classes.
-'''
+"""
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
@@ -36,11 +36,11 @@ logger = logging.getLogger("Neo")
 
 
 def _check_annotations(value):
-    '''
+    """
     Recursively check that value is either of a "simple" type (number, string,
     date/time) or is a (possibly nested) dict, list or numpy array containing
     only simple types.
-    '''
+    """
     if isinstance(value, np.ndarray):
         if not issubclass(value.dtype.type, ALLOWED_ANNOTATION_TYPES):
             raise ValueError("Invalid annotation. NumPy arrays with dtype %s"
@@ -57,38 +57,55 @@ def _check_annotations(value):
 
 
 def merge_annotation(a, b):
-    '''
+    """
     First attempt at a policy for merging annotations (intended for use with
     parallel computations using MPI). This policy needs to be discussed
     further, or we could allow the user to specify a policy.
 
     Current policy:
-        for arrays: concatenate the two arrays
-        otherwise: fail if the annotations are not equal
-    '''
-    assert type(a) == type(b)
+        For arrays or lists: concatenate
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: fail if the annotations are not equal
+    """
+    assert type(a) == type(b), 'type(%s) %s != type(%s) %s' % (a, type(a),
+                                                               b, type(b))
     if isinstance(a, dict):
         return merge_annotations(a, b)
     elif isinstance(a, np.ndarray):  # concatenate b to a
         return np.append(a, b)
+    elif isinstance(a, list):  # concatenate b to a
+        return a + b
     elif isinstance(a, basestring):
         if a == b:
             return a
         else:
             return a + ";" + b
     else:
-        assert a == b
+        assert a == b, '%s != %s' % (a, b)
         return a
 
 
 def merge_annotations(A, B):
-    '''
+    """
     Merge two sets of annotations.
-    '''
+
+    Merging follows these rules:
+    All keys that are in A or B, but not both, are kept.
+    For keys that are present in both:
+        For arrays or lists: concatenate
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: fail if the annotations are not equal
+    """
     merged = {}
     for name in A:
         if name in B:
-            merged[name] = merge_annotation(A[name], B[name])
+            try:
+                merged[name] = merge_annotation(A[name], B[name])
+            except BaseException as exc:
+                exc.args += ('key %s' % name,)
+                raise
         else:
             merged[name] = A[name]
     for name in B:
@@ -99,10 +116,56 @@ def merge_annotations(A, B):
 
 
 class BaseNeo(object):
-    '''This is the base class from which all Neo objects inherit.
+    """
+    This is the base class from which all Neo objects inherit.
 
     This class implements support for universally recommended arguments,
     and also sets up the :attr:`annotations` dict for additional arguments.
+
+    Each class can define one or more of the following class attributes:
+        :_single_parent_objects: Neo objects that can be parents of this
+                                 object. This attribute is used in cases where
+                                 only one parent of this class is allowed.
+                                 An instance attribute named
+                                 class.__name__.lower() will be automatically
+                                 defined to hold this parent and will be
+                                 initialized to None.
+        :_multi_parent_objects: Neo objects that can be parents of this
+                                object. This attribute is used in cases where
+                                multiple parents of this class is allowed.
+                                An instance attribute named
+                                class.__name__.lower()+'s' will be
+                                automatically defined to hold this parent and
+                                will be initialized to an empty list.
+        :_necessary_attrs: A list of tuples containing the attributes that the
+                           class must have. The tuple can have 2-4 elements.
+                           The first element is the attribute name.
+                           The second element is the attribute type.
+                           The third element is the number of  dimensions
+                           (only for numpy arrays and quantities).
+                           The fourth element is the dtype of array
+                           (only for numpy arrays and quantities).
+                           This does NOT include the attributes holding the
+                           parents or children of the object.
+        :_recommended_attrs: A list of tuples containing the attributes that
+                             the class may optionally have.  It uses the same
+                             structure as :_necessary_attrs:
+        :_repr_pretty_attrs_keys_: The names of attributes printed when
+                                   pretty-printing using iPython.
+
+    The following helper properties are available:
+        :_parent_objects: All parent objects.
+                         :_single_parent_objects: + :_multi_parent_objects:
+        :_single_parent_containers: The names of the container attributes used
+                                   to store :_single_parent_objects:
+        :_multi_parent_containers: The names of the container attributes used
+                                   to store :_multi_parent_objects:
+        :_parent_containers: All parent container attributes.
+                            :_single_parent_containers: +
+                            :_multi_parent_containers:
+        :parents: All objects that are parents of the current object.
+        :_all_attrs: All required and optional attributes.
+                     :_necessary_attrs: + :_recommended_attrs:
 
     The following "universal" methods are available:
         :__init__: Grabs the universally recommended arguments :attr:`name`,
@@ -116,12 +179,23 @@ class BaseNeo(object):
         :annotate(**args): Updates :attr:`annotations` with keyword/value
                            pairs.
 
+        :merge(**args): Merge the contents of another object into this one.
+                        The merge method implemented here only merges
+                        annotations (see :merge_annotations:).
+                        Subclasses should implementt their own merge rules.
+
+        :merge_annotations(**args): Merge the :attr:`annotations` of another
+                                    object into this one.
+
     Each child class should:
-        0) call BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                                 description=description, **annotations)
+        0) describe its parents (if any) and attributes in the relevant
+           class attributes. :_recommended_attrs: should append
+           BaseNeo._recommended_attrs to the end.
+        1) call BaseNeo.__init__(self, name=name, description=description,
+                                 file_origin=file_origin, **annotations)
            with the universal recommended arguments, plus optional annotations
-        1) process its required arguments in its __new__ or __init__ method
-        2) process its non-universal recommended arguments (in its __new__ or
+        2) process its required arguments in its __new__ or __init__ method
+        3) process its non-universal recommended arguments (in its __new__ or
            __init__ method
 
     Non-keyword arguments should only be used for required arguments.
@@ -129,22 +203,14 @@ class BaseNeo(object):
     The required and recommended arguments for each child class (Neo object)
     are specified in the _necessary_attrs and _recommended_attrs attributes and
     documentation for the child object.
-    '''
+    """
 
     # these attributes control relationships, they need to be
     # specified in each child class
-    # Child objects that are a container and have a single parent
-    _container_child_objects = ()
-    # Child objects that have data and have a single parent
-    _data_child_objects = ()
     # Parent objects whose children can have a single parent
     _single_parent_objects = ()
-    # Child objects that can have multiple parents
-    _multi_child_objects = ()
     # Parent objects whose children can have multiple parents
     _multi_parent_objects = ()
-    # Properties returning children of children [of children...]
-    _child_properties = ()
 
     # Attributes that an instance is requires to have defined
     _necessary_attrs = ()
@@ -152,16 +218,18 @@ class BaseNeo(object):
     _recommended_attrs = (('name', str),
                           ('description', str),
                           ('file_origin', str))
+    # Attributes that are used for pretty-printing
+    _repr_pretty_attrs_keys_ = ("name", "description", "annotations")
 
-    def __init__(self, name=None, file_origin=None, description=None,
+    def __init__(self, name=None, description=None, file_origin=None,
                  **annotations):
-        '''
+        """
         This is the base constructor for all Neo objects.
 
         Stores universally recommended attributes and creates
         :attr:`annotations` from additional arguments not processed by
         :class:`BaseNeo` or the child class.
-        '''
+        """
         # create `annotations` for additional arguments
         _check_annotations(annotations)
         self.annotations = annotations
@@ -171,8 +239,14 @@ class BaseNeo(object):
         self.description = description
         self.file_origin = file_origin
 
+        # initialize parent containers
+        for parent in self._single_parent_containers:
+            setattr(self, parent, None)
+        for parent in self._multi_parent_containers:
+            setattr(self, parent, [])
+
     def annotate(self, **annotations):
-        '''
+        """
         Add annotations (non-standardized metadata) to a Neo object.
 
         Example:
@@ -180,11 +254,9 @@ class BaseNeo(object):
         >>> obj.annotate(key1=value0, key2=value1)
         >>> obj.key2
         value2
-        '''
+        """
         _check_annotations(annotations)
         self.annotations.update(annotations)
-
-    _repr_pretty_attrs_keys_ = ["name", "description", "annotations"]
 
     def _has_repr_pretty_attrs_(self):
         return any(getattr(self, k) for k in self._repr_pretty_attrs_keys_)
@@ -203,180 +275,83 @@ class BaseNeo(object):
                     pp.pretty(value)
 
     def _repr_pretty_(self, pp, cycle):
-        '''
+        """
         Handle pretty-printing the :class:`BaseNeo`.
-        '''
+        """
         pp.text(self.__class__.__name__)
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
 
     @property
-    def _single_child_objects(self):
-        '''
-        Child objects that have a single parent.
-        '''
-        return self._container_child_objects + self._data_child_objects
-
-    @property
-    def _container_child_containers(self):
-        '''
-        Containers for child objects that are a container and
-        have a single parent.
-        '''
-        return tuple([child.lower() + 's' for child in
-                      self._container_child_objects])
-
-    @property
-    def _data_child_containers(self):
-        '''
-        Containers for child objects that have data and have a single parent.
-        '''
-        return tuple([child.lower() + 's' for child in
-                      self._data_child_objects])
-
-    @property
-    def _single_child_containers(self):
-        '''
-        Containers for child objects with a single parent.
-        '''
-        return tuple([child.lower() + 's' for child in
-                      self._single_child_objects])
-
-    @property
     def _single_parent_containers(self):
-        '''
+        """
         Containers for parent objects whose children can have a single parent.
-        '''
+        """
         return tuple([parent.lower() for parent in
                       self._single_parent_objects])
 
     @property
-    def _multi_child_containers(self):
-        '''
-        Containers for child objects that can have multiple parents.
-        '''
-        return tuple([child.lower() + 's' for child in
-                      self._multi_child_objects])
-
-    @property
     def _multi_parent_containers(self):
-        '''
+        """
         Containers for parent objects whose children can have multiple parents.
-        '''
+        """
         return tuple([parent.lower() + 's' for parent in
                       self._multi_parent_objects])
 
     @property
-    def _child_objects(self):
-        '''
-        All types for child objects.
-        '''
-        return self._single_child_objects + self._multi_child_objects
-
-    @property
-    def _child_containers(self):
-        '''
-        All containers for child objects.
-        '''
-        return self._single_child_containers + self._multi_child_containers
-
-    @property
     def _parent_objects(self):
-        '''
+        """
         All types for parent objects.
-        '''
+        """
         return self._single_parent_objects + self._multi_parent_objects
 
     @property
     def _parent_containers(self):
-        '''
+        """
         All containers for parent objects.
-        '''
+        """
         return self._single_parent_containers + self._multi_parent_containers
 
     @property
-    def children(self):
-        '''
-        All child objects stored in the current object.
-        '''
-        childs = [list(getattr(self, attr)) for attr in self._child_containers]
-        return tuple(sum(childs, []))
-
-    @property
     def parents(self):
-        '''
+        """
         All parent objects storing the current object.
-        '''
+        """
         single = [getattr(self, attr) for attr in
                   self._single_parent_containers]
         multi = [list(getattr(self, attr)) for attr in
                  self._multi_parent_containers]
         return tuple(single + sum(multi, []))
 
-    def create_many_to_one_relationship(self, force=False, recursive=True):
-        """
-        For each child of the current object, set its parent to be the current
-        object.
-
-        Usage:
-        >>> a_block.create_many_to_one_relationship()
-        >>> a_block.create_many_to_one_relationship(force=True)
-
-        You want to run populate_RecordingChannel first, because this will
-        create new objects that this method will link up.
-
-        If force is True overwrite any existing relationships
-        If recursive is True desecend into child objects and create
-        relationships there
-
-        """
-        classname = self.__class__.__name__.lower()
-        for child in self.children:
-            if (hasattr(child, classname) and
-                    getattr(child, classname) is None or force):
-                setattr(child, classname, self)
-
-            if recursive:
-                child.create_many_to_one_relationship(force=force,
-                                                      recursive=True)
-
-    def create_many_to_many_relationship(self, append=True, recursive=True):
-        '''
-        For children of the current object that can have more than one parent
-        of this type, put the current object in the parent list.
-
-        If append is True add it to the list, otherwise overwrite the list.
-        If recursive is True desecend into child objects and create
-        relationships there
-        '''
-        classname = self.__class__.__name__.lower() + 's'
-        for child in self.children:
-            if not hasattr(child, classname):
-                pass
-            elif append:
-                target = getattr(child, classname)
-                if not self in target:
-                    target.append(self)
-            else:
-                setattr(child, classname, [self])
-
-            if recursive:
-                child.create_many_to_many_relationship(append=append,
-                                                       recursive=True)
-
-    def create_relationship(self, force=False, append=True, recursive=True):
-        self.create_many_to_one_relationship(force=force, recursive=False)
-        self.create_many_to_many_relationship(append=append, recursive=False)
-        if recursive:
-            for child in self.children:
-                child.create_relationship(force=force, append=append,
-                                          recursive=True)
-
     @property
     def _all_attrs(self):
-        '''
+        """
         Returns a combination of all required and recommended
         attributes.
-        '''
+        """
         return self._necessary_attrs + self._recommended_attrs
+
+    def merge_annotations(self, other):
+        """
+        Merge annotations from the other object into this one.
+
+        Merging follows these rules:
+        All keys that are in the either object, but not both, are kept.
+        For keys that are present in both objects:
+            For arrays or lists: concatenate the two arrays
+            For dicts: merge recursively
+            For strings: concatenate with ';'
+            Otherwise: fail if the annotations are not equal
+        """
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        self.annotations.update(merged_annotations)
+
+    def merge(self, other):
+        """
+        Merge the contents of another object into this one.
+
+        See :meth:`merge_annotations` for details of the merge operation.
+        """
+        self.merge_annotations(other)

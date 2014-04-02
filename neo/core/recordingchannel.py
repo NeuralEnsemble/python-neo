@@ -3,8 +3,8 @@
 This module defines :class:`RecordingChannel`, a container for recordings
 coming from a single data channel.
 
-:class:`RecordingChannel` derives from :class:`BaseNeo`, from
-:module:`neo.core.baseneo`.
+:class:`RecordingChannel` derives from :class:`Container`,
+from :module:`neo.core.container`.
 '''
 
 # needed for python 3 compatibility
@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, print_function
 
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo
+from neo.core.container import Container
 
 
-class RecordingChannel(BaseNeo):
+class RecordingChannel(Container):
     '''
     A container for recordings coming from a single data channel.
 
@@ -86,7 +86,7 @@ class RecordingChannel(BaseNeo):
     _multi_parent_objects = ('RecordingChannelGroup',)
     _necessary_attrs = (('index', int),)
     _recommended_attrs = ((('coordinate', pq.Quantity, 1),) +
-                          BaseNeo._recommended_attrs)
+                          Container._recommended_attrs)
 
     def __init__(self, index=0, coordinate=None, name=None, description=None,
                  file_origin=None, **annotations):
@@ -96,25 +96,11 @@ class RecordingChannel(BaseNeo):
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        super(RecordingChannel, self).__init__(name=name,
+                                               description=description,
+                                               file_origin=file_origin,
+                                               **annotations)
 
         # Store required and recommended attributes
         self.index = index
         self.coordinate = coordinate
-
-        # Initialize contianers
-        self.analogsignals = []
-        self.irregularlysampledsignals = []
-        # Many to many relationship
-        self.recordingchannelgroups = []
-
-    def merge(self, other):
-        '''
-        Merge the contents of another RecordingChannel into this one.
-
-        Objects from the other RecordingChannel will be added to this one.
-        '''
-        for container in ("analogsignals", "irregularlysampledsignals"):
-            getattr(self, container).extend(getattr(other, container))
-        # TODO: merge annotations

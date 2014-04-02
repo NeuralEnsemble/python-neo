@@ -4,7 +4,8 @@ This module defines :class:`Block`, the main container gathering all the data,
 whether discrete or continous, for a given recording session. base class
 used by all :module:`neo.core` classes.
 
-:class:`Block` derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`.
+:class:`Block` derives from :class:`Container`,
+from :module:`neo.core.container`.
 '''
 
 # needed for python 3 compatibility
@@ -12,10 +13,10 @@ from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
 
-from neo.core.baseneo import BaseNeo
+from neo.core.container import Container, unique_objs
 
 
-class Block(BaseNeo):
+class Block(Container):
     '''
     Main container for data.
 
@@ -85,7 +86,11 @@ class Block(BaseNeo):
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
-                          BaseNeo._recommended_attrs)
+                          Container._recommended_attrs)
+    _repr_pretty_attrs_keys_ = (Container._repr_pretty_attrs_keys_ +
+                                ('file_origin', 'file_datetime',
+                                 'rec_datetime', 'index'))
+    _repr_pretty_containers = ('segments',)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
@@ -93,27 +98,44 @@ class Block(BaseNeo):
         '''
         Initalize a new :class:`Block` instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        super(Block, self).__init__(name=name, description=description,
+                                    file_origin=file_origin, **annotations)
 
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
 
-        self.segments = []
-        self.recordingchannelgroups = []
+    @property
+    def data_children_recur(self):
+        '''
+        All data child objects stored in the current object,
+        obtained recursively.
+        '''
+        # subclassing this to remove duplicate objects such as SpikeTrain
+        # objects in both Segment and Unit
+        # Only Block can have duplicate items right now, so implement
+        # this here for performance reasons.
+        return tuple(unique_objs(super(Block, self).data_children_recur))
+
+    def list_children_by_class(self, cls):
+        '''
+        List all children of a particular class recursively.
+
+        You can either provide a class object, a class name,
+        or the name of the container storing the class.
+        '''
+        # subclassing this to remove duplicate objects such as SpikeTrain
+        # objects in both Segment and Unit
+        # Only Block can have duplicate items right now, so implement
+        # this here for performance reasons.
+        return unique_objs(super(Block, self).list_children_by_class(cls))
 
     @property
     def list_units(self):
         '''
         Return a list of all :class:`Unit` objects in the :class:`Block`.
         '''
-        units = []
-        for rcg in self.recordingchannelgroups:
-            for unit in rcg.units:
-                if unit not in units:
-                    units.append(unit)
-        return units
+        return self.list_children_by_class('units')
 
     @property
     def list_recordingchannels(self):
@@ -121,56 +143,4 @@ class Block(BaseNeo):
         Return a list of all :class:`RecordingChannel` objects in the
         :class:`Block`.
         '''
-        all_rc = []
-        for rcg in self.recordingchannelgroups:
-            for rc in rcg.recordingchannels:
-                if rc not in all_rc:
-                    all_rc.append(rc)
-        return all_rc
-
-    def merge(self, other):
-        '''
-        Merge the contents of another block into this one.
-
-        For each :class:`Segment` in the other block, if its name matches that
-        of a :class:`Segment` in this block, the two segments will be merged,
-        otherwise it will be added as a new segment. The equivalent procedure
-        is then applied to each :class:`RecordingChannelGroup`.
-        '''
-        for container in ("segments", "recordingchannelgroups"):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
-            for obj in getattr(other, container):
-                if obj.name in lookup:
-                    lookup[obj.name].merge(obj)
-                else:
-                    lookup[obj.name] = obj
-                    getattr(self, container).append(obj)
-        # TODO: merge annotations
-
-    _repr_pretty_attrs_keys_ = [
-        "name", "description", "annotations",
-        "file_origin", "file_datetime", "rec_datetime", "index"]
-
-    def _repr_pretty_(self, pp, cycle):
-        '''
-        Handle pretty-printing the :class:`Block`.
-        '''
-        pp.text("{0} with {1} segments and {2} groups".format(
-            self.__class__.__name__,
-            len(self.segments),
-            len(self.recordingchannelgroups),
-        ))
-        if self._has_repr_pretty_attrs_():
-            pp.breakable()
-            self._repr_pretty_attrs_(pp, cycle)
-
-        if self.segments:
-            pp.breakable()
-            pp.text("# Segments")
-            pp.breakable()
-            for (i, seg) in enumerate(self.segments):
-                if i > 0:
-                    pp.breakable()
-                pp.text("{0}: ".format(i))
-                with pp.indent(3):
-                    pp.pretty(seg)
+        return self.list_children_by_class('recordingchannels')

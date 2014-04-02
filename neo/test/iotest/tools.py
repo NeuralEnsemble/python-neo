@@ -17,7 +17,7 @@ except ImportError:
     from urllib.request import urlretrieve  # Py3
 
 from neo.core import Block, Segment
-from neo.test.iotest.generate_datasets import generate_from_supported_objects
+from neo.test.generate_datasets import generate_from_supported_objects
 
 
 def can_use_network():
