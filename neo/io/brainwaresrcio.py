@@ -150,7 +150,6 @@ class BrainwareSrcIO(BaseIO):
 
         # this is the logger used by the IO class
         self._logger = logging.getLogger(__name__ + '.' + type(self).__name__)
-        self._logger.addHandler(logging.NullHandler())
 
         # log the __init__
         self._logger.info('__init__')
