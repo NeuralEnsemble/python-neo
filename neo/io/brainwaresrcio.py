@@ -149,18 +149,8 @@ class BrainwareSrcIO(BaseIO):
         BaseIO.__init__(self)
 
         # this is the logger used by the IO class
-        self._logger = logging.getLogger(__name__)
-
-        # this is the handler for the IO class.  It is global for all
-        # instances of the IO class.
-        self._loghandler = LOGHANDLER
-
-        # setup the logger
-        fmt = logging.Formatter('%(levelname)s - %(asctime)s - %(name)s - ' +
-                                str(filename) +
-                                ' - %(message)s')
-        self._loghandler.setFormatter(fmt)
-        self._logger.addHandler(self._loghandler)
+        self._logger = logging.getLogger(__name__ + '.' + type(self).__name__)
+        self._logger.addHandler(logging.NullHandler())
 
         # log the __init__
         self._logger.info('__init__')
