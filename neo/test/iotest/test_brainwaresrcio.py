@@ -305,7 +305,6 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
     def setUp(self):
         super(BrainwareSrcIOTestCase, self).setUp()
-        brainwaresrcio.LOGHANDLER.setLevel(logging.CRITICAL)
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):
@@ -348,4 +347,8 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger(BrainwareSrcIO.__module__ +
+                               '.' +
+                               BrainwareSrcIO.__name__)
+    logger.setLevel(100)
     unittest.main()

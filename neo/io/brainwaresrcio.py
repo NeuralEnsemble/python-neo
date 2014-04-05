@@ -148,12 +148,8 @@ class BrainwareSrcIO(BaseIO):
         """
         BaseIO.__init__(self)
 
-        # this is the logger used by the IO class
-        self._logger = logging.getLogger(__name__ + '.' + type(self).__name__)
-        self._logger.addHandler(logging.NullHandler())
-
         # log the __init__
-        self._logger.info('__init__')
+        self.logger.info('__init__')
 
         # this stores the filename of the current object, exactly as it is
         # provided when the instance is initialized.
@@ -222,7 +218,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Close the currently-open file and reset the current reading point.
         """
-        self._logger.info('close')
+        self.logger.info('close')
         if self._isopen and not self._fsrc.closed:
             self._fsrc.close()
 
@@ -341,7 +337,7 @@ class BrainwareSrcIO(BaseIO):
         # cascade==True, since the user will know it is done when the method
         # returns a value
         if result is None:
-            self._logger.info('Last Block read.  Closing file.')
+            self.logger.info('Last Block read.  Closing file.')
             self.close()
 
         return blockobj
@@ -399,7 +395,7 @@ class BrainwareSrcIO(BaseIO):
             timestamp = convert_brainwaresrc_timestamp(timestamp, start_date)
         except OverflowError as err:
             timestamp = start_date
-            self._logger.exception('_convert_timestamp overflow')
+            self.logger.exception('_convert_timestamp overflow')
 
         return timestamp
 
@@ -453,7 +449,7 @@ class BrainwareSrcIO(BaseIO):
                 # even the official reference files have invalid keys
                 # when using the official reference reader matlab
                 # scripts
-                self._logger.warning('unknown ID: %s',  seqid)
+                self.logger.warning('unknown ID: %s',  seqid)
                 return []
 
         try:
@@ -461,7 +457,7 @@ class BrainwareSrcIO(BaseIO):
             return readfunc(self)
         except (EOFError, UnicodeDecodeError) as err:
             # return a warning if the EOF is reached in the middle of a method
-            self._logger.exception('Premature end of file')
+            self.logger.exception('Premature end of file')
             return None
 
     # -------------------------------------------------------------------------
@@ -482,28 +478,28 @@ class BrainwareSrcIO(BaseIO):
         used since manual reorganization may be needed.
         """
         if isinstance(data_obj, Unit):
-            self._logger.warning('Unknown Unit found, adding to Units list')
+            self.logger.warning('Unknown Unit found, adding to Units list')
             self._rcg.units.append(data_obj)
             if data_obj.name:
                 self._unitdict[data_obj.name] = data_obj
         elif isinstance(data_obj, Segment):
-            self._logger.warning('Unknown Segment found, '
+            self.logger.warning('Unknown Segment found, '
                                  'adding to Segments list')
             self._blk.segments.append(data_obj)
         elif isinstance(data_obj, EventArray):
-            self._logger.warning('Unknown EventArray found, '
+            self.logger.warning('Unknown EventArray found, '
                                  'adding to comment Events list')
             self._seg0.eventarrays.append(data_obj)
         elif isinstance(data_obj, SpikeTrain):
-            self._logger.warning('Unknown SpikeTrain found, '
+            self.logger.warning('Unknown SpikeTrain found, '
                                  'adding to the UnassignedSpikes Unit')
             self._unit0.spiketrains.append(data_obj)
         elif hasattr(data_obj, '__iter__') and not isinstance(data_obj, str):
             for sub_obj in data_obj:
                 self._assign_sequence(sub_obj)
         else:
-            if self._logger.isEnabledFor(logging.WARNING):
-                self._logger.warning('Unrecognized sequence of type %s found, '
+            if self.logger.isEnabledFor(logging.WARNING):
+                self.logger.warning('Unrecognized sequence of type %s found, '
                                      'skipping', type(data_obj))
 
     _default_datetime = datetime(1, 1, 1)
@@ -850,7 +846,7 @@ class BrainwareSrcIO(BaseIO):
 
         if not self._damaged and numelements < 0:
             self._damaged = True
-            self._logger.error('Negative sequence count %s, file damaged',
+            self.logger.error('Negative sequence count %s, file damaged',
                                numelements)
 
         if not self._damaged:
