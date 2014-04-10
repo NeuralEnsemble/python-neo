@@ -100,12 +100,7 @@ class BrainwareF32IO(BaseIO):
     # and 'label' (for a descriptive name).
     # Note that if the highest-level object requires parameters,
     # common_io_test will be skipped.
-    read_params = {Block: [],
-                   RecordingChannelGroup: [],
-                   Segment: [],
-                   SpikeTrain: [],
-                   Unit: [],
-                   }
+    read_params = {Block: []}
 
     # does not support write so no GUI stuff
     write_params = None
