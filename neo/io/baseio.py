@@ -13,7 +13,9 @@ If you want a model for developing a new IO start from exampleIO.
 """
 
 import collections
+import logging
 
+from neo import logging_handler
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       Epoch, EpochArray, Event, EventArray,
                       IrregularlySampledSignal,
@@ -92,6 +94,17 @@ class BaseIO(object):
 
     def __init__(self, filename=None, **kargs):
         self.filename = filename
+        # create a logger for the IO class
+        fullname = self.__class__.__module__ + '.' + self.__class__.__name__
+        self.logger = logging.getLogger(fullname)
+        # create a logger for 'neo' and add a handler to it if it doesn't
+        # have one already.
+        # (it will also not add one if the root logger has a handler)
+        corename = self.__class__.__module__.split('.')[0]
+        corelogger = logging.getLogger(corename)
+        rootlogger = logging.getLogger()
+        if not corelogger.handlers and not rootlogger.handlers:
+            corelogger.addHandler(logging_handler)
 
     ######## General read/write methods #######################
     def read(self, lazy=False, cascade=True,  **kargs):
