@@ -8,7 +8,6 @@ from __future__ import division
 
 import os
 import pickle
-from pprint import pformat
 
 try:
     import unittest2 as unittest
@@ -18,11 +17,90 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core import Segment, RecordingChannel
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
+from neo.test.generate_datasets import (get_fake_value, get_fake_values,
+                                        fake_neo, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        signal = get_fake_value('signal', pq.Quantity, seed=0, dim=1)
+        sampling_rate = get_fake_value('sampling_rate', pq.Quantity,
+                                       seed=1, dim=0)
+        t_start = get_fake_value('t_start', pq.Quantity, seed=2, dim=0)
+        channel_index = get_fake_value('channel_index', int, seed=3)
+        name = get_fake_value('name', str, seed=4, obj=AnalogSignal)
+        description = get_fake_value('description', str, seed=5,
+                                     obj='AnalogSignal')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'channel_index': channel_index,
+                  'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(AnalogSignal, annotate=False, seed=0)
+        res12 = get_fake_values('AnalogSignal', annotate=False, seed=0)
+        res21 = get_fake_values(AnalogSignal, annotate=True, seed=0)
+        res22 = get_fake_values('AnalogSignal', annotate=True, seed=0)
+
+        assert_arrays_equal(res11.pop('signal'), signal)
+        assert_arrays_equal(res12.pop('signal'), signal)
+        assert_arrays_equal(res21.pop('signal'), signal)
+        assert_arrays_equal(res22.pop('signal'), signal)
+
+        assert_arrays_equal(res11.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res12.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res21.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res22.pop('sampling_rate'), sampling_rate)
+
+        assert_arrays_equal(res11.pop('t_start'), t_start)
+        assert_arrays_equal(res12.pop('t_start'), t_start)
+        assert_arrays_equal(res21.pop('t_start'), t_start)
+        assert_arrays_equal(res22.pop('t_start'), t_start)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = AnalogSignal
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, AnalogSignal))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'AnalogSignal'
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, AnalogSignal))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
 
 
 class TestAnalogSignalConstructor(unittest.TestCase):
@@ -190,16 +268,6 @@ class TestAnalogSignalProperties(unittest.TestCase):
             assert_neo_object_is_compliant(signal)
             assert_arrays_almost_equal(signal.times, targ, 1e-12*pq.ms)
 
-    def test__pprint(self):
-        for i, signal in enumerate(self.signals):
-            prepr = pformat(signal)
-            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % \
-                (pformat(self.data[i]),
-                 self.t_start[i],
-                 self.t_start[i] + len(self.data[i])/self.rates[i],
-                 self.rates[i])
-            self.assertEqual(prepr, targ)
-
     def test__duplicate_with_new_array(self):
         signal1 = self.signals[1]
         signal2 = self.signals[2]
@@ -221,40 +289,47 @@ class TestAnalogSignalProperties(unittest.TestCase):
         rchan.analogsignals = [signal]
         rchan.create_many_to_one_relationship()
 
-        self.assertEqual(signal._container_child_objects, ())
-        self.assertEqual(signal._data_child_objects, ())
         self.assertEqual(signal._single_parent_objects,
                          ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._multi_child_objects, ())
         self.assertEqual(signal._multi_parent_objects, ())
-        self.assertEqual(signal._child_properties, ())
 
-        self.assertEqual(signal._single_child_objects, ())
-
-        self.assertEqual(signal._container_child_containers, ())
-        self.assertEqual(signal._data_child_containers, ())
-        self.assertEqual(signal._single_child_containers, ())
         self.assertEqual(signal._single_parent_containers,
                          ('segment', 'recordingchannel'))
-        self.assertEqual(signal._multi_child_containers, ())
         self.assertEqual(signal._multi_parent_containers, ())
 
-        self.assertEqual(signal._child_objects, ())
-        self.assertEqual(signal._child_containers, ())
         self.assertEqual(signal._parent_objects,
                          ('Segment', 'RecordingChannel'))
         self.assertEqual(signal._parent_containers,
                          ('segment', 'recordingchannel'))
 
-        self.assertEqual(signal.children, ())
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')
         self.assertEqual(signal.parents[1].name, 'rchan1')
 
-        signal.create_many_to_one_relationship()
-        signal.create_many_to_many_relationship()
-        signal.create_relationship()
         assert_neo_object_is_compliant(signal)
+
+    def test__repr(self):
+        for i, signal in enumerate(self.signals):
+            prepr = repr(signal)
+            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % \
+                (repr(self.data[i]),
+                 self.t_start[i],
+                 self.t_start[i] + len(self.data[i])/self.rates[i],
+                 self.rates[i])
+            self.assertEqual(prepr, targ)
+
+    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    def test__pretty(self):
+        for i, signal in enumerate(self.signals):
+            prepr = pretty(signal)
+            targ = (('AnalogSignal in %s with %s %s values\n' %
+                     (signal.units, len(signal), signal.dtype)) +
+                    ('annotations: %s\n' % signal.annotations) +
+                    ('channel index: %s\n' % signal.channel_index) +
+                    ('sampling rate: %s\n' % signal.sampling_rate) +
+                    ('time: %s to %s' % (signal.t_start, signal.t_stop)))
+
+            self.assertEqual(prepr, targ)
 
 
 class TestAnalogSignalArrayMethods(unittest.TestCase):

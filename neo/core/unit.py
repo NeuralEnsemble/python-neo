@@ -3,7 +3,8 @@
 This module defines :class:`Unit`, a container of :class:`Spike` and
 :class:`SpikeTrain` objects from a unit.
 
-:class:`Unit` derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`.
+:class:`Unit` derives from :class:`Container`,
+from :module:`neo.core.container`.
 '''
 
 # needed for python 3 compatibility
@@ -11,10 +12,10 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from neo.core.baseneo import BaseNeo
+from neo.core.container import Container
 
 
-class Unit(BaseNeo):
+class Unit(Container):
     '''
     A container of :class:`Spike` and :class:`SpikeTrain` objects from a unit.
 
@@ -67,29 +68,16 @@ class Unit(BaseNeo):
     _data_child_objects = ('Spike', 'SpikeTrain')
     _single_parent_objects = ('RecordingChannelGroup',)
     _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),)
-                          + BaseNeo._recommended_attrs)
+                          + Container._recommended_attrs)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  channel_indexes=None, **annotations):
         '''
         Initialize a new :clas:`Unit` instance (spike source)
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        super(Unit, self).__init__(name=name, description=description,
+                                   file_origin=file_origin, **annotations)
 
         self.channel_indexes = channel_indexes
 
-        self.spiketrains = []
-        self.spikes = []
-
         self.recordingchannelgroup = None
-
-    def merge(self, other):
-        '''
-        Merge the contents of another :class:`Unit` into this one.
-
-        Child objects of the other :class:`Unit` will be added to this one.
-        '''
-        for container in ("spikes", "spiketrains"):
-            getattr(self, container).extend(getattr(other, container))
-        # TODO: merge annotations

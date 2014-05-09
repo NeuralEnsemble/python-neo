@@ -3,8 +3,8 @@
 This module defines :class:`Segment`, a container for data sharing a common
 time basis.
 
-:class:`Segment` derives from :class:`BaseNeo`,
-from :module:`neo.core.baseneo`.
+:class:`Segment` derives from :class:`Container`,
+from :module:`neo.core.container`.
 '''
 
 # needed for python 3 compatibility
@@ -14,10 +14,10 @@ from datetime import datetime
 
 import numpy as np
 
-from neo.core.baseneo import BaseNeo
+from neo.core.container import Container
 
 
-class Segment(BaseNeo):
+class Segment(Container):
     '''
     A container for data sharing a common time basis.
 
@@ -87,7 +87,8 @@ class Segment(BaseNeo):
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
-                          BaseNeo._recommended_attrs)
+                          Container._recommended_attrs)
+    _repr_pretty_containers = ('analogsignals', 'analogsignalarrays')
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
@@ -95,51 +96,12 @@ class Segment(BaseNeo):
         '''
         Initialize a new :class:`Segment` instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        super(Segment, self).__init__(name=name, description=description,
+                                      file_origin=file_origin, **annotations)
+
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-
-        self.epochs = []
-        self.epocharrays = []
-        self.events = []
-        self.eventarrays = []
-        self.analogsignals = []
-        self.analogsignalarrays = []
-        self.irregularlysampledsignals = []
-        self.spikes = []
-        self.spiketrains = []
-
-        self.block = None
-
-    @property
-    def all_data(self):
-        '''
-        Returns a list of all child objects in the :class:`Segment`.
-        '''
-        return sum((self.epochs, self.epocharrays, self.events,
-                    self.eventarrays, self.analogsignals,
-                    self.analogsignalarrays, self.irregularlysampledsignals,
-                    self.spikes, self.spiketrains), [])
-
-    def filter(self, **kwargs):
-        '''
-        Return a list of child objects matching *any* of the search terms
-        in either their attributes or annotations.
-
-        Examples::
-
-            >>> segment.filter(name="Vm")
-        '''
-        results = []
-        for key, value in kwargs.items():
-            for obj in self.all_data:
-                if hasattr(obj, key) and getattr(obj, key) == value:
-                    results.append(obj)
-                elif key in obj.annotations and obj.annotations[key] == value:
-                    results.append(obj)
-        return results
 
     def take_spikes_by_unit(self, unit_list=None):
         '''
@@ -276,94 +238,3 @@ class Segment(BaseNeo):
             self.take_slice_of_analogsignalarray_by_unit(unit_list)
         #TODO copy others attributes
         return seg
-
-    def merge(self, other):
-        '''
-        Merge the contents of another :class:`Segment` into this one.
-
-        For each array-type object in the other :class:`Segment`, if its name
-        matches that of an object of the same type in this :class:`Segment`,
-        the two arrays will be joined by concatenation. Non-array objects will
-        just be added to this segment.
-        '''
-        for container in ("epochs",  "events",  "analogsignals",
-                          "irregularlysampledsignals", "spikes",
-                          "spiketrains"):
-            getattr(self, container).extend(getattr(other, container))
-        for container in ("epocharrays", "eventarrays", "analogsignalarrays"):
-            objs = getattr(self, container)
-            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
-            for obj in getattr(other, container):
-                if obj.name in lookup:
-                    ind = lookup[obj.name]
-                    try:
-                        newobj = getattr(self, container)[ind].merge(obj)
-                    except AttributeError as e:
-                        raise AttributeError("%s. container=%s, obj.name=%s, \
-                                              shape=%s" % (e, container,
-                                                           obj.name,
-                                                           obj.shape))
-                    getattr(self, container)[ind] = newobj
-                else:
-                    lookup[obj.name] = obj
-                    getattr(self, container).append(obj)
-        # TODO: merge annotations
-
-    def size(self):
-        '''
-        Get dictionary containing the names of child containers in the current
-        :class:`Segment` as keys and the number of children of that type
-        as values.
-        '''
-        return dict((name, len(getattr(self, name)))
-                    for name in ("epochs",  "events",  "analogsignals",
-                                 "irregularlysampledsignals", "spikes",
-                                 "spiketrains", "epocharrays", "eventarrays",
-                                 "analogsignalarrays"))
-
-    def _repr_pretty_(self, pp, cycle):
-        '''
-        Handle pretty-printing the :class:`Segment`.
-        '''
-        pp.text(self.__class__.__name__)
-        pp.text(" with ")
-        first = True
-        for (value, readable) in [
-                (self.analogsignals, "analogs"),
-                (self.analogsignalarrays, "analog arrays"),
-                (self.events, "events"),
-                (self.eventarrays, "event arrays"),
-                (self.epochs, "epochs"),
-                (self.epocharrays, "epoch arrays"),
-                (self.irregularlysampledsignals, "epoch arrays"),
-                (self.spikes, "spikes"),
-                (self.spiketrains, "spike trains"),
-                ]:
-            if value:
-                if first:
-                    first = False
-                else:
-                    pp.text(", ")
-                pp.text("{0} {1}".format(len(value), readable))
-        if self._has_repr_pretty_attrs_():
-            pp.breakable()
-            self._repr_pretty_attrs_(pp, cycle)
-
-        if self.analogsignals:
-            pp.breakable()
-            pp.text("# Analog signals (N={0})".format(len(self.analogsignals)))
-            for (i, asig) in enumerate(self.analogsignals):
-                pp.breakable()
-                pp.text("{0}: ".format(i))
-                with pp.indent(3):
-                    pp.pretty(asig)
-
-        if self.analogsignalarrays:
-            pp.breakable()
-            pp.text("# Analog signal arrays (N={0})"
-                    .format(len(self.analogsignalarrays)))
-            for i, asarr in enumerate(self.analogsignalarrays):
-                pp.breakable()
-                pp.text("{0}: ".format(i))
-                with pp.indent(3):
-                    pp.pretty(asarr)

@@ -31,7 +31,7 @@ There is an intrinsic structure in the different Neo objects, that could be seen
 The highest level object is the :class:`Block` object, which is the high level container able to encapsulate all the others.
 
 A :class:`Block` has therefore a list of :class:`Segment` objects, that can, in some file formats, be accessed individually.
-Depending on the file format, i.e. if it is streamable or not, the whole :class:`Block` may need to be loaded, but sometimes 
+Depending on the file format, i.e. if it is streamable or not, the whole :class:`Block` may need to be loaded, but sometimes
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
 A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
@@ -40,7 +40,7 @@ A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
 
 Depending on the file format, these objects can sometimes be loaded separately, without the need to load the whole file.
 If possible, a file IO therefore provides distinct methods allowing to load only particular objects that may be present in the file.
-The basic idea of each IO file format is to have, as much as possible, read/write methods for the individual encapsulated objects, 
+The basic idea of each IO file format is to have, as much as possible, read/write methods for the individual encapsulated objects,
 and otherwise to provide a read/write method that will return the object at the highest level of hierarchy
 (by default, a :class:`Block` or a :class:`Segment`).
 
@@ -165,6 +165,85 @@ Some IOs support advanced forms of lazy loading, cascading or both (these featur
 
     >>> print(block.segments[0].analogsignals[0])  # The first Segment is already in memory, its first AnalogSignal is loaded
 
+Logging
+=======
+
+:mod:`neo` uses the standard python :mod:`logging` module for logging.
+All :mod:`neo.io` classes have logging set up by default, although not all classes produce log messages.
+The logger name is the same as the full qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
+By default, only log messages that are critically important for users are displayed, so users should not disable log messages unless they are sure they know what they are doing.
+However, if you wish to disable the messages, you can do so::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo')
+    >>> logger.setLevel(100)
+
+Some io classes provide additional information that might be interesting to advanced users.
+To enable these messages, do the following::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo')
+    >>> logger.setLevel(logging.INFO)
+
+It is also possible to log to a file in addition to the terminal::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo')
+    >>> handler = logging.FileHandler('filename.log')
+    >>> logger.addHandler(handler)
+
+To only log to the terminal::
+
+    >>> import logging
+    >>> from neo import logging_handler
+    >>>
+    >>> logger = logging.getLogger('neo')
+    >>> handler = logging.FileHandler('filename.log')
+    >>> logger.addHandler(handler)
+    >>>
+    >>> logging_handler.setLevel(100)
+
+This can also be done for individual IO classes::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> handler = logging.FileHandler('filename.log')
+    >>> logger.addHandler(handler)
+
+Individual IO classes can have their loggers disabled as well::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> logger.setLevel(100)
+
+And more detailed logging messages can be enabled for individual IO classes::
+
+    >>> import logging
+    >>>
+    >>> logger = logging.getLogger('neo.io.hdf5io.NeoHdf5IO')
+    >>> logger.setLevel(logging.INFO)
+
+The default handler, which is used to print logs to the command line, is stored in :attr:`neo.logging_handler`.
+This example changes how the log text is displayed::
+
+    >>> import logging
+    >>> from neo import logging_handler
+    >>>
+    >>> formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    >>> logging_handler.setFormatter(formatter)
+
+For more complex logging, please see the documentation for the logging_ module.
+
+.. note:: If you wish to implement more advanced logging as describe in the documentation for the logging_ module or elsewhere on the internet, please do so before calling any :mod:`neo` functions or initializing any :mod:`neo` classes.
+This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
+Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
+Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
+
 
 .. _neo_io_API:
 
@@ -180,7 +259,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
     - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
     - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
-    - each IO is able to save and load all required attributes (metadata) of the objects it supports. 
+    - each IO is able to save and load all required attributes (metadata) of the objects it supports.
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 
 
@@ -197,3 +276,4 @@ If you want to develop your own IO
 
 See :doc:`io_developers_guide` for information on how to implement of a new IO.
 
+.. _`logging`: http://docs.python.org/library/logging.html

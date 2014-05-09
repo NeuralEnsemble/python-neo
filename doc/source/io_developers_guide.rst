@@ -29,15 +29,14 @@ Receipe to develop an IO module for a new data format:
 Miscellaneous
 =============
 
-Notes:
-    * if your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
-    * :py:func:`neo.io.tools.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
+    * If your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
+    * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
     * :py:func:`neo.io.tools.populate_RecordingChannel` offers a utility to
       create inside a :class:`Block` all :class:`RecordingChannel` objects and links to :class:`AnalogSignal`, :class:`SpikeTrain`, ...
     * In the docstring, explain where you obtained the file format specification if it is a closed one.
     * If your IO is based on a database mapper, keep in mind that the returned object MUST be detached,
       because this object can be written to another url for copying.
-    
+
 Advanced lazy loading
 =====================
 
@@ -85,6 +84,29 @@ Here is an example test script taken from the distribution: ``test_axonio.py``:
 
 .. literalinclude:: ../../neo/test/iotest/test_axonio.py
 
+
+Logging
+=======
+
+All IO classes by default have logging using the standard :mod:`logging` module: already set up.
+The logger name is the same as the full qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
+The :attr:`class.logger` attribute holds the logger for easy access.
+
+There are generally 3 types of situations in which an IO class should use a logger
+
+  * Recoverable errors with the file that the users need to be notified about.
+    In this case, please use :meth:`logger.warning` or :meth:`logger.error`.
+    If there is an exception associated with the issue, you can use :meth:`logger.exception` in the exception handler to automatically include a backtrace with the log.
+    By default, all users will see messages at this level, so please restrict it only to problems the user absolutely needs to know about.
+  * Informational messages that advanced users might want to see in order to get some insight into the file.
+    In this case, please use :meth:`logger.info`.
+  * Messages useful to developers to fix problems with the io class.
+    In this case, please use :meth:`logger.debug`.
+
+A log handler is automatically added to :mod:`neo`, so please do not user your own handler.
+Please use the :attr:`class.logger` attribute for accessing the logger inside the class rather than :meth:`logging.getLogger`.
+Please do not log directly to the root logger (e.g. :meth:`logging.warning`), use the class's logger instead (:meth:`class.logger.warning`).
+In the tests for the io class, if you intentionally test broken files, please disable logs by setting the logging level to `100`.
 
 
 ExampleIO

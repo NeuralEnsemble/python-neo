@@ -16,10 +16,105 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
+try:
+    from IPython.lib.pretty import pretty
+except ImportError as err:
+    HAVE_IPYTHON = False
+else:
+    HAVE_IPYTHON = True
+
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain,
                                  _check_time_in_range, _new_spiketrain)
 from neo.core import Segment, Unit
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
+from neo.test.generate_datasets import (get_fake_value, get_fake_values,
+                                        fake_neo, TEST_ANNOTATIONS)
+
+
+class Test__generate_datasets(unittest.TestCase):
+    def setUp(self):
+        np.random.seed(0)
+        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
+                                 range(len(TEST_ANNOTATIONS))])
+
+    def test__get_fake_values(self):
+        self.annotations['seed'] = 0
+        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
+        t_start = get_fake_value('t_start', pq.Quantity, seed=1, dim=0)
+        t_stop = get_fake_value('t_stop', pq.Quantity, seed=2, dim=0)
+        waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
+        left_sweep = get_fake_value('left_sweep', pq.Quantity, seed=4, dim=0)
+        sampling_rate = get_fake_value('sampling_rate', pq.Quantity,
+                                       seed=5, dim=0)
+        name = get_fake_value('name', str, seed=6, obj=SpikeTrain)
+        description = get_fake_value('description', str,
+                                     seed=7, obj='SpikeTrain')
+        file_origin = get_fake_value('file_origin', str)
+        attrs1 = {'name': name,
+                  'description': description,
+                  'file_origin': file_origin}
+        attrs2 = attrs1.copy()
+        attrs2.update(self.annotations)
+
+        res11 = get_fake_values(SpikeTrain, annotate=False, seed=0)
+        res12 = get_fake_values('SpikeTrain', annotate=False, seed=0)
+        res21 = get_fake_values(SpikeTrain, annotate=True, seed=0)
+        res22 = get_fake_values('SpikeTrain', annotate=True, seed=0)
+
+        assert_arrays_equal(res11.pop('times'), times)
+        assert_arrays_equal(res12.pop('times'), times)
+        assert_arrays_equal(res21.pop('times'), times)
+        assert_arrays_equal(res22.pop('times'), times)
+
+        assert_arrays_equal(res11.pop('t_start'), t_start)
+        assert_arrays_equal(res12.pop('t_start'), t_start)
+        assert_arrays_equal(res21.pop('t_start'), t_start)
+        assert_arrays_equal(res22.pop('t_start'), t_start)
+
+        assert_arrays_equal(res11.pop('t_stop'), t_stop)
+        assert_arrays_equal(res12.pop('t_stop'), t_stop)
+        assert_arrays_equal(res21.pop('t_stop'), t_stop)
+        assert_arrays_equal(res22.pop('t_stop'), t_stop)
+
+        assert_arrays_equal(res11.pop('waveforms'), waveforms)
+        assert_arrays_equal(res12.pop('waveforms'), waveforms)
+        assert_arrays_equal(res21.pop('waveforms'), waveforms)
+        assert_arrays_equal(res22.pop('waveforms'), waveforms)
+
+        assert_arrays_equal(res11.pop('left_sweep'), left_sweep)
+        assert_arrays_equal(res12.pop('left_sweep'), left_sweep)
+        assert_arrays_equal(res21.pop('left_sweep'), left_sweep)
+        assert_arrays_equal(res22.pop('left_sweep'), left_sweep)
+
+        assert_arrays_equal(res11.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res12.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res21.pop('sampling_rate'), sampling_rate)
+        assert_arrays_equal(res22.pop('sampling_rate'), sampling_rate)
+
+        self.assertEqual(res11, attrs1)
+        self.assertEqual(res12, attrs1)
+        self.assertEqual(res21, attrs2)
+        self.assertEqual(res22, attrs2)
+
+    def test__fake_neo__cascade(self):
+        self.annotations['seed'] = None
+        obj_type = 'SpikeTrain'
+        cascade = True
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, SpikeTrain))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
+
+    def test__fake_neo__nocascade(self):
+        self.annotations['seed'] = None
+        obj_type = SpikeTrain
+        cascade = False
+        res = fake_neo(obj_type=obj_type, cascade=cascade)
+
+        self.assertTrue(isinstance(res, SpikeTrain))
+        assert_neo_object_is_compliant(res)
+        self.assertEqual(res.annotations, self.annotations)
 
 
 class Testcheck_has_dimensions_time(unittest.TestCase):
@@ -1267,11 +1362,17 @@ class TestPropertiesMethods(unittest.TestCase):
         self.t_stop1quant = self.t_stop1 * pq.ms
         self.sampling_rate1 = .1*pq.Hz
         self.left_sweep1 = 2.*pq.s
+        self.name1 = 'train 1'
+        self.description1 = 'a test object'
+        self.ann1 = {'targ0': [1, 2], 'targ1': 1.1}
         self.train1 = SpikeTrain(self.data1quant,
                                  t_start=self.t_start1, t_stop=self.t_stop1,
                                  waveforms=self.waveforms1,
                                  left_sweep=self.left_sweep1,
-                                 sampling_rate=self.sampling_rate1)
+                                 sampling_rate=self.sampling_rate1,
+                                 name=self.name1,
+                                 description=self.description1,
+                                 **self.ann1)
 
     def test__compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -1374,40 +1475,32 @@ class TestPropertiesMethods(unittest.TestCase):
         unit.spikes = [self.train1]
         unit.create_many_to_one_relationship()
 
-        self.assertEqual(self.train1._container_child_objects, ())
-        self.assertEqual(self.train1._data_child_objects, ())
         self.assertEqual(self.train1._single_parent_objects,
                          ('Segment', 'Unit'))
-        self.assertEqual(self.train1._multi_child_objects, ())
         self.assertEqual(self.train1._multi_parent_objects, ())
-        self.assertEqual(self.train1._child_properties, ())
 
-        self.assertEqual(self.train1._single_child_objects, ())
-
-        self.assertEqual(self.train1._container_child_containers, ())
-        self.assertEqual(self.train1._data_child_containers, ())
-        self.assertEqual(self.train1._single_child_containers, ())
         self.assertEqual(self.train1._single_parent_containers,
                          ('segment', 'unit'))
-        self.assertEqual(self.train1._multi_child_containers, ())
         self.assertEqual(self.train1._multi_parent_containers, ())
 
-        self.assertEqual(self.train1._child_objects, ())
-        self.assertEqual(self.train1._child_containers, ())
         self.assertEqual(self.train1._parent_objects,
                          ('Segment', 'Unit'))
         self.assertEqual(self.train1._parent_containers,
                          ('segment', 'unit'))
 
-        self.assertEqual(self.train1.children, ())
         self.assertEqual(len(self.train1.parents), 2)
         self.assertEqual(self.train1.parents[0].name, 'seg1')
         self.assertEqual(self.train1.parents[1].name, 'unit1')
 
-        self.train1.create_many_to_one_relationship()
-        self.train1.create_many_to_many_relationship()
-        self.train1.create_relationship()
         assert_neo_object_is_compliant(self.train1)
+
+    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    def test__pretty(self):
+        res = pretty(self.train1)
+        targ = ("SpikeTrain\n" +
+                "name: '%s'\ndescription: '%s'\nannotations: %s" %
+                (self.name1, self.description1, pretty(self.ann1)))
+        self.assertEqual(res, targ)
 
 
 class TestMiscellaneous(unittest.TestCase):

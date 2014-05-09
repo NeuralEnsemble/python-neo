@@ -6,9 +6,9 @@ Tests of neo.io.brainwaresrcio
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os.path
 import sys
-import warnings
 
 try:
     import unittest2 as unittest
@@ -18,7 +18,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, Event, RecordingChannel,
+from neo.core import (Block, EventArray, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -27,6 +27,28 @@ from neo.test.tools import (assert_same_sub_schema,
 from neo.test.iotest.tools import create_generic_reader
 
 PY_VER = sys.version_info[0]
+
+FILES_TO_TEST = ['block_300ms_4rep_1clust_part_ch1.src',
+                 'block_500ms_5rep_empty_fullclust_ch1.src',
+                 'block_500ms_5rep_empty_partclust_ch1.src',
+                 'interleaved_500ms_5rep_ch2.src',
+                 'interleaved_500ms_5rep_nospikes_ch1.src',
+                 'interleaved_500ms_7rep_noclust_ch1.src',
+                 'long_170s_1rep_1clust_ch2.src',
+                 'multi_500ms_mulitrep_ch1.src',
+                 'random_500ms_12rep_noclust_part_ch2.src',
+                 'sequence_500ms_5rep_ch2.src']
+
+FILES_TO_COMPARE = ['block_300ms_4rep_1clust_part_ch1',
+                    'block_500ms_5rep_empty_fullclust_ch1',
+                    'block_500ms_5rep_empty_partclust_ch1',
+                    'interleaved_500ms_5rep_ch2',
+                    'interleaved_500ms_5rep_nospikes_ch1',
+                    'interleaved_500ms_7rep_noclust_ch1',
+                    '',
+                    'multi_500ms_mulitrep_ch1',
+                    'random_500ms_12rep_noclust_part_ch2',
+                    'sequence_500ms_5rep_ch2']
 
 
 def proc_src(filename):
@@ -94,16 +116,18 @@ def proc_src_comments(srcfile, filename):
     texts = [res[0] for res in commentarray['text'].flatten()]
     timeStamps = [res[0, 0] for res in commentarray['timeStamp'].flatten()]
 
-    for sender, text, timeStamp in zip(senders, texts, timeStamps):
-        time = pq.Quantity(timeStamp, units=pq.d)
-        timeStamp = brainwaresrcio.convert_brainwaresrc_timestamp(timeStamp)
-        commentevent = Event(time=time,
-                             label=str(text),
-                             sender=str(sender),
-                             name='Comment', file_origin=filename,
-                             description='container for a comment',
-                             timestamp=timeStamp)
-        comm_seg.events.append(commentevent)
+    timeStamps = np.array(timeStamps, dtype=np.float32)
+    t_start = timeStamps.min()
+    timeStamps = pq.Quantity(timeStamps-t_start, units=pq.d).rescale(pq.s)
+    texts = np.array(texts, dtype='S')
+    senders = np.array(senders, dtype='S')
+    t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
+
+    comments = EventArray(times=timeStamps,
+                          labels=texts,
+                          senders=senders)
+    comm_seg.eventarrays = [comments]
+    comm_seg.rec_datetime = t_start
 
     return comm_seg
 
@@ -265,28 +289,10 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     read_and_write_is_bijective = False
 
     # These are the files it tries to read and test for compliance
-    files_to_test = ['block_300ms_4rep_1clust_part_ch1.src',
-                     'block_500ms_5rep_empty_fullclust_ch1.src',
-                     'block_500ms_5rep_empty_partclust_ch1.src',
-                     'interleaved_500ms_5rep_ch2.src',
-                     'interleaved_500ms_5rep_nospikes_ch1.src',
-                     'interleaved_500ms_7rep_noclust_ch1.src',
-                     'long_170s_1rep_1clust_ch2.src',
-                     'multi_500ms_mulitrep_ch1.src',
-                     'random_500ms_12rep_noclust_part_ch2.src',
-                     'sequence_500ms_5rep_ch2.src']
+    files_to_test = FILES_TO_TEST
 
     # these are reference files to compare to
-    files_to_compare = ['block_300ms_4rep_1clust_part_ch1',
-                        'block_500ms_5rep_empty_fullclust_ch1',
-                        'block_500ms_5rep_empty_partclust_ch1',
-                        'interleaved_500ms_5rep_ch2',
-                        'interleaved_500ms_5rep_nospikes_ch1',
-                        'interleaved_500ms_7rep_noclust_ch1',
-                        '',
-                        'multi_500ms_mulitrep_ch1',
-                        'random_500ms_12rep_noclust_part_ch2',
-                        'sequence_500ms_5rep_ch2']
+    files_to_compare = FILES_TO_COMPARE
 
     # add the appropriate suffix depending on the python version
     for i, fname in enumerate(files_to_compare):
@@ -298,8 +304,6 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     files_to_download = files_to_test + files_to_compare
 
     def setUp(self):
-        warnings.filterwarnings('ignore', message='Negative sequence count.*')
-        warnings.filterwarnings('ignore', message='unknown ID:*')
         super(BrainwareSrcIOTestCase, self).setUp()
 
     def test_reading_same(self):
@@ -312,9 +316,9 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
             obj_all = obj_reader_all()
             obj_base = obj_reader_base()
             obj_single = obj_reader_single()
-            obj_next = [obj_reader_next(warnlast=False)]
-            while ioobj.isopen:
-                obj_next.append(obj_reader_next(warnlast=False))
+            obj_next = [obj_reader_next()]
+            while ioobj._isopen:
+                obj_next.append(obj_reader_next())
 
             try:
                 assert_same_sub_schema(obj_all[0], obj_base)
@@ -343,4 +347,8 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger(BrainwareSrcIO.__module__ +
+                               '.' +
+                               BrainwareSrcIO.__name__)
+    logger.setLevel(100)
     unittest.main()

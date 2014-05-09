@@ -123,3 +123,9 @@ class Spike(BaseNeo):
             self.sampling_rate = None
         else:
             self.sampling_rate = 1.0 / period
+
+    def merge(self, other):
+        '''
+        Merging is not supported in :class:`Spike`.
+        '''
+        raise NotImplementedError('Cannot merge Spike objects')

@@ -13,9 +13,12 @@ import neo
 from neo.core import objectlist
 
 
-def assert_arrays_equal(a, b):
+def assert_arrays_equal(a, b, dtype=False):
     '''
-    Check if two arrays have the same shape and contents
+    Check if two arrays have the same shape and contents.
+
+    If dtype is True (default=False), then also theck that they have the same
+    dtype.
     '''
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
@@ -33,12 +36,22 @@ def assert_arrays_equal(a, b):
         except (AttributeError, ValueError):
             assert np.all(a.flatten() == b.flatten()), "%s != %s" % (a, b)
 
+    if dtype:
+        assert a.dtype == b.dtype, \
+            "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
 
-def assert_arrays_almost_equal(a, b, threshold):
+
+def assert_arrays_almost_equal(a, b, threshold, dtype=False):
     '''
     Check if two arrays have the same shape and contents that differ
     by abs(a - b) <= threshold for all elements.
+
+    If threshold is None, do an absolute comparison rather than a relative
+    comparison.
     '''
+    if threshold is None:
+        return assert_arrays_equal(a, b, dtype=dtype)
+
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a, b)
@@ -49,6 +62,10 @@ def assert_arrays_almost_equal(a, b, threshold):
         assert (abs(a - b) < threshold).all(), \
             "abs(%s - %s)    max(|a - b|) = %s    threshold:%s" % \
             (a, b, (abs(a - b)).max(), threshold)
+
+    if dtype:
+        assert a.dtype == b.dtype, \
+            "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
 
 
 def file_digest(filename):
@@ -104,7 +121,7 @@ def assert_neo_object_is_compliant(ob):
         if (hasattr(ob, '_quantity_attr') and
                 ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
-            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            # object inherits from Quantity (AnalogSIgnal, SpikeTrain, ...)
             ndim = ioattr[2]
             assert ob.ndim == ndim, \
                 '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
@@ -156,7 +173,8 @@ def assert_neo_object_is_compliant(ob):
             raise
 
 
-def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
+def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10,
+                           exclude=None):
     '''
     Test if ob1 and ob2 has the same sub schema.
     Explore all parent/child relationships.
@@ -166,11 +184,16 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
     Arguments:
         equal_almost: if False do a strict arrays_equal if
                       True do arrays_almost_equal
+        exclude: a list of attributes and annotations to ignore in
+                 the comparison
 
     '''
     assert type(ob1) == type(ob2), 'type(%s) != type(%s)' % (type(ob1),
                                                              type(ob2))
     classname = ob1.__class__.__name__
+
+    if exclude is None:
+        exclude = []
 
     if isinstance(ob1, list):
         assert len(ob1) == len(ob2), \
@@ -179,7 +202,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):
             try:
                 assert_same_sub_schema(sub1, sub2, equal_almost=equal_almost,
-                                       threshold=threshold)
+                                       threshold=threshold, exclude=exclude)
             # intercept exceptions and add more information
             except BaseException as exc:
                 exc.args += ('%s[%s]' % (classname, i),)
@@ -188,6 +211,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
 
     # test parent/child relationship
     for container in getattr(ob1, '_single_child_containers', []):
+        if container in exclude:
+            continue
         if not hasattr(ob1, container):
             assert not hasattr(ob2, container), \
                 '%s 2 does have %s but not %s 1' % (classname, container,
@@ -196,7 +221,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
         else:
             assert hasattr(ob2, container), \
                 '%s 1 has %s but not %s 2' % (classname, container,
-                                                classname)
+                                              classname)
 
         sub1 = getattr(ob1, container)
         sub2 = getattr(ob2, container)
@@ -208,42 +233,61 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
             # previously lacking parameter
             try:
                 assert_same_sub_schema(sub1[i], sub2[i],
-                                        equal_almost, threshold)
+                                       equal_almost=equal_almost,
+                                       threshold=threshold,
+                                       exclude=exclude)
             # intercept exceptions and add more information
             except BaseException as exc:
                 exc.args += ('from %s[%s] of %s' % (container, i,
                                                     classname),)
                 raise
 
-    # check if all attributes are equal
-    if equal_almost:
-        def assert_arrays_equal_and_dtype(a, b):
-            assert_arrays_equal(a, b)
-            assert a.dtype == b.dtype, \
-                "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
-        assert_eg = assert_arrays_equal_and_dtype
+    assert_same_attributes(ob1, ob2, equal_almost=equal_almost,
+                           threshold=threshold, exclude=exclude)
+
+
+def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
+                           exclude=None):
+    '''
+    Test if ob1 and ob2 has the same attributes.
+
+    Arguments:
+        equal_almost: if False do a strict arrays_equal if
+                      True do arrays_almost_equal
+        exclude: a list of attributes and annotations to ignore in
+                 the comparison
+
+    '''
+    classname = ob1.__class__.__name__
+
+    if exclude is None:
+        exclude = []
+
+    if not equal_almost:
+        threshold = None
+        dtype = True
     else:
-        def assert_arrays_almost_and_dtype(a, b):
-            assert_arrays_almost_equal(a, b, threshold)
-            #assert a.dtype == b.dtype, \
-                #"%s and %s not same dtype %s %s" % (a, b, a.dtype, b.dtype)
-        assert_eg = assert_arrays_almost_and_dtype
+        dtype = False
 
     for ioattr in ob1._all_attrs:
+        if ioattr[0] in exclude:
+            continue
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
             # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
             try:
-                assert_eg(ob1.magnitude, ob2.magnitude)
+                assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude,
+                                           threshold=threshold,
+                                           dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s' % classname,)
+                exc.args += ('from %s %s' % (classname, attrname),)
                 raise
             assert ob1.dimensionality.string == ob2.dimensionality.string, \
-                'Units of %s are not the same: %s and %s' % \
-                (classname, ob1.dimensionality.string,
-                 ob2.dimensionality.string)
+                'Units of %s %s are not the same: %s and %s' % \
+                (classname, attrname,
+                 ob1.dimensionality.string, ob2.dimensionality.string)
             continue
 
         if not hasattr(ob1, attrname):
@@ -275,7 +319,9 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
             #print "2. ob1(%s) %s:%s\n   ob2(%s) %s:%s" % \
                 #(ob1,attrname,mag1,ob2,attrname,mag2)
             try:
-                assert_eg(mag1, mag2)
+                assert_arrays_almost_equal(mag1, mag2,
+                                           threshold=threshold,
+                                           dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
                 exc.args += ('from %s of %s' % (attrname, classname),)
@@ -290,7 +336,10 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 (attrname, classname, dimstr1, dimstr2)
         elif attrtype == np.ndarray:
             try:
-                assert_eg(getattr(ob1, attrname), getattr(ob2, attrname))
+                assert_arrays_almost_equal(getattr(ob1, attrname),
+                                           getattr(ob2, attrname),
+                                           threshold=threshold,
+                                           dtype=dtype)
             # intercept exceptions and add more information
             except BaseException as exc:
                 exc.args += ('from %s of %s' % (attrname, classname),)
@@ -302,6 +351,43 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=False, threshold=1e-10):
                 (classname, attrname,
                  type(getattr(ob1, attrname)), getattr(ob1, attrname),
                  type(getattr(ob2, attrname)), getattr(ob2, attrname))
+
+
+def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10,
+                            exclude=None):
+    '''
+    Test if ob1 and ob2 has the same annotations.
+
+    Arguments:
+        equal_almost: if False do a strict arrays_equal if
+                      True do arrays_almost_equal
+        exclude: a list of attributes and annotations to ignore in
+                 the comparison
+
+    '''
+    if exclude is None:
+        exclude = []
+
+    if not equal_almost:
+        threshold = None
+        dtype = False
+    else:
+        dtype = True
+
+    for key in ob2.annotations:
+        if key in exclude:
+            continue
+        assert key in ob1.annotations
+
+    for key, value in ob1.annotations.items():
+        if key in exclude:
+            continue
+        assert key in ob2.annotations
+        try:
+            assert value == ob2.annotations[key]
+        except ValueError:
+            assert_arrays_almost_equal(ob1, ob2,
+                                       threshold=threshold, dtype=False)
 
 
 def assert_sub_schema_is_lazy_loaded(ob):
@@ -398,7 +484,7 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
             # intercept exceptions and add more information
             except BaseException as exc:
                 exc.args += ('from of %s %s of %s' %
-                                (container, i, classname),)
+                             (container, i, classname),)
                 raise
 
 

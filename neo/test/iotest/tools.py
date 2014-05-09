@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Common tools that are useful for neo.io object tests
-'''
+"""
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -17,13 +17,13 @@ except ImportError:
     from urllib.request import urlretrieve  # Py3
 
 from neo.core import Block, Segment
-from neo.test.iotest.generate_datasets import generate_from_supported_objects
+from neo.test.generate_datasets import generate_from_supported_objects
 
 
 def can_use_network():
-    '''
+    """
     Return True if network access is allowed
-    '''
+    """
     if os.environ.get('NOSETESTS_NO_NETWORK', False):
         return False
     if os.environ.get('TRAVIS') == 'true':
@@ -32,9 +32,9 @@ def can_use_network():
 
 
 def make_all_directories(filename, localdir):
-    '''
+    """
     Make the directories needed to store test files
-    '''
+    """
     # handle case of multiple filenames
     if not hasattr(filename, 'lower'):
         for ifilename in filename:
@@ -49,7 +49,7 @@ def make_all_directories(filename, localdir):
 
 
 def download_test_file(filename, localdir, url):
-    '''
+    """
     Download a test file from a server if it isn't already available.
 
     filename is the name of the file.
@@ -57,7 +57,7 @@ def download_test_file(filename, localdir, url):
     localdir is the local directory to store the file in.
 
     url is the remote url that the file should be downloaded from.
-    '''
+    """
     # handle case of multiple filenames
     if not hasattr(filename, 'lower'):
         for ifilename in filename:
@@ -73,14 +73,14 @@ def download_test_file(filename, localdir, url):
 
 
 def create_local_temp_dir(name, directory=None):
-    '''
+    """
     Create a directory for storing temporary files needed for testing neo
 
     If directory is None or not specified, automatically create the directory
     in {tempdir}/files_for_testing_neo on linux/unix/mac or
     {tempdir}\files_for_testing_neo on windows, where {tempdir} is the system
     temporary directory returned by tempfile.gettempdir().
-    '''
+    """
     if directory is None:
         directory = os.path.join(tempfile.gettempdir(),
                                  'files_for_testing_neo')
@@ -94,13 +94,13 @@ def create_local_temp_dir(name, directory=None):
 
 
 def close_object_safe(obj):
-    '''
+    """
     Close an object safely, ignoring errors
 
     For some io types, like HDF5IO, the file should be closed before being
     opened again in a test.  Call this after the test is done to make sure
     the file is closed.
-    '''
+    """
     try:
         obj.close()
     except:
@@ -108,7 +108,7 @@ def close_object_safe(obj):
 
 
 def cleanup_test_file(mode, path, directory=None):
-    '''
+    """
     Remove test files or directories safely.  mode is the mode of the io class,
     either 'file' or 'directory'.  It can also be an io class object, or any
     other object with a 'mode' attribute.  If that is the case, use the
@@ -116,7 +116,7 @@ def cleanup_test_file(mode, path, directory=None):
 
     If directory is not None and path is not an absolute path already,
     use the file from the given directory.
-    '''
+    """
     if directory is not None and not os.path.isabs(path):
         path = os.path.join(directory, path)
     if hasattr(mode, 'mode'):
@@ -129,9 +129,49 @@ def cleanup_test_file(mode, path, directory=None):
             shutil.rmtree(path)
 
 
+def get_test_file_full_path(ioclass, filename=None,
+                            directory=None, clean=False):
+    """
+    Get the full path for a file of the given filename.
+
+    If filename is None, create a filename.
+
+    If filename is a list, get the full path for each item in the list.
+
+    If return_path is True, also return the full path to the file.
+
+    If directory is not None and path is not an absolute path already,
+    use the file from the given directory.
+
+    If return_path is True, return the full path of the file along with
+    the io object.  return reader, path.  Default is False.
+
+    If clean is True, try to delete existing versions of the file
+    before creating the io object.  Default is False.
+    """
+    # create a filename if none is provided
+    if filename is None:
+        filename = 'Generated0_%s' % ioclass.__name__
+        if (ioclass.mode == 'file' and len(ioclass.extensions) >= 1):
+            filename += '.' + ioclass.extensions[0]
+    elif not hasattr(filename, 'lower'):
+        return [get_test_file_full_path(ioclass, filename=fname,
+                                        directory=directory, clean=clean) for
+                fname in filename]
+
+    # if a directory is provided add it
+    if directory is not None and not os.path.isabs(filename):
+        filename = os.path.join(directory, filename)
+
+    if clean:
+        cleanup_test_file(ioclass, filename)
+
+    return filename
+
+
 def create_generic_io_object(ioclass, filename=None, directory=None,
                              return_path=False, clean=False):
-    '''
+    """
     Create an io object in a generic way that can work with both
     file-based and directory-based io objects
 
@@ -147,20 +187,9 @@ def create_generic_io_object(ioclass, filename=None, directory=None,
 
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
-    '''
-    # create a filename if none is provided
-    if filename is None:
-        filename = 'Generated0_%s' % ioclass.__name__
-        if (ioclass.mode == 'file' and len(ioclass.extensions) >= 1):
-            filename += '.' + ioclass.extensions[0]
-
-    # if a directory is provided add it
-    if directory is not None and not os.path.isabs(filename):
-        filename = os.path.join(directory, filename)
-
-    if clean:
-        cleanup_test_file(ioclass, filename)
-
+    """
+    filename = get_test_file_full_path(ioclass, filename=filename,
+                                       directory=directory, clean=clean)
     try:
         # actually create the object
         if ioclass.mode == 'file':
@@ -181,7 +210,7 @@ def create_generic_io_object(ioclass, filename=None, directory=None,
 
 def iter_generic_io_objects(ioclass, filenames, directory=None,
                             return_path=False, clean=False):
-    '''
+    """
     Return an iterable over the io objects created from a list of filenames.
 
     The objects are automatically cleaned up afterwards.
@@ -194,7 +223,7 @@ def iter_generic_io_objects(ioclass, filenames, directory=None,
 
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
-    '''
+    """
     for filename in filenames:
         ioobj, path = create_generic_io_object(ioclass, filename=filename,
                                                directory=directory,
@@ -211,7 +240,7 @@ def iter_generic_io_objects(ioclass, filenames, directory=None,
 
 
 def create_generic_reader(ioobj, target=None, readall=False):
-    '''
+    """
     Create a function that can read the target object from a file.
 
     If target is None, use the first supported_objects from ioobj
@@ -222,7 +251,7 @@ def create_generic_reader(ioobj, target=None, readall=False):
 
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
-    '''
+    """
     if target is None:
         target = ioobj.supported_objects[0].__name__
 
@@ -247,7 +276,7 @@ def create_generic_reader(ioobj, target=None, readall=False):
 def iter_generic_readers(ioclass, filenames, directory=None, target=None,
                          return_path=False, return_ioobj=False,
                          clean=False, readall=False):
-    '''
+    """
     Iterate over functions that can read the target object from a list of
     filenames.
 
@@ -274,7 +303,7 @@ def iter_generic_readers(ioclass, filenames, directory=None, target=None,
 
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
-    '''
+    """
     for ioobj, path in iter_generic_io_objects(ioclass=ioclass,
                                                filenames=filenames,
                                                directory=directory,
@@ -294,7 +323,7 @@ def iter_generic_readers(ioclass, filenames, directory=None, target=None,
 
 
 def create_generic_writer(ioobj, target=None):
-    '''
+    """
     Create a function that can write the target object to a file using the
     neo io object ioobj.
 
@@ -303,7 +332,7 @@ def create_generic_writer(ioobj, target=None):
     If target is the Block or Segment class, use write_block or write_segment,
     respectively.
     If target is a string, use 'write_'+target.
-    '''
+    """
     if target is None:
         target = ioobj.supported_objects[0].__name__
 
@@ -319,7 +348,7 @@ def create_generic_writer(ioobj, target=None):
 
 def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
                  return_reader=False):
-    '''
+    """
     Read the target object from a file using the given neo io object ioobj.
 
     If target is None, use the first supported_objects from ioobj
@@ -336,7 +365,7 @@ def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
 
     If return_reader is True, yield the io reader function as well as the
     object. yield obj, reader.  Default is False.
-    '''
+    """
     obj_reader = create_generic_reader(ioobj, target=target, readall=readall)
     obj = obj_reader(cascade=cascade, lazy=lazy)
     if return_reader:
@@ -348,7 +377,7 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
                       return_path=False, return_ioobj=False,
                       return_reader=False, clean=False, readall=False,
                       cascade=True, lazy=False):
-    '''
+    """
     Iterate over objects read from a list of filenames.
 
     If target is None, use the first supported_objects from ioobj
@@ -380,7 +409,7 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
 
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
-    '''
+    """
     for obj_reader, path, ioobj in iter_generic_readers(ioclass, filenames,
                                                         directory=directory,
                                                         target=target,
@@ -404,7 +433,7 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
 
 
 def write_generic(ioobj, target=None, obj=None, return_writer=False):
-    '''
+    """
     Write the target object to a file using the given neo io object ioobj.
 
     If target is None, use the first supported_objects from ioobj
@@ -418,7 +447,7 @@ def write_generic(ioobj, target=None, obj=None, return_writer=False):
 
     If return_writer is True, yield the io writer function as well as the
     object. yield obj, writer.  Default is False.
-    '''
+    """
     if obj is None:
         supported_objects = ioobj.supported_objects
         obj = generate_from_supported_objects(supported_objects)
