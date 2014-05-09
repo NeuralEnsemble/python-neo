@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 
 Class for reading data from Alpha Omega .map files.
@@ -63,18 +63,13 @@ Supported : Read
 #   this IO very painful and long).
 
 
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
-from .baseio import BaseIO
-from ..core import Block, Segment, AnalogSignal
-from .tools import create_many_to_one_relationship, populate_RecordingChannel
-
-# note neo.core need only numpy and quantities
-import numpy as np
-import quantities as pq
 
 # specific imports
-import struct, os
 import datetime
+import os
+import struct
 
 # file no longer exists in Python3
 try:
@@ -82,6 +77,14 @@ try:
 except NameError:
     import io
     file = io.BufferedReader
+
+# note neo.core need only numpy and quantities
+import numpy as np
+import quantities as pq
+
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal
+from neo.io.tools import populate_RecordingChannel
 
 class AlphaOmegaIO(BaseIO):
     """
@@ -384,7 +387,7 @@ class AlphaOmegaIO(BaseIO):
                 seg.annotate(alphamap_version = version)
         if cascade:
             populate_RecordingChannel(blck, remove_from_annotation = True)
-            create_many_to_one_relationship(blck)
+            blck.create_many_to_one_relationship()
 
         return blck
 
@@ -685,17 +688,16 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            format = '<' + format # insures use of standard sizes
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            fmt = '<' + fmt # insures use of standard sizes
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = list(struct.unpack(fmt , buf))
+            for i, ival in enumerate(val):
+                if hasattr(ival, 'split'):
+                    val[i] = ival.split('\x00', 1)[0]
             if len(val) == 1:
                 val = val[0]
-            else :
-                val = list(val)
-            if 's' in format :
-                val = val.split('\x00',1)[0]
             d[key] = val
         return d
 

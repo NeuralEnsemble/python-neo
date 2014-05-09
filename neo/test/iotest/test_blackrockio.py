@@ -1,22 +1,28 @@
+# -*- coding: utf-8 -*-
+"""
+Tests of neo.io.blackrockio
+"""
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
+
+import os
+import struct
 import sys
+import tempfile
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-import neo.io.blackrockio
-import os
 import numpy as np
 import quantities as pq
-import glob
 
-from .common_io_test import BaseTestIO
-from ...io import tools
-from ..tools import assert_arrays_almost_equal
-import struct
-import tempfile
-
+import neo.io.blackrockio
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.io import tools
+from neo.test.tools import assert_arrays_almost_equal
 
 
 #~ class testRead(unittest.TestCase):
@@ -40,6 +46,7 @@ import tempfile
         #~ self.assertTrue(np.all(seg.spiketrains[0].times == np.array(
             #~ [0.026, 0.122, 0.228])))
 
+
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWrite(unittest.TestCase):
     def setUp(self):
@@ -62,22 +69,21 @@ class testWrite(unittest.TestCase):
 
         # Create segment1 with analogsignals
         segment1 = neo.Segment()
-        sig1 = neo.AnalogSignal([3,4,5], units='mV', channel_index=3,
-            sampling_rate=30000.*pq.Hz)
-        sig2 = neo.AnalogSignal([6,-4,-5], units='mV', channel_index=4,
-            sampling_rate=30000.*pq.Hz)
+        sig1 = neo.AnalogSignal([3, 4, 5], units='mV', channel_index=3,
+                                sampling_rate=30000.*pq.Hz)
+        sig2 = neo.AnalogSignal([6, -4, -5], units='mV', channel_index=4,
+                                sampling_rate=30000.*pq.Hz)
         segment1.analogsignals.append(sig1)
         segment1.analogsignals.append(sig2)
 
         # Create segment2 with analogsignals
         segment2 = neo.Segment()
-        sig3 = neo.AnalogSignal([-3,-4,-5], units='mV', channel_index=3,
-            sampling_rate=30000.*pq.Hz)
-        sig4 = neo.AnalogSignal([-6,4,5], units='mV', channel_index=4,
-            sampling_rate=30000.*pq.Hz)
+        sig3 = neo.AnalogSignal([-3, -4, -5], units='mV', channel_index=3,
+                                sampling_rate=30000.*pq.Hz)
+        sig4 = neo.AnalogSignal([-6, 4, 5], units='mV', channel_index=4,
+                                sampling_rate=30000.*pq.Hz)
         segment2.analogsignals.append(sig3)
         segment2.analogsignals.append(sig4)
-
 
         # Link segments to block
         block.segments.append(segment1)
@@ -87,22 +93,22 @@ class testWrite(unittest.TestCase):
         #tools.populate_RecordingChannel(block)
         #print "problem happening"
         #print block.recordingchannelgroups[0].recordingchannels
-        #print block.recordingchannelgroups[0].recordingchannels[0].analogsignals
-        #tools.create_many_to_one_relationship(block)
+        #chan = block.recordingchannelgroups[0].recordingchannels[0]
+        #print chan.analogsignals
+        #block.create_many_to_one_relationship()
         #print "here: "
         #print block.segments[0].analogsignals[0].recordingchannel
 
         # Chris I prefer that:
         #tools.finalize_block(block)
         tools.populate_RecordingChannel(block)
-        tools.create_many_to_one_relationship(block)
-
+        block.create_many_to_one_relationship()
 
         # Check that blackrockio is correctly extracting channel indexes
         self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
-            segment1), [3,4])
+            segment1), [3, 4])
         self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
-            segment2), [3,4])
+            segment2), [3, 4])
 
         # Create writer. Write block, then read back in.
         bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
@@ -114,12 +120,12 @@ class testWrite(unittest.TestCase):
         self.assertEqual(fi.read(8), '\x00\x00\x00\x00\x00\x00\x00\x00')
 
         # Integers: period, channel count, channel index1, channel index2
-        self.assertEqual(struct.unpack('<4I', fi.read(16)), (1,2,3,4))
+        self.assertEqual(struct.unpack('<4I', fi.read(16)), (1, 2, 3, 4))
 
         # What should the signals be after conversion?
         conv = float(full_range) / 2**16
-        sigs = np.array(\
-            [np.concatenate((sig1,sig3)), np.concatenate((sig2, sig4))])
+        sigs = np.array([np.concatenate((sig1, sig3)),
+                         np.concatenate((sig2, sig4))])
         sigs_converted = np.rint(sigs / conv).astype(np.int)
 
         # Check that each time point is the same
@@ -136,6 +142,7 @@ class testWrite(unittest.TestCase):
 
         # Empty out test session again
         #~ delete_test_session()
+
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testRead(unittest.TestCase):
@@ -160,9 +167,9 @@ class testRead(unittest.TestCase):
         self.assertEqual(len(seg.analogsignals), 2)
 
         assert_arrays_almost_equal(seg.analogsignals[0],
-            [3., 4., 5., -3., -4., -5.] * pq.mV, .0001)
+                                   [3., 4., 5., -3., -4., -5.] * pq.mV, .0001)
         assert_arrays_almost_equal(seg.analogsignals[1],
-            [6., -4., -5., -6., 4., 5.] * pq.mV, .0001)
+                                   [6., -4., -5., -6., 4., 5.] * pq.mV, .0001)
 
     def test2(self):
         """Read data into two segments instead of just one"""
@@ -179,21 +186,21 @@ class testRead(unittest.TestCase):
         seg = block.segments[0]
         self.assertEqual(len(seg.analogsignals), 2)
         assert_arrays_almost_equal(seg.analogsignals[0],
-            [3., 4.] * pq.mV, .0001)
+                                   [3., 4.] * pq.mV, .0001)
         assert_arrays_almost_equal(seg.analogsignals[1],
-            [6., -4.] * pq.mV, .0001)
+                                   [6., -4.] * pq.mV, .0001)
 
         # Test second seg
         seg = block.segments[1]
         self.assertEqual(len(seg.analogsignals), 2)
         assert_arrays_almost_equal(seg.analogsignals[0],
-            [-3., -4., -5.] * pq.mV, .0001)
+                                   [-3., -4., -5.] * pq.mV, .0001)
         assert_arrays_almost_equal(seg.analogsignals[1],
-            [-6., 4., 5.] * pq.mV, .0001)
+                                   [-6., 4., 5.] * pq.mV, .0001)
 
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
-class CommonTests(BaseTestIO, unittest.TestCase ):
+class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = neo.io.BlackrockIO
     read_and_write_is_bijective = False
 

@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for "reading" fake data from an imaginary file.
 
@@ -16,31 +16,29 @@ Supported: Read
 Author: sgarcia
 
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import
-
-# I need to subclass BaseIO
-from .baseio import BaseIO
-
-# to import from core
-from ..core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
-
-# some tools to finalize the hierachy
-from .tools import create_many_to_one_relationship
 
 # note neo.core needs only numpy and quantities
 import numpy as np
 import quantities as pq
 
 # but my specific IO can depend on many other packages
-from numpy import pi, newaxis
-import datetime
 try:
-    have_scipy = True
     from scipy import stats
-    from scipy import randn, rand
-    from scipy.signal import resample
-except ImportError:
-    have_scipy = False
+except ImportError as err:
+    HAVE_SCIPY = False
+    SCIPY_ERR = err
+else:
+    HAVE_SCIPY = True
+    SCIPY_ERR = None
+
+# I need to subclass BaseIO
+from neo.io.baseio import BaseIO
+
+# to import from core
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
 
 # I need to subclass BaseIO
@@ -194,7 +192,7 @@ class ExampleIO(BaseIO):
 
             # read nested spiketrain
             for i in range(num_analogsignal):
-                for j in range(num_spiketrain_by_channel):
+                for _ in range(num_spiketrain_by_channel):
                     sptr = self.read_spiketrain(lazy = lazy , cascade = cascade ,
                                                             segment_duration = segment_duration, t_start = t_start , channel_index = i)
                     seg.spiketrains += [ sptr ]
@@ -213,19 +211,19 @@ class ExampleIO(BaseIO):
                 n = 1000
 
                 # neo.io support quantities my vector use second for unit
-                eva.times = timevect[(rand(n)*timevect.size).astype('i')]* pq.s
+                eva.times = timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s
                 # all duration are the same
                 eva.durations = np.ones(n)*500*pq.ms
                 # label
                 l = [ ]
                 for i in range(n):
-                    if rand()>.6: l.append( 'TriggerA' )
+                    if np.random.rand()>.6: l.append( 'TriggerA' )
                     else : l.append( 'TriggerB' )
                 eva.labels = np.array( l )
 
             seg.eventarrays += [ eva ]
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
 
@@ -255,7 +253,7 @@ class ExampleIO(BaseIO):
             anasig.lazy_shape = tvect.shape
         else:
             # create analogsignal (sinus of 3 Hz)
-            sig = np.sin(2*pi*tvect*sinus_freq + channel_index/5.*2*pi)+rand(tvect.size)
+            sig = np.sin(2*np.pi*tvect*sinus_freq + channel_index/5.*2*np.pi)+np.random.rand(tvect.size)
             anasig = AnalogSignal(sig, units= 'V', sampling_rate=sr * pq.Hz,
                                   t_start=t_start * pq.s,
                                   channel_index=channel_index)
@@ -284,6 +282,8 @@ class ExampleIO(BaseIO):
         # There are 2 possibles behaviour for a SpikeTrain
         # holding many Spike instance or directly holding spike times
         # we choose here the first :
+        if not HAVE_SCIPY:
+            raise SCIPY_ERR
 
         num_spike_by_spiketrain = 40
         sr = 10000.
@@ -291,7 +291,8 @@ class ExampleIO(BaseIO):
         if lazy:
             times = [ ]
         else:
-            times = rand(num_spike_by_spiketrain)*segment_duration+t_start
+            times = (np.random.rand(num_spike_by_spiketrain)*segment_duration +
+                     t_start)
 
         # create a spiketrain
         spiketr = SpikeTrain(times, t_start = t_start*pq.s, t_stop = (t_start+segment_duration)*pq.s ,
@@ -314,8 +315,8 @@ class ExampleIO(BaseIO):
         if not lazy:
             # in the neo API the waveforms attr is 3 D in case tetrode
             # in our case it is mono electrode so dim 1 is size 1
-            waveforms  = np.tile( w[newaxis,newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
-            waveforms *=  randn(*waveforms.shape)/6+1
+            waveforms  = np.tile( w[np.newaxis,np.newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
+            waveforms *=  np.random.randn(*waveforms.shape)/6+1
             spiketr.waveforms = waveforms*pq.mV
             spiketr.sampling_rate = sr * pq.Hz
             spiketr.left_sweep = 1.5* pq.s

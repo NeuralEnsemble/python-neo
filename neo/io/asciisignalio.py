@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading/writing analog signals in a text file.
 Each columns represents a AnalogSignal. All AnalogSignal have the same sampling rate.
@@ -10,16 +10,14 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship
+import csv
+import os
+
 import numpy as np
 import quantities as pq
 
-
-import csv
-import os
-from numpy import newaxis
+from neo.io.baseio import BaseIO
+from neo.core import AnalogSignal, Segment
 
 
 class AsciiSignalIO(BaseIO):
@@ -143,7 +141,7 @@ class AsciiSignalIO(BaseIO):
                                         skiprows = skiprows,
                                         dtype = 'f')
             if len(sig.shape) ==1:
-                sig = sig[:,newaxis]
+                sig = sig[:, np.newaxis]
         elif method == 'csv' :
             tab = [l for l in  csv.reader( file(self.filename,'rU') , delimiter = delimiter ) ]
             tab = tab[skiprows:]
@@ -184,7 +182,7 @@ class AsciiSignalIO(BaseIO):
                 anaSig.lazy_shape = sig.shape
             seg.analogsignals.append( anaSig )
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment,
@@ -201,11 +199,14 @@ class AsciiSignalIO(BaseIO):
             delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
             writetimecolumn :  True or Flase write time vector as first column
         """
+        if skiprows:
+            raise NotImplementedError('skiprows values other than 0 are not ' +
+                                      'supported')
         l = [ ]
         if writetimecolumn is not None:
-            l.append(segment.analogsignals[0].times[:,newaxis])
+            l.append(segment.analogsignals[0].times[:, np.newaxis])
         for anaSig in segment.analogsignals:
-            l.append(anaSig.magnitude[:,newaxis])
+            l.append(anaSig.magnitude[:, np.newaxis])
         sigs = np.concatenate(l, axis=1)
         #print sigs.shape
         np.savetxt(self.filename , sigs , delimiter = delimiter)

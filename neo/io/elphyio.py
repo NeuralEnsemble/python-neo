@@ -2817,8 +2817,8 @@ class DAC2Layout(ElphyLayout):
         start = pre_events
         end = start + n_events
         # print "events = ",events
-        # print "n_events = ",n_events
         # print "we have tot waveforms: ", sum(events)
+        # print "\nn_events = ",n_events
         # print "pre_events = ",pre_events
         # print "start = ",start
         # print "end = ",end
@@ -2927,14 +2927,14 @@ class DAC2Layout(ElphyLayout):
         n_events, = bytes.shape
         wf_samples = bytes['waveform'].shape[1]
         dtype = [
-            ('time', float),
+            ('waveform', float, (wf_samples, 2)),
             ('electrode_id', int),
-            ('unit_id', int),
-            ('waveform', float, (wf_samples, 2))
+            ('time', float),
+            ('unit_id', int)
         ]
         data = numpy.empty(n_events, dtype=dtype)
         data['electrode_id'] = bytes['channel_id'][:, 0]
-        data['unit_id'] = bytes['unit_id'][:, 0]
+        data['unit_id'] = bytes['unit_id'][:, 0] 
         data['time'] = bytes['elphy_time'][:, 0] * block.ep_block.dX
         data['waveform'][:, :, 0] = times * block.ep_block.dX
         data['waveform'][:, :, 1] = bytes['waveform'] * block.ep_block.dY_wf + block.ep_block.Y0_wf
@@ -4313,11 +4313,16 @@ class ElphyIO(BaseIO):
         block = self.elphy_file.layout.episode_block(episode)
         spiketrain = self.elphy_file.get_spiketrain(episode, spk)
         waveforms = spiketrain.waveforms # a property triggering waveforms extraction.
+        #print spk
+        #print waveforms[spk]['electrode_id']
+        #print waveforms[spk]['waveform'][:,1]
         sampling_rate = spiketrain.wf_sampling_frequency # sampling frequency of waveforms.
         start = spiketrain.t_start # the time before the arrival of the spike which corresponds to the starting time of a waveform.
         # spiketrain_data.wf_samples : number of samples composing waveforms.
         # spiketrain_data.wf_sampling_period : sampling period of waveforms.
         # Neo format:
+        # The waveforms of each spike: quantity array 3D (spike, channel_index, time) (nb_spike, channel, nb_point)
+        # spike_index, channel_index, time_sample
         spikes = spiketrain.times * s
         dct = {
             'times':spikes,
@@ -4328,9 +4333,19 @@ class ElphyIO(BaseIO):
             'label':"episode %s, electrode %s" % (episode, spk),
             'electrode_id':spk,
             # waveforms: quantity array 3D (spike, channel_index, time) The waveforms of each spike.
-            'waveforms':waveforms * s,
+            'waveforms': pq.Quantity([ [ waveforms[spk]['waveform'][:,1] ] ]),
             # sampling_rate: (quantity scalar) Number of samples per unit time for the waveforms.
-            'sampling_rate': sampling_rate
+            'sampling_rate': sampling_rate * pq.s
         }
         # new spiketrain
         return SpikeTrain(**dct)  
+
+        # ('elphy_time', 'u4', (1,)),
+        # ('device_time', 'u4', (1,)),
+        # ('channel_id', 'u2', (1,)),
+        # # the 'category' of the waveform
+        # ('unit_id', 'u1', (1,)),
+        # # not used
+        # ('dummy', 'u1', (13,)),
+        # # samples of the waveform
+        # ('waveform', 'u2', (wf_samples,))

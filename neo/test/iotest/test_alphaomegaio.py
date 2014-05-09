@@ -1,7 +1,9 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.alphaomegaio
+Tests of neo.io.alphaomegaio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -9,9 +11,8 @@ try:
 except ImportError:
     import unittest
 
-from ...io import AlphaOmegaIO
-
-from .common_io_test import BaseTestIO
+from neo.io import AlphaOmegaIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestAlphaOmegaIO(BaseTestIO, unittest.TestCase):

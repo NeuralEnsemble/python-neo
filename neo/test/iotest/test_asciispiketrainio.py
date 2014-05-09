@@ -1,7 +1,9 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.asciisignalio
+Tests of neo.io.asciispiketrainio
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -9,16 +11,13 @@ try:
 except ImportError:
     import unittest
 
-from ...io import AsciiSpikeTrainIO
-import numpy
-
-from .common_io_test import BaseTestIO
+from neo.io import AsciiSpikeTrainIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestAsciiSpikeTrainIO(BaseTestIO, unittest.TestCase, ):
     ioclass = AsciiSpikeTrainIO
-    files_to_download = [ 'File_ascii_spiketrain_1.txt',
-                            ]
+    files_to_download = ['File_ascii_spiketrain_1.txt']
     files_to_test = files_to_download
 
 

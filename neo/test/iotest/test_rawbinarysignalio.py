@@ -1,7 +1,9 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.asciisignalio
+Tests of io.rawbinarysignal
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -9,18 +11,13 @@ try:
 except ImportError:
     import unittest
 
-from ...io import RawBinarySignalIO
-import numpy
-
-
-from .common_io_test import BaseTestIO
-
+from neo.io import RawBinarySignalIO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestRawBinarySignalIO(BaseTestIO, unittest.TestCase, ):
     ioclass = RawBinarySignalIO
-    files_to_test = [ 'File_rawbinary_10kHz_2channels_16bit.raw',
-                            ]
+    files_to_test = ['File_rawbinary_10kHz_2channels_16bit.raw']
     files_to_download = files_to_test
 
 

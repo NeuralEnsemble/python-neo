@@ -1,4 +1,4 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Class for reading data from from Tucker Davis TTank format.
 Terminology:
@@ -16,16 +16,16 @@ Author: sgarcia
 
 """
 
-from .baseio import BaseIO
-from ..core import *
-from .tools import create_many_to_one_relationship, iteritems
+import os
+import struct
+import sys
 
 import numpy as np
-from numpy import dtype
 import quantities as pq
 
-import struct
-import os, sys
+from neo.io.baseio import BaseIO
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.io.tools import iteritems
 
 PY3K = (sys.version_info[0] == 3)
 
@@ -209,7 +209,7 @@ class TdtIO(BaseIO):
                                               t_start=(h['timestamp'] -
                                                        global_t_start) * pq.s,
                                               channel_index=channel)
-                        anaSig.lazy_dtype = dtype(DataFormats[h['dataformat']])
+                        anaSig.lazy_dtype = np.dtype(DataFormats[h['dataformat']])
                         anaSig.pos = 0
 
                         # for counting:
@@ -315,7 +315,7 @@ class TdtIO(BaseIO):
                     for sortcode, sptr in iteritems(allsorted):
                         seg.spiketrains.append( sptr )
 
-        create_many_to_one_relationship(bl)
+        bl.create_many_to_one_relationship()
         return bl
 
 
@@ -361,15 +361,15 @@ class HeaderReader():
         if offset is not None :
             self.fid.seek(offset)
         d = { }
-        for key, format in self.description :
-            buf = self.fid.read(struct.calcsize(format))
-            if len(buf) != struct.calcsize(format) : return None
-            val = struct.unpack(format , buf)
+        for key, fmt in self.description :
+            buf = self.fid.read(struct.calcsize(fmt))
+            if len(buf) != struct.calcsize(fmt) : return None
+            val = struct.unpack(fmt , buf)
             if len(val) == 1:
                 val = val[0]
             else :
                 val = list(val)
-            #~ if 's' in format :
+            #~ if 's' in fmt :
                 #~ val = val.replace('\x00','')
             d[key] = val
         return d

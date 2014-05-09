@@ -1,7 +1,9 @@
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
-Tests of io.asciisignalio
+Tests of neo.io.spike2io
 """
+
+# needed for python 3 compatibility
 from __future__ import absolute_import, division
 
 try:
@@ -9,18 +11,16 @@ try:
 except ImportError:
     import unittest
 
-from ...io import Spike2IO
-import numpy
-
-from .common_io_test import BaseTestIO
+from neo.io import Spike2IO
+from neo.test.iotest.common_io_test import BaseTestIO
 
 
 class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
     ioclass = Spike2IO
-    files_to_test = [ 'File_spike2_1.smr',
-                            'File_spike2_2.smr',
-                            'File_spike2_3.smr',
-                            ]
+    files_to_test = ['File_spike2_1.smr',
+                     'File_spike2_2.smr',
+                     'File_spike2_3.smr',
+                     ]
     files_to_download = files_to_test
 
 
