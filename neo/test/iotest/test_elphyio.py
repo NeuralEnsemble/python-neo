@@ -23,14 +23,10 @@ class TestElphyIO(BaseTestIO, unittest.TestCase):
     files_to_test = ['ElphyExample.DAT',
                      'ElphyExample_Mode1.dat',
                      'ElphyExample_Mode2.dat',
-<<<<<<< HEAD
                      #'ElphyExample_Mode3.dat', # corrupted waveforms in this file
                      'DATA1.DAT',
                     ]
-=======
-                     'ElphyExample_Mode3.dat',
-                     ]
->>>>>>> 3793a708d6bb55599ab731249dc777dac211b094
+
     files_to_download = files_to_test
 
 
