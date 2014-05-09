@@ -1633,7 +1633,7 @@ def read_from_char(data, type_char):
             value = None    
     else :
         try :
-            value = float(ascii) # in python maps on C double
+            value = extended_to_double(ascii)
         except :
             value = None
     return value
@@ -2429,6 +2429,24 @@ class DAC2Layout(ElphyLayout):
             ck_blocks.append(DummyDataBlock(self, 'RCyberTag', start, size))
         self.ck_blocks = ck_blocks
     
+    def set_rspk_blocks(self):
+        rspk_blocks = list()
+        blocks = self.get_blocks_of_type('RSPK')
+        for block in blocks :
+            start = block.data_start
+            size = block.end + 1 - start
+            rspk_blocks.append(DummyDataBlock(self, 'RSPK', start, size))
+        self.rspk_blocks = rspk_blocks
+    
+    def set_rspkwave_blocks(self):
+        rspkwave_blocks = list()
+        blocks = self.get_blocks_of_type('RspkWave')
+        for block in blocks :
+            start = block.data_start
+            size = block.end + 1 - start
+            rspkwave_blocks.append(DummyDataBlock(self, 'RspkWave', start, size))
+        self.rspkwave_blocks = rspkwave_blocks
+    
     def episode_block(self, ep):
         return self.episode_blocks[ep - 1]
     
@@ -2488,7 +2506,8 @@ class DAC2Layout(ElphyLayout):
         return block.ks_block.k_sampling[ch - 1] if block.ks_block else 1
     
     def aggregate_size(self, block, ep):
-        ag_count = self.aggregate_sample_count(block)
+        #ag_count = self.aggregate_sample_count(block)
+        ag_count = self.n_channels(ep)
         ag_size = 0
         for ch in range(1, ag_count + 1) :
             if (block.ks_block.k_sampling[ch - 1] != 0) :
@@ -2600,7 +2619,6 @@ class DAC2Layout(ElphyLayout):
         """
         Return the number of sample in an aggregate.
         """
-        
         # compute the least common multiple
         # for channels having block.ks_block.k_sampling[ch] > 0
         lcm0 = 1
@@ -2765,7 +2783,74 @@ class DAC2Layout(ElphyLayout):
         res.sort() # sometimes timings are not sorted
         #print "load_encoded_data() - spikes:",res
         return res
+    
+    
+    def load_encoded_waveforms(self, episode, electrode_id):
+        """
+        Return times on which waveforms are defined
+        and a numpy recarray containing all the data
+        stored in the RspkWave block.
+        """
+        # print "electrode_id = ", electrode_id
+        # load data corresponding to the RspkWave block
+        #identifier = "RspkWave"
+        #data_blocks = self.group_blocks_of_type(episode, identifier)
+        #bytes = self.load_bytes(data_blocks)
+        #ep_blocks = self.get_blocks_stored_in_episode(episode)
+        #wf_blocks = [k for k in ep_blocks if k.identifier == "RspkWave"]
+        wf_blocks = [k for k in self.blocks if k.identifier == "RspkWave"]
+        # print "len of wf_blocks: ",len(wf_blocks)
+        # print "pre_trigger = ",wf_blocks[0].pre_trigger
+        # print "wf_samples wavelength = ",wf_blocks[0].wavelength 
+        # print "we have n_spk_channels = ",wf_blocks[0].n_spk_channels
+        # print "in each channel, we have n_spikes = ",wf_blocks[0].n_spikes
+        # print "data starts at ",wf_blocks[0].data_start
+        # print "with an offset of ", wf_blocks[0].data_start - wf_blocks[0].start
 
+        # For any event in the RSPK block, it corresponds a waveform in the Rspkwave
+        # A waveform is made of wavelength 2-byte integer values
+        wf_samples = wf_blocks[0].wavelength
+        # print "the samples for each waveform are wf_samples = ",wf_samples
+        events = numpy.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
+        n_events = events[electrode_id - 1]
+        pre_events = numpy.sum(events[0:electrode_id - 1], dtype=int)
+        start = pre_events
+        end = start + n_events
+        # print "events = ",events
+        # print "n_events = ",n_events
+        # print "we have tot waveforms: ", sum(events)
+        # print "pre_events = ",pre_events
+        # print "start = ",start
+        # print "end = ",end
+
+        # TElphySpkPacket record
+        dtype = [
+            # the time of the spike arrival
+            ('elphy_time', 'u4', (1,)),
+            ('device_time', 'u4', (1,)),
+            ('channel_id', 'u2', (1,)),
+            # the 'category' of the waveform
+            ('unit_id', 'u1', (1,)),
+            # not used
+            ('dummy', 'u1', (13,)),
+            # samples of the waveform
+            ('waveform', 'u2', (wf_samples,))
+        ]
+        # Then we find the waveforms for all the n_spk_channels
+        # load_bytes(self, data_blocks, dtype='<i1', start=None, end=None, expected_size=None):
+        #bytes = self.load_bytes(wf_blocks, start=168)
+        bytes = self.load_bytes(wf_blocks, start=(wf_blocks[0].data_start - wf_blocks[0].start), )
+        # print "bytes.shape: ", bytes.shape
+        # print bytes
+        x_start = wf_blocks[0].pre_trigger
+        x_stop = wf_samples - x_start
+        # print "Raw data Byte count: 11+13bytes + 64wf_samples*2bytes * all events = ", (24+(wf_samples*2))*sum(events)
+        # print "Length of bytes took from the block is: ", len(bytes)
+        # print numpy.arange(-x_start, x_stop) # times pre-trigger up to wf_samples
+        res = numpy.arange(-x_start, x_stop), numpy.frombuffer(bytes, dtype=dtype)[start:end]
+        # print res
+        return res
+  
     def get_episode_name( self, episode ):
         episode_name = "episode %s" % episode
         names = [k for k in self.blocks if k.identifier == 'COM']
@@ -2829,53 +2914,6 @@ class DAC2Layout(ElphyLayout):
         block = self.episode_block(episode)
         times = self.load_encoded_spikes(episode, electrode_id, "RSPK")
         return times * block.ep_block.dX
-    
-    def load_encoded_waveforms(self, episode, electrode_id):
-        """
-        Return times on which waveforms are defined
-        and a numpy recarray containing all the data
-        stored in the RspkWave block.
-        """
-        # load data corresponding to the RspkWave block
-        identifier = "RspkWave"
-        data_blocks = self.group_blocks_of_type(episode, identifier)
-        bytes = self.load_bytes(data_blocks)
-        
-        # select only data corresponding
-        # to the specified spk_channel
-        ep_blocks = self.get_blocks_stored_in_episode(episode)
-        wf_blocks = [k for k in ep_blocks if k.identifier == identifier]
-        wf_samples = wf_blocks[0].wavelength
-        events = numpy.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
-        n_events = events[electrode_id - 1]
-        pre_events = numpy.sum(events[0:electrode_id - 1], dtype=int)
-        start = pre_events
-        end = start + n_events
-        
-        # data must be reshaped before
-        dtype = [
-            # the time of the spike arrival
-            ('elphy_time', 'u4', (1,)),
-            ('device_time', 'u4', (1,)),
-            
-            # the identifier of the electrode
-            # would also be the 'trodalness'
-            # but this tetrode devices are not
-            # implemented in Elphy
-            ('channel_id', 'u2', (1,)),
-            
-            # the 'category' of the waveform
-            ('unit_id', 'u1', (1,)),
-            
-            #do not used
-            ('dummy', 'u1', (13,)),
-            
-            # samples of the waveform
-            ('waveform', 'i2', (wf_samples,))
-        ]
-        x_start = wf_blocks[0].pre_trigger
-        x_stop = wf_samples - x_start
-        return numpy.arange(-x_start, x_stop), numpy.frombuffer(bytes, dtype=dtype)[start:end]
     
     def get_waveform_data(self, episode, electrode_id):
         """
@@ -3464,11 +3502,12 @@ class ElphyFile(object):
                     block.set_sample_size_block()
 
             # SpikeTrain
-            #if isinstance(header, DAC2Header) and (block.identifier in ['RSPK']) :
-                #print "\nElphyFile.create_layout() - RSPK"
+            #if isinstance(header, DAC2Header) and (block.identifier in ['RSPK', 'RspkWave']) :
+                #print "\nElphyFile.create_layout() - ", block.identifier
                 #print "ElphyFile.create_layout() - n_events",block.n_events
                 #print "ElphyFile.create_layout() - n_evt_channels",block.n_evt_channels
-            
+                # do nothing, it will create the block
+
             layout.add_block(block)
             offset += block.size
             
@@ -3490,7 +3529,9 @@ class ElphyFile(object):
             layout.set_episode_blocks()
         
         layout.set_data_blocks()
-        
+        layout.set_rspk_blocks()
+        layout.set_rspkwave_blocks()
+
         # finally set up the user info block of the layout
         layout.set_info_block()
 
@@ -4189,11 +4230,11 @@ class ElphyIO(BaseIO):
         # spike channel in the episode
         # in case of multi-electrode
         # acquisition context
-        n_spikes = self.elphy_file.n_spiketrains(episode)
-        #print "read_segment() - n_spikes:",n_spikes
-        if n_spikes>0 :
-            for spk in range(1, n_spikes+1) :
-                spiketrain = self.read_spiketrain(episode, spk)
+        n_spiketrains = self.elphy_file.n_spiketrains(episode)
+        #print "read_segment() - n_spiketrains:",n_spiketrains
+        if n_spiketrains>0 :
+            for spkt in range(1, n_spiketrains+1) :
+                spiketrain = self.read_spiketrain(episode, spkt)
                 spiketrain.segment = segment
                 create_many_to_one_relationship( spiketrain )
                 segment.spiketrains.append( spiketrain )
@@ -4268,23 +4309,28 @@ class ElphyIO(BaseIO):
             episode : number of elphy episode, roughly corresponding to a segment.
             spk : index of the spike array.
         """
+        # Elphy data:
         block = self.elphy_file.layout.episode_block(episode)
-        spike = self.elphy_file.get_spiketrain(episode, spk)
-        spikes = spike.times * s
-        #print "read_spiketrain() - spikes: %s" % (len(spikes))
-        #print "read_spiketrain() - spikes:",spikes
+        spiketrain = self.elphy_file.get_spiketrain(episode, spk)
+        waveforms = spiketrain.waveforms # a property triggering waveforms extraction.
+        sampling_rate = spiketrain.wf_sampling_frequency # sampling frequency of waveforms.
+        start = spiketrain.t_start # the time before the arrival of the spike which corresponds to the starting time of a waveform.
+        # spiketrain_data.wf_samples : number of samples composing waveforms.
+        # spiketrain_data.wf_sampling_period : sampling period of waveforms.
+        # Neo format:
+        spikes = spiketrain.times * s
         dct = {
             'times':spikes,
             't_start': block.ep_block.X0_wf if block.ep_block.X0_wf < spikes[0] else spikes[0], #check
+            #'t_start': start,
             't_stop': block.ep_block.cyber_time if block.ep_block.cyber_time > spikes[-1] else spikes[-1],
             'units':'s',
-            # special keywords to identify the 
-            # electrode providing the spiketrain
-            # event though it is redundant with
-            # waveforms
             'label':"episode %s, electrode %s" % (episode, spk),
-            'electrode_id':spk
+            'electrode_id':spk,
+            # waveforms: quantity array 3D (spike, channel_index, time) The waveforms of each spike.
+            'waveforms':waveforms * s,
+            # sampling_rate: (quantity scalar) Number of samples per unit time for the waveforms.
+            'sampling_rate': sampling_rate
         }
         # new spiketrain
-        return SpikeTrain(**dct)
-  
+        return SpikeTrain(**dct)  
