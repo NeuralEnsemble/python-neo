@@ -305,7 +305,7 @@ class MultichannelIO(BaseIO):
         
         if lazy:
             # we add the attribute lazy_shape with the size if lazy
-            SpikeTrain(times,units = pq.s, 
+            spiketr = SpikeTrain(times,units = pq.s, 
                        t_stop = t_start+segment_duration,
                        t_start = t_start*pq.s,lazy_shape = 40)
         
@@ -336,9 +336,9 @@ class MultichannelIO(BaseIO):
         return spiketr
 
     def read_eventarray(self,lazy = False, cascade = True,channel_index = 0):
-#        """function to read digital timestamps. this function only reads the event
-#        onset and disconsiders its duration. to get digital event durations, use 
-#        the epoch function (to be implemented)."""
+        """function to read digital timestamps. this function only reads the event
+        onset and disconsiders its duration. to get digital event durations, use 
+        the epoch function (to be implemented)."""
         if lazy:
             eva = EventArray(file_origin = self.filename)        
         else:
