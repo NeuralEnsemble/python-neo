@@ -167,7 +167,7 @@ class MultichannelIO(BaseIO):
                      cascade = True,
                      # all following arguments are decied by this IO and are free
                      t_start = 0.,
-                     segment_duration = 15.,
+                     segment_duration = 0.,
                      #num_spiketrain_by_channel = 3,
                     ):
         """
@@ -180,6 +180,9 @@ class MultichannelIO(BaseIO):
             num_spiketrain : number of SpikeTrain in this segment
             
         """
+        #if no segment duration is given, use the complete file
+        if segment_duration ==0.:
+            segment_duration=float(self.metadata['TimeSpan'])
         #time vector for generated signal
         #timevect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata['sampRate'])
 
@@ -214,7 +217,8 @@ class MultichannelIO(BaseIO):
             for i in range(self.metadata['num_spkChans']):
                 #create spike object
                 sptr = self.read_spiketrain(lazy = lazy, cascade = cascade,
-                        channel_index = self.metadata['spkChanId'][i])
+                        channel_index = self.metadata['spkChanId'][i],
+                        segment_duration = segment_duration,)
                 #add the spike object to segment
                 seg.spiketrains += [ sptr ]
 
@@ -283,8 +287,8 @@ class MultichannelIO(BaseIO):
                         lazy = False,
                         cascade = True,
                         segment_duration = 15.,
-                        t_start = -1,
-                        channel_index = 0,):
+                        t_start = 0.,
+                        channel_index = 0):
         """
         Function to read in spike trains. This API still does not support read in of
         specific channels as they are recorded. rather the fuunction gets the entity set
@@ -298,14 +302,13 @@ class MultichannelIO(BaseIO):
         
         # create a list to store spiketrain times
         times = list() 
-        #create a spike train object
-        spiketr = SpikeTrain(times, t_start = t_start*pq.s, 
-                             t_stop = (t_start+segment_duration)*pq.s ,
-                             units = pq.s,)
         
         if lazy:
             # we add the attribute lazy_shape with the size if lazy
-            spiketr.lazy_shape = (40)
+            SpikeTrain(times,units = pq.s, 
+                       t_stop = t_start+segment_duration,
+                       t_start = t_start*pq.s,lazy_shape = 40)
+        
         else:
             #get the spike data from a specific channel index
             tempSpks =  self.fd.get_entity(channel_index)    
@@ -319,49 +322,44 @@ class MultichannelIO(BaseIO):
                 waveforms[i]=tempCuts[0]
                 #append time stamp to list
                 times.append(timeStamp)
-            
-            #set data into spike train object
-            #name
-            spiketr.name = 'spikes from electrode'+tempSpks.label[-3:],
-            #cutouts
-            spiketr.waveforms = waveforms*pq.volt
-            #samp rate
-            spiketr.sampling_rate = sr * pq.Hz
-            #file origin
-            spiketr.file_origin = self.filename
-            # the channel index used
-            spiketr.annotate(channel_index = channel_index)
+                
+            #create a spike train object
+            spiketr = SpikeTrain(times,units = pq.s, 
+                         t_stop = t_start+segment_duration,
+                         t_start = t_start*pq.s,
+                         name ='spikes from electrode'+tempSpks.label[-3:],
+                         waveforms = waveforms*pq.volt,
+                         sampling_rate = sr * pq.Hz,
+                         file_origin = self.filename,
+                         annotate = ('channel_index:'+ str(channel_index)))
             
         return spiketr
 
     def read_eventarray(self,lazy = False, cascade = True,channel_index = 0):
-        """function to read digital timestamps. this function only reads the event
-        onset and disconsiders its duration. to get digital event durations, use 
-        the epoch function (to be implemented)."""
-        #create an event array        
-        eva = EventArray()    
-        #create temporary empty lists to store data
-        tempNames = list()
-        tempTimeStamp = list()
-        #get entity from file
-        trigEntity = self.fd.get_entity(channel_index)
-        #run through entity
-        for i in range(trigEntity.item_count):
-            #get in which digital bit was the trigger detected
-            tempNames.append(trigEntity.label[-8:])
-            #get the time stamps
-            tempData,_ = trigEntity.get_data(i)
-            #append the time stamp to them empty list
-            tempTimeStamp.append(tempData)
-        #set event object variables
-        #filename
-        eva.file_origin = self.filename
-        #which digital bits were detected
-        eva.labels = tempNames
-        #the time stamps
-        eva.times = tempTimeStamp*pq.sec
-#        eva.description('here are stored all the trigger events'+
-#                        '(without their durations) as detected by '+
-#                        'the Trigger detector tool in MCRack')
+#        """function to read digital timestamps. this function only reads the event
+#        onset and disconsiders its duration. to get digital event durations, use 
+#        the epoch function (to be implemented)."""
+        if lazy:
+            eva = EventArray(file_origin = self.filename)        
+        else:
+            #create temporary empty lists to store data
+            tempNames = list()
+            tempTimeStamp = list()
+            #get entity from file
+            trigEntity = self.fd.get_entity(channel_index)
+            #run through entity
+            for i in range(trigEntity.item_count):
+                #get in which digital bit was the trigger detected
+                tempNames.append(trigEntity.label[-8:])
+                #get the time stamps
+                tempData, _ = trigEntity.get_data(i)
+                #append the time stamp to them empty list
+                tempTimeStamp.append(tempData)
+                #create an event array        
+            eva = EventArray(file_origin = self.filename,labels = tempNames,
+                        times = tempTimeStamp,
+                        description = 'here are stored all the trigger events'+
+                            '(without their durations) as detected by '+
+                            'the Trigger detector tool in MCRack' )       
         return eva
             
