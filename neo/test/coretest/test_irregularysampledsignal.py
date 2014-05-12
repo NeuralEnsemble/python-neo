@@ -8,6 +8,8 @@ try:
 except ImportError:
     import unittest
 
+import os
+import pickle
 import numpy as np
 import quantities as pq
 
@@ -516,6 +518,27 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
                  pretty(self.signal1.annotations)))
         self.assertEqual(res, targ)
 
+
+
+class TestAnalogSignalFunctions(unittest.TestCase):
+    def test__pickle(self):
+        signal1 = IrregularlySampledSignal(np.arange(10.0)/100*pq.s,
+                                           np.arange(10.0), units="mV")
+
+        fobj = open('./pickle', 'wb')
+        pickle.dump(signal1, fobj)
+        fobj.close()
+
+        fobj = open('./pickle', 'rb')
+        try:
+            signal2 = pickle.load(fobj)
+        except ValueError:
+            signal2 = None
+
+        assert_arrays_equal(signal1, signal2)
+        fobj.close()
+        os.remove('./pickle')
+        
 
 class TestIrregularlySampledSignalEquality(unittest.TestCase):
     def test__signals_with_different_times_should_be_not_equal(self):
