@@ -12,13 +12,15 @@ Classes
 BlackrockIO    - class to enable reading of BlackrockIO files
 """
 
-import struct
-import os
 import datetime
+import os
+import struct
+
+from neo.io.baseio import BaseIO
+import neo
+
 import numpy as np
 import quantities as pq
-import neo
-from neo.io.baseio import BaseIO
 
 
 if __name__ == '__main__':
@@ -43,7 +45,8 @@ class BlackrockIO(BaseIO):
 
     Attributes:
         associated (bool):
-            True if the object is successfully associated to a set of Blackrock files
+            True if the object is successfully associated to a set of Blackrock
+            files.
         associated_fileset (string):
             Name of the associated file set, which is the base file name (i.e.,
             without .nev or .nsX extensions) determined when constructing the
@@ -63,8 +66,8 @@ class BlackrockIO(BaseIO):
             A list of integers of length ten. The entry at index X
             corresponds to the number of channels in the file .nsX.
         channel_id_nsx (list):
-            This list contains at entry X a list of available channel IDs in the
-            .nsX file.
+            This list contains at entry X a list of available channel IDs in
+            the .nsX file.
         channel_id_nev (list):
             List of channel IDs on which spike events are detected.
         nsx_unit (list):
@@ -84,19 +87,26 @@ class BlackrockIO(BaseIO):
             Sampling frequency of spike waveforms in Hz.
         parameters_nsx (list):
             List of dictionaries of information extracted from .nsX files. The
-            entry at position X corresponds to the information in the .nsX file.
+            entry at position X corresponds to the information in the .nsX
+            file.
         parameters_nev (dict):
             Dictionary of information extracted from .nev file.
-        parameters_electrodes (list):
+        parameters_nev_electrodes (list):
             List of dictionaries of information extracted from .nev file per
-            electrode. The entry at position X corresponds to the information on
-            electrode X (X=1-255; entry X=0 contains an empty dict).
+            electrode. The entry at position [X] corresponds to the information
+            on electrode X (X=1-255; entry X=0 contains an empty dict).
+        parameters_nsx_electrodes (list):
+            List of lists of dictionaries of information extracted from .nsx
+            file per electrode. The entry at list position [N][X] corresponds
+            to the information on electrode X (X=1-255; entry X=0 contains an
+            empty dict) of nsX N.
         parameters_patient (dict):
             Dictionary of information extracted from .sif file.
         nev_content (string):
             Gives a textual description of the nev-file content.
         nsx_content (dict):
-            For each file extension (keys), gives a textual description of the file content.
+            For each file extension (keys), gives a textual description of the
+            file content.
     """
 
     # Class variables demonstrating capabilities of this IO
@@ -313,28 +323,96 @@ class BlackrockIO(BaseIO):
 
             # Read number of channels in file
             # unsigned int 32bit, little endian
-            (self.num_channels_nsx[nsx],) = struct.unpack('<I', filehandle.read(4))
-            self.parameters_nsx[nsx]['NumChannels'] = self.num_channels_nsx[nsx];
+            (self.num_channels_nsx[nsx],) = \
+                struct.unpack('<I', filehandle.read(4))
+            self.parameters_nsx[nsx]['NumChannels'] = \
+                self.num_channels_nsx[nsx]
 
             # Pre-allocate channel list
             self.channel_id_nsx[nsx] = self.num_channels_nsx[nsx] * [None]
             self.parameters_nsx[nsx]['ChannelLabel'] = []
 
+            # Preset strings for filter types
+            filter_types = ('None', 'Butterworth')
+
             for channel_i in range(self.num_channels_nsx[nsx]):
+                # Initialize dictionary to hold electrode information
+                self.parameters_nsx_electrodes[nsx] = \
+                    [{} for dummy in xrange(256)]
+
                 if filehandle.read(2) != 'CC':
-                    raise IOError("Expected channel block " + str(channel_i) + "in .nsX header, but did not encounter correct block ID.")
+                    raise IOError("Expected channel block " +
+                        str(channel_i) +
+                        "in .nsX header, but did not encounter correct \
+                        block ID.")
 
                 # Read list of channel IDs
                 # unsigned short 16bit, little endian
-                (self.channel_id_nsx[nsx][channel_i],) = struct.unpack('<H', filehandle.read(2))
+                (el_id,) = struct.unpack('<H', filehandle.read(2))
+                self.channel_id_nsx[nsx][channel_i] = el_id
+
+                # Create a dictionary for this electrode ID
+                self.parameters_nsx_electrodes[nsx][el_id] = {}
 
                 # Read label string and remove 0's
-                # TODO: Transform this into a real dict
-                self.parameters_nsx[nsx]['ChannelLabel'].append(filehandle.read(16).replace('\x00', ''))
+                self.parameters_nsx_electrodes[nsx][el_id] \
+                    ['ChannelLabel'] = filehandle.read(16).replace('\x00', '')
 
-                # TODO: Add info from CC ext header!
-                # 47 bytes ignored for now
-                dummy = filehandle.read(46)
+                # Read physical connector (bank A-D)
+                # unsigned byte 8bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['ConnectorID'],) = struct.unpack('<B', filehandle.read(1))
+
+                # Read connector pin (pin number on connector, 1-37)
+                # unsigned byte 8bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['ConnectorPin'],) = struct.unpack('<B', filehandle.read(1))
+
+                # Minimal digital value (e.g., -8192)
+                # unsigned short 16bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['MinDigiValue'],) = struct.unpack('<H', filehandle.read(2))
+
+                # Maximum digital value (e.g., 8192)
+                # unsigned short 16bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['MaxDigiValue'],) = struct.unpack('<H', filehandle.read(2))
+
+                # Minimal analog value (e.g., -5000 mV)
+                # unsigned short 16bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['MinAnalogValue'],) = struct.unpack('<H', filehandle.read(2))
+
+                # Maximum analog value (e.g., 5000 mV)
+                # unsigned short 16bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['MaxAnalogValue'],) = struct.unpack('<H', filehandle.read(2))
+
+                # Read units string and remove 0's
+                self.parameters_nsx_electrodes[nsx][el_id]\
+                    ['Unit'] = filehandle.read(16).replace('\x00', '')
+
+                # Read high frequency cut-off in mHz
+                # unsigned long  32bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['HiFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
+
+                # Read high frequency filter order
+                # unsigned long  32bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['HiFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
+
+                # Read high frequency filter order
+                # unsigned short 16bit, little endian
+                (dummy,) = struct.unpack('<H', filehandle.read(2))
+                self.parameters_nsx_electrodes[nsx][el_id]['HiFreqType'] = \
+                    filter_types[dummy]
+
+                # Read low frequency cut-off in mHz
+                # unsigned long  32bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['LoFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
+
+                # Read low frequency filter order
+                # unsigned long  32bit, little endian
+                (self.parameters_nsx_electrodes[nsx][el_id]['LoFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
+
+                # Read low frequency filter order
+                # unsigned short 16bit, little endian
+                (dummy,) = struct.unpack('<H', filehandle.read(2))
+                self.parameters_nsx_electrodes[nsx][el_id]['LoFreqType'] = \
+                    filter_types[dummy]
 
             # Save channel ID list to parameters_nsx
             self.parameters_nsx[nsx]['ChannelIDs'] = self.channel_id_nsx[nsx]
@@ -346,7 +424,6 @@ class BlackrockIO(BaseIO):
         else:
             # Unrecognized file format version
             raise IOError("Unrecognized file specification in .nsX file.")
-
 
     def __read_nev_header(self, filehandle):
         '''
@@ -369,12 +446,13 @@ class BlackrockIO(BaseIO):
         # unsigned byte 8bit, little endian
         (major,) = struct.unpack('<B', filehandle.read(1))
         (minor,) = struct.unpack('<B', filehandle.read(1))
-        self.parameters_nev['Version'] = str(major) + '.' + str(minor);
+        self.parameters_nev['Version'] = str(major) + '.' + str(minor)
         self.parameters_nev['VersionMajor'] = major
         self.parameters_nev['VersionMinor'] = minor
 
         if fileheader == 'NEURALEV':
-            # Version 2.2+ may have a sif file containing experimenter information
+            # Version 2.2+ may have a sif file containing experimenter
+            # information
             filename_sif = self.parameters_nev['SessionName'][0:-4] + '.sif'
             if os.path.exists(filename_sif):
                 self._diagnostic_print("Note: Scanning " + filename_sif)
@@ -437,7 +515,7 @@ class BlackrockIO(BaseIO):
     def __read_nev_ext_header(self, filehandle):
         '''
         Reads the extended header block and stores the information in the
-        object's parameters_nev and parameters_electrodes dictionaries.
+        object's parameters_nev and parameters_nev_electrodes dictionaries.
 
         Args:
             filehandle (file object):
@@ -451,7 +529,7 @@ class BlackrockIO(BaseIO):
         '''
 
         # Initialize dictionary to hold electrode information...
-        self.parameters_electrodes = [ {} for dummy in xrange(256) ]
+        self.parameters_nev_electrodes = [ {} for dummy in xrange(256) ]
         # ...and the number of byte per spike waveform sample, default to 1
         self.__byte_per_waveform_sample = 256 * [ 1 ]
 
@@ -481,38 +559,38 @@ class BlackrockIO(BaseIO):
 
                 # Read physical connector (bank A-D)
                 # unsigned byte 8bit, little endian
-                (self.parameters_electrodes[el_id]['ConnectorID'],) = struct.unpack('<B', filehandle.read(1))
+                (self.parameters_nev_electrodes[el_id]['ConnectorID'],) = struct.unpack('<B', filehandle.read(1))
 
                 # Read connector pin (pin number on connector, 1-37)
                 # unsigned byte 8bit, little endian
-                (self.parameters_electrodes[el_id]['ConnectorPin'],) = struct.unpack('<B', filehandle.read(1))
+                (self.parameters_nev_electrodes[el_id]['ConnectorPin'],) = struct.unpack('<B', filehandle.read(1))
 
                 # Read digitization factor in nV per LSB step
                 # unsigned short 16bit, little endian
-                (self.parameters_electrodes[el_id]['DigitizationFactor'],) = struct.unpack('<H', filehandle.read(2))
+                (self.parameters_nev_electrodes[el_id]['DigitizationFactor'],) = struct.unpack('<H', filehandle.read(2))
 
                 # Read energy threshold in nV per LSB step
                 # unsigned short 16bit, little endian
-                (self.parameters_electrodes[el_id]['EnergyThreshold'],) = struct.unpack('<H', filehandle.read(2))
+                (self.parameters_nev_electrodes[el_id]['EnergyThreshold'],) = struct.unpack('<H', filehandle.read(2))
 
                 # Read high threshold in µV
                 # signed short 16bit, little endian
-                (self.parameters_electrodes[el_id]['AmpThresholdHi'],) = struct.unpack('<h', filehandle.read(2))
+                (self.parameters_nev_electrodes[el_id]['AmpThresholdHi'],) = struct.unpack('<h', filehandle.read(2))
 
                 # Read low threshold in µV
                 # signed short 16bit, little endian
-                (self.parameters_electrodes[el_id]['AmpThresholdLo'],) = struct.unpack('<h', filehandle.read(2))
+                (self.parameters_nev_electrodes[el_id]['AmpThresholdLo'],) = struct.unpack('<h', filehandle.read(2))
 
                 # Read number of sorted units
                 # unsigned byte 8bit, little endian
-                (self.parameters_electrodes[el_id]['NumSortedUnits'],) = struct.unpack('<B', filehandle.read(1))
+                (self.parameters_nev_electrodes[el_id]['NumSortedUnits'],) = struct.unpack('<B', filehandle.read(1))
 
                 # Read number of bytes per waveform sample
                 # 0 or 1 both imply 1 byte, so convert a 0 to 1 for simplification
                 # unsigned byte 8bit, little endian
-                (self.parameters_electrodes[el_id]['NumBytesPerWaveform'],) = struct.unpack('<B', filehandle.read(1))
-                self.parameters_electrodes[el_id]['NumBytesPerWaveform'] += (self.parameters_electrodes[el_id]['NumBytesPerWaveform'] == 0)
-                self.__byte_per_waveform_sample[el_id] = self.parameters_electrodes[el_id]['NumBytesPerWaveform']
+                (self.parameters_nev_electrodes[el_id]['NumBytesPerWaveform'],) = struct.unpack('<B', filehandle.read(1))
+                self.parameters_nev_electrodes[el_id]['NumBytesPerWaveform'] += (self.parameters_nev_electrodes[el_id]['NumBytesPerWaveform'] == 0)
+                self.__byte_per_waveform_sample[el_id] = self.parameters_nev_electrodes[el_id]['NumBytesPerWaveform']
 
                 # Unused, 10 bytes
                 filehandle.read(10)
@@ -523,7 +601,7 @@ class BlackrockIO(BaseIO):
                 (el_id,) = struct.unpack('<H', filehandle.read(2))
 
                 # Electrode label and remove 0's
-                self.parameters_electrodes[el_id]['Label'] = filehandle.read(16).replace('\x00', '')
+                self.parameters_nev_electrodes[el_id]['Label'] = filehandle.read(16).replace('\x00', '')
 
                 # Unused, 6 bytes
                 filehandle.read(6)
@@ -537,29 +615,29 @@ class BlackrockIO(BaseIO):
 
                 # Read high frequency cut-off in mHz
                 # unsigned long  32bit, little endian
-                (self.parameters_electrodes[el_id]['HiFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
+                (self.parameters_nev_electrodes[el_id]['HiFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned long  32bit, little endian
-                (self.parameters_electrodes[el_id]['HiFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
+                (self.parameters_nev_electrodes[el_id]['HiFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned short 16bit, little endian
                 (dummy,) = struct.unpack('<H', filehandle.read(2))
-                self.parameters_electrodes[el_id]['HiFreqType'] = filter_types[dummy]
+                self.parameters_nev_electrodes[el_id]['HiFreqType'] = filter_types[dummy]
 
                 # Read low frequency cut-off in mHz
                 # unsigned long  32bit, little endian
-                (self.parameters_electrodes[el_id]['LoFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
+                (self.parameters_nev_electrodes[el_id]['LoFreqCorner'],) = struct.unpack('<I', filehandle.read(4))
 
                 # Read low frequency filter order
                 # unsigned long  32bit, little endian
-                (self.parameters_electrodes[el_id]['LoFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
+                (self.parameters_nev_electrodes[el_id]['LoFreqOrder'],) = struct.unpack('<I', filehandle.read(4))
 
                 # Read low frequency filter order
                 # unsigned short 16bit, little endian
                 (dummy,) = struct.unpack('<H', filehandle.read(2))
-                self.parameters_electrodes[el_id]['LoFreqType'] = filter_types[dummy]
+                self.parameters_nev_electrodes[el_id]['LoFreqType'] = filter_types[dummy]
 
                 # Unused, 2 bytes
                 filehandle.read(2)
@@ -580,40 +658,46 @@ class BlackrockIO(BaseIO):
 
             elif fileextheader == 'NSASEXEV':
                 digital_enable_types = ('Disabled', 'Enabled')
-                analog_enable_types = ('Disabled', 'Enabled on Lo->Hi', 'Enabled on Hi->Lo', 'Enabled on Lo<->Hi')
+                analog_enable_types = ('Disabled', 'Enabled on Lo->Hi',
+                    'Enabled on Hi->Lo', 'Enabled on Lo<->Hi')
 
-                # Read frequency of periodic packet generation in ?? (unit), 0 if none
+                # Read frequency of periodic packet generation in ?? (unit), 0
+                # if none
                 # unsigned short 16bit, little endian
-                (self.parameters_nev['PeriodicPacketGenerator'],) = struct.unpack('<H', filehandle.read(2))
+                (self.parameters_nev['PeriodicPacketGenerator'],) = \
+                    struct.unpack('<H', filehandle.read(2))
 
                 # Read if digital input triggers events
                 # unsigned byte 8bit, little endian
                 (dummy,) = struct.unpack('<B', filehandle.read(1))
-                self.parameters_nev['DigitialChannelEnable'] = digital_enable_types [dummy & 1]
+                self.parameters_nev['DigitialChannelEnable'] = \
+                    digital_enable_types[dummy & 1]
 
                 for analog_i in range(0, 5):
                     # Read if analog input triggers events
                     # unsigned byte 8bit, little endian
                     (dummy,) = struct.unpack('<B', filehandle.read(1))
-                    self.parameters_nev['AnalogEnable'][analog_i] = analog_enable_types [dummy & 3]
+                    self.parameters_nev['AnalogEnable'][analog_i] = \
+                        analog_enable_types[dummy & 3]
 
                     # Read analog edge detect level in mV
                     # unsigned short 16bit, little endian
-                    (self.parameters_nev['AnalogEdgeDetect'][analog_i],) = struct.unpack('<H', filehandle.read(2))
+                    (self.parameters_nev['AnalogEdgeDetect'][analog_i],) = \
+                        struct.unpack('<H', filehandle.read(2))
 
                 # Unused, 6 bytes
                 filehandle.read(6)
 
             else:
-                self._diagnostic_print("Header ID " + fileextheader + " is not known.")
+                self._diagnostic_print("Header ID " + fileextheader +
+                    " is not known.")
                 filehandle.read(24)
-
 
     def _associate(self, sessionname, nsx_override=None, nev_override=None):
         """
         Associates the object with a specified Blackrock session, i.e., a
-        combination of a .nsX and .nev file. The meta data is read into the object
-        for future reference.
+        combination of a .nsX and .nev file. The meta data is read into the
+        object for future reference.
 
         Args:
             sessionname (string):
@@ -633,16 +717,22 @@ class BlackrockIO(BaseIO):
 
         # If already associated, disassociate first
         if self.associated:
-            raise IOError("Trying to associate an already associated BlackrockIO object.")
+            raise IOError("Trying to associate an already associated \
+                BlackrockIO object.")
 
         # Create parameter containers
         # Dictionary that holds different parameters read from the .nev file
         self.parameters_nev = {}
         # List of parameter dictionaries for all potential .nsX files 0..9
-        self.parameters_nsx = [ {} for _ in range(10) ]
-        # a list of dictionaries that holds parameters for each of the different electrodes
-        self.parameters_electrodes = []
-        # dictionary that holds different parameters about the patient read from the sif file
+        self.parameters_nsx = [{} for _ in range(10)]
+        # a list of dictionaries that holds parameters for each of the
+        # different electrodes regarding each nev file
+        self.parameters_nev_electrodes = []
+        # a list of list of dictionaries that holds parameters for each of the
+        # different electrodes regarding each nsX file
+        self.parameters_nsx_electrodes = [{} for _ in range(10)]
+        # dictionary that holds different parameters about the patient read
+        # from the sif file
         self.parameters_patient = {}
 
         # If session name contains a known file extension, remove it
@@ -663,10 +753,9 @@ class BlackrockIO(BaseIO):
         else:
             self.nev_fileprefix = nev_override
 
-
-        #===============================================================================
-        # Scan NSx files
-        #===============================================================================
+        #======================================================================
+        # # Scan NSx files
+        #======================================================================
 
         # List of sampling resolution of different nsX files
         self.analog_res = 10 * [0]
@@ -681,7 +770,7 @@ class BlackrockIO(BaseIO):
         self.__num_packets_nsx = 10 * [0]
 
         # Allocate lists of channel IDs
-        self.channel_id_nsx = [ [] for _ in range(0, 10) ]
+        self.channel_id_nsx = [[] for _ in range(0, 10)]
 
         # .nsX file positions directly after the header, and end of file
         self.__file_nsx_header_end_pos = 10 * [0]
@@ -968,7 +1057,7 @@ class BlackrockIO(BaseIO):
             Quantity:
                 Largest time point (event or analog signal) found in the data,
                 either in units of the nev or the nsX file.
-                
+
                 Note that this notation is compatible with pythonic indexing: If
                 the last sample n of an analog signal is the last sample, or if
                 the last time stamp n of spikes/markers is the last sample,
@@ -1000,7 +1089,7 @@ class BlackrockIO(BaseIO):
         Args:
             lazy (bool):
                 If True, loads the neo block structure without the following data:
-                    signal of AnalogSignal objects 
+                    signal of AnalogSignal objects
                     times of SpikeTrain objects
                     channelindexes of RecordingChannelGroup and Unit objects
             cascade (bool):
@@ -1127,7 +1216,7 @@ class BlackrockIO(BaseIO):
 
                 EventArray
                     For each time-stamped comment in the data file (version >=2.3) one event
-                    is created. 
+                    is created.
                     Attributes:
                         name: string of the form "Comment n"
                         file_origin: session name
@@ -1586,7 +1675,7 @@ class BlackrockIO(BaseIO):
                 for (channel_i, el_idx_i) in zip(channel_list, el_idx):
                     # Create a unit for the amplitude of the channel voltage
                     try:
-                        digif = self.parameters_electrodes[channel_i]['DigitizationFactor']
+                        digif = self.parameters_nev_electrodes[channel_i]['DigitizationFactor']
                         if digif == 1:
                             LFPunit = pq.CompoundUnit('10^-9*V')
                         elif digif == 1000:
