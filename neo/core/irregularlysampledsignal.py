@@ -28,6 +28,18 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo
 
 
+def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
+                                  copy=True, name=None, description=None, file_origin=None,
+                                  annotations=None):
+    '''
+    A function to map IrregularlySampledSignal.__new__ to function that
+    does not do the unit checking. This is needed for pickle to work.
+    '''
+    return cls(times=times, signal=signal, units=units, time_units=time_units, 
+               dtype=dtype, copy=copy, name=name, description=description, 
+               file_origin=file_origin, **annotations)
+
+
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     '''
     An analog signal with samples taken at arbitrary time points.
@@ -143,6 +155,23 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+
+    def __reduce__(self):
+        '''
+        Map the __new__ function onto _new_IrregularlySampledSignal, so that pickle
+        works
+        '''
+        return _new_IrregularlySampledSignal, (self.__class__,
+                                               self.times, 
+                                               np.array(self),
+                                               self.units, 
+                                               self.times.units, 
+                                               self.dtype,
+                                               True, 
+                                               self.name, 
+                                               self.description, 
+                                               self.file_origin,
+                                               self.annotations)
 
     def __array_finalize__(self, obj):
         '''
