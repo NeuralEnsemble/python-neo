@@ -1285,7 +1285,6 @@ class BlackrockIO(BaseIO):
         elif type(nsx) != list:
             raise ValueError('Invalid specification of nsx.')
 
-
         # Load from all channels?
         if channel_list == []:
             # Determine which channels are available (in all nsx and nev)
@@ -1302,16 +1301,16 @@ class BlackrockIO(BaseIO):
         if type(channel_list) != list:
             raise ValueError('Invalid specification of channel_list.')
 
-
         # Make sure the requested .nsX file exists
         for nsx_i in nsx:
             if nsx_i not in self.nsx_avail:
-                raise IOError("Data at requested sampling frequency is not found (.ns" + str(nsx_i) + ").")
+                raise IOError("Data at requested sampling frequency \
+                not found (.ns" + str(nsx_i) + ").")
 
         # Make sure the requested .nev exists
         if (units != None or events) and not self.nev_avail:
-            raise IOError("Requested spiking data and/or events not found (.nev).")
-
+            raise IOError("Requested spiking data and/or events \
+            not found (.nev).")
 
         # Set of all unit IDs that are requested on at least one channel
         complete_unit_ids = set([])
@@ -1660,22 +1659,26 @@ class BlackrockIO(BaseIO):
                     start_packet = 0
 
                 if n_stop_i != None:
-                    end_packet = int(((n_stop_i / self.nsx_unit[nsx_i]).simplified).base)
+                    end_packet = int(((n_stop_i /
+                        self.nsx_unit[nsx_i]).simplified).base)
                     if end_packet < 0:
                         end_packet = 0
-                    if end_packet > self.__num_packets_nsx[nsx_i] :
+                    if end_packet > self.__num_packets_nsx[nsx_i]:
                         end_packet = self.__num_packets_nsx[nsx_i]
                 else:
                     end_packet = self.__num_packets_nsx[nsx_i]
 
-                # Calculate the sequential signal number in the file
-                el_idx = [self.channel_id_nsx[nsx_i].index(i) for i in channel_list if i in self.channel_id_nsx[nsx_i]]
+                # Load individual channels which are in this nsX
+                for channel_i in set(channel_list).intersection(
+                    self.channel_id_nsx[nsx_i]):
 
-                # Load individual channels
-                for (channel_i, el_idx_i) in zip(channel_list, el_idx):
+                    # Find position at which channel_i is stored
+                    el_idx_i = self.channel_id_nsx[nsx_i].index(channel_i)
+
                     # Create a unit for the amplitude of the channel voltage
                     try:
-                        digif = self.parameters_nev_electrodes[channel_i]['DigitizationFactor']
+                        digif = self.parameters_nev_electrodes[
+                            channel_i]['DigitizationFactor']
                         if digif == 1:
                             LFPunit = pq.CompoundUnit('10^-9*V')
                         elif digif == 1000:
@@ -1688,29 +1691,34 @@ class BlackrockIO(BaseIO):
                             # Other more complicated gain factor
                             LFPunit = pq.CompoundUnit(str(digif) + '*10^-9*V')
                     except:
-                        # If no nev file exists, or the information is missing for other reasons,
-                        # return channel data without unit attached (i.e., in voltage steps)
+                        # If no nev file exists, or the information is missing
+                        # for other reasons, return channel data without unit
+                        # attached (i.e., in voltage steps)
                         LFPunit = pq.dimensionless
-                        self._diagnostic_print("Warning: Channel " + str(channel_i) + " does not have a digitization factor -- data is dimensionless.")
+                        self._diagnostic_print("Warning: Channel " +
+                            str(el_idx_i) + " does not have a digitization \
+                            factor -- data is dimensionless.")
 
                     if not lazy:
-                        data = pq.Quantity(analogbuf[start_packet:end_packet, el_idx_i].T, units=LFPunit)
+                        data = pq.Quantity(analogbuf[start_packet:end_packet,
+                            el_idx_i].T, units=LFPunit)
                     else:
                         data = pq.Quantity([], units=LFPunit)
 
                     asig = neo.AnalogSignal(signal=data,
-                                            sampling_period=self.nsx_unit[nsx_i],
-                                            # Alternative:
-                                            # sampling_rate=pq.CompoundUnit(str(self.analog_res[nsx_i]) + ' * Hz'),
-                                            t_start=start_packet * self.nsx_unit[nsx_i],
-                                            name="Analog Signal Segment " + str(seg_i) + ", Channel " + str(channel_i) + ", NSX " + str(nsx_i),
-                                            file_origin=self.associated_fileset,
-                                            channel_id=channel_i,
-                                            file_nsx=nsx_i)
+                        sampling_period=self.nsx_unit[nsx_i],
+                        # Alternative:
+                        # sampling_rate=pq.CompoundUnit(str(
+                        # self.analog_res[nsx_i]) + ' * Hz'),
+                        t_start=start_packet * self.nsx_unit[nsx_i],
+                        name="Analog Signal Segment " + str(seg_i) +
+                        ", Channel " + str(channel_i) + ", NSX " + str(nsx_i),
+                        file_origin=self.associated_fileset,
+                        channel_id=channel_i,
+                        file_nsx=nsx_i)
 
                     if lazy:
                         asig.lazy_shape = True
-
 
                     # Attach analog signal to segment and recording channel
                     seg[seg_i].analogsignals.append(asig)
@@ -1719,7 +1727,6 @@ class BlackrockIO(BaseIO):
                     asig.recordingchannel = rc[channel_i]
 
         return bl
-
 
     def __str__(self):
         print(self.associated_fileset)
