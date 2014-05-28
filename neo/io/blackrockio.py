@@ -1,4 +1,4 @@
-# coding=utf-8
+# -*- coding: utf-8 -*-
 """
 Module for reading binary files in the Blackrock format.
 Authors: Michael Denker, Lyuba Zehl
@@ -16,15 +16,11 @@ import datetime
 import os
 import struct
 
-from neo.io.baseio import BaseIO
-import neo
-
 import numpy as np
 import quantities as pq
 
-
-if __name__ == '__main__':
-    pass
+from neo.io.baseio import BaseIO
+import neo
 
 
 class BlackrockIO(BaseIO):
