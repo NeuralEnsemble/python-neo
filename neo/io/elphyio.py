@@ -2813,11 +2813,12 @@ class DAC2Layout(ElphyLayout):
         # Then we find the waveforms for all the n_spk_channels
         data_start = wf_blocks[episode-1].data_start - wf_blocks[episode-1].start
         bytes = self.load_bytes(wf_blocks, start=data_start)
+        # data = np.frombuffer(bytes, dtype=dtype)
         try: # Elphy format for Cyberkinetics/Blackrock files can store additional bytes so they can't express the end bytes
             data = np.frombuffer(bytes, dtype=dtype)
-        except Exception, e: # but the others do have to specify it
+        except ValueError, e: # but the others do have to specify it
             bytes = self.load_bytes(wf_blocks, start=data_start, end=data_start+(n_events*np.dtype(dtype).itemsize) ) 
-        # bounduaries of the part to read
+        # # bounduaries of the part to read
         x_start = wf_blocks[episode-1].pre_trigger
         x_stop = wf_samples - x_start
         # reading from bytes a 
