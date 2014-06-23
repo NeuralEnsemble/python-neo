@@ -76,14 +76,11 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(res.annotations, self.annotations)
 
         self.assertEqual(len(res.spiketrains), 1)
-        self.assertEqual(len(res.spikes), 1)
 
         for child in res.children_recur:
             del child.annotations['i']
             del child.annotations['j']
         self.assertEqual(res.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(res.spikes[0].annotations,
                          self.annotations)
 
     def test__fake_neo__nocascade(self):
@@ -97,7 +94,6 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(res.annotations, self.annotations)
 
         self.assertEqual(len(res.spiketrains), 0)
-        self.assertEqual(len(res.spikes), 0)
 
 
 class TestUnit(unittest.TestCase):
@@ -109,12 +105,9 @@ class TestUnit(unittest.TestCase):
         self.unit2 = fake_neo(Unit, seed=self.seed2, n=self.nchildren)
         self.targobj = self.unit1
 
-        self.spikes1 = self.unit1.spikes
-        self.spikes2 = self.unit2.spikes
         self.trains1 = self.unit1.spiketrains
         self.trains2 = self.unit2.spiketrains
 
-        self.spikes1a = clone_object(self.spikes1)
         self.trains1a = clone_object(self.trains1)
 
     def check_creation(self, unit):
@@ -140,10 +133,8 @@ class TestUnit(unittest.TestCase):
         targ4['seed'] = seed
         self.assertEqual(unit.annotations, targ4)
 
-        self.assertTrue(hasattr(unit, 'spikes'))
         self.assertTrue(hasattr(unit, 'spiketrains'))
 
-        self.assertEqual(len(unit.spikes), self.nchildren)
         self.assertEqual(len(unit.spiketrains), self.nchildren)
 
     def test__creation(self):
@@ -154,12 +145,10 @@ class TestUnit(unittest.TestCase):
         unit1a = fake_neo(Unit, seed=self.seed1, n=self.nchildren)
         assert_same_sub_schema(self.unit1, unit1a)
         unit1a.annotate(seed=self.seed2)
-        unit1a.spikes.append(self.spikes2[0])
+        unit1a.spiketrains.append(self.trains2[0])
         unit1a.merge(self.unit2)
         self.check_creation(self.unit2)
 
-        assert_same_sub_schema(self.spikes1a + self.spikes2,
-                               unit1a.spikes)
         assert_same_sub_schema(self.trains1a + self.trains2,
                                unit1a.spiketrains)
 
@@ -171,69 +160,63 @@ class TestUnit(unittest.TestCase):
         assert_neo_object_is_compliant(rcg)
 
         self.assertEqual(self.unit1._container_child_objects, ())
-        self.assertEqual(self.unit1._data_child_objects,
-                         ('Spike', 'SpikeTrain'))
+        self.assertEqual(self.unit1._data_child_objects, ('SpikeTrain',))
         self.assertEqual(self.unit1._single_parent_objects,
                          ('RecordingChannelGroup',))
         self.assertEqual(self.unit1._multi_child_objects, ())
         self.assertEqual(self.unit1._multi_parent_objects, ())
         self.assertEqual(self.unit1._child_properties, ())
 
-        self.assertEqual(self.unit1._single_child_objects,
-                         ('Spike', 'SpikeTrain'))
+        self.assertEqual(self.unit1._single_child_objects, ('SpikeTrain',))
 
         self.assertEqual(self.unit1._container_child_containers, ())
-        self.assertEqual(self.unit1._data_child_containers,
-                         ('spikes', 'spiketrains'))
-        self.assertEqual(self.unit1._single_child_containers,
-                         ('spikes', 'spiketrains'))
+        self.assertEqual(self.unit1._data_child_containers, ('spiketrains',))
+        self.assertEqual(self.unit1._single_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_parent_containers,
                          ('recordingchannelgroup',))
         self.assertEqual(self.unit1._multi_child_containers, ())
         self.assertEqual(self.unit1._multi_parent_containers, ())
 
-        self.assertEqual(self.unit1._child_objects,
-                         ('Spike', 'SpikeTrain'))
-        self.assertEqual(self.unit1._child_containers,
-                         ('spikes', 'spiketrains'))
+        self.assertEqual(self.unit1._child_objects, ('SpikeTrain',))
+        self.assertEqual(self.unit1._child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._parent_objects,
                          ('RecordingChannelGroup',))
         self.assertEqual(self.unit1._parent_containers,
                          ('recordingchannelgroup',))
 
-        self.assertEqual(len(self.unit1._single_children), self.nchildren*2)
+        self.assertEqual(len(self.unit1._single_children), self.nchildren)
         self.assertEqual(len(self.unit1._multi_children), 0)
-        self.assertEqual(len(self.unit1.data_children), self.nchildren*2)
-        self.assertEqual(len(self.unit1.data_children_recur), self.nchildren*2)
+        self.assertEqual(len(self.unit1.data_children), self.nchildren)
+        self.assertEqual(len(self.unit1.data_children_recur), self.nchildren)
         self.assertEqual(len(self.unit1.container_children), 0)
         self.assertEqual(len(self.unit1.container_children_recur), 0)
-        self.assertEqual(len(self.unit1.children), self.nchildren*2)
-        self.assertEqual(len(self.unit1.children_recur), self.nchildren*2)
+        self.assertEqual(len(self.unit1.children), self.nchildren)
+        self.assertEqual(len(self.unit1.children_recur), self.nchildren)
 
         self.assertEqual(self.unit1._multi_children, ())
         self.assertEqual(self.unit1.container_children, ())
         self.assertEqual(self.unit1.container_children_recur, ())
 
         assert_same_sub_schema(list(self.unit1._single_children),
-                               self.spikes1a+self.trains1a)
+                               self.trains1a)
 
         assert_same_sub_schema(list(self.unit1.data_children),
-                               self.spikes1a+self.trains1a)
+                               self.trains1a)
 
         assert_same_sub_schema(list(self.unit1.data_children_recur),
-                               self.spikes1a+self.trains1a)
+                               self.trains1a)
 
         assert_same_sub_schema(list(self.unit1.children),
-                               self.spikes1a+self.trains1a)
+                               self.trains1a)
 
         assert_same_sub_schema(list(self.unit1.children_recur),
-                               self.spikes1a+self.trains1a)
+                               self.trains1a)
 
         self.assertEqual(len(self.unit1.parents), 1)
         self.assertEqual(self.unit1.parents[0].name, 'rcg1')
 
     def test__size(self):
-        targ = {'spikes': self.nchildren, 'spiketrains': self.nchildren}
+        targ = {'spiketrains': self.nchildren}
         self.assertEqual(self.targobj.size, targ)
 
     def test__filter_none(self):
@@ -262,7 +245,7 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res10, targ)
 
     def test__filter_annotation_single(self):
-        targ = [self.spikes1a[1], self.trains1a[1]]
+        targ = [self.trains1a[1]]
 
         res0 = self.targobj.filter(j=1)
         res1 = self.targobj.filter({'j': 1})
@@ -292,9 +275,9 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
 
     def test__filter_attribute_single(self):
-        targ = [self.spikes1a[0]]
+        targ = [self.trains1a[0]]
 
-        name = self.spikes1a[0].name
+        name = self.trains1a[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -306,7 +289,7 @@ class TestUnit(unittest.TestCase):
     def test__filter_attribute_single_nores(self):
         targ = []
 
-        name = self.spikes2[0].name
+        name = self.trains2[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -316,9 +299,9 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_multi(self):
-        targ = [self.spikes1a[1], self.trains1a[1], self.spikes1a[0]]
+        targ = [self.trains1a[1], self.trains1a[0]]
 
-        name = self.spikes1a[0].name
+        name = self.trains1a[0].name
         res0 = self.targobj.filter(name=name, j=1)
         res1 = self.targobj.filter({'name': name, 'j': 1})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 1})
@@ -330,7 +313,7 @@ class TestUnit(unittest.TestCase):
     def test__filter_multi_nores(self):
         targ = []
 
-        name0 = self.spikes2[0].name
+        name0 = self.trains2[0].name
         res0 = self.targobj.filter([{'j': 5}, {}])
         res1 = self.targobj.filter({}, j=0)
         res2 = self.targobj.filter([{}], i=0)
@@ -364,9 +347,9 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res14, targ)
 
     def test__filter_multi_partres(self):
-        targ = [self.spikes1a[0]]
+        targ = [self.trains1a[0]]
 
-        name = self.spikes1a[0].name
+        name = self.trains1a[0].name
         res0 = self.targobj.filter(name=name, j=5)
         res1 = self.targobj.filter({'name': name, 'j': 5})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 5})
@@ -397,11 +380,6 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res3, targ)
         assert_same_sub_schema(res4, targ)
 
-    def test__filter_single_annotation_obj_multi(self):
-        targ = [self.spikes1a[1], self.trains1a[1]]
-        res0 = self.targobj.filter(j=1, objects=['Spike', SpikeTrain])
-        assert_same_sub_schema(res0, targ)
-
     def test__filter_single_annotation_obj_none(self):
         targ = []
 
@@ -414,13 +392,13 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_single_annotation_norecur(self):
-        targ = [self.spikes1a[1], self.trains1a[1]]
+        targ = [self.trains1a[1]]
         res0 = self.targobj.filter(j=1, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_norecur(self):
-        targ = [self.spikes1a[0]]
-        res0 = self.targobj.filter(name=self.spikes1a[0].name, recursive=False)
+        targ = [self.trains1a[0]]
+        res0 = self.targobj.filter(name=self.trains1a[0].name, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_nodata(self):
@@ -430,7 +408,7 @@ class TestUnit(unittest.TestCase):
 
     def test__filter_single_attribute_nodata(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1a[0].name, data=False)
+        res0 = self.targobj.filter(name=self.trains1a[0].name, data=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_nodata_norecur(self):
@@ -441,28 +419,28 @@ class TestUnit(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_norecur(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1a[0].name,
+        res0 = self.targobj.filter(name=self.trains1a[0].name,
                                    data=False, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container(self):
-        targ = [self.spikes1a[1], self.trains1a[1]]
+        targ = [self.trains1a[1]]
         res0 = self.targobj.filter(j=1, container=True)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container(self):
-        targ = [self.spikes1a[0]]
-        res0 = self.targobj.filter(name=self.spikes1a[0].name, container=True)
+        targ = [self.trains1a[0]]
+        res0 = self.targobj.filter(name=self.trains1a[0].name, container=True)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container_norecur(self):
-        targ = [self.spikes1a[1], self.trains1a[1]]
+        targ = [self.trains1a[1]]
         res0 = self.targobj.filter(j=1, container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container_norecur(self):
-        targ = [self.spikes1a[0]]
-        res0 = self.targobj.filter(name=self.spikes1a[0].name,
+        targ = [self.trains1a[0]]
+        res0 = self.targobj.filter(name=self.trains1a[0].name,
                                    container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
@@ -474,7 +452,7 @@ class TestUnit(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1a[0].name,
+        res0 = self.targobj.filter(name=self.trains1a[0].name,
                                    data=False, container=True)
         assert_same_sub_schema(res0, targ)
 
@@ -487,7 +465,7 @@ class TestUnit(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container_norecur(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1a[0].name,
+        res0 = self.targobj.filter(name=self.trains1a[0].name,
                                    data=False, container=True,
                                    recursive=False)
         assert_same_sub_schema(res0, targ)
@@ -495,9 +473,9 @@ class TestUnit(unittest.TestCase):
     def test__filterdata_multi(self):
         data = self.targobj.children_recur
 
-        targ = [self.spikes1a[1], self.trains1a[1], self.spikes1a[0]]
+        targ = [self.trains1a[1], self.trains1a[0]]
 
-        name = self.spikes1a[0].name
+        name = self.trains1a[0].name
         res0 = filterdata(data, name=name, j=1)
         res1 = filterdata(data, {'name': name, 'j': 1})
         res2 = filterdata(data, targdict={'name': name, 'j': 1})
@@ -511,8 +489,8 @@ class TestUnit(unittest.TestCase):
 
         targ = []
 
-        name1 = self.spikes1a[0].name
-        name2 = self.spikes2[0].name
+        name1 = self.trains1a[0].name
+        name2 = self.trains2[0].name
         res0 = filterdata(data, [{'j': 0}, {}])
         res1 = filterdata(data, {}, i=0)
         res2 = filterdata(data, [{}], i=0)
@@ -548,9 +526,9 @@ class TestUnit(unittest.TestCase):
     def test__filterdata_multi_partres(self):
         data = self.targobj.children_recur
 
-        targ = [self.spikes1a[0]]
+        targ = [self.trains1a[0]]
 
-        name = self.spikes1a[0].name
+        name = self.trains1a[0].name
         res0 = filterdata(data, name=name, j=5)
         res1 = filterdata(data, {'name': name, 'j': 5})
         res2 = filterdata(data, targdict={'name': name, 'j': 5})
@@ -572,8 +550,7 @@ class TestUnit(unittest.TestCase):
         ann['seed'] = self.seed1
         ann = pretty(ann).replace('\n ', '\n  ')
         targ = ("Unit with " +
-                ("%s spikes, %s spiketrains\n" %
-                 (len(self.spikes1a), len(self.trains1a))) +
+                ("%s spiketrains\n" % len(self.trains1a)) +
                 ("name: '%s'\ndescription: '%s'\n" % (self.unit1.name,
                                                       self.unit1.description)
                  ) +
