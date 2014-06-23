@@ -21,7 +21,7 @@ from neo.core import (class_by_name, Block, Segment,
                       AnalogSignal, AnalogSignalArray,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch, Spike,
-                      EventArray, EpochArray)
+                      EventArray)
 from neo.test.generate_datasets import (generate_one_simple_block,
                                         generate_one_simple_segment,
                                         generate_from_supported_objects,
@@ -45,7 +45,6 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.events), 0)
         self.assertEqual(len(res.epochs), 0)
         self.assertEqual(len(res.eventarrays), 0)
-        self.assertEqual(len(res.epocharrays), 0)
 
     def test_all_supported(self):
         objects = [Block, Segment,
@@ -53,7 +52,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_one_simple_segment(supported_objects=objects)
 
@@ -66,15 +65,13 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.spiketrains), 6)
         self.assertEqual(len(res.spikes), 0)
         self.assertEqual(len(res.events), 0)
-        self.assertEqual(len(res.epochs), 0)
+        self.assertEqual(len(res.epochs), 2)
         self.assertEqual(len(res.eventarrays), 3)
-        self.assertEqual(len(res.epocharrays), 2)
 
     def test_half_supported(self):
         objects = [Segment,
                    IrregularlySampledSignal, SpikeTrain,
-                   Epoch, Spike,
-                   EpochArray]
+                   Epoch, Spike]
 
         res = generate_one_simple_segment(supported_objects=objects)
 
@@ -87,9 +84,8 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.spiketrains), 6)
         self.assertEqual(len(res.spikes), 0)
         self.assertEqual(len(res.events), 0)
-        self.assertEqual(len(res.epochs), 0)
+        self.assertEqual(len(res.epochs), 2)
         self.assertEqual(len(res.eventarrays), 0)
-        self.assertEqual(len(res.epocharrays), 2)
 
     def test_all_without_block(self):
         objects = [Segment,
@@ -97,7 +93,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_one_simple_segment(supported_objects=objects)
 
@@ -110,9 +106,8 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.spiketrains), 6)
         self.assertEqual(len(res.spikes), 0)
         self.assertEqual(len(res.events), 0)
-        self.assertEqual(len(res.epochs), 0)
+        self.assertEqual(len(res.epochs), 2)
         self.assertEqual(len(res.eventarrays), 3)
-        self.assertEqual(len(res.epocharrays), 2)
 
     def test_all_without_segment_valueerror(self):
         objects = [Block,
@@ -120,7 +115,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         self.assertRaises(ValueError, generate_one_simple_segment,
                           supported_objects=objects)
@@ -141,7 +136,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_one_simple_block(supported_objects=objects)
 
@@ -157,9 +152,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg1.spiketrains), 6)
         self.assertEqual(len(seg1.spikes), 0)
         self.assertEqual(len(seg1.events), 0)
-        self.assertEqual(len(seg1.epochs), 0)
+        self.assertEqual(len(seg1.epochs), 2)
         self.assertEqual(len(seg1.eventarrays), 3)
-        self.assertEqual(len(seg1.epocharrays), 2)
 
         self.assertEqual(len(seg2.analogsignals), 4)
         self.assertEqual(len(seg2.analogsignalarrays), 0)
@@ -167,9 +161,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg2.spiketrains), 6)
         self.assertEqual(len(seg2.spikes), 0)
         self.assertEqual(len(seg2.events), 0)
-        self.assertEqual(len(seg2.epochs), 0)
+        self.assertEqual(len(seg2.epochs), 2)
         self.assertEqual(len(seg2.eventarrays), 3)
-        self.assertEqual(len(seg2.epocharrays), 2)
 
         self.assertEqual(len(seg3.analogsignals), 4)
         self.assertEqual(len(seg3.analogsignalarrays), 0)
@@ -177,15 +170,13 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg3.spiketrains), 6)
         self.assertEqual(len(seg3.spikes), 0)
         self.assertEqual(len(seg3.events), 0)
-        self.assertEqual(len(seg3.epochs), 0)
+        self.assertEqual(len(seg3.epochs), 2)
         self.assertEqual(len(seg3.eventarrays), 3)
-        self.assertEqual(len(seg3.epocharrays), 2)
 
     def test_half_supported(self):
         objects = [Block, Segment,
                    IrregularlySampledSignal, SpikeTrain,
-                   Epoch, Spike,
-                   EpochArray]
+                   Epoch, Spike]
 
         res = generate_one_simple_block(supported_objects=objects)
 
@@ -201,9 +192,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg1.spiketrains), 6)
         self.assertEqual(len(seg1.spikes), 0)
         self.assertEqual(len(seg1.events), 0)
-        self.assertEqual(len(seg1.epochs), 0)
+        self.assertEqual(len(seg1.epochs), 2)
         self.assertEqual(len(seg1.eventarrays), 0)
-        self.assertEqual(len(seg1.epocharrays), 2)
 
         self.assertEqual(len(seg2.analogsignals), 0)
         self.assertEqual(len(seg2.analogsignalarrays), 0)
@@ -211,9 +201,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg2.spiketrains), 6)
         self.assertEqual(len(seg2.spikes), 0)
         self.assertEqual(len(seg2.events), 0)
-        self.assertEqual(len(seg2.epochs), 0)
+        self.assertEqual(len(seg2.epochs), 2)
         self.assertEqual(len(seg2.eventarrays), 0)
-        self.assertEqual(len(seg2.epocharrays), 2)
 
         self.assertEqual(len(seg3.analogsignals), 0)
         self.assertEqual(len(seg3.analogsignalarrays), 0)
@@ -221,9 +210,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg3.spiketrains), 6)
         self.assertEqual(len(seg3.spikes), 0)
         self.assertEqual(len(seg3.events), 0)
-        self.assertEqual(len(seg3.epochs), 0)
+        self.assertEqual(len(seg3.epochs), 2)
         self.assertEqual(len(seg3.eventarrays), 0)
-        self.assertEqual(len(seg3.epocharrays), 2)
 
     def test_all_without_segment(self):
         objects = [Block,
@@ -231,7 +219,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_one_simple_block(supported_objects=objects)
 
@@ -246,7 +234,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         self.assertRaises(ValueError, generate_one_simple_block,
                           supported_objects=objects)
@@ -264,7 +252,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_from_supported_objects(objects)
 
@@ -280,9 +268,8 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg1.spiketrains), 6)
         self.assertEqual(len(seg1.spikes), 0)
         self.assertEqual(len(seg1.events), 0)
-        self.assertEqual(len(seg1.epochs), 0)
+        self.assertEqual(len(seg1.epochs), 2)
         self.assertEqual(len(seg1.eventarrays), 3)
-        self.assertEqual(len(seg1.epocharrays), 2)
 
         self.assertEqual(len(seg2.analogsignals), 4)
         self.assertEqual(len(seg2.analogsignalarrays), 0)
@@ -290,9 +277,8 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg2.spiketrains), 6)
         self.assertEqual(len(seg2.spikes), 0)
         self.assertEqual(len(seg2.events), 0)
-        self.assertEqual(len(seg2.epochs), 0)
+        self.assertEqual(len(seg2.epochs), 2)
         self.assertEqual(len(seg2.eventarrays), 3)
-        self.assertEqual(len(seg2.epocharrays), 2)
 
         self.assertEqual(len(seg3.analogsignals), 4)
         self.assertEqual(len(seg3.analogsignalarrays), 0)
@@ -300,9 +286,8 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg3.spiketrains), 6)
         self.assertEqual(len(seg3.spikes), 0)
         self.assertEqual(len(seg3.events), 0)
-        self.assertEqual(len(seg3.epochs), 0)
+        self.assertEqual(len(seg3.epochs), 2)
         self.assertEqual(len(seg3.eventarrays), 3)
-        self.assertEqual(len(seg3.epocharrays), 2)
 
     def test_block(self):
         objects = [Block]
@@ -333,7 +318,6 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg1.events), 0)
         self.assertEqual(len(seg1.epochs), 0)
         self.assertEqual(len(seg1.eventarrays), 0)
-        self.assertEqual(len(seg1.epocharrays), 0)
 
         self.assertEqual(len(seg2.analogsignals), 0)
         self.assertEqual(len(seg2.analogsignalarrays), 0)
@@ -343,7 +327,6 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg2.events), 0)
         self.assertEqual(len(seg2.epochs), 0)
         self.assertEqual(len(seg2.eventarrays), 0)
-        self.assertEqual(len(seg2.epocharrays), 0)
 
         self.assertEqual(len(seg3.analogsignals), 0)
         self.assertEqual(len(seg3.analogsignalarrays), 0)
@@ -353,7 +336,6 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(seg3.events), 0)
         self.assertEqual(len(seg3.epochs), 0)
         self.assertEqual(len(seg3.eventarrays), 0)
-        self.assertEqual(len(seg3.epocharrays), 0)
 
     def test_segment(self):
         objects = [Segment]
@@ -371,7 +353,6 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(res.events), 0)
         self.assertEqual(len(res.epochs), 0)
         self.assertEqual(len(res.eventarrays), 0)
-        self.assertEqual(len(res.epocharrays), 0)
 
     def test_all_without_block(self):
         objects = [Segment,
@@ -379,7 +360,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_from_supported_objects(objects)
 
@@ -392,9 +373,8 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(res.spiketrains), 6)
         self.assertEqual(len(res.spikes), 0)
         self.assertEqual(len(res.events), 0)
-        self.assertEqual(len(res.epochs), 0)
+        self.assertEqual(len(res.epochs), 2)
         self.assertEqual(len(res.eventarrays), 3)
-        self.assertEqual(len(res.epocharrays), 2)
 
     def test_all_without_segment(self):
         objects = [Block,
@@ -402,7 +382,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
                    AnalogSignal, AnalogSignalArray,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch, Spike,
-                   EventArray, EpochArray]
+                   EventArray]
 
         res = generate_from_supported_objects(supported_objects=objects)
 
@@ -665,9 +645,6 @@ class Test__get_fake_values(unittest.TestCase):
     def test__epoch(self):
         self.check__get_fake_values(Epoch)
 
-    def test__epocharray(self):
-        self.check__get_fake_values(EpochArray)
-
     def test__event(self):
         self.check__get_fake_values(Event)
 
@@ -778,9 +755,6 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__epoch(self):
         self.check__generate_datasets(Epoch)
-
-    def test__epocharray(self):
-        self.check__generate_datasets(EpochArray)
 
     def test__event(self):
         self.check__generate_datasets(Event)

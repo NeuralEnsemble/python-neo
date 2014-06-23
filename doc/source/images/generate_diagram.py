@@ -212,8 +212,7 @@ def generate_diagram_simple():
 
                 'Event': (.5+rw*bf*4, 6),
                 'EventArray': (.5+rw*bf*4, 4),
-                'Epoch': (.5+rw*bf*4, 2),
-                'EpochArray': (.5+rw*bf*4, .2),
+                'Epoch': (.5+rw*bf*4, .2),
 
                 'RecordingChannelGroup': (.5+rw*bf*.8, 8.5),
                 'RecordingChannel': (.5+rw*bf*1.2, 5.5),
