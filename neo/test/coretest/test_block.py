@@ -95,7 +95,6 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(len(seg.spikes), 1)
         self.assertEqual(len(seg.events), 1)
         self.assertEqual(len(seg.epochs), 1)
-        self.assertEqual(len(seg.eventarrays), 1)
         self.assertEqual(seg.analogsignalarrays[0].annotations,
                          self.annotations)
         self.assertEqual(seg.analogsignals[0].annotations,
@@ -109,8 +108,6 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(seg.events[0].annotations,
                          self.annotations)
         self.assertEqual(seg.epochs[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.eventarrays[0].annotations,
                          self.annotations)
 
         self.assertEqual(len(rcg.recordingchannels), 1)
@@ -210,10 +207,6 @@ class TestBlock(unittest.TestCase):
                       for seg in self.segs1]
         self.evts2 = [[evt for evt in seg.events]
                       for seg in self.segs2]
-        self.evtas1 = [[evta for evta in seg.eventarrays]
-                       for seg in self.segs1]
-        self.evtas2 = [[evta for evta in seg.eventarrays]
-                       for seg in self.segs2]
 
         self.sigarrs1 = sum(self.sigarrs1, [])
         self.sigarrs2 = sum(self.sigarrs2, [])
@@ -231,8 +224,6 @@ class TestBlock(unittest.TestCase):
         self.epcs2 = sum(self.epcs2, [])
         self.evts1 = sum(self.evts1, [])
         self.evts2 = sum(self.evts2, [])
-        self.evtas1 = sum(self.evtas1, [])
-        self.evtas2 = sum(self.evtas2, [])
 
     def test_block_init(self):
         blk = Block(name='a block')
@@ -329,7 +320,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         4*self.nchildren**3 + 4*self.nchildren**2)
+                         4*self.nchildren**3 + 3*self.nchildren**2)
         self.assertEqual(len(self.blk1.container_children), 2*self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
                          2*self.nchildren + 2*self.nchildren**2)
@@ -337,7 +328,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1.children_recur),
                          2*self.nchildren +
                          2*self.nchildren**2 +
-                         4*self.nchildren**3 + 4*self.nchildren**2)
+                         4*self.nchildren**3 + 3*self.nchildren**2)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),
@@ -352,13 +343,11 @@ class TestBlock(unittest.TestCase):
 
         assert_same_sub_schema(list(self.blk1.data_children_recur),
                                self.sigs1[::2] + self.sigarrs1[::2] +
-                               self.epcs1[:2] +
-                               self.evts1[:2] + self.evtas1[:2] +
+                               self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] + self.spikes1[::2] +
                                self.trains1[::2] +
                                self.sigs1[1::2] + self.sigarrs1[1::2] +
-                               self.epcs1[2:] +
-                               self.evts1[2:] + self.evtas1[2:] +
+                               self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
                                self.spikes1[1::2] + self.trains1[1::2],
                                exclude=['channel_index'])
@@ -367,13 +356,11 @@ class TestBlock(unittest.TestCase):
                                segs1a + rcgs1a)
         assert_same_sub_schema(list(self.blk1.children_recur),
                                self.sigs1[::2] + self.sigarrs1[::2] +
-                               self.epcs1[:2] +
-                               self.evts1[:2] + self.evtas1[:2] +
+                               self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] + self.spikes1[::2] +
                                self.trains1[::2] +
                                self.sigs1[1::2] + self.sigarrs1[1::2] +
-                               self.epcs1[2:] +
-                               self.evts1[2:] + self.evtas1[2:] +
+                               self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
                                self.spikes1[1::2] + self.trains1[1::2] +
                                self.segs1 + self.rcgs1 +
@@ -412,11 +399,9 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res10, targ)
 
     def test__filter_annotation_single(self):
-        targ = ([self.epcs1[1],
-                 self.evts1[1], self.evtas1[1]] +
+        targ = ([self.epcs1[1], self.evts1[1]] +
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
-                [self.epcs1[3],
-                 self.evts1[3], self.evtas1[3]] +
+                [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.spikes1[1::2] + self.trains1[1::2])
 
@@ -472,11 +457,9 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_multi(self):
-        targ = ([self.epcs1[1],
-                 self.evts1[1], self.evtas1[1]] +
+        targ = ([self.epcs1[1], self.evts1[1]] +
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
-                [self.epcs1[3],
-                 self.evts1[3], self.evtas1[3]] +
+                [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.spikes1[1::2] + self.trains1[1::2] +
                 [self.spikes1[0]])
@@ -601,11 +584,9 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container(self):
-        targ = ([self.epcs1[1],
-                 self.evts1[1], self.evtas1[1]] +
+        targ = ([self.epcs1[1], self.evts1[1]] +
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
-                [self.epcs1[3],
-                 self.evts1[3], self.evtas1[3]] +
+                [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.spikes1[1::2] + self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],
@@ -689,11 +670,9 @@ class TestBlock(unittest.TestCase):
     def test__filterdata_multi(self):
         data = self.targobj.children_recur
 
-        targ = ([self.epcs1[1],
-                 self.evts1[1], self.evtas1[1]] +
+        targ = ([self.epcs1[1], self.evts1[1]] +
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
-                [self.epcs1[3],
-                 self.evts1[3], self.evtas1[3]] +
+                [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.spikes1[1::2] + self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],

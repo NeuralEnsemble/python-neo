@@ -210,8 +210,7 @@ def generate_diagram_simple():
 
                 'Segment': (.5+rw*bf*1, .5),
 
-                'Event': (.5+rw*bf*4, 6),
-                'EventArray': (.5+rw*bf*4, 4),
+                'Event': (.5+rw*bf*4, 4),
                 'Epoch': (.5+rw*bf*4, .2),
 
                 'RecordingChannelGroup': (.5+rw*bf*.8, 8.5),

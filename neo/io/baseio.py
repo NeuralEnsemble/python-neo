@@ -17,7 +17,7 @@ import logging
 
 from neo import logging_handler
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, Event, EventArray,
+                      Epoch, Event,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
                       Segment, Spike, SpikeTrain, Unit)
@@ -176,9 +176,6 @@ class BaseIO(object):
     def read_event(self, **kargs):
         assert(Event in self.readable_objects), read_error
 
-    def read_eventarray(self, **kargs):
-        assert(EventArray in self.readable_objects), read_error
-
     def read_epoch(self, **kargs):
         assert(Epoch in self.readable_objects), read_error
 
@@ -215,9 +212,6 @@ class BaseIO(object):
 
     def write_event(self, ev, **kargs):
         assert(Event in self.writeable_objects), write_error
-
-    def write_eventarray(self, ea,  **kargs):
-        assert(EventArray in self.writeable_objects), write_error
 
     def write_epoch(self, ep, **kargs):
         assert(Epoch in self.writeable_objects), write_error
