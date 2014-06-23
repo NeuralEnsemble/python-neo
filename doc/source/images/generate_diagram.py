@@ -219,7 +219,6 @@ def generate_diagram_simple():
                 'Unit': (.5+rw*bf*2., 9.5),
 
                 'SpikeTrain': (.5+rw*bf*3, 9.5),
-                'Spike': (.5+rw*bf*3, 7.5),
 
                 'IrregularlySampledSignal': (.5+rw*bf*3, 4.9),
                 'AnalogSignal': (.5+rw*bf*3, 2.7),

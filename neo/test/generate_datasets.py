@@ -346,8 +346,6 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             for k, sigarr in enumerate(rcg.analogsignalarrays):
                 obj.segments[k].analogsignalarrays.append(sigarr)
             for j, unit in enumerate(rcg.units):
-                for k, spike in enumerate(unit.spikes):
-                    obj.segments[k].spikes.append(spike)
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
             for j, rchan in enumerate(rcg.recordingchannels):

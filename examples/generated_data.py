@@ -17,7 +17,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     """
     Generate a block with a single recording channel group and a number of
     segments, recording channels and units with associated analog signals
-    and spike trains.
+    and spiketrains.
     """
     feature_len = feature_samples / data_samples
 
@@ -51,7 +51,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
             seg.analogsignals.append(signal)
             rc.analogsignals.append(signal)
 
-        # Spike trains: Random spike times with elevated rate in short period
+        # SpikeTrains: Random spike times with elevated rate in short period
         feature_time = feature_pos / data_samples
         for u in units:
             random_spikes = np.random.rand(20)
@@ -99,7 +99,7 @@ for rc in rcg.recordingchannels:
     plt.plot(time_points, avg)
     plt.title("Average response on channel %d" % rc.index)
 
-# There are three ways to access the spike train data: by Segment,
+# There are three ways to access the spiketrain data: by Segment,
 # by RecordingChannel or by Unit.
 
 # By Segment. In this example, each Segment represents data from one trial,

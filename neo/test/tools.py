@@ -444,7 +444,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     'because of %s attribute' % attrname
 
 
-lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
+lazy_shape_arrays = {'SpikeTrain': 'times',
                      'AnalogSignal': 'signal',
                      'AnalogSignalArray': 'signal',
                      'Event': 'times', 'Epoch': 'times'}

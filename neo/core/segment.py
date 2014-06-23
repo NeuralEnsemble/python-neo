@@ -71,15 +71,13 @@ class Segment(Container):
         :class:`AnalogSignal`
         :class:`AnalogSignalArray`
         :class:`IrregularlySampledSignal`
-        :class:`Spike`
         :class:`SpikeTrain`
 
     '''
 
     _data_child_objects = ('AnalogSignal', 'AnalogSignalArray',
                            'Epoch', 'Event',
-                           'IrregularlySampledSignal',
-                           'Spike', 'SpikeTrain')
+                           'IrregularlySampledSignal', 'SpikeTrain')
     _single_parent_objects = ('Block',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
@@ -99,19 +97,6 @@ class Segment(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
-
-    def take_spikes_by_unit(self, unit_list=None):
-        '''
-        Return :class:`Spike` objects in the :class:`Segment` that are also in
-        a :class:`Unit` in the :attr:`unit_list` provided.
-        '''
-        if unit_list is None:
-            return []
-        spike_list = []
-        for spike in self.spikes:
-            if spike.unit in unit_list:
-                spike_list.append(spike)
-        return spike_list
 
     def take_spiketrains_by_unit(self, unit_list=None):
         '''
@@ -190,7 +175,7 @@ class Segment(Container):
     def construct_subsegment_by_unit(self, unit_list=None):
         '''
         Return a new :class:`Segment that contains the :class:`AnalogSignal`,
-        :class:`AnalogSignalArray`, :class:`Spike`:, and :class:`SpikeTrain`
+        :class:`AnalogSignalArray`, and :class:`SpikeTrain`
         objects common to both the current :class:`Segment` and any
         :class:`Unit` in the :attr:`unit_list` provided.
 
@@ -229,7 +214,6 @@ class Segment(Container):
         '''
         seg = Segment()
         seg.analogsignals = self.take_analogsignal_by_unit(unit_list)
-        seg.spikes = self.take_spikes_by_unit(unit_list)
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
         seg.analogsignalarrays = \
             self.take_slice_of_analogsignalarray_by_unit(unit_list)

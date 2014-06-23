@@ -845,7 +845,7 @@ class TestSlice(unittest.TestCase):
         assert_neo_object_is_compliant(self.train1)
 
     def test_slice(self):
-        # slice spike train, keep sliced spike times
+        # slice spiketrain, keep sliced spike times
         result = self.train1[1:2]
         assert_arrays_equal(self.train1[1:2], result)
         targwaveforms = np.array([[[2., 3.],
@@ -866,7 +866,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_to_end(self):
-        # slice spike train, keep sliced spike times
+        # slice spiketrain, keep sliced spike times
         result = self.train1[1:]
         assert_arrays_equal(self.train1[1:], result)
         targwaveforms = np.array([[[2., 3.],
@@ -889,7 +889,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_from_beginning(self):
-        # slice spike train, keep sliced spike times
+        # slice spiketrain, keep sliced spike times
         result = self.train1[:2]
         assert_arrays_equal(self.train1[:2], result)
         targwaveforms = np.array([[[0., 1.],
@@ -912,7 +912,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_negative_idxs(self):
-        # slice spike train, keep sliced spike times
+        # slice spiketrain, keep sliced spike times
         result = self.train1[:-1]
         assert_arrays_equal(self.train1[:-1], result)
         targwaveforms = np.array([[[0., 1.],
@@ -958,7 +958,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_neo_object_is_compliant(self.train1)
 
     def test_time_slice_typical(self):
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         # this is the typical time slice falling somewhere
         # in the middle of spikes
         t_start = 0.12 * pq.ms
@@ -985,7 +985,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_stop, result.t_stop)
 
     def test_time_slice_differnt_units(self):
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_start = 0.00012 * pq.s
         t_stop = 0.0035 * pq.s
         result = self.train1.time_slice(t_start, t_stop)
@@ -1010,7 +1010,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_stop, result.t_stop)
 
     def test_time_slice_matching_ends(self):
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_start = 0.1 * pq.ms
         t_stop = 7.0 * pq.ms
         result = self.train1.time_slice(t_start, t_stop)
@@ -1031,7 +1031,7 @@ class TestTimeSlice(unittest.TestCase):
         self.train1.t_start = 0.1*pq.ms
         assert_neo_object_is_compliant(self.train1)
 
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_start = 0.01 * pq.ms
         t_stop = 70.0 * pq.ms
         result = self.train1.time_slice(t_start, t_stop)
@@ -1053,7 +1053,7 @@ class TestTimeSlice(unittest.TestCase):
         train = SpikeTrain([] * pq.ms, t_stop=10.0, waveforms=waveforms)
         assert_neo_object_is_compliant(train)
 
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_start = 0.01 * pq.ms
         t_stop = 70.0 * pq.ms
         result = train.time_slice(t_start, t_stop)
@@ -1071,7 +1071,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(train.t_stop, result.t_stop)
 
     def test_time_slice_none_stop(self):
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_start = 1 * pq.ms
         result = self.train1.time_slice(t_start, None)
         assert_arrays_equal([1.2, 3.3, 6.4, 7] * pq.ms, result)
@@ -1096,7 +1096,7 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
     def test_time_slice_none_start(self):
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         t_stop = 1 * pq.ms
         result = self.train1.time_slice(None, t_stop)
         assert_arrays_equal([0.1, 0.5] * pq.ms, result)
@@ -1120,7 +1120,7 @@ class TestTimeSlice(unittest.TestCase):
         self.train1.t_start = 0.1*pq.ms
         assert_neo_object_is_compliant(self.train1)
 
-        # time_slice spike train, keep sliced spike times
+        # time_slice spiketrain, keep sliced spike times
         result = self.train1.time_slice(None, None)
         assert_arrays_equal(self.train1, result)
         assert_arrays_equal(self.waveforms1, result.waveforms)
@@ -1166,7 +1166,7 @@ class TestAttributesAnnotations(unittest.TestCase):
 class TestChanging(unittest.TestCase):
     def test_change_with_copy_default(self):
         # Default is copy = True
-        # Changing spike train does not change data
+        # Changing spiketrain does not change data
         # Data source is quantity
         data = [3, 4, 5] * pq.s
         train = SpikeTrain(data, t_stop=100.0)
@@ -1176,7 +1176,7 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(data[0], 3*pq.s)
 
     def test_change_with_copy_false(self):
-        # Changing spike train also changes data, because it is a view
+        # Changing spiketrain also changes data, because it is a view
         # Data source is quantity
         data = [3, 4, 5] * pq.s
         train = SpikeTrain(data, copy=False, t_stop=100.0)
@@ -1186,7 +1186,7 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(data[0], 99*pq.s)
 
     def test_change_with_copy_false_and_fake_rescale(self):
-        # Changing spike train also changes data, because it is a view
+        # Changing spiketrain also changes data, because it is a view
         # Data source is quantity
         data = [3000, 4000, 5000] * pq.ms
         # even though we specify units, it still returns a view
@@ -1198,7 +1198,7 @@ class TestChanging(unittest.TestCase):
 
     def test_change_with_copy_false_and_rescale_true(self):
         # When rescaling, a view cannot be returned
-        # Changing spike train also changes data, because it is a view
+        # Changing spiketrain also changes data, because it is a view
         data = [3, 4, 5] * pq.s
         self.assertRaises(ValueError, SpikeTrain, data, units='ms',
                           copy=False, t_stop=10000)
@@ -1212,7 +1212,7 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(train.t_stop, 6000*pq.ms)
 
     def test_change_with_copy_true(self):
-        # Changing spike train does not change data
+        # Changing spiketrain does not change data
         # Data source is quantity
         data = [3, 4, 5] * pq.s
         train = SpikeTrain(data, copy=True, t_stop=100)
@@ -1223,7 +1223,7 @@ class TestChanging(unittest.TestCase):
 
     def test_change_with_copy_default_and_data_not_quantity(self):
         # Default is copy = True
-        # Changing spike train does not change data
+        # Changing spiketrain does not change data
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
@@ -1235,7 +1235,7 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(data[0], 3*pq.s)
 
     def test_change_with_copy_false_and_data_not_quantity(self):
-        # Changing spike train also changes data, because it is a view
+        # Changing spiketrain also changes data, because it is a view
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
@@ -1254,7 +1254,7 @@ class TestChanging(unittest.TestCase):
                           copy=False, t_stop=101, dtype=np.float64)
 
     def test_change_with_copy_true_and_data_not_quantity(self):
-        # Changing spike train does not change data
+        # Changing spiketrain does not change data
         # Data source is array
         # Array and quantity are tested separately because copy default
         # is different for these two.
@@ -1472,7 +1472,7 @@ class TestPropertiesMethods(unittest.TestCase):
         segment.create_many_to_one_relationship()
 
         unit = Unit(name='unit1')
-        unit.spikes = [self.train1]
+        unit.spiketrains = [self.train1]
         unit.create_many_to_one_relationship()
 
         self.assertEqual(self.train1._single_parent_objects,
