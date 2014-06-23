@@ -108,10 +108,7 @@ class Test__generate_datasets(unittest.TestCase):
                          self.annotations)
 
         self.assertEqual(len(unit.spiketrains), 1)
-        self.assertEqual(len(unit.spikes), 1)
         self.assertEqual(unit.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(unit.spikes[0].annotations,
                          self.annotations)
 
     def test__fake_neo__nocascade(self):
@@ -151,10 +148,6 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.units1a = clone_object(self.units1)
         self.sigarrs1a = clone_object(self.sigarrs1, n=2)
 
-        self.spikes1 = [[spike for spike in unit.spikes]
-                        for unit in self.units1]
-        self.spikes2 = [[spike for spike in unit.spikes]
-                        for unit in self.units2]
         self.trains1 = [[train for train in unit.spiketrains]
                         for unit in self.units1]
         self.trains2 = [[train for train in unit.spiketrains]
@@ -168,8 +161,6 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.irsigs2 = [[irsig for irsig in rchan.irregularlysampledsignals]
                         for rchan in self.rchans2]
 
-        self.spikes1 = sum(self.spikes1, [])
-        self.spikes2 = sum(self.spikes2, [])
         self.trains1 = sum(self.trains1, [])
         self.trains2 = sum(self.trains2, [])
         self.sigs1 = sum(self.sigs1, [])
@@ -292,13 +283,13 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(len(self.rcg1._multi_children), self.nchildren)
         self.assertEqual(len(self.rcg1.data_children), self.nchildren)
         self.assertEqual(len(self.rcg1.data_children_recur),
-                         self.nchildren + 4*self.nchildren**2)
+                         self.nchildren + 3*self.nchildren**2)
         self.assertEqual(len(self.rcg1.container_children), 2*self.nchildren)
         self.assertEqual(len(self.rcg1.container_children_recur),
                          2*self.nchildren)
         self.assertEqual(len(self.rcg1.children), 3*self.nchildren)
         self.assertEqual(len(self.rcg1.children_recur),
-                         3*self.nchildren + 4*self.nchildren**2)
+                         3*self.nchildren + 3*self.nchildren**2)
 
         assert_same_sub_schema(list(self.rcg1._multi_children), self.rchans1)
         assert_same_sub_schema(list(self.rcg1._single_children),
@@ -314,8 +305,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
                                exclude=['channel_index'])
         assert_same_sub_schema(list(self.rcg1.data_children_recur),
                                self.sigarrs1a +
-                               self.spikes1[:2] + self.trains1[:2] +
-                               self.spikes1[2:] + self.trains1[2:] +
+                               self.trains1[:2] + self.trains1[2:] +
                                self.sigs1[:2] + self.irsigs1[:2] +
                                self.sigs1[2:] + self.irsigs1[2:],
                                exclude=['channel_index'])
@@ -325,8 +315,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
                                exclude=['channel_index'])
         assert_same_sub_schema(list(self.rcg1.children_recur),
                                self.sigarrs1a +
-                               self.spikes1[:2] + self.trains1[:2] +
-                               self.spikes1[2:] + self.trains1[2:] +
+                               self.trains1[:2] + self.trains1[2:] +
                                self.sigs1[:2] + self.irsigs1[:2] +
                                self.sigs1[2:] + self.irsigs1[2:] +
                                self.units1a + self.rchans1a,
@@ -368,8 +357,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_annotation_single(self):
         targ = [self.sigarrs1[1],
-                self.spikes1[1], self.trains1[1],
-                self.spikes1[3], self.trains1[3],
+                self.trains1[1], self.trains1[3],
                 self.sigs1[1], self.irsigs1[1],
                 self.sigs1[3], self.irsigs1[3]]
 
@@ -401,9 +389,9 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
 
     def test__filter_attribute_single(self):
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -415,7 +403,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
     def test__filter_attribute_single_nores(self):
         targ = []
 
-        name = self.spikes2[0].name
+        name = self.trains2[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -426,13 +414,12 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_multi(self):
         targ = [self.sigarrs1[1],
-                self.spikes1[1], self.trains1[1],
-                self.spikes1[3], self.trains1[3],
+                self.trains1[1], self.trains1[3],
                 self.sigs1[1], self.irsigs1[1],
                 self.sigs1[3], self.irsigs1[3],
-                self.spikes1[0]]
+                self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name, j=1)
         res1 = self.targobj.filter({'name': name, 'j': 1})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 1})
@@ -478,9 +465,9 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_same_sub_schema(res14, targ)
 
     def test__filter_multi_partres_annotation_attribute(self):
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name, j=9)
         res1 = self.targobj.filter({'name': name, 'j': 9})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 9})
@@ -490,7 +477,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_multi_partres_annotation_annotation(self):
-        targ = [self.spikes1[0], self.spikes1[2],
+        targ = [self.trains1[0], self.trains1[2],
                 self.sigs1[0], self.sigs1[2]]
 
         res0 = self.targobj.filter([{'j': 0}, {'i': 0}])
@@ -516,12 +503,6 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
         assert_same_sub_schema(res3, targ)
         assert_same_sub_schema(res4, targ)
-
-    def test__filter_single_annotation_obj_multi(self):
-        targ = [self.spikes1[1], self.trains1[1],
-                self.spikes1[3], self.trains1[3]]
-        res0 = self.targobj.filter(j=1, objects=['Spike', SpikeTrain])
-        assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_obj_none(self):
         targ = []
@@ -569,8 +550,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_single_annotation_container(self):
         targ = [self.sigarrs1[1],
-                self.spikes1[1], self.trains1[1],
-                self.spikes1[3], self.trains1[3],
+                self.trains1[1], self.trains1[3],
                 self.sigs1[1], self.irsigs1[1],
                 self.sigs1[3], self.irsigs1[3],
                 self.units1[1], self.rchans1[1]]
@@ -580,8 +560,8 @@ class TestRecordingChannelGroup(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container_data(self):
-        targ = [self.spikes1[0]]
-        res0 = self.targobj.filter(name=self.spikes1[0].name, container=True)
+        targ = [self.trains1[0]]
+        res0 = self.targobj.filter(name=self.trains1[0].name, container=True)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container_container(self):
@@ -604,7 +584,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_single_attribute_container_norecur_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
@@ -622,7 +602,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    data=False, container=True)
         assert_same_sub_schema(res0, targ)
 
@@ -642,7 +622,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container_norecur_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    data=False, container=True,
                                    recursive=False)
         assert_same_sub_schema(res0, targ)
@@ -651,14 +631,13 @@ class TestRecordingChannelGroup(unittest.TestCase):
         data = self.targobj.children_recur
 
         targ = [self.sigarrs1[1],
-                self.spikes1[1], self.trains1[1],
-                self.spikes1[3], self.trains1[3],
+                self.trains1[1], self.trains1[3],
                 self.sigs1[1], self.irsigs1[1],
                 self.sigs1[3], self.irsigs1[3],
                 self.units1[1], self.rchans1[1],
-                self.spikes1[0]]
+                self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = filterdata(data, name=name, j=1)
         res1 = filterdata(data, {'name': name, 'j': 1})
         res2 = filterdata(data, targdict={'name': name, 'j': 1})
@@ -709,9 +688,9 @@ class TestRecordingChannelGroup(unittest.TestCase):
     def test__filterdata_multi_partres_annotation_attribute(self):
         data = self.targobj.children_recur
 
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = filterdata(data, name=name, j=5)
         res1 = filterdata(data, {'name': name, 'j': 5})
         res2 = filterdata(data, targdict={'name': name, 'j': 5})
@@ -723,7 +702,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
     def test__filterdata_multi_partres_annotation_annotation(self):
         data = self.targobj.children_recur
 
-        targ = [self.spikes1[0], self.spikes1[2],
+        targ = [self.trains1[0], self.trains1[2],
                 self.sigs1[0], self.sigs1[2],
                 self.units1[0]]
 

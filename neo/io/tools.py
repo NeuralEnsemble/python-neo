@@ -13,7 +13,7 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
-                      Segment, Spike, SpikeTrain, Unit)
+                      Segment, SpikeTrain, Unit)
 
 
 #def finalize_block(block):
@@ -89,7 +89,7 @@ class LazyList(collections.MutableSequence):
         [Block, Segment, RecordingChannelGroup, RecordingChannel, Unit])
     _neo_objects = _container_objects.union(
         [AnalogSignal, AnalogSignalArray, Epoch, Event,
-         IrregularlySampledSignal, Spike, SpikeTrain])
+         IrregularlySampledSignal, SpikeTrain])
 
     def __init__(self, io, lazy, items=None):
         """

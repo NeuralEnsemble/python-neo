@@ -92,7 +92,6 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.irregularlysampledsignals), 1)
         self.assertEqual(len(seg.spiketrains), 1)
-        self.assertEqual(len(seg.spikes), 1)
         self.assertEqual(len(seg.events), 1)
         self.assertEqual(len(seg.epochs), 1)
         self.assertEqual(seg.analogsignalarrays[0].annotations,
@@ -102,8 +101,6 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(seg.irregularlysampledsignals[0].annotations,
                          self.annotations)
         self.assertEqual(seg.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(seg.spikes[0].annotations,
                          self.annotations)
         self.assertEqual(seg.events[0].annotations,
                          self.annotations)
@@ -130,10 +127,7 @@ class Test__generate_datasets(unittest.TestCase):
                          self.annotations)
 
         self.assertEqual(len(unit.spiketrains), 1)
-        self.assertEqual(len(unit.spikes), 1)
         self.assertEqual(unit.spiketrains[0].annotations,
-                         self.annotations)
-        self.assertEqual(unit.spikes[0].annotations,
                          self.annotations)
 
     def test__fake_neo__nocascade(self):
@@ -181,10 +175,6 @@ class TestBlock(unittest.TestCase):
         self.sigarrs2 = [[sigarr for sigarr in rcg.analogsignalarrays]
                          for rcg in self.rcgs2]
 
-        self.spikes1 = [[spike for spike in unit.spikes]
-                        for unit in self.units1]
-        self.spikes2 = [[spike for spike in unit.spikes]
-                        for unit in self.units2]
         self.trains1 = [[train for train in unit.spiketrains]
                         for unit in self.units1]
         self.trains2 = [[train for train in unit.spiketrains]
@@ -211,8 +201,6 @@ class TestBlock(unittest.TestCase):
         self.sigarrs1 = sum(self.sigarrs1, [])
         self.sigarrs2 = sum(self.sigarrs2, [])
 
-        self.spikes1 = sum(self.spikes1, [])
-        self.spikes2 = sum(self.spikes2, [])
         self.trains1 = sum(self.trains1, [])
         self.trains2 = sum(self.trains2, [])
         self.sigs1 = sum(self.sigs1, [])
@@ -320,7 +308,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         4*self.nchildren**3 + 3*self.nchildren**2)
+                         3*self.nchildren**3 + 3*self.nchildren**2)
         self.assertEqual(len(self.blk1.container_children), 2*self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
                          2*self.nchildren + 2*self.nchildren**2)
@@ -328,7 +316,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1.children_recur),
                          2*self.nchildren +
                          2*self.nchildren**2 +
-                         4*self.nchildren**3 + 3*self.nchildren**2)
+                         3*self.nchildren**3 + 3*self.nchildren**2)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),
@@ -344,12 +332,12 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(list(self.blk1.data_children_recur),
                                self.sigs1[::2] + self.sigarrs1[::2] +
                                self.epcs1[:2] + self.evts1[:2] +
-                               self.irsigs1[::2] + self.spikes1[::2] +
+                               self.irsigs1[::2] +
                                self.trains1[::2] +
                                self.sigs1[1::2] + self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
-                               self.spikes1[1::2] + self.trains1[1::2],
+                               self.trains1[1::2],
                                exclude=['channel_index'])
 
         assert_same_sub_schema(list(self.blk1.children),
@@ -357,12 +345,12 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(list(self.blk1.children_recur),
                                self.sigs1[::2] + self.sigarrs1[::2] +
                                self.epcs1[:2] + self.evts1[:2] +
-                               self.irsigs1[::2] + self.spikes1[::2] +
+                               self.irsigs1[::2] +
                                self.trains1[::2] +
                                self.sigs1[1::2] + self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
-                               self.spikes1[1::2] + self.trains1[1::2] +
+                               self.trains1[1::2] +
                                self.segs1 + self.rcgs1 +
                                self.units1[:2] + self.rchans1[:2] +
                                self.units1[2:] + self.rchans1[2:],
@@ -403,7 +391,7 @@ class TestBlock(unittest.TestCase):
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
-                self.spikes1[1::2] + self.trains1[1::2])
+                self.trains1[1::2])
 
         res0 = self.targobj.filter(j=1)
         res1 = self.targobj.filter({'j': 1})
@@ -433,9 +421,9 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
 
     def test__filter_attribute_single(self):
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -447,7 +435,7 @@ class TestBlock(unittest.TestCase):
     def test__filter_attribute_single_nores(self):
         targ = []
 
-        name = self.spikes2[0].name
+        name = self.trains2[0].name
         res0 = self.targobj.filter(name=name)
         res1 = self.targobj.filter({'name': name})
         res2 = self.targobj.filter(targdict={'name': name})
@@ -461,10 +449,10 @@ class TestBlock(unittest.TestCase):
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
-                self.spikes1[1::2] + self.trains1[1::2] +
-                [self.spikes1[0]])
+                self.trains1[1::2] +
+                [self.trains1[0]])
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name, j=1)
         res1 = self.targobj.filter({'name': name, 'j': 1})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 1})
@@ -510,9 +498,9 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res14, targ)
 
     def test__filter_multi_partres_annotation_attribute(self):
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = self.targobj.filter(name=name, j=90)
         res1 = self.targobj.filter({'name': name, 'j': 90})
         res2 = self.targobj.filter(targdict={'name': name, 'j': 90})
@@ -522,7 +510,7 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_multi_partres_annotation_annotation(self):
-        targ = self.sigs1[::2] + self.spikes1[::2]
+        targ = self.sigs1[::2] + self.trains1[::2]
 
         res0 = self.targobj.filter([{'j': 0}, {'i': 0}])
         res1 = self.targobj.filter({'j': 0}, i=0)
@@ -544,11 +532,6 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
         assert_same_sub_schema(res3, targ)
-
-    def test__filter_single_annotation_obj_multi(self):
-        targ = self.spikes1[1::2] + self.trains1[1::2]
-        res0 = self.targobj.filter(j=1, objects=['Spike', SpikeTrain])
-        assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_norecur(self):
         targ = []
@@ -588,7 +571,7 @@ class TestBlock(unittest.TestCase):
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
-                self.spikes1[1::2] + self.trains1[1::2] +
+                self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],
                  self.units1[1], self.rchans1[1],
                  self.units1[3], self.rchans1[3]])
@@ -598,8 +581,8 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container_data(self):
-        targ = [self.spikes1[0]]
-        res0 = self.targobj.filter(name=self.spikes1[0].name, container=True)
+        targ = [self.trains1[0]]
+        res0 = self.targobj.filter(name=self.trains1[0].name, container=True)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_attribute_container_container(self):
@@ -622,7 +605,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_attribute_container_norecur_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
 
@@ -642,7 +625,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    data=False, container=True)
         assert_same_sub_schema(res0, targ)
 
@@ -662,7 +645,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_attribute_nodata_container_norecur_nores(self):
         targ = []
-        res0 = self.targobj.filter(name=self.spikes1[0].name,
+        res0 = self.targobj.filter(name=self.trains1[0].name,
                                    data=False, container=True,
                                    recursive=False)
         assert_same_sub_schema(res0, targ)
@@ -674,13 +657,13 @@ class TestBlock(unittest.TestCase):
                 self.sigs1[1::2] + self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
-                self.spikes1[1::2] + self.trains1[1::2] +
+                self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],
                  self.units1[1], self.rchans1[1],
                  self.units1[3], self.rchans1[3],
-                 self.spikes1[0]])
+                 self.trains1[0]])
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = filterdata(data, name=name, j=1)
         res1 = filterdata(data, {'name': name, 'j': 1})
         res2 = filterdata(data, targdict={'name': name, 'j': 1})
@@ -731,9 +714,9 @@ class TestBlock(unittest.TestCase):
     def test__filterdata_multi_partres_annotation_attribute(self):
         data = self.targobj.children_recur
 
-        targ = [self.spikes1[0]]
+        targ = [self.trains1[0]]
 
-        name = self.spikes1[0].name
+        name = self.trains1[0].name
         res0 = filterdata(data, name=name, j=90)
         res1 = filterdata(data, {'name': name, 'j': 90})
         res2 = filterdata(data, targdict={'name': name, 'j': 90})
@@ -745,7 +728,7 @@ class TestBlock(unittest.TestCase):
     def test__filterdata_multi_partres_annotation_annotation(self):
         data = self.targobj.children_recur
 
-        targ = (self.sigs1[::2] + self.spikes1[::2] +
+        targ = (self.sigs1[::2] + self.trains1[::2] +
                 self.segs1[:1] + self.units1[::2])
 
         res0 = filterdata(data, [{'j': 0}, {'i': 0}])

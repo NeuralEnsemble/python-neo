@@ -23,7 +23,6 @@ Classes:
 .. autoclass:: Event
 .. autoclass:: Epoch
 
-.. autoclass:: Spike
 .. autoclass:: SpikeTrain
 
 """
@@ -44,13 +43,12 @@ from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core.event import Event
 from neo.core.epoch import Epoch
 
-from neo.core.spike import Spike
 from neo.core.spiketrain import SpikeTrain
 
 # Block should always be first in this list
 objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,
               AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
-              Event, Epoch, Unit, Spike, SpikeTrain]
+              Event, Epoch, Unit, SpikeTrain]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))

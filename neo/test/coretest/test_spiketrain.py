@@ -1472,7 +1472,7 @@ class TestPropertiesMethods(unittest.TestCase):
         segment.create_many_to_one_relationship()
 
         unit = Unit(name='unit1')
-        unit.spikes = [self.train1]
+        unit.spiketrains = [self.train1]
         unit.create_many_to_one_relationship()
 
         self.assertEqual(self.train1._single_parent_objects,

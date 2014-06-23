@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-This module defines :class:`Unit`, a container of :class:`Spike` and
-:class:`SpikeTrain` objects from a unit.
+This module defines :class:`Unit`, a container of :class:`SpikeTrain` objects
+from a unit.
 
 :class:`Unit` derives from :class:`Container`,
 from :module:`neo.core.container`.
@@ -17,9 +17,9 @@ from neo.core.container import Container
 
 class Unit(Container):
     '''
-    A container of :class:`Spike` and :class:`SpikeTrain` objects from a unit.
+    A container of :class:`SpikeTrain` objects from a unit.
 
-    A :class:`Unit` regroups all the :class:`SpikeTrain` and :class:`Spike`
+    A :class:`Unit` regroups all the :class:`SpikeTrain`
     objects that were emitted by a single spike source during a :class:`Block`.
     A spike source is often a single neuron but doesn't have to be.  The spikes
     may come from different :class:`Segment` objects within the :class:`Block`,
@@ -61,11 +61,10 @@ class Unit(Container):
 
     *Container of*:
         :class:`SpikeTrain`
-        :class:`Spike`
 
     '''
 
-    _data_child_objects = ('Spike', 'SpikeTrain')
+    _data_child_objects = ('SpikeTrain',)
     _single_parent_objects = ('RecordingChannelGroup',)
     _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),)
                           + Container._recommended_attrs)
