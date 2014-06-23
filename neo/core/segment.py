@@ -67,7 +67,6 @@ class Segment(Container):
 
     *Container of*:
         :class:`Epoch`
-        :class:`EpochArray`
         :class:`Event`
         :class:`EventArray`
         :class:`AnalogSignal`
@@ -79,7 +78,7 @@ class Segment(Container):
     '''
 
     _data_child_objects = ('AnalogSignal', 'AnalogSignalArray',
-                           'Epoch', 'EpochArray',
+                           'Epoch',
                            'Event', 'EventArray',
                            'IrregularlySampledSignal',
                            'Spike', 'SpikeTrain')
