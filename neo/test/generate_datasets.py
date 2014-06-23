@@ -14,7 +14,7 @@ import quantities as pq
 
 from neo.core import (AnalogSignal, AnalogSignalArray,
                       Block,
-                      Epoch, Event, EventArray,
+                      Epoch, Event,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
                       Segment, SpikeTrain,
@@ -57,15 +57,15 @@ def generate_one_simple_segment(seg_name='segment 0',
                                 nb_spiketrain=6,
                                 spikerate_range=[.5*pq.Hz, 12*pq.Hz],
 
-                                event_array_types={'stim': ['a', 'b',
-                                                            'c', 'd'],
-                                                   'enter_zone': ['one',
-                                                                  'two'],
-                                                   'color': ['black',
-                                                             'yellow',
-                                                             'green'],
-                                                   },
-                                event_array_size_range=[5, 20],
+                                event_types={'stim': ['a', 'b',
+                                                      'c', 'd'],
+                                             'enter_zone': ['one',
+                                                            'two'],
+                                             'color': ['black',
+                                                       'yellow',
+                                                       'green'],
+                                             },
+                                event_size_range=[5, 20],
 
                                 epoch_types={'animal state': ['Sleep',
                                                               'Freeze',
@@ -102,14 +102,14 @@ def generate_one_simple_segment(seg_name='segment 0',
             sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
 
-    if EventArray in supported_objects:
-        for name, labels in iteritems(event_array_types):
-            ea_size = rand()*np.diff(event_array_size_range)
-            ea_size += event_array_size_range[0]
+    if Event in supported_objects:
+        for name, labels in iteritems(event_types):
+            evt_size = rand()*np.diff(event_size_range)
+            evt_size += event_size_range[0]
             labels = np.array(labels, dtype='S')
-            labels = labels[(rand(ea_size)*len(labels)).astype('i')]
-            ea = EventArray(times=rand(ea_size)*duration, labels=labels)
-            seg.eventarrays.append(ea)
+            labels = labels[(rand(evt_size)*len(labels)).astype('i')]
+            evt = Event(times=rand(evt_size)*duration, labels=labels)
+            seg.events.append(evt)
 
     if Epoch in supported_objects:
         for name, labels in iteritems(epoch_types):

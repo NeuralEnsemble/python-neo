@@ -530,7 +530,7 @@ class BaseTestIO(object):
 
         Test the reader with lazy = True.  All objects derived from ndarray
         or Quantity should have a size of 0. Also, AnalogSignal,
-        AnalogSignalArray, SpikeTrain, Epoch, and EventArray should
+        AnalogSignalArray, SpikeTrain, Epoch, and Event should
         contain the lazy_shape attribute.
         ''' % self.ioclass.__name__
         # This is for files presents at G-Node or generated
@@ -551,7 +551,7 @@ class BaseTestIO(object):
 
         Test the reader with lazy = True.  All objects derived from ndarray
         or Quantity should have a size of 0. Also, AnalogSignal,
-        AnalogSignalArray, SpikeTrain, Epoch, and EventArray should
+        AnalogSignalArray, SpikeTrain, Epoch, and Event should
         contain the lazy_shape attribute.
         ''' % self.ioclass.__name__
         if not hasattr(self.ioclass, 'load_lazy_object'):

@@ -20,7 +20,8 @@ else:
 
 from neo.core.event import Event
 from neo.core import Segment
-from neo.test.tools import assert_neo_object_is_compliant, assert_arrays_equal
+from neo.test.tools import (assert_neo_object_is_compliant,
+                            assert_arrays_equal, assert_same_sub_schema)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values,
                                         fake_neo, TEST_ANNOTATIONS)
 
@@ -33,13 +34,13 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        time = get_fake_value('time', pq.Quantity, seed=0, dim=0)
-        label = get_fake_value('label', str, seed=1)
+        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
+        labels = get_fake_value('labels', np.ndarray, seed=1, dim=1, dtype='S')
         name = get_fake_value('name', str, seed=2, obj=Event)
-        description = get_fake_value('description', str, seed=3, obj='Event')
+        description = get_fake_value('description', str,
+                                     seed=3, obj='Event')
         file_origin = get_fake_value('file_origin', str)
-        attrs1 = {'label': label,
-                  'name': name,
+        attrs1 = {'name': name,
                   'description': description,
                   'file_origin': file_origin}
         attrs2 = attrs1.copy()
@@ -50,10 +51,15 @@ class Test__generate_datasets(unittest.TestCase):
         res21 = get_fake_values(Event, annotate=True, seed=0)
         res22 = get_fake_values('Event', annotate=True, seed=0)
 
-        assert_arrays_equal(res11.pop('time'), time)
-        assert_arrays_equal(res12.pop('time'), time)
-        assert_arrays_equal(res21.pop('time'), time)
-        assert_arrays_equal(res22.pop('time'), time)
+        assert_arrays_equal(res11.pop('times'), times)
+        assert_arrays_equal(res12.pop('times'), times)
+        assert_arrays_equal(res21.pop('times'), times)
+        assert_arrays_equal(res22.pop('times'), times)
+
+        assert_arrays_equal(res11.pop('labels'), labels)
+        assert_arrays_equal(res12.pop('labels'), labels)
+        assert_arrays_equal(res21.pop('labels'), labels)
+        assert_arrays_equal(res22.pop('labels'), labels)
 
         self.assertEqual(res11, attrs1)
         self.assertEqual(res12, attrs1)
@@ -62,7 +68,7 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__fake_neo__cascade(self):
         self.annotations['seed'] = None
-        obj_type = 'Event'
+        obj_type = Event
         cascade = True
         res = fake_neo(obj_type=obj_type, cascade=cascade)
 
@@ -72,7 +78,7 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__fake_neo__nocascade(self):
         self.annotations['seed'] = None
-        obj_type = Event
+        obj_type = 'Event'
         cascade = False
         res = fake_neo(obj_type=obj_type, cascade=cascade)
 
@@ -84,15 +90,20 @@ class Test__generate_datasets(unittest.TestCase):
 class TestEvent(unittest.TestCase):
     def test_Event_creation(self):
         params = {'test2': 'y1', 'test3': True}
-        evt = Event(1.5*pq.ms,
-                    label='test epoch', name='test', description='tester',
+        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+                    labels=np.array(['test event 1',
+                                     'test event 2',
+                                     'test event 3'], dtype='S'),
+                    name='test', description='tester',
                     file_origin='test.file',
                     test1=1, **params)
         evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
 
-        self.assertEqual(evt.time, 1.5*pq.ms)
-        self.assertEqual(evt.label, 'test epoch')
+        assert_arrays_equal(evt.times, [1.1, 1.5, 1.7]*pq.ms)
+        assert_arrays_equal(evt.labels, np.array(['test event 1',
+                                                  'test event 2',
+                                                  'test event 3'], dtype='S'))
         self.assertEqual(evt.name, 'test')
         self.assertEqual(evt.description, 'tester')
         self.assertEqual(evt.file_origin, 'test.file')
@@ -101,19 +112,71 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(evt.annotations['test2'], 'y1')
         self.assertTrue(evt.annotations['test3'])
 
-    def test_epoch_merge_NotImplementedError(self):
-        evt1 = Event(1.5*pq.ms,
-                     label='test epoch', name='test', description='tester',
-                     file_origin='test.file', test1=1)
-        evt2 = Event(1.5*pq.ms,
-                     label='test epoch', name='test', description='tester',
-                     file_origin='test.file', test1=1)
-        self.assertRaises(NotImplementedError, evt1.merge, evt2)
+    def test_Event_repr(self):
+        params = {'test2': 'y1', 'test3': True}
+        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+                    labels=np.array(['test event 1',
+                                     'test event 2',
+                                     'test event 3'], dtype='S'),
+                    name='test', description='tester',
+                    file_origin='test.file',
+                    test1=1, **params)
+        evt.annotate(test1=1.1, test0=[1, 2])
+        assert_neo_object_is_compliant(evt)
+
+        targ = ('<Event: test event 1@1.1 ms, test event 2@1.5 ms, ' +
+                'test event 3@1.7 ms>')
+
+        res = repr(evt)
+
+        self.assertEqual(targ, res)
+
+    def test_Event_merge(self):
+        params1 = {'test2': 'y1', 'test3': True}
+        params2 = {'test2': 'no', 'test4': False}
+        paramstarg = {'test2': 'yes;no',
+                      'test3': True,
+                      'test4': False}
+        evt1 = Event([1.1, 1.5, 1.7]*pq.ms,
+                     labels=np.array(['test event 1 1',
+                                      'test event 1 2',
+                                      'test event 1 3'], dtype='S'),
+                     name='test', description='tester 1',
+                     file_origin='test.file',
+                     test1=1, **params1)
+        evt2 = Event([2.1, 2.5, 2.7]*pq.us,
+                     labels=np.array(['test event 2 1',
+                                      'test event 2 2',
+                                      'test event 2 3'], dtype='S'),
+                     name='test', description='tester 2',
+                     file_origin='test.file',
+                     test1=1, **params2)
+        evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027]*pq.ms,
+                        labels=np.array(['test event 1 1',
+                                         'test event 1 2',
+                                         'test event 1 3',
+                                         'test event 2 1',
+                                         'test event 2 2',
+                                         'test event 2 3'], dtype='S'),
+                        name='test',
+                        description='merge(tester 1, tester 2)',
+                        file_origin='test.file',
+                        test1=1, **paramstarg)
+        assert_neo_object_is_compliant(evt1)
+        assert_neo_object_is_compliant(evt2)
+        assert_neo_object_is_compliant(evttarg)
+
+        evtres = evt1.merge(evt2)
+        assert_neo_object_is_compliant(evtres)
+        assert_same_sub_schema(evttarg, evtres)
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
-        evt = Event(1.5*pq.ms,
-                    label='test epoch', name='test', description='tester',
+        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+                    labels=np.array(['test event 1',
+                                     'test event 2',
+                                     'test event 3'], dtype='S'),
+                    name='test', description='tester',
                     file_origin='test.file',
                     test1=1, **params)
         evt.annotate(test1=1.1, test0=[1, 2])
@@ -139,10 +202,13 @@ class TestEvent(unittest.TestCase):
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
-        evt = Event(1.5*pq.ms,
-                    label='test epoch', name='test', description='tester',
+        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+                    labels=np.array(['test event 1',
+                                     'test event 2',
+                                     'test event 3'], dtype='S'),
+                    name='test', description='tester',
                     file_origin='test.file')
-        evt.annotate(targ1=1.1, targ0=[1])
+        evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
 
         prepr = pretty(evt)
