@@ -20,6 +20,9 @@ class TestBrainVisionIO(BaseTestIO, unittest.TestCase, ):
     ioclass = BrainVisionIO
     files_to_test = ['File_brainvision_1.vhdr',
                      'File_brainvision_2.vhdr',
+                     'File_brainvision_3_float32.vhdr',
+                     'File_brainvision_3_int16.vhdr',
+                     'File_brainvision_3_int32.vhdr',
                      ]
     files_to_download = ['File_brainvision_1.eeg',
                          'File_brainvision_1.vhdr',
@@ -27,6 +30,15 @@ class TestBrainVisionIO(BaseTestIO, unittest.TestCase, ):
                          'File_brainvision_2.eeg',
                          'File_brainvision_2.vhdr',
                          'File_brainvision_2.vmrk',
+                         'File_brainvision_3_float32.eeg',
+                         'File_brainvision_3_float32.vhdr',
+                         'File_brainvision_3_float32.vmrk',
+                         'File_brainvision_3_int16.eeg',
+                         'File_brainvision_3_int16.vhdr',
+                         'File_brainvision_3_int16.vmrk',
+                         'File_brainvision_3_int32.eeg',
+                         'File_brainvision_3_int32.vhdr',
+                         'File_brainvision_3_int32.vmrk',
                          ]
 
 
