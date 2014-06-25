@@ -90,7 +90,7 @@ Module             Python 2 Python 3
 AlphaOmegaIO       Yes      No
 AsciiSignalIO      Yes      Yes
 AsciiSpikeTrainIO  Yes      Yes
-AxonIO             Yes      No
+AxonIO             Yes      Yes
 BlackrockIO        Yes      No
 BrainwareDamIO     Yes      Yes
 BrainwareF32IO     Yes      Yes
