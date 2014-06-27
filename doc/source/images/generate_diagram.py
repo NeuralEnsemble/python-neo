@@ -210,10 +210,8 @@ def generate_diagram_simple():
 
                 'Segment': (.5+rw*bf*1, .5),
 
-                'Event': (.5+rw*bf*4, 6),
-                'EventArray': (.5+rw*bf*4, 4),
-                'Epoch': (.5+rw*bf*4, 2),
-                'EpochArray': (.5+rw*bf*4, .2),
+                'Event': (.5+rw*bf*4, 4),
+                'Epoch': (.5+rw*bf*4, .2),
 
                 'RecordingChannelGroup': (.5+rw*bf*.8, 8.5),
                 'RecordingChannel': (.5+rw*bf*1.2, 5.5),
@@ -221,7 +219,6 @@ def generate_diagram_simple():
                 'Unit': (.5+rw*bf*2., 9.5),
 
                 'SpikeTrain': (.5+rw*bf*3, 9.5),
-                'Spike': (.5+rw*bf*3, 7.5),
 
                 'IrregularlySampledSignal': (.5+rw*bf*3, 4.9),
                 'AnalogSignal': (.5+rw*bf*3, 2.7),

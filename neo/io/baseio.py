@@ -17,10 +17,10 @@ import logging
 
 from neo import logging_handler
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, EpochArray, Event, EventArray,
+                      Epoch, Event, EventArray,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
-                      Segment, Spike, SpikeTrain, Unit)
+                      Segment, SpikeTrain, Unit)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -155,9 +155,6 @@ class BaseIO(object):
     def read_spiketrain(self, **kargs):
         assert(SpikeTrain in self.readable_objects), read_error
 
-    def read_spike(self, **kargs):
-        assert(Spike in self.readable_objects), read_error
-
     def read_analogsignal(self, **kargs):
         assert(AnalogSignal in self.readable_objects), read_error
 
@@ -182,9 +179,6 @@ class BaseIO(object):
     def read_epoch(self, **kargs):
         assert(Epoch in self.readable_objects), read_error
 
-    def read_epocharray(self, **kargs):
-        assert(EpochArray in self.readable_objects), read_error
-
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
         assert(Block in self.writeable_objects), write_error
@@ -197,9 +191,6 @@ class BaseIO(object):
 
     def write_spiketrain(self, sptr, **kargs):
         assert(SpikeTrain in self.writeable_objects), write_error
-
-    def write_spike(self, sp, **kargs):
-        assert(Spike in self.writeable_objects), write_error
 
     def write_analogsignal(self, anasig,  **kargs):
         assert(AnalogSignal in self.writeable_objects), write_error
@@ -224,6 +215,3 @@ class BaseIO(object):
 
     def write_epoch(self, ep, **kargs):
         assert(Epoch in self.writeable_objects), write_error
-
-    def write_epocharray(self, epa,  **kargs):
-        assert(EpochArray in self.writeable_objects), write_error
