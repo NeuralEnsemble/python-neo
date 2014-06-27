@@ -46,7 +46,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (Block, EventArray, RecordingChannel,
+from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 
 # need to subclass BaseIO
@@ -84,7 +84,7 @@ class BrainwareSrcIO(BaseIO):
 
     Note 2:
         The first Segment in each Block is always Comments, which stores all
-        comments as an EventArray object.
+        comments as an Event object.
 
     Note 3:
         The parameters from the BrainWare table for each condition are stored
@@ -117,7 +117,7 @@ class BrainwareSrcIO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects = [Block, RecordingChannel, RecordingChannelGroup,
-                         Segment, SpikeTrain, EventArray, Unit]
+                         Segment, SpikeTrain, Event, Unit]
 
     readable_objects = [Block]
     writeable_objects = []
@@ -328,8 +328,8 @@ class BrainwareSrcIO(BaseIO):
         self._rcg = None
         self._unitdict = {}
 
-        # combine the comments into one big eventarray
-        self._combine_segment_eventarrays(self._seg0)
+        # combine the comments into one big event
+        self._combine_segment_events(self._seg0)
 
         # result is None iff the end of the file is reached, so we can
         # close the file
@@ -409,7 +409,6 @@ class BrainwareSrcIO(BaseIO):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
 
-    #@profile
     def _read_by_id(self):
         """
         Reader for generic data
@@ -484,15 +483,15 @@ class BrainwareSrcIO(BaseIO):
                 self._unitdict[data_obj.name] = data_obj
         elif isinstance(data_obj, Segment):
             self.logger.warning('Unknown Segment found, '
-                                 'adding to Segments list')
+                                'adding to Segments list')
             self._blk.segments.append(data_obj)
-        elif isinstance(data_obj, EventArray):
-            self.logger.warning('Unknown EventArray found, '
-                                 'adding to comment Events list')
-            self._seg0.eventarrays.append(data_obj)
+        elif isinstance(data_obj, Event):
+            self.logger.warning('Unknown Event found, '
+                                'adding to comment Events list')
+            self._seg0.events.append(data_obj)
         elif isinstance(data_obj, SpikeTrain):
             self.logger.warning('Unknown SpikeTrain found, '
-                                 'adding to the UnassignedSpikes Unit')
+                                'adding to the UnassignedSpikes Unit')
             self._unit0.spiketrains.append(data_obj)
         elif hasattr(data_obj, '__iter__') and not isinstance(data_obj, str):
             for sub_obj in data_obj:
@@ -500,7 +499,7 @@ class BrainwareSrcIO(BaseIO):
         else:
             if self.logger.isEnabledFor(logging.WARNING):
                 self.logger.warning('Unrecognized sequence of type %s found, '
-                                     'skipping', type(data_obj))
+                                    'skipping', type(data_obj))
 
     _default_datetime = datetime(1, 1, 1)
     _default_t_start = pq.Quantity(0., units=pq.ms, dtype=np.float32)
@@ -522,24 +521,24 @@ class BrainwareSrcIO(BaseIO):
                                                             dtype=np.uint8),
                                           side='')
 
-    def _combine_eventarrays(self, eventarrays):
+    def _combine_events(self, events):
         """
-        _combine_eventarrays(eventarrays) - combine a list of EventArrays
-        with single events into one long EventArray
+        _combine_events(events) - combine a list of Events
+        with single events into one long Event
         """
-        if not eventarrays or self._lazy:
-            eventarray = EventArray(times=pq.Quantity([], units=pq.s),
-                                    labels=np.array([], dtype='S'),
-                                    senders=np.array([], dtype='S'),
-                                    t_start=0)
+        if not events or self._lazy:
+            event = Event(times=pq.Quantity([], units=pq.s),
+                          labels=np.array([], dtype='S'),
+                          senders=np.array([], dtype='S'),
+                          t_start=0)
             if self._lazy:
-                eventarray.lazy_shape = len(eventarrays)
-            return eventarray
+                event.lazy_shape = len(events)
+            return event
 
         times = []
         labels = []
         senders = []
-        for event in eventarrays:
+        for event in events:
             times.append(event.times.magnitude)
             labels.append(event.labels)
             senders.append(event.annotations['sender'])
@@ -551,21 +550,21 @@ class BrainwareSrcIO(BaseIO):
         labels = np.array(labels)
         senders = np.array(senders)
 
-        eventarray = EventArray(times=times, labels=labels,
-                                t_start=t_start.tolist(), senders=senders)
+        event = Event(times=times, labels=labels,
+                      t_start=t_start.tolist(), senders=senders)
 
-        return eventarray
+        return event
 
-    def _combine_segment_eventarrays(self, segment):
+    def _combine_segment_events(self, segment):
         """
-        _combine_segment_eventarrays(segment)
-        Combine all EventArrays in a segment.
+        _combine_segment_events(segment)
+        Combine all Events in a segment.
         """
-        eventarray = self._combine_eventarrays(segment.eventarrays)
-        eventarray_t_start = eventarray.annotations.pop('t_start')
-        segment.rec_datetime = self._convert_timestamp(eventarray_t_start)
-        segment.eventarrays = [eventarray]
-        eventarray.segment = segment
+        event = self._combine_events(segment.events)
+        event_t_start = event.annotations.pop('t_start')
+        segment.rec_datetime = self._convert_timestamp(event_t_start)
+        segment.events = [event]
+        event.segment = segment
 
     def _combine_spiketrains(self, spiketrains):
         """
@@ -769,7 +768,7 @@ class BrainwareSrcIO(BaseIO):
         """
         Read a single comment.
 
-        The comment is stored as an EventArray in Segment 0, which is
+        The comment is stored as an Event in Segment 0, which is
         specifically for comments.
 
         ----------------------
@@ -797,11 +796,10 @@ class BrainwareSrcIO(BaseIO):
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
 
-        comment = EventArray(times=pq.Quantity(time, units=pq.d), labels=text,
-                             sender=sender,
-                             file_origin=self._file_origin)
+        comment = Event(times=pq.Quantity(time, units=pq.d), labels=text,
+                        sender=sender, file_origin=self._file_origin)
 
-        self._seg0.eventarrays.append(comment)
+        self._seg0.events.append(comment)
 
         return []
 
@@ -847,7 +845,7 @@ class BrainwareSrcIO(BaseIO):
         if not self._damaged and numelements < 0:
             self._damaged = True
             self.logger.error('Negative sequence count %s, file damaged',
-                               numelements)
+                              numelements)
 
         if not self._damaged:
             # read the sequences into a list
@@ -923,7 +921,7 @@ class BrainwareSrcIO(BaseIO):
                 # create an empty spike train
                 trains = [[self._default_spiketrain.copy()]]
         elif hasattr(trains[0], 'dtype'):
-            #workaround for some broken files
+            # workaround for some broken files
             trains = [unassigned_spikes +
                       [self._combine_spiketrains([trains])]]
         else:
@@ -1211,7 +1209,7 @@ class BrainwareSrcIO(BaseIO):
         ID: 29121
         """
 
-        #int32 -- index of the analogsignalarray in corresponding .dam file
+        # int32 -- index of the analogsignalarray in corresponding .dam file
         dama_index = np.fromfile(self._fsrc, dtype=np.int32,
                                  count=1)[0]
 
