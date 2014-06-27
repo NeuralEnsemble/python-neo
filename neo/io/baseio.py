@@ -17,7 +17,7 @@ import logging
 
 from neo import logging_handler
 from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, Event, EventArray,
+                      Epoch, Event,
                       IrregularlySampledSignal,
                       RecordingChannel, RecordingChannelGroup,
                       Segment, SpikeTrain, Unit)
