@@ -18,7 +18,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, EventArray, RecordingChannel,
+from neo.core import (Block, Event, RecordingChannel,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -123,10 +123,8 @@ def proc_src_comments(srcfile, filename):
     senders = np.array(senders, dtype='S')
     t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
 
-    comments = EventArray(times=timeStamps,
-                          labels=texts,
-                          senders=senders)
-    comm_seg.eventarrays = [comments]
+    comments = Event(times=timeStamps, labels=texts, senders=senders)
+    comm_seg.events = [comments]
     comm_seg.rec_datetime = t_start
 
     return comm_seg
