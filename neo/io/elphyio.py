@@ -1842,7 +1842,7 @@ class ElphyLayout(object):
             # print "databytes[",start,":",end,"]=",databytes[start:end]
             return databytes[start:end]
         else :
-            return []
+            return np.array([])
         
     
     def reshape_bytes(self, databytes, reshape, datatypes, order='<'):
