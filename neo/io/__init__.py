@@ -83,7 +83,7 @@ from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.exampleio import ExampleIO
 from neo.io.klustakwikio import KlustaKwikIO
 #from neo.io.micromedio import MicromedIO
-#from neo.io.hdf5io import NeoHdf5IO
+from neo.io.hdf5io import NeoHdf5IO
 #from neo.io.neomatlabio import NeoMatlabIO
 #from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
@@ -114,7 +114,7 @@ iolist = [AlphaOmegaIO,
           ExampleIO,
           KlustaKwikIO,
           #MicromedIO,
-          #NeoHdf5IO,
+          NeoHdf5IO,
           #NeoMatlabIO,
           #NeuroExplorerIO,
           NeuroScopeIO,
