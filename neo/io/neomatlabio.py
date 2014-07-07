@@ -80,8 +80,8 @@ class NeoMatlabIO(BaseIO):
                 seg.analogsignals = { };
                 for a = 1:5
                     anasig = struct();
-                    anasig.array = rand(100,1);
-                    anasig.units = 'mV';
+                    anasig.signal = rand(100,1);
+                    anasig.signal_units = 'mV';
                     anasig.t_start = 0;
                     anasig.t_start_units = 's';
                     anasig.sampling_rate = 100;
@@ -91,8 +91,8 @@ class NeoMatlabIO(BaseIO):
                 seg.spiketrains = { };
                 for t = 1:7
                     sptr = struct();
-                    sptr.array = rand(30,1)*10;
-                    sptr.units = 'ms';
+                    sptr.times = rand(30,1)*10;
+                    sptr.times_units = 'ms';
                     sptr.t_start = 0;
                     sptr.t_start_units = 'ms';
                     sptr.t_stop = 10;
@@ -101,6 +101,7 @@ class NeoMatlabIO(BaseIO):
                 end
 
                 block.segments{s} = seg;
+                
             end
             save 'myblock.mat' block -V7
 
@@ -141,8 +142,8 @@ class NeoMatlabIO(BaseIO):
 
             load 'myblock.mat'
             block.name
-            block.segments{2}.analogsignals{3}.array
-            block.segments{2}.analogsignals{3}.units
+            block.segments{2}.analogsignals{3}.signal
+            block.segments{2}.analogsignals{3}.signal_units
             block.segments{2}.analogsignals{3}.t_start
             block.segments{2}.analogsignals{3}.t_start_units
 
