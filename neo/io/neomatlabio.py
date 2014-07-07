@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Module for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
+Module for reading/writing Neo objects in MATLAB format (.mat) versions
+5 to 7.2.
 
-This module is a bridge for MATLAB users who want to adopt the Neo object representation.
-The nomenclature is the same but using Matlab structs and cell arrays.
-With this module MATLAB users can use neo.io to read a format and convert it to .mat.
+This module is a bridge for MATLAB users who want to adopt the Neo object
+representation. The nomenclature is the same but using Matlab structs and cell
+arrays. With this module MATLAB users can use neo.io to read a format and
+convert it to .mat.
 
 Supported : Read/Write
 
@@ -48,22 +50,26 @@ for k in objectnames:
 
 class NeoMatlabIO(BaseIO):
     """
-    Class for reading/writing Neo objects in MATLAB format (.mat) versions 5 to 7.2.
+    Class for reading/writing Neo objects in MATLAB format (.mat) versions
+    5 to 7.2.
 
-    This module is a bridge for MATLAB users who want to adopt the Neo object representation.
-    The nomenclature is the same but using Matlab structs and cell arrays.
-    With this module MATLAB users can use neo.io to read a format and convert it to .mat.
+    This module is a bridge for MATLAB users who want to adopt the Neo object
+    representation.  The nomenclature is the same but using Matlab structs and
+    cell arrays. With this module MATLAB users can use neo.io to read a format
+    and convert it to .mat.
 
     Rules of conversion:
       * Neo classes are converted to MATLAB structs.
         e.g., a Block is a struct with attributes "name", "file_datetime", ...
       * Neo one_to_many relationships are cellarrays in MATLAB.
-        e.g., ``seg.analogsignals[2]`` in Python Neo will be ``seg.analogsignals{3}`` in MATLAB.
+        e.g., ``seg.analogsignals[2]`` in Python Neo will be
+        ``seg.analogsignals{3}`` in MATLAB.
       * Quantity attributes are represented by 2 fields in MATLAB.
         e.g., ``anasig.t_start = 1.5 * s`` in Python
-        will be ``anasig.t_start = 1.5`` and ``anasig.t_start_unit = 's'`` in MATLAB.
-      * classes that inherit from Quantity (AnalogSignal, SpikeTrain, ...) in Python will
-        have 2 fields (array and units) in the MATLAB struct.
+        will be ``anasig.t_start = 1.5`` and ``anasig.t_start_unit = 's'``
+        in MATLAB.
+      * classes that inherit from Quantity (AnalogSignal, SpikeTrain, ...) in
+        Python will have 2 fields (array and units) in the MATLAB struct.
         e.g.: ``AnalogSignal( [1., 2., 3.], 'V')`` in Python will be
         ``anasig.array = [1. 2. 3]`` and ``anasig.units = 'V'`` in MATLAB.
 
@@ -101,7 +107,7 @@ class NeoMatlabIO(BaseIO):
                 end
 
                 block.segments{s} = seg;
-                
+
             end
             save 'myblock.mat' block -V7
 
@@ -128,10 +134,10 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100), units='mV', t_start=0*pq.s, sampling_rate=100*pq.Hz)
+                    anasig = neo.AnalogSignal(rand(100), units='mV', t_start=0 * pq.s, sampling_rate=100 * pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
-                    sptr = neo.SpikeTrain(rand(30), units='ms', t_start=0*pq.ms, t_stop=10*pq.ms)
+                    sptr = neo.SpikeTrain(rand(30), units='ms', t_start=0 * pq.ms, t_stop=10 * pq.ms)
                     seg.spiketrains.append(sptr)
 
         w = neo.io.NeoMatlabIO(filename='myblock.mat')
@@ -163,24 +169,24 @@ class NeoMatlabIO(BaseIO):
             w.write_block(bl)
 
     """
-    is_readable        = True
-    is_writable        = True
+    is_readable = True
+    is_writable = True
 
-    supported_objects            = [ Block, Segment , AnalogSignal , EventArray, SpikeTrain ]
-    readable_objects    = [Block, ]
-    writeable_objects    = [Block, ]
+    supported_objects = [Block, Segment, AnalogSignal, EventArray, SpikeTrain]
+    readable_objects = [Block]
+    writeable_objects = [Block]
 
-    has_header         = False
-    is_streameable     = False
-    read_params        = { Block : [ ] }
-    write_params       = { Block : [ ] }
+    has_header = False
+    is_streameable = False
+    read_params = {Block: []}
+    write_params = {Block: []}
 
-    name               = 'neomatlab'
-    extensions          = [ 'mat' ]
+    name = 'neomatlab'
+    extensions = ['mat']
 
     mode = 'file'
 
-    def __init__(self , filename = None) :
+    def __init__(self, filename=None):
         """
         This class read/write neo objects in matlab 5 to 7.2 format.
 
@@ -192,23 +198,26 @@ class NeoMatlabIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-
-    def read_block(self, cascade = True, lazy = False,):
+    def read_block(self, cascade=True, lazy=False,):
         """
         Arguments:
 
         """
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True)
-        assert'block' in d, 'no block in'+self.filename
+        if not 'block' in d:
+            self.logger.exception('No block in ' + self.filename)
+            return None
+
         bl_struct = d['block']
-        bl =  self.create_ob_from_struct(bl_struct, 'Block', cascade = cascade, lazy = lazy)
+        bl = self.create_ob_from_struct(
+            bl_struct, 'Block', cascade=cascade, lazy=lazy)
         bl.create_many_to_one_relationship()
         return bl
 
-    def write_block(self, bl,):
+    def write_block(self, bl, **kargs):
         """
-        Arguments::
+        Arguments:
             bl: the block to b saved
         """
 
@@ -230,13 +239,10 @@ class NeoMatlabIO(BaseIO):
                 sptr_struct = self.create_struct_from_obj(sptr)
                 seg_struct['spiketrains'].append(sptr_struct)
 
-        scipy.io.savemat(self.filename, {'block':bl_struct}, oned_as = 'row')
+        scipy.io.savemat(self.filename, {'block': bl_struct}, oned_as='row')
 
-
-
-    def create_struct_from_obj(self, ob, ):
-        classname = ob.__class__.__name__
-        struct = { }
+    def create_struct_from_obj(self, ob):
+        struct = {}
 
         # relationship
         for childname in getattr(ob, '_single_child_containers', []):
@@ -244,9 +250,9 @@ class NeoMatlabIO(BaseIO):
                                     self.supported_objects]
             if childname in supported_containers:
                 struct[childname] = []
+
         # attributes
         for i, attr in enumerate(ob._all_attrs):
-
             attrname, attrtype = attr[0], attr[1]
 
             #~ if attrname =='':
@@ -260,22 +266,25 @@ class NeoMatlabIO(BaseIO):
                 struct[attrname+'_units'] = ob.dimensionality.string
                 continue
 
-
-            if not(attrname in ob.annotations or hasattr(ob, attrname)): continue
-            if getattr(ob, attrname) is None : continue
+            if not(attrname in ob.annotations or hasattr(ob, attrname)):
+                continue
+            if getattr(ob, attrname) is None:
+                continue
 
             if attrtype == pq.Quantity:
                 #ndim = attr[2]
-                struct[attrname] = getattr(ob,attrname).magnitude
-                struct[attrname+'_units'] = getattr(ob,attrname).dimensionality.string
-            elif attrtype ==datetime:
-                struct[attrname] = str(getattr(ob,attrname))
+                struct[attrname] = getattr(ob, attrname).magnitude
+                struct[attrname + '_units'] = getattr(
+                    ob, attrname).dimensionality.string
+            elif attrtype == datetime:
+                struct[attrname] = str(getattr(ob, attrname))
             else:
-                struct[attrname] = getattr(ob,attrname)
+                struct[attrname] = getattr(ob, attrname)
 
         return struct
 
-    def create_ob_from_struct(self, struct, classname, cascade = True, lazy = False,):
+    def create_ob_from_struct(self, struct, classname,
+                              cascade=True, lazy=False):
         cl = class_by_name[classname]
         # check if hinerits Quantity
         #~ is_quantity = False
@@ -287,50 +296,56 @@ class NeoMatlabIO(BaseIO):
 
         #~ if is_quantity:
         if hasattr(cl, '_quantity_attr'):
-
             quantity_attr = cl._quantity_attr
-            arr = getattr(struct,quantity_attr)
+            arr = getattr(struct, quantity_attr)
             #~ data_complement = dict(units=str(struct.units))
-            data_complement = dict(units=str(getattr(struct,quantity_attr+'_units')))
+            data_complement = dict(units=str(
+                getattr(struct, quantity_attr + '_units')))
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
-                data_complement["sampling_rate"] = 0*pq.kHz  # put fake value for now, put correct value later
+                # put fake value for now, put correct value later
+                data_complement["sampling_rate"] = 0 * pq.kHz
             if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
-                    data_complement["t_stop"] =arr.max()
+                    data_complement["t_stop"] = arr.max()
                 else:
                     data_complement["t_stop"] = 0.0
             if "t_start" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
-                    data_complement["t_start"] =arr.min()
+                    data_complement["t_start"] = arr.min()
                 else:
                     data_complement["t_start"] = 0.0
-            
+
             if lazy:
-                ob = cl([ ], **data_complement)
+                ob = cl([], **data_complement)
                 ob.lazy_shape = arr.shape
             else:
                 ob = cl(arr, **data_complement)
         else:
             ob = cl()
+
         for attrname in struct._fieldnames:
             # check children
             if attrname in getattr(ob, '_single_child_containers', []):
                 try:
-                    for c in range(len(getattr(struct,attrname))):
+                    for c in range(len(getattr(struct, attrname))):
                         if cascade:
-                            child = self.create_ob_from_struct(getattr(struct,attrname)[c]  , classname_lower_to_upper[attrname[:-1]],
-                                                                                        cascade = cascade, lazy = lazy)
+                            child = self.create_ob_from_struct(
+                                getattr(struct, attrname)[c],
+                                classname_lower_to_upper[attrname[:-1]],
+                                cascade=cascade, lazy=lazy)
                             getattr(ob, attrname.lower()).append(child)
                 except TypeError:
-                    # strange behavior in scipy.io: if len is 1 so there is no len() 
+                    # strange scipy.io behavior: if len is 1 there is no len()
                     if cascade:
-                        child = self.create_ob_from_struct(getattr(struct,attrname)  , classname_lower_to_upper[attrname[:-1]],
-                                                                                        cascade = cascade, lazy = lazy)
-                        getattr(ob, attrname.lower()).append(child)                    
+                        child = self.create_ob_from_struct(
+                            getattr(struct, attrname),
+                            classname_lower_to_upper[attrname[:-1]],
+                            cascade=cascade, lazy=lazy)
+                        getattr(ob, attrname.lower()).append(child)
                 continue
 
             # attributes
-            if attrname.endswith('_units')  or attrname =='units' :#or attrname == 'array':
+            if attrname.endswith('_units') or attrname == 'units':
                 # linked with another field
                 continue
             if (hasattr(cl, '_quantity_attr') and
@@ -346,17 +361,17 @@ class NeoMatlabIO(BaseIO):
                 if attrtype == datetime:
                     m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
                     r = re.findall(m, str(item))
-                    if len(r)==1:
-                        item = datetime( *[ int(e) for e in r[0] ] )
+                    if len(r) == 1:
+                        item = datetime(*[int(e) for e in r[0]])
                     else:
                         item = None
                 elif attrtype == np.ndarray:
                     dt = dict_attributes[attrname][2]
                     if lazy:
-                        item = np.array([ ], dtype = dt)
+                        item = np.array([], dtype=dt)
                         ob.lazy_shape = item.shape
                     else:
-                        item = item.astype( dt )
+                        item = item.astype(dt)
                 elif attrtype == pq.Quantity:
                     ndim = dict_attributes[attrname][1]
                     units = str(getattr(struct, attrname+'_units'))
@@ -364,7 +379,7 @@ class NeoMatlabIO(BaseIO):
                         item = pq.Quantity(item, units)
                     else:
                         if lazy:
-                            item = pq.Quantity([ ], units)
+                            item = pq.Quantity([], units)
                             item.lazy_shape = item.shape
                         else:
                             item = pq.Quantity(item, units)
@@ -373,8 +388,4 @@ class NeoMatlabIO(BaseIO):
 
             setattr(ob, attrname, item)
 
-
         return ob
-
-
-
