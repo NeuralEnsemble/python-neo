@@ -68,7 +68,6 @@ Classes:
 
 import os.path
 
-
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
@@ -84,7 +83,7 @@ from neo.io.exampleio import ExampleIO
 from neo.io.klustakwikio import KlustaKwikIO
 #from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
-#from neo.io.neomatlabio import NeoMatlabIO
+from neo.io.neomatlabio import NeoMatlabIO
 #from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 #from neo.io.neuroshareio import NeuroshareIO
@@ -115,7 +114,7 @@ iolist = [AlphaOmegaIO,
           KlustaKwikIO,
           #MicromedIO,
           NeoHdf5IO,
-          #NeoMatlabIO,
+          NeoMatlabIO,
           #NeuroExplorerIO,
           NeuroScopeIO,
           #NeuroshareIO,
