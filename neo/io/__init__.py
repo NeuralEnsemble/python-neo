@@ -71,7 +71,7 @@ import os.path
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
-#from neo.io.axonio import AxonIO
+from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 #from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
@@ -102,7 +102,7 @@ from neo.io.winwcpio import WinWcpIO
 iolist = [AlphaOmegaIO,
           AsciiSignalIO,
           AsciiSpikeTrainIO,
-          #AxonIO,
+          AxonIO,
           BlackrockIO,
           #BrainVisionIO,
           BrainwareDamIO,

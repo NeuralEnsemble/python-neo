@@ -53,7 +53,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, EventArray
+from neo.core import Block, Segment, AnalogSignal, Event
 from neo.io.tools import iteritems
 
 
@@ -124,7 +124,7 @@ class AxonIO(BaseIO):
         [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,
             1.33056641,  1.3458252 ,  1.3671875 ], dtype=float32) * pA,
             [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
-        >>> print bl.segments[0].eventarrays
+        >>> print bl.segments[0].events
         []
 
     """
@@ -132,7 +132,7 @@ class AxonIO(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Block, Segment, AnalogSignal, EventArray]
+    supported_objects = [Block, Segment, AnalogSignal, Event]
     readable_objects = [Block]
     writeable_objects = []
 
@@ -323,13 +323,12 @@ class AxonIO(BaseIO):
                 # attach all tags to the first segment.
                 seg = bl.segments[0]
                 if lazy:
-                    ea = EventArray(times=[] * pq.s,
-                                    labels=np.array([], dtype='S'))
+                    ea = Event(times=[] * pq.s, labels=np.array([], dtype='S'))
                     ea.lazy_shape = len(times)
                 else:
-                    ea = EventArray(times=times * pq.s, labels=labels,
-                                    comments=comments)
-                seg.eventarrays.append(ea)
+                    ea = Event(times=times * pq.s, labels=labels,
+                               comments=comments)
+                seg.events.append(ea)
 
         bl.create_many_to_one_relationship()
         return bl
