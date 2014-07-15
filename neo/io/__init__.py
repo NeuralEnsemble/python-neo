@@ -73,28 +73,28 @@ from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 #from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
-#from neo.io.brainvisionio import BrainVisionIO
+from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
-#from neo.io.elanio import ElanIO
+from neo.io.elanio import ElanIO
 #from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.klustakwikio import KlustaKwikIO
-#from neo.io.micromedio import MicromedIO
+from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
-#from neo.io.neuroexplorerio import NeuroExplorerIO
+from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 #from neo.io.neuroshareio import NeuroshareIO
 from neo.io.pickleio import PickleIO
-#from neo.io.plexonio import PlexonIO
+from neo.io.plexonio import PlexonIO
 from neo.io.pynnio import PyNNNumpyIO
 from neo.io.pynnio import PyNNTextIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
-#from neo.io.spike2io import Spike2IO
+from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
-#from neo.io.tdtio import TdtIO
+from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
@@ -104,28 +104,28 @@ iolist = [AlphaOmegaIO,
           AsciiSpikeTrainIO,
           #AxonIO,
           BlackrockIO,
-          #BrainVisionIO,
+          BrainVisionIO,
           BrainwareDamIO,
           BrainwareF32IO,
           BrainwareSrcIO,
-          #ElanIO,
+          ElanIO,
           #ElphyIO,
           ExampleIO,
           KlustaKwikIO,
-          #MicromedIO,
+          MicromedIO,
           NeoHdf5IO,
           NeoMatlabIO,
-          #NeuroExplorerIO,
+          NeuroExplorerIO,
           NeuroScopeIO,
           #NeuroshareIO,
           PickleIO,
-          #PlexonIO,
+          PlexonIO,
           PyNNNumpyIO,
           PyNNTextIO,
           RawBinarySignalIO,
-          #Spike2IO,
+          Spike2IO,
           StimfitIO,
-          #TdtIO,
+          TdtIO,
           WinEdrIO,
           WinWcpIO
           ]

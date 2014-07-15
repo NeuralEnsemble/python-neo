@@ -25,7 +25,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, EpochArray, EventArray
+from neo.core import Segment, AnalogSignal, Epoch, Event
 
 
 class StructFile(file):
@@ -48,7 +48,7 @@ class MicromedIO(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, EventArray, EpochArray]
+    supported_objects = [Segment, AnalogSignal, Event, Epoch]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -185,7 +185,7 @@ class MicromedIO(BaseIO):
             f.seek(pos, 0)
             triggers = np.fromstring(f.read(length), dtype=[('pos', 'u4'), (
                 'label', label_dtype)])
-            ea = EventArray(name=zname[0] + zname[1:].lower())
+            ea = Event(name=zname[0] + zname[1:].lower())
             if not lazy:
                 keep = (triggers['pos'] >= triggers['pos'][0]) & (
                     triggers['pos'] < rawdata.shape[0]) & (
@@ -195,7 +195,7 @@ class MicromedIO(BaseIO):
                 ea.times = (triggers['pos'] / sampling_rate).rescale('s')
             else:
                 ea.lazy_shape = triggers.size
-            seg.eventarrays.append(ea)
+            seg.events.append(ea)
 
         # Read Event A and B
         # Not so well  tested
@@ -205,7 +205,7 @@ class MicromedIO(BaseIO):
             epochs = np.fromstring(f.read(length),
                                    dtype=[('label', 'u4'), ('start', 'u4'),
                                           ('stop', 'u4'), ])
-            ep = EpochArray(name=zname[0] + zname[1:].lower())
+            ep = Epoch(name=zname[0] + zname[1:].lower())
             if not lazy:
                 keep = (epochs['start'] > 0) & (
                     epochs['start'] < rawdata.shape[0]) & (
@@ -218,7 +218,7 @@ class MicromedIO(BaseIO):
                     sampling_rate).rescale('s')
             else:
                 ep.lazy_shape = triggers.size
-            seg.epocharrays.append(ep)
+            seg.epochs.append(ep)
 
         seg.create_many_to_one_relationship()
         return seg

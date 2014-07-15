@@ -25,7 +25,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Event
 from neo.io.tools import iteritems
 
 
@@ -42,15 +42,14 @@ class PlexonIO(BaseIO):
         >>> print seg.spiketrains  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         [<SpikeTrain(array([  2.75000000e-02,   5.68250000e-02, ...,
         ...
-        >>> print seg.eventarrays
+        >>> print seg.events
         []
     """
 
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, SpikeTrain, EventArray,
-                         EpochArray]
+    supported_objects = [Segment, AnalogSignal, SpikeTrain, Event]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -252,12 +251,12 @@ class PlexonIO(BaseIO):
                 times = []
             else:
                 times = evarrays[chan]
-            ea = EventArray(times * pq.s,
-                            channel_name=eventHeaders[chan]['Name'],
-                            channel_index=chan)
+            ea = Event(times * pq.s,
+                       channel_name=eventHeaders[chan]['Name'],
+                       channel_index=chan)
             if lazy:
                 ea.lazy_shape = nb_events[chan]
-            seg.eventarrays.append(ea)
+            seg.events.append(ea)
 
         for chan, h in iteritems(slowChannelHeaders):
             if lazy:

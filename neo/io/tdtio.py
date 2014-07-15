@@ -26,7 +26,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
 from neo.io.tools import iteritems
 
 PY3K = (sys.version_info[0] == 3)
@@ -46,14 +46,14 @@ class TdtIO(BaseIO):
         [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,
             1.33056641, 1.3458252 ,  1.3671875 ], dtype=float32) * pA,
             [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
-        >>> print bl.segments[0].eventarrays
+        >>> print bl.segments[0].events
         []
     """
 
     is_readable = True
     is_writable = False
 
-    supported_objects = [Block, Segment, AnalogSignal, EventArray]
+    supported_objects = [Block, Segment, AnalogSignal, Event]
     readable_objects = [Block]
     writeable_objects = []
 
@@ -133,7 +133,7 @@ class TdtIO(BaseIO):
                     if code not in allevent:
                         allevent[code] = {}
                     if channel not in allevent[code]:
-                        ea = EventArray(name=code, channel_index=channel)
+                        ea = Event(name=code, channel_index=channel)
                         # for counting:
                         ea.lazy_shape = 0
                         ea.maxlabelsize = 0
@@ -318,7 +318,7 @@ class TdtIO(BaseIO):
 
             for code, v in iteritems(allevent):
                 for channel, ea in iteritems(v):
-                    seg.eventarrays.append(ea)
+                    seg.events.append(ea)
 
             for code, v in iteritems(allspiketr):
                 for channel, allsorted in iteritems(v):

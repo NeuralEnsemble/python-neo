@@ -28,7 +28,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, EventArray
+from neo.core import Segment, AnalogSignal, Event
 
 
 class VersionError(Exception):
@@ -53,7 +53,7 @@ class ElanIO(BaseIO):
             [0.0 s, 101.5808 s], sampling rate: 10000.0 Hz)>]
         >>> print seg.spiketrains   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         []
-        >>> print seg.eventarrays   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        >>> print seg.events   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         []
 
 
@@ -63,7 +63,7 @@ class ElanIO(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, EventArray]
+    supported_objects = [Segment, AnalogSignal, Event]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -237,10 +237,10 @@ class ElanIO(BaseIO):
             times = np.array(times) * pq.s
             labels = np.array(labels)
             reject_codes = np.array(reject_codes)
-        ea = EventArray(times=times, labels=labels, reject_codes=reject_codes)
+        ea = Event(times=times, labels=labels, reject_codes=reject_codes)
         if lazy:
             ea.lazy_shape = len(times)
-        seg.eventarrays.append(ea)
+        seg.events.append(ea)
 
         f.close()
 

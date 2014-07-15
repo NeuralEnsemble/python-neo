@@ -20,7 +20,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, SpikeTrain, EpochArray, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Epoch, Event
 
 
 class NeuroExplorerIO(BaseIO):
@@ -35,18 +35,17 @@ class NeuroExplorerIO(BaseIO):
         [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ...,
         >>> print seg.spiketrains   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         [<SpikeTrain(array([  2.29499992e-02,   6.79249987e-02, ...
-        >>> print seg.eventarrays   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        [<EventArray: @21.1967754364 s, @21.2993755341 s, @21.350725174 s, ...
-        >>> print seg.epocharrays   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        [<neo.core.epocharray.EpochArray object at 0x10561ba90>,
-         <neo.core.epocharray.EpochArray object at 0x10561bad0>]
+        >>> print seg.events   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<Event: @21.1967754364 s, @21.2993755341 s, @21.350725174 s, ...
+        >>> print seg.epochs   # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<neo.core.epoch.Epoch object at 0x10561ba90>,
+         <neo.core.epoch.Epoch object at 0x10561bad0>]
     """
 
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, SpikeTrain, EventArray,
-                         EpochArray]
+    supported_objects = [Segment, AnalogSignal, SpikeTrain, Event, Epoch]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -126,11 +125,11 @@ class NeuroExplorerIO(BaseIO):
                     event_times = event_times.astype('f8') / global_header[
                         'freq'] * pq.s
                 labels = np.array([''] * event_times.size, dtype='S')
-                evar = EventArray(times=event_times, labels=labels,
-                                  channel_name=entity_header['name'])
+                evar = Event(times=event_times, labels=labels,
+                             channel_name=entity_header['name'])
                 if lazy:
                     evar.lazy_shape = entity_header['n']
-                seg.eventarrays.append(evar)
+                seg.events.append(evar)
 
             if entity_header['type'] == 2:
                 # interval
@@ -149,14 +148,14 @@ class NeuroExplorerIO(BaseIO):
                                            entity_header['n'] * 4)
                     stop_times = stop_times.astype('f') / global_header[
                         'freq'] * pq.s
-                epar = EpochArray(times=start_times,
-                                  durations=stop_times - start_times,
-                                  labels=np.array([''] * start_times.size,
-                                                  dtype='S'),
-                                  channel_name=entity_header['name'])
+                epar = Epoch(times=start_times,
+                             durations=stop_times - start_times,
+                             labels=np.array([''] * start_times.size,
+                                             dtype='S'),
+                             channel_name=entity_header['name'])
                 if lazy:
                     epar.lazy_shape = entity_header['n']
-                seg.epocharrays.append(epar)
+                seg.epochs.append(epar)
 
             if entity_header['type'] == 3:
                 # spiketrain and wavefoms
@@ -255,14 +254,14 @@ class NeuroExplorerIO(BaseIO):
                         'r', shape=(entity_header['n']),
                         offset=entity_header['offset'] +
                         entity_header['n'] * 4 + 64)
-                ea = EventArray(times=times,
-                                labels=labels.view(np.ndarray),
-                                name=entity_header['name'],
-                                channel_index=entity_header['WireNumber'],
-                                marker_type=markertype)
+                ea = Event(times=times,
+                           labels=labels.view(np.ndarray),
+                           name=entity_header['name'],
+                           channel_index=entity_header['WireNumber'],
+                           marker_type=markertype)
                 if lazy:
                     ea.lazy_shape = entity_header['n']
-                seg.eventarrays.append(ea)
+                seg.events.append(ea)
 
         seg.create_many_to_one_relationship()
         return seg

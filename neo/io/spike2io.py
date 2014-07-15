@@ -30,7 +30,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Event
 
 PY3K = (sys.version_info[0] == 3)
 
@@ -45,14 +45,14 @@ class Spike2IO(BaseIO):
         >>> seg = r.read_segment(lazy = False, cascade = True,)
         >>> print seg.analogsignals
         >>> print seg.spiketrains
-        >>> print seg.eventarrays
+        >>> print seg.events
 
     """
 
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, EventArray, SpikeTrain]
+    supported_objects = [Segment, AnalogSignal, Event, SpikeTrain]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -129,7 +129,7 @@ class Spike2IO(BaseIO):
                     fid, i, header, lazy=lazy)
                 if ea is not None:
                     addannotations(ea, channelHeader)
-                    seg.eventarrays.append(ea)
+                    seg.events.append(ea)
 
             elif channelHeader.kind in [6, 7]:
                 sptr = self.read_one_channel_event_or_spike(
@@ -302,7 +302,7 @@ class Spike2IO(BaseIO):
 
     def read_one_channel_event_or_spike(self, fid, channel_num, header,
                                         lazy=True):
-        # return SPikeTrain or EventArray
+        # return SPikeTrain or Event
         channelHeader = header.channelHeaders[channel_num]
         if channelHeader.firstblock < 0:
             return
@@ -342,7 +342,7 @@ class Spike2IO(BaseIO):
 
         if lazy:
             if channelHeader.kind in [2, 3, 4, 5, 8]:
-                ea = EventArray()
+                ea = Event()
                 ea.annotate(channel_index=channel_num)
                 ea.lazy_shape = totalitems
                 return ea
@@ -376,7 +376,7 @@ class Spike2IO(BaseIO):
 
             if channelHeader.kind in [2, 3, 4, 5, 8]:
                 #events
-                ea = EventArray()
+                ea = Event()
                 ea.annotate(channel_index=channel_num)
                 ea.times = alltimes
                 if channelHeader.kind >= 5:

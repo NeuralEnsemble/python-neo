@@ -17,7 +17,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, EventArray
+from neo.core import Segment, AnalogSignal, Event
 
 
 class BrainVisionIO(BaseIO):
@@ -37,7 +37,7 @@ class BrainVisionIO(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Segment, AnalogSignal, EventArray]
+    supported_objects = [Segment, AnalogSignal, Event]
     readable_objects = [Segment]
     writeable_objects = []
 
@@ -126,12 +126,12 @@ class BrainVisionIO(BaseIO):
         for type_ in np.unique(all_types):
             ind = type_ == all_types
             if lazy:
-                ea = EventArray(name=str(type_))
+                ea = Event(name=str(type_))
                 ea.lazy_shape = -1
             else:
-                ea = EventArray(
+                ea = Event(
                     times=times[ind], labels=labels[ind], name=str(type_))
-            seg.eventarrays.append(ea)
+            seg.events.append(ea)
 
         seg.create_many_to_one_relationship()
         return seg
