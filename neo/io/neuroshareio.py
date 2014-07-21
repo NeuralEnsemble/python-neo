@@ -17,6 +17,7 @@ Author: sgarcia
 
 """
 
+import sys
 import ctypes
 import os
 
@@ -104,9 +105,13 @@ class NeuroshareIO(BaseIO):
 
         """
         seg = Segment( file_origin = os.path.basename(self.filename), )
-
-        #~ neuroshare = ctypes.windll.LoadLibrary(self.dllname)
-        neuroshare = ctypes.cdll.LoadLibrary(self.dllname)
+        
+        if sys.platform.startswith('win'):
+            neuroshare = ctypes.windll.LoadLibrary(self.dllname)
+        elif sys.platform.startswith('linux'):
+            neuroshare = ctypes.cdll.LoadLibrary(self.dllname)
+        #elif sys.platform.startswith('darwin'):
+        
 
         # API version
         info = ns_LIBRARYINFO()
@@ -155,11 +160,7 @@ class NeuroshareIO(BaseIO):
                                             ctypes.byref(pdTimeStamp), ctypes.byref(pData),
                                             ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize) )
                         times.append(pdTimeStamp.value)
-                        if pEventInfo.dwEventType in[0, 1]:
-                            labels.append(str(pData.value))
-                        else:
-                            pEventInfo.dwEventType
-                            labels.append(str(pData.value))
+                        labels.append(str(pData.value))
                     ea.times = times*pq.s
                     ea.labels = np.array(labels, dtype ='S')
                 else :
@@ -180,16 +181,16 @@ class NeuroshareIO(BaseIO):
                     pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
                     total_read = 0
                     while total_read< entityInfo.dwItemCount:
-                        try:
-                            dwStartIndex = ctypes.c_uint32(total_read)
-                            dwStopIndex = ctypes.c_uint32(entityInfo.dwItemCount - total_read)
-                            
-                            neuroshare.ns_GetAnalogData( hFile,  dwEntityID,  dwStartIndex,
-                                         dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
-                            total_read += pdwContCount.value
-                        except:
-                            pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
-                            neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
+                        #try:
+                        dwStartIndex = ctypes.c_uint32(total_read)
+                        dwStopIndex = ctypes.c_uint32(entityInfo.dwItemCount - total_read)
+                        
+                        neuroshare.ns_GetAnalogData( hFile,  dwEntityID,  dwStartIndex,
+                                     dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+                        total_read += pdwContCount.value
+                        #except:
+                        #   pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
+                        # neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
                             
                     signal =  pq.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
 

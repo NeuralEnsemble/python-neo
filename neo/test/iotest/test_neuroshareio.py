@@ -6,15 +6,53 @@ Tests of neo.io.neuroshareio
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
 
+import os
+import tarfile
+import tempfile
+
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-#from neo.io import NeuroshareIO
+try:
+    from urllib import urlretrieve  # Py2
+except ImportError:
+    from urllib.request import urlretrieve  # Py3
 
-#~ class TestNeuroshareIO(unittest.TestCase):
-    #~ pass
+
+from neo.io import NeuroshareIO
+from neo.test.iotest.common_io_test import BaseTestIO
+
+
+
+class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
+    ioclass = NeuroshareIO
+    files_to_test = [ ]
+    files_to_download = [ 'Multichannel_fil_1.mcd', ]
+    
+    def setUp(self):
+        BaseTestIO.setUp(self)
+        
+        distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
+        localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux64_3.7b.tar.gz')
+        if not os.path.exists(localfile):
+            urlretrieve(distantfile, localfile)
+        tar = tarfile.open(localfile)
+        tar.extract('nsMCDLibrary/nsMCDLibrary.so', path = tempfile.gettempdir())
+        self.dllname = os.path.join(tempfile.gettempdir(),'nsMCDLibrary/nsMCDLibrary.so')
+        
+    
+    def test_with_multichannel(self):
+        
+        filename0 = self.get_filename_path(self.files_to_download[0])
+        reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
+        blocks = reader.read()
+
+    
+
+    
+    
 
 
 if __name__ == "__main__":
