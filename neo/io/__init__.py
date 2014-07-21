@@ -78,7 +78,7 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
-#from neo.io.elphyio import ElphyIO
+from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.micromedio import MicromedIO
@@ -109,7 +109,7 @@ iolist = [AlphaOmegaIO,
           BrainwareF32IO,
           BrainwareSrcIO,
           ElanIO,
-          #ElphyIO,
+          ElphyIO,
           ExampleIO,
           KlustaKwikIO,
           MicromedIO,
