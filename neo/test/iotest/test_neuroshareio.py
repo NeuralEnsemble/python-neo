@@ -6,8 +6,10 @@ Tests of neo.io.neuroshareio
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
 
+import sys
 import os
 import tarfile
+import zipfile
 import tempfile
 
 try:
@@ -33,14 +35,25 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     
     def setUp(self):
         BaseTestIO.setUp(self)
-        
-        distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
-        localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux64_3.7b.tar.gz')
-        if not os.path.exists(localfile):
-            urlretrieve(distantfile, localfile)
-        tar = tarfile.open(localfile)
-        tar.extract('nsMCDLibrary/nsMCDLibrary.so', path = tempfile.gettempdir())
-        self.dllname = os.path.join(tempfile.gettempdir(),'nsMCDLibrary/nsMCDLibrary.so')
+        if sys.platform.startswith('win'):
+            distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_3.7b.zip'
+            localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_3.7b.zip')
+            if not os.path.exists(localfile):
+                urlretrieve(distantfile, localfile)
+            self.dllname = os.path.join(tempfile.gettempdir(),'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll')
+            if not os.path.exists(self.dllname):
+                zip = zipfile.ZipFile(localfile)
+                zip.extract('Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll', path = tempfile.gettempdir())
+
+        elif sys.platform.startswith('linux'):
+            distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
+            localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux64_3.7b.tar.gz')
+            if not os.path.exists(localfile):
+                urlretrieve(distantfile, localfile)
+            self.dllname = os.path.join(tempfile.gettempdir(),'nsMCDLibrary/nsMCDLibrary.so')
+            if not os.path.exists(self.dllname):
+                tar = tarfile.open(localfile)
+                tar.extract('nsMCDLibrary/nsMCDLibrary.so', path = tempfile.gettempdir())
         
     
     def test_with_multichannel(self):
@@ -48,11 +61,6 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
         filename0 = self.get_filename_path(self.files_to_download[0])
         reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
         blocks = reader.read()
-
-    
-
-    
-    
 
 
 if __name__ == "__main__":
