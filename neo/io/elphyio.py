@@ -92,7 +92,7 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
-                      AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
+                      AnalogSignal, AnalogSignalArray, Event, SpikeTrain)
 
 # --------------------------------------------------------
 # OBJECTS
@@ -3678,7 +3678,7 @@ class ElphyIO(BaseIO):
     - :class:`Segment`
     - :class:`RecordingChannel`
     - :class:`RecordingChannelGroup`
-    - :class:`EventArray`
+    - :class:`Event`
     - :class:`SpikeTrain`
 
     Usage:
@@ -3687,7 +3687,7 @@ class ElphyIO(BaseIO):
         >>> seg = r.read_block(lazy=False, cascade=True)
         >>> print(seg.analogsignals)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(seg.spiketrains)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        >>> print(seg.eventarrays)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        >>> print(seg.events)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(anasig._data_description)
         >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
 
@@ -4226,7 +4226,7 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_eventarray( self, episode, evt ):
+    def read_event( self, episode, evt ):
         """
         Internal method used to return a list of elphy :class:`EventArray` acquired from event channels.
 
@@ -4236,11 +4236,11 @@ class ElphyIO(BaseIO):
             evt : index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
-        event_array = EventArray(
+        neo_event = Event(
             times=event.times * pq.s,
             channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
         )
-        return event_array
+        return neo_event
     
 
 

@@ -9,7 +9,7 @@ Supported: Read
 
 #TODO:
 SpikeTrain file   '.clu'  '.res'
-EventArray  '.ext.evt'  or '.evt.ext'
+Event  '.ext.evt'  or '.evt.ext'
 
 Author: sgarcia
 
