@@ -34,6 +34,41 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
+ns_OK = 0 #Function successful
+ns_LIBERROR = -1 #Generic linked library error
+ns_TYPEERROR = -2 #Library unable to open file type
+ns_FILEERROR = -3 #File access or read error
+ns_BADFILE = -4 # Invalid file handle passed to function
+ns_BADENTITY = -5 #Invalid or inappropriate entity identifier specified
+ns_BADSOURCE = -6 #Invalid source identifier specified
+ns_BADINDEX = -7 #Invalid entity index specified
+
+
+class NeuroshareError( Exception ):
+    def __init__(self, lib, errno):
+        self.lib = lib
+        self.errno = errno
+        pszMsgBuffer = ctypes.create_string_buffer(256)
+        self.lib.ns_GetLastErrorMsg(pszMsgBuffer, ctypes.c_uint32(256))
+        errstr = '{}: {}'.format(errno, pszMsgBuffer.value)
+        Exception.__init__(self, errstr)
+
+class DllWithError():
+    def __init__(self, lib):
+        self.lib = lib
+    
+    def __getattr__(self, attr):
+        f = getattr(self.lib, attr)
+        return self.decorate_with_error(f)
+    
+    def decorate_with_error(self, f):
+        def func_with_error(*args):
+            errno = f(*args)
+            if errno != ns_OK:
+                raise NeuroshareError(self.lib, errno)
+            return errno
+        return func_with_error
+
 
 class NeuroshareIO(BaseIO):
     """
@@ -110,6 +145,8 @@ class NeuroshareIO(BaseIO):
             neuroshare = ctypes.windll.LoadLibrary(self.dllname)
         elif sys.platform.startswith('linux'):
             neuroshare = ctypes.cdll.LoadLibrary(self.dllname)
+        neuroshare = DllWithError(neuroshare)
+        
         #elif sys.platform.startswith('darwin'):
         
 
@@ -126,7 +163,7 @@ class NeuroshareIO(BaseIO):
         hFile = ctypes.c_uint32(0)
         neuroshare.ns_OpenFile(ctypes.c_char_p(self.filename) ,ctypes.byref(hFile))
         fileinfo = ns_FILEINFO()
-        neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo) , ctypes.sizeof(fileinfo))
+        print neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo) , ctypes.sizeof(fileinfo))
         
         # read all entities
         for dwEntityID in range(fileinfo.dwEntityCount):

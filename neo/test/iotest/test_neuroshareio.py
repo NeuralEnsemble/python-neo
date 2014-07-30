@@ -57,7 +57,6 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
         
     
     def test_with_multichannel(self):
-        
         filename0 = self.get_filename_path(self.files_to_download[0])
         reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
         blocks = reader.read()
