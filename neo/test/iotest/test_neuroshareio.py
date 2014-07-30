@@ -60,6 +60,9 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
         filename0 = self.get_filename_path(self.files_to_download[0])
         reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
         blocks = reader.read()
+        n = len(blocks[0].segments[0].analogsignals)
+        assert n == 2, \
+                    'For {} , nb AnalogSignal: {} (should be 2)'.format(self.files_to_download[0], n)
 
 
 if __name__ == "__main__":

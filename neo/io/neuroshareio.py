@@ -163,7 +163,7 @@ class NeuroshareIO(BaseIO):
         hFile = ctypes.c_uint32(0)
         neuroshare.ns_OpenFile(ctypes.c_char_p(self.filename) ,ctypes.byref(hFile))
         fileinfo = ns_FILEINFO()
-        print neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo) , ctypes.sizeof(fileinfo))
+        neuroshare.ns_GetFileInfo(hFile, ctypes.byref(fileinfo) , ctypes.sizeof(fileinfo))
         
         # read all entities
         for dwEntityID in range(fileinfo.dwEntityCount):
@@ -218,16 +218,12 @@ class NeuroshareIO(BaseIO):
                     pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
                     total_read = 0
                     while total_read< entityInfo.dwItemCount:
-                        #try:
                         dwStartIndex = ctypes.c_uint32(total_read)
                         dwStopIndex = ctypes.c_uint32(entityInfo.dwItemCount - total_read)
                         
                         neuroshare.ns_GetAnalogData( hFile,  dwEntityID,  dwStartIndex,
                                      dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
                         total_read += pdwContCount.value
-                        #except:
-                        #   pszMsgBuffer  = ctypes.create_string_buffer(" "*256)
-                        # neuroshare.ns_GetLastErrorMsg(ctypes.byref(pszMsgBuffer), 256)
                             
                     signal =  pq.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
 
