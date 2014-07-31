@@ -22,6 +22,7 @@ import sys
 
 import numpy as np
 import quantities as pq
+import itertools
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
@@ -30,14 +31,13 @@ from neo.io.tools import iteritems
 PY3K = (sys.version_info[0] == 3)
 
 
-def get_chunks(sizes, offsets, dt, fid):
-    sizes = (sizes -10)  * dt.itemsize
-    f = np.memmap(fid, mode = 'r', dtype = 'uint8')
-    all = [ ]
-    for s, o in zip(sizes, offsets):
-        all.append(f[o:o+s])
-    all = np.concatenate(all)
-    return all.view(dt)
+def get_chunks(sizes, offsets, big_array):
+    # offsets are octect count
+    # sizes are not!!
+    # so need this (I really do not knwo why...):
+    sizes = (sizes -10)  * 4 # 
+    all = np.concatenate([ big_array[o:o+s] for s, o in itertools.izip(sizes, offsets) ])
+    return all
 
 class TdtIO(BaseIO):
     """
@@ -123,16 +123,17 @@ class TdtIO(BaseIO):
                         ('dataformat','int32'),
                         ('frequency','float32'),
                     ]
-            tsq = np.memmap(tsq_filename, mode = 'r', dtype = dt)
+            tsq = np.fromfile(tsq_filename, dtype = dt)
             
             #0x8801: 'EVTYPE_MARK' give the global_start
             global_t_start = tsq[tsq['evtype']==0x8801]['timestamp'][0]
-            #print global_t_start, type(global_t_start)
-
-            
+           
             #TEV is the old data file
             if os.path.exists(os.path.join(subdir, tankname+'_'+blockname+'.tev')):
                 tev_filename = os.path.join(subdir, tankname+'_'+blockname+'.tev')
+                #tev_array = np.memmap(tev_filename, mode = 'r', dtype = 'uint8') # if memory problem use this instead
+                tev_array = np.fromfile(tev_filename, dtype = 'uint8')
+                
             else:
                 tev_filename = None
 
@@ -173,7 +174,7 @@ class TdtIO(BaseIO):
                                 else:
                                     times = (tsq[mask4]['timestamp'] - global_t_start) * pq.s
                                     dt = np.dtype(data_formats[ tsq[mask3]['dataformat'][0]])                                    
-                                    waveforms = get_chunks(tsq[mask4]['size'],tsq[mask4]['eventoffset'],dt,  tev_filename)
+                                    waveforms = get_chunks(tsq[mask4]['size'],tsq[mask4]['eventoffset'], tev_array).view(dt)
                                     waveforms = waveforms.reshape(nb_spike, -1, waveformsize)
                                     waveforms = waveforms * pq.mV
                                 if nb_spike>0:
@@ -184,7 +185,8 @@ class TdtIO(BaseIO):
                                 else:
                                     t_start = 0 *pq.s
                                     t_stop = 0 *pq.s
-                                st = SpikeTrain(times = times, name = str(sortcode),
+                                st = SpikeTrain(times = times, 
+                                                                name = 'Chan{} Code{}'.format(channel,sortcode),
                                                                 t_start = t_start,
                                                                 t_stop = t_stop,
                                                                 waveforms = waveforms,
@@ -207,13 +209,16 @@ class TdtIO(BaseIO):
                                     signame = code.decode('ascii')
                                 else:
                                     signame = code
-                                filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(channel)+'.sev')
-                                if not os.path.exists(filename):
-                                    filename = tev_filename
-                                signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],dt,  filename)
+                                sev_filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(channel)+'.sev')
+                                if os.path.exists(sev_filename):
+                                    #sig_array = np.memmap(sev_filename, mode = 'r', dtype = 'uint8') # if memory problem use this instead
+                                    sig_array = np.fromfile(sev_filename, dtype = 'uint8')
+                                else:
+                                    sig_array = tev_array
+                                signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
                             
                             anasig = AnalogSignal(signal = signal* pq.V,
-                                                                    name = code,
+                                                                    name = '{} {}'.format(code, channel),
                                                                     sampling_rate= sr * pq.Hz,
                                                                     t_start = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
                                                                     channel_index = int(channel))
@@ -244,6 +249,5 @@ data_formats = {
         2 : np.int16,
         3 : np.int8,
         4 : np.float64,
-        #~ 5 : ''
         }
 
