@@ -11,6 +11,7 @@ import os
 import tarfile
 import zipfile
 import tempfile
+import platform
 
 try:
     import unittest2 as unittest
@@ -40,10 +41,16 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
             localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_3.7b.zip')
             if not os.path.exists(localfile):
                 urlretrieve(distantfile, localfile)
-            self.dllname = os.path.join(tempfile.gettempdir(),'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll')
-            if not os.path.exists(self.dllname):
-                zip = zipfile.ZipFile(localfile)
-                zip.extract('Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll', path = tempfile.gettempdir())
+            if platform.architecture()[0].startswith('64'):
+                self.dllname = os.path.join(tempfile.gettempdir(),'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll')
+                if not os.path.exists(self.dllname):
+                    zip = zipfile.ZipFile(localfile)
+                    zip.extract('Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll', path = tempfile.gettempdir())
+            else:
+                self.dllname = os.path.join(tempfile.gettempdir(),'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll')
+                if not os.path.exists(self.dllname):
+                    zip = zipfile.ZipFile(localfile)
+                    zip.extract('Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll', path = tempfile.gettempdir())
 
         elif sys.platform.startswith('linux'):
             distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
