@@ -54,4 +54,4 @@ Thumbs.db
 
 # Things specific to this project #
 ###################################
-neo/test/io/files_for_tests
+neo/test/io/neurosharemergeio.py
