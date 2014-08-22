@@ -103,7 +103,7 @@ class NeuroshareIO(BaseIO):
 
         """
 
-        seg = Segment( file_origin = os.path.basename(self.filename), )
+        seg = Segment( file_origin = os.path.basename(self.filename) )
 
         neuroshare = ctypes.windll.LoadLibrary(self.dllname)
 
