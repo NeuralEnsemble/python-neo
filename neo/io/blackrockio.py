@@ -1836,6 +1836,9 @@ class BlackrockIO(BaseIO):
             # Determine position where analog data starts
             fileoffset = self.__file_nsx_header_end_pos[nsx_i]
 
+            # Handle offset between nsx signals indicated in nsx header
+            nsx_offset = 0
+
             # From version 2.2+, there is a header block to consider
             if float(self.parameters_nsx[nsx_i]['Version']) > 2.1:
                 try:
@@ -1848,12 +1851,12 @@ class BlackrockIO(BaseIO):
                     temp1 = np.fromfile(filehandle_nsx, count=1, dtype='b')
                     # Number of data points that follow (per channel!)
                     temp2 = np.fromfile(filehandle_nsx, count=2, dtype='i')
-                    # TODO: temp2[0] is the time stamp of the first sample ->
-                    # should be recognized!!!
                     if temp1[0] != 1 or \
                             temp2[1] != (self.__num_packets_nsx[nsx_i] + 1):
-                        raise Exception('blackrockio cannot handle files \
-                            with gaps (available in version 2.2+).')
+                        raise Exception(
+                            "blackrockio cannot handle files with gaps "
+                            "(available in version 2.2+).")
+                    nsx_offset = temp2[0]
 
                     # For 2.3 files, check that only one header block follows
                     # (i.e., no gaps) or, even better, deal with having more
@@ -1881,6 +1884,9 @@ class BlackrockIO(BaseIO):
                 # Start and end packet to read
                 if n_start_i is not None:
                     start_packet = int(((
+                        n_start_i / self.nsx_unit[nsx_i]).rescale(
+                            'dimensionless')).magnitude) - nsx_offset
+                    start_packet = int(((
                         n_start_i / self.nsx_unit[nsx_i]).simplified).base)
                     if start_packet < 0:
                         start_packet = 0
@@ -1890,6 +1896,9 @@ class BlackrockIO(BaseIO):
                     start_packet = 0
 
                 if n_stop_i is not None:
+                    end_packet = int(((
+                        n_stop_i / self.nsx_unit[nsx_i]).rescale(
+                            'dimensionless')).magnitude) - nsx_offset
                     end_packet = int(((
                         n_stop_i / self.nsx_unit[nsx_i]).simplified).base)
                     if end_packet < 0:
