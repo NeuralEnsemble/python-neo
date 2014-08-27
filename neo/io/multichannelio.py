@@ -34,7 +34,7 @@ else:
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
 
 # some tools to finalize the hierachy
 #from neo.io.tools import create_many_to_one_relationship
@@ -73,7 +73,7 @@ class MultichannelIO(BaseIO):
 #    # and 'label' (for a descriptive name).
 #    # Note that if the highest-level object requires parameters,
 #    # common_io_test will be skipped.
-#    read_params = {
+    read_params = {
 #        Segment : [
 #            ('segment_duration',
 #                {'value' : 15., 'label' : 'Segment size (s.)'}),
@@ -82,18 +82,16 @@ class MultichannelIO(BaseIO):
 #            ('num_spiketrain_by_channel',
 #                {'value' : 3, 'label' : 'Num of spiketrains'}),
 #            ],
-#        }
+        }
 #
-#    # do not supported write so no GUI stuff
-#    write_params       = None
-#
-#    name               = 'example'
-#
-#    extensions          = [ 'nof' ]
-#
-    # mode can be 'file' or 'dir' or 'fake' or 'database'
-    # the main case is 'file' but some reader are base on a directory or a database
-    # this info is for GUI stuff also
+    # do not supported write so no GUI stuff
+    write_params       = None
+
+    name               = 'Multichannel'
+
+    extensions          = [ 'mcd' ]
+
+    # This object operates on "*.mcd" files
     mode = 'file'
 
 
@@ -356,10 +354,10 @@ class MultichannelIO(BaseIO):
                 #append the time stamp to them empty list
                 tempTimeStamp.append(tempData)
                 #create an event array        
-            eva = EventArray(file_origin = self.filename,labels = tempNames,
-                        times = tempTimeStamp,
-                        description = 'here are stored all the trigger events'+
+            eva = EventArray(labels = np.array(tempNames,dtype = "S"),
+    			     times = np.array(tempTimeStamp)*pq.s,
+			     file_origin = self.filename,                            
+                             description = 'here are stored all the trigger events'+
                             '(without their durations) as detected by '+
                             'the Trigger detector tool in MCRack' )       
         return eva
-            
