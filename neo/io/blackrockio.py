@@ -110,7 +110,8 @@ class BlackrockIO(BaseIO):
     is_writable = False  # write is not supported
 
     # This IO can only manipulate continuous data, spikes, and events
-    supported_objects = [neo.Block, neo.Segment, neo.AnalogSignal,
+    supported_objects = [
+        neo.Block, neo.Segment, neo.AnalogSignal,
         neo.SpikeTrain, neo.EventArray, neo.RecordingChannelGroup,
         neo.RecordingChannel]
 
@@ -137,8 +138,8 @@ class BlackrockIO(BaseIO):
     #                    .ns2 -  1000 Hz
     #                    .ns1 -   500 Hz
     name = 'Blackrock'
-    description = 'This IO reads .nev/.nsX file of the Blackrock (Cerebus) \
-        recordings system ("Utah" array).'
+    description = "This IO reads .nev/.nsX file of the Blackrock (Cerebus) \
+        recordings system ('Utah' array)."
 
     extensions = ['ns' + str(_) for _ in range(1, 7)]
     extensions.append('nev')
@@ -157,8 +158,9 @@ class BlackrockIO(BaseIO):
                    "ns5": "analog data: 30000 Hz",
                    "ns6": "analog data: 30000 Hz (no digital filter)"}
 
-    def __init__(self, filename, nsx_override=None, nev_override=None,
-        print_diagnostic=False):
+    def __init__(
+            self, filename, nsx_override=None, nev_override=None,
+            print_diagnostic=False):
         """Initialize the BlackrockSession class and associate it to a file
         set.
 
@@ -210,7 +212,8 @@ class BlackrockIO(BaseIO):
         # Remember choice whether to print diagnostic messages or not
         self._print_diagnostic = print_diagnostic
         # Associate to the session
-        self._associate(sessionname=filename, nsx_override=nsx_override,
+        self._associate(
+            sessionname=filename, nsx_override=nsx_override,
             nev_override=nev_override)
         # For consistency with baseio
         self.filename = filename
@@ -280,8 +283,8 @@ class BlackrockIO(BaseIO):
 
             # Read list of channel IDs
             # unsigned int 32bit, little endian
-            self.channel_id_nsx[nsx] = struct.unpack('<' +
-                str(self.num_channels_nsx[nsx]) + 'I',
+            self.channel_id_nsx[nsx] = struct.unpack(
+                '<' + str(self.num_channels_nsx[nsx]) + 'I',
                 filehandle.read(4 * self.num_channels_nsx[nsx]))
             self.parameters_nsx[nsx]['ChannelIDs'] = \
                 list(self.channel_id_nsx[nsx])
@@ -328,8 +331,9 @@ class BlackrockIO(BaseIO):
 
             # Read date and time
             # 8 unsigned short 16bit, little endian
-            weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday',
-                'Friday', 'Saturday', 'Sunday']
+            weekdays = [
+                'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+                'Saturday', 'Sunday']
             date_time = struct.unpack('<8H', filehandle.read(16))
             self.parameters_nsx[nsx]['Date'] = str(date_time[1]) + '/' + \
                 str(date_time[3]) + '/' + str(date_time[0]) + ' ' + \
@@ -358,10 +362,10 @@ class BlackrockIO(BaseIO):
                     [{} for dummy in xrange(256)]
 
                 if filehandle.read(2) != 'CC':
-                    raise IOError("Expected channel block " +
-                        str(channel_i) +
-                        "in .nsX header, but did not encounter correct \
-                        block ID.")
+                    raise IOError(
+                        "Expected channel block " + str(channel_i) +
+                        "in .nsX header, but did not encounter correct "
+                        "block ID.")
 
                 # Read list of channel IDs
                 # unsigned short 16bit, little endian
@@ -398,14 +402,14 @@ class BlackrockIO(BaseIO):
                 # Minimal analog value (e.g., -5000 mV)
                 # unsigned short 16bit, little endian
                 (self.parameters_nsx_electrodes[nsx][el_id][
-                    'MinAnalogValue'],) = struct.unpack('<H',
-                    filehandle.read(2))
+                    'MinAnalogValue'],) = struct.unpack(
+                        '<H', filehandle.read(2))
 
                 # Maximum analog value (e.g., 5000 mV)
                 # unsigned short 16bit, little endian
                 (self.parameters_nsx_electrodes[nsx][el_id][
-                    'MaxAnalogValue'],) = struct.unpack('<H',
-                    filehandle.read(2))
+                    'MaxAnalogValue'],) = struct.unpack(
+                        '<H', filehandle.read(2))
 
                 # Read units string and remove 0's
                 self.parameters_nsx_electrodes[nsx][el_id][
@@ -414,14 +418,14 @@ class BlackrockIO(BaseIO):
                 # Read high frequency cut-off in mHz
                 # unsigned long  32bit, little endian
                 (self.parameters_nsx_electrodes[nsx][el_id][
-                    'HiFreqCorner'],) = struct.unpack('<I',
-                    filehandle.read(4))
+                    'HiFreqCorner'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned long  32bit, little endian
                 (self.parameters_nsx_electrodes[nsx][el_id][
-                    'HiFreqOrder'],) = struct.unpack('<I',
-                        filehandle.read(4))
+                    'HiFreqOrder'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned short 16bit, little endian
@@ -496,7 +500,7 @@ class BlackrockIO(BaseIO):
                 filehandle_sif.close()
             else:
                 self._diagnostic_print(
-                    "No .sif file was found for session " + \
+                    "No .sif file was found for session " +
                     self.associated_fileset + ".")
 
         elif self.parameters_nev['Version'] != '2.1':
@@ -529,8 +533,9 @@ class BlackrockIO(BaseIO):
 
         # Read date and time
         # 8 unsigned short 16bit, little endian
-        weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday',
-            'Friday', 'Saturday', 'Sunday']
+        weekdays = [
+            'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+            'Saturday', 'Sunday']
         date_time = struct.unpack('<8H', filehandle.read(16))
         self.parameters_nev['Date'] = str(date_time[1]) + '/' + \
             str(date_time[3]) + '/' + str(date_time[0]) + ' ' + \
@@ -608,59 +613,59 @@ class BlackrockIO(BaseIO):
                 # Read physical connector (bank A-D)
                 # unsigned byte 8bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'ConnectorID'],) = struct.unpack('<B',
-                    filehandle.read(1))
+                    'ConnectorID'],) = struct.unpack(
+                        '<B', filehandle.read(1))
 
                 # Read connector pin (pin number on connector, 1-37)
                 # unsigned byte 8bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'ConnectorPin'],) = struct.unpack('<B',
-                    filehandle.read(1))
+                    'ConnectorPin'],) = struct.unpack(
+                        '<B', filehandle.read(1))
 
                 # Read digitization factor in nV per LSB step
                 # unsigned short 16bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'DigitizationFactor'],) = struct.unpack('<H',
-                    filehandle.read(2))
+                    'DigitizationFactor'],) = struct.unpack(
+                        '<H', filehandle.read(2))
 
                 # Read energy threshold in nV per LSB step
                 # unsigned short 16bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'EnergyThreshold'],) = struct.unpack('<H',
-                    filehandle.read(2))
+                    'EnergyThreshold'],) = struct.unpack(
+                        '<H', filehandle.read(2))
 
                 # Read high threshold in µV
                 # signed short 16bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'AmpThresholdHi'],) = struct.unpack('<h',
-                    filehandle.read(2))
+                    'AmpThresholdHi'],) = struct.unpack(
+                        '<h', filehandle.read(2))
 
                 # Read low threshold in µV
                 # signed short 16bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'AmpThresholdLo'],) = struct.unpack('<h',
-                    filehandle.read(2))
+                    'AmpThresholdLo'],) = struct.unpack(
+                        '<h', filehandle.read(2))
 
                 # Read number of sorted units
                 # unsigned byte 8bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'NumSortedUnits'],) = struct.unpack('<B',
-                    filehandle.read(1))
+                    'NumSortedUnits'],) = struct.unpack(
+                        '<B', filehandle.read(1))
 
                 # Read number of bytes per waveform sample
                 # 0 or 1 both imply 1 byte, so convert a 0 to 1 for
                 # simplification
                 # unsigned byte 8bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'NumBytesPerWaveform'],) = struct.unpack('<B',
-                    filehandle.read(1))
+                    'NumBytesPerWaveform'],) = struct.unpack(
+                        '<B', filehandle.read(1))
                 self.parameters_nev_electrodes[el_id][
                     'NumBytesPerWaveform'] += \
                     (self.parameters_nev_electrodes[el_id][
-                    'NumBytesPerWaveform'] == 0)
+                        'NumBytesPerWaveform'] == 0)
                 self.__byte_per_waveform_sample[el_id] = \
                     self.parameters_nev_electrodes[
-                    el_id]['NumBytesPerWaveform']
+                        el_id]['NumBytesPerWaveform']
 
                 # Unused, 10 bytes
                 filehandle.read(10)
@@ -687,14 +692,14 @@ class BlackrockIO(BaseIO):
                 # Read high frequency cut-off in mHz
                 # unsigned long  32bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'HiFreqCorner'],) = struct.unpack('<I',
-                    filehandle.read(4))
+                    'HiFreqCorner'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned long  32bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'HiFreqOrder'],) = struct.unpack('<I',
-                    filehandle.read(4))
+                    'HiFreqOrder'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read high frequency filter order
                 # unsigned short 16bit, little endian
@@ -705,14 +710,14 @@ class BlackrockIO(BaseIO):
                 # Read low frequency cut-off in mHz
                 # unsigned long  32bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'LoFreqCorner'],) = struct.unpack('<I',
-                    filehandle.read(4))
+                    'LoFreqCorner'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read low frequency filter order
                 # unsigned long  32bit, little endian
                 (self.parameters_nev_electrodes[el_id][
-                    'LoFreqOrder'],) = struct.unpack('<I',
-                    filehandle.read(4))
+                    'LoFreqOrder'],) = struct.unpack(
+                        '<I', filehandle.read(4))
 
                 # Read low frequency filter order
                 # unsigned short 16bit, little endian
@@ -741,7 +746,8 @@ class BlackrockIO(BaseIO):
 
             elif fileextheader == 'NSASEXEV':
                 digital_enable_types = ('Disabled', 'Enabled')
-                analog_enable_types = ('Disabled', 'Enabled on Lo->Hi',
+                analog_enable_types = (
+                    'Disabled', 'Enabled on Lo->Hi',
                     'Enabled on Hi->Lo', 'Enabled on Lo<->Hi')
 
                 # Read frequency of periodic packet generation in ?? (unit), 0
@@ -772,8 +778,8 @@ class BlackrockIO(BaseIO):
                 filehandle.read(6)
 
             else:
-                self._diagnostic_print("Header ID " + fileextheader +
-                    " is not known.")
+                self._diagnostic_print(
+                    "Header ID " + fileextheader + " is not known.")
                 filehandle.read(24)
 
     def _associate(self, sessionname, nsx_override=None, nev_override=None):
@@ -800,8 +806,9 @@ class BlackrockIO(BaseIO):
 
         # If already associated, disassociate first
         if self.associated:
-            raise IOError("Trying to associate an already associated \
-                BlackrockIO object.")
+            raise IOError(
+                "Trying to associate an already associated "
+                "BlackrockIO object.")
 
         # Create parameter containers
         # Dictionary that holds different parameters read from the .nev file
@@ -827,18 +834,18 @@ class BlackrockIO(BaseIO):
         self.parameters_nev["SessionName"] = sessionname
 
         # Set base prefix for nsx and nev files
-        if nsx_override == None:
+        if nsx_override is None:
             self.nsx_fileprefix = sessionname
         else:
             self.nsx_fileprefix = nsx_override
-        if nev_override == None:
+        if nev_override is None:
             self.nev_fileprefix = sessionname
         else:
             self.nev_fileprefix = nev_override
 
-        #======================================================================
-        # # Scan NSx files
-        #======================================================================
+        # =====================================================================
+        # Scan NSx files
+        # =====================================================================
 
         # List of sampling resolution of different nsX files
         self.analog_res = 10 * [0]
@@ -878,39 +885,40 @@ class BlackrockIO(BaseIO):
                 # Calculate number of data points and jump to end of headers
                 filehandle.seek(0, os.SEEK_END)
                 self.__file_nsx_end_pos[nsx_i] = filehandle.tell()
-                filehandle.seek(self.__file_nsx_header_end_pos[nsx_i],
-                    os.SEEK_SET)
+                filehandle.seek(
+                    self.__file_nsx_header_end_pos[nsx_i], os.SEEK_SET)
 
                 # Number of data packets per channel in file (each value:16bit)
                 # Subtracting 1 in order not to take the last sample in case
                 # it's incomplete
                 self.__num_packets_nsx[nsx_i] = \
                     (self.__file_nsx_end_pos[nsx_i] -
-                    self.__file_nsx_header_end_pos[nsx_i]) / \
+                        self.__file_nsx_header_end_pos[nsx_i]) / \
                     (2 * self.num_channels_nsx[nsx_i]) - 1
 
                 if (self.__file_nsx_end_pos[nsx_i] -
                         self.__file_nsx_header_end_pos[nsx_i]) % \
                         (2 * self.num_channels_nsx[nsx_i]) != 0:
-                    self._diagnostic_print('Unequal number of packets \
-                        per channel in file .ns' + str(nsx_i) + '.')
+                    self._diagnostic_print(
+                        "Unequal number of packets per channel in file .ns" +
+                        str(nsx_i) + ".")
 
                 filehandle.close()
 
             # Create units for all .nsX
             self.nsx_unit = {}
             for nsx_i in self.nsx_avail:
-                self.nsx_unit[nsx_i] = pq.CompoundUnit("1.0/" + \
-                    str(self.analog_res[nsx_i]) + "*s")
+                self.nsx_unit[nsx_i] = pq.CompoundUnit(
+                    "1.0/" + str(self.analog_res[nsx_i]) + "*s")
 
         # Print a warning if no .nsX are found
         if len(self.nsx_avail) == 0:
-            self._diagnostic_print("No .nsX files were found \
-                for session " + sessionname + ".")
+            self._diagnostic_print(
+                "No .nsX files were found for session " + sessionname + ".")
 
-        #======================================================================
+        # =====================================================================
         # Open NEV file
-        #======================================================================
+        # =====================================================================
 
         # Channels in .nev file
         self.channel_id_nev = []
@@ -921,15 +929,15 @@ class BlackrockIO(BaseIO):
         # Does the .nev file exist?
         if not os.path.exists(filename_nev):
             self.nev_avail = False
-            self._diagnostic_print("No .nev file was found \
-                for session " + sessionname + ".")
+            self._diagnostic_print(
+                "No .nev file was found for session " + sessionname + ".")
         else:
             self.nev_avail = True
             self._diagnostic_print("Scanning " + filename_nev + ".")
 
-            #==================================================================
+            # =================================================================
             # Read headers
-            #==================================================================
+            # =================================================================
 
             filehandle = open(filename_nev, 'rb')
             # Read basic header block
@@ -940,12 +948,13 @@ class BlackrockIO(BaseIO):
             self.__read_nev_ext_header(filehandle)
             # Is the file in a consistent state?
             if not self.__file_nev_ext_header_end_pos == filehandle.tell():
-                raise IOError("The .nev file for session " + sessionname + \
+                raise IOError(
+                    "The .nev file for session " + sessionname +
                     " is corrupt.")
 
-            #==================================================================
+            # =================================================================
             # Read data packets and read all markers
-            #==================================================================
+            # =================================================================
 
             # Calculate number of data points from the end of the header to
             # the end of the file
@@ -962,7 +971,8 @@ class BlackrockIO(BaseIO):
                     for session " + sessionname + " is invalid.")
 
             # Number of data packets in file (each value is 16bit)
-            self.__num_packets_nev = (self.__file_nev_end_pos -
+            self.__num_packets_nev = (
+                self.__file_nev_end_pos -
                 self.__file_nev_ext_header_end_pos) / self.__packet_bytes
 
             # Pre-read buffer for faster input
@@ -1017,9 +1027,9 @@ class BlackrockIO(BaseIO):
                 (self.__num_packets_nev, self.__packet_bytes), order='C')
             self._event_class_or_reason = buf[:, 6].astype('int')
 
-            #==================================================================
+            # =================================================================
             # Determine the neuron IDs present for each electrode
-            #==================================================================
+            # =================================================================
 
             # Pre-allocate for each electrode
             self._unit_ids = [[] for _ in range(256)]
@@ -1027,8 +1037,9 @@ class BlackrockIO(BaseIO):
             # Calculate on which channels there are spike events (electrodes
             # in the file are 1-2048 (V<2.3: 1-256))
             self.channel_id_nev = list(np.unique(self._event_packet_id[
-                np.logical_and(self._event_packet_id >= 1,
-                self._event_packet_id <= 2048)]))
+                np.logical_and(
+                    self._event_packet_id >= 1,
+                    self._event_packet_id <= 2048)]))
 
             # Determine number of neurons per channel, and sorted IDs
             # Note that this list uses python indexing, i.e., electrode is at
@@ -1036,14 +1047,14 @@ class BlackrockIO(BaseIO):
             for electrode_i in self.channel_id_nev:
                 self._unit_ids[electrode_i - 1] = np.unique(
                     self._event_class_or_reason[
-                    self._event_packet_id == electrode_i])
+                        self._event_packet_id == electrode_i])
 
             # Calculate indices for all spike events
             (self._spike_index,) = np.nonzero(self._event_packet_id)
 
-            #==================================================================
+            # =================================================================
             # Determine comment markers
-            #==================================================================
+            # =================================================================
 
             # Calculate indices for all comments
             (self._comment_index,) = \
@@ -1077,9 +1088,9 @@ class BlackrockIO(BaseIO):
                         marker_idx, 12:self.__packet_bytes - 12].tostring(),
                         encoding='utf16', errors='ignore')
 
-            #==================================================================
+            # =================================================================
             # Determine the digital marker IDs present in the session
-            #==================================================================
+            # =================================================================
 
             # For each marker that is digital, record its value
             (self._digital_marker_index,) = np.nonzero(np.logical_and(
@@ -1089,9 +1100,9 @@ class BlackrockIO(BaseIO):
             self._digital_marker_ids = np.unique(
                 self._event_digital_marker[self._digital_marker_index])
 
-            #==================================================================
+            # =================================================================
             # Determine the analog marker IDs present in the session
-            #==================================================================
+            # =================================================================
 
             # Pre-allocate for 5 analog channels
             self._analog_marker_index = 5 * [None]
@@ -1100,12 +1111,14 @@ class BlackrockIO(BaseIO):
             # Calculate indices for analog marker events
             for analog_i in range(0, 5):
                 (self._analog_marker_index[analog_i],) = np.nonzero(
-                    np.logical_and(self._event_packet_id == 0,
-                    np.bitwise_and(self._event_class_or_reason,
-                    2 ** (analog_i + 1))))
+                    np.logical_and(
+                        self._event_packet_id == 0,
+                        np.bitwise_and(
+                            self._event_class_or_reason,
+                            2 ** (analog_i + 1))))
                 self._analog_marker_ids[analog_i] = np.unique(
                     self._event_analog_marker[
-                    self._analog_marker_index[analog_i], analog_i])
+                        self._analog_marker_index[analog_i], analog_i])
 
             filehandle.close()
 
@@ -1115,9 +1128,9 @@ class BlackrockIO(BaseIO):
             self.waveform_unit = pq.CompoundUnit(
                 '1.0/' + str(self.waveform_res) + '*s')
 
-        #======================================================================
+        # =====================================================================
         # Finalize association
-        #======================================================================
+        # =====================================================================
 
         # This object is now successfully associated with a session
         self.associated = True
@@ -1137,7 +1150,7 @@ class BlackrockIO(BaseIO):
                 List containing all neuron IDs of the specified electrode.
         '''
 
-        if electrode < 1  or electrode > 2048:
+        if electrode < 1 or electrode > 2048:
             raise Exception("Invalid electrode ID specified.")
 
         return self._unit_ids[electrode - 1]
@@ -1192,8 +1205,8 @@ class BlackrockIO(BaseIO):
         '''
 
         if self.nev_avail:
-            tstop = pq.Quantity(np.max(self._event_timestamps + 1),
-                self.nev_unit, dtype=int)
+            tstop = pq.Quantity(np.max(
+                self._event_timestamps + 1), self.nev_unit, dtype=int)
         else:
             tstop = pq.Quantity(0, pq.s, dtype=int)
         for nsx_i in self.nsx_avail:
@@ -1204,9 +1217,9 @@ class BlackrockIO(BaseIO):
 
         return tstop
 
-    def read_block(self, lazy=False, cascade=True,
-        n_starts=[None], n_stops=[None], channel_list=[], nsx=[],
-        units=[], events=False, waveforms=False):
+    def read_block(
+            self, lazy=False, cascade=True, n_starts=[None], n_stops=[None],
+            channel_list=[], nsx=[], units=[], events=False, waveforms=False):
         """Reads file contents as a neo Block.
 
         The Block contains one Segment for each entry in zip(n_starts,
@@ -1395,25 +1408,25 @@ class BlackrockIO(BaseIO):
         if not self.associated:
             raise IOError("Cannot load from unassociated session.")
 
-        #======================================================================
+        # =====================================================================
         # Input checking and correcting
-        #======================================================================
+        # =====================================================================
 
         # For lazy users that specify x,x instead of [x],[x]
         # for n_starts,n_stops
-        if n_starts == None:
+        if n_starts is None:
             n_starts = [None]
         elif type(n_starts) == pq.Quantity:
             n_starts = [n_starts]
-        elif type(n_starts) != list or any([(type(i) != \
-                pq.Quantity and i != None) for i in n_starts]):
+        elif type(n_starts) != list or any([
+                (type(i) != pq.Quantity and i is not None) for i in n_starts]):
             raise ValueError('Invalid specification of n_starts.')
-        if n_stops == None:
+        if n_stops is None:
             n_stops = [None]
         elif type(n_stops) == pq.Quantity:
             n_stops = [n_stops]
-        elif type(n_stops) != list or any([(type(i) != \
-                pq.Quantity and i != None) for i in n_stops]):
+        elif type(n_stops) != list or any([
+                (type(i) != pq.Quantity and i is not None) for i in n_stops]):
             raise ValueError('Invalid specification of n_stops.')
 
         # Use all .nsx files?
@@ -1421,7 +1434,7 @@ class BlackrockIO(BaseIO):
             nsx = self.nsx_avail
 
         # If no nsx is specified, convert to an empty list (no nsx files)
-        if nsx == None:
+        if nsx is None:
             nsx = []
 
         # Also permit lazy specification for list of nsx
@@ -1440,7 +1453,7 @@ class BlackrockIO(BaseIO):
             channel_list = list(np.unique(channel_list))
 
         # If no channels are specified, then transform to an empty list
-        if channel_list == None:
+        if channel_list is None:
             channel_list = []
 
         if type(channel_list) != list:
@@ -1449,19 +1462,20 @@ class BlackrockIO(BaseIO):
         # Make sure the requested .nsX file exists
         for nsx_i in nsx:
             if nsx_i not in self.nsx_avail:
-                raise IOError("Data at requested sampling frequency \
-                not found (.ns" + str(nsx_i) + ").")
+                raise IOError(
+                    "Data at requested sampling frequency not found (.ns" +
+                    str(nsx_i) + ").")
 
         # Make sure the requested .nev exists
-        if (units != None or events) and not self.nev_avail:
-            raise IOError("Requested spiking data and/or events \
-            not found (.nev).")
+        if (units is not None or events) and not self.nev_avail:
+            raise IOError(
+                "Requested spiking data and/or events not found (.nev).")
 
         # Set of all unit IDs that are requested on at least one channel
         complete_unit_ids = set([])
 
         # Find IDs of all units if complete spike data is requested
-        if units == None:
+        if units is None:
             # Select no units
             units = {}
             for channel_i in channel_list:
@@ -1484,7 +1498,7 @@ class BlackrockIO(BaseIO):
         elif type(units) == dict:
             # Fill dictionary with missing entries
             for channel_i in channel_list:
-                if not channel_i in units:
+                if channel_i not in units:
                     units[channel_i] = []
                 if type(units[channel_i]) == int:
                     units[channel_i] = [units[channel_i]]
@@ -1500,9 +1514,9 @@ class BlackrockIO(BaseIO):
         if not type(waveforms) == bool:
             raise ValueError('Invalid specification of waveforms.')
 
-        #======================================================================
+        # =====================================================================
         # Preparations and pre-calculations
-        #======================================================================
+        # =====================================================================
 
         # A list containing the start and stop times (as Quantity) for each
         # segment - used later in creating neo Spiketrain objects
@@ -1537,7 +1551,7 @@ class BlackrockIO(BaseIO):
         for (seg_i, n_start_i, n_stop_i) in \
                 zip(range(len(n_starts)), n_starts, n_stops):
             # Make sure start time < end time
-            if n_start_i != None and n_stop_i != None and \
+            if n_start_i is not None and n_stop_i is not None and \
                     n_start_i >= n_stop_i:
                 raise ValueError("An n_starts value is larger than the \
                     corresponding n_stops value.")
@@ -1546,14 +1560,14 @@ class BlackrockIO(BaseIO):
             # try to find out the total length of recording as good as possible
             # (last event or last sample in analog signal)
             # Also determine start and end packets in nev time stamps
-            if n_start_i == None:
+            if n_start_i is None:
                 tstart.append(pq.Quantity(0, self.nev_unit, dtype=int))
                 start_packet = 0
             else:
                 tstart.append(n_start_i)
                 start_packet = int(((
                     n_start_i / self.nev_unit).simplified).base)
-            if n_stop_i == None:
+            if n_stop_i is None:
                 tstop.append(self.get_max_time())
                 # Note: add 1 to get last sample as well (not inclusive)
                 end_packet = max(self._event_timestamps) + 1
@@ -1574,7 +1588,8 @@ class BlackrockIO(BaseIO):
             # Pre-calculate the indices of nev time stamps corresponding to
             # the segment
             # Obey pythonic indexing: sample end_packet is not considered!
-            t_idx.append((self._event_timestamps >= start_packet) &
+            t_idx.append(
+                (self._event_timestamps >= start_packet) &
                 (self._event_timestamps < end_packet))
 
         # Create a dictionary of recording channels,
@@ -1633,26 +1648,27 @@ class BlackrockIO(BaseIO):
             filename_nev = self.nev_fileprefix + '.nev'
             # The .nev must still exist
             if not os.path.isfile(filename_nev):
-                raise IOError(".nev file for session " + \
-                    self.associated_fileset + " not found.")
+                raise IOError(
+                    ".nev file for session " + self.associated_fileset +
+                    " not found.")
 
             try:
                 # Open the .nev file
                 filehandle_nev = open(filename_nev, 'rb')
 
                 # Pre-read buffer for faster input
-                filehandle_nev.seek(self.__file_nev_ext_header_end_pos,
-                    os.SEEK_SET)
+                filehandle_nev.seek(
+                    self.__file_nev_ext_header_end_pos, os.SEEK_SET)
                 filebuffer = filehandle_nev.read(
                     self.__packet_bytes * self.__num_packets_nev)
             finally:
                 filehandle_nev.close()
 
-        #======================================================================
+        # =====================================================================
         # Read neo Block
-        #======================================================================
+        # =====================================================================
 
-        #----------------------------------------------------- Load nev data
+        # ---------------------------------------------------- Load nev data
 
         # To avoid unnecessary conversions when all channels have waveforms
         # sampled at the same bandwidth
@@ -1693,7 +1709,8 @@ class BlackrockIO(BaseIO):
                     #    unsigned byte 8bit, little endian
                     #  waveform:
                     #    (__packet_bytes-8) unsig. bytes 8bit, little endian
-                    wfbuf = np.frombuffer(filebuffer, count=-1,
+                    wfbuf = np.frombuffer(
+                        filebuffer, count=-1,
                         dtype=datatypes[numbytes]).reshape(
                             (-1, self.__packet_bytes / numbytes), order='C')[
                             :, (8 / numbytes):self.__packet_bytes / numbytes]
@@ -1706,7 +1723,8 @@ class BlackrockIO(BaseIO):
                     combi_idx = ch_idx & t_idx[seg_i] & u_idx[unit_i]
 
                     if not lazy:
-                        data = pq.Quantity(self._event_timestamps[combi_idx],
+                        data = pq.Quantity(
+                            self._event_timestamps[combi_idx],
                             units=self.nev_unit)
                     else:
                         data = pq.Quantity([], units=self.nev_unit)
@@ -1718,8 +1736,9 @@ class BlackrockIO(BaseIO):
                         t_start=tstart[seg_i],
                         t_stop=tstop[seg_i],
                         sampling_rate=self.nev_unit,
-                        name="Segment " + str(seg_i) + ", Channel " + \
-                            str(channel_i) + ", Unit " + str(unit_i),
+                        name=(
+                            "Segment " + str(seg_i) + ", Channel " +
+                            str(channel_i) + ", Unit " + str(unit_i)),
                         file_origin=self.associated_fileset,
                         unit_id=unit_i,
                         channel_id=channel_i)
@@ -1745,13 +1764,13 @@ class BlackrockIO(BaseIO):
                     # Extract all time stamps of digital markers
                     marker_idx = self._digital_marker_index[np.logical_and(
                         self._event_digital_marker[
-                        self._digital_marker_index] == marker_i,
+                            self._digital_marker_index] == marker_i,
                         t_idx[seg_i][self._digital_marker_index])]
 
                     ev = neo.EventArray(
                         times=pq.Quantity(
-                        self._event_timestamps[marker_idx],
-                        units=self.nev_unit, dtype="int"),
+                            self._event_timestamps[marker_idx],
+                            units=self.nev_unit, dtype="int"),
                         labels=np.tile(str(marker_i), (len(marker_idx))),
                         name="Digital Marker " + str(marker_i),
                         file_origin=self.associated_fileset,
@@ -1767,18 +1786,20 @@ class BlackrockIO(BaseIO):
                         # analog_channel_i
                         marker_idx = self._analog_marker_index[
                             analog_channel_i][np.logical_and(
-                                self._event_analog_marker[
-                                analog_channel_i][self._analog_marker_index[
-                                    analog_channel_i]] == marker_i,
-                            t_idx[seg_i][
-                                self._analog_marker_index[analog_channel_i]])]
+                                self._event_analog_marker[analog_channel_i][
+                                    self._analog_marker_index[
+                                        analog_channel_i]] == marker_i,
+                                t_idx[seg_i][
+                                    self._analog_marker_index[
+                                        analog_channel_i]])]
 
                         ev = neo.EventArray(
                             times=pq.Quantity(
                                 self._event_timestamps[marker_idx],
-                            units=self.nev_unit, dtype="int"),
-                            name="Analog Channel " + str(analog_channel_i) + \
-                                ", Marker " + str(marker_i),
+                                units=self.nev_unit, dtype='int'),
+                            name=(
+                                "Analog Channel " + str(analog_channel_i) +
+                                ", Marker " + str(marker_i)),
                             labels=np.tile(str(marker_i), (len(marker_idx))),
                             marker_id=marker_i,
                             digital_marker=False,
@@ -1792,7 +1813,7 @@ class BlackrockIO(BaseIO):
                         ev = neo.EventArray(
                             times=pq.Quantity(
                                 self._event_timestamps[marker_idx],
-                            units=self.nev_unit, dtype="int"),
+                                units=self.nev_unit, dtype="int"),
                             name="Comment " + str(marker_i),
                             labels=str(marker_i),
                             comment=self._comment[marker_idx],
@@ -1800,7 +1821,7 @@ class BlackrockIO(BaseIO):
                                 marker_idx])
                         seg[seg_i].events.append(ev)
 
-        #----------------------------------------------------- Load nsX data
+        # ---------------------------------------------------- Load nsX data
 
         for nsx_i in nsx:
             # Construct the filename of the .nsX file
@@ -1808,7 +1829,8 @@ class BlackrockIO(BaseIO):
 
             # The .nsX must still exist
             if not os.path.isfile(filename_nsx):
-                raise IOError(".ns" + str(nsx_i) + " file for session " + \
+                raise IOError(
+                    ".ns" + str(nsx_i) + " file for session " +
                     self.associated_fileset + " not found.")
 
             # Determine position where analog data starts
@@ -1846,15 +1868,18 @@ class BlackrockIO(BaseIO):
             # Explicitely mention the number of bytes to read from the
             # file using count=... because we disregard the last sample
             # point (see definition of self.__num_packets_nsx above)
-            analogbuf = np.memmap(filename_nsx, dtype='<h', mode='r',
-                offset=fileoffset, shape=(self.__num_packets_nsx[nsx_i],
+            analogbuf = np.memmap(
+                filename_nsx, dtype='<h', mode='r',
+                offset=fileoffset,
+                shape=(
+                    self.__num_packets_nsx[nsx_i],
                     self.num_channels_nsx[nsx_i]))
 
             # Go through all time periods
             for (seg_i, n_start_i, n_stop_i) \
                     in zip(range(len(n_starts)), n_starts, n_stops):
                 # Start and end packet to read
-                if n_start_i != None:
+                if n_start_i is not None:
                     start_packet = int(((
                         n_start_i / self.nsx_unit[nsx_i]).simplified).base)
                     if start_packet < 0:
@@ -1864,9 +1889,9 @@ class BlackrockIO(BaseIO):
                 else:
                     start_packet = 0
 
-                if n_stop_i != None:
-                    end_packet = int(((n_stop_i /
-                        self.nsx_unit[nsx_i]).simplified).base)
+                if n_stop_i is not None:
+                    end_packet = int(((
+                        n_stop_i / self.nsx_unit[nsx_i]).simplified).base)
                     if end_packet < 0:
                         end_packet = 0
                     if end_packet > self.__num_packets_nsx[nsx_i]:
@@ -1875,8 +1900,8 @@ class BlackrockIO(BaseIO):
                     end_packet = self.__num_packets_nsx[nsx_i]
 
                 # Load individual channels which are in this nsX
-                for channel_i in set(channel_list).intersection(
-                    self.channel_id_nsx[nsx_i]):
+                for channel_i in set(
+                        channel_list).intersection(self.channel_id_nsx[nsx_i]):
 
                     # Find position at which channel_i is stored
                     el_idx_i = self.channel_id_nsx[nsx_i].index(channel_i)
@@ -1901,21 +1926,24 @@ class BlackrockIO(BaseIO):
                         # for other reasons, return channel data without unit
                         # attached (i.e., in voltage steps)
                         LFPunit = pq.dimensionless
-                        self._diagnostic_print("Warning: Channel " +
-                            str(el_idx_i) + " does not have a digitization \
-                            factor -- data is dimensionless.")
+                        self._diagnostic_print(
+                            "Warning: Channel " + str(el_idx_i) +
+                            " does not have a digitization factor -- " +
+                            "data is dimensionless.")
 
                     if not lazy:
-                        data = pq.Quantity(analogbuf[start_packet:end_packet,
-                            el_idx_i].T, units=LFPunit)
+                        data = pq.Quantity(
+                            analogbuf[start_packet:end_packet, el_idx_i].T,
+                            units=LFPunit)
                     else:
                         data = pq.Quantity([], units=LFPunit)
 
-                    asig = neo.AnalogSignal(signal=data,
+                    # TODO: Use alternative to setting the period:
+                    # sampling_rate=pq.CompoundUnit(str(
+                    #     self.analog_res[nsx_i]) + ' * Hz'),
+                    asig = neo.AnalogSignal(
+                        signal=data,
                         sampling_period=self.nsx_unit[nsx_i],
-                        # Alternative:
-                        # sampling_rate=pq.CompoundUnit(str(
-                        # self.analog_res[nsx_i]) + ' * Hz'),
                         t_start=start_packet * self.nsx_unit[nsx_i],
                         name="Analog Signal Segment " + str(seg_i) +
                         ", Channel " + str(channel_i) + ", NSX " + str(nsx_i),
