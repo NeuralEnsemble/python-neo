@@ -122,16 +122,16 @@ class BlackrockIO(BaseIO):
         if os.path.exists(filename_nev):
             self.read_nev(filename_nev, seg, lazy, cascade, load_waveform = load_waveform)
         
-        #~ filename_sif = self.filename + '.sif'
-        #~ if os.path.exists(filename_sif):
-            #~ sif_header = self.read_sif(filename_sif)
+        filename_sif = self.filename + '.sif'
+        if os.path.exists(filename_sif):
+            sif_header = self.read_sif(filename_sif)
         
-        #~ for i in range(1,10):
-            #~ if nsx_num is not None and nsx_num!=i: continue
-            #~ filename_nsx = self.filename + '.ns'+str(i)
-            #~ if os.path.exists(filename_nsx):
-                #~ print i
-                #~ self.read_nsx(filename_nsx, seg, lazy, cascade)
+        for i in range(1,10):
+            if nsx_num is not None and nsx_num!=i: continue
+            filename_nsx = self.filename + '.ns'+str(i)
+            if os.path.exists(filename_nsx):
+                print i
+                self.read_nsx(filename_nsx, seg, lazy, cascade)
         
         return seg
 
