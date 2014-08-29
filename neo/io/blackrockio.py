@@ -130,7 +130,6 @@ class BlackrockIO(BaseIO):
             if nsx_num is not None and nsx_num!=i: continue
             filename_nsx = self.filename + '.ns'+str(i)
             if os.path.exists(filename_nsx):
-                print i
                 self.read_nsx(filename_nsx, seg, lazy, cascade)
         
         return seg
