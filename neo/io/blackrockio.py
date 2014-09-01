@@ -27,8 +27,9 @@ spike- and event-data; 30000 Hz
 
 
 TODO:
-   * synchro video
-    * tracking
+  * synchro video
+  * tracking
+  * Units for spiketrain
 
 """
 
@@ -263,13 +264,15 @@ class BlackrockIO(BaseIO):
 
         # get the dtype of waveform (this is stupidly complicated)
         if nev_header['additionnal_flag']&0x1:
-            dtype_waveforms = { k:'int16' for k in channel_ids }
+            #dtype_waveforms = { k:'int16' for k in channel_ids }
+            dtype_waveforms = dict( (k,'int16') for k in channel_ids)
         else:
             # there is a code electrodes by electrodes given the approiate dtype
             neuewav_header = ext_header['NEUEVWAV']
             dtype_waveform = dict(zip(neuewav_header['channel_id'], neuewav_header['num_bytes_per_waveform']))
             dtypes_conv = { 0: 'int8', 1 : 'int8', 2: 'int16', 4 : 'int32' }
-            dtype_waveforms = { k:dtypes_conv[v] for k,v in dtype_waveform.items() }
+            #dtype_waveforms = { k:dtypes_conv[v] for k,v in dtype_waveform.items() }
+            dtype_waveforms = dict( (k,dtypes_conv[v]) for k,v in dtype_waveform.items() )
         
         dt2 =   [('samplepos', 'uint32'),
                     ('id', 'uint16'), 
