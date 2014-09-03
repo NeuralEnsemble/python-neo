@@ -22,26 +22,28 @@ import quantities as pq
 try:
     import neuroshare as ns
 except ImportError as err:
-    print('\n neuroshare library not found, loading data will not work!' )
-    print('\n be sure to install the library found at:')
-    print('\n www.http://pythonhosted.org/neuroshare/')
+    print (err)
+    #print('\n neuroshare library not found, loading data will not work!' )
+    #print('\n be sure to install the library found at:')
+    #print('\n www.http://pythonhosted.org/neuroshare/')
 
 else:
-    print('neuroshare library successfully imported')
+    pass
+    #print('neuroshare library successfully imported')
 
 
 #import BaseIO
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
 # some tools to finalize the hierachy
 #from neo.io.tools import create_many_to_one_relationship
 
 
 # create an object based on BaseIO
-class MultichannelIO(BaseIO):
+class NeuroshareapiIO(BaseIO):
     """
     Class for "reading" data from *.mcd files (files generate with the MCRack
     software, distributed by Multichannelsystems company - Reutlingen, Germany).
@@ -87,12 +89,12 @@ class MultichannelIO(BaseIO):
     # do not supported write so no GUI stuff
     write_params       = None
 
-    name               = 'Multichannel'
+    name               = "Neuroshare"
 
-    extensions          = [ 'mcd' ]
+    extensions          = [ ]
 
     # This object operates on "*.mcd" files
-    mode = 'file'
+    mode = "file"
 
 
 
@@ -119,43 +121,43 @@ class MultichannelIO(BaseIO):
             #get all the metadata from file
             self.metadata = self.fd.metadata_raw
             #get sampling rate
-            self.metadata['sampRate'] = 1./self.metadata['TimeStampResolution']#hz
+            self.metadata["sampRate"] = 1./self.metadata["TimeStampResolution"]#hz
             #create lists and array for electrode, spike cutouts and trigger channels
-            self.metadata['elecChannels'] = list()
-            self.metadata['elecChanId']   = list()
-            self.metadata['num_analogs']  = 0
-            self.metadata['spkChannels']  = list()
-            self.metadata['spkChanId']    = list()
-            self.metadata['num_spkChans'] = 0
-            self.metadata['triggers']     = list()
-            self.metadata['triggersId']   = list()
-            self.metadata['num_trigs']    = 0
+            self.metadata["elecChannels"] = list()
+            self.metadata["elecChanId"]   = list()
+            self.metadata["num_analogs"]  = 0
+            self.metadata["spkChannels"]  = list()
+            self.metadata["spkChanId"]    = list()
+            self.metadata["num_spkChans"] = 0
+            self.metadata["triggers"]     = list()
+            self.metadata["triggersId"]   = list()
+            self.metadata["num_trigs"]    = 0
             #loop through all entities in file to get the indexes for each entity
             #type, so that one can run through the indexes later, upon reading the 
             #segment
             for entity in self.fd.entities:
                 #if entity is analog and not the digital line recording 
                 #(stored as analog in the *.mcd files) 
-                if entity.entity_type == analogID and entity.label[0:4]!= 'digi':
+                if entity.entity_type == analogID and entity.label[0:4]!= "digi":
                     #get the electrode number                    
-                    self.metadata['elecChannels'].append(entity.label[-4:])
+                    self.metadata["elecChannels"].append(entity.label[-4:])
                     #get the electrode index
-                    self.metadata['elecChanId'].append(entity.id)
+                    self.metadata["elecChanId"].append(entity.id)
                     #increase the number of electrodes found
-                    self.metadata['num_analogs'] += 1
+                    self.metadata["num_analogs"] += 1
                 # if the entity is a event entitiy, but not the digital line,
-                if entity.entity_type == eventID and entity.label[-2:] != 'D1':
+                if entity.entity_type == eventID and entity.label[-2:] != "D1":
                     #get the digital bit/trigger number
-                    self.metadata['triggers'].append(entity.label[0:4]+entity.label[-4:])
+                    self.metadata["triggers"].append(entity.label[0:4]+entity.label[-4:])
                     #get the digital bit index
-                    self.metadata['triggersId'].append(entity.id)
+                    self.metadata["triggersId"].append(entity.id)
                     #increase the number of triggers found                    
-                    self.metadata['num_trigs'] += 1
+                    self.metadata["num_trigs"] += 1
                 #
-                if entity.entity_type == epochID and entity.label[0:4] == 'spks':
-                    self.metadata['spkChannels'].append(entity.label[-4:])
-                    self.metadata['spkChanId'].append(entity.id)
-                    self.metadata['num_spkChans'] += 1
+                if entity.entity_type == epochID and entity.label[0:4] == "spks":
+                    self.metadata["spkChannels"].append(entity.label[-4:])
+                    self.metadata["spkChanId"].append(entity.id)
+                    self.metadata["num_spkChans"] += 1
             
                     
     #create function to read segment
@@ -163,7 +165,7 @@ class MultichannelIO(BaseIO):
                      # the 2 first keyword arguments are imposed by neo.io API
                      lazy = False,
                      cascade = True,
-                     # all following arguments are decied by this IO and are free
+                     # all following arguments are decided by this IO and are free
                      t_start = 0.,
                      segment_duration = 0.,
                      #num_spiketrain_by_channel = 3,
@@ -180,42 +182,45 @@ class MultichannelIO(BaseIO):
         """
         #if no segment duration is given, use the complete file
         if segment_duration ==0.:
-            segment_duration=float(self.metadata['TimeSpan'])
+            segment_duration=float(self.metadata["TimeSpan"])
+        #if the segment duration is bigger than file, use the complete file
+        if segment_duration >=float(self.metadata["TimeSpan"]):
+            segment_duration=float(self.metadata["TimeSpan"])
         #time vector for generated signal
         #timevect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata['sampRate'])
 
         # create an empty segment
-        seg = Segment( name = 'segment from the MultichannelIO')
+        seg = Segment( name = "segment from the NeuroshareapiIO")
 
         if cascade:
             # read nested analosignal
             
-            if self.metadata['num_analogs'] == 0:
-                print ('no analog signals in this file!')
+            if self.metadata["num_analogs"] == 0:
+                print ("no analog signals in this file!")
             else:
                 #run through the number of analog channels found at the __init__ function
-                for i in range(self.metadata['num_analogs']):
+                for i in range(self.metadata["num_analogs"]):
                     #create an analog signal object for each channel found
                     ana = self.read_analogsignal( lazy = lazy , cascade = cascade ,
-                                             channel_index = self.metadata['elecChanId'][i],
+                                             channel_index = self.metadata["elecChanId"][i],
                                             segment_duration = segment_duration, t_start=t_start)
                     #add analog signal read to segment object
                     seg.analogsignals += [ ana ]
             
             # read triggers (in this case without any duration)
-            for i in range(self.metadata['num_trigs']):
+            for i in range(self.metadata["num_trigs"]):
                 #create event object for each trigger/bit found
                 eva = self.read_eventarray(lazy = lazy , cascade = cascade,
-                        channel_index = self.metadata['triggersId'][i])
+                        channel_index = self.metadata["triggersId"][i])
                 #add event object to segment
                 seg.eventarrays +=  [eva]
 
             # read nested spiketrain
             #run through all spike channels found
-            for i in range(self.metadata['num_spkChans']):
+            for i in range(self.metadata["num_spkChans"]):
                 #create spike object
                 sptr = self.read_spiketrain(lazy = lazy, cascade = cascade,
-                        channel_index = self.metadata['spkChanId'][i],
+                        channel_index = self.metadata["spkChanId"][i],
                         segment_duration = segment_duration,)
                 #add the spike object to segment
                 seg.spiketrains += [ sptr ]
@@ -241,11 +246,11 @@ class MultichannelIO(BaseIO):
         
         
         if lazy:
-            anasig = AnalogSignal([], units='V', sampling_rate =  self.metadata['sampRate'] * pq.Hz,
+            anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
                                   channel_index=channel_index)
             #create a dummie time vector                     
-            tvect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata['sampRate'])                                  
+            tvect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata["sampRate"])                                  
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = tvect.shape
         else:
@@ -257,9 +262,9 @@ class MultichannelIO(BaseIO):
             chanName = sig.label[-4:]
             
             #transform t_start into index (reading will start from this index)           
-            startat = int(t_start*self.metadata['sampRate'])
+            startat = int(t_start*self.metadata["sampRate"])
             #get the number of bins to read in
-            bins = int((segment_duration-t_start) * self.metadata['sampRate'])
+            bins = int((segment_duration-t_start) * self.metadata["sampRate"])
             
             #if the number of bins to read is bigger than 
             #the total number of bins, read only till the end of analog object
@@ -268,12 +273,12 @@ class MultichannelIO(BaseIO):
             #read the data from the sig object
             sig,_,_ = sig.get_data(index = startat, count = bins)
             #store it to the 'AnalogSignal' object
-            anasig = AnalogSignal(sig, units = sigUnits, sampling_rate=self.metadata['sampRate'] * pq.Hz,
+            anasig = AnalogSignal(sig, units = sigUnits, sampling_rate=self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
                                   channel_index=channel_index)
 
         # annotate from which electrode the signal comes from
-        anasig.annotate(info = 'signal from channel %s' %chanName )
+        anasig.annotate(info = "signal from channel %s" %chanName )
 
         return anasig
 
@@ -296,7 +301,7 @@ class MultichannelIO(BaseIO):
                 
 
         #sampling rate
-        sr = self.metadata['sampRate']
+        sr = self.metadata["sampRate"]
         
         # create a list to store spiketrain times
         times = list() 
@@ -325,11 +330,11 @@ class MultichannelIO(BaseIO):
             spiketr = SpikeTrain(times,units = pq.s, 
                          t_stop = t_start+segment_duration,
                          t_start = t_start*pq.s,
-                         name ='spikes from electrode'+tempSpks.label[-3:],
+                         name ="spikes from electrode"+tempSpks.label[-3:],
                          waveforms = waveforms*pq.volt,
                          sampling_rate = sr * pq.Hz,
                          file_origin = self.filename,
-                         annotate = ('channel_index:'+ str(channel_index)))
+                         annotate = ("channel_index:"+ str(channel_index)))
             
         return spiketr
 
@@ -357,7 +362,7 @@ class MultichannelIO(BaseIO):
             eva = EventArray(labels = np.array(tempNames,dtype = "S"),
     			     times = np.array(tempTimeStamp)*pq.s,
 			     file_origin = self.filename,                            
-                             description = 'here are stored all the trigger events'+
-                            '(without their durations) as detected by '+
-                            'the Trigger detector tool in MCRack' )       
+                             description = "here are stored all the trigger events"+
+                            "(without their durations)")       
         return eva
+            

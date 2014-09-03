@@ -70,7 +70,7 @@ class DllWithError():
         return func_with_error
 
 
-class NeuroshareIO(BaseIO):
+class NeurosharectypesIO(BaseIO):
     """
     Class for reading file trougth neuroshare API.
     The user need the DLLs in the path of the file format.
