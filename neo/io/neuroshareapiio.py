@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Class for "reading" data from *.mcd files (files generate with the MCRack
-software, distributed by Multichannelsystems company - Reutlingen, Germany).
+Class for "reading" data from Neuroshare compatible files (check neuroshare.org)
 It runs through the whole file and searches for: analog signals, spike cutouts,
 and trigger events (without duration)
 Depends on: Neuroshare API 0.9.1, numpy 1.6.1, quantities 0.10.1
@@ -38,23 +37,13 @@ from neo.io.baseio import BaseIO
 #import objects from neo.core
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
-# some tools to finalize the hierachy
-#from neo.io.tools import create_many_to_one_relationship
+#some tools to finalize the hierachy
+from neo.io.tools import create_many_to_one_relationship
 
 
 # create an object based on BaseIO
 class NeuroshareapiIO(BaseIO):
-    """
-    Class for "reading" data from *.mcd files (files generate with the MCRack
-    software, distributed by Multichannelsystems company - Reutlingen, Germany).
-    It runs through the whole file and searches for: analog signals, spike cutouts,
-    and trigger events (without duration)
-    Depends on: Neuroshare API 0.9.1, numpy 1.6.1, quantities 0.10.1
 
-    Supported: Read
-
-    Author: Andre Maia Chagas
-    """
     #setting some class parameters
     is_readable = True # This class can only read data
     is_writable = False # write is not supported
@@ -76,14 +65,15 @@ class NeuroshareapiIO(BaseIO):
 #    # Note that if the highest-level object requires parameters,
 #    # common_io_test will be skipped.
     read_params = {
-#        Segment : [
-#            ('segment_duration',
-#                {'value' : 15., 'label' : 'Segment size (s.)'}),
-#            ('num_analogsignal',
-#                {'value' : 8, 'label' : 'Number of recording points'}),
-#            ('num_spiketrain_by_channel',
-#                {'value' : 3, 'label' : 'Num of spiketrains'}),
-#            ],
+        Segment : [
+            ("segment_duration",{"value" : 0., "label" : "Segment size (s.)"}),
+            #("lazy",{"value" : False,"label" : "load in lazy mode?"}),
+            #("cascade",{"value" : True,"label" : "Cascade?"})
+#            ("num_analogsignal",
+#                {'value" : 8, "label" : "Number of recording points"}),
+#            ("num_spiketrain_by_channel',
+#                {"value" : 3, "label" : "Num of spiketrains"}),
+            ],
         }
 #
     # do not supported write so no GUI stuff
@@ -93,7 +83,7 @@ class NeuroshareapiIO(BaseIO):
 
     extensions          = [ ]
 
-    # This object operates on "*.mcd" files
+    # This object operates on neuroshare files
     mode = "file"
 
 
@@ -137,7 +127,7 @@ class NeuroshareapiIO(BaseIO):
             #segment
             for entity in self.fd.entities:
                 #if entity is analog and not the digital line recording 
-                #(stored as analog in the *.mcd files) 
+                #(stored as analog in neuroshare files) 
                 if entity.entity_type == analogID and entity.label[0:4]!= "digi":
                     #get the electrode number                    
                     self.metadata["elecChannels"].append(entity.label[-4:])
@@ -168,7 +158,6 @@ class NeuroshareapiIO(BaseIO):
                      # all following arguments are decided by this IO and are free
                      t_start = 0.,
                      segment_duration = 0.,
-                     #num_spiketrain_by_channel = 3,
                     ):
         """
         Return a Segment containing all analog and spike channels, as well as
@@ -225,10 +214,12 @@ class NeuroshareapiIO(BaseIO):
                 #add the spike object to segment
                 seg.spiketrains += [ sptr ]
 
-        #create_many_to_one_relationship(seg)
+        create_many_to_one_relationship(seg)
         return seg
 
-
+    """
+        With this IO AnalogSignal can be accessed directly with its channel number
+    """
     def read_analogsignal(self,
                           # the 2 first key arguments are imposed by neo.io API
                           lazy = False,
@@ -239,12 +230,15 @@ class NeuroshareapiIO(BaseIO):
                           #time in seconds to start reading from
                           t_start = 0.,
                           ):
-        """
-        With this IO AnalogSignal can e acces directly with its channel number
-
-        """
         
-        
+        #some controls:        
+        #if no segment duration is given, use the complete file
+        if segment_duration ==0.:
+            segment_duration=float(self.metadata["TimeSpan"])
+        #if the segment duration is bigger than file, use the complete file
+        if segment_duration >=float(self.metadata["TimeSpan"]):
+            segment_duration=float(self.metadata["TimeSpan"])
+            
         if lazy:
             anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
@@ -264,7 +258,7 @@ class NeuroshareapiIO(BaseIO):
             #transform t_start into index (reading will start from this index)           
             startat = int(t_start*self.metadata["sampRate"])
             #get the number of bins to read in
-            bins = int((segment_duration-t_start) * self.metadata["sampRate"])
+            bins = int((segment_duration+t_start) * self.metadata["sampRate"])
             
             #if the number of bins to read is bigger than 
             #the total number of bins, read only till the end of analog object
@@ -275,10 +269,11 @@ class NeuroshareapiIO(BaseIO):
             #store it to the 'AnalogSignal' object
             anasig = AnalogSignal(sig, units = sigUnits, sampling_rate=self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
+                                  t_stop = (t_start+segment_duration)*pq.s,
                                   channel_index=channel_index)
 
-        # annotate from which electrode the signal comes from
-        anasig.annotate(info = "signal from channel %s" %chanName )
+            # annotate from which electrode the signal comes from
+            anasig.annotate(info = "signal from channel %s" %chanName )
 
         return anasig
 
@@ -289,7 +284,7 @@ class NeuroshareapiIO(BaseIO):
                         # the 2 first key arguments are imposed by neo.io API
                         lazy = False,
                         cascade = True,
-                        segment_duration = 15.,
+                        segment_duration = 0.,
                         t_start = 0.,
                         channel_index = 0):
         """
@@ -297,9 +292,12 @@ class NeuroshareapiIO(BaseIO):
         specific channels as they are recorded. rather the fuunction gets the entity set
         by 'channel_index' which is set in the __init__ function (all spike channels)
         """
-
-                
-
+        
+                  
+        
+       
+        #t_stop
+        
         #sampling rate
         sr = self.metadata["sampRate"]
         
@@ -315,10 +313,16 @@ class NeuroshareapiIO(BaseIO):
         else:
             #get the spike data from a specific channel index
             tempSpks =  self.fd.get_entity(channel_index)    
+            #transform t_start into index (reading will start from this index) 
+            startat = tempSpks.get_index_by_time(t_start,0)#zero means closest index to value
+            #get the last index to read, using segment duration and t_start
+            endat = tempSpks.get_index_by_time(float(segment_duration+t_start),-1)#-1 means last index before time
+            numIndx = endat-startat
+            #get the end point using segment duration
             #create a numpy empty array to store the waveforms
-            waveforms=np.array(np.empty([tempSpks.item_count,tempSpks.max_sample_count]))
+            waveforms=np.array(np.zeros([numIndx,tempSpks.max_sample_count]))
             #loop through the data from the specific channel index
-            for i in range(tempSpks.item_count):
+            for i in range(numIndx):
                 #get cutout, timestamp, cutout duration, and spike unit
                 tempCuts,timeStamp,duration,unit = tempSpks.get_data(i)
                 #save the cutout in the waveform matrix
