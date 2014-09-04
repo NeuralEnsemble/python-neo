@@ -66,7 +66,8 @@ class NeuroshareapiIO(BaseIO):
 #    # common_io_test will be skipped.
     read_params = {
         Segment : [
-            ("segment_duration",{"value" : 0., "label" : "Segment size (s.)"}),
+            ("segment_duration",{"value" : 5., "label" : "Segment size (s.)"}),
+            ("t_start",{"value" : 0.,"label" : "start reading (s.)"}),
             #("lazy",{"value" : False,"label" : "load in lazy mode?"}),
             #("cascade",{"value" : True,"label" : "Cascade?"})
 #            ("num_analogsignal",
