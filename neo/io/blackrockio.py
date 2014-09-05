@@ -66,8 +66,8 @@ class BlackrockIO(BaseIO):
     mode = 'file'
 
     read_params = {
-        Block: [ ],
-        Segment : [],
+        Block: [('load_waveforms' , { 'value' : False } ) , ],
+        Segment : [('load_waveforms' , { 'value' : False } ) ,],
         }
 
 
@@ -82,7 +82,7 @@ class BlackrockIO(BaseIO):
                 filename = filename.strip('.'+ext)
         self.filename = filename
         
-    def read_block(self, lazy=False, cascade=True, load_waveform = False):
+    def read_block(self, lazy=False, cascade=True, load_waveforms = False):
         """
         """
         # Create block
@@ -91,7 +91,7 @@ class BlackrockIO(BaseIO):
             return bl
         
         seg = self.read_segment(self.filename,lazy=lazy, cascade=cascade,
-                            load_waveform = load_waveform)
+                            load_waveforms = load_waveforms)
         bl.segments.append(seg)
         neo.io.tools.populate_RecordingChannel(bl, remove_from_annotation=False)
         bl.create_many_to_one_relationship()
@@ -99,7 +99,7 @@ class BlackrockIO(BaseIO):
         return bl
 
     def read_segment(self, n_start=None, n_stop=None,
-                load_waveform = False, nsx_num = None,
+                load_waveforms = False, nsx_num = None,
                 lazy=False, cascade=True):
         """Reads one Segment.
 
@@ -121,7 +121,7 @@ class BlackrockIO(BaseIO):
         
         filename_nev = self.filename + '.nev'
         if os.path.exists(filename_nev):
-            self.read_nev(filename_nev, seg, lazy, cascade, load_waveform = load_waveform)
+            self.read_nev(filename_nev, seg, lazy, cascade, load_waveforms = load_waveforms)
         
         filename_sif = self.filename + '.sif'
         if os.path.exists(filename_sif):
@@ -135,7 +135,7 @@ class BlackrockIO(BaseIO):
         
         return seg
 
-    def read_nev(self, filename_nev, seg, lazy, cascade, load_waveform = False):
+    def read_nev(self, filename_nev, seg, lazy, cascade, load_waveforms = False):
         # basic hedaer
         dt = [('header_id','S8'),
                     ('ver_major','uint8'),
@@ -232,7 +232,7 @@ class BlackrockIO(BaseIO):
         if version in ['2.1', '2.2' ]:
             for i in range(5):
                 is_analog = (data_trigger ['reason']&(2**(i+1)))>0
-                create_event_array(is_analog, 'Analog trigger {}'.format(i), labelmode = None)
+                create_event_array_trig_or_analog(is_analog, 'Analog trigger {}'.format(i), labelmode = None)
         
         # Comments
         mask = (data['id']==0xFFF) 
@@ -301,7 +301,7 @@ class BlackrockIO(BaseIO):
                     times = [ ]
                 else:
                     times = data_spike_chan_clus['samplepos'].astype(float)/sr
-                    if load_waveform:
+                    if load_waveforms:
                         dtype_waveform = dtype_waveforms[channel_id]
                         waveform_size = (h['packet_size']-8)/np.dtype(dtype_waveform).itemsize
                         waveforms = data_spike_chan_clus['waveform'].flatten().view(dtype_waveform)
