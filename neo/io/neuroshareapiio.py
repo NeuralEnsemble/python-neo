@@ -35,7 +35,7 @@ else:
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
 
 #some tools to finalize the hierachy
 from neo.io.tools import create_many_to_one_relationship
@@ -47,12 +47,12 @@ class NeuroshareapiIO(BaseIO):
     #setting some class parameters
     is_readable = True # This class can only read data
     is_writable = False # write is not supported
-    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray ]
+    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray ]
     
     has_header         = False
     is_streameable     = False
 
-    readable_objects    = [ Segment , AnalogSignal, SpikeTrain, EventArray]
+    readable_objects    = [ Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray]
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -123,6 +123,9 @@ class NeuroshareapiIO(BaseIO):
             self.metadata["triggers"]     = list()
             self.metadata["triggersId"]   = list()
             self.metadata["num_trigs"]    = 0
+            self.metadata["digital epochs"] = list()
+            self.metadata["digiEpochId"]    = list()
+            self.metadata["num_digiEpochs"] = 0
             #loop through all entities in file to get the indexes for each entity
             #type, so that one can run through the indexes later, upon reading the 
             #segment
@@ -136,15 +139,23 @@ class NeuroshareapiIO(BaseIO):
                     self.metadata["elecChanId"].append(entity.id)
                     #increase the number of electrodes found
                     self.metadata["num_analogs"] += 1
-                # if the entity is a event entitiy, but not the digital line,
-                if entity.entity_type == eventID and entity.label[-2:] != "D1":
+                # if the entity is a event entitiy and a trigger
+                if entity.entity_type == eventID and entity.label[0:4] == "trig":
                     #get the digital bit/trigger number
                     self.metadata["triggers"].append(entity.label[0:4]+entity.label[-4:])
                     #get the digital bit index
                     self.metadata["triggersId"].append(entity.id)
                     #increase the number of triggers found                    
                     self.metadata["num_trigs"] += 1
-                #
+                #if the entity is non triggered digital values with duration
+                if entity.entity_type == eventID and entity.label[0:4] == "digi":
+                    #get the digital bit number
+                    self.metadata["digital epochs"].append(entity.label[-5:])
+                    #get the digital bit index
+                    self.metadata["digiEpochId"].append(entity.id)
+                    #increase the number of triggers found                    
+                    self.metadata["num_digiEpochs"] += 1
+                #if the entity is spike cutouts
                 if entity.entity_type == epochID and entity.label[0:4] == "spks":
                     self.metadata["spkChannels"].append(entity.label[-4:])
                     self.metadata["spkChanId"].append(entity.id)
@@ -171,14 +182,16 @@ class NeuroshareapiIO(BaseIO):
             
         """
         #if no segment duration is given, use the complete file
-        if segment_duration ==0.:
+        if segment_duration == 0. :
             segment_duration=float(self.metadata["TimeSpan"])
         #if the segment duration is bigger than file, use the complete file
         if segment_duration >=float(self.metadata["TimeSpan"]):
             segment_duration=float(self.metadata["TimeSpan"])
-        #time vector for generated signal
-        #timevect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata['sampRate'])
-
+        #if the time sum of start point and segment duration is bigger than
+        #the file time span, cap it at the end
+        if segment_duration+t_start>float(self.metadata["TimeSpan"]):
+            segment_duration = float(self.metadata["TimeSpan"])-t_start
+        
         # create an empty segment
         seg = Segment( name = "segment from the NeuroshareapiIO")
 
@@ -200,22 +213,35 @@ class NeuroshareapiIO(BaseIO):
             # read triggers (in this case without any duration)
             for i in range(self.metadata["num_trigs"]):
                 #create event object for each trigger/bit found
-                eva = self.read_eventarray(lazy = lazy , cascade = cascade,
-                        channel_index = self.metadata["triggersId"][i])
+                eva = self.read_eventarray(lazy = lazy , 
+                                           cascade = cascade,
+                                           channel_index = self.metadata["triggersId"][i],
+                                           segment_duration = segment_duration,
+                                           t_start = t_start,)
                 #add event object to segment
                 seg.eventarrays +=  [eva]
-
+            #read epochs (digital events with duration)
+            for i in range(self.metadata["num_digiEpochs"]):
+                #create event object for each trigger/bit found
+                epa = self.read_epocharray(lazy = lazy, 
+                                           cascade = cascade,
+                                           channel_index = self.metadata["digiEpochId"][i],
+                                            segment_duration = segment_duration,
+                                            t_start = t_start,)
+                #add event object to segment
+                seg.epocharrays +=  [epa]
             # read nested spiketrain
             #run through all spike channels found
             for i in range(self.metadata["num_spkChans"]):
                 #create spike object
                 sptr = self.read_spiketrain(lazy = lazy, cascade = cascade,
                         channel_index = self.metadata["spkChanId"][i],
-                        segment_duration = segment_duration,)
+                        segment_duration = segment_duration,
+                        t_start = t_start)
                 #add the spike object to segment
-                seg.spiketrains += [ sptr ]
+                seg.spiketrains += [sptr]
 
-        create_many_to_one_relationship(seg)
+        #create_many_to_one_relationship(seg)
         return seg
 
     """
@@ -285,19 +311,14 @@ class NeuroshareapiIO(BaseIO):
                         # the 2 first key arguments are imposed by neo.io API
                         lazy = False,
                         cascade = True,
+                        channel_index = 0,
                         segment_duration = 0.,
-                        t_start = 0.,
-                        channel_index = 0):
+                        t_start = 0.):
         """
         Function to read in spike trains. This API still does not support read in of
         specific channels as they are recorded. rather the fuunction gets the entity set
         by 'channel_index' which is set in the __init__ function (all spike channels)
         """
-        
-                  
-        
-       
-        #t_stop
         
         #sampling rate
         sr = self.metadata["sampRate"]
@@ -323,7 +344,7 @@ class NeuroshareapiIO(BaseIO):
             #create a numpy empty array to store the waveforms
             waveforms=np.array(np.zeros([numIndx,tempSpks.max_sample_count]))
             #loop through the data from the specific channel index
-            for i in range(numIndx):
+            for i in range(startat,endat+1,1):
                 #get cutout, timestamp, cutout duration, and spike unit
                 tempCuts,timeStamp,duration,unit = tempSpks.get_data(i)
                 #save the cutout in the waveform matrix
@@ -343,10 +364,12 @@ class NeuroshareapiIO(BaseIO):
             
         return spiketr
 
-    def read_eventarray(self,lazy = False, cascade = True,channel_index = 0):
+    def read_eventarray(self,lazy = False, cascade = True,
+                        channel_index = 0,
+                        t_start = 0.,
+                        segment_duration = 0.):
         """function to read digital timestamps. this function only reads the event
-        onset and disconsiders its duration. to get digital event durations, use 
-        the epoch function (to be implemented)."""
+        onset. to get digital event durations, use the epoch function (to be implemented)."""
         if lazy:
             eva = EventArray(file_origin = self.filename)        
         else:
@@ -355,19 +378,79 @@ class NeuroshareapiIO(BaseIO):
             tempTimeStamp = list()
             #get entity from file
             trigEntity = self.fd.get_entity(channel_index)
-            #run through entity
-            for i in range(trigEntity.item_count):
+            #transform t_start into index (reading will start from this index) 
+            startat = trigEntity.get_index_by_time(t_start,0)#zero means closest index to value
+            #get the last index to read, using segment duration and t_start
+            endat = trigEntity.get_index_by_time(float(segment_duration+t_start),-1)#-1 means last index before time
+            #numIndx = endat-startat
+            #run through specified intervals in entity
+            for i in range(startat,endat+1,1):#trigEntity.item_count):
                 #get in which digital bit was the trigger detected
                 tempNames.append(trigEntity.label[-8:])
-                #get the time stamps
-                tempData, _ = trigEntity.get_data(i)
-                #append the time stamp to them empty list
-                tempTimeStamp.append(tempData)
+                #get the time stamps of onset events
+                tempData, onOrOff = trigEntity.get_data(i)
+                #if this was an onset event, save it to the list
+                #on triggered recordings it seems that only onset events are
+                #recorded. On continuous recordings both onset(==1) 
+                #and offset(==255) seem to be recorded
+                if onOrOff == 1:               
+                    #append the time stamp to them empty list
+                    tempTimeStamp.append(tempData)
                 #create an event array        
             eva = EventArray(labels = np.array(tempNames,dtype = "S"),
     			     times = np.array(tempTimeStamp)*pq.s,
 			     file_origin = self.filename,                            
-                             description = "here are stored all the trigger events"+
-                            "(without their durations)")       
+                             description = "the trigger events (without durations)")       
         return eva
+        
+       
+    def read_epocharray(self,lazy = False, cascade = True, 
+                        channel_index = 0,
+                        t_start = 0.,
+                        segment_duration = 0.):
+        """function to read digital timestamps. this function reads the event
+        onset and offset and outputs onset and duration. to get only onsets use
+        the event array function"""
+        if lazy:
+            epa = EpochArray(file_origin = self.filename,
+                             times=None, durations=None, labels=None)
+        else:
+            #create temporary empty lists to store data
+            tempNames = list()
+            tempTimeStamp = list()
+            durations = list()
+            #get entity from file
+            digEntity = self.fd.get_entity(channel_index)
+            #transform t_start into index (reading will start from this index) 
+            startat = digEntity.get_index_by_time(t_start,0)#zero means closest index to value
+            #get the last index to read, using segment duration and t_start
+            endat = digEntity.get_index_by_time(float(segment_duration+t_start),-1)#-1 means last index before time       
             
+            #run through entity using only odd "i"s 
+            for i in range(startat,endat+1,1):
+                if i % 2 == 1:
+                    #get in which digital bit was the trigger detected
+                    tempNames.append(digEntity.label[-8:])
+                    #get the time stamps of even events
+                    tempData, onOrOff = digEntity.get_data(i-1)
+                    #if this was an onset event, save it to the list
+                    #on triggered recordings it seems that only onset events are
+                    #recorded. On continuous recordings both onset(==1) 
+                    #and offset(==255) seem to be recorded
+                    #if onOrOff == 1:
+                    #append the time stamp to them empty list
+                    tempTimeStamp.append(tempData)
+                
+                    #get time stamps of odd events
+                    tempData1, onOrOff = digEntity.get_data(i)
+                    #if onOrOff == 255:
+                    #pass
+                    durations.append(tempData1-tempData)
+            epa = EpochArray(file_origin = self.filename,
+                                 times = np.array(tempTimeStamp)*pq.s, 
+                                 durations = np.array(durations)*pq.s, 
+                                 labels = np.array(tempNames,dtype = "S"),
+                                 description = "digital events with duration")
+            return epa
+        
+        
