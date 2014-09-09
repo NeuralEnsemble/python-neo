@@ -38,7 +38,7 @@ from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
 
 #some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
+#from neo.io.tools import create_many_to_one_relationship
 
 
 # create an object based on BaseIO
@@ -82,7 +82,7 @@ class NeuroshareapiIO(BaseIO):
 
     name               = "Neuroshare"
 
-    extensions          = [ ]
+    extensions          = ["mcd"]
 
     # This object operates on neuroshare files
     mode = "file"
@@ -344,7 +344,7 @@ class NeuroshareapiIO(BaseIO):
             #create a numpy empty array to store the waveforms
             waveforms=np.array(np.zeros([numIndx,tempSpks.max_sample_count]))
             #loop through the data from the specific channel index
-            for i in range(startat,endat+1,1):
+            for i in range(startat,endat,1):
                 #get cutout, timestamp, cutout duration, and spike unit
                 tempCuts,timeStamp,duration,unit = tempSpks.get_data(i)
                 #save the cutout in the waveform matrix
