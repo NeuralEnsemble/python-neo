@@ -35,7 +35,7 @@ else:
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
 
 #some tools to finalize the hierachy
 #from neo.io.tools import create_many_to_one_relationship
@@ -66,7 +66,7 @@ class NeuroshareapiIO(BaseIO):
 #    # common_io_test will be skipped.
     read_params = {
         Segment : [
-            ("segment_duration",{"value" : 5., "label" : "Segment size (s.)"}),
+            ("segment_duration",{"value" : 0., "label" : "Segment size (s.)"}),
             ("t_start",{"value" : 0.,"label" : "start reading (s.)"}),
             #("lazy",{"value" : False,"label" : "load in lazy mode?"}),
             #("cascade",{"value" : True,"label" : "Cascade?"})
@@ -126,6 +126,7 @@ class NeuroshareapiIO(BaseIO):
             self.metadata["digital epochs"] = list()
             self.metadata["digiEpochId"]    = list()
             self.metadata["num_digiEpochs"] = 0
+            
             #loop through all entities in file to get the indexes for each entity
             #type, so that one can run through the indexes later, upon reading the 
             #segment
@@ -161,7 +162,23 @@ class NeuroshareapiIO(BaseIO):
                     self.metadata["spkChanId"].append(entity.id)
                     self.metadata["num_spkChans"] += 1
             
-                    
+    #function to create a block and read in a segment
+#    def create_block(self,
+#                     lazy = False,
+#                     cascade = True,
+#                     
+#                     ):
+#        
+#        blk=Block(name = self.fileName+"_segment:",
+#                  file_datetime = str(self.metadata_raw["Time_Day"])+"/"+
+#                                  str(self.metadata_raw["Time_Month"])+"/"+
+#                                  str(self.metadata_raw["Time_Year"])+"_"+
+#                                  str(self.metadata_raw["Time_Hour"])+":"+
+#                                  str(self.metadata_raw["Time_Min"]))
+#        
+#        blk.rec_datetime = blk.file_datetime
+#        return blk
+    
     #create function to read segment
     def read_segment(self,
                      # the 2 first keyword arguments are imposed by neo.io API
