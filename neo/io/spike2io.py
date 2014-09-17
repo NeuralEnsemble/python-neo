@@ -218,6 +218,8 @@ class Spike2IO(BaseIO):
             sampling_rate = (1./sample_interval)*pq.Hz
 
         # read blocks header to preallocate memory by jumping block to block
+        if channelHeader.blocks==0:
+            return [ ]
         fid.seek(channelHeader.firstblock)
         blocksize = [ 0 ]
         starttimes = [ ]
