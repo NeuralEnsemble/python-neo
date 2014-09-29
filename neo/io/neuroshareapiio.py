@@ -35,8 +35,8 @@ else:
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
-
+#from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
 #some tools to finalize the hierachy
 #from neo.io.tools import create_many_to_one_relationship
 
