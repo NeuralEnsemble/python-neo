@@ -66,7 +66,7 @@ class BlackrockIO(BaseIO):
     mode = 'file'
 
     read_params = {
-        Block: [('load_waveforms' , { 'value' : False } ) , ],
+        Block: [('load_waveforms' , { 'value' : True } ) , ],
         Segment : [('load_waveforms' , { 'value' : False } ) ,],
         }
 
@@ -94,6 +94,30 @@ class BlackrockIO(BaseIO):
                             load_waveforms = load_waveforms)
         bl.segments.append(seg)
         neo.io.tools.populate_RecordingChannel(bl, remove_from_annotation=False)
+        
+        # This create rc and RCG for attaching Units
+        rcg0 = bl.recordingchannelgroups[0]
+        def find_rc(chan):
+            for rc in rcg0.recordingchannels:
+                if rc.index==chan:
+                    return rc
+        for st in seg.spiketrains:
+            chan = st.annotations['channel_index']
+            rc = find_rc(chan)
+            if rc is None:
+                rc = RecordingChannel(index = chan)
+                rcg0.recordingchannels.append(rc)
+                rc.recordingchannelgroups.append(rcg0)
+            if len(rc.recordingchannelgroups) == 1:
+                rcg = RecordingChannelGroup(name = 'Group {}'.format(chan))
+                rcg.recordingchannels.append(rc)
+                rc.recordingchannelgroups.append(rcg)
+                bl.recordingchannelgroups.append(rcg)
+            else:
+                rcg = rc.recordingchannelgroups[1]
+            unit = Unit(name = st.name)
+            rcg.units.append(unit)
+            unit.spiketrains.append(st)
         bl.create_many_to_one_relationship()
         
         return bl
@@ -312,6 +336,7 @@ class BlackrockIO(BaseIO):
                 st = SpikeTrain(times =  times*pq.s, name = name,
                                 t_start = t_start, t_stop =t_stop,
                                 waveforms = waveforms, sampling_rate = w_sampling_rate, left_sweep = left_sweep)
+                st.annotate(channel_index = channel_id)
                 if lazy:
                     st.lazy_shape = n_spike
                 seg.spiketrains.append(st)
