@@ -46,32 +46,30 @@ class PlexonIO(BaseIO):
         []
     """
 
-    is_readable        = True
-    is_writable        = False
+    is_readable = True
+    is_writable = False
 
-    supported_objects  = [Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray]
-    readable_objects    = [ Segment]
-    writeable_objects   = []
+    supported_objects = [Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray]
+    readable_objects = [Segment]
+    writeable_objects = []
 
-    has_header         = False
-    is_streameable     = False
+    has_header = False
+    is_streameable = False
 
-    # This is for GUI stuf : a definition for parameters when reading.
-    read_params        = {
+    # This is for GUI stuff: a definition for parameters when reading.
+    read_params = {
+        Segment:  [
+            ('load_spike_waveform', {'value': False}),
+            ]
+        }
+    write_params = None
 
-                        Segment :  [
-                                        ('load_spike_waveform' , { 'value' : False } ) ,
-                                        ]
-                        }
-    write_params       = None
-
-    name               = 'Plexon'
-    extensions          = [ 'plx' ]
+    name = 'Plexon'
+    extensions = ['plx']
 
     mode = 'file'
 
-
-    def __init__(self , filename = None) :
+    def __init__(self, filename=None):
         """
         This class read a plx file.
 
@@ -84,22 +82,18 @@ class PlexonIO(BaseIO):
         self.filename = filename
 
 
-    def read_segment(self,
-                                        lazy = False,
-                                        cascade = True,
-                                        load_spike_waveform = True,
-                                            ):
+    def read_segment(self, lazy = False, cascade = True, load_spike_waveform = True):
         """
 
         """
 
         fid = open(self.filename, 'rb')
-        globalHeader = HeaderReader(fid , GlobalHeader ).read_f(offset = 0)
+        globalHeader = HeaderReader(fid, GlobalHeader).read_f(offset=0)
 
         # metadatas
         seg = Segment()
-        seg.rec_datetime = datetime.datetime(  globalHeader['Year'] , globalHeader['Month']  , globalHeader['Day'] ,
-                    globalHeader['Hour'] , globalHeader['Minute'] , globalHeader['Second'] )
+        seg.rec_datetime = datetime.datetime(globalHeader['Year'], globalHeader['Month'], globalHeader['Day'],
+            globalHeader['Hour'], globalHeader['Minute'], globalHeader['Second'])
         seg.file_origin = os.path.basename(self.filename)
         seg.annotate(plexon_version = globalHeader['Version'])
 
@@ -107,7 +101,7 @@ class PlexonIO(BaseIO):
             return seg
 
         ## Step 1 : read headers
-        # dsp channels header = sipkes and waveforms
+        # dsp channels header = spikes and waveforms
         dspChannelHeaders = { }
         maxunit=0
         maxchan = 0
