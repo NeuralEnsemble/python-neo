@@ -126,7 +126,7 @@ class NeuroshareapiIO(BaseIO):
             self.metadata["digital epochs"] = list()
             self.metadata["digiEpochId"]    = list()
             self.metadata["num_digiEpochs"] = 0
-            
+
             #loop through all entities in file to get the indexes for each entity
             #type, so that one can run through the indexes later, upon reading the 
             #segment
@@ -295,7 +295,7 @@ class NeuroshareapiIO(BaseIO):
             #get the analog object
             sig =  self.fd.get_entity(channel_index)
             #get the units (V, mV etc)            
-            sigUnits = sig.units
+            sigUnits = sig.metadata_raw["Units"]
             #get the electrode number
             chanName = sig.label[-4:]
             
