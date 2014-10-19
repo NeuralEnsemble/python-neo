@@ -265,9 +265,10 @@ class NeuroshareapiIO(BaseIO):
         With this IO AnalogSignal can be accessed directly with its channel number
     """
     def read_analogsignal(self,
-                          # the 2 first key arguments are imposed by neo.io API
+                          # the 2 first key arguments are imposed by neo.io
                           lazy = False,
                           cascade = True,
+                          #channel index as given by the neuroshare API
                           channel_index = 0,
                           #time in seconds to be read
                           segment_duration = 0.,
@@ -286,7 +287,7 @@ class NeuroshareapiIO(BaseIO):
         if lazy:
             anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
-                                  channel_index=channel_index)
+                                  channel_index=self.fd.get_entity(channel_index))
             #create a dummie time vector                     
             tvect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata["sampRate"])                                  
             # we add the attribute lazy_shape with the size if loaded
