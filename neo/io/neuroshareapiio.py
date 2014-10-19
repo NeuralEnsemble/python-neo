@@ -287,7 +287,7 @@ class NeuroshareapiIO(BaseIO):
         if lazy:
             anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * pq.Hz,
                                   t_start=t_start * pq.s,
-                                  channel_index=self.fd.get_entity(channel_index))
+                                  )
             #create a dummie time vector                     
             tvect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata["sampRate"])                                  
             # we add the attribute lazy_shape with the size if loaded
@@ -296,7 +296,7 @@ class NeuroshareapiIO(BaseIO):
             #get the analog object
             sig =  self.fd.get_entity(channel_index)
             #get the units (V, mV etc)            
-            sigUnits = sig.metadata_raw["Units"]
+            sigUnits = sig.units
             #get the electrode number
             chanName = sig.label[-4:]
             
