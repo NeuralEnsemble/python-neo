@@ -37,7 +37,7 @@ from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
 
 #some tools to finalize the hierachy
-#from neo.io.tools import create_many_to_one_relationship
+from neo.io.tools import create_many_to_one_relationship
 
 
 # create an object based on BaseIO
@@ -257,7 +257,8 @@ class NeuroshareapiIO(BaseIO):
                 #add the spike object to segment
                 seg.spiketrains += [sptr]
 
-        #create_many_to_one_relationship(seg)
+        create_many_to_one_relationship(seg)
+        
         return seg
 
     """
