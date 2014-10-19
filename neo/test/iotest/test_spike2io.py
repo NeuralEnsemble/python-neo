@@ -20,6 +20,7 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
     files_to_test = ['File_spike2_1.smr',
                      'File_spike2_2.smr',
                      'File_spike2_3.smr',
+                     '130322-1LY.smr', # this is for bug 182
                      ]
     files_to_download = files_to_test
 
