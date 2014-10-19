@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for "reading" data from Neuroshare compatible files (check neuroshare.org)
 It runs through the whole file and searches for: analog signals, spike cutouts,
