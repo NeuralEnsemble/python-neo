@@ -8,10 +8,7 @@ Other versions have not been tested.
 This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/downloads.html
 
-
-Depend on:
-
-Supported : Read
+Supported: Read
 
 Author: sgarcia
 
@@ -69,21 +66,21 @@ class PlexonIO(BaseIO):
 
     mode = 'file'
 
+
     def __init__(self, filename=None):
         """
-        This class read a plx file.
-
         Arguments:
             filename : the filename
+
+        """
+        BaseIO.__init__(self, filename)
+
+    def read_segment(self, lazy=False, cascade=True, load_spike_waveform=True):
+        """
+        Read in a segment.
+
+        Arguments:
             load_spike_waveform : load or not waveform of spikes (default True)
-
-        """
-        BaseIO.__init__(self)
-        self.filename = filename
-
-
-    def read_segment(self, lazy = False, cascade = True, load_spike_waveform = True):
-        """
 
         """
 
@@ -92,45 +89,53 @@ class PlexonIO(BaseIO):
 
         # metadatas
         seg = Segment()
-        seg.rec_datetime = datetime.datetime(globalHeader['Year'], globalHeader['Month'], globalHeader['Day'],
-            globalHeader['Hour'], globalHeader['Minute'], globalHeader['Second'])
+        seg.rec_datetime = datetime.datetime(
+            globalHeader.pop('Year'),
+            globalHeader.pop('Month'),
+            globalHeader.pop('Day'),
+            globalHeader.pop('Hour'),
+            globalHeader.pop('Minute'),
+            globalHeader.pop('Second')
+        )
         seg.file_origin = os.path.basename(self.filename)
-        seg.annotate(plexon_version = globalHeader['Version'])
+
+        for key, val in globalHeader.iteritems():
+            seg.annotate(**{key: val})
 
         if not cascade:
             return seg
 
         ## Step 1 : read headers
         # dsp channels header = spikes and waveforms
-        dspChannelHeaders = { }
-        maxunit=0
+        dspChannelHeaders = {}
+        maxunit = 0
         maxchan = 0
         for _ in range(globalHeader['NumDSPChannels']):
             # channel is 1 based
-            channelHeader = HeaderReader(fid , ChannelHeader ).read_f(offset = None)
+            channelHeader = HeaderReader(fid, ChannelHeader).read_f(offset=None)
             channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
             channelHeader['Boxes'] = np.array(channelHeader['Boxes']).reshape((5,2,4))
-            dspChannelHeaders[channelHeader['Channel']]=channelHeader
-            maxunit = max(channelHeader['NUnits'],maxunit)
-            maxchan = max(channelHeader['Channel'],maxchan)
+            dspChannelHeaders[channelHeader['Channel']] = channelHeader
+            maxunit = max(channelHeader['NUnits'], maxunit)
+            maxchan = max(channelHeader['Channel'], maxchan)
 
-       # event channel header
+        # event channel header
         eventHeaders = { }
         for _ in range(globalHeader['NumEventChannels']):
-            eventHeader = HeaderReader(fid , EventHeader ).read_f(offset = None)
+            eventHeader = HeaderReader(fid, EventHeader).read_f(offset=None)
             eventHeaders[eventHeader['Channel']] = eventHeader
 
         # slow channel header = signal
-        slowChannelHeaders = { }
+        slowChannelHeaders = {}
         for _ in range(globalHeader['NumSlowChannels']):
-            slowChannelHeader = HeaderReader(fid , SlowChannelHeader ).read_f(offset = None)
+            slowChannelHeader = HeaderReader(fid, SlowChannelHeader).read_f(offset=None)
             slowChannelHeaders[slowChannelHeader['Channel']] = slowChannelHeader
 
         ## Step 2 : a first loop for counting size
         # signal
         nb_samples = np.zeros(len(slowChannelHeaders))
         sample_positions = np.zeros(len(slowChannelHeaders))
-        t_starts = np.zeros(len(slowChannelHeaders), dtype = 'f')
+        t_starts = np.zeros(len(slowChannelHeaders), dtype='f')
 
         #spiketimes and waveform
         nb_spikes = np.zeros((maxchan+1, maxunit+1) ,dtype='i')
@@ -191,7 +196,10 @@ class PlexonIO(BaseIO):
             eventpositions = { }
             evarrays = { }
             for chan, nb in iteritems(nb_events):
-                evarrays[chan] = np.zeros(nb, dtype = 'f' )
+                evarrays[chan] = {
+                    'times': np.zeros(nb, dtype='f'),
+                    'labels': np.zeros(nb, dtype='S4')
+                }
                 eventpositions[chan]=0 
                 
             fid.seek(start)
@@ -218,7 +226,8 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    evarrays[chan][pos] = time
+                    evarrays[chan]['times'][pos] = time
+                    evarrays[chan]['labels'][pos] = dataBlockHeader['Unit']
                     eventpositions[chan]+= 1
 
                 elif dataBlockHeader['Type'] == 5:
@@ -228,18 +237,23 @@ class PlexonIO(BaseIO):
                     sample_positions[chan] += data.size
 
 
-        ## Step 3: create neo object
+        ## Step 4: create neo object
         for chan, h in iteritems(eventHeaders):
             if lazy:
-                times = [ ]
+                times = []
             else:
-                times = evarrays[chan]
-            ea = EventArray(times*pq.s,
-                                            channel_name= eventHeaders[chan]['Name'],
-                                            channel_index = chan)
+                times = evarrays[chan]['times']
+
+            ea = EventArray(
+                times*pq.s,
+                labels=evarrays[chan]['labels'],
+                channel_name=eventHeaders[chan]['Name'],
+                channel_index=chan
+            )
             if lazy:
-                ea.lazy_shape = nb_events[chan]
+                ea.lazy_shape = nb_events[chan]['times']
             seg.eventarrays.append(ea)
+
             
         for chan, h in iteritems(slowChannelHeaders):
             if lazy:
@@ -254,11 +268,11 @@ class PlexonIO(BaseIO):
                                                         slowChannelHeaders[chan]['Gain']*slowChannelHeaders[chan]['PreampGain'])
                 signal = sigarrays[chan]*gain
             anasig =  AnalogSignal(signal*pq.V,
-                                                        sampling_rate = float(slowChannelHeaders[chan]['ADFreq'])*pq.Hz,
-                                                        t_start = t_starts[chan]*pq.s,
-                                                        channel_index = slowChannelHeaders[chan]['Channel'],
-                                                        channel_name = slowChannelHeaders[chan]['Name'],
-                                                        )
+                sampling_rate = float(slowChannelHeaders[chan]['ADFreq'])*pq.Hz,
+                t_start = t_starts[chan]*pq.s,
+                channel_index = slowChannelHeaders[chan]['Channel'],
+                channel_name = slowChannelHeaders[chan]['Name'],
+            )
             if lazy:
                 anasig.lazy_shape = nb_samples[chan]
             seg.analogsignals.append(anasig)
@@ -282,12 +296,17 @@ class PlexonIO(BaseIO):
                     waveforms = swfarrays[chan, unit] * gain * pq.V
                 else:
                     waveforms = None
-            sptr = SpikeTrain(times,
-                                            units='s', t_stop=t_stop*pq.s,
-                                            waveforms = waveforms,
-                                            )
+            sptr = SpikeTrain(
+                times,
+                units='s', 
+                t_stop=t_stop*pq.s,
+                waveforms=waveforms
+            )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
+            for key, val in dspChannelHeaders[chan].iteritems():
+                sptr.annotate(**{key: val})
+
             if lazy:
                 sptr.lazy_shape = nb_spikes[chan,unit]
             seg.spiketrains.append(sptr)
@@ -414,16 +433,18 @@ DataBlockHeader = [
 
 
 class HeaderReader():
-    def __init__(self,fid ,description ):
+
+    def __init__(self, fid, description):
         self.fid = fid
         self.description = description
-    def read_f(self, offset =None):
-        if offset is not None :
+
+    def read_f(self, offset=None):
+        if offset is not None:
             self.fid.seek(offset)
-        d = { }
-        for key, fmt in self.description :
+        d = {}
+        for key, fmt in self.description:
             buf = self.fid.read(struct.calcsize(fmt))
-            if len(buf) != struct.calcsize(fmt) : return None
+            if len(buf) != struct.calcsize(fmt): return None
             val = list(struct.unpack(fmt , buf))
             for i, ival in enumerate(val):
                 if hasattr(ival, 'replace'):
