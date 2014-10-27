@@ -12,6 +12,7 @@
 .pydevproject
 .settings
 *.tmp*
+.idea
 
 # Compiled source #
 ###################
@@ -43,6 +44,8 @@ dist
 *.EGG-INFO
 # tox testing tool
 .tox
+# coverage
+.coverage
 
 # OS generated files #
 ######################

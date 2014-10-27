@@ -13,11 +13,19 @@ Supported: Read/Write
 Authors: Andrew Davison, Pierre Yger
 """
 
+from itertools import chain
 import numpy
 import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+
+try:
+    unicode
+    PY2 = True
+except NameError:
+    PY2 = False
+
 
 UNITS_MAP = {
     'spikes': pq.ms,
@@ -198,7 +206,14 @@ class PyNNNumpyIO(BasePyNNIO):
         return data, metadata
 
     def _write_file_contents(self, data, metadata):
-        metadata_array = numpy.array(sorted(metadata.items()))
+        # we explicitly set the dtype to ensure roundtrips preserve file contents exactly
+        max_metadata_length = max(chain([len(k) for k in metadata.keys()],
+                                        [len(str(v)) for v in metadata.values()]))
+        if PY2:
+            dtype = "S%d" % max_metadata_length
+        else:
+            dtype = "U%d" % max_metadata_length
+        metadata_array = numpy.array(sorted(metadata.items()), dtype)
         numpy.savez(self.filename, data=data, metadata=metadata_array)
 
 
