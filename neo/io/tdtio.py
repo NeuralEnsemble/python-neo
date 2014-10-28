@@ -225,8 +225,8 @@ class TdtIO(BaseIO):
                             if lazy:
                                 anasig.lazy_shape = shape
                             seg.analogsignals.append(anasig)
-            bl.create_many_to_one_relationship()
-            return bl
+        bl.create_many_to_one_relationship()
+        return bl
             
 
 
