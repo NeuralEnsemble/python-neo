@@ -336,7 +336,7 @@ class BlackrockIO(BaseIO):
                 st = SpikeTrain(times =  times*pq.s, name = name,
                                 t_start = t_start, t_stop =t_stop,
                                 waveforms = waveforms, sampling_rate = w_sampling_rate, left_sweep = left_sweep)
-                st.annotate(channel_index = channel_id)
+                st.annotate(channel_index = int(channel_id))
                 if lazy:
                     st.lazy_shape = n_spike
                 seg.spiketrains.append(st)
