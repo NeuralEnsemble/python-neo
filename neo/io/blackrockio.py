@@ -434,6 +434,7 @@ def get_window_datetime(buf):
     """This transform a buffer of 16 bytes window datetime type
      n python datetime object
     """
+    buf = buffer(buf.copy())
     dt = [('year', 'uint16'), ('mouth', 'uint16'), ('weekday', 'uint16'),
                 ('day', 'uint16'), ('hour', 'uint16'), ('min', 'uint16'),
                 ('sec', 'uint16'), ('usec', 'uint16'),]
