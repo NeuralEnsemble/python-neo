@@ -61,6 +61,8 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
             if not os.path.exists(self.dllname):
                 tar = tarfile.open(localfile)
                 tar.extract('nsMCDLibrary/nsMCDLibrary.so', path = tempfile.gettempdir())
+        else:
+            raise unittest.SkipTest("Not currently supported on OS X")
         
     
     def test_with_multichannel(self):

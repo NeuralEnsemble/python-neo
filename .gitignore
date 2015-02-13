@@ -46,6 +46,7 @@ dist
 .tox
 # coverage
 .coverage
+cover
 
 # OS generated files #
 ######################

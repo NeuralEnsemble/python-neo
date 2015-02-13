@@ -296,7 +296,7 @@ class AxonIO(BaseIO):
 
                     anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                           t_start=t_start,
-                                          name=name.decode('utf-8'),
+                                          name=str(name),
                                           channel_index=int(num))
                     if lazy:
                         anaSig.lazy_shape = subdata.shape[0]

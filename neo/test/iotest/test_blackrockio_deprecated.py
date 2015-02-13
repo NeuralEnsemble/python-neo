@@ -19,7 +19,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-import neo.io.blackrockio
+import neo.io.blackrockio_deprecated
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io import tools
 from neo.test.tools import assert_arrays_almost_equal
@@ -105,13 +105,13 @@ class testWrite(unittest.TestCase):
         block.create_many_to_one_relationship()
 
         # Check that blackrockio is correctly extracting channel indexes
-        self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
+        self.assertEqual(neo.io.blackrockio_deprecated.channel_indexes_in_segment(
             segment1), [3, 4])
-        self.assertEqual(neo.io.blackrockio.channel_indexes_in_segment(
+        self.assertEqual(neo.io.blackrockio_deprecated.channel_indexes_in_segment(
             segment2), [3, 4])
 
         # Create writer. Write block, then read back in.
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
+        bio = neo.io.blackrockio_deprecated.BlackrockIO(filename=self.fn, full_range=full_range)
         bio.write_block(block)
         fi = file(self.fn)
 
@@ -156,7 +156,7 @@ class testRead(unittest.TestCase):
     def test1(self):
         """Read data into one big segment (default)"""
         full_range = 8192 * pq.mV
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
+        bio = neo.io.blackrockio_deprecated.BlackrockIO(filename=self.fn, full_range=full_range)
         block = bio.read_block(n_starts=[0], n_stops=[6])
         self.assertEqual(bio.header.Channel_Count, 2)
         self.assertEqual(bio.header.n_samples, 6)
@@ -174,7 +174,7 @@ class testRead(unittest.TestCase):
     def test2(self):
         """Read data into two segments instead of just one"""
         full_range = 8192 * pq.mV
-        bio = neo.io.BlackrockIO(filename=self.fn, full_range=full_range)
+        bio = neo.io.blackrockio_deprecated.BlackrockIO(filename=self.fn, full_range=full_range)
         block = bio.read_block(n_starts=[0, 3], n_stops=[2, 6])
         self.assertEqual(bio.header.Channel_Count, 2)
         self.assertEqual(bio.header.n_samples, 6)
@@ -201,7 +201,7 @@ class testRead(unittest.TestCase):
 
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class CommonTests(BaseTestIO, unittest.TestCase):
-    ioclass = neo.io.BlackrockIO
+    ioclass = neo.io.blackrockio_deprecated.BlackrockIO
     read_and_write_is_bijective = False
 
     # These are the files it tries to read and test for compliance

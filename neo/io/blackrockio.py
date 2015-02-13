@@ -177,7 +177,7 @@ class BlackrockIO(BaseIO):
                 ]
         nev_header = h = np.fromfile(filename_nev, count = 1, dtype = dt)[0]
         version = '{}.{}'.format(h['ver_major'], h['ver_minor'])
-        assert  h['header_id'] == 'NEURALEV' or version=='2.1', 'Unsupported version {}'.format(version)
+        assert h['header_id'].decode('ascii') == 'NEURALEV' or version == '2.1', 'Unsupported version {}'.format(version)
         version = '{}.{}'.format(h['ver_major'], h['ver_minor'])
         seg.annotate(blackrock_version = version)
         seg.rec_datetime = get_window_datetime(nev_header['window_datetime'])
