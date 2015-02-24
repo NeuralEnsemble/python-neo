@@ -250,6 +250,10 @@ class NeoHdf5IO(BaseIO):
     The IO Manager is the core I/O class for HDF5 / NEO. It handles the
     connection with the HDF5 file, and uses PyTables for data operations. Use
     this class to get (load), insert or delete NEO objects to HDF5 file.
+
+    dtype: The data type to use when creating the underlying PyTable EArrays
+        storing the data. If None, the data type of the runtime data arrays
+        will be used. Defaults to `np.float64` to keep old behavior.
     """
     supported_objects = objectlist
     readable_objects = objectlist
@@ -262,10 +266,11 @@ class NeoHdf5IO(BaseIO):
     is_readable = True
     is_writable = True
 
-    def __init__(self, filename=None, **kwargs):
+    def __init__(self, filename=None, array_dtype=np.float64, **kwargs):
         if not HAVE_TABLES:
             raise TABLES_ERR
         BaseIO.__init__(self, filename=filename)
+        self.array_dtype = array_dtype
         self.connected = False
         self.objects_by_ref = {}  # Loaded objects by reference id
         self.parent_paths = {}  # Tuples of (Segment, other parent) paths
@@ -398,7 +403,8 @@ class NeoHdf5IO(BaseIO):
                     # we try to create new array first, so not to loose the
                     # data in case of any failure
                     if obj_attr.size == 0:
-                        atom = tb.Float64Atom(shape=(1,))
+                        np_type = obj_attr.dtype if self.array_dtype is None else self.array_dtype
+                        atom = tb.Atom.from_dtype(np.dtype((np_type, (1, ))))
                         new_arr = self._data.createEArray(path, attr_name + "__temp", atom, shape=(0,), expectedrows=1)
                     else:
                         new_arr = self._data.createArray(path, attr_name + "__temp", obj_attr)
