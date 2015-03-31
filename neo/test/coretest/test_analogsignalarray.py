@@ -407,6 +407,8 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1.max(), 54000*pq.pA)
         self.assertEqual(self.signal1.min(), 0*pq.nA)
         self.assertEqual(self.signal1.mean(), 27*pq.nA)
+        self.assertEqual(self.signal1.std(), self.signal1.magnitude.std()*pq.nA)
+        self.assertEqual(self.signal1.var(), self.signal1.magnitude.var()*pq.nA**2)
 
     def test__rescale_same(self):
         result = self.signal1.copy()
