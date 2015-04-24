@@ -224,12 +224,21 @@ class AnalogSignalArray(BaseAnalogSignal):
         the nearest sampling bins.
         '''
 
-        t_start = t_start.rescale(self.sampling_period.units)
-        t_stop = t_stop.rescale(self.sampling_period.units)
-        i = (t_start - self.t_start) / self.sampling_period
-        j = (t_stop - self.t_start) / self.sampling_period
-        i = int(np.rint(i.magnitude))
-        j = int(np.rint(j.magnitude))
+        # checking start time and transforming to start index
+        if t_start == None:
+            i = 0
+        else:
+            t_start = t_start.rescale(self.sampling_period.units)
+            i = (t_start - self.t_start) / self.sampling_period
+            i = int(np.rint(i.magnitude))
+
+        # checking stop time and transforming to stop index
+        if t_stop == None:
+            j = len(self)
+        else:
+            t_stop = t_stop.rescale(self.sampling_period.units)
+            j = (t_stop - self.t_start) / self.sampling_period
+            j = int(np.rint(j.magnitude))
 
         if (i < 0) or (j > len(self)):
             raise ValueError('t_start, t_stop have to be withing the analog \
