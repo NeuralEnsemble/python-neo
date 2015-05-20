@@ -96,7 +96,7 @@ def merge_annotations(A, B):
         For arrays or lists: concatenate
         For dicts: merge recursively
         For strings: concatenate with ';'
-        Otherwise: fail if the annotations are not equal
+        Otherwise: warn if the annotations are not equal
     """
     merged = {}
     for name in A:
@@ -104,8 +104,9 @@ def merge_annotations(A, B):
             try:
                 merged[name] = merge_annotation(A[name], B[name])
             except BaseException as exc:
-                exc.args += ('key %s' % name,)
-                raise
+                #exc.args += ('key %s' % name,)
+                #raise
+                merged[name] = "MERGE CONFLICT"  # temporary hack
         else:
             merged[name] = A[name]
     for name in B:
