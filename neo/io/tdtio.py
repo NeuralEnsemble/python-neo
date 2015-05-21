@@ -24,6 +24,7 @@ import sys
 
 import numpy as np
 import quantities as pq
+import itertools
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
@@ -31,6 +32,14 @@ from neo.io.tools import iteritems
 
 PY3K = (sys.version_info[0] == 3)
 
+
+def get_chunks(sizes, offsets, big_array):
+    # offsets are octect count
+    # sizes are not!!
+    # so need this (I really do not knwo why...):
+    sizes = (sizes -10)  * 4 # 
+    all = np.concatenate([ big_array[o:o+s] for s, o in itertools.izip(sizes, offsets) ])
+    return all
 
 class TdtIO(BaseIO):
     """
@@ -100,285 +109,144 @@ class TdtIO(BaseIO):
             seg = Segment(name=blockname)
             bl.segments.append(seg)
 
-            global_t_start = None
-            # Step 1 : first loop for counting - tsq file
-            tsq = open(os.path.join(
-                subdir, tankname + '_' + blockname + '.tsq'), 'rb')
-            hr = HeaderReader(tsq, TsqDescription)
-            allsig = {}
-            allspiketr = {}
-            allevent = {}
-            while 1:
-                h = hr.read_f()
-                if h is None:
-                    break
 
-                channel, code, evtype = h['channel'], h['code'], h['evtype']
+            #TSQ is the global index
+            tsq_filename = os.path.join(subdir, tankname+'_'+blockname+'.tsq')
+            dt = [('size','int32'),
+                        ('evtype','int32'),
+                        ('code','S4'),
+                        ('channel','uint16'),
+                        ('sortcode','uint16'),
+                        ('timestamp','float64'),
+                        ('eventoffset','int64'),
+                        ('dataformat','int32'),
+                        ('frequency','float32'),
+                    ]
+            tsq = np.fromfile(tsq_filename, dtype = dt)
+            
+            #0x8801: 'EVTYPE_MARK' give the global_start
+            global_t_start = tsq[tsq['evtype']==0x8801]['timestamp'][0]
+           
+            #TEV is the old data file
+            if os.path.exists(os.path.join(subdir, tankname+'_'+blockname+'.tev')):
+                tev_filename = os.path.join(subdir, tankname+'_'+blockname+'.tev')
+                #tev_array = np.memmap(tev_filename, mode = 'r', dtype = 'uint8') # if memory problem use this instead
+                tev_array = np.fromfile(tev_filename, dtype = 'uint8')
+                
+            else:
+                tev_filename = None
 
-                if Types[evtype] == 'EVTYPE_UNKNOWN':
-                    pass
 
-                elif Types[evtype] == 'EVTYPE_MARK':
-                    if global_t_start is None:
-                        global_t_start = h['timestamp']
-
-                elif Types[evtype] == 'EVTYPE_SCALER':
-                    # TODO
-                    pass
-
-                elif Types[evtype] == 'EVTYPE_STRON' or \
-                        Types[evtype] == 'EVTYPE_STROFF':
-                    # EVENTS
-
-                    if code not in allevent:
-                        allevent[code] = {}
-                    if channel not in allevent[code]:
-                        ea = Event(name=code, channel_index=channel)
-                        # for counting:
-                        ea.lazy_shape = 0
-                        ea.maxlabelsize = 0
-
-                        allevent[code][channel] = ea
-
-                    allevent[code][channel].lazy_shape += 1
-                    strobe, = struct.unpack('d',
-                                            struct.pack('q', h['eventoffset']))
-                    strobe = str(strobe)
-                    if len(strobe) >= allevent[code][channel].maxlabelsize:
-                        allevent[code][channel].maxlabelsize = len(strobe)
-
-                        # ~ ev = Event()
-                        #~ ev.time = h['timestamp'] - global_t_start
-                        #~ ev.name = code
-                        #~ # it the strobe attribute masked with eventoffset
-                        #~ strobe, = struct.unpack(
-                        #~     'd' , struct.pack('q' , h['eventoffset']))
-                        #~ ev.label = str(strobe)
-                        #~ seg._events.append( ev )
-
-                elif Types[evtype] == 'EVTYPE_SNIP':
-
-                    if code not in allspiketr:
-                        allspiketr[code] = {}
-                    if channel not in allspiketr[code]:
-                        allspiketr[code][channel] = {}
-                    if h['sortcode'] not in allspiketr[code][channel]:
-                        sptr = SpikeTrain(
-                            [], units='s', name=str(h['sortcode']),
-                            # t_start = global_t_start,
-                            t_start=0. * pq.s, t_stop=0. * pq.s,  # temporary
-                            left_sweep=(h['size'] - 10.) / 2. /
-                            h['frequency'] * pq.s,
-                            sampling_rate=h['frequency'] * pq.Hz)
-                        # ~ sptr.channel = channel
-                        #sptr.annotations['channel_index'] = channel
-                        sptr.annotate(channel_index=channel)
-
-                        # for counting:
-                        sptr.lazy_shape = 0
-                        sptr.pos = 0
-                        sptr.waveformsize = h['size'] - 10
-
-                        #~ sptr.name = str(h['sortcode'])
-                        #~ sptr.t_start = global_t_start
-                        #~ sptr.sampling_rate = h['frequency']
-                        #~ sptr.left_sweep = (h['size']-10.)/2./h['frequency']
-                        #~ sptr.right_sweep = (h['size']-10.)/2./h['frequency']
-                        #~ sptr.waveformsize = h['size']-10
-
-                        allspiketr[code][channel][h['sortcode']] = sptr
-
-                    allspiketr[code][channel][h['sortcode']].lazy_shape += 1
-
-                elif Types[evtype] == 'EVTYPE_STREAM':
-                    if code not in allsig:
-                        allsig[code] = {}
-                    if channel not in allsig[code]:
-                        # ~ print 'code', code, 'channel',  channel
-                        ana_sig = AnalogSignal(
-                            [] * pq.V, name=code,
-                            sampling_rate=h['frequency'] * pq.Hz,
-                            t_start=(h['timestamp'] - global_t_start) * pq.s,
-                            channel_index=channel)
-                        ana_sig.lazy_dtype = np.dtype(
-                            DataFormats[h['dataformat']])
-                        ana_sig.pos = 0
-
-                        # for counting:
-                        ana_sig.lazy_shape = 0
-                        #~ anaSig.pos = 0
-                        allsig[code][channel] = ana_sig
-                    allsig[code][channel].lazy_shape += \
-                        (h['size'] * 4 - 40) / ana_sig.dtype.itemsize
-
-            if not lazy:
-                # Step 2 : allocate memory
-                for code, v in iteritems(allsig):
-                    for channel, ana_sig in iteritems(v):
-                        v[channel] = ana_sig.duplicate_with_new_array(
-                            np.zeros(ana_sig.lazy_shape,
-                                     dtype=ana_sig.lazy_dtype) * pq.V)
-                        v[channel].pos = 0
-
-                for code, v in iteritems(allevent):
-                    for channel, ea in iteritems(v):
-                        ea.times = np.empty(ea.lazy_shape) * pq.s
-                        ea.labels = np.empty(
-                            ea.lazy_shape, dtype='S' + str(ea.maxlabelsize))
-                        ea.pos = 0
-
-                for code, v in iteritems(allspiketr):
-                    for channel, allsorted in iteritems(v):
-                        for sortcode, sptr in iteritems(allsorted):
-                            new = SpikeTrain(
-                                np.zeros(sptr.lazy_shape, dtype='f8') * pq.s,
-                                name=sptr.name,
-                                t_start=sptr.t_start,
-                                t_stop=sptr.t_stop,
-                                left_sweep=sptr.left_sweep,
-                                sampling_rate=sptr.sampling_rate,
-                                waveforms=np.ones(
-                                    (sptr.lazy_shape, 1, sptr.waveformsize),
-                                    dtype='f') * pq.mV)
-                            new.annotations.update(sptr.annotations)
-                            new.pos = 0
-                            new.waveformsize = sptr.waveformsize
-                            allsorted[sortcode] = new
-
-                # Step 3 : search sev (individual data files) or
-                # tev (common data file). sev is for version > 70
-                if os.path.exists(os.path.join(
-                        subdir, tankname + '_' + blockname + '.tev')):
-                    tev = open(os.path.join(
-                        subdir, tankname + '_' + blockname + '.tev'), 'rb')
-                else:
-                    tev = None
-                for code, v in iteritems(allsig):
-                    for channel, ana_sig in iteritems(v):
-                        if PY3K:
-                            signame = ana_sig.name.decode('ascii')
-                        else:
-                            signame = ana_sig.name
-                        filename = os.path.join(
-                            subdir, tankname + '_' + blockname + '_' +
-                            signame + '_ch' +
-                            str(ana_sig.channel_index) + '.sev')
-                        if os.path.exists(filename):
-                            ana_sig.fid = open(filename, 'rb')
-                        else:
-                            ana_sig.fid = tev
-                for code, v in iteritems(allspiketr):
-                    for channel, allsorted in iteritems(v):
-                        for sortcode, sptr in iteritems(allsorted):
-                            sptr.fid = tev
-
-                # Step 4 : second loop for copyin chunk of data
-                tsq.seek(0)
-                while 1:
-                    h = hr.read_f()
-                    if h is None:
-                        break
-                    channel = h['channel']
-                    code = h['code']
-                    evtype = h['evtype']
-
-                    if Types[evtype] == 'EVTYPE_STREAM':
-                        a = allsig[code][channel]
-                        dt = a.dtype
-                        s = int((h['size'] * 4 - 40) / dt.itemsize)
-                        a.fid.seek(h['eventoffset'])
-                        a[a.pos:a.pos + s] = np.fromstring(
-                            a.fid.read(s * dt.itemsize), dtype=a.dtype)
-                        a.pos += s
-
-                    elif Types[evtype] == 'EVTYPE_STRON' or \
-                            Types[evtype] == 'EVTYPE_STROFF':
-                        ea = allevent[code][channel]
-                        ea.times[ea.pos] = (h['timestamp'] -
-                                            global_t_start) * pq.s
-                        strobe, = struct.unpack(
-                            'd', struct.pack('q', h['eventoffset']))
-                        ea.labels[ea.pos] = str(strobe)
-                        ea.pos += 1
-
-                    elif Types[evtype] == 'EVTYPE_SNIP':
-                        sptr = allspiketr[code][channel][h['sortcode']]
-                        sptr.t_stop = (h['timestamp'] - global_t_start) * pq.s
-                        sptr[sptr.pos] = (h['timestamp'] -
-                                          global_t_start) * pq.s
-                        sptr.waveforms[sptr.pos, 0, :] = np.fromstring(
-                            sptr.fid.read(sptr.waveformsize * 4),
-                            dtype='f4') * pq.V
-                        sptr.pos += 1
-
-            # Step 5 : populating segment
-            for code, v in iteritems(allsig):
-                for channel, ana_sig in iteritems(v):
-                    seg.analogsignals.append(ana_sig)
-
-            for code, v in iteritems(allevent):
-                for channel, ea in iteritems(v):
-                    seg.events.append(ea)
-
-            for code, v in iteritems(allspiketr):
-                for channel, allsorted in iteritems(v):
-                    for sortcode, sptr in iteritems(allsorted):
-                        seg.spiketrains.append(sptr)
-
+            for type_code, type_label in tdt_event_type:
+                mask1 = tsq['evtype']==type_code
+                codes = np.unique(tsq[mask1]['code'])
+                
+                for code in codes:
+                    mask2 = mask1 & (tsq['code']==code)
+                    channels = np.unique(tsq[mask2]['channel'])
+                    
+                    for channel in channels:
+                        mask3 = mask2 & (tsq['channel']==channel)
+                        
+                        if type_label in ['EVTYPE_STRON', 'EVTYPE_STROFF']:
+                            if lazy:
+                                times = [ ]*pq.s
+                                labels = np.array([ ], dtype = str)
+                            else:
+                                times = (tsq[mask3]['timestamp'] - global_t_start) * pq.s
+                                labels = tsq[mask3]['eventoffset'].view('float64').astype('S')
+                            ea = Event(times = times, name = code , channel_index = int(channel), labels = labels)
+                            if lazy:
+                                ea.lazy_shape = np.sum(mask3)
+                            seg.events.append(ea)
+                        
+                        elif type_label == 'EVTYPE_SNIP':
+                            sortcodes = np.unique(tsq[mask3]['sortcode'])
+                            for sortcode in sortcodes:
+                                mask4 = mask3 & (tsq['sortcode']==sortcode)
+                                nb_spike = np.sum(mask4)
+                                sr = tsq[mask4]['frequency'][0]
+                                waveformsize = tsq[mask4]['size'][0]-10
+                                if lazy:
+                                    times = [ ]*pq.s
+                                    waveforms = None
+                                else:
+                                    times = (tsq[mask4]['timestamp'] - global_t_start) * pq.s
+                                    dt = np.dtype(data_formats[ tsq[mask3]['dataformat'][0]])                                    
+                                    waveforms = get_chunks(tsq[mask4]['size'],tsq[mask4]['eventoffset'], tev_array).view(dt)
+                                    waveforms = waveforms.reshape(nb_spike, -1, waveformsize)
+                                    waveforms = waveforms * pq.mV
+                                if nb_spike>0:
+                                 #   t_start = (tsq['timestamp'][0] - global_t_start) * pq.s # this hould work but not
+                                    t_start = 0 *pq.s
+                                    t_stop = (tsq['timestamp'][-1] - global_t_start) * pq.s
+                                    
+                                else:
+                                    t_start = 0 *pq.s
+                                    t_stop = 0 *pq.s
+                                st = SpikeTrain(times = times, 
+                                                                name = 'Chan{0} Code{1}'.format(channel,sortcode),
+                                                                t_start = t_start,
+                                                                t_stop = t_stop,
+                                                                waveforms = waveforms,
+                                                                left_sweep = waveformsize/2./sr * pq.s,
+                                                                sampling_rate = sr * pq.Hz,
+                                                                )
+                                st.annotate(channel_index = channel)
+                                if lazy:
+                                    st.lazy_shape = nb_spike
+                                seg.spiketrains.append(st)
+                        
+                        elif type_label == 'EVTYPE_STREAM':
+                            dt = np.dtype(data_formats[ tsq[mask3]['dataformat'][0]])
+                            shape = np.sum(tsq[mask3]['size']-10)
+                            sr = tsq[mask3]['frequency'][0]
+                            if lazy:
+                                signal = [ ]
+                            else:
+                                if PY3K:
+                                    signame = code.decode('ascii')
+                                else:
+                                    signame = code
+                                sev_filename = os.path.join(subdir, tankname+'_'+blockname+'_'+signame+'_ch'+str(channel)+'.sev')
+                                if os.path.exists(sev_filename):
+                                    #sig_array = np.memmap(sev_filename, mode = 'r', dtype = 'uint8') # if memory problem use this instead
+                                    sig_array = np.fromfile(sev_filename, dtype = 'uint8')
+                                else:
+                                    sig_array = tev_array
+                                signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
+                            
+                            anasig = AnalogSignal(signal = signal* pq.V,
+                                                                    name = '{0} {1}'.format(code, channel),
+                                                                    sampling_rate= sr * pq.Hz,
+                                                                    t_start = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
+                                                                    channel_index = int(channel))
+                            if lazy:
+                                anasig.lazy_shape = shape
+                            seg.analogsignals.append(anasig)
         bl.create_many_to_one_relationship()
         return bl
+            
 
 
-TsqDescription = [
-    ('size', 'i'),
-    ('evtype', 'i'),
-    ('code', '4s'),
-    ('channel', 'H'),
-    ('sortcode', 'H'),
-    ('timestamp', 'd'),
-    ('eventoffset', 'q'),
-    ('dataformat', 'i'),
-    ('frequency', 'f'),
-]
+tdt_event_type = [
+   #(0x0,'EVTYPE_UNKNOWN'),
+    (0x101, 'EVTYPE_STRON'),
+    (0x102,'EVTYPE_STROFF'),
+    #(0x201,'EVTYPE_SCALER'),
+    (0x8101, 'EVTYPE_STREAM'),
+    (0x8201, 'EVTYPE_SNIP'),
+    #(0x8801, 'EVTYPE_MARK'),
+    ]
+ 
 
-Types = {
-    0x0: 'EVTYPE_UNKNOWN',
-    0x101: 'EVTYPE_STRON',
-    0x102: 'EVTYPE_STROFF',
-    0x201: 'EVTYPE_SCALER',
-    0x8101: 'EVTYPE_STREAM',
-    0x8201: 'EVTYPE_SNIP',
-    0x8801: 'EVTYPE_MARK',
-}
-DataFormats = {
-    0: np.float32,
-    1: np.int32,
-    2: np.int16,
-    3: np.int8,
-    4: np.float64,
-    # ~ 5 : ''
-}
+            
 
+data_formats = {
+        0 : np.float32,
+        1 : np.int32,
+        2 : np.int16,
+        3 : np.int8,
+        4 : np.float64,
+        }
 
-class HeaderReader():
-    def __init__(self, fid, description):
-        self.fid = fid
-        self.description = description
-
-    def read_f(self, offset=None):
-        if offset is not None:
-            self.fid.seek(offset)
-        d = {}
-        for key, fmt in self.description:
-            buf = self.fid.read(struct.calcsize(fmt))
-            if len(buf) != struct.calcsize(fmt):
-                return None
-            val = struct.unpack(fmt, buf)
-            if len(val) == 1:
-                val = val[0]
-            else:
-                val = list(val)
-                # ~ if 's' in fmt :
-                #~ val = val.replace('\x00','')
-            d[key] = val
-        return d

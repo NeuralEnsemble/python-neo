@@ -61,9 +61,9 @@ class BaseIO(object):
     The object types can be one of the classes defined in neo.core
     (Block, Segment, AnalogSignal, ...)
 
-    Each class do not necessary support all the whole neo hierarchy but part
+    Each class does not necessary support all the whole neo hierarchy but part
     of it.
-    This is discribe with **supported_objects**.
+    This is described with **supported_objects**.
     All IOs must support at least Block with a read_block()
 
 

@@ -123,6 +123,7 @@ class NeoMatlabIO(BaseIO):
                 seg.epochs{1} = epoch;
 
                 block.segments{s} = seg;
+                
             end
 
             save 'myblock.mat' block -V7
