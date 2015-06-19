@@ -67,7 +67,12 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     
     def test_with_multichannel(self):
         filename0 = self.get_filename_path(self.files_to_download[0])
-        reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
+        try:
+            import neuroshare as ns
+        except ImportError as err:
+            reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
+        else:
+            reader = NeuroshareIO(filename = filename0)
         blocks = reader.read()
         n = len(blocks[0].segments[0].analogsignals)
         assert n == 2, \
