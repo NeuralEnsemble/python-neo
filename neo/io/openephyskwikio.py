@@ -13,7 +13,7 @@ Depends on: scipy
 
 Supported: Read
 
-Author: sgarcia
+Author: Mikkel E. Lepperød @CINPLA
 
 """
 
@@ -42,7 +42,7 @@ from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
 
 
 # I need to subclass BaseIO
-class ExampleIO(BaseIO):
+class OpenEphysKwikIO(BaseIO):
     """
     Class for "reading" fake data from an imaginary file.
 
@@ -116,14 +116,14 @@ class ExampleIO(BaseIO):
     # do not supported write so no GUI stuff
     write_params       = None
 
-    name               = 'example'
+    name               = 'openephyskwik'
 
-    extensions          = [ 'nof' ]
+    extensions          = [ 'kwd', 'kwx', 'kwik' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
     # this info is for GUI stuff also
-    mode = 'fake'
+    mode = 'file'
 
 
 
