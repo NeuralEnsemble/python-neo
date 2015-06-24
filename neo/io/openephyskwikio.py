@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Class for "reading" fake data from an imaginary file.
+Class for reading data from a .kwik dataset
 
 For the user, it generates a :class:`Segment` or a :class:`Block` with a
 sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
 :class:`EventArray`.
-
-For a developer, it is just an example showing guidelines for someone who wants
-to develop a new IO module.
 
 Depends on: scipy
 
 Supported: Read
 
 Author: Mikkel E. Lepperød @CINPLA
+
+TODO: units
 
 """
 
@@ -23,6 +22,9 @@ from __future__ import absolute_import
 # note neo.core needs only numpy and quantities
 import numpy as np
 import quantities as pq
+import h5py
+
+def load(filename, dataset=0):
 
 # but my specific IO can depend on many other packages
 try:
@@ -127,7 +129,7 @@ class OpenEphysKwikIO(BaseIO):
 
 
 
-    def __init__(self , filename = None) :
+    def __init__(self , filename) :
         """
 
 
@@ -141,8 +143,7 @@ class OpenEphysKwikIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
-        # Seed so all instances can return the same values
-        np.random.seed(1234)
+
 
 
     # Segment reading is supported so I define this :
@@ -232,17 +233,21 @@ class OpenEphysKwikIO(BaseIO):
                           lazy = False,
                           cascade = True,
                           channel_index = 0,
-                          segment_duration = 15.,
-                          t_start = -1,
+                          dataset = 0,
                           ):
         """
         With this IO AnalogSignal can e acces directly with its channel number
 
         """
-        sr = 10000.
-        sinus_freq = 3. # Hz
-        #time vector for generated signal:
-        tvect = np.arange(t_start, t_start+ segment_duration , 1./sr)
+        f = h5py.File(self.filename, 'r')
+
+        data['info'] = f['recordings'][str(dataset)].attrs
+        t_start = data['info']['start_time']
+        sr = data['info']['sample_rate']
+        data['data'] = f['recordings'][str(dataset)]['data']
+        data['timestamps'] = ((np.arange(0,data['data'].shape[0])
+                             + t_start)
+                             / sr)
 
 
         if lazy:
@@ -250,7 +255,7 @@ class OpenEphysKwikIO(BaseIO):
                                   t_start=t_start * pq.s,
                                   channel_index=channel_index)
             # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = tvect.shape
+            anasig.lazy_shape = data['data'].shape[0]
         else:
             # create analogsignal (sinus of 3 Hz)
             sig = np.sin(2*np.pi*tvect*sinus_freq + channel_index/5.*2*np.pi)+np.random.rand(tvect.size)
