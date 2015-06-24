@@ -12,9 +12,9 @@ Supported: Read
 
 Author: Mikkel E. Lepperød @CINPLA
 
-TODO: units
-
 """
+# TODO: units
+# TODO: channelindex for LFP
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -40,7 +40,8 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, EpochArray,
-                      RecordingChannel, RecordingChannelGroup, AnalogSignal)
+                      RecordingChannel, RecordingChannelGroup, AnalogSignal,
+                      AnalogSignalArray)
 
 
 
@@ -86,14 +87,16 @@ class KwikIO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray,
-                          RecordingChannel, RecordingChannelGroup, AnalogSignal ]
+                          RecordingChannel, RecordingChannelGroup, AnalogSignal,
+                          AnalogSignalArray ]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
     readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray,
-                          RecordingChannel, RecordingChannelGroup, AnalogSignal ]
+                          RecordingChannel, RecordingChannelGroup, AnalogSignal,
+                          AnalogSignalArray ]
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -102,7 +105,7 @@ class KwikIO(BaseIO):
 
     name               = 'kwik'
 
-    extensions          = [ 'kwd', 'kwx', 'kwik' ]
+    extensions         = [ 'kwd', 'kwx', 'kwik' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
@@ -117,36 +120,46 @@ class KwikIO(BaseIO):
         """
         BaseIO.__init__(self)
         self.filename = filename
+        basename, ext = op.splitext(filename)
+        self.kwik = h5py.File(filename, 'r')
+        self.kwd = h5py.File(basename + '.raw.kwd', 'r')
 
     def read_segment(self,
                      lazy=False,
                      cascade=True,
                      dataset=0,
+                     lfpchannel=12
+                     tracechannel=None
                     ):
         """
-
+        lfpchannel can be int  - how to select all?
         """
-        basename, ext = op.splitext(self.filename)
-        kwik = h5py.File(self.filename, 'r')
-        kwd = h5py.File(basename + '.raw.kwd', 'r')
-        num_channels = kwd['recordings'][str(dataset)]['data'].shape[1]
-        attrs = kwd['recordings'][str(dataset)].attrs
+
+        raw_shape = self.kwd['recordings'][str(dataset)]['data'].shape # Do we need this?
+        attrs = self.kwd['recordings'][str(dataset)].attrs
         # create an empty segment
         seg = Segment( name='session something' )
 
         if cascade:
+            if LFPchannel is not None
             # read nested analosignal
-            for i in range(num_channels):
-                ana = self.read_analogsignal(lazy=lazy,
-                                             kwd=kwd,
-                                             channel_index=i,
-                                             dataset=dataset,
+                ana = self.read_lfpdata(lazy=lazy,
+                                        kwd=kwd,
+                                        channel_index=lfpchannel,
+                                        dataset=dataset,
                                              )
                 seg.analogsignals += [ ana ]
-
+            if tracechannel is not None
+                # read nested analosignal
+                ana = self.read_rawdata(lazy=lazy,
+                                        kwd=kwd,
+                                        channel_index=tracechannel,
+                                        dataset=dataset,
+                                             )
+                seg.analogsignals += [ ana ]
             # read nested spiketrain
             num_spiketrain_by_channel = 3
-            for i in range(num_channels):
+            for i in range(raw_shape[1]):
                 for _ in range(num_spiketrain_by_channel):
                     sptr = self.read_spiketrain(lazy=lazy,
                                                 channel_index=i,
@@ -156,24 +169,24 @@ class KwikIO(BaseIO):
             epo = self.read_stimulus(lazy=lazy)
             seg.epocharrays += [ epo ]
 
-            timestamps = ((np.arange(0,attrs['shape'])
-                             + attrs['start_time'])
-                             / attrs['sample_rate'])
-            seg.duration = timestamps.max()
+            seg.duration = (raw_shape[0]
+                          / attrs['sample_rate']
+                          + attrs['start_time'])
+
         seg.create_many_to_one_relationship()
         return seg
 
-    def read_analogsignal(self,
-                          lazy,
-                          kwd,
-                          channel_index,
-                          dataset,
+    def read_lfpdata(self,
+                          lazy=False,
+                          cascade=True
+                          channel_index
+                          dataset=0,
                           ):
         """
-
+        Downsample and filter raw data into LFP
         """
 
-        attrs = kwd['recordings'][str(dataset)].attrs
+        attrs = self.kwd['recordings'][str(dataset)].attrs
 
         if lazy:
             anasig = AnalogSignal([],
@@ -183,10 +196,11 @@ class KwikIO(BaseIO):
                                   channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = attrs['shape']
+            anasig.lazy_shape = self.kwd['recordings'][str(dataset)]['data'].shape[0]
         else:
-            data   = kwd['recordings'][str(dataset)]['data'][channel_index]
-            anasig = AnalogSignal(data,
+            data   = self.kwd['recordings'][str(dataset)]['data']
+            for i in arange(0,)
+            anasig = AnalogSignalArray(data,
                                   units='V',
                                   sampling_rate=attrs['sample_rate']*pq.Hz,
                                   t_start=attrs['start_time']*pq.s,
@@ -194,7 +208,42 @@ class KwikIO(BaseIO):
                                   )
 
         # for attributes out of neo you can annotate
-        anasig.annotate(info = 'What to insert metadata')
+        anasig.annotate(info = 'low pass filtered')
+
+        return anasig
+
+    def read_rawdata(self,
+                          lazy=False,
+                          cascade=True
+                          channel_index=0,
+                          dataset=0,
+                          ):
+        """
+
+        """
+
+        attrs = self.kwd['recordings'][str(dataset)].attrs
+
+        if lazy:
+            anasig = AnalogSignal([],
+                                  units='V',
+                                  sampling_rate=attrs['sample_rate']*pq.Hz,
+                                  t_start=attrs['start_time']*pq.s,
+                                  channel_index=channel_index,
+                                  )
+            # we add the attribute lazy_shape with the size if loaded
+            anasig.lazy_shape = self.kwd['recordings'][str(dataset)]['data'].shape[0]
+        else:
+            data   = np.array(self.kwd['recordings'][str(dataset)]['data'][:,:])
+            anasig = AnalogSignalArray(data,
+                                  units='V',
+                                  sampling_rate=attrs['sample_rate']*pq.Hz,
+                                  t_start=attrs['start_time']*pq.s,
+                                  channel_index=channel_index,
+                                  )
+
+        # for attributes out of neo you can annotate
+        anasig.annotate(info = 'rawdata')
 
         return anasig
 
@@ -202,21 +251,17 @@ class KwikIO(BaseIO):
         epo = EpochArray()
         if lazy:
             # in lazy case no data are read
-            # epo is empty
             pass
         else:
-            # otherwise it really contain data
-            n = 1000
-
-            # neo.io support quantities my vector use second for unit
-            epo.times = timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s
+            n = 96
+            epo.times = np.linspace(1,100,n)* pq.s
             # all duration are the same
             epo.durations = np.ones(n)*500*pq.ms
             # label
             l = [ ]
             for i in range(n):
-                if np.random.rand()>.6: l.append( 'TriggerA' )
-                else : l.append( 'TriggerB' )
+                if np.mod(i,2)==0: l.append( 'Evoked' )
+            else : l.append( 'Spontaneous' )
             epo.labels = np.array( l )
 
         return epo
