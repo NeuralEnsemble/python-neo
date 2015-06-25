@@ -128,8 +128,8 @@ class KwikIO(BaseIO):
                      lazy=False,
                      cascade=True,
                      dataset=0,
-                     lfpchannel=12
-                     tracechannel=None
+                     lfpchannel=12,
+                     rawchannel=None
                     ):
         """
         lfpchannel can be int  - how to select all?
@@ -141,7 +141,7 @@ class KwikIO(BaseIO):
         seg = Segment( name='session something' )
 
         if cascade:
-            if LFPchannel is not None
+            if LFPchannel is not None:
             # read nested analosignal
                 ana = self.read_lfpdata(lazy=lazy,
                                         kwd=kwd,
@@ -149,11 +149,11 @@ class KwikIO(BaseIO):
                                         dataset=dataset,
                                              )
                 seg.analogsignals += [ ana ]
-            if tracechannel is not None
+            if rawchannel is not None:
                 # read nested analosignal
                 ana = self.read_rawdata(lazy=lazy,
                                         kwd=kwd,
-                                        channel_index=tracechannel,
+                                        channel_index=rawchannel,
                                         dataset=dataset,
                                              )
                 seg.analogsignals += [ ana ]
@@ -178,34 +178,37 @@ class KwikIO(BaseIO):
 
     def read_lfpdata(self,
                           lazy=False,
-                          cascade=True
-                          channel_index
+                          cascade=True,
+                          channel_index=12,
                           dataset=0,
+                          sampling_rate=1000
+                          bandwidth=[0,500]
                           ):
         """
         Downsample and filter raw data into LFP
         """
 
-        attrs = self.kwd['recordings'][str(dataset)].attrs
-
         if lazy:
             anasig = AnalogSignal([],
-                                  units='V',
-                                  sampling_rate=attrs['sample_rate']*pq.Hz,
+                                  units='uV',
+                                  sampling_rate=sampling_rate*pq.Hz,
                                   t_start=attrs['start_time']*pq.s,
                                   channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = self.kwd['recordings'][str(dataset)]['data'].shape[0]
         else:
-            data   = self.kwd['recordings'][str(dataset)]['data']
-            for i in arange(0,)
-            anasig = AnalogSignalArray(data,
-                                  units='V',
-                                  sampling_rate=attrs['sample_rate']*pq.Hz,
-                                  t_start=attrs['start_time']*pq.s,
-                                  channel_index=channel_index,
-                                  )
+            for idx in channel_index:
+                attrs = self.kwd['recordings'][str(dataset)].attrs
+                slice = int(attrs['sample_rate']/sampling_rate)
+                data = np.array(self.kwd['recordings'][str(dataset)]['data'][0:-1:slice,idx])
+                data = self.lowpass_filter(bits2volt(data), bandwidth)
+                anasig = AnalogSignalArray(data,
+                                      units='uV',
+                                      sampling_rate=sampling_rate*pq.Hz,
+                                      t_start=attrs['start_time']*pq.s,
+                                      channel_index=idx,
+                                      )
 
         # for attributes out of neo you can annotate
         anasig.annotate(info = 'low pass filtered')
@@ -214,7 +217,7 @@ class KwikIO(BaseIO):
 
     def read_rawdata(self,
                           lazy=False,
-                          cascade=True
+                          cascade=True,
                           channel_index=0,
                           dataset=0,
                           ):
@@ -226,7 +229,7 @@ class KwikIO(BaseIO):
 
         if lazy:
             anasig = AnalogSignal([],
-                                  units='V',
+                                  units='uV',
                                   sampling_rate=attrs['sample_rate']*pq.Hz,
                                   t_start=attrs['start_time']*pq.s,
                                   channel_index=channel_index,
@@ -234,9 +237,9 @@ class KwikIO(BaseIO):
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = self.kwd['recordings'][str(dataset)]['data'].shape[0]
         else:
-            data   = np.array(self.kwd['recordings'][str(dataset)]['data'][:,:])
+            data   = bits2volt(np.array(self.kwd['recordings'][str(dataset)]['data'][:,:]))
             anasig = AnalogSignalArray(data,
-                                  units='V',
+                                  units='uV',
                                   sampling_rate=attrs['sample_rate']*pq.Hz,
                                   t_start=attrs['start_time']*pq.s,
                                   channel_index=channel_index,
@@ -265,6 +268,14 @@ class KwikIO(BaseIO):
             epo.labels = np.array( l )
 
         return epo
+
+    def bits2volt(bits):
+        '''
+        Converts 16bit signal to microvolt
+        '''
+        # TODO: verify gain, formula and bitvalue
+        gain = 200
+        return (bits * 20e6) / (gain * np.pow(2.0,16));
 
     def read_spiketrain(self,
                         lazy = False,
