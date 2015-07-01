@@ -74,7 +74,7 @@ class KwikIO(BaseIO):
     is_streameable     = False
 
     name               = 'Kwik'
-
+    description        = 'This IO reads experimental data from a .kwik dataset'
     extensions         = [ 'kwd', 'kwx', 'kwik' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
