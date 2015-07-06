@@ -151,7 +151,7 @@ class KwikIO(BaseIO):
                           / attrs['kwik']['sample_rate']
                           + start_time) * pq.s
 
-        seg.create_many_to_one_relationship()
+        # seg.create_many_to_one_relationship() #TODO: what does this do?
         return seg
 
     def _read_traces(self,
