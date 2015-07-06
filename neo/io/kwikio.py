@@ -76,7 +76,7 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = []#[ 'kwd', 'kwx', 'kwik' ]
+    extensions         = [ 'kwik', 'kwd', 'kwx' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
@@ -116,18 +116,13 @@ class KwikIO(BaseIO):
         except:
             attrs['app_data'] = False
 
-        if attrs['kwik']['start_time'] == 'N.': #TODO bad fix
-            start_time = 0
-        else:
-            start_time = attrs['kwik']['start_time']
-
         # create an empty segment
         seg = Segment( name=self._basename ) #TODO: fetch a meaningfull name of the segment
 
         if cascade:
             # read nested analosignal
             ana = self._read_traces(attrs=attrs,
-                                    start_time=start_time,
+                                    start_time=attrs['kwik']['start_time'],
                                     lazy=lazy,
                                     cascade=cascade,
                                     dataset=dataset,
@@ -149,7 +144,7 @@ class KwikIO(BaseIO):
 
             seg.duration = (attrs['shape'][0] #TODO: this duration is not necessarily correct after downsample
                           / attrs['kwik']['sample_rate']
-                          + start_time) * pq.s
+                          + attrs['kwik']['start_time']) * pq.s
 
         # seg.create_many_to_one_relationship() #TODO: what does this do?
         return seg
@@ -190,7 +185,7 @@ class KwikIO(BaseIO):
             anasig = AnalogSignal([],
                                   units=sig_unit,
                                   sampling_rate=sampling_rate*pq.Hz,
-                                  t_start=start_time*pq.s,
+                                  t_start=attrs['kwik']['start_time']*pq.s,
                                   channel_index=np.array(channel_index),
                                   )
             # we add the attribute lazy_shape with the size if loaded
@@ -205,7 +200,7 @@ class KwikIO(BaseIO):
             anasig = AnalogSignalArray(data,
                                        units=sig_unit,
                                        sampling_rate=sampling_rate*pq.Hz,
-                                       t_start=start_time*pq.s,
+                                       t_start=attrs['kwik']['start_time']*pq.s,
                                        channel_index=np.array(channel_index),
                                        )
 
