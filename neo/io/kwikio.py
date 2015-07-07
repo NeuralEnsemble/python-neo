@@ -36,8 +36,7 @@ else:
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Segment, SpikeTrain, Unit, EpochArray,
-                      RecordingChannel, RecordingChannelGroup, AnalogSignal,
+from neo.core import (Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
                       AnalogSignalArray)
 
 
@@ -57,16 +56,14 @@ class KwikIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray,
-                          RecordingChannel, RecordingChannelGroup, AnalogSignal,
+    supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
                           AnalogSignalArray ]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
-    readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray,
-                          RecordingChannel, RecordingChannelGroup, AnalogSignal,
+    readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
                           AnalogSignalArray ]
     # This class is not able to write objects
     writeable_objects   = [ ]
@@ -76,7 +73,7 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = [ 'kwik', 'kwd', 'kwx' ]
+    extensions         = []#[ 'kwik', 'kwd', 'kwx' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
@@ -117,19 +114,23 @@ class KwikIO(BaseIO):
             attrs['app_data'] = False
 
         # create an empty segment
-        seg = Segment( name=self._basename ) #TODO: fetch a meaningfull name of the segment
+        seg = Segment( file_origin=self._basename ) #TODO: fetch a meaningfull name of the segment
 
         if cascade:
+            if channel_index is not None:
+                if type(channel_index) is int: channel_index = [channel_index]
+            else:
+                channel_index = range(0,attrs['shape'][1])
             # read nested analosignal
-            ana = self._read_traces(attrs=attrs,
-                                    start_time=attrs['kwik']['start_time'],
-                                    lazy=lazy,
-                                    cascade=cascade,
-                                    dataset=dataset,
-                                    channel_index=channel_index,
-                                    sampling_rate=sampling_rate,
+            for idx in channel_index:
+                ana = self._read_traces(attrs=attrs,
+                                        channel_index=idx,
+                                        lazy=lazy,
+                                        cascade=cascade,
+                                        dataset=dataset,
+                                        sampling_rate=sampling_rate,
                                          )
-            seg.analogsignals += [ ana ]
+                seg.analogsignals += [ ana ]
             # # read nested spiketrain
             # num_spiketrain_by_channel = 3
             # for i in range(attrs['shape'][1]):
@@ -151,12 +152,11 @@ class KwikIO(BaseIO):
 
     def _read_traces(self,
                       attrs,
-                      start_time,
+                      channel_index,
                       lazy=False,
                       cascade=True,
                       dataset=0,
-                      channel_index=None,
-                      sampling_rate=None
+                      sampling_rate=None,
                       ):
         """
         read raw traces with given sampling_rate, if sampling_rate is None
@@ -170,40 +170,32 @@ class KwikIO(BaseIO):
             sliceskip = 1
             sampling_rate = attrs['kwik']['sample_rate']
 
-        if channel_index is not None:
-            if type(channel_index) is int: channel_index = [channel_index]
-        else:
-            channel_index = range(0,attrs['shape'][1])
         if attrs['app_data']:
             bit_volts = attrs['app_data']['channel_bit_volts']
             sig_unit = 'uV'
         else:
             bit_volts = np.ones((attrs['shape'][1]))
-            bit_depth = attrs['kwik']['bit_depth']
+            bit_depth = attrs['kwik']['bit_depth'] #TODO bad fix
             sig_unit =  'bit'#str(bit_depth)
         if lazy:
             anasig = AnalogSignal([],
                                   units=sig_unit,
                                   sampling_rate=sampling_rate*pq.Hz,
                                   t_start=attrs['kwik']['start_time']*pq.s,
-                                  channel_index=np.array(channel_index),
+                                  channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = attrs['shape'] #TODO: wrong if downsampled
         else:
-            data_array = []
-            for idx in channel_index:
-                data = self._kwd['recordings'][str(dataset)]['data'].value[:,idx]
-                data_array.append(data[0:-1:sliceskip] * bit_volts[idx])
-            data = np.array(data_array).T
-            data_array = [] #delete from memory
-            anasig = AnalogSignalArray(data,
+            data = self._kwd['recordings'][str(dataset)]['data'].value[:,channel_index]
+            data = data[0:-1:sliceskip] * bit_volts[channel_index]
+            anasig = AnalogSignal(data,
                                        units=sig_unit,
                                        sampling_rate=sampling_rate*pq.Hz,
                                        t_start=attrs['kwik']['start_time']*pq.s,
-                                       channel_index=np.array(channel_index),
+                                       channel_index=channel_index,
                                        )
-
+            data = [] # delete from memory
         # for attributes out of neo you can annotate
         anasig.annotate(info='raw traces')
         return anasig
