@@ -37,17 +37,13 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                      AnalogSignalArray)
+                      RecordingChannel)
 
-
-
-# I need to subclass BaseIO
 class KwikIO(BaseIO):
     """
     Class for "reading" experimental data from a .kwik file.
 
-    Generates a :class:`Segment` with a :class:`AnalogSignal`,
-    a :class:`SpikeTrain` and a :class:`EpochArray`.
+    Generates a :class:`Segment` with a :class:`AnalogSignal`
 
     """
 
@@ -57,14 +53,14 @@ class KwikIO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          AnalogSignalArray ]
+                          RecordingChannel ]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
     readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          AnalogSignalArray ]
+                          RecordingChannel ]
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -73,7 +69,7 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = []#[ 'kwik', 'kwd', 'kwx' ]
+    extensions         = []#[ 'kwik', 'kwd', 'kwx' ] TODO: change when OpenElectrophy works
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
@@ -114,7 +110,10 @@ class KwikIO(BaseIO):
             attrs['app_data'] = False
 
         # create an empty segment
-        seg = Segment( file_origin=self._basename ) #TODO: fetch a meaningfull name of the segment
+        segname = attrs['kwik']['name']
+        if segname is None:
+            segname = 'no name'
+        seg = Segment( file_origin=self._basename, name=segname )
 
         if cascade:
             if channel_index is not None:
@@ -130,24 +129,15 @@ class KwikIO(BaseIO):
                                         dataset=dataset,
                                         sampling_rate=sampling_rate,
                                          )
+                rc = RecordingChannel(name='channel', channel_index=idx)
+                rc.analogsignals += [ ana ]
                 seg.analogsignals += [ ana ]
-            # # read nested spiketrain
-            # num_spiketrain_by_channel = 3
-            # for i in range(attrs['shape'][1]):
-            #     for _ in range(num_spiketrain_by_channel):
-            #         sptr = self._read_spiketrain(lazy=lazy,
-            #                                     channel_index=i,
-            #                                     )
-            #         seg.spiketrains += [ sptr ]
-            #
-            # epo = self._read_stimulus(lazy=lazy)
-            # seg.epocharrays += [ epo ]
 
             seg.duration = (attrs['shape'][0] #TODO: this duration is not necessarily correct after downsample
                           / attrs['kwik']['sample_rate']
                           + attrs['kwik']['start_time']) * pq.s
 
-        # seg.create_many_to_one_relationship() #TODO: what does this do?
+        seg.create_many_to_one_relationship()
         return seg
 
     def _read_traces(self,
@@ -175,8 +165,7 @@ class KwikIO(BaseIO):
             sig_unit = 'uV'
         else:
             bit_volts = np.ones((attrs['shape'][1]))
-            bit_depth = attrs['kwik']['bit_depth'] #TODO bad fix
-            sig_unit =  'bit'#str(bit_depth)
+            sig_unit =  'bit'
         if lazy:
             anasig = AnalogSignal([],
                                   units=sig_unit,
@@ -199,79 +188,3 @@ class KwikIO(BaseIO):
         # for attributes out of neo you can annotate
         anasig.annotate(info='raw traces')
         return anasig
-
-    # def _read_stimulus(self, lazy):
-    #     epo = EpochArray()
-    #     if lazy:
-    #         # in lazy case no data are read
-    #         pass
-    #     else:
-    #         n = 96
-    #         epo.times = np.linspace(1,100,n)* pq.s
-    #         # all duration are the same
-    #         epo.durations = np.ones(n)*500*pq.ms
-    #         # label
-    #         l = [ ]
-    #         for i in range(n):
-    #             if np.mod(i,2)==0: l.append( 'Evoked' )
-    #         else : l.append( 'Spontaneous' )
-    #         epo.labels = np.array( l )
-    #
-    #     return epo
-    #
-    # def _read_spiketrain(self,
-    #                     lazy = False,
-    #                     cascade = True,
-    #                     segment_duration = 15.,
-    #                     t_start = -1,
-    #                     channel_index = 0,
-    #                     ):
-    #     """
-    #     With this IO SpikeTrain can be accessed directly with its channel number
-    #     """
-    #     # There are 2 possibles behaviour for a SpikeTrain
-    #     # holding many Spike instance or directly holding spike times
-    #     # we choose here the first :
-    #     if not HAVE_SCIPY:
-    #         raise SCIPY_ERR
-    #
-    #     num_spike_by_spiketrain = 40
-    #     sr = 10000.
-    #
-    #     if lazy:
-    #         times = [ ]
-    #     else:
-    #         times = (np.random.rand(num_spike_by_spiketrain)*segment_duration +
-    #                  t_start)
-    #
-    #     # create a spiketrain
-    #     spiketr = SpikeTrain(times, t_start = t_start*pq.s, t_stop = (t_start+segment_duration)*pq.s ,
-    #                                         units = pq.s,
-    #                                         name = 'it is a spiketrain from exampleio',
-    #                                         )
-    #
-    #     if lazy:
-    #         # we add the attribute lazy_shape with the size if loaded
-    #         spiketr.lazy_shape = (num_spike_by_spiketrain,)
-    #
-    #     # ours spiketrains also hold the waveforms:
-    #
-    #     # 1 generate a fake spike shape (2d array if trodness >1)
-    #     w1 = -stats.nct.pdf(np.arange(11,60,4), 5,20)[::-1]/3.
-    #     w2 = stats.nct.pdf(np.arange(11,60,2), 5,20)
-    #     w = np.r_[ w1 , w2 ]
-    #     w = -w/max(w)
-    #
-    #     if not lazy:
-    #         # in the neo API the waveforms attr is 3 D in case tetrode
-    #         # in our case it is mono electrode so dim 1 is size 1
-    #         waveforms  = np.tile( w[np.newaxis,np.newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
-    #         waveforms *=  np.random.randn(*waveforms.shape)/6+1
-    #         spiketr.waveforms = waveforms*pq.mV
-    #         spiketr.sampling_rate = sr * pq.Hz
-    #         spiketr.left_sweep = 1.5* pq.s
-    #
-    #     # for attributes out of neo you can annotate
-    #     spiketr.annotate(channel_index = channel_index)
-    #
-    #     return spiketr
