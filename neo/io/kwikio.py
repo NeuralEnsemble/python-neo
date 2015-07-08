@@ -13,10 +13,11 @@ Author: Mikkel E. Lepperød @CINPLA
 # TODO: units
 # TODO: enable reading of several files e.g. downsampled and/or filtered
 # TODO: enable writing to file
-# TODO: stimulus and tracing data
+# TODO: stimulus and tracking data
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
+from __future__ import division
 
 import numpy as np
 import quantities as pq
@@ -110,8 +111,7 @@ class KwikIO(BaseIO):
                      lazy=False,
                      cascade=True,
                      dataset=0,
-                     channel_index=None,
-                     sampling_rate=None
+                     channel_index=None
                     ):
         """
         Arguments:
@@ -132,10 +132,10 @@ class KwikIO(BaseIO):
 
         blk = Block()
         if cascade:
-            seg = Segment( file_origin=self._filename ,name='test' )
+            seg = Segment( file_origin=self._filename )
             blk.segments += [ seg ]
             if channel_index:
-                if type(channel_index) is int: channel_index = [channel_index]
+                if type(channel_index) is int: channel_index = [ channel_index ]
             else:
                 channel_index = range(0,attrs['shape'][1])
 
@@ -146,7 +146,6 @@ class KwikIO(BaseIO):
                                         lazy=lazy,
                                         cascade=cascade,
                                         dataset=dataset,
-                                        sampling_rate=sampling_rate,
                                          )
                 seg.analogsignals += [ ana ]
 
@@ -163,19 +162,12 @@ class KwikIO(BaseIO):
                       lazy=False,
                       cascade=True,
                       dataset=0,
-                      sampling_rate=None,
                       ):
         """
         read raw traces with given sampling_rate, if sampling_rate is None
         default from acquisition system is given. channel_index can be int or
         iterable, if None all channels are read
         """
-
-        if sampling_rate:
-            sliceskip = int(attrs['kwik']['sample_rate']/sampling_rate)
-        else:
-            sliceskip = 1
-            sampling_rate = attrs['kwik']['sample_rate']
 
         if attrs['app_data']:
             bit_volts = attrs['app_data']['channel_bit_volts']
@@ -186,18 +178,18 @@ class KwikIO(BaseIO):
         if lazy:
             anasig = AnalogSignal([],
                                   units=sig_unit,
-                                  sampling_rate=sampling_rate*pq.Hz,
+                                  sampling_rate=attrs['kwik']['sample_rate']*pq.Hz,
                                   t_start=attrs['kwik']['start_time']*pq.s,
                                   channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = attrs['shape'] #TODO: wrong if downsampled
+            anasig.lazy_shape = attrs['shape']
         else:
             data = self._kwd['recordings'][str(dataset)]['data'].value[:,channel_index]
-            data = data[0:-1:sliceskip] * bit_volts[channel_index]
+            data = data * bit_volts[channel_index]
             anasig = AnalogSignal(data,
                                        units=sig_unit,
-                                       sampling_rate=sampling_rate*pq.Hz,
+                                       sampling_rate=attrs['kwik']['sample_rate']*pq.Hz,
                                        t_start=attrs['kwik']['start_time']*pq.s,
                                        channel_index=channel_index,
                                        )
