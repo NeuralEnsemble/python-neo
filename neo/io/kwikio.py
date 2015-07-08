@@ -69,7 +69,7 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = []#[ 'kwik', 'kwd', 'kwx' ] TODO: change when OpenElectrophy works
+    extensions         = []#[ 'kwik', 'kwd', 'kwx' ] #TODO: change when OpenElectrophy works
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
@@ -89,7 +89,7 @@ class KwikIO(BaseIO):
         self._kwik = h5py.File(filename, 'r')
         self._kwd = h5py.File(basename + '.raw.kwd', 'r') #TODO read filename from kwik file
 
-    def read_segment(self,
+    def read_block(self,
                      lazy=False,
                      cascade=True,
                      dataset=0,
@@ -105,22 +105,17 @@ class KwikIO(BaseIO):
         attrs['kwd'] = self._kwd['recordings'][str(dataset)].attrs
         attrs['shape'] = self._kwd['recordings'][str(dataset)]['data'].shape
         try:
-            attrs['app_data'] = self._kwd['recordings'][str(dataset)]['application_data'].attrs
+            attrs['app_data'] = self._kwd['recordings'][str(dataset)]['application_data'].attrs # TODO: find bitvolt conversion in phy generated data
         except:
             attrs['app_data'] = False
 
-        # create an empty segment
-        # segname = attrs['kwik']['name']
-        # if segname is None:
-        #     segname = 'no name'
-        # blk = Block()
+        blk = Block()
         seg = Segment( file_origin=self._basename )
         rcg = RecordingChannelGroup(name='all channels')
-        # seg.recordingchannelgroups += [ rcg ]
-        # blk.recordingchannelgroups += [ rcg ]
-        # blk.segments += [ seg ]
+        blk.recordingchannelgroups += [ rcg ]
+        blk.segments += [ seg ]
         if cascade:
-            if channel_index is not None:
+            if channel_index:
                 if type(channel_index) is int: channel_index = [channel_index]
             else:
                 channel_index = range(0,attrs['shape'][1])
@@ -136,18 +131,18 @@ class KwikIO(BaseIO):
                                          )
                 seg.analogsignals += [ ana ]
                 # generate many to many and many to one relationships
-                rc = RecordingChannel(channel_index=idx)
+                rc = RecordingChannel(index=idx)
                 rcg.recordingchannels += [ rc ]
                 rc.recordingchannelgroups += [ rcg ]
                 rc.analogsignals += [ ana ]
 
 
-            seg.duration = (attrs['shape'][0] #TODO: this duration is not necessarily correct after downsample
-                          / attrs['kwik']['sample_rate']
-                          + attrs['kwik']['start_time']) * pq.s
+            seg.duration = (attrs['shape'][0]
+                          / attrs['kwik']['sample_rate']) * pq.s
 
-        seg.create_many_to_one_relationship()
-        return seg
+        blk.create_many_to_one_relationship()
+        blk.create_many_to_many_relationship()
+        return blk
 
     def _read_traces(self,
                       attrs,
@@ -173,7 +168,7 @@ class KwikIO(BaseIO):
             bit_volts = attrs['app_data']['channel_bit_volts']
             sig_unit = 'uV'
         else:
-            bit_volts = np.ones((attrs['shape'][1]))
+            bit_volts = np.ones((attrs['shape'][1])) # TODO: find conversion in phy generated files
             sig_unit =  'bit'
         if lazy:
             anasig = AnalogSignal([],
