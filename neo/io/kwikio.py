@@ -11,7 +11,9 @@ Author: Mikkel E. Lepperød @CINPLA
 
 """
 # TODO: units
-# TODO: channelindex for traces - count from 0 or 1?
+# TODO: enable reading of several files e.g. downsampled or filtered
+# TODO: enable writing to file
+# TODO: stimulus and tracing data
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -38,6 +40,7 @@ from neo.io.baseio import BaseIO
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
                       RecordingChannel, RecordingChannelGroup, Block)
+import neo.io.tools
 
 class KwikIO(BaseIO):
     """
@@ -52,15 +55,15 @@ class KwikIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          RecordingChannel, RecordingChannelGroup, Block ]
+    supported_objects    = [ Block, Segment, AnalogSignal,
+                          RecordingChannel, RecordingChannelGroup]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
-    readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          RecordingChannel, RecordingChannelGroup, Block ]
+    readable_objects  = [ Block ]
+
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -87,7 +90,7 @@ class KwikIO(BaseIO):
         basename, ext = op.splitext(filename)
         self._basename = basename
         self._kwik = h5py.File(filename, 'r')
-        self._kwd = h5py.File(basename + '.raw.kwd', 'r') #TODO read filename from kwik file
+        self._kwd = h5py.File(basename + '.raw.kwd', 'r') #TODO read filename from kwik file - depends on openephys issue
 
     def read_block(self,
                      lazy=False,
@@ -97,7 +100,11 @@ class KwikIO(BaseIO):
                      sampling_rate=None
                     ):
         """
-        Channel_index can be int, iterable or None to select one, many or all channel(s)
+        Arguments:
+            Channel_index: can be int, iterable or None to select one, many or all channel(s)
+            dataset: points to a specific dataset in the .kwik and .raw.kwd file,
+                     however this will be an issue to change in e.g. OpenElectrophy or Spykeviewer
+            sampling_rate: None or float/int if not None raw data will be downsampled
         """
 
         attrs = {}
@@ -110,11 +117,9 @@ class KwikIO(BaseIO):
             attrs['app_data'] = False
 
         blk = Block()
-        seg = Segment( file_origin=self._basename )
-        rcg = RecordingChannelGroup(name='all channels')
-        blk.recordingchannelgroups += [ rcg ]
-        blk.segments += [ seg ]
         if cascade:
+            seg = Segment( file_origin=self._filename ,name='test' )
+            blk.segments += [ seg ]
             if channel_index:
                 if type(channel_index) is int: channel_index = [channel_index]
             else:
@@ -130,18 +135,12 @@ class KwikIO(BaseIO):
                                         sampling_rate=sampling_rate,
                                          )
                 seg.analogsignals += [ ana ]
-                # generate many to many and many to one relationships
-                rc = RecordingChannel(index=idx)
-                rcg.recordingchannels += [ rc ]
-                rc.recordingchannelgroups += [ rcg ]
-                rc.analogsignals += [ ana ]
-
 
             seg.duration = (attrs['shape'][0]
                           / attrs['kwik']['sample_rate']) * pq.s
 
+            neo.tools.populate_RecordingChannel(blk)
         blk.create_many_to_one_relationship()
-        blk.create_many_to_many_relationship()
         return blk
 
     def _read_traces(self,
