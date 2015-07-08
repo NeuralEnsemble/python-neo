@@ -16,8 +16,6 @@ except ImportError:
 from neo.io import KwikIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
-
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestKwikIO(BaseTestIO, unittest.TestCase):
     ioclass = KwikIO
     files_to_test = ['experiment0.kwik',
