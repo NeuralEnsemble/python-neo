@@ -3,7 +3,7 @@
 Class for reading data from a .kwik dataset
 
 Depends on: scipy
-            h5py >= 2.5.0 at least > 2.2.1
+            h5py >= 2.5.0
 
 Supported: Read
 
@@ -11,20 +11,34 @@ Author: Mikkel E. Lepperød @CINPLA
 
 """
 # TODO: units
-# TODO: enable reading of several files e.g. downsampled or filtered
+# TODO: enable reading of several files e.g. downsampled and/or filtered
 # TODO: enable writing to file
 # TODO: stimulus and tracing data
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-# note neo.core needs only numpy and quantities
 import numpy as np
 import quantities as pq
-import h5py
 import os.path as op
-
-# but my specific IO can depend on many other packages
+#version checking
+from distutils import version
+# check h5py
+try:
+    import h5py
+except ImportError as err:
+    HAVE_H5PY = False
+    H5PY_ERR = err
+else:
+    if version.LooseVersion(h5py.__version__) < '2.5.0':
+        HAVE_H5PY = False
+        H5PY_ERR = ImportError("your h5py version is too old to " +
+                                 "support KwikIO, you need at least 2.5.0 " +
+                                 "You have %s" % h5py.__version__)
+    else:
+        HAVE_H5PY = True
+        H5PY_ERR = None
+# check scipy
 try:
     from scipy import stats
 except ImportError as err:
