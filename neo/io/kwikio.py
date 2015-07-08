@@ -37,7 +37,7 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                      RecordingChannel)
+                      RecordingChannel, RecordingChannelGroup, Block)
 
 class KwikIO(BaseIO):
     """
@@ -53,14 +53,14 @@ class KwikIO(BaseIO):
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects  = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          RecordingChannel ]
+                          RecordingChannel, RecordingChannelGroup, Block ]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
     readable_objects    = [ Segment, SpikeTrain, Unit, EpochArray, AnalogSignal,
-                          RecordingChannel ]
+                          RecordingChannel, RecordingChannelGroup, Block ]
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -110,18 +110,23 @@ class KwikIO(BaseIO):
             attrs['app_data'] = False
 
         # create an empty segment
-        segname = attrs['kwik']['name']
-        if segname is None:
-            segname = 'no name'
-        seg = Segment( file_origin=self._basename, name=segname )
-
+        # segname = attrs['kwik']['name']
+        # if segname is None:
+        #     segname = 'no name'
+        # blk = Block()
+        seg = Segment( file_origin=self._basename )
+        rcg = RecordingChannelGroup(name='all channels')
+        # seg.recordingchannelgroups += [ rcg ]
+        # blk.recordingchannelgroups += [ rcg ]
+        # blk.segments += [ seg ]
         if cascade:
             if channel_index is not None:
                 if type(channel_index) is int: channel_index = [channel_index]
             else:
                 channel_index = range(0,attrs['shape'][1])
-            # read nested analosignal
+
             for idx in channel_index:
+                # read nested analosignal
                 ana = self._read_traces(attrs=attrs,
                                         channel_index=idx,
                                         lazy=lazy,
@@ -129,9 +134,13 @@ class KwikIO(BaseIO):
                                         dataset=dataset,
                                         sampling_rate=sampling_rate,
                                          )
-                rc = RecordingChannel(name='channel', channel_index=idx)
-                rc.analogsignals += [ ana ]
                 seg.analogsignals += [ ana ]
+                # generate many to many and many to one relationships
+                rc = RecordingChannel(channel_index=idx)
+                rcg.recordingchannels += [ rc ]
+                rc.recordingchannelgroups += [ rcg ]
+                rc.analogsignals += [ ana ]
+
 
             seg.duration = (attrs['shape'][0] #TODO: this duration is not necessarily correct after downsample
                           / attrs['kwik']['sample_rate']
