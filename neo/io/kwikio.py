@@ -14,6 +14,7 @@ Author: Mikkel E. Lepperød @CINPLA
 # TODO: enable reading of several files e.g. downsampled and/or filtered
 # TODO: enable writing to file
 # TODO: stimulus and tracking data
+# TODO: enable read all datasets
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -118,7 +119,6 @@ class KwikIO(BaseIO):
             Channel_index: can be int, iterable or None to select one, many or all channel(s)
             dataset: points to a specific dataset in the .kwik and .raw.kwd file,
                      however this will be an issue to change in e.g. OpenElectrophy or Spykeviewer
-            sampling_rate: None or float/int if not None raw data will be downsampled
         """
 
         attrs = {}
@@ -164,9 +164,9 @@ class KwikIO(BaseIO):
                       dataset=0,
                       ):
         """
-        read raw traces with given sampling_rate, if sampling_rate is None
-        default from acquisition system is given. channel_index can be int or
-        iterable, if None all channels are read
+        Read raw traces
+        Arguments:
+            channel_index: can be int or iterable, if None all channels are selected
         """
 
         if attrs['app_data']:
