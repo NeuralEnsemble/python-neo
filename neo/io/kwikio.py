@@ -156,7 +156,7 @@ class KwikIO(BaseIO):
                                         lazy=lazy,
                                         cascade=cascade,
                                          )
-                chan = RecordingChannel(index=idx)
+                chan = RecordingChannel(index=int(idx))
                 seg.analogsignals += [ ana ]
                 chan.analogsignals += [ ana ]
                 rcg.recordingchannels.append(chan)
