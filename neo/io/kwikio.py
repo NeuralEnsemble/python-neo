@@ -69,8 +69,6 @@ class KwikIO(BaseIO):
     is_readable = True # This class can only read data
     is_writable = False # write is not supported
 
-    # This class is able to directly or indirectly handle the following objects
-    # You can notice that this greatly simplifies the full Neo object hierarchy
     supported_objects    = [ Block, Segment, AnalogSignal,
                           RecordingChannel, RecordingChannelGroup]
 
@@ -89,10 +87,6 @@ class KwikIO(BaseIO):
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
     extensions         = [ 'kwik' ]
-
-    # mode can be 'file' or 'dir' or 'fake' or 'database'
-    # the main case is 'file' but some reader are base on a directory or a database
-    # this info is for GUI stuff also
     mode = 'file'
 
     def __init__(self, filename, dataset=0) :
