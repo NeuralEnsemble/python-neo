@@ -88,7 +88,7 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = []#[ 'kwik' ] #TODO: change when OpenElectrophy works
+    extensions         = [ 'kwik' ]
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
