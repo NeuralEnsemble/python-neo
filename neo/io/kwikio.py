@@ -11,7 +11,7 @@ Author: Mikkel E. Lepperød @CINPLA
 
 """
 # TODO: units
-# TODO: enable reading of several files e.g. downsampled and/or filtered
+# TODO: enable reading of all otputfiles
 # TODO: enable writing to file
 # TODO: stimulus and tracking data
 # TODO: enable read all datasets
@@ -22,7 +22,7 @@ from __future__ import division
 
 import numpy as np
 import quantities as pq
-import os.path as op
+import os
 #version checking
 from distutils import version
 # check h5py
@@ -88,109 +88,122 @@ class KwikIO(BaseIO):
 
     name               = 'Kwik'
     description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = []#[ 'kwik', 'kwd', 'kwx' ] #TODO: change when OpenElectrophy works
+    extensions         = []#[ 'kwik' ] #TODO: change when OpenElectrophy works
 
     # mode can be 'file' or 'dir' or 'fake' or 'database'
     # the main case is 'file' but some reader are base on a directory or a database
     # this info is for GUI stuff also
     mode = 'file'
 
-    def __init__(self, filename) :
+    def __init__(self, filename, dataset=0) :
         """
         Arguments:
             filename : the filename
-
+            dataset: points to a specific dataset in the .kwik and .raw.kwd file,
+                     however this can be an issue to change in e.g. OpenElectrophy or Spykeviewer
         """
         BaseIO.__init__(self)
         self._filename = filename
-        basename, ext = op.splitext(filename)
-        self._basename = basename
+        self._path, file = os.path.split(filename)
         self._kwik = h5py.File(filename, 'r')
-        self._kwd = h5py.File(basename + '.raw.kwd', 'r') #TODO read filename from kwik file - depends on openephys issue
+        self._dataset = dataset
+        try:
+            rawfile = self._kwik['recordings'][str(self._dataset)]['raw'].attrs['hdf5_path'] # klustakwik/phy and newest version of open ephys
+            rawfile = rawfile.split('/')[0]
+        except:
+            rawfile = file.split('.')[0] + '_100.raw.kwd' # first version of open ephys files
+        self._kwd = h5py.File(self._path + os.sep + rawfile, 'r')
+        self._attrs = {}
+        self._attrs['kwik'] = self._kwik['recordings'][str(self._dataset)].attrs
+        self._attrs['kwd'] = self._kwd['recordings'][str(self._dataset)].attrs
+        self._attrs['shape'] = self._kwd['recordings'][str(self._dataset)]['data'].shape
+        try:
+            self._attrs['app_data'] = self._kwd['recordings'][str(self._dataset)]['application_data'].attrs # TODO: find bitvolt conversion in phy generated data
+        except:
+            self._attrs['app_data'] = False
 
     def read_block(self,
                      lazy=False,
                      cascade=True,
-                     dataset=0,
                      channel_index=None
                     ):
         """
         Arguments:
             Channel_index: can be int, iterable or None to select one, many or all channel(s)
-            dataset: points to a specific dataset in the .kwik and .raw.kwd file,
-                     however this will be an issue to change in e.g. OpenElectrophy or Spykeviewer
-        """
 
-        attrs = {}
-        attrs['kwik'] = self._kwik['recordings'][str(dataset)].attrs
-        attrs['kwd'] = self._kwd['recordings'][str(dataset)].attrs
-        attrs['shape'] = self._kwd['recordings'][str(dataset)]['data'].shape
-        try:
-            attrs['app_data'] = self._kwd['recordings'][str(dataset)]['application_data'].attrs # TODO: find bitvolt conversion in phy generated data
-        except:
-            attrs['app_data'] = False
+        """
 
         blk = Block()
         if cascade:
             seg = Segment( file_origin=self._filename )
             blk.segments += [ seg ]
+
+
+
             if channel_index:
                 if type(channel_index) is int: channel_index = [ channel_index ]
+                if type(channel_index) is list: channel_index = np.array( channel_index )
             else:
-                channel_index = range(0,attrs['shape'][1])
+                channel_index = np.arange(0,self._attrs['shape'][1])
+
+            rcg = RecordingChannelGroup(name='all channels',
+                                 channel_indexes=channel_index)
+            blk.recordingchannelgroups.append(rcg)
 
             for idx in channel_index:
                 # read nested analosignal
-                ana = self._read_traces(attrs=attrs,
-                                        channel_index=idx,
+                ana = self.read_analogsignal(channel_index=idx,
                                         lazy=lazy,
                                         cascade=cascade,
-                                        dataset=dataset,
                                          )
+                chan = RecordingChannel(channel_index=idx)
                 seg.analogsignals += [ ana ]
+                chan.analogsignals += [ ana ]
+                rcg.recordingchannels.append(chan)
+            seg.duration = (self._attrs['shape'][0]
+                          / self._attrs['kwik']['sample_rate']) * pq.s
 
-            seg.duration = (attrs['shape'][0]
-                          / attrs['kwik']['sample_rate']) * pq.s
-
-            neo.tools.populate_RecordingChannel(blk)
+            # neo.tools.populate_RecordingChannel(blk)
         blk.create_many_to_one_relationship()
         return blk
 
-    def _read_traces(self,
-                      attrs,
-                      channel_index,
+    def read_analogsignal(self,
+                      channel_index=None,
                       lazy=False,
                       cascade=True,
-                      dataset=0,
                       ):
         """
         Read raw traces
         Arguments:
-            channel_index: can be int or iterable, if None all channels are selected
+            channel_index: must be integer
         """
+        try:
+            channel_index = int(channel_index)
+        except TypeError:
+            print('channel_index must be int, not %s' %type(channel_index))
 
-        if attrs['app_data']:
-            bit_volts = attrs['app_data']['channel_bit_volts']
+        if self._attrs['app_data']:
+            bit_volts = self._attrs['app_data']['channel_bit_volts']
             sig_unit = 'uV'
         else:
-            bit_volts = np.ones((attrs['shape'][1])) # TODO: find conversion in phy generated files
+            bit_volts = np.ones((self._attrs['shape'][1])) # TODO: find conversion in phy generated files
             sig_unit =  'bit'
         if lazy:
             anasig = AnalogSignal([],
                                   units=sig_unit,
-                                  sampling_rate=attrs['kwik']['sample_rate']*pq.Hz,
-                                  t_start=attrs['kwik']['start_time']*pq.s,
+                                  sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
+                                  t_start=self._attrs['kwik']['start_time']*pq.s,
                                   channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = attrs['shape']
+            anasig.lazy_shape = self._attrs['shape']
         else:
-            data = self._kwd['recordings'][str(dataset)]['data'].value[:,channel_index]
+            data = self._kwd['recordings'][str(self._dataset)]['data'].value[:,channel_index]
             data = data * bit_volts[channel_index]
             anasig = AnalogSignal(data,
                                        units=sig_unit,
-                                       sampling_rate=attrs['kwik']['sample_rate']*pq.Hz,
-                                       t_start=attrs['kwik']['start_time']*pq.s,
+                                       sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
+                                       t_start=self._attrs['kwik']['start_time']*pq.s,
                                        channel_index=channel_index,
                                        )
             data = [] # delete from memory
