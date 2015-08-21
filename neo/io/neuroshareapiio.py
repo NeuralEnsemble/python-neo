@@ -16,6 +16,8 @@ from __future__ import absolute_import
 import numpy as np
 import quantities as pq
 
+import os
+
 #check to see if the neuroshare bindings are properly imported    
 try:
     import neuroshare as ns
@@ -35,9 +37,6 @@ from neo.io.baseio import BaseIO
 
 #import objects from neo.core
 from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
-
-#some tools to finalize the hierachy
-from neo.io.tools import create_many_to_one_relationship
 
 
 # create an object based on BaseIO
@@ -88,7 +87,7 @@ class NeuroshareapiIO(BaseIO):
 
 
 
-    def __init__(self , filename = None) :
+    def __init__(self , filename = None, dllpath = None) :
         """
         Arguments:
             filename : the filename
@@ -107,7 +106,12 @@ class NeuroshareapiIO(BaseIO):
         #if a filename was given, create a dictionary with information that will 
         #be needed later on.
         if self.filename != None:
-            self.fd = ns.File(self.filename)
+            if dllpath is not None:
+                name = os.path.splitext(os.path.basename(dllpath))[0]
+                library = ns.Library(name, dllpath)
+            else:
+                library = None
+            self.fd = ns.File(self.filename, library = library)
             #get all the metadata from file
             self.metadata = self.fd.metadata_raw
             #get sampling rate
@@ -257,7 +261,7 @@ class NeuroshareapiIO(BaseIO):
                 #add the spike object to segment
                 seg.spiketrains += [sptr]
 
-        create_many_to_one_relationship(seg)
+        seg.create_many_to_one_relationship()
         
         return seg
 
