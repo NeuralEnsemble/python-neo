@@ -5,8 +5,8 @@ Classe for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 - abf = Axon binary file
-- atf is a text file based format from axon that could be read by AsciiIO
-  (but this file is less efficient.)
+- atf is a text file based format from axon that could be
+  read by AsciiIO (but this file is less efficient.)
 
 
 This code is a port of abfload and abf2load
@@ -256,15 +256,18 @@ class AxonIO(BaseIO):
 
                 if (fSynchTimeUnit != 0) and (mode == 1):
                     length /= fSynchTimeUnit
-                subdata = data[pos:pos + length]
+
+                if not lazy:
+                    subdata = data[pos:pos+length]
+                    subdata = subdata.reshape((subdata.size/nbchannel,
+                                               nbchannel)).astype('f')
+                    if dt == np.dtype('i2'):
+                        if version < 2.:
+                            reformat_integer_v1(subdata, nbchannel, header)
+                        elif version >= 2.:
+                            reformat_integer_v2(subdata, nbchannel, header)
+
                 pos += length
-                subdata = subdata.reshape((subdata.size/nbchannel,
-                                           nbchannel)).astype('f')
-                if dt == np.dtype('i2'):
-                    if version < 2.:
-                        reformat_integer_v1(subdata, nbchannel, header)
-                    elif version >= 2.:
-                        reformat_integer_v2(subdata, nbchannel, header)
 
                 if version < 2.:
                     chans = [chan_num for chan_num in
@@ -300,7 +303,7 @@ class AxonIO(BaseIO):
                                           name=str(name),
                                           channel_index=int(num))
                     if lazy:
-                        anaSig.lazy_shape = subdata.shape[0]
+                        anaSig.lazy_shape = length / nbchannel
                     seg.analogsignals.append(anaSig)
                 bl.segments.append(seg)
 
