@@ -407,6 +407,8 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1.max(), 54000*pq.pA)
         self.assertEqual(self.signal1.min(), 0*pq.nA)
         self.assertEqual(self.signal1.mean(), 27*pq.nA)
+        self.assertEqual(self.signal1.std(), self.signal1.magnitude.std()*pq.nA)
+        self.assertEqual(self.signal1.var(), self.signal1.magnitude.var()*pq.nA**2)
 
     def test__rescale_same(self):
         result = self.signal1.copy()
@@ -551,6 +553,46 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.sampling_rate, targ.sampling_rate)
         assert_arrays_equal(result, targ)
         assert_same_sub_schema(result, targ)
+
+    def test__time_slice__no_explicit_time(self):
+        self.signal2.t_start = 10.0 * pq.ms
+        assert_neo_object_is_compliant(self.signal2)
+
+        t1 = 2 * pq.s + 10.0 * pq.ms
+        t2 = 4 * pq.s + 10.0 * pq.ms
+
+        for t_start,t_stop in [(t1,None),(None,None),(None,t2)]:
+
+            t_start_targ = t1 if t_start!=None else self.signal2.t_start
+            t_stop_targ = t2 if t_stop!=None else self.signal2.t_stop
+
+            result = self.signal2.time_slice(t_start, t_stop)
+            self.assertIsInstance(result, AnalogSignalArray)
+            assert_neo_object_is_compliant(result)
+            self.assertEqual(result.name, 'spam')
+            self.assertEqual(result.description, 'eggs')
+            self.assertEqual(result.file_origin, 'testfile.txt')
+            self.assertEqual(result.annotations, {'arg1': 'test'})
+
+            targ_ind = np.where((self.signal2.times >= t_start_targ) &
+                                (self.signal2.times < t_stop_targ))
+            targ_array = self.signal2.magnitude[targ_ind]
+
+            targ = AnalogSignalArray(targ_array,
+                                     t_start=t_start_targ.rescale(pq.ms),
+                                     sampling_rate=1.0*pq.Hz, units='mV',
+                                     name='spam', description='eggs',
+                                     file_origin='testfile.txt', arg1='test')
+            assert_neo_object_is_compliant(result)
+
+            assert_neo_object_is_compliant(self.signal2)
+            self.assertEqual(self.signal2.t_start, 10.0 * pq.ms)
+            self.assertAlmostEqual(result.t_stop, t_stop_targ, delta=1e-12*pq.ms)
+            self.assertAlmostEqual(result.t_start, t_start_targ, delta=1e-12*pq.ms)
+            assert_arrays_almost_equal(result.times, targ.times, 1e-12*pq.ms)
+            self.assertEqual(result.sampling_rate, targ.sampling_rate)
+            assert_arrays_equal(result, targ)
+            assert_same_sub_schema(result, targ)
 
 
 class TestAnalogSignalArrayEquality(unittest.TestCase):

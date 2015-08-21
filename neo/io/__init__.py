@@ -68,6 +68,24 @@ Classes:
 
 import os.path
 
+#try to import the neuroshare library. 
+#if it is present, use the neuroshareapiio to load neuroshare files
+#if it is not present, use the neurosharectypesio to load files
+try:
+    import neuroshare as ns
+except ImportError as err:
+    from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
+    #print("\n neuroshare library not found, loading data with ctypes" )
+    #print("\n to use the API be sure to install the library found at:")
+    #print("\n www.http://pythonhosted.org/neuroshare/")
+
+else:
+    from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
+    #print("neuroshare library successfully imported")
+    #print("\n loading with API...")
+
+
+
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
@@ -86,7 +104,7 @@ from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
-#from neo.io.neuroshareio import NeuroshareIO
+
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.pynnio import PyNNNumpyIO
@@ -117,7 +135,7 @@ iolist = [AlphaOmegaIO,
           NeoMatlabIO,
           NeuroExplorerIO,
           NeuroScopeIO,
-          #NeuroshareIO,
+          NeuroshareIO,
           PickleIO,
           PlexonIO,
           PyNNNumpyIO,
@@ -127,8 +145,7 @@ iolist = [AlphaOmegaIO,
           StimfitIO,
           TdtIO,
           WinEdrIO,
-          WinWcpIO
-          ]
+          WinWcpIO]
 
 
 def get_io(filename):

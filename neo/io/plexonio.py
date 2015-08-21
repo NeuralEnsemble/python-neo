@@ -8,10 +8,7 @@ Other versions have not been tested.
 This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/downloads.html
 
-
-Depend on:
-
-Supported : Read
+Supported: Read
 
 Author: sgarcia
 
@@ -56,13 +53,12 @@ class PlexonIO(BaseIO):
     has_header = False
     is_streameable = False
 
-    # This is for GUI stuf : a definition for parameters when reading.
+    # This is for GUI stuff: a definition for parameters when reading.
     read_params = {
-
-        Segment: [
+        Segment:  [
             ('load_spike_waveform', {'value': False}),
-        ]
-    }
+            ]
+        }
     write_params = None
 
     name = 'Plexon'
@@ -70,19 +66,24 @@ class PlexonIO(BaseIO):
 
     mode = 'file'
 
+
     def __init__(self, filename=None):
         """
-        This class read a plx file.
-
         Arguments:
             filename : the filename
+
+        """
+        BaseIO.__init__(self, filename)
+
+    def read_segment(self, lazy=False, cascade=True, load_spike_waveform=True):
+        """
+        Read in a segment.
+
+        Arguments:
             load_spike_waveform : load or not waveform of spikes (default True)
 
         """
-        BaseIO.__init__(self)
-        self.filename = filename
 
-    def read_segment(self, lazy=False, cascade=True, load_spike_waveform=True):
         fid = open(self.filename, 'rb')
         global_header = HeaderReader(fid, GlobalHeader).read_f(offset=0)
 
@@ -97,22 +98,22 @@ class PlexonIO(BaseIO):
         seg.file_origin = os.path.basename(self.filename)
         seg.annotate(plexon_version=global_header['Version'])
 
+        for key, val in global_header.iteritems():
+            seg.annotate(**{key: val})
+
         if not cascade:
             return seg
 
-        # # Step 1 : read headers
-        # dsp channels header = sipkes and waveforms
+        ## Step 1 : read headers
+        # dsp channels header = spikes and waveforms
         dspChannelHeaders = {}
         maxunit = 0
         maxchan = 0
         for _ in range(global_header['NumDSPChannels']):
             # channel is 1 based
-            channelHeader = HeaderReader(fid, ChannelHeader).read_f(
-                offset=None)
-            channelHeader['Template'] = np.array(
-                channelHeader['Template']).reshape((5, 64))
-            channelHeader['Boxes'] = np.array(channelHeader['Boxes']).reshape(
-                (5, 2, 4))
+            channelHeader = HeaderReader(fid, ChannelHeader).read_f(offset=None)
+            channelHeader['Template'] = np.array(channelHeader['Template']).reshape((5,64))
+            channelHeader['Boxes'] = np.array(channelHeader['Boxes']).reshape((5,2,4))
             dspChannelHeaders[channelHeader['Channel']] = channelHeader
             maxunit = max(channelHeader['NUnits'], maxunit)
             maxchan = max(channelHeader['Channel'], maxchan)
@@ -200,9 +201,12 @@ class PlexonIO(BaseIO):
             eventpositions = {}
             evarrays = {}
             for chan, nb in iteritems(nb_events):
-                evarrays[chan] = np.zeros(nb, dtype='f')
-                eventpositions[chan] = 0
-
+                evarrays[chan] = {
+                    'times': np.zeros(nb, dtype='f'),
+                    'labels': np.zeros(nb, dtype='S4')
+                }
+                eventpositions[chan]=0 
+                
             fid.seek(start)
             while fid.tell() != -1:
                 dataBlockHeader = HeaderReader(fid, DataBlockHeader).read_f(
@@ -234,8 +238,9 @@ class PlexonIO(BaseIO):
                 elif dataBlockHeader['Type'] == 4:
                     # event
                     pos = eventpositions[chan]
-                    evarrays[chan][pos] = time
-                    eventpositions[chan] += 1
+                    evarrays[chan]['times'][pos] = time
+                    evarrays[chan]['labels'][pos] = dataBlockHeader['Unit']
+                    eventpositions[chan]+= 1
 
                 elif dataBlockHeader['Type'] == 5:
                     #signal
@@ -245,15 +250,21 @@ class PlexonIO(BaseIO):
                                     sample_positions[chan]+data.size] = data
                     sample_positions[chan] += data.size
 
-        ## Step 3: create neo object
+
+        ## Step 4: create neo object
         for chan, h in iteritems(eventHeaders):
             if lazy:
                 times = []
+                labels = None
             else:
-                times = evarrays[chan]
-            ea = Event(times * pq.s,
-                       channel_name=eventHeaders[chan]['Name'],
-                       channel_index=chan)
+                times = evarrays[chan]['times']
+                labels = evarrays[chan]['labels']
+            ea = Event(
+                times*pq.s,
+                labels=labels,
+                channel_name=eventHeaders[chan]['Name'],
+                channel_index=chan
+            )
             if lazy:
                 ea.lazy_shape = nb_events[chan]
             seg.events.append(ea)
@@ -313,9 +324,16 @@ class PlexonIO(BaseIO):
                 else:
                     waveforms = None
             sptr = SpikeTrain(
-                times, units='s', t_stop=t_stop * pq.s, waveforms=waveforms)
-            sptr.annotate(unit_name=dspChannelHeaders[chan]['Name'])
-            sptr.annotate(channel_index=chan)
+                times,
+                units='s', 
+                t_stop=t_stop*pq.s,
+                waveforms=waveforms
+            )
+            sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
+            sptr.annotate(channel_index = chan)
+            for key, val in dspChannelHeaders[chan].iteritems():
+                sptr.annotate(**{key: val})
+
             if lazy:
                 sptr.lazy_shape = nb_spikes[chan, unit]
             seg.spiketrains.append(sptr)
@@ -439,6 +457,7 @@ DataBlockHeader = [
 
 
 class HeaderReader():
+
     def __init__(self, fid, description):
         self.fid = fid
         self.description = description

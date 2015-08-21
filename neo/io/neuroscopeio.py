@@ -100,7 +100,7 @@ class NeuroScopeIO(BaseIO):
             # RC and RCG
             rc_list = [ ]
             for i, xml_rcg in  enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
-                rcg = RecordingChannelGroup(name = 'Group {}'.format(i))
+                rcg = RecordingChannelGroup(name = 'Group {0}'.format(i))
                 bl.recordingchannelgroups.append(rcg)
                 for xml_rc in xml_rcg:
                     rc = RecordingChannel(index = int(xml_rc.text))
@@ -108,7 +108,7 @@ class NeuroScopeIO(BaseIO):
                     rcg.recordingchannels.append(rc)
                     rc.recordingchannelgroups.append(rcg)
                 rcg.channel_indexes = np.array([rc.index for rc in rcg.recordingchannels], dtype = int)
-                rcg.channel_names = np.array(['Channel{}'.format(rc.index) for rc in rcg.recordingchannels], dtype = 'S')
+                rcg.channel_names = np.array(['Channel{0}'.format(rc.index) for rc in rcg.recordingchannels], dtype = 'S')
         
             # AnalogSignals
             reader = RawBinarySignalIO(filename = self.filename.replace('.xml', '.dat'))

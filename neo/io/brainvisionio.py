@@ -76,7 +76,8 @@ class BrainVisionIO(BaseIO):
             header['Common Infos']['SamplingInterval']) * pq.Hz
 
         fmt = header['Binary Infos']['BinaryFormat']
-        fmts = {'INT_16': np.int16, 'IEEE_FLOAT_32': np.float32}
+        fmts = { 'INT_16':np.int16,  'INT_32':np.int32, 'IEEE_FLOAT_32':np.float32,}
+
         assert fmt in fmts, NotImplementedError
         dt = fmts[fmt]
 
@@ -100,10 +101,14 @@ class BrainVisionIO(BaseIO):
             if lazy:
                 signal = [] * units
             else:
-                signal = sigs[:, c] * units
-            anasig = AnalogSignal(
-                signal=signal, channel_index=c, name=name,
-                sampling_rate=sampling_rate)
+                signal = sigs[:,c]*units
+                if dt == np.int16 or dt == np.int32:
+                    signal *= np.float(res) 
+            anasig = AnalogSignal(signal = signal,
+                                                channel_index = c,
+                                                name = name,
+                                                sampling_rate = sampling_rate,
+                                                )
             if lazy:
                 anasig.lazy_shape = -1
             seg.analogsignals.append(anasig)
