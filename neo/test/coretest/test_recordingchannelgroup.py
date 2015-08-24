@@ -96,8 +96,8 @@ class Test__generate_datasets(unittest.TestCase):
         unit = res.units[0]
         self.assertEqual(unit.annotations, self.annotations)
 
-        self.assertEqual(len(res.analogsignalarrays), 1)
-        self.assertEqual(res.analogsignalarrays[0].annotations,
+        self.assertEqual(len(res.analogsignals), 1)
+        self.assertEqual(res.analogsignals[0].annotations,
                          self.annotations)
 
         self.assertEqual(len(rchan.analogsignals), 1)
@@ -123,7 +123,7 @@ class Test__generate_datasets(unittest.TestCase):
 
         self.assertEqual(len(res.recordingchannels), 0)
         self.assertEqual(len(res.units), 0)
-        self.assertEqual(len(res.analogsignalarrays), 0)
+        self.assertEqual(len(res.analogsignals), 0)
 
 
 class TestRecordingChannelGroup(unittest.TestCase):
@@ -141,8 +141,8 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.rchans2 = self.rcg2.recordingchannels
         self.units1 = self.rcg1.units
         self.units2 = self.rcg2.units
-        self.sigarrs1 = self.rcg1.analogsignalarrays
-        self.sigarrs2 = self.rcg2.analogsignalarrays
+        self.sigarrs1 = self.rcg1.analogsignals
+        self.sigarrs2 = self.rcg2.analogsignals
 
         self.rchans1a = clone_object(self.rchans1)
         self.units1a = clone_object(self.units1)
@@ -174,7 +174,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(rcg.name, None)
         self.assertEqual(rcg.file_origin, None)
         self.assertEqual(rcg.recordingchannels, [])
-        self.assertEqual(rcg.analogsignalarrays, [])
+        self.assertEqual(rcg.analogsignals, [])
         assert_arrays_equal(rcg.channel_names, np.array([], dtype='S'))
         assert_arrays_equal(rcg.channel_indexes, np.array([]))
 
@@ -185,7 +185,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(rcg.file_origin, 'temp.dat')
         self.assertEqual(rcg.name, None)
         self.assertEqual(rcg.recordingchannels, [])
-        self.assertEqual(rcg.analogsignalarrays, [])
+        self.assertEqual(rcg.analogsignals, [])
         assert_arrays_equal(rcg.channel_names, np.array([], dtype='S'))
         assert_arrays_equal(rcg.channel_indexes, np.array([1]))
 
@@ -198,7 +198,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
             self.assertEqual(rchan.name, rcg.channel_names[i].astype(str))
             self.assertEqual(rchan.index, rcg.channel_indexes[i])
         for i, unit in enumerate(rcg.units):
-            for sigarr in rcg.analogsignalarrays:
+            for sigarr in rcg.analogsignals:
                 self.assertEqual(unit.channel_indexes[0],
                                  sigarr.channel_index[i])
 
@@ -219,11 +219,11 @@ class TestRecordingChannelGroup(unittest.TestCase):
 
         self.assertTrue(hasattr(rcg, 'recordingchannels'))
         self.assertTrue(hasattr(rcg, 'units'))
-        self.assertTrue(hasattr(rcg, 'analogsignalarrays'))
+        self.assertTrue(hasattr(rcg, 'analogsignals'))
 
         self.assertEqual(len(rcg.recordingchannels), self.nchildren)
         self.assertEqual(len(rcg.units), self.nchildren)
-        self.assertEqual(len(rcg.analogsignalarrays), self.nchildren)
+        self.assertEqual(len(rcg.analogsignals), self.nchildren)
 
     def test__creation(self):
         self.check_creation(self.rcg1)
@@ -234,12 +234,12 @@ class TestRecordingChannelGroup(unittest.TestCase):
                          seed=self.seed1, n=self.nchildren)
         assert_same_sub_schema(self.rcg1, rcg1a)
         rcg1a.annotate(seed=self.seed2)
-        rcg1a.analogsignalarrays.append(self.sigarrs2[0])
+        rcg1a.analogsignals.append(self.sigarrs2[0])
         rcg1a.merge(self.rcg2)
         self.check_creation(self.rcg2)
 
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
-                               rcg1a.analogsignalarrays,
+                               rcg1a.analogsignals,
                                exclude=['channel_index'])
         assert_same_sub_schema(self.units1a + self.units2,
                                rcg1a.units)
@@ -253,29 +253,29 @@ class TestRecordingChannelGroup(unittest.TestCase):
         blk.create_many_to_one_relationship()
 
         self.assertEqual(self.rcg1._container_child_objects, ('Unit',))
-        self.assertEqual(self.rcg1._data_child_objects, ('AnalogSignalArray',))
+        self.assertEqual(self.rcg1._data_child_objects, ('AnalogSignal',))
         self.assertEqual(self.rcg1._single_parent_objects, ('Block',))
         self.assertEqual(self.rcg1._multi_child_objects, ('RecordingChannel',))
         self.assertEqual(self.rcg1._multi_parent_objects, ())
         self.assertEqual(self.rcg1._child_properties, ())
 
         self.assertEqual(self.rcg1._single_child_objects,
-                         ('Unit', 'AnalogSignalArray',))
+                         ('Unit', 'AnalogSignal',))
 
         self.assertEqual(self.rcg1._container_child_containers, ('units',))
         self.assertEqual(self.rcg1._data_child_containers,
-                         ('analogsignalarrays',))
+                         ('analogsignals',))
         self.assertEqual(self.rcg1._single_child_containers,
-                         ('units', 'analogsignalarrays'))
+                         ('units', 'analogsignals'))
         self.assertEqual(self.rcg1._single_parent_containers, ('block',))
         self.assertEqual(self.rcg1._multi_child_containers,
                          ('recordingchannels',))
         self.assertEqual(self.rcg1._multi_parent_containers, ())
 
         self.assertEqual(self.rcg1._child_objects,
-                         ('Unit', 'AnalogSignalArray', 'RecordingChannel'))
+                         ('Unit', 'AnalogSignal', 'RecordingChannel'))
         self.assertEqual(self.rcg1._child_containers,
-                         ('units', 'analogsignalarrays', 'recordingchannels'))
+                         ('units', 'analogsignals', 'recordingchannels'))
         self.assertEqual(self.rcg1._parent_objects, ('Block',))
         self.assertEqual(self.rcg1._parent_containers, ('block',))
 
@@ -325,7 +325,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         self.assertEqual(self.rcg1.parents[0].name, 'block1')
 
     def test__size(self):
-        targ = {'analogsignalarrays': self.nchildren,
+        targ = {'analogsignals': self.nchildren,
                 'units': self.nchildren,
                 'recordingchannels': self.nchildren}
         self.assertEqual(self.targobj.size, targ)
@@ -721,7 +721,7 @@ class TestRecordingChannelGroup(unittest.TestCase):
         ann['seed'] = self.seed1
         ann = pretty(ann).replace('\n ', '\n  ')
         targ = ("RecordingChannelGroup with " +
-                ("%s units, %s analogsignalarrays, %s recordingchannels\n" %
+                ("%s units, %s analogsignals, %s recordingchannels\n" %
                  (len(self.units1a),
                   len(self.sigarrs1a),
                   len(self.rchans1a))) +

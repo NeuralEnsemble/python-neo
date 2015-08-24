@@ -20,7 +20,7 @@ class RecordingChannelGroup(Container):
     A container for multiple data channels.
 
     This container have sereval purpose:
-      * Grouping all :class:`AnalogSignalArray` inside a :class:`Block`
+      * Grouping all :class:`AnalogSignal` inside a :class:`Block`
         across :class:`Segment`
       * Grouping :class:`RecordingChannel` inside a :class:`Block`. This
         case is *many to many* relation. It mean that a
@@ -33,7 +33,7 @@ class RecordingChannelGroup(Container):
     *Usage 1* multi :class:`Segment` recording with 2 electrode array::
 
         >>> from neo.core import (Block, Segment, RecordingChannelGroup,
-        ...                       AnalogSignalArray)
+        ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
@@ -48,13 +48,13 @@ class RecordingChannelGroup(Container):
         ...                                 channel_indexes=np.arange(64))
         ...     blk.recordingchannelgroups.append(rcg)
         ...
-        >>> # Populate the Block with AnalogSignalArray objects
+        >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
         ...     for rcg in blk.recordingchannelgroups:
-        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
+        ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignalarrays.append(a)
-        ...         seg.analogsignalarrays.append(a)
+        ...         rcg.analogsignals.append(a)
+        ...         seg.analogsignals.append(a)
 
     *Usage 2* grouping channel::
 
@@ -115,13 +115,13 @@ class RecordingChannelGroup(Container):
 
     *Container of*:
         :class:`RecordingChannel`
-        :class:`AnalogSignalArray`
+        :class:`AnalogSignal`
         :class:`Unit`
 
     '''
 
     _container_child_objects = ('Unit',)
-    _data_child_objects = ('AnalogSignalArray',)
+    _data_child_objects = ('AnalogSignal',)
     _multi_child_objects = ('RecordingChannel',)
     _single_parent_objects = ('Block',)
     _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),

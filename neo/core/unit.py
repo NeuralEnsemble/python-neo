@@ -52,7 +52,7 @@ class Unit(Container):
         :file_origin: (str) Filesystem path or URL of the original data file.
         :channel_index: (numpy array 1D dtype='i') You can use this to order
             :class:`Unit` objects in an way you want. It can have any number
-            of elements.  :class:`AnalogSignal` and :class:`AnalogSignalArray`
+            of elements.  :class:`AnalogSignal` and :class:`AnalogSignal`
             objects can be given indexes as well so related objects can be
             linked together.
 

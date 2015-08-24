@@ -28,7 +28,7 @@ class Block(Container):
     *Usage*::
 
         >>> from neo.core import (Block, Segment, RecordingChannelGroup,
-        ...                       AnalogSignalArray)
+        ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
@@ -43,13 +43,13 @@ class Block(Container):
         ...                                 channel_indexes=np.arange(64))
         ...     blk.recordingchannelgroups.append(rcg)
         ...
-        >>> # Populate the Block with AnalogSignalArray objects
+        >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
         ...     for rcg in blk.recordingchannelgroups:
-        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
+        ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignalarrays.append(a)
-        ...         seg.analogsignalarrays.append(a)
+        ...         rcg.analogsignals.append(a)
+        ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:
         None

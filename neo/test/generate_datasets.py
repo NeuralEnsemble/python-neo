@@ -12,7 +12,7 @@ import numpy as np
 from numpy.random import rand
 import quantities as pq
 
-from neo.core import (AnalogSignal, AnalogSignalArray,
+from neo.core import (AnalogSignal,
                       Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
@@ -82,9 +82,9 @@ def generate_one_simple_segment(seg_name='segment 0',
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
             anasig = AnalogSignal(rand(int(sampling_rate * duration)),
-                                  sampling_rate=sampling_rate, t_start=t_start,
-                                  units=pq.mV, channel_index=a,
-                                  name='sig %d for segment %s' % (a, seg.name))
+                                       sampling_rate=sampling_rate, t_start=t_start,
+                                       units=pq.mV, channel_index=a,
+                                       name='sig %d for segment %s' % (a, seg.name))
             seg.analogsignals.append(anasig)
 
     if SpikeTrain in supported_objects:
@@ -220,7 +220,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         data = np.array(0.0)
     elif name == 't_stop':
         data = np.array(1.0)
-    elif n and obj == 'AnalogSignalArray':
+    elif n and obj == 'AnalogSignal':
         if name == 'channel_index':
             data = np.random.random(n)*1000.
         elif name == 'signal':
@@ -262,7 +262,7 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     If annotate is True (default), also add annotations to the values.
     """
 
-    if hasattr(cls, 'lower'):
+    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls, basestring), no?
         cls = class_by_name[cls]
 
     kwargs = {}  # assign attributes
@@ -343,8 +343,8 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     if obj_type == 'Block':
         # connect data objects to segment
         for i, rcg in enumerate(obj.recordingchannelgroups):
-            for k, sigarr in enumerate(rcg.analogsignalarrays):
-                obj.segments[k].analogsignalarrays.append(sigarr)
+            for k, sigarr in enumerate(rcg.analogsignals):
+                obj.segments[k].analogsignals.append(sigarr)
             for j, unit in enumerate(rcg.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
@@ -357,7 +357,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         inds = []
         names = []
         chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
-        for sigarr in obj.analogsignalarrays:
+        for sigarr in obj.analogsignals:
             sigarr.channel_index = chinds[:sigarr.shape[1]]
         for i, rchan in enumerate(obj.recordingchannels):
             for sig in rchan.analogsignals:

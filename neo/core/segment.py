@@ -39,11 +39,11 @@ class Segment(Container):
         >>> seg.spiketrains.append(train1)
         >>>
         >>> sig0 = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV',
-        ...                     sampling_rate=1*Hz)
+        ...                          sampling_rate=1*Hz)
         >>> seg.analogsignals.append(sig0)
         >>>
         >>> sig1 = AnalogSignal(signal=[100.01, 103.3, 109.3], units='nA',
-        ...                     sampling_period=.1*s)
+        ...                          sampling_period=.1*s)
         >>> seg.analogsignals.append(sig1)
 
     *Required attributes/properties*:
@@ -69,13 +69,12 @@ class Segment(Container):
         :class:`Epoch`
         :class:`Event`
         :class:`AnalogSignal`
-        :class:`AnalogSignalArray`
         :class:`IrregularlySampledSignal`
         :class:`SpikeTrain`
 
     '''
 
-    _data_child_objects = ('AnalogSignal', 'AnalogSignalArray',
+    _data_child_objects = ('AnalogSignal',
                            'Epoch', 'Event',
                            'IrregularlySampledSignal', 'SpikeTrain')
     _single_parent_objects = ('Block',)
@@ -83,7 +82,7 @@ class Segment(Container):
                            ('rec_datetime', datetime),
                            ('index', int)) +
                           Container._recommended_attrs)
-    _repr_pretty_containers = ('analogsignals', 'analogsignalarrays')
+    _repr_pretty_containers = ('analogsignals',)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
@@ -141,7 +140,7 @@ class Segment(Container):
 
     def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
         '''
-        Return slices of the :class:`AnalogSignalArray` objects in the
+        Return slices of the :class:`AnalogSignal` objects in the
         :class:`Segment` that correspond to a :attr:`channel_index`  of any of
         the :class:`Unit` objects in the :attr:`unit_list` provided.
         '''
@@ -165,7 +164,7 @@ class Segment(Container):
             return []
 
         sliced_sigarrays = []
-        for sigarr in self.analogsignalarrays:
+        for sigarr in self.analogsignals:
             if sigarr.channel_indexes is not None:
                 ind = np.in1d(sigarr.channel_indexes, channel_indexes)
                 sliced_sigarrays.append(sigarr[:, ind])
@@ -175,7 +174,7 @@ class Segment(Container):
     def construct_subsegment_by_unit(self, unit_list=None):
         '''
         Return a new :class:`Segment that contains the :class:`AnalogSignal`,
-        :class:`AnalogSignalArray`, and :class:`SpikeTrain`
+        :class:`AnalogSignal`, and :class:`SpikeTrain`
         objects common to both the current :class:`Segment` and any
         :class:`Unit` in the :attr:`unit_list` provided.
 
@@ -213,9 +212,8 @@ class Segment(Container):
 
         '''
         seg = Segment()
-        seg.analogsignals = self.take_analogsignal_by_unit(unit_list)
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
-        seg.analogsignalarrays = \
+        seg.analogsignals = \
             self.take_slice_of_analogsignalarray_by_unit(unit_list)
         #TODO copy others attributes
         return seg

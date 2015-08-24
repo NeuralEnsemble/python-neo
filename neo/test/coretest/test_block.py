@@ -88,13 +88,13 @@ class Test__generate_datasets(unittest.TestCase):
         rcg = res.recordingchannelgroups[0]
         self.assertEqual(rcg.annotations, self.annotations)
 
-        self.assertEqual(len(seg.analogsignalarrays), 1)
+        self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.irregularlysampledsignals), 1)
         self.assertEqual(len(seg.spiketrains), 1)
         self.assertEqual(len(seg.events), 1)
         self.assertEqual(len(seg.epochs), 1)
-        self.assertEqual(seg.analogsignalarrays[0].annotations,
+        self.assertEqual(seg.analogsignals[0].annotations,
                          self.annotations)
         self.assertEqual(seg.analogsignals[0].annotations,
                          self.annotations)
@@ -115,8 +115,8 @@ class Test__generate_datasets(unittest.TestCase):
         unit = rcg.units[0]
         self.assertEqual(unit.annotations, self.annotations)
 
-        self.assertEqual(len(rcg.analogsignalarrays), 1)
-        self.assertEqual(rcg.analogsignalarrays[0].annotations,
+        self.assertEqual(len(rcg.analogsignals), 1)
+        self.assertEqual(rcg.analogsignals[0].annotations,
                          self.annotations)
 
         self.assertEqual(len(rchan.analogsignals), 1)
@@ -170,9 +170,9 @@ class TestBlock(unittest.TestCase):
         self.rchans1 = sum(self.rchans1, [])
         self.rchans2 = sum(self.rchans2, [])
 
-        self.sigarrs1 = [[sigarr for sigarr in rcg.analogsignalarrays]
+        self.sigarrs1 = [[sigarr for sigarr in rcg.analogsignals]
                          for rcg in self.rcgs1]
-        self.sigarrs2 = [[sigarr for sigarr in rcg.analogsignalarrays]
+        self.sigarrs2 = [[sigarr for sigarr in rcg.analogsignals]
                          for rcg in self.rcgs2]
 
         self.trains1 = [[train for train in unit.spiketrains]

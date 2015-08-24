@@ -24,7 +24,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.segment import Segment
-from neo.core import (AnalogSignalArray, Block,
+from neo.core import (AnalogSignal, Block,
                       Epoch, RecordingChannelGroup, SpikeTrain, Unit)
 from neo.core.container import filterdata
 from neo.test.tools import (assert_neo_object_is_compliant,
@@ -77,7 +77,6 @@ class Test__generate_datasets(unittest.TestCase):
         assert_neo_object_is_compliant(res)
         self.assertEqual(res.annotations, self.annotations)
 
-        self.assertEqual(len(res.analogsignalarrays), 1)
         self.assertEqual(len(res.analogsignals), 1)
         self.assertEqual(len(res.irregularlysampledsignals), 1)
         self.assertEqual(len(res.spiketrains), 1)
@@ -87,8 +86,6 @@ class Test__generate_datasets(unittest.TestCase):
             del child.annotations['i']
             del child.annotations['j']
 
-        self.assertEqual(res.analogsignalarrays[0].annotations,
-                         self.annotations)
         self.assertEqual(res.analogsignals[0].annotations,
                          self.annotations)
         self.assertEqual(res.irregularlysampledsignals[0].annotations,
@@ -110,7 +107,6 @@ class Test__generate_datasets(unittest.TestCase):
         assert_neo_object_is_compliant(res)
         self.assertEqual(res.annotations, self.annotations)
 
-        self.assertEqual(len(res.analogsignalarrays), 0)
         self.assertEqual(len(res.analogsignals), 0)
         self.assertEqual(len(res.irregularlysampledsignals), 0)
         self.assertEqual(len(res.spiketrains), 0)
@@ -135,8 +131,8 @@ class TestSegment(unittest.TestCase):
 
         self.sigs1 = self.seg1.analogsignals
         self.sigs2 = self.seg2.analogsignals
-        self.sigarrs1 = self.seg1.analogsignalarrays
-        self.sigarrs2 = self.seg2.analogsignalarrays
+        self.sigarrs1 = self.seg1.analogsignals
+        self.sigarrs2 = self.seg2.analogsignals
         self.irsigs1 = self.seg1.irregularlysampledsignals
         self.irsigs2 = self.seg2.irregularlysampledsignals
 
@@ -197,7 +193,6 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(seg.annotations, targ6)
 
         self.assertTrue(hasattr(seg, 'analogsignals'))
-        self.assertTrue(hasattr(seg, 'analogsignalarrays'))
         self.assertTrue(hasattr(seg, 'irregularlysampledsignals'))
 
         self.assertTrue(hasattr(seg, 'epochs'))
@@ -205,8 +200,7 @@ class TestSegment(unittest.TestCase):
 
         self.assertTrue(hasattr(seg, 'spiketrains'))
 
-        self.assertEqual(len(seg.analogsignals), self.nchildren**2)
-        self.assertEqual(len(seg.analogsignalarrays), self.nchildren)
+        self.assertEqual(len(seg.analogsignals), self.nchildren)
         self.assertEqual(len(seg.irregularlysampledsignals), self.nchildren**2)
 
         self.assertEqual(len(seg.epochs), self.nchildren)
@@ -228,7 +222,7 @@ class TestSegment(unittest.TestCase):
 
         assert_same_sub_schema(self.sigs1a + self.sigs2, seg1a.analogsignals)
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
-                               seg1a.analogsignalarrays)
+                               seg1a.analogsignals)
         assert_same_sub_schema(self.irsigs1a + self.irsigs2,
                                seg1a.irregularlysampledsignals)
 
@@ -244,11 +238,11 @@ class TestSegment(unittest.TestCase):
         assert_neo_object_is_compliant(self.seg1)
         assert_neo_object_is_compliant(blk)
 
-        childobjs = ('AnalogSignal', 'AnalogSignalArray',
+        childobjs = ('AnalogSignal',
                      'Epoch', 'Event',
                      'IrregularlySampledSignal',
                      'SpikeTrain')
-        childconts = ('analogsignals', 'analogsignalarrays',
+        childconts = ('analogsignals',
                       'epochs', 'events',
                       'irregularlysampledsignals',
                       'spiketrains')
@@ -301,10 +295,9 @@ class TestSegment(unittest.TestCase):
 
     def test__size(self):
         targ1 = {"epochs": self.nchildren,  "events": self.nchildren,
-                 "analogsignals": self.nchildren**2,
                  "irregularlysampledsignals": self.nchildren**2,
                  "spiketrains": self.nchildren**2,
-                 "analogsignalarrays": self.nchildren}
+                 "analogsignals": self.nchildren}
         self.assertEqual(self.targobj.size, targ1)
 
     def test__filter_none(self):
@@ -681,7 +674,7 @@ class TestSegment(unittest.TestCase):
         sigarr1 = sigarr1.replace('\n', '\n   ')
 
         targ = ("Segment with " +
-                ("%s analogsignals, %s analogsignalarrays, " %
+                ("%s analogsignals, %s analogsignals, " %
                  (len(self.sigs1a), len(self.sigarrs1a))) +
                 ("%s epochs, " % len(self.epcs1a)) +
                 ("%s events, " % len(self.evts1a)) +
@@ -701,7 +694,7 @@ class TestSegment(unittest.TestCase):
                 ('%s: %s\n' % (2, sig2)) +
                 ('%s: %s\n' % (3, sig3)) +
 
-                ("# analogsignalarrays (N=%s)\n" % len(self.sigarrs1a)) +
+                ("# analogsignals (N=%s)\n" % len(self.sigarrs1a)) +
 
                 ('%s: %s\n' % (0, sigarr0)) +
                 ('%s: %s' % (1, sigarr1)))
@@ -738,12 +731,12 @@ class TestSegment(unittest.TestCase):
                 st.unit = all_unit[j]
 
             for t in signal_types:
-                anasigarr = AnalogSignalArray(np.zeros((sig_len,
+                anasigarr = AnalogSignal(np.zeros((sig_len,
                                                         len(unit_with_sig))),
                                               units='nA',
                                               sampling_rate=1000.*pq.Hz,
                                               channel_indexes=unit_with_sig)
-                seg.analogsignalarrays.append(anasigarr)
+                seg.analogsignals.append(anasigarr)
 
         blk.create_many_to_one_relationship()
         for unit in all_unit:

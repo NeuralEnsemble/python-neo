@@ -17,7 +17,6 @@ Classes:
 .. autoclass:: Unit
 
 .. autoclass:: AnalogSignal
-.. autoclass:: AnalogSignalArray
 .. autoclass:: IrregularlySampledSignal
 
 .. autoclass:: Event
@@ -37,7 +36,6 @@ from neo.core.recordingchannel import RecordingChannel
 from neo.core.unit import Unit
 
 from neo.core.analogsignal import AnalogSignal
-from neo.core.analogsignalarray import AnalogSignalArray
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
 from neo.core.event import Event
@@ -47,7 +45,7 @@ from neo.core.spiketrain import SpikeTrain
 
 # Block should always be first in this list
 objectlist = [Block, Segment, RecordingChannelGroup, RecordingChannel,
-              AnalogSignal, AnalogSignalArray, IrregularlySampledSignal,
+              AnalogSignal, IrregularlySampledSignal,
               Event, Epoch, Unit, SpikeTrain]
 
 objectnames = [ob.__name__ for ob in objectlist]

@@ -276,7 +276,7 @@ def channel_indexes_in_segment(seg):
     for sig in seg.analogsignals:
         channel_indices.append(sig.recordingchannel.index)
 
-    for asa in seg.analogsignalarrays:
+    for asa in seg.analogsignals:
         channel_indices.append(asa.recordingchannelgroup.channel_indexes)
 
     return channel_indices
