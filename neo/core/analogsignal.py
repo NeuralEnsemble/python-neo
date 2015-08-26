@@ -50,7 +50,7 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
                           t_start=0*pq.s, sampling_rate=None,
                           sampling_period=None, name=None, file_origin=None,
-                          description=None, channel_index=None,
+                          description=None,
                           annotations=None):
     '''
     A function to map AnalogSignal.__new__ to function that
@@ -60,7 +60,6 @@ def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
                t_start=t_start, sampling_rate=sampling_rate,
                sampling_period=sampling_period, name=name,
                file_origin=file_origin, description=description,
-               channel_index=channel_index,
                **annotations)
 
 
@@ -94,7 +93,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         array(5) * V
 
     *Required attributes/properties*:
-        :signal: (quantity array 2D, numpy array 2D, or list (data, chanel))
+        :signal: (quantity array 2D, numpy array 2D, or list (data, channel))
             The data itself.
         :units: (quantity units) Required if the signal is a list or NumPy
                 array, not if it is a :class:`Quantity`
@@ -109,11 +108,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         :name: (str) A label for the dataset.
         :description: (str) Text description.
         :file_origin: (str) Filesystem path or URL of the original data file.
-        :channel_index: (numpy array 1D dtype='i') You can use this to order
-            the columns of the signal in any way you want. It should have the
-            same number of elements as the signal has columns.
-            TOUPDATE :class:`AnalogSignal` and :class:`Unit` objects can be given
-            indexes as well so related objects can be linked together.
 
     *Optional attributes/properties*:
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
@@ -134,8 +128,9 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         :times: (quantity 1D) The time points of each sample of the signal,
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
-        :channel_indexes: (numpy array 1D dtype='i') The same as
-            :attr:`channel_index`, read-only.
+        :channel_index:
+            access to the channel_index attribute of the principal RecordingChannelGroup
+            associated with this signal.
 
     *Slicing*:
         :class:`AnalogSignal` objects can be sliced. When taking a single
@@ -156,13 +151,12 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
                         ('t_start', pq.Quantity, 0))
-    _recommended_attrs = ((('channel_index', np.ndarray, 1, np.dtype('i')),) +
-                           BaseNeo._recommended_attrs)
+    _recommended_attrs = BaseNeo._recommended_attrs
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
-                channel_index=None, **annotations):
+                **annotations):
         '''
         Constructs new :class:`AnalogSignal` from data.
 
@@ -192,16 +186,15 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
-        obj.channel_index = channel_index
         obj.segment = None
-        obj.recordingchannel = None
+        obj.recordingchannelgroup = None
 
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
                  t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
                  name=None, file_origin=None, description=None,
-                 channel_index=None, **annotations):
+                 **annotations):
         '''
         Initializes a newly constructed :class:`AnalogSignal` instance.
         '''
@@ -231,7 +224,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                                         self.name,
                                         self.file_origin,
                                         self.description,
-                                        self.channel_index,
                                         self.annotations)
 
     def __array_finalize__(self, obj):
@@ -256,7 +248,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
-        self.channel_index = getattr(obj, 'channel_index', None)
 
     def __repr__(self):
         '''
@@ -268,10 +259,18 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                  self.t_stop, self.sampling_rate))
 
     @property
+    def channel_index(self):
+        """
+        """
+        if self.recordingchannelgroup:
+            return self.recordingchannelgroup.channel_indexes
+        else:
+            return None
+
+    @property
     def channel_indexes(self):
-        '''
-        The same as :attr:`channel_index`.
-        '''
+        """
+        """
         return self.channel_index
 
     def __getslice__(self, i, j):
@@ -312,8 +311,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                 obj.t_start = self.t_start + i.start * self.sampling_period
         else:
             raise IndexError("index should be an integer, tuple or slice")
-        if hasattr(obj, "channel_index") and obj.channel_index is not None:
-            obj.channel_index = self.channel_index[i]
         return obj
 
     # sampling_rate attribute is handled as a property so type checking can
@@ -471,7 +468,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         Copy the metadata from another :class:`AnalogSignal`.
         '''
         for attr in ("t_start", "sampling_rate", "name", "file_origin",
-                     "description", "channel_index", "annotations"):
+                     "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def _apply_operator(self, other, op, *args):
@@ -528,14 +525,13 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         '''
         Handle pretty-printing the :class:`AnalogSignal`.
         '''
-        pp.text(" ".join([self.__class__.__name__,
-                          "in",
-                          str(self.units),
-                          "with",
-                          "x".join(map(str, self.shape)),
-                          str(self.dtype),
-                          "values",
-                          ]))
+        pp.text("{cls} with {channels} channels of length {length}; "
+                "units {units}; datatype {dtype} ".format(
+                    cls=self.__class__.__name__,
+                    channels=self.shape[1],
+                    length=self.shape[0],
+                    units=self.units.dimensionality.string,
+                    dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -544,8 +540,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
             pp.breakable()
             with pp.group(indent=1):
                 pp.text(line)
-        if hasattr(self, "channel_index"):
-            _pp("channel index: {0}".format(self.channel_index))
         for line in ["sampling rate: {0}".format(self.sampling_rate),
                      "time: {0} to {1}".format(self.t_start, self.t_stop)
                      ]:
@@ -610,18 +604,10 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        if self.channel_index is None:
-            channel_index = other.channel_index
-        elif other.channel_index is None:
-            channel_index = self.channel_index
-        else:
-            channel_index = np.append(self.channel_index,
-                                      other.channel_index)
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
         return AnalogSignal(stack, units=self.units, dtype=self.dtype,
                                  copy=False, t_start=self.t_start,
                                  sampling_rate=self.sampling_rate,
-                                 channel_index=channel_index,
                                  **kwargs)

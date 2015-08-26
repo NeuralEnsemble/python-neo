@@ -26,7 +26,7 @@ else:
 
 from numpy.testing import assert_array_equal
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
-from neo.core import Segment, RecordingChannel
+from neo.core import Segment
 from neo.test.tools import (assert_arrays_almost_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -236,35 +236,35 @@ class TestAnalogSignalProperties(unittest.TestCase):
         self.assertEqual(signal1b.t_start, signal1.t_start)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
 
-    def test__children(self):
-        signal = self.signals[0]
-
-        segment = Segment(name='seg1')
-        segment.analogsignals = [signal]
-        segment.create_many_to_one_relationship()
-
-        rchan = RecordingChannel(name='rchan1')
-        rchan.analogsignals = [signal]
-        rchan.create_many_to_one_relationship()
-
-        self.assertEqual(signal._single_parent_objects,
-                         ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._multi_parent_objects, ())
-
-        self.assertEqual(signal._single_parent_containers,
-                         ('segment', 'recordingchannel'))
-        self.assertEqual(signal._multi_parent_containers, ())
-
-        self.assertEqual(signal._parent_objects,
-                         ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._parent_containers,
-                         ('segment', 'recordingchannel'))
-
-        self.assertEqual(len(signal.parents), 2)
-        self.assertEqual(signal.parents[0].name, 'seg1')
-        self.assertEqual(signal.parents[1].name, 'rchan1')
-
-        assert_neo_object_is_compliant(signal)
+    # def test__children(self):
+    #     signal = self.signals[0]
+    #
+    #     segment = Segment(name='seg1')
+    #     segment.analogsignals = [signal]
+    #     segment.create_many_to_one_relationship()
+    #
+    #     rchan = RecordingChannel(name='rchan1')
+    #     rchan.analogsignals = [signal]
+    #     rchan.create_many_to_one_relationship()
+    #
+    #     self.assertEqual(signal._single_parent_objects,
+    #                      ('Segment', 'RecordingChannel'))
+    #     self.assertEqual(signal._multi_parent_objects, ())
+    #
+    #     self.assertEqual(signal._single_parent_containers,
+    #                      ('segment', 'recordingchannel'))
+    #     self.assertEqual(signal._multi_parent_containers, ())
+    #
+    #     self.assertEqual(signal._parent_objects,
+    #                      ('Segment', 'RecordingChannel'))
+    #     self.assertEqual(signal._parent_containers,
+    #                      ('segment', 'recordingchannel'))
+    #
+    #     self.assertEqual(len(signal.parents), 2)
+    #     self.assertEqual(signal.parents[0].name, 'seg1')
+    #     self.assertEqual(signal.parents[1].name, 'rchan1')
+    #
+    #     assert_neo_object_is_compliant(signal)
 
     def test__repr(self):
         for i, signal in enumerate(self.signals):
@@ -280,13 +280,11 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (('AnalogSignal in %s with %sx%s %s values\n' %
-                     (signal.units, signal.shape[0], signal.shape[1], signal.dtype)) +
+            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n' %
+                     (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)) +
                     ('annotations: %s\n' % signal.annotations) +
-                    ('channel index: %s\n' % signal.channel_index) +
                     ('sampling rate: %s\n' % signal.sampling_rate) +
                     ('time: %s to %s' % (signal.t_start, signal.t_stop)))
-
             self.assertEqual(prepr, targ)
 
 
@@ -590,7 +588,7 @@ class TestAnalogSignalCombination(unittest.TestCase):
 class TestAnalogSignalFunctions(unittest.TestCase):
     def test__pickle(self):
         signal1 = AnalogSignal([1, 2, 3, 4], sampling_period=1*pq.ms,
-                                    units=pq.S, channel_index=42)
+                                    units=pq.S)
         signal1.annotations['index'] = 2
 
         fobj = open('./pickle', 'wb')
@@ -604,7 +602,6 @@ class TestAnalogSignalFunctions(unittest.TestCase):
             signal2 = None
 
         assert_array_equal(signal1, signal2)
-        self.assertEqual(signal1.channel_index, signal2.channel_index, 42)
         fobj.close()
         os.remove('./pickle')
 

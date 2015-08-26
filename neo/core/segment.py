@@ -110,33 +110,33 @@ class Segment(Container):
                 spiketrain_list.append(spiketrain)
         return spiketrain_list
 
-    def take_analogsignal_by_unit(self, unit_list=None):
-        '''
-        Return :class:`AnalogSignal` objects in the :class:`Segment` that are
-        have the same :attr:`channel_index` as any of the :class:`Unit: objects
-        in the :attr:`unit_list` provided.
-        '''
-        if unit_list is None:
-            return []
-        channel_indexes = []
-        for unit in unit_list:
-            if unit.channel_indexes is not None:
-                channel_indexes.extend(unit.channel_indexes)
-        return self.take_analogsignal_by_channelindex(channel_indexes)
-
-    def take_analogsignal_by_channelindex(self, channel_indexes=None):
-        '''
-        Return :class:`AnalogSignal` objects in the :class:`Segment` that have
-        a :attr:`channel_index` that is in the :attr:`channel_indexes`
-        provided.
-        '''
-        if channel_indexes is None:
-            return []
-        anasig_list = []
-        for anasig in self.analogsignals:
-            if anasig.channel_index in channel_indexes:
-                anasig_list.append(anasig)
-        return anasig_list
+    # def take_analogsignal_by_unit(self, unit_list=None):
+    #     '''
+    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that are
+    #     have the same :attr:`channel_index` as any of the :class:`Unit: objects
+    #     in the :attr:`unit_list` provided.
+    #     '''
+    #     if unit_list is None:
+    #         return []
+    #     channel_indexes = []
+    #     for unit in unit_list:
+    #         if unit.channel_indexes is not None:
+    #             channel_indexes.extend(unit.channel_indexes)
+    #     return self.take_analogsignal_by_channelindex(channel_indexes)
+    #
+    # def take_analogsignal_by_channelindex(self, channel_indexes=None):
+    #     '''
+    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that have
+    #     a :attr:`channel_index` that is in the :attr:`channel_indexes`
+    #     provided.
+    #     '''
+    #     if channel_indexes is None:
+    #         return []
+    #     anasig_list = []
+    #     for anasig in self.analogsignals:
+    #         if anasig.channel_index in channel_indexes:
+    #             anasig_list.append(anasig)
+    #     return anasig_list
 
     def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
         '''

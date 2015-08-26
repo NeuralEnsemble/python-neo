@@ -39,10 +39,9 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        channel_indexes = get_fake_value('channel_indexes', np.ndarray, seed=0,
-                                         dim=1, dtype='i')
-        name = get_fake_value('name', str, seed=1, obj=Unit)
-        description = get_fake_value('description', str, seed=2, obj='Unit')
+
+        name = get_fake_value('name', str, seed=0, obj=Unit)
+        description = get_fake_value('description', str, seed=1, obj='Unit')
         file_origin = get_fake_value('file_origin', str)
         attrs1 = {'name': name,
                   'description': description,
@@ -54,11 +53,6 @@ class Test__generate_datasets(unittest.TestCase):
         res12 = get_fake_values('Unit', annotate=False, seed=0)
         res21 = get_fake_values(Unit, annotate=True, seed=0)
         res22 = get_fake_values('Unit', annotate=True, seed=0)
-
-        assert_arrays_equal(res11.pop('channel_indexes'), channel_indexes)
-        assert_arrays_equal(res12.pop('channel_indexes'), channel_indexes)
-        assert_arrays_equal(res21.pop('channel_indexes'), channel_indexes)
-        assert_arrays_equal(res22.pop('channel_indexes'), channel_indexes)
 
         self.assertEqual(res11, attrs1)
         self.assertEqual(res12, attrs1)
@@ -115,15 +109,11 @@ class TestUnit(unittest.TestCase):
 
         seed = unit.annotations['seed']
 
-        targ0 = get_fake_value('channel_indexes', np.ndarray, dim=1, dtype='i',
-                               seed=seed+0)
-        assert_arrays_equal(unit.channel_indexes, targ0)
-
-        targ1 = get_fake_value('name', str, seed=seed+1, obj=Unit)
+        targ1 = get_fake_value('name', str, seed=seed, obj=Unit)
         self.assertEqual(unit.name, targ1)
 
         targ2 = get_fake_value('description', str,
-                               seed=seed+2, obj=Unit)
+                               seed=seed+1, obj=Unit)
         self.assertEqual(unit.description, targ2)
 
         targ3 = get_fake_value('file_origin', str)
@@ -153,7 +143,7 @@ class TestUnit(unittest.TestCase):
                                unit1a.spiketrains)
 
     def test__children(self):
-        rcg = RecordingChannelGroup(name='rcg1')
+        rcg = RecordingChannelGroup(channel_indexes=np.arange(self.nchildren), name='rcg1')
         rcg.units = [self.unit1]
         rcg.create_many_to_one_relationship()
         assert_neo_object_is_compliant(self.unit1)

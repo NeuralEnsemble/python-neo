@@ -43,10 +43,8 @@ class Test__generate_datasets(unittest.TestCase):
         sampling_rate = get_fake_value('sampling_rate', pq.Quantity,
                                        seed=1, dim=0)
         t_start = get_fake_value('t_start', pq.Quantity, seed=2, dim=0)
-        channel_index = get_fake_value('channel_index', np.ndarray, seed=3,
-                                       dim=1, dtype='i')
-        name = get_fake_value('name', str, seed=4, obj=AnalogSignal)
-        description = get_fake_value('description', str, seed=5,
+        name = get_fake_value('name', str, seed=3, obj=AnalogSignal)
+        description = get_fake_value('description', str, seed=4,
                                      obj='AnalogSignal')
         file_origin = get_fake_value('file_origin', str)
         attrs1 = {'name': name,
@@ -74,11 +72,6 @@ class Test__generate_datasets(unittest.TestCase):
         assert_arrays_equal(res12.pop('t_start'), t_start)
         assert_arrays_equal(res21.pop('t_start'), t_start)
         assert_arrays_equal(res22.pop('t_start'), t_start)
-
-        assert_arrays_equal(res11.pop('channel_index'), channel_index)
-        assert_arrays_equal(res12.pop('channel_index'), channel_index)
-        assert_arrays_equal(res21.pop('channel_index'), channel_index)
-        assert_arrays_equal(res22.pop('channel_index'), channel_index)
 
         self.assertEqual(res11, attrs1)
         self.assertEqual(res12, attrs1)
@@ -204,7 +197,7 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         segment.analogsignals = [signal]
         segment.create_many_to_one_relationship()
 
-        rcg = RecordingChannelGroup(name='rcg1')
+        rcg = RecordingChannelGroup(name='rcg1', channel_indexes=np.arange(signal.shape[1]))
         rcg.analogsignals = [signal]
         rcg.create_many_to_one_relationship()
 
@@ -235,19 +228,6 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
                  self.t_start[i],
                  self.t_start[i] + len(self.data[i])/self.rates[i],
                  self.rates[i])
-            self.assertEqual(prepr, targ)
-
-    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    def test__pretty(self):
-        for signal in self.signals:
-            prepr = pretty(signal)
-            targ = (('AnalogSignal in %s with %sx%s %s values\n' %
-                     (signal.units, signal.shape[0], signal.shape[1],
-                      signal.dtype)) +
-                    ('channel index: %s\n' % signal.channel_index) +
-                    ('sampling rate: %s\n' % signal.sampling_rate) +
-                    ('time: %s to %s' % (signal.t_start, signal.t_stop)))
-
             self.assertEqual(prepr, targ)
 
 
@@ -745,13 +725,11 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
 
         signal2 = AnalogSignal(self.data1quant,
                                     sampling_rate=1*pq.kHz,
-                                    channel_index=np.arange(5),
                                     name='signal2',
                                     description='test signal',
                                     file_origin='testfile.txt')
         signal3 = AnalogSignal(data3,
                                     units="uV", sampling_rate=1*pq.kHz,
-                                    channel_index=np.arange(5, 11),
                                     name='signal3',
                                     description='test signal',
                                     file_origin='testfile.txt')
@@ -798,16 +776,11 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(mergeddata23, targdata23)
         assert_arrays_equal(mergeddata24, targdata24)
 
-        assert_arrays_equal(merged13.channel_indexes, np.arange(5, 11))
-        assert_arrays_equal(merged23.channel_indexes, np.arange(11))
-        assert_arrays_equal(merged24.channel_indexes, np.arange(5))
-
 
 class TestAnalogSignalArrayFunctions(unittest.TestCase):
     def test__pickle(self):
         signal1 = AnalogSignal(np.arange(55.0).reshape((11, 5)),
-                                    units="mV", sampling_rate=1*pq.kHz,
-                                    channel_index=np.arange(5))
+                                    units="mV", sampling_rate=1*pq.kHz)
 
         fobj = open('./pickle', 'wb')
         pickle.dump(signal1, fobj)
@@ -822,9 +795,6 @@ class TestAnalogSignalArrayFunctions(unittest.TestCase):
         assert_array_equal(signal1, signal2)
         assert_neo_object_is_compliant(signal1)
         assert_neo_object_is_compliant(signal2)
-        self.assertEqual(list(signal1.channel_indexes), [0, 1, 2, 3, 4])
-        self.assertEqual(list(signal1.channel_indexes),
-                         list(signal2.channel_indexes))
         fobj.close()
         os.remove('./pickle')
 

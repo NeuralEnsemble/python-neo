@@ -17,7 +17,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core import (class_by_name, Block, Segment,
-                      RecordingChannelGroup, RecordingChannel, Unit,
+                      RecordingChannelGroup, Unit,
                       AnalogSignal,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch)
@@ -44,7 +44,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
 
     def test_all_supported(self):
         objects = [Block, Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -78,7 +78,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
 
     def test_all_without_block(self):
         objects = [Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -96,7 +96,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
 
     def test_all_without_segment_valueerror(self):
         objects = [Block,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -116,7 +116,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
 
     def test_all_supported(self):
         objects = [Block, Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -180,7 +180,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
 
     def test_all_without_segment(self):
         objects = [Block,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -194,7 +194,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
 
     def test_all_without_block_valueerror(self):
         objects = [Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -211,7 +211,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
 
     def test_all(self):
         objects = [Block, Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -297,7 +297,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
 
     def test_all_without_block(self):
         objects = [Segment,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -315,7 +315,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
 
     def test_all_without_segment(self):
         objects = [Block,
-                   RecordingChannelGroup, RecordingChannel, Unit,
+                   RecordingChannelGroup, Unit,
                    AnalogSignal,
                    IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
@@ -584,9 +584,6 @@ class Test__get_fake_values(unittest.TestCase):
     def test__irregularlysampledsignal(self):
         self.check__get_fake_values(IrregularlySampledSignal)
 
-    def test__recordingchannel(self):
-        self.check__get_fake_values(RecordingChannel)
-
     def test__recordingchannelgroup(self):
         self.check__get_fake_values(RecordingChannelGroup)
 
@@ -638,7 +635,8 @@ class Test__generate_datasets(unittest.TestCase):
             for name, value in resattr.items():
                 if name in ['channel_names',
                             'channel_indexes',
-                            'channel_index']:
+                            'channel_index',
+                            'coordinates']:
                     continue
                 try:
                     try:
@@ -663,9 +661,6 @@ class Test__generate_datasets(unittest.TestCase):
             self.assertNotEqual(res.children, ())
 
         if cls in ['RecordingChannelGroup', RecordingChannelGroup]:
-            for i, rchan in enumerate(res.recordingchannels):
-                self.assertEqual(rchan.name, res.channel_names[i].astype(str))
-                self.assertEqual(rchan.index, res.channel_indexes[i])
             for i, unit in enumerate(res.units):
                 for sigarr in res.analogsignals:
                     self.assertEqual(unit.channel_indexes[0],
@@ -685,9 +680,6 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__irregularlysampledsignal(self):
         self.check__generate_datasets(IrregularlySampledSignal)
-
-    def test__recordingchannel(self):
-        self.check__generate_datasets(RecordingChannel)
 
     def test__recordingchannelgroup(self):
         self.check__generate_datasets(RecordingChannelGroup)

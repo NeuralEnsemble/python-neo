@@ -16,11 +16,11 @@ from neo.core import (AnalogSignal,
                       Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannel, RecordingChannelGroup,
+                      RecordingChannelGroup,
                       Segment, SpikeTrain,
                       Unit,
                       class_by_name)
-from neo.io.tools import populate_RecordingChannel, iteritems
+from neo.io.tools import iteritems
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
@@ -40,8 +40,8 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
                                               supported_objects=objects, **kws)
             bl.segments.append(seg)
 
-    if RecordingChannel in objects:
-        populate_RecordingChannel(bl)
+    #if RecordingChannel in objects:
+    #    populate_RecordingChannel(bl)
 
     bl.create_many_to_one_relationship()
     return bl
@@ -220,10 +220,12 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         data = np.array(0.0)
     elif name == 't_stop':
         data = np.array(1.0)
+    elif n and name == 'channel_indexes':
+        data = np.arange(n)
+    elif n and name == 'channel_names':
+        data = np.array(["ch%d" % i for i in range(n)])
     elif n and obj == 'AnalogSignal':
-        if name == 'channel_index':
-            data = np.random.random(n)*1000.
-        elif name == 'signal':
+        if name == 'signal':
             size = []
             for _ in range(int(dim)):
                 size.append(np.random.randint(5) + 1)
@@ -294,8 +296,7 @@ def get_annotations():
 def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     '''
     Create a fake NEO object of a given type. Follows one-to-many
-    and many-to-many relationships if cascade. RC, when requested cascade, will
-    not create RGCs to avoid dead-locks.
+    and many-to-many relationships if cascade.
 
     n (default=1) is the number of child objects of each type will be created.
     In cases like segment.spiketrains, there will be more than this number
@@ -345,28 +346,17 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         for i, rcg in enumerate(obj.recordingchannelgroups):
             for k, sigarr in enumerate(rcg.analogsignals):
                 obj.segments[k].analogsignals.append(sigarr)
+            for k, sigarr in enumerate(rcg.irregularlysampledsignals):
+                obj.segments[k].irregularlysampledsignals.append(sigarr)
             for j, unit in enumerate(rcg.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
-            for j, rchan in enumerate(rcg.recordingchannels):
-                for k, sig in enumerate(rchan.analogsignals):
-                    obj.segments[k].analogsignals.append(sig)
-                for k, irsig in enumerate(rchan.irregularlysampledsignals):
-                    obj.segments[k].irregularlysampledsignals.append(irsig)
-    elif obj_type == 'RecordingChannelGroup':
-        inds = []
-        names = []
-        chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
-        for sigarr in obj.analogsignals:
-            sigarr.channel_index = chinds[:sigarr.shape[1]]
-        for i, rchan in enumerate(obj.recordingchannels):
-            for sig in rchan.analogsignals:
-                sig.channel_index = chinds[i].tolist()
-            inds.append(rchan.index)
-            names.append(rchan.name)
-            rchan.recordingchannelgroups.append(obj)
-        obj.channel_indexes = np.array(inds)
-        obj.channel_names = np.array(names).astype('S')
+    #elif obj_type == 'RecordingChannelGroup':
+    #    inds = []
+    #    names = []
+    #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
+    #    obj.channel_indexes = np.array(inds, dtype='i')
+    #    obj.channel_names = np.array(names).astype('S')
 
     if hasattr(obj, 'create_many_to_one_relationship'):
         obj.create_many_to_one_relationship()
