@@ -190,7 +190,7 @@ class KwikIO(BaseIO):
                                   channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = self._attrs['shape']
+            anasig.lazy_shape = self._attrs['shape'][0]
         else:
             data = self._kwd['recordings'][str(self._dataset)]['data'].value[:,channel_index]
             data = data * bit_volts[channel_index]
