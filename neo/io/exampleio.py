@@ -325,4 +325,3 @@ class ExampleIO(BaseIO):
         spiketr.annotate(channel_index = channel_index)
 
         return spiketr
-

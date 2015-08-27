@@ -87,7 +87,7 @@ class BaseIO(object):
     write_params = {}
 
     name = 'BaseIO'
-    description = 'This IO does not read or write anything'
+    description = ''
     extentions = []
 
     mode = 'file'  # or 'fake' or 'dir' or 'database'
