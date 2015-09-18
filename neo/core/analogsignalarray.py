@@ -225,7 +225,7 @@ class AnalogSignalArray(BaseAnalogSignal):
         '''
 
         # checking start time and transforming to start index
-        if t_start == None:
+        if t_start is None:
             i = 0
         else:
             t_start = t_start.rescale(self.sampling_period.units)
@@ -233,7 +233,7 @@ class AnalogSignalArray(BaseAnalogSignal):
             i = int(np.rint(i.magnitude))
 
         # checking stop time and transforming to stop index
-        if t_stop == None:
+        if t_stop is None:
             j = len(self)
         else:
             t_stop = t_stop.rescale(self.sampling_period.units)
