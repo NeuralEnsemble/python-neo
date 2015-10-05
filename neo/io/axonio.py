@@ -209,7 +209,6 @@ class AxonIO(BaseIO):
         elif version >= 2.:
             mode = header['protocol']['nOperationMode']
 
-        #~ print 'mode', mode
         if (mode == 1) or (mode == 2) or (mode == 5) or (mode == 3):
             # event-driven variable-length mode (mode 1)
             # event-driven fixed-length mode (mode 2 or 5)
@@ -285,7 +284,10 @@ class AxonIO(BaseIO):
                         unit = lADCIi['ADCChUnits'].replace(b'\xb5', b'u').\
                             replace(b' ', b'').decode('utf-8')
                         num = header['listADCInfo'][i]['nADCNum']
-                    t_start = float(episodArray[j]['offset']) / sampling_rate
+                    if (fSynchTimeUnit == 0):
+                        t_start = float(episodArray[j]['offset']) / sampling_rate
+                    else:
+                        t_start = float(episodArray[j]['offset']) * fSynchTimeUnit *1e-6* pq.s
                     t_start = t_start.rescale('s')
                     try:
                         pq.Quantity(1, unit)
