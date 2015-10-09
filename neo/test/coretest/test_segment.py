@@ -246,6 +246,33 @@ class TestSegment(unittest.TestCase):
         self.check_creation(self.seg1)
         self.check_creation(self.seg2)
 
+    def test_times(self):
+
+        for seg in [self.seg1,self.seg2]:
+            # calculate target values for t_start and t_stop
+            t_starts, t_stops = [], []
+            for children in [seg.analogsignals,seg.analogsignalarrays,
+                             seg.epochs,seg.epocharrays,
+                             seg.events,seg.eventarrays,
+                             seg.irregularlysampledsignals,
+                             seg.spikes,seg.spiketrains]:
+                for child in children:
+                    if hasattr(child,'t_start'):
+                        t_starts.append(child.t_start)
+                    if hasattr(child,'t_stop'):
+                        t_stops.append(child.t_stop)
+                    if hasattr(child,'time'):
+                        t_starts.append(child.time)
+                        t_stops.append(child.time)
+                    if hasattr(child,'times'):
+                        t_starts.append(child.times[0])
+                        t_stops.append(child.times[-1])
+            targ_t_start = min(t_starts)
+            targ_t_stop = max(t_stops)
+
+            self.assertEqual(seg.t_start,targ_t_start)
+            self.assertEqual(seg.t_stop,targ_t_stop)
+
     def test__merge(self):
         seg1a = fake_neo(Block, seed=self.seed1, n=self.nchildren).segments[0]
         assert_same_sub_schema(self.seg1, seg1a)
