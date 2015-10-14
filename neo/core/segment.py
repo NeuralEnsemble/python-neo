@@ -110,7 +110,7 @@ class Segment(Container):
         Time when first signal begins.
         '''
         t_starts = [sig.t_start for sig in self.analogsignalarrays + self.analogsignals +  self.spiketrains]
-        t_starts += [e.times[0] for e in self.epocharrays + self.eventarrays + self.irregularlysampledsignals]
+        t_starts += [e.times[0] for e in self.epocharrays + self.eventarrays + self.irregularlysampledsignals if len(e.times)>0]
         t_starts += [e.time for e in self.events + self.epochs + self.spikes]
 
         # t_start is not defined if no children are present
@@ -127,7 +127,7 @@ class Segment(Container):
         Time when last signal ends.
         '''
         t_stops = [sig.t_stop for sig in self.analogsignalarrays + self.analogsignals +  self.spiketrains]
-        t_stops += [e.times[-1] for e in self.epocharrays + self.eventarrays + self.irregularlysampledsignals]
+        t_stops += [e.times[-1] for e in self.epocharrays + self.eventarrays + self.irregularlysampledsignals if len(e.times)>0]
         t_stops += [e.time for e in self.events + self.epochs + self.spikes]
 
         # t_stop is not defined if no children are present
