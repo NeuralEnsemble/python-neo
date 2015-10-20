@@ -307,7 +307,7 @@ class NeuroshareapiIO(BaseIO):
             #transform t_start into index (reading will start from this index)           
             startat = int(t_start*self.metadata["sampRate"])
             #get the number of bins to read in
-            bins = int((segment_duration+t_start) * self.metadata["sampRate"])
+            bins = int(segment_duration * self.metadata["sampRate"])
             
             #if the number of bins to read is bigger than 
             #the total number of bins, read only till the end of analog object
