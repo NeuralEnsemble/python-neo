@@ -16,9 +16,10 @@ Authors: Andrew Davison, Pierre Yger
 from itertools import chain
 import numpy
 import quantities as pq
+import warnings
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, AnalogSignalArray, SpikeTrain
+from neo.core import Segment, AnalogSignal, SpikeTrain
 
 try:
     unicode
@@ -42,7 +43,7 @@ class BasePyNNIO(BaseIO):
     is_writable = True
     has_header = True
     is_streameable = False # TODO - correct spelling to "is_streamable"
-    supported_objects = [Segment, AnalogSignal, AnalogSignalArray, SpikeTrain]
+    supported_objects = [Segment, AnalogSignal, SpikeTrain]
     readable_objects = supported_objects
     writeable_objects = supported_objects
     mode = 'file'
@@ -62,26 +63,25 @@ class BasePyNNIO(BaseIO):
         else:
             raise IOError("Cannot determine units")
 
-    def _extract_signal(self, data, metadata, channel_index, lazy):
+    def _extract_signals(self, data, metadata, lazy):
+
         signal = None
-        if lazy:
-            if channel_index in data[:, 1]:
-                signal = AnalogSignal([],
-                                      units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms,
-                                      channel_index=channel_index)
-                signal.lazy_shape = None
+        if lazy and data.size > 0:
+            signal = AnalogSignal([],
+                                  units=self._determine_units(metadata),
+                                  sampling_period=metadata['dt']*pq.ms)
+            signal.lazy_shape = None
         else:
-            arr = self._extract_array(data, channel_index)
+            arr = numpy.vstack(self._extract_array(data, channel_index)
+                               for channel_index in range(metadata['first_index'], metadata['last_index'] + 1))
             if len(arr) > 0:
-                signal = AnalogSignal(arr,
+                signal = AnalogSignal(arr.T,
                                       units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms,
-                                      channel_index=channel_index)
+                                      sampling_period=metadata['dt']*pq.ms)
         if signal is not None:
             signal.annotate(label=metadata["label"],
                             variable=metadata["variable"])
-            return signal
+        return signal
 
     def _extract_spikes(self, data, metadata, channel_index, lazy):
         spiketrain = None
@@ -108,33 +108,38 @@ class BasePyNNIO(BaseIO):
         seg = Segment(**annotations)
         if cascade:
             if metadata['variable'] == 'spikes':
-                for i in range(metadata['first_index'], metadata['last_index']):
+                for i in range(metadata['first_index'], metadata['last_index'] + 1):
                     spiketrain = self._extract_spikes(data, metadata, i, lazy)
                     if spiketrain is not None:
                         seg.spiketrains.append(spiketrain)
                 seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
             else:
-                for i in range(metadata['first_index'], metadata['last_index']):
-                    # probably slow. Replace with numpy-based version from 0.1
-                    signal = self._extract_signal(data, metadata, i, lazy)
-                    if signal is not None:
-                        seg.analogsignals.append(signal)
+                signal = self._extract_signals(data, metadata, lazy)
+                if signal is not None:
+                    seg.analogsignals.append(signal)
             seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment):
-        source = segment.analogsignals or segment.analogsignalarrays or segment.spiketrains
+        source = segment.analogsignals or segment.spiketrains
         assert len(source) > 0, "Segment contains neither analog signals nor spike trains."
         metadata = segment.annotations.copy()
-        metadata['size'] = len(source)
+        s0 = source[0]
+        if isinstance(s0, AnalogSignal):
+            if len(source) > 1:
+                warnings.warn("Cannot handle multiple analog signals. Writing only the first.")
+            source = s0.T
+            metadata['size'] = s0.shape[1]
+            n = source.size
+        else:
+            metadata['size'] = len(source)
+            n = sum(s.size for s in source)
         metadata['first_index'] = 0
-        metadata['last_index'] = metadata['size']
+        metadata['last_index'] = metadata['size'] - 1
         if 'label' not in metadata:
             metadata['label'] = 'unknown'
-        s0 = source[0]
         if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
             metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
-        n = sum(s.size for s in source)
         metadata['n'] = n
         data = numpy.empty((n, 2))
         # if the 'variable' annotation is a standard one from PyNN, we rescale
@@ -150,30 +155,25 @@ class BasePyNNIO(BaseIO):
             metadata['units'] = units.unicode
         except AttributeError:
             metadata['units'] = units.u_symbol
+
         start = 0
-        if isinstance(s0, AnalogSignalArray):
-            assert len(source) == 1, "Cannot handle multiple analog signal arrays"
-            source = s0.T
         for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
             end = start + signal.size
             data[start:end, 0] = numpy.array(signal.rescale(units))
-            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float) # index (what about channel_indexes, if it's an AnalogSignalArray?)
+            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float)
             start = end
         self._write_file_contents(data, metadata)
 
-    def read_analogsignal(self, lazy=False, channel_index=0): # channel_index should be positional arg, no?
+    def read_analogsignal(self, lazy=False):
         data, metadata = self._read_file_contents()
         if metadata['variable'] == 'spikes':
             raise TypeError("File contains spike data, not analog signals")
         else:
-            signal = self._extract_signal(data, metadata, channel_index, lazy)
+            signal = self._extract_signals(data, metadata, lazy)
             if signal is None:
-                raise IndexError("File does not contain a signal with channel index %d" % channel_index)
+                raise IndexError("File does not contain a signal")
             else:
                 return signal
-
-    def read_analogsignalarray(self, lazy=False):
-        raise NotImplementedError
 
     def read_spiketrain(self, lazy=False, channel_index=0):
         data, metadata = self._read_file_contents()

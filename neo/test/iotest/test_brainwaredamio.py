@@ -17,7 +17,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import (AnalogSignal, Block, RecordingChannel,
+from neo.core import (AnalogSignal, Block,
                       RecordingChannelGroup, Segment)
 from neo.io import BrainwareDamIO
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -58,13 +58,12 @@ def proc_dam(filename):
 
     block = Block(file_origin=filename)
 
-    rcg = RecordingChannelGroup(file_origin=filename)
-    chan = RecordingChannel(file_origin=filename, index=0, name='Chan1')
-    rcg.channel_indexes = np.array([1])
-    rcg.channel_names = np.array(['Chan1'], dtype='S')
+    rcg = RecordingChannelGroup(file_origin=filename,
+                                channel_indexes = np.array([0]),
+                                channel_ids = np.array([1]),
+                                channel_names = np.array(['Chan1'], dtype='S'))
 
     block.recordingchannelgroups.append(rcg)
-    rcg.recordingchannels.append(chan)
 
     params = [res['params'][0, 0].flatten() for res in damfile['stim']]
     values = [res['values'][0, 0].flatten() for res in damfile['stim']]

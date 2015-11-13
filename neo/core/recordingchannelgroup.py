@@ -69,8 +69,8 @@ class RecordingChannelGroup(Container):
         ...
         >>> # Create a new RecordingChannelGroup which groups three channels from the signal
         ... rcg = RecordingChannelGroup(channel_names=np.array(['ch1', 'ch4', 'ch6']),
-        ...                             channel_indexes = np.array([0, 3, 5]),
-        ...                             signals=[sig])
+        ...                             channel_indexes = np.array([0, 3, 5])
+        >>> rcg.analogsignals.append(sig)
         >>> blk.recordingchannelgroups.append(rcg)
 
     *Usage 3* dealing with :class:`Unit` objects::
@@ -119,10 +119,11 @@ class RecordingChannelGroup(Container):
     _single_parent_objects = ('Block',)
     _necessary_attrs = (('channel_indexes', np.ndarray, 1, np.dtype('i')),)
     _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
-                          ('coordinates', pq.Quantity, 2)) +
+                           ('channel_ids', np.ndarray, 1, np.dtype('i')),
+                           ('coordinates', pq.Quantity, 2)) +
                           Container._recommended_attrs)
 
-    def __init__(self, channel_indexes, channel_names=None,
+    def __init__(self, channel_indexes, channel_names=None, channel_ids=None,
                  name=None, description=None, file_origin=None,
                  coordinates=None, **annotations):
         '''
@@ -142,4 +143,5 @@ class RecordingChannelGroup(Container):
 
         # Store recommended attributes
         self.channel_names = channel_names
+        self.channel_ids = channel_ids
         self.channel_indexes = channel_indexes

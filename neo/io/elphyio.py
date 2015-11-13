@@ -92,7 +92,7 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
-                      AnalogSignal, AnalogSignalArray, Event, SpikeTrain)
+                      AnalogSignal, Event, SpikeTrain)
 
 # --------------------------------------------------------
 # OBJECTS
@@ -3698,7 +3698,7 @@ class ElphyIO(BaseIO):
     is_readable = True # This class can read data
     is_writable = False # This class can write data
     # This class is able to directly or indirectly handle the following objects
-    supported_objects  = [ Block, Segment, AnalogSignalArray, SpikeTrain ] #, AnalogSignal
+    supported_objects  = [ Block, Segment, AnalogSignal, SpikeTrain ]
     # This class can return a Block
     readable_objects    = [ Block ]
     # This class is not able to write objects

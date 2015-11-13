@@ -18,7 +18,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import (Block, Event, RecordingChannel,
+from neo.core import (Block, Event,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -86,14 +86,7 @@ def proc_src(filename):
 
     rcg = proc_src_units(srcfile, filename)
     chan_nums = np.arange(NChannels, dtype='int')
-    chan_names = []
-    for i in chan_nums:
-        name = 'Chan'+str(i)
-        chan_names.append(name)
-        chan = RecordingChannel(file_origin='filename',
-                                name=name,
-                                index=int(i))
-        rcg.recordingchannels.append(chan)
+    chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
     block.recordingchannelgroups.append(rcg)
@@ -133,7 +126,8 @@ def proc_src_comments(srcfile, filename):
 def proc_src_units(srcfile, filename):
     '''Get the units in an src file that has been processed by the official
     matlab function.  See proc_src for details'''
-    rcg = RecordingChannelGroup(file_origin=filename)
+    rcg = RecordingChannelGroup(file_origin=filename,
+                                channel_indexes=np.array([], dtype=int))
     un_unit = Unit(name='UnassignedSpikes', file_origin=filename,
                    elliptic=[], boundaries=[], timestamp=[], max_valid=[])
 

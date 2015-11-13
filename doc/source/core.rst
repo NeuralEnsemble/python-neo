@@ -47,10 +47,6 @@ were recorded on which electrodes, which spike trains were obtained from which
 membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
-:py:class:`RecordingChannel`:
-    Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain`
-    objects that come from the same logical and/or physical channel inside a :py:class:`Block`,
-    possibly across  several :py:class:`Segment` objects.
 
 :py:class:`RecordingChannelGroup`:
     A set of indices into :py:class:`AnalogSignal` objects, representing logical and/or
@@ -139,12 +135,6 @@ Now consider a more complex example: a 1x4 silicon probe, with a neuron on chann
 
     bl = Block(name='probe data')
 
-    # create individual channels
-    all_rc = []
-    for i in range(4):
-        rc = RecordingChannel(index=i, name='channel %d' % i)
-        all_rc.append(rc)
-
     # one group for each neuron
     rcg0 = RecordingChannelGroup(name='Group 0',
                                  channel_indexes=[0, 1, 2])
@@ -161,8 +151,6 @@ Now consider a more complex example: a 1x4 silicon probe, with a neuron on chann
 Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`RecordingChannelGroup` contains a reference to the :py:class:`Unit` object.
 That unit then contains references to its spiketrains. Also note that recording channels can be
 identified by names/labels as well as, or instead of, integer indices.
-
-There are some shortcuts for IO writers to automatically create this structure based on 'channel_indexes' entries in the annotations for each spiketrain.
 
 
 See :doc:`usecases` for more examples of how the different objects may be used.

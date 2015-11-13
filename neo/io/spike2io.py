@@ -285,7 +285,7 @@ class Spike2IO(BaseIO):
                 sig = np.fromstring(fid.read(blockHeader.items * dt.itemsize),
                                     dtype=dt)
                 ana_sigs[numblock][pos:pos + sig.size] = \
-                    sig.astype('f4') * unit
+                    sig.reshape(-1, 1).astype('f4') * unit
                 pos += sig.size
                 if pos >= blocksize[numblock]:
                     numblock += 1

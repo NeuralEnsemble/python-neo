@@ -1,30 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-Module for reading binary file from Blackrock format.
+Module for reading binary files from Blackrock format.
 
 This work is based on:
-  * Chris rodger first version
-  * Michael Denker, Lyuba Zehl second version.
+  * Chris Rodgers - first version
+  * Michael Denker, Lyuba Zehl - second version.
+  * Samuel Garcia - third version
 
-It support reading only.
-his IO is able to read:
-  * the nev file with contain spikes
-  * ns1, ns2, .., ns6 files that contains signals at differents sampling rates
+It supports reading only.
+This IO is able to read:
+  * the nev file which contains spikes
+  * ns1, ns2, .., ns6 files that contain signals at different sampling rates
 
-
-
-The neural data channels
-            are 1 - 128. The analog inputs are 129 - 144.
+The neural data channels are 1 - 128. The analog inputs are 129 - 144.
             
 spike- and event-data; 30000 Hz
 "ns1": "analog data: 500 Hz",
-                   "ns2": "analog data: 1000 Hz",
-                   "ns3": "analog data: 2000 Hz",
-                   "ns4": "analog data: 10000 Hz",
-                   "ns5": "analog data: 30000 Hz",
-                   "ns6": "analog data: 30000 Hz (no digital filter)"
-                   
-
+"ns2": "analog data: 1000 Hz",
+"ns3": "analog data: 2000 Hz",
+"ns4": "analog data: 10000 Hz",
+"ns5": "analog data: 30000 Hz",
+"ns6": "analog data: 30000 Hz (no digital filter)"
 
 TODO:
   * synchro video
@@ -33,6 +29,7 @@ TODO:
 
 """
 
+from __future__ import division
 import logging
 import struct
 import datetime
@@ -43,10 +40,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, SpikeTrain, Unit, Event,
-                      RecordingChannel, RecordingChannelGroup, AnalogSignal)
-from neo.io import tools as iotools
-import neo.io.tools
-
+                      RecordingChannelGroup, AnalogSignal)
 
 
 class BlackrockIO(BaseIO):
@@ -57,7 +51,7 @@ class BlackrockIO(BaseIO):
     is_writable        = False
 
     supported_objects  = [Block, Segment, AnalogSignal, RecordingChannelGroup, 
-                                                    RecordingChannel, SpikeTrain, Unit]
+                          SpikeTrain, Unit]
     readable_objects    = [Block, Segment]
 
     name               = 'Blackrock'
@@ -93,31 +87,25 @@ class BlackrockIO(BaseIO):
         seg = self.read_segment(self.filename,lazy=lazy, cascade=cascade,
                             load_waveforms = load_waveforms)
         bl.segments.append(seg)
-        neo.io.tools.populate_RecordingChannel(bl, remove_from_annotation=False)
-        
-        # This create rc and RCG for attaching Units
-        rcg0 = bl.recordingchannelgroups[0]
-        def find_rc(chan):
-            for rc in rcg0.recordingchannels:
-                if rc.index==chan:
-                    return rc
+
+        # This creates RCG for attaching Units
         for st in seg.spiketrains:
-            chan = st.annotations['channel_index']
-            rc = find_rc(chan)
-            if rc is None:
-                rc = RecordingChannel(index = chan)
-                rcg0.recordingchannels.append(rc)
-                rc.recordingchannelgroups.append(rcg0)
-            if len(rc.recordingchannelgroups) == 1:
-                rcg = RecordingChannelGroup(name = 'Group {0}'.format(chan))
-                rcg.recordingchannels.append(rc)
-                rc.recordingchannelgroups.append(rcg)
+            channel_id = st.annotations['channel_id']
+            index = None
+            for sig in seg.analogsignals:
+                if channel_id in sig.recordingchannelgroup.channel_ids:
+                    i = np.where(sig.recordingchannelgroup.channel_ids==channel_id)[0][0]
+                    index = sig.channel_indexes[i]
+                    break
+            if index is not None:
+                rcg = RecordingChannelGroup(name = 'Group {0}'.format(channel_id),
+                                            channel_indexes=np.array([index]),
+                                            channel_ids=np.array([channel_id]))
+                unit = Unit(name=st.name)
+                unit.spiketrains.append(st)
+                rcg.units.append(unit)
                 bl.recordingchannelgroups.append(rcg)
-            else:
-                rcg = rc.recordingchannelgroups[1]
-            unit = Unit(name = st.name)
-            rcg.units.append(unit)
-            unit.spiketrains.append(st)
+
         bl.create_many_to_one_relationship()
         
         return bl
@@ -126,9 +114,6 @@ class BlackrockIO(BaseIO):
                 load_waveforms = False, nsx_num = None,
                 lazy=False, cascade=True):
         """Reads one Segment.
-
-        The Segment will contain one AnalogSignal for each channel
-        and will go from n_start to n_stop (in samples).
 
         Arguments:
             n_start : time in samples that the Segment begins
@@ -142,11 +127,7 @@ class BlackrockIO(BaseIO):
         seg = Segment(file_origin=self.filename)
         if not cascade:
             return seg
-        
-        filename_nev = self.filename + '.nev'
-        if os.path.exists(filename_nev):
-            self.read_nev(filename_nev, seg, lazy, cascade, load_waveforms = load_waveforms)
-        
+
         filename_sif = self.filename + '.sif'
         if os.path.exists(filename_sif):
             sif_header = self.read_sif(filename_sif)
@@ -156,7 +137,11 @@ class BlackrockIO(BaseIO):
             filename_nsx = self.filename + '.ns'+str(i)
             if os.path.exists(filename_nsx):
                 self.read_nsx(filename_nsx, seg, lazy, cascade)
-        
+
+        filename_nev = self.filename + '.nev'
+        if os.path.exists(filename_nev):
+            self.read_nev(filename_nev, seg, lazy, cascade, load_waveforms = load_waveforms)
+
         return seg
 
     def read_nev(self, filename_nev, seg, lazy, cascade, load_waveforms = False):
@@ -304,7 +289,7 @@ class BlackrockIO(BaseIO):
                     ('waveform','uint8',(h['packet_size']-8, )),
                 ]
         data_spike = data.view(dt2)
-        
+
         for channel_id in channel_ids:
             data_spike_chan = data_spike[data['id']==channel_id]
             cluster_ids = np.unique(data_spike_chan['cluster'])
@@ -335,7 +320,7 @@ class BlackrockIO(BaseIO):
                 st = SpikeTrain(times =  times*pq.s, name = name,
                                 t_start = t_start, t_stop =t_stop,
                                 waveforms = waveforms, sampling_rate = w_sampling_rate, left_sweep = left_sweep)
-                st.annotate(channel_index = int(channel_id))
+                st.annotate(channel_id=int(channel_id))
                 if lazy:
                     st.lazy_shape = n_spike
                 seg.spiketrains.append(st)
@@ -382,8 +367,8 @@ class BlackrockIO(BaseIO):
                     ('lo_freq_order',  'uint32'),
                     ('lo_freq_type',  'uint16'), #0=None 1=Butterworth
             ]
-        channels_header = ch= np.memmap(filename_nsx, shape = nb_channel,
-                    offset = np.dtype(dt0).itemsize,   dtype = dt1)
+        channels_header = np.memmap(filename_nsx, shape=nb_channel,
+                                    offset=np.dtype(dt0).itemsize, dtype = dt1)
         
         #read data
         dt2 = [('header_id','uint8'),
@@ -395,34 +380,54 @@ class BlackrockIO(BaseIO):
         nb_sample = sample_header['nb_sample']
         data = np.memmap(filename_nsx, dtype = 'int16', shape = (nb_sample, nb_channel),
                         offset = nsx_header['header_size'] +np.dtype(dt2).itemsize )
-        
-        # create ne objects
-        for i in range(nb_channel):
-            unit = str(channels_header['units'][i])
+
+        # create neo objects
+        neural_data_channels = channels_header['channel_id'] < 129
+        analog_input_channels = channels_header['channel_id'] > 128
+
+        for channel_filter, name in ((neural_data_channels, "Neural data"),
+                                     (analog_input_channels, "Analog inputs")):
+            ch = channels_header[channel_filter]
+            units = ch['units']
+            assert (units == units[0]).all(), "Neural channel data not homogeneous, contact the Neo developers"
+            # todo: handle heterogeneous units
+
             if lazy:
-                sig = [ ]
+                sig = []
             else:
-                sig = data[:,i].astype(float)
-                # dig value to pysical value
-                if ch['max_analog_val'][i] == -ch['min_analog_val'][i] and\
-                     ch['max_digital_val'][i] == -ch['min_digital_val'][i]:
-                    #when symetric it is simple
-                    sig *= float(ch['max_analog_val'][i])/float(ch['max_digital_val'][i])
+                sig = data[:, channel_filter].astype(float)
+                # digital value to physical value
+                if ((ch['max_analog_val'] == -ch['min_analog_val']).all() and
+                    (ch['max_digital_val'] == -ch['min_digital_val']).all()):
+                    # when symmetric it is simple
+                    sig *= ch['max_analog_val']/ch['max_digital_val']
                 else:
-                    #general case
-                    sig -= ch['min_digital_val'][i]
-                    sig *= float(ch['max_analog_val'][i] - ch['min_analog_val'])/\
-                                    float(ch['max_digital_val'][i] - ch['min_digital_val'])
-                    sig += float(ch['min_analog_val'][i])
-            anasig = AnalogSignal(signal = pq.Quantity(sig,unit, copy = False),
-                                                        sampling_rate = sr*pq.Hz,
-                                                        t_start = sample_header['n_start']/sr*pq.s,
-                                                        name = str(ch['label'][i]),
-                                                        channel_index = int(ch['channel_id'][i]))
+                    # general case
+                    sig -= ch['min_digital_val']
+                    sig *= (ch['max_analog_val'] - ch['min_analog_val'])/\
+                               (ch['max_digital_val'] - ch['min_digital_val'])
+                    sig += ch['min_analog_val']
+
+            anasig = AnalogSignal(sig, units[0], copy=False,
+                                  sampling_rate=sr*pq.Hz,
+                                  t_start=sample_header['n_start']/sr*pq.s,
+                                  name=name,
+                                  file_origin=filename_nsx)
             if lazy:
                 anasig.lazy_shape = nb_sample
-            seg.analogsignals.append(anasig)
+                channel_indexes = np.arange(anasig.lazy_shape)
+            else:
+                channel_indexes = np.arange(anasig.shape[1])
 
+            # this assumes there is only ever a single segment
+            rcg = RecordingChannelGroup(channel_indexes=channel_indexes,
+                                        channel_ids=np.array(ch['channel_id']),
+                                        channel_names=np.array(ch['label']),
+                                        name=name,
+                                        file_origin=filename_nsx)
+            rcg.analogsignals.append(anasig)
+            anasig.recordingchannelgroup = rcg
+            seg.analogsignals.append(anasig)
 
     def read_sif(self, filename_sif, seg, ):
         pass
