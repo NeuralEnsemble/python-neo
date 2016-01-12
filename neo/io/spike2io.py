@@ -166,20 +166,23 @@ class Spike2IO(BaseIO):
                 dt = [('scale' , 'f4'),
                       ('offset' , 'f4'),
                       ('unit' , 'S6'),]
+                      #~ ('unit' , 'S5'),]
                 channelHeader += HeaderReader(fid, np.dtype(dt))
+                
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i4')]) )#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i2')]) )
                 else :
-                    channelHeader +=HeaderReader(fid, np.dtype([ ('interleave' , 'i4')]) )#i8
+                    channelHeader +=HeaderReader(fid, np.dtype([ ('interleave' , 'i2')]) )
+                
             if channelHeader.kind in [7, 9]:
                 dt = [('min' , 'f4'),
                       ('max' , 'f4'),
                       ('unit' , 'S6'),]
                 channelHeader += HeaderReader(fid, np.dtype(dt))
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i4')]))#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i2')]))
                 else :
-                    channelHeader += HeaderReader(fid, np.dtype([ ('interleave' , 'i4')]) )#i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('interleave' , 'i2')]) )
             if channelHeader.kind in [4]:
                 dt = [('init_low' , 'u1'),
                       ('next_low' , 'u1'),]
