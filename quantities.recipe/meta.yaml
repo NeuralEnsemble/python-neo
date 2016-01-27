@@ -29,9 +29,11 @@ source:
 requirements:
   build:
     - python
+    - numpy
 
   run:
     - python
+    - numpy
 
 test:
   # Python imports
