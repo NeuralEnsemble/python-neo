@@ -30,13 +30,13 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy >=1.3.0
-    - quantities >=0.9.0
+    - numpy
+    - quantities
 
   run:
     - python
-    - numpy >=1.3.0
-    - quantities >=0.9.0
+    - numpy
+    - quantities
 
 test:
   # Python imports
