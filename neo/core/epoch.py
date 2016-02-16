@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-This module defines :class:`Epoch`, an array of epochs. Introduced for
-performance reasons.
+This module defines :class:`Epoch`, an array of epochs.
 
 :class:`Epoch` derives from :class:`BaseNeo`, from
 :module:`neo.core.baseneo`.
@@ -20,11 +19,9 @@ from neo.core.baseneo import BaseNeo, merge_annotations
 PY_VER = sys.version_info[0]
 
 
-class Epoch(BaseNeo):
+class Epoch(BaseNeo, pq.Quantity):
     '''
-    Array of epochs. Introduced for performance reason.
-
-    An :class:`Epoch` is prefered to a list of :class:`Epoch` objects.
+    Array of epochs.
 
     *Usage*::
 
@@ -65,6 +62,33 @@ class Epoch(BaseNeo):
                         ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
+    def __new__(cls, times=None, durations=None, labels=None,
+                name=None, description=None, file_origin=None, **annotations):
+        if times is None:
+            times = np.array([]) * pq.s
+        if durations is None:
+            durations = np.array([]) * pq.s
+        if labels is None:
+            labels = np.array([], dtype='S')
+        try:
+            units = times.units
+            dim = units.dimensionality
+        except AttributeError:
+            raise ValueError('you must specify units')
+        # check to make sure the units are time
+        # this approach is much faster than comparing the
+        # reference dimensionality
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or
+                not isinstance(list(dim.keys())[0], pq.UnitTime)):
+            ValueError("Unit %s has dimensions %s, not [time]" %
+                       (units, dim.simplified))
+
+        obj = pq.Quantity.__new__(cls, times, units=dim)
+        obj.durations = durations
+        obj.labels = labels
+        obj.segment = None
+        return obj
+
     def __init__(self, times=None, durations=None, labels=None,
                  name=None, description=None, file_origin=None, **annotations):
         '''
@@ -73,18 +97,15 @@ class Epoch(BaseNeo):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
-        if times is None:
-            times = np.array([]) * pq.s
-        if durations is None:
-            durations = np.array([]) * pq.s
-        if labels is None:
-            labels = np.array([], dtype='S')
-
-        self.times = times
-        self.durations = durations
-        self.labels = labels
-
-        self.segment = None
+    def __array_finalize__(self, obj):
+        super(Epoch, self).__array_finalize__(obj)
+        self.durations = getattr(obj, 'durations', None)
+        self.labels = getattr(obj, 'labels', None)
+        self.annotations = getattr(obj, 'annotations', None)
+        self.name = getattr(obj, 'name', None)
+        self.file_origin = getattr(obj, 'file_origin', None)
+        self.description = getattr(obj, 'description', None)
+        self.segment = getattr(obj, 'segment', None)
 
     def __repr__(self):
         '''
@@ -99,6 +120,10 @@ class Epoch(BaseNeo):
         objs = ['%s@%s for %s' % (label, time, dur) for
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
+
+    @property
+    def times(self):
+        return pq.Quantity(self)
 
     def merge(self, other):
         '''
