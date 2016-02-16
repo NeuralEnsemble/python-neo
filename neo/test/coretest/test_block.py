@@ -705,35 +705,35 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
 
-    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    def test__pretty(self):
-        res = pretty(self.blk1)
-        ann = get_annotations()
-        ann['seed'] = self.seed1
-        ann = pretty(ann).replace('\n ', '\n  ')
-
-        seg0 = pretty(self.segs1[0])
-        seg1 = pretty(self.segs1[1])
-        seg0 = seg0.replace('\n', '\n   ')
-        seg1 = seg1.replace('\n', '\n   ')
-
-        targ = ("Block with " +
-                ("%s segments, %s recordingchannelgroups\n" %
-                 (len(self.segs1), len(self.rcgs1))) +
-                ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
-                                                      self.blk1.description)) +
-                ("annotations: %s\n" % ann) +
-                ("file_origin: '%s'\n" % self.blk1.file_origin) +
-                ("file_datetime: %s\n" % repr(self.blk1.file_datetime)) +
-                ("rec_datetime: %s\n" % repr(self.blk1.rec_datetime)) +
-                ("index: %s\n" % self.blk1.index) +
-
-
-                ("# segments (N=%s)\n" % len(self.segs1)) +
-                ('%s: %s\n' % (0, seg0)) +
-                ('%s: %s' % (1, seg1)))
-
-        self.assertEqual(res, targ)
+    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    # def test__pretty(self):
+    #     res = pretty(self.blk1)
+    #     ann = get_annotations()
+    #     ann['seed'] = self.seed1
+    #     ann = pretty(ann).replace('\n ', '\n  ')
+    #
+    #     seg0 = pretty(self.segs1[0])
+    #     seg1 = pretty(self.segs1[1])
+    #     seg0 = seg0.replace('\n', '\n   ')
+    #     seg1 = seg1.replace('\n', '\n   ')
+    #
+    #     targ = ("Block with " +
+    #             ("%s segments, %s recordingchannelgroups\n" %
+    #              (len(self.segs1), len(self.rcgs1))) +
+    #             ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
+    #                                                   self.blk1.description)) +
+    #             ("annotations: %s\n" % ann) +
+    #             ("file_origin: '%s'\n" % self.blk1.file_origin) +
+    #             ("file_datetime: %s\n" % repr(self.blk1.file_datetime)) +
+    #             ("rec_datetime: %s\n" % repr(self.blk1.rec_datetime)) +
+    #             ("index: %s\n" % self.blk1.index) +
+    #
+    #
+    #             ("# segments (N=%s)\n" % len(self.segs1)) +
+    #             ('%s: %s\n' % (0, seg0)) +
+    #             ('%s: %s' % (1, seg1)))
+    #
+    #     self.assertEqual(res, targ)
 
     def test_block_list_units(self):
         assert_same_sub_schema(self.units1, self.blk1.list_units)

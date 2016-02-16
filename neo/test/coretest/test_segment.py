@@ -644,38 +644,38 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
         assert_same_sub_schema(res5, targ)
 
-    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    def test__pretty(self):
-        ann = get_annotations()
-        ann['seed'] = self.seed1
-        ann = pretty(ann).replace('\n ', '\n  ')
-        res = pretty(self.seg1)
-
-        sigarr0 = pretty(self.sigarrs1[0])
-        sigarr1 = pretty(self.sigarrs1[1])
-        sigarr0 = sigarr0.replace('\n', '\n   ')
-        sigarr1 = sigarr1.replace('\n', '\n   ')
-
-        targ = ("Segment with " +
-                ("%s analogsignals, " %
-                 (len(self.sigarrs1a),)) +
-                ("%s epochs, " % len(self.epcs1a)) +
-                ("%s events, " % len(self.evts1a)) +
-                ("%s irregularlysampledsignals, " %
-                 len(self.irsigs1a)) +
-                ("%s spiketrains\n" % len(self.trains1a)) +
-                ("name: '%s'\ndescription: '%s'\n" %
-                 (self.seg1.name, self.seg1.description)
-                 ) +
-
-                ("annotations: %s\n" % ann) +
-
-                ("# analogsignals (N=%s)\n" % len(self.sigarrs1a)) +
-
-                ('%s: %s\n' % (0, sigarr0)) +
-                ('%s: %s' % (1, sigarr1)))
-
-        self.assertEqual(res, targ)
+    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    # def test__pretty(self):
+    #     ann = get_annotations()
+    #     ann['seed'] = self.seed1
+    #     ann = pretty(ann).replace('\n ', '\n  ')
+    #     res = pretty(self.seg1)
+    #
+    #     sigarr0 = pretty(self.sigarrs1[0])
+    #     sigarr1 = pretty(self.sigarrs1[1])
+    #     sigarr0 = sigarr0.replace('\n', '\n   ')
+    #     sigarr1 = sigarr1.replace('\n', '\n   ')
+    #
+    #     targ = ("Segment with " +
+    #             ("%s analogsignals, " %
+    #              (len(self.sigarrs1a),)) +
+    #             ("%s epochs, " % len(self.epcs1a)) +
+    #             ("%s events, " % len(self.evts1a)) +
+    #             ("%s irregularlysampledsignals, " %
+    #              len(self.irsigs1a)) +
+    #             ("%s spiketrains\n" % len(self.trains1a)) +
+    #             ("name: '%s'\ndescription: '%s'\n" %
+    #              (self.seg1.name, self.seg1.description)
+    #              ) +
+    #
+    #             ("annotations: %s\n" % ann) +
+    #
+    #             ("# analogsignals (N=%s)\n" % len(self.sigarrs1a)) +
+    #
+    #             ('%s: %s\n' % (0, sigarr0)) +
+    #             ('%s: %s' % (1, sigarr1)))
+    #
+    #     self.assertEqual(res, targ)
 
     def test__construct_subsegment_by_unit(self):
         nb_seg = 3
