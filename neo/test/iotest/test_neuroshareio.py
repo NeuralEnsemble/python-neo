@@ -53,8 +53,12 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
                     zip.extract('Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll', path = tempfile.gettempdir())
 
         elif sys.platform.startswith('linux'):
-            distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
-            localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux64_3.7b.tar.gz')
+            if platform.architecture()[0].startswith('64'):
+                distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux64_3.7b.tar.gz'
+                localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux64_3.7b.tar.gz')
+            else:
+                distantfile = 'http://download.multichannelsystems.com/download_data/software/neuroshare/nsMCDLibrary_Linux32_3.7b.tar.gz'
+                localfile = os.path.join(tempfile.gettempdir(),'nsMCDLibrary_Linux32_3.7b.tar.gz')
             if not os.path.exists(localfile):
                 urlretrieve(distantfile, localfile)
             self.dllname = os.path.join(tempfile.gettempdir(),'nsMCDLibrary/nsMCDLibrary.so')
@@ -67,7 +71,7 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     
     def test_with_multichannel(self):
         filename0 = self.get_filename_path(self.files_to_download[0])
-        reader = NeuroshareIO(filename = filename0, dllname = self.dllname)
+        reader = NeuroshareIO(filename0, self.dllname)
         blocks = reader.read()
         n = len(blocks[0].segments[0].analogsignals)
         assert n == 2, \

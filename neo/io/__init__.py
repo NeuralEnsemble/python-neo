@@ -60,6 +60,8 @@ Classes:
 
 .. autoclass:: neo.io.TdtIO
 
+.. autoclass:: neo.io.KwikIO
+
 .. autoclass:: neo.io.WinEdrIO
 
 .. autoclass:: neo.io.WinWcpIO
@@ -68,7 +70,7 @@ Classes:
 
 import os.path
 
-#try to import the neuroshare library. 
+#try to import the neuroshare library.
 #if it is present, use the neuroshareapiio to load neuroshare files
 #if it is not present, use the neurosharectypesio to load files
 try:
@@ -112,6 +114,7 @@ from neo.io.pynnio import PyNNTextIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
+from neo.io.kwikio import KwikIO
 from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
@@ -144,6 +147,7 @@ iolist = [AlphaOmegaIO,
           Spike2IO,
           StimfitIO,
           TdtIO,
+          KwikIO,
           WinEdrIO,
           WinWcpIO]
 
