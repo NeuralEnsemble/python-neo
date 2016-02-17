@@ -50,11 +50,6 @@ class Unit(Container):
         :name: (str) A label for the dataset.
         :description: (str) Text description.
         :file_origin: (str) Filesystem path or URL of the original data file.
-        :channel_index: (numpy array 1D dtype='i') You can use this to order
-            :class:`Unit` objects in an way you want. It can have any number
-            of elements.  :class:`AnalogSignal` and :class:`AnalogSignalArray`
-            objects can be given indexes as well so related objects can be
-            linked together.
 
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
@@ -66,17 +61,22 @@ class Unit(Container):
 
     _data_child_objects = ('SpikeTrain',)
     _single_parent_objects = ('RecordingChannelGroup',)
-    _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),)
-                          + Container._recommended_attrs)
+    _recommended_attrs = Container._recommended_attrs
 
     def __init__(self, name=None, description=None, file_origin=None,
-                 channel_indexes=None, **annotations):
+                 **annotations):
         '''
         Initialize a new :clas:`Unit` instance (spike source)
         '''
         super(Unit, self).__init__(name=name, description=description,
                                    file_origin=file_origin, **annotations)
-
-        self.channel_indexes = channel_indexes
-
         self.recordingchannelgroup = None
+
+    @property
+    def channel_indexes(self):
+        """
+        """
+        if self.recordingchannelgroup:
+            return self.recordingchannelgroup.channel_indexes
+        else:
+            return None

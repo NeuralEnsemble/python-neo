@@ -158,7 +158,8 @@ class BrainwareF32IO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = RecordingChannelGroup(file_origin=self._filename)
+        rcg = RecordingChannelGroup(file_origin=self._filename,
+                                    channel_indexes=np.array([], dtype=np.int))
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers

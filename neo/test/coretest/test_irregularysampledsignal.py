@@ -12,6 +12,7 @@ import os
 import pickle
 import numpy as np
 import quantities as pq
+from numpy.testing import assert_array_equal
 
 try:
     from IPython.lib.pretty import pretty
@@ -21,7 +22,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo.core import Segment, RecordingChannel
+from neo.core import Segment
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -38,7 +39,7 @@ class Test__generate_datasets(unittest.TestCase):
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
         times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
-        signal = get_fake_value('signal', pq.Quantity, seed=1, dim=1)
+        signal = get_fake_value('signal', pq.Quantity, seed=1, dim=2)
         name = get_fake_value('name', str, seed=2,
                               obj=IrregularlySampledSignal)
         description = get_fake_value('description', str, seed=3,
@@ -59,15 +60,15 @@ class Test__generate_datasets(unittest.TestCase):
         res22 = get_fake_values('IrregularlySampledSignal',
                                 annotate=True, seed=0)
 
-        assert_arrays_equal(res11.pop('times'), times)
-        assert_arrays_equal(res12.pop('times'), times)
-        assert_arrays_equal(res21.pop('times'), times)
-        assert_arrays_equal(res22.pop('times'), times)
+        assert_array_equal(res11.pop('times'), times)
+        assert_array_equal(res12.pop('times'), times)
+        assert_array_equal(res21.pop('times'), times)
+        assert_array_equal(res22.pop('times'), times)
 
-        assert_arrays_equal(res11.pop('signal'), signal)
-        assert_arrays_equal(res12.pop('signal'), signal)
-        assert_arrays_equal(res21.pop('signal'), signal)
-        assert_arrays_equal(res22.pop('signal'), signal)
+        assert_array_equal(res11.pop('signal'), signal)
+        assert_array_equal(res12.pop('signal'), signal)
+        assert_array_equal(res21.pop('signal'), signal)
+        assert_array_equal(res22.pop('signal'), signal)
 
         self.assertEqual(res11, attrs1)
         self.assertEqual(res12, attrs1)
@@ -106,8 +107,8 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_arrays_equal(sig.times, [1.1, 1.5, 1.7]*pq.ms)
-        assert_arrays_equal(np.asarray(sig), np.array([20., 40., 60.]))
+        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*pq.ms)
+        assert_array_equal(np.asarray(sig).flatten(), np.array([20., 40., 60.]))
         self.assertEqual(sig.units, pq.mV)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
@@ -128,8 +129,8 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_arrays_equal(sig.times, [1.1, 1.5, 1.7]*pq.s)
-        assert_arrays_equal(np.asarray(sig), np.array([20., 40., 60.]))
+        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*pq.s)
+        assert_array_equal(np.asarray(sig).flatten(), np.array([20., 40., 60.]))
         self.assertEqual(sig.units, pq.V)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
@@ -150,8 +151,8 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_arrays_equal(sig.times, [1100, 1500, 1700]*pq.ms)
-        assert_arrays_equal(np.asarray(sig), np.array([2000., 4000., 6000.]))
+        assert_array_equal(sig.times, [1100, 1500, 1700]*pq.ms)
+        assert_array_equal(np.asarray(sig).flatten(), np.array([2000., 4000., 6000.]))
         self.assertEqual(sig.units, pq.mV)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
@@ -225,40 +226,40 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
                                        test1=1)
         assert_neo_object_is_compliant(sig)
 
-        targ = ('<IrregularlySampledSignal(array([ 2.,  4.,  6.]) * V ' +
+        targ = ('<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) * V ' +
                 'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
 
-    def test__children(self):
-        signal = self.signals[0]
-
-        segment = Segment(name='seg1')
-        segment.analogsignals = [signal]
-        segment.create_many_to_one_relationship()
-
-        rchan = RecordingChannel(name='rchan1')
-        rchan.analogsignals = [signal]
-        rchan.create_many_to_one_relationship()
-
-        self.assertEqual(signal._single_parent_objects,
-                         ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._multi_parent_objects, ())
-
-        self.assertEqual(signal._single_parent_containers,
-                         ('segment', 'recordingchannel'))
-        self.assertEqual(signal._multi_parent_containers, ())
-
-        self.assertEqual(signal._parent_objects,
-                         ('Segment', 'RecordingChannel'))
-        self.assertEqual(signal._parent_containers,
-                         ('segment', 'recordingchannel'))
-
-        self.assertEqual(len(signal.parents), 2)
-        self.assertEqual(signal.parents[0].name, 'seg1')
-        self.assertEqual(signal.parents[1].name, 'rchan1')
-
-        assert_neo_object_is_compliant(signal)
+    # def test__children(self):
+    #     signal = self.signals[0]
+    #
+    #     segment = Segment(name='seg1')
+    #     segment.analogsignals = [signal]
+    #     segment.create_many_to_one_relationship()
+    #
+    #     rchan = RecordingChannel(name='rchan1')
+    #     rchan.analogsignals = [signal]
+    #     rchan.create_many_to_one_relationship()
+    #
+    #     self.assertEqual(signal._single_parent_objects,
+    #                      ('Segment', 'RecordingChannel'))
+    #     self.assertEqual(signal._multi_parent_objects, ())
+    #
+    #     self.assertEqual(signal._single_parent_containers,
+    #                      ('segment', 'recordingchannel'))
+    #     self.assertEqual(signal._multi_parent_containers, ())
+    #
+    #     self.assertEqual(signal._parent_objects,
+    #                      ('Segment', 'RecordingChannel'))
+    #     self.assertEqual(signal._parent_containers,
+    #                      ('segment', 'recordingchannel'))
+    #
+    #     self.assertEqual(len(signal.parents), 2)
+    #     self.assertEqual(signal.parents[0].name, 'seg1')
+    #     self.assertEqual(signal.parents[1].name, 'rchan1')
+    #
+    #     assert_neo_object_is_compliant(signal)
 
 
 class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
@@ -293,8 +294,8 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.size, 5)
         self.assertEqual(result.t_start, self.time1quant[3])
         self.assertEqual(result.t_stop, self.time1quant[7])
-        assert_arrays_equal(self.time1quant[3:8], result.times)
-        assert_arrays_equal(self.data1[3:8], result)
+        assert_array_equal(self.time1quant[3:8], result.times)
+        assert_array_equal(self.data1[3:8].reshape(-1, 1), result.magnitude)
 
         # Test other attributes were copied over (in this case, defaults)
         self.assertEqual(result.file_origin, self.signal1.file_origin)
@@ -311,16 +312,16 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertRaises(IndexError, self.signal1.__getitem__, 10)
 
     def test_comparison_operators(self):
-        assert_arrays_equal(self.signal1 >= 5*pq.mV,
-                            np.array([False, False, False, False, False,
-                                      True, True, True, True, True]))
+        assert_array_equal(self.signal1 >= 5*pq.mV,
+                            np.array([[False, False, False, False, False,
+                                      True, True, True, True, True]]).T)
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal1.__gt__, 5*pq.nA)
 
     def test_simple_statistics(self):
-        targmean = self.signal1[:-1]*np.diff(self.time1quant)
-        targmean = targmean.sum()/(self.time1quant[-1]-self.time1quant[0])
+        targmean = self.signal1[:-1]*np.diff(self.time1quant).reshape(-1, 1)
+        targmean = targmean.sum()/(self.time1quant[-1] - self.time1quant[0])
         self.assertEqual(self.signal1.max(), 9*pq.mV)
         self.assertEqual(self.signal1.min(), 0*pq.mV)
         self.assertEqual(self.signal1.mean(), targmean)
@@ -343,8 +344,8 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
         self.assertEqual(result.units, 1*pq.mV)
-        assert_arrays_equal(result, self.data1)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, self.data1.reshape(-1, 1))
+        assert_array_equal(result.times, self.time1quant)
         assert_same_sub_schema(result, self.signal1)
 
     def test__rescale_new(self):
@@ -359,8 +360,8 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
         self.assertEqual(result.units, 1*pq.uV)
-        assert_arrays_almost_equal(np.array(result), self.data1*1000., 1e-10)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1)*1000., 1e-10)
+        assert_array_equal(result.times, self.time1quant)
 
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.nA)
@@ -395,8 +396,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        assert_arrays_equal(result, self.data1 + 65)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, self.data1.reshape(-1, 1) + 65)
+        assert_array_equal(result.times, self.time1quant)
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], 74*pq.mV)
 
@@ -422,9 +423,9 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
                                         arg1='test')
         assert_neo_object_is_compliant(targ)
 
-        assert_arrays_equal(result, targ)
-        assert_arrays_equal(self.time1quant, targ.times)
-        assert_arrays_equal(result.times, targ.times)
+        assert_array_equal(result, targ)
+        assert_array_equal(self.time1quant, targ.times)
+        assert_array_equal(result.times, targ.times)
         assert_same_sub_schema(result, targ)
 
     def test__add_signals_with_inconsistent_times_AssertionError(self):
@@ -450,8 +451,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], -56*pq.mV)
-        assert_arrays_equal(result, self.data1 - 65)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, (self.data1 - 65).reshape(-1, 1))
+        assert_array_equal(result.times, self.time1quant)
 
     def test__subtract_from_const_should_return_signal(self):
         result = 10*pq.mV - self.signal1
@@ -464,8 +465,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], 1*pq.mV)
-        assert_arrays_equal(result, 10 - self.data1)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, (10 - self.data1).reshape(-1, 1))
+        assert_array_equal(result.times, self.time1quant)
 
     def test__mult_signal_by_const_float_should_preserve_data_complement(self):
         result = self.signal1*2.
@@ -478,8 +479,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], 18*pq.mV)
-        assert_arrays_equal(result, self.data1*2)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)*2)
+        assert_array_equal(result.times, self.time1quant)
 
     def test__mult_signal_by_const_array_should_preserve_data_complement(self):
         result = self.signal1*np.array(2.)
@@ -492,8 +493,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], 18*pq.mV)
-        assert_arrays_equal(result, self.data1*2)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)*2)
+        assert_array_equal(result.times, self.time1quant)
 
     def test__divide_signal_by_const_should_preserve_data_complement(self):
         result = self.signal1/0.5
@@ -506,8 +507,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         self.assertEqual(self.signal1[9], 9*pq.mV)
         self.assertEqual(result[9], 18*pq.mV)
-        assert_arrays_equal(result, self.data1/0.5)
-        assert_arrays_equal(result.times, self.time1quant)
+        assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)/0.5)
+        assert_array_equal(result.times, self.time1quant)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
@@ -535,7 +536,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         except ValueError:
             signal2 = None
 
-        assert_arrays_equal(signal1, signal2)
+        assert_array_equal(signal1, signal2)
         fobj.close()
         os.remove('./pickle')
         

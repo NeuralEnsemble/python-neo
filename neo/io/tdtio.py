@@ -82,7 +82,6 @@ class TdtIO(BaseIO):
 
     def __init__(self , dirname=None) :
         """
-        This class read a WinEDR wcp file.
 
         **Arguments**
         Arguments:

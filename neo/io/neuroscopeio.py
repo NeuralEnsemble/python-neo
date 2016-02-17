@@ -26,7 +26,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
-from neo.core import (Block, Segment, RecordingChannel,  RecordingChannelGroup,
+from neo.core import (Block, Segment,  RecordingChannelGroup,
                       AnalogSignal)
 
 
@@ -39,7 +39,7 @@ class NeuroScopeIO(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects  = [ Block, Segment , AnalogSignal, RecordingChannel,  RecordingChannelGroup]
+    supported_objects  = [ Block, Segment , AnalogSignal,  RecordingChannelGroup]
 
     readable_objects    = [ Block ]
     writeable_objects   = [ ]
@@ -97,18 +97,14 @@ class NeuroScopeIO(BaseIO):
             seg = Segment()
             bl.segments.append(seg)
             
-            # RC and RCG
-            rc_list = [ ]
+            # RCG
             for i, xml_rcg in  enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
-                rcg = RecordingChannelGroup(name = 'Group {0}'.format(i))
+                n_channels = len(xml_rcg)
+                rcg = RecordingChannelGroup(name = 'Group {0}'.format(i),
+                                            channel_indexes=np.arange(n_channels, dtype = int))
+                rcg.channel_ids = np.array([int(xml_rc.text) for xml_rc in xml_rcg])
+                rcg.channel_names = np.array(['Channel{0}'.format(id) for id in rcg.channel_ids], dtype = 'S')
                 bl.recordingchannelgroups.append(rcg)
-                for xml_rc in xml_rcg:
-                    rc = RecordingChannel(index = int(xml_rc.text))
-                    rc_list.append(rc)
-                    rcg.recordingchannels.append(rc)
-                    rc.recordingchannelgroups.append(rcg)
-                rcg.channel_indexes = np.array([rc.index for rc in rcg.recordingchannels], dtype = int)
-                rcg.channel_names = np.array(['Channel{0}'.format(rc.index) for rc in rcg.recordingchannels], dtype = 'S')
         
             # AnalogSignals
             reader = RawBinarySignalIO(filename = self.filename.replace('.xml', '.dat'))
@@ -125,7 +121,7 @@ class NeuroScopeIO(BaseIO):
                     sig /= amplification
                 sig.segment = seg
                 seg.analogsignals.append(sig)
-                rc_list[s].analogsignals.append(sig)
+                rcg.analogsignals.append(sig)
             
         bl.create_many_to_one_relationship()
         return bl

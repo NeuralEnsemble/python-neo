@@ -121,7 +121,7 @@ def assert_neo_object_is_compliant(ob):
         if (hasattr(ob, '_quantity_attr') and
                 ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
-            # object inherits from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            # object inherits from Quantity (AnalogSignal, SpikeTrain, ...)
             ndim = ioattr[2]
             assert ob.ndim == ndim, \
                 '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
@@ -275,7 +275,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
-            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            # object is hinerited from Quantity (AnalogSignal, SpikeTrain, ...)
             try:
                 assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude,
                                            threshold=threshold,
@@ -446,7 +446,6 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
 lazy_shape_arrays = {'SpikeTrain': 'times',
                      'AnalogSignal': 'signal',
-                     'AnalogSignalArray': 'signal',
                      'Event': 'times', 'Epoch': 'times'}
 
 

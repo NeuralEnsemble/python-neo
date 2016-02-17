@@ -562,9 +562,9 @@ class AxonIO(BaseIO):
                 signal = np.ones(nSam) *\
                     header['listDACInfo'][DACNum]['fDACHoldingLevel'] *\
                     pq.Quantity(1, unit)
-                anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                      t_start=t_start, name=str(name),
-                                      channel_index=DACNum)
+                ana_sig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                       t_start=t_start, name=str(name),
+                                       channel_index=DACNum)
                 # If there are epoch infos for this DAC
                 if DACNum in header['dictEpochInfoPerDAC']:
                     # Save last sample index
@@ -578,7 +578,7 @@ class AxonIO(BaseIO):
                         i_end = i_last + epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end-i_begin
-                        anaSig[i_begin:i_end] = np.ones(len(range(dif))) *\
+                        ana_sig[i_begin:i_end] = np.ones(len(range(dif))) *\
                             pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)

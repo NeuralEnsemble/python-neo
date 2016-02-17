@@ -88,13 +88,13 @@ class Test__generate_datasets(unittest.TestCase):
         rcg = res.recordingchannelgroups[0]
         self.assertEqual(rcg.annotations, self.annotations)
 
-        self.assertEqual(len(seg.analogsignalarrays), 1)
+        self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.irregularlysampledsignals), 1)
         self.assertEqual(len(seg.spiketrains), 1)
         self.assertEqual(len(seg.events), 1)
         self.assertEqual(len(seg.epochs), 1)
-        self.assertEqual(seg.analogsignalarrays[0].annotations,
+        self.assertEqual(seg.analogsignals[0].annotations,
                          self.annotations)
         self.assertEqual(seg.analogsignals[0].annotations,
                          self.annotations)
@@ -107,23 +107,12 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(seg.epochs[0].annotations,
                          self.annotations)
 
-        self.assertEqual(len(rcg.recordingchannels), 1)
-        rchan = rcg.recordingchannels[0]
-        self.assertEqual(rchan.annotations, self.annotations)
-
         self.assertEqual(len(rcg.units), 1)
         unit = rcg.units[0]
         self.assertEqual(unit.annotations, self.annotations)
 
-        self.assertEqual(len(rcg.analogsignalarrays), 1)
-        self.assertEqual(rcg.analogsignalarrays[0].annotations,
-                         self.annotations)
-
-        self.assertEqual(len(rchan.analogsignals), 1)
-        self.assertEqual(len(rchan.irregularlysampledsignals), 1)
-        self.assertEqual(rchan.analogsignals[0].annotations,
-                         self.annotations)
-        self.assertEqual(rchan.irregularlysampledsignals[0].annotations,
+        self.assertEqual(len(rcg.analogsignals), 1)
+        self.assertEqual(rcg.analogsignals[0].annotations,
                          self.annotations)
 
         self.assertEqual(len(unit.spiketrains), 1)
@@ -160,19 +149,13 @@ class TestBlock(unittest.TestCase):
 
         self.units1 = [[unit for unit in rcg.units] for rcg in self.rcgs1]
         self.units2 = [[unit for unit in rcg.units] for rcg in self.rcgs2]
-        self.rchans1 = [[rchan for rchan in rcg.recordingchannels]
-                        for rcg in self.rcgs1]
-        self.rchans2 = [[rchan for rchan in rcg.recordingchannels]
-                        for rcg in self.rcgs2]
 
         self.units1 = sum(self.units1, [])
         self.units2 = sum(self.units2, [])
-        self.rchans1 = sum(self.rchans1, [])
-        self.rchans2 = sum(self.rchans2, [])
 
-        self.sigarrs1 = [[sigarr for sigarr in rcg.analogsignalarrays]
+        self.sigarrs1 = [[sigarr for sigarr in rcg.analogsignals]
                          for rcg in self.rcgs1]
-        self.sigarrs2 = [[sigarr for sigarr in rcg.analogsignalarrays]
+        self.sigarrs2 = [[sigarr for sigarr in rcg.analogsignals]
                          for rcg in self.rcgs2]
 
         self.trains1 = [[train for train in unit.spiketrains]
@@ -180,14 +163,10 @@ class TestBlock(unittest.TestCase):
         self.trains2 = [[train for train in unit.spiketrains]
                         for unit in self.units2]
 
-        self.sigs1 = [[sig for sig in rchan.analogsignals]
-                      for rchan in self.rchans1]
-        self.sigs2 = [[sig for sig in rchan.analogsignals]
-                      for rchan in self.rchans2]
-        self.irsigs1 = [[irsig for irsig in rchan.irregularlysampledsignals]
-                        for rchan in self.rchans1]
-        self.irsigs2 = [[irsig for irsig in rchan.irregularlysampledsignals]
-                        for rchan in self.rchans2]
+        self.irsigs1 = [[irsig for irsig in rcg.irregularlysampledsignals]
+                        for rcg in self.rcgs1]
+        self.irsigs2 = [[irsig for irsig in rcg.irregularlysampledsignals]
+                        for rcg in self.rcgs2]
 
         self.epcs1 = [[epc for epc in seg.epochs]
                       for seg in self.segs1]
@@ -203,8 +182,6 @@ class TestBlock(unittest.TestCase):
 
         self.trains1 = sum(self.trains1, [])
         self.trains2 = sum(self.trains2, [])
-        self.sigs1 = sum(self.sigs1, [])
-        self.sigs2 = sum(self.sigs2, [])
         self.irsigs1 = sum(self.irsigs1, [])
         self.irsigs2 = sum(self.irsigs2, [])
 
@@ -283,7 +260,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.blk1._multi_child_objects, ())
         self.assertEqual(self.blk1._multi_parent_objects, ())
         self.assertEqual(self.blk1._child_properties,
-                         ('Unit', 'RecordingChannel'))
+                         ('Unit',))
 
         self.assertEqual(self.blk1._single_child_objects,
                          ('Segment', 'RecordingChannelGroup'))
@@ -308,15 +285,15 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         3*self.nchildren**3 + 3*self.nchildren**2)
+                         1*self.nchildren**3 + 4*self.nchildren**2)
         self.assertEqual(len(self.blk1.container_children), 2*self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
-                         2*self.nchildren + 2*self.nchildren**2)
+                         2*self.nchildren + 1*self.nchildren**2)
         self.assertEqual(len(self.blk1.children), 2*self.nchildren)
         self.assertEqual(len(self.blk1.children_recur),
                          2*self.nchildren +
-                         2*self.nchildren**2 +
-                         3*self.nchildren**3 + 3*self.nchildren**2)
+                         5*self.nchildren**2 +
+                         1*self.nchildren**3)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),
@@ -326,15 +303,15 @@ class TestBlock(unittest.TestCase):
                                self.segs1 + self.rcgs1)
         assert_same_sub_schema(list(self.blk1.container_children_recur),
                                self.segs1 + self.rcgs1 +
-                               self.units1[:2] + self.rchans1[:2] +
-                               self.units1[2:] + self.rchans1[2:])
+                               self.units1[:2] +
+                               self.units1[2:])
 
         assert_same_sub_schema(list(self.blk1.data_children_recur),
-                               self.sigs1[::2] + self.sigarrs1[::2] +
+                               self.sigarrs1[::2] +
                                self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] +
                                self.trains1[::2] +
-                               self.sigs1[1::2] + self.sigarrs1[1::2] +
+                               self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
                                self.trains1[1::2],
@@ -343,17 +320,17 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(list(self.blk1.children),
                                segs1a + rcgs1a)
         assert_same_sub_schema(list(self.blk1.children_recur),
-                               self.sigs1[::2] + self.sigarrs1[::2] +
+                               self.sigarrs1[::2] +
                                self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] +
                                self.trains1[::2] +
-                               self.sigs1[1::2] + self.sigarrs1[1::2] +
+                               self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
                                self.trains1[1::2] +
                                self.segs1 + self.rcgs1 +
-                               self.units1[:2] + self.rchans1[:2] +
-                               self.units1[2:] + self.rchans1[2:],
+                               self.units1[:2] +
+                               self.units1[2:],
                                exclude=['channel_index'])
 
     def test__size(self):
@@ -388,7 +365,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_annotation_single(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                self.sigs1[1::2] + self.sigarrs1[1::2] +
+                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2])
@@ -446,7 +423,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_multi(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                self.sigs1[1::2] + self.sigarrs1[1::2] +
+                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
@@ -510,7 +487,7 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_multi_partres_annotation_annotation(self):
-        targ = self.sigs1[::2] + self.trains1[::2]
+        targ = self.trains1[::2]
 
         res0 = self.targobj.filter([{'j': 0}, {'i': 0}])
         res1 = self.targobj.filter({'j': 0}, i=0)
@@ -568,13 +545,13 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_annotation_container(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                self.sigs1[1::2] + self.sigarrs1[1::2] +
+                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],
-                 self.units1[1], self.rchans1[1],
-                 self.units1[3], self.rchans1[3]])
+                 self.units1[1],
+                 self.units1[3]])
 
         res0 = self.targobj.filter(j=1, container=True)
 
@@ -583,11 +560,6 @@ class TestBlock(unittest.TestCase):
     def test__filter_single_attribute_container_data(self):
         targ = [self.trains1[0]]
         res0 = self.targobj.filter(name=self.trains1[0].name, container=True)
-        assert_same_sub_schema(res0, targ)
-
-    def test__filter_single_attribute_container_container(self):
-        targ = [self.rchans1[0]]
-        res0 = self.targobj.filter(name=self.rchans1[0].name, container=True)
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container_norecur(self):
@@ -611,15 +583,9 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_annotation_nodata_container(self):
         targ = [self.segs1[1], self.rcgs1[1],
-                self.units1[1], self.rchans1[1],
-                self.units1[3], self.rchans1[3]]
+                self.units1[1],
+                self.units1[3]]
         res0 = self.targobj.filter(j=1,
-                                   data=False, container=True)
-        assert_same_sub_schema(res0, targ)
-
-    def test__filter_single_attribute_nodata_container(self):
-        targ = [self.rchans1[0]]
-        res0 = self.targobj.filter(name=self.rchans1[0].name,
                                    data=False, container=True)
         assert_same_sub_schema(res0, targ)
 
@@ -654,13 +620,13 @@ class TestBlock(unittest.TestCase):
         data = self.targobj.children_recur
 
         targ = ([self.epcs1[1], self.evts1[1]] +
-                self.sigs1[1::2] + self.sigarrs1[1::2] +
+                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
                 [self.segs1[1], self.rcgs1[1],
-                 self.units1[1], self.rchans1[1],
-                 self.units1[3], self.rchans1[3],
+                 self.units1[1],
+                 self.units1[3],
                  self.trains1[0]])
 
         name = self.trains1[0].name
@@ -728,7 +694,7 @@ class TestBlock(unittest.TestCase):
     def test__filterdata_multi_partres_annotation_annotation(self):
         data = self.targobj.children_recur
 
-        targ = (self.sigs1[::2] + self.trains1[::2] +
+        targ = (self.trains1[::2] +
                 self.segs1[:1] + self.units1[::2])
 
         res0 = filterdata(data, [{'j': 0}, {'i': 0}])
@@ -739,35 +705,35 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
 
-    @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    def test__pretty(self):
-        res = pretty(self.blk1)
-        ann = get_annotations()
-        ann['seed'] = self.seed1
-        ann = pretty(ann).replace('\n ', '\n  ')
-
-        seg0 = pretty(self.segs1[0])
-        seg1 = pretty(self.segs1[1])
-        seg0 = seg0.replace('\n', '\n   ')
-        seg1 = seg1.replace('\n', '\n   ')
-
-        targ = ("Block with " +
-                ("%s segments, %s recordingchannelgroups\n" %
-                 (len(self.segs1), len(self.rcgs1))) +
-                ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
-                                                      self.blk1.description)) +
-                ("annotations: %s\n" % ann) +
-                ("file_origin: '%s'\n" % self.blk1.file_origin) +
-                ("file_datetime: %s\n" % repr(self.blk1.file_datetime)) +
-                ("rec_datetime: %s\n" % repr(self.blk1.rec_datetime)) +
-                ("index: %s\n" % self.blk1.index) +
-
-
-                ("# segments (N=%s)\n" % len(self.segs1)) +
-                ('%s: %s\n' % (0, seg0)) +
-                ('%s: %s' % (1, seg1)))
-
-        self.assertEqual(res, targ)
+    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+    # def test__pretty(self):
+    #     res = pretty(self.blk1)
+    #     ann = get_annotations()
+    #     ann['seed'] = self.seed1
+    #     ann = pretty(ann).replace('\n ', '\n  ')
+    #
+    #     seg0 = pretty(self.segs1[0])
+    #     seg1 = pretty(self.segs1[1])
+    #     seg0 = seg0.replace('\n', '\n   ')
+    #     seg1 = seg1.replace('\n', '\n   ')
+    #
+    #     targ = ("Block with " +
+    #             ("%s segments, %s recordingchannelgroups\n" %
+    #              (len(self.segs1), len(self.rcgs1))) +
+    #             ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
+    #                                                   self.blk1.description)) +
+    #             ("annotations: %s\n" % ann) +
+    #             ("file_origin: '%s'\n" % self.blk1.file_origin) +
+    #             ("file_datetime: %s\n" % repr(self.blk1.file_datetime)) +
+    #             ("rec_datetime: %s\n" % repr(self.blk1.rec_datetime)) +
+    #             ("index: %s\n" % self.blk1.index) +
+    #
+    #
+    #             ("# segments (N=%s)\n" % len(self.segs1)) +
+    #             ('%s: %s\n' % (0, seg0)) +
+    #             ('%s: %s' % (1, seg1)))
+    #
+    #     self.assertEqual(res, targ)
 
     def test_block_list_units(self):
         assert_same_sub_schema(self.units1, self.blk1.list_units)
@@ -784,10 +750,6 @@ class TestBlock(unittest.TestCase):
                                self.blk1.list_children_by_class('units'))
         assert_same_sub_schema(self.units2,
                                self.blk2.list_children_by_class('units'))
-
-    def test_block_list_recordingchannels(self):
-        assert_same_sub_schema(self.rchans1, self.blk1.list_recordingchannels)
-        assert_same_sub_schema(self.rchans2, self.blk2.list_recordingchannels)
 
 
 if __name__ == "__main__":

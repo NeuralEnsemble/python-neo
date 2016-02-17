@@ -18,9 +18,10 @@ import quantities as pq
 
 from neo.core import Segment, AnalogSignal, SpikeTrain
 from neo.io import PyNNNumpyIO, PyNNTextIO
+from numpy.testing import assert_array_equal
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
-#TODO: common test fails.
 from neo.test.iotest.common_io_test import BaseTestIO
+
 #class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
 
@@ -68,8 +69,8 @@ class BaseTestPyNNIO(object):
             'first_id': 0,
             'n': 505,
             'variable': variable,
-            'last_id': 4,
-            'last_index': 5,
+            'last_id': NCELLS - 1,
+            'last_index': NCELLS - 1,
             'dt': 0.1,
             'label': "population0",
         }
@@ -97,32 +98,34 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         io = self.io_cls(self.test_file)
         segment = io.read_segment(lazy=False, cascade=True)
         self.assertIsInstance(segment, Segment)
-        self.assertEqual(len(segment.analogsignals), NCELLS)
+        self.assertEqual(len(segment.analogsignals), 1)
+
         as0 = segment.analogsignals[0]
         self.assertIsInstance(as0, AnalogSignal)
-        assert_arrays_equal(as0,
-                            AnalogSignal(np.arange(0, 101, dtype=float),
-                                         sampling_period=0.1*pq.ms,
-                                         t_start=0*pq.s,
-                                         units=pq.mV))
-        as4 = segment.analogsignals[4]
+        self.assertEqual(as0.shape, (101, NCELLS))
+        assert_array_equal(as0[:, 0],
+                           AnalogSignal(np.arange(0, 101, dtype=float),
+                                        sampling_period=0.1*pq.ms,
+                                        t_start=0*pq.s,
+                                        units=pq.mV))
+        as4 = as0[:, 4]
         self.assertIsInstance(as4, AnalogSignal)
-        assert_arrays_equal(as4,
-                            AnalogSignal(np.arange(4, 105, dtype=float),
-                                         sampling_period=0.1*pq.ms,
-                                         t_start=0*pq.s,
-                                         units=pq.mV))
+        assert_array_equal(as4,
+                           AnalogSignal(np.arange(4, 105, dtype=float),
+                                        sampling_period=0.1*pq.ms,
+                                        t_start=0*pq.s,
+                                        units=pq.mV))
         # test annotations (stuff from file metadata)
 
     def test_read_analogsignal_using_eager(self):
         io = self.io_cls(self.test_file)
-        as3 = io.read_analogsignal(lazy=False, channel_index=3)
-        self.assertIsInstance(as3, AnalogSignal)
-        assert_arrays_equal(as3,
-                            AnalogSignal(np.arange(3, 104, dtype=float),
-                                         sampling_period=0.1*pq.ms,
-                                         t_start=0*pq.s,
-                                         units=pq.mV))
+        sig = io.read_analogsignal(lazy=False)
+        self.assertIsInstance(sig, AnalogSignal)
+        assert_array_equal(sig[:, 3],
+                           AnalogSignal(np.arange(3, 104, dtype=float),
+                                        sampling_period=0.1*pq.ms,
+                                        t_start=0*pq.s,
+                                        units=pq.mV))
         # should test annotations: 'channel_index', etc.
 
     def test_read_spiketrain_should_fail_with_analogsignal_file(self):
