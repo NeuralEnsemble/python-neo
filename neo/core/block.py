@@ -28,7 +28,7 @@ class Block(Container):
     *Usage*::
 
         >>> from neo.core import (Block, Segment, RecordingChannelGroup,
-        ...                       AnalogSignalArray)
+        ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
@@ -43,13 +43,13 @@ class Block(Container):
         ...                                 channel_indexes=np.arange(64))
         ...     blk.recordingchannelgroups.append(rcg)
         ...
-        >>> # Populate the Block with AnalogSignalArray objects
+        >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
         ...     for rcg in blk.recordingchannelgroups:
-        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
+        ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignalarrays.append(a)
-        ...         seg.analogsignalarrays.append(a)
+        ...         rcg.analogsignals.append(a)
+        ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:
         None
@@ -69,8 +69,6 @@ class Block(Container):
             :class:`Unit` objects existing in the block. This shortcut exists
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
-        :list_recordingchannels: descends through hierarchy and returns
-            a list of :class:`RecordingChannel` objects existing in the block.
 
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
@@ -82,7 +80,7 @@ class Block(Container):
     '''
 
     _container_child_objects = ('Segment', 'RecordingChannelGroup')
-    _child_properties = ('Unit', 'RecordingChannel')
+    _child_properties = ('Unit',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
@@ -136,11 +134,3 @@ class Block(Container):
         Return a list of all :class:`Unit` objects in the :class:`Block`.
         '''
         return self.list_children_by_class('units')
-
-    @property
-    def list_recordingchannels(self):
-        '''
-        Return a list of all :class:`RecordingChannel` objects in the
-        :class:`Block`.
-        '''
-        return self.list_children_by_class('recordingchannels')

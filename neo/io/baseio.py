@@ -16,10 +16,10 @@ import collections
 import logging
 
 from neo import logging_handler
-from neo.core import (AnalogSignal, AnalogSignalArray, Block,
+from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannel, RecordingChannelGroup,
+                      RecordingChannelGroup,
                       Segment, SpikeTrain, Unit)
 
 read_error = "This type is not supported by this file format for reading"
@@ -161,20 +161,11 @@ class BaseIO(object):
     def read_irregularlysampledsignal(self, **kargs):
         assert(IrregularlySampledSignal in self.readable_objects), read_error
 
-    def read_analogsignalarray(self, **kargs):
-        assert(AnalogSignalArray in self.readable_objects), read_error
-
     def read_recordingchannelgroup(self, **kargs):
         assert(RecordingChannelGroup in self.readable_objects), read_error
 
-    def read_recordingchannel(self, **kargs):
-        assert(RecordingChannel in self.readable_objects), read_error
-
     def read_event(self, **kargs):
         assert(Event in self.readable_objects), read_error
-
-    def read_eventarray(self, **kargs):
-        assert(EventArray in self.readable_objects), read_error
 
     def read_epoch(self, **kargs):
         assert(Epoch in self.readable_objects), read_error
@@ -198,20 +189,11 @@ class BaseIO(object):
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
-    def write_analogsignalarray(self, anasigar, **kargs):
-        assert(AnalogSignalArray in self.writeable_objects), write_error
-
     def write_recordingchannelgroup(self, rcg, **kargs):
         assert(RecordingChannelGroup in self.writeable_objects), write_error
 
-    def write_recordingchannel(self, rc, **kargs):
-        assert(RecordingChannel in self.writeable_objects), write_error
-
     def write_event(self, ev, **kargs):
         assert(Event in self.writeable_objects), write_error
-
-    def write_eventarray(self, ea,  **kargs):
-        assert(EventArray in self.writeable_objects), write_error
 
     def write_epoch(self, ep, **kargs):
         assert(Epoch in self.writeable_objects), write_error

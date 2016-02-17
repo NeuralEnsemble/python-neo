@@ -46,7 +46,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (Block, Event, RecordingChannel,
+from neo.core import (Block, Event,
                       RecordingChannelGroup, Segment, SpikeTrain, Unit)
 
 # need to subclass BaseIO
@@ -115,8 +115,7 @@ class BrainwareSrcIO(BaseIO):
     is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
-    # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, RecordingChannel, RecordingChannelGroup,
+    supported_objects = [Block, RecordingChannelGroup,
                          Segment, SpikeTrain, Event, Unit]
 
     readable_objects = [Block]
@@ -253,7 +252,7 @@ class BrainwareSrcIO(BaseIO):
         # neither of which should pass silently
         if kargs:
             raise NotImplementedError('This method does not have any '
-                                      'argument implemented yet')
+                                      'arguments implemented yet')
 
         blockobj = self.read_next_block(cascade=cascade, lazy=lazy)
         self.close()
@@ -275,7 +274,7 @@ class BrainwareSrcIO(BaseIO):
         # neither of which should pass silently
         if kargs:
             raise NotImplementedError('This method does not have any '
-                                      'argument implemented yet')
+                                      'arguments implemented yet')
 
         self._lazy = lazy
         self._opensrc()
@@ -290,7 +289,8 @@ class BrainwareSrcIO(BaseIO):
         self._blk = Block(file_origin=self._file_origin)
         if not cascade:
             return self._blk
-        self._rcg = RecordingChannelGroup(file_origin=self._file_origin)
+        self._rcg = RecordingChannelGroup(file_origin=self._file_origin,
+                                          channel_indexes=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
         self._unit0 = Unit(name='UnassignedSpikes',
                            file_origin=self._file_origin,
@@ -308,14 +308,6 @@ class BrainwareSrcIO(BaseIO):
             except:
                 self.close()
                 raise
-
-        # set the recorging channel group names and indices
-        chans = self._rcg.recordingchannels
-        chan_inds = np.arange(len(chans), dtype='int')
-        chan_names = np.array(['Chan'+str(i) for i in chan_inds],
-                              dtype='string_')
-        self._rcg.channel_indexes = chan_inds
-        self._rcg.channel_names = chan_names
 
         # since we read at a Block level we always do this
         self._blk.create_many_to_one_relationship()
@@ -987,11 +979,9 @@ class BrainwareSrcIO(BaseIO):
         for _ in range(numelements):
             self.__read_comment()
 
-        # create an empty RecordingChannel for each of the numchannels
-        for i in range(numchannels):
-            chan = RecordingChannel(file_origin=self._file_origin,
-                                    index=int(i), name='Chan'+str(int(i)))
-            self._rcg.recordingchannels.append(chan)
+        # create a channel_index for the numchannels
+        self._rcg.channel_indexes = np.arange(numchannels)
+        self._rcg.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)])
 
         # store what side of the head we are dealing with
         for segment in segments:

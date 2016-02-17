@@ -18,7 +18,7 @@ except ImportError:
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment,
-                      AnalogSignal, AnalogSignalArray, SpikeTrain)
+                      AnalogSignal, SpikeTrain)
 
 
 class PickleIO(BaseIO):
@@ -29,7 +29,7 @@ class PickleIO(BaseIO):
     is_writable = True
     has_header = False
     is_streameable = False # TODO - correct spelling to "is_streamable"
-    supported_objects = [Block, Segment, AnalogSignal, AnalogSignalArray, SpikeTrain] # should extend to Epoch, etc.
+    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain] # should extend to Epoch, etc.
     readable_objects = supported_objects
     writeable_objects = supported_objects
     mode = 'file'

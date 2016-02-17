@@ -7,10 +7,11 @@ data channels.
 from :module:`neo.core.container`.
 '''
 
-# needed for python 3 compatibility
+# needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+import quantities as pq
 
 from neo.core.container import Container
 
@@ -19,26 +20,23 @@ class RecordingChannelGroup(Container):
     '''
     A container for multiple data channels.
 
-    This container have sereval purpose:
-      * Grouping all :class:`AnalogSignalArray` inside a :class:`Block`
-        across :class:`Segment`
-      * Grouping :class:`RecordingChannel` inside a :class:`Block`. This
-        case is *many to many* relation. It mean that a
-        :class:`RecordingChannel` can belong to several group. A typical use
-        case is tetrode (4 X :class:`RecordingChannel` inside a
-        :class:`RecordingChannelGroup`).
-      * Container of  :class:`Unit`. A neuron decharge (:class:`Unit`)
+    This container has several purposes:
+
+      * Grouping all :class:`AnalogSignal`\s inside a :class:`Block`
+        across :class:`Segment`\s;
+      * Indexing a subset of the channels within an :class:`AnalogSignal`;
+      * Container of  :class:`Unit`\s. A neuron discharge (:class:`Unit`)
         can be seen by several electrodes (4 in tetrode case).
 
-    *Usage 1* multi :class:`Segment` recording with 2 electrode array::
+    *Usage 1* multi :class:`Segment` recording with 2 electrode arrays::
 
         >>> from neo.core import (Block, Segment, RecordingChannelGroup,
-        ...                       AnalogSignalArray)
+        ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
         >>> # create a Block with 3 Segment and 2 RecordingChannelGroup objects
-        ,,, blk = Block()
+        ... blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
@@ -48,88 +46,86 @@ class RecordingChannelGroup(Container):
         ...                                 channel_indexes=np.arange(64))
         ...     blk.recordingchannelgroups.append(rcg)
         ...
-        >>> # Populate the Block with AnalogSignalArray objects
+        >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
         ...     for rcg in blk.recordingchannelgroups:
-        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
-        ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignalarrays.append(a)
-        ...         seg.analogsignalarrays.append(a)
+        ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
+        ...                          sampling_rate=10*kHz)
+        ...         rcg.analogsignals.append(a)
+        ...         seg.analogsignals.append(a)
 
-    *Usage 2* grouping channel::
+    *Usage 2* grouping channels::
 
-        >>> from neo.core import (Block, RecordingChannelGroup,
-        ...                       RecordingChannel)
+        >>> from neo.core import Block, RecordingChannelGroup
         >>> import numpy as np
         >>>
         >>> # Create a Block
-        ,,, blk = Block()
+        ... blk = Block()
+        >>> blk.segments.append(Segment())
         >>>
-        >>> # Create a new RecordingChannelGroup and add it to the Block
-        ... rcg = RecordingChannelGroup(channel_names=np.array(['ch0',
-        ...                                                     'ch1',
-        ...                                                     'ch2']))
-        >>> rcg.channel_indexes = np.array([0, 1, 2])
+        >>> # Create a signal with 8 channels
+        ... sig = AnalogSignal(np.random.randn(1000, 8)*mV, sampling_rate=10*kHz)
+        ... blk.segments[0].append(sig)
+        ...
+        >>> # Create a new RecordingChannelGroup which groups three channels from the signal
+        ... rcg = RecordingChannelGroup(channel_names=np.array(['ch1', 'ch4', 'ch6']),
+        ...                             channel_indexes = np.array([0, 3, 5])
+        >>> rcg.analogsignals.append(sig)
         >>> blk.recordingchannelgroups.append(rcg)
-        >>>
-        >>> # Create 3 RecordingChannel objects and add them to the Block
-        ... for ind in range(3):
-        ...     chan = RecordingChannel(index=ind)
-        ...     rcg.recordingchannels.append(chan)  # <- many to many
-        ,,,                                         # relationship
-        ...     chan.recordingchannelgroups.append(rcg)  # <- many to many
-        ...                                              #    relationship
 
     *Usage 3* dealing with :class:`Unit` objects::
 
         >>> from neo.core import Block, RecordingChannelGroup, Unit
         >>>
         >>> # Create a Block
-        ... blk = Block()
+        >>> blk = Block()
         >>>
         >>> # Create a new RecordingChannelGroup and add it to the Block
-        ... rcg = RecordingChannelGroup(name='octotrode A')
+        >>> rcg = RecordingChannelGroup(name='octotrode A')
         >>> blk.recordingchannelgroups.append(rcg)
         >>>
         >>> # create several Unit objects and add them to the
         >>> # RecordingChannelGroup
         ... for ind in range(5):
-        ...     unit = Unit(name = 'unit %d' % ind, description=
-        ...                 'after a long and hard spike sorting')
+        ...     unit = Unit(name = 'unit %d' % ind,
+        ...                 description='after a long and hard spike sorting')
         ...     rcg.units.append(unit)
 
     *Required attributes/properties*:
-        None
+        :channel_indexes: (numpy.array 1D dtype='i')
+            Index of each channel in the attached signals.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset.
         :description: (str) Text description.
         :file_origin: (str) Filesystem path or URL of the original data file.
         :channel_names: (numpy.array 1D dtype='S')
-            Names for each :class:`RecordingChannel`.
-        :channel_indexes: (numpy.array 1D dtype='i')
-            Index of each :class:`RecordingChannel`.
+            Names for each recording channel.
+        :coordinates: (quantity array 2D (x, y, z))
+            Physical or logical coordinates of all channels.
 
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
 
     *Container of*:
-        :class:`RecordingChannel`
-        :class:`AnalogSignalArray`
+        :class:`AnalogSignal`
+        :class:`IrregularlySampledSignal`
         :class:`Unit`
 
     '''
 
     _container_child_objects = ('Unit',)
-    _data_child_objects = ('AnalogSignalArray',)
-    _multi_child_objects = ('RecordingChannel',)
+    _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
     _single_parent_objects = ('Block',)
-    _recommended_attrs = ((('channel_indexes', np.ndarray, 1, np.dtype('i')),
-                           ('channel_names', np.ndarray, 1, np.dtype('S'))) +
+    _necessary_attrs = (('channel_indexes', np.ndarray, 1, np.dtype('i')),)
+    _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
+                           ('channel_ids', np.ndarray, 1, np.dtype('i')),
+                           ('coordinates', pq.Quantity, 2)) +
                           Container._recommended_attrs)
 
-    def __init__(self, channel_names=None, channel_indexes=None, name=None,
-                 description=None, file_origin=None, **annotations):
+    def __init__(self, channel_indexes, channel_names=None, channel_ids=None,
+                 name=None, description=None, file_origin=None,
+                 coordinates=None, **annotations):
         '''
         Initialize a new :class:`RecordingChannelGroup` instance.
         '''
@@ -142,11 +138,10 @@ class RecordingChannelGroup(Container):
                                                     **annotations)
 
         # Defaults
-        if channel_indexes is None:
-            channel_indexes = np.array([], dtype=np.int)
         if channel_names is None:
             channel_names = np.array([], dtype='S')
 
         # Store recommended attributes
         self.channel_names = channel_names
+        self.channel_ids = channel_ids
         self.channel_indexes = channel_indexes
