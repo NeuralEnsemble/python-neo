@@ -166,19 +166,17 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         __array_finalize__ is called on the new object.
         '''
         if units is None:
-            if hasattr(signal, "units"):
-                units = signal.units
-            else:
+            if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
             # could improve this test, what if units is a string?
             if units != signal.units:
                 signal = signal.rescale(units)
 
-        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype,
-                                  copy=copy)
+        obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
+
         if obj.ndim == 1:
-            obj = obj.reshape(-1, 1)
+            obj.shape = (-1, 1)
 
         if t_start is None:
             raise ValueError('t_start cannot be None')
@@ -188,7 +186,6 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
         obj.segment = None
         obj.recordingchannelgroup = None
-
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
@@ -594,7 +591,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         '''
         assert self.sampling_rate == other.sampling_rate
         assert self.t_start == other.t_start
-        other.units = self.units
+        if other.units != self.units:
+            other = other.rescale(self.units)
         stack = np.hstack(map(np.array, (self, other)))
         kwargs = {}
         for name in ("name", "description", "file_origin"):

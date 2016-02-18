@@ -400,7 +400,7 @@ class TestConstructor(unittest.TestCase):
         train2 = _new_spiketrain(SpikeTrain, times,
                                  t_start=t_start, t_stop=t_stop, units="s")
 
-        dtype = np.float32
+        dtype = times.dtype
         units = 1 * pq.s
         t_start_out = t_start
         t_stop_out = t_stop

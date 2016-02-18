@@ -134,6 +134,15 @@ class TestAnalogSignalConstructor(unittest.TestCase):
         assert_neo_object_is_compliant(signal)
         self.assertEqual(signal[3, 0], 99*pq.mV)
 
+    def test__create2D_with_copy_false_should_return_view(self):
+        data = np.arange(10.0) * pq.mV
+        data = data.reshape((5, 2))
+        rate = 5000*pq.Hz
+        signal = AnalogSignal(data, copy=False, sampling_rate=rate)
+        data[3, 0] = 99*pq.mV
+        assert_neo_object_is_compliant(signal)
+        self.assertEqual(signal[3, 0], 99*pq.mV)
+
     def test__create_with_additional_argument(self):
         signal = AnalogSignal([1, 2, 3], units="mV", sampling_rate=1*pq.kHz,
                               file_origin='crack.txt', ratname='Nicolas')
