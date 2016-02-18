@@ -55,7 +55,7 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, AnalogSignal,
-                      RecordingChannel, RecordingChannelGroup, Block)
+                      RecordingChannelGroup, Block)
 import neo.io.tools
 
 class KwikIO(BaseIO):
@@ -70,7 +70,7 @@ class KwikIO(BaseIO):
     is_writable = False # write is not supported
 
     supported_objects    = [ Block, Segment, AnalogSignal,
-                          RecordingChannel, RecordingChannelGroup]
+                             RecordingChannelGroup]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
@@ -144,16 +144,10 @@ class KwikIO(BaseIO):
                                  channel_indexes=channel_index)
             blk.recordingchannelgroups.append(rcg)
 
-            for idx in channel_index:
-                # read nested analosignal
-                ana = self.read_analogsignal(channel_index=idx,
-                                        lazy=lazy,
-                                        cascade=cascade,
-                                         )
-                chan = RecordingChannel(index=int(idx))
-                seg.analogsignals += [ ana ]
-                chan.analogsignals += [ ana ]
-                rcg.recordingchannels.append(chan)
+            ana = self.read_analogsignal(channel_index=channel_index,
+                                         lazy=lazy,
+                                         cascade=cascade)
+            ana.recordingchannelgroup = rcg
             seg.duration = (self._attrs['shape'][0]
                           / self._attrs['kwik']['sample_rate']) * pq.s
 
@@ -169,13 +163,8 @@ class KwikIO(BaseIO):
         """
         Read raw traces
         Arguments:
-            channel_index: must be integer
+            channel_index: must be integer array
         """
-        try:
-            channel_index = int(channel_index)
-        except TypeError:
-            print('channel_index must be int, not %s' %type(channel_index))
-
         if self._attrs['app_data']:
             bit_volts = self._attrs['app_data']['channel_bit_volts']
             sig_unit = 'uV'
@@ -187,20 +176,18 @@ class KwikIO(BaseIO):
                                   units=sig_unit,
                                   sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
                                   t_start=self._attrs['kwik']['start_time']*pq.s,
-                                  channel_index=channel_index,
                                   )
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = self._attrs['shape'][0]
         else:
-            data = self._kwd['recordings'][str(self._dataset)]['data'].value[:,channel_index]
+            data = self._kwd['recordings'][str(self._dataset)]['data'].value[:, channel_index]
             data = data * bit_volts[channel_index]
             anasig = AnalogSignal(data,
                                        units=sig_unit,
                                        sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
                                        t_start=self._attrs['kwik']['start_time']*pq.s,
-                                       channel_index=channel_index,
                                        )
-            data = [] # delete from memory
+            data = []  # delete from memory
         # for attributes out of neo you can annotate
         anasig.annotate(info='raw traces')
         return anasig
