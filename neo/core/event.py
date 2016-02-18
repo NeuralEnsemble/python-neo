@@ -54,20 +54,28 @@ class Event(BaseNeo, pq.Quantity):
     '''
 
     _single_parent_objects = ('Segment',)
+    _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
-    def __new__(cls, times=None, labels=None, name=None, description=None,
+    def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
                 file_origin=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
         if labels is None:
             labels = np.array([], dtype='S')
-        try:
-            units = times.units
-            dim = units.dimensionality
-        except AttributeError:
-            raise ValueError('you must specify units')
+        if units is None:
+            # No keyword units, so get from `times`
+            try:
+                units = times.units
+                dim = units.dimensionality
+            except AttributeError:
+                raise ValueError('you must specify units')
+        else:
+            if hasattr(units, 'dimensionality'):
+                dim = units.dimensionality
+            else:
+                dim = pq.quantity.validate_dimensionality(units)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
@@ -81,7 +89,7 @@ class Event(BaseNeo, pq.Quantity):
         obj.segment = None
         return obj
 
-    def __init__(self, times=None, labels=None, name=None, description=None,
+    def __init__(self, times=None, labels=None, units=None, name=None, description=None,
                  file_origin=None, **annotations):
         '''
         Initialize a new :class:`Event` instance.
