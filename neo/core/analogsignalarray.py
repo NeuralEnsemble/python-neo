@@ -139,14 +139,15 @@ class AnalogSignalArray(BaseAnalogSignal):
         This is called whenever a new class:`AnalogSignalArray` is created from
         the constructor, but not when slicing.
         '''
-        if (isinstance(signal, pq.Quantity)
-                and units is not None
-                and units != signal.units):
-            signal = signal.rescale(units)
-        if not units and hasattr(signal, "units"):
-            units = signal.units
-        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype,
-                                  copy=copy)
+        if units is None:
+            if not hasattr(signal, "units"):
+                raise ValueError("Units must be specified")
+        elif isinstance(signal, pq.Quantity):
+            # could improve this test, what if units is a string?
+            if units != signal.units:
+                signal = signal.rescale(units)
+        obj = pq.Quantity(signal, units=units, dtype=dtype,
+                          copy=copy).view(cls)
 
         obj.t_start = t_start
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
@@ -263,7 +264,8 @@ class AnalogSignalArray(BaseAnalogSignal):
         '''
         assert self.sampling_rate == other.sampling_rate
         assert self.t_start == other.t_start
-        other.units = self.units
+        if other.units != self.units:
+            other = other.rescale(self.units)
         stack = np.hstack(map(np.array, (self, other)))
         kwargs = {}
         for name in ("name", "description", "file_origin"):
