@@ -185,15 +185,16 @@ class MicromedIO(BaseIO):
             f.seek(pos, 0)
             triggers = np.fromstring(f.read(length), dtype=[('pos', 'u4'), (
                 'label', label_dtype)])
-            ea = Event(name=zname[0] + zname[1:].lower())
             if not lazy:
                 keep = (triggers['pos'] >= triggers['pos'][0]) & (
                     triggers['pos'] < rawdata.shape[0]) & (
                     triggers['pos'] != 0)
                 triggers = triggers[keep]
-                ea.labels = triggers['label'].astype('S')
-                ea.times = (triggers['pos'] / sampling_rate).rescale('s')
+                ea = Event(name=zname[0] + zname[1:].lower(),
+                           labels=triggers['label'].astype('S'),
+                           times=(triggers['pos'] / sampling_rate).rescale('s'))
             else:
+                ea = Event(name=zname[0] + zname[1:].lower())
                 ea.lazy_shape = triggers.size
             seg.events.append(ea)
 
@@ -211,12 +212,12 @@ class MicromedIO(BaseIO):
                     epochs['start'] < rawdata.shape[0]) & (
                     epochs['stop'] < rawdata.shape[0])
                 epochs = epochs[keep]
-                ep.labels = epochs['label'].astype('S')
-                ep.times = (epochs['start'] / sampling_rate).rescale('s')
-                ep.durations = (
-                    (epochs['stop'] - epochs['start']) /
-                    sampling_rate).rescale('s')
+                ep = Epoch(name=zname[0] + zname[1:].lower(),
+                           labels=epochs['label'].astype('S'),
+                           times=(epochs['start'] / sampling_rate).rescale('s'),
+                           durations=((epochs['stop'] - epochs['start']) / sampling_rate).rescale('s'))
             else:
+                ep = Epoch(name=zname[0] + zname[1:].lower())
                 ep.lazy_shape = triggers.size
             seg.epochs.append(ep)
 

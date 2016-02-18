@@ -160,7 +160,7 @@ class TdtIO(BaseIO):
                                    labels=labels)
                         if lazy:
                             ea.lazy_shape = np.sum(mask3)
-                        seg.eventarrays.append(ea)
+                        seg.events.append(ea)
 
                     elif type_label == 'EVTYPE_SNIP':
                         sortcodes = np.unique(tsq[mask3]['sortcode'])
