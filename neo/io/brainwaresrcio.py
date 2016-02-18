@@ -628,7 +628,7 @@ class BrainwareSrcIO(BaseIO):
             waveforms = np.concatenate(waveforms, axis=0)
 
             # extract the trig2 annotation
-            trig2 = pq.Quantity(np.concatenate(trig2, axis=1),
+            trig2 = pq.Quantity(np.hstack(trig2),
                                 units=pq.ms, copy=False)
 
         if not times.size:
@@ -981,7 +981,7 @@ class BrainwareSrcIO(BaseIO):
 
         # create a channel_index for the numchannels
         self._rcg.channel_indexes = np.arange(numchannels)
-        self._rcg.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)])
+        self._rcg.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)], dtype='S')
 
         # store what side of the head we are dealing with
         for segment in segments:

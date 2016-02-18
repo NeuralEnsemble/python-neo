@@ -201,19 +201,19 @@ class ExampleIO(BaseIO):
             # create an Event that mimic triggers.
             # note that ExampleIO  do not allow to acess directly to Event
             # for that you need read_segment(cascade = True)
-            eva = Event()
+
             if lazy:
                 # in lazy case no data are readed
                 # eva is empty
-                pass
+                eva = Event()
             else:
                 # otherwise it really contain data
                 n = 1000
 
                 # neo.io support quantities my vector use second for unit
-                eva.times = timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s
+                eva = Event(timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s)
                 # all duration are the same
-                eva.durations = np.ones(n)*500*pq.ms
+                eva.durations = np.ones(n)*500*pq.ms  # Event doesn't have durations. Is Epoch intended here?
                 # label
                 l = [ ]
                 for i in range(n):

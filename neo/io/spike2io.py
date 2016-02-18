@@ -378,9 +378,8 @@ class Spike2IO(BaseIO):
 
             if channelHeader.kind in [2, 3, 4, 5, 8]:
                 #events
-                ea = Event()
+                ea = Event(alltimes)
                 ea.annotate(channel_index=channel_num)
-                ea.times = alltimes
                 if channelHeader.kind >= 5:
                     # Spike2 marker is closer to label sens of neo
                     ea.labels = alltrigs['marker'].astype('S32')

@@ -185,7 +185,7 @@ class BlackrockIO(BaseIO):
         
         # channel label
         neuelbl_header = ext_header['NEUEVLBL']
-        channel_labels = dict(zip(neuelbl_header['channel_id'], neuelbl_header['channel_label']))
+        #not used# channel_labels = dict(zip(neuelbl_header['channel_id'], neuelbl_header['channel_label']))
         
         # TODO ext_header['DIGLABEL'] is there only one label ???? because no id in that case
         # TODO ECOMMENT + CCOMMENT for annotations
@@ -408,7 +408,7 @@ class BlackrockIO(BaseIO):
                                (ch['max_digital_val'] - ch['min_digital_val'])
                     sig += ch['min_analog_val']
 
-            anasig = AnalogSignal(sig, units[0], copy=False,
+            anasig = AnalogSignal(sig, units=units[0].decode('ascii'), copy=False,
                                   sampling_rate=sr*pq.Hz,
                                   t_start=sample_header['n_start']/sr*pq.s,
                                   name=name,
