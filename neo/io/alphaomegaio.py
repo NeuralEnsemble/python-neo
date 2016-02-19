@@ -354,7 +354,7 @@ class AlphaOmegaIO(BaseIO):
                                            file_origin = \
                                                os.path.basename(self.filename),
                                            units = pq.dimensionless)
-# todo apibreak: create RecordingChannelGroup for each signals
+# todo apibreak: create ChannelIndex for each signals
 #                ana_sig.channel_index = \
 #                            file_blocks[list_chan[ind_chan]]['m_numChannel']
                 ana_sig.annotate(channel_name = \

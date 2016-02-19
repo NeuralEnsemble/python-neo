@@ -40,7 +40,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, SpikeTrain, Unit, Event,
-                      RecordingChannelGroup, AnalogSignal)
+                      ChannelIndex, AnalogSignal)
 
 
 class BlackrockIO(BaseIO):
@@ -50,7 +50,7 @@ class BlackrockIO(BaseIO):
     is_readable        = True
     is_writable        = False
 
-    supported_objects  = [Block, Segment, AnalogSignal, RecordingChannelGroup, 
+    supported_objects  = [Block, Segment, AnalogSignal, ChannelIndex,
                           SpikeTrain, Unit]
     readable_objects    = [Block, Segment]
 
@@ -93,18 +93,18 @@ class BlackrockIO(BaseIO):
             channel_id = st.annotations['channel_id']
             index = None
             for sig in seg.analogsignals:
-                if channel_id in sig.recordingchannelgroup.channel_ids:
-                    i = np.where(sig.recordingchannelgroup.channel_ids==channel_id)[0][0]
+                if channel_id in sig.channelindex.channel_ids:
+                    i = np.where(sig.channelindex.channel_ids==channel_id)[0][0]
                     index = sig.channel_indexes[i]
                     break
             if index is not None:
-                rcg = RecordingChannelGroup(name = 'Group {0}'.format(channel_id),
+                rcg = ChannelIndex(name = 'Group {0}'.format(channel_id),
                                             channel_indexes=np.array([index]),
                                             channel_ids=np.array([channel_id]))
                 unit = Unit(name=st.name)
                 unit.spiketrains.append(st)
                 rcg.units.append(unit)
-                bl.recordingchannelgroups.append(rcg)
+                bl.channelindexes.append(rcg)
 
         bl.create_many_to_one_relationship()
         
@@ -420,13 +420,13 @@ class BlackrockIO(BaseIO):
                 channel_indexes = np.arange(anasig.shape[1])
 
             # this assumes there is only ever a single segment
-            rcg = RecordingChannelGroup(channel_indexes=channel_indexes,
+            rcg = ChannelIndex(channel_indexes=channel_indexes,
                                         channel_ids=np.array(ch['channel_id']),
                                         channel_names=np.array(ch['label']),
                                         name=name,
                                         file_origin=filename_nsx)
             rcg.analogsignals.append(anasig)
-            anasig.recordingchannelgroup = rcg
+            anasig.channelindex = rcg
             seg.analogsignals.append(anasig)
 
     def read_sif(self, filename_sif, seg, ):

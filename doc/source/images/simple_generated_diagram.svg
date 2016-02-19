@@ -1606,7 +1606,7 @@ z
     </g>
    </g>
    <g id="text_13">
-    <!-- RecordingChannelGroup -->
+    <!-- ChannelIndex -->
     <defs>
      <path d="
 M67 4
@@ -3542,7 +3542,7 @@ Q61.2344 40.8281 56.5 39.0156" id="BitstreamVeraSans-Bold-42"/>
     </g>
    </g>
    <g id="text_66">
-    <!-- recordingchannelgroups: list -->
+    <!-- channelindexes: list -->
     <g transform="translate(43.2 475.93734375)scale(0.105 -0.105)">
      <use xlink:href="#BitstreamVeraSans-Roman-72"/>
      <use x="38.86328125" xlink:href="#BitstreamVeraSans-Roman-65"/>

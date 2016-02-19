@@ -429,7 +429,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
             # FIXME: it is a workaround for recordingChannelGroup.channel_names
             # which is nupy.array but allowed to be loaded when lazy == True
-            if ob.__class__ == neo.RecordingChannelGroup:
+            if ob.__class__ == neo.ChannelIndex:
                 continue
 
             ndim = ioattr[2]

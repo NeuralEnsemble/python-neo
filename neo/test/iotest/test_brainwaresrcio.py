@@ -19,7 +19,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core import (Block, Event,
-                      RecordingChannelGroup, Segment, SpikeTrain, Unit)
+                      ChannelIndex, Segment, SpikeTrain, Unit)
 from neo.io import BrainwareSrcIO, brainwaresrcio
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
@@ -89,7 +89,7 @@ def proc_src(filename):
     chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
-    block.recordingchannelgroups.append(rcg)
+    block.channelindexes.append(rcg)
 
     for rep in srcfile['sets'][0, 0].flatten():
         proc_src_condition(rep, filename, ADperiod, side, block)
@@ -126,7 +126,7 @@ def proc_src_comments(srcfile, filename):
 def proc_src_units(srcfile, filename):
     '''Get the units in an src file that has been processed by the official
     matlab function.  See proc_src for details'''
-    rcg = RecordingChannelGroup(file_origin=filename,
+    rcg = ChannelIndex(file_origin=filename,
                                 channel_indexes=np.array([], dtype=int))
     un_unit = Unit(name='UnassignedSpikes', file_origin=filename,
                    elliptic=[], boundaries=[], timestamp=[], max_valid=[])
@@ -155,7 +155,7 @@ def proc_src_condition(rep, filename, ADperiod, side, block):
     '''Get the condition in a src file that has been processed by the official
     matlab function.  See proc_src for details'''
 
-    rcg = block.recordingchannelgroups[0]
+    rcg = block.channelindexes[0]
 
     stim = rep['stim'].flatten()
     params = [str(res[0]) for res in stim['paramName'][0].flatten()]

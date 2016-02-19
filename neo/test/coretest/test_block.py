@@ -84,8 +84,8 @@ class Test__generate_datasets(unittest.TestCase):
         seg = res.segments[0]
         self.assertEqual(seg.annotations, self.annotations)
 
-        self.assertEqual(len(res.recordingchannelgroups), 1)
-        rcg = res.recordingchannelgroups[0]
+        self.assertEqual(len(res.channelindexes), 1)
+        rcg = res.channelindexes[0]
         self.assertEqual(rcg.annotations, self.annotations)
 
         self.assertEqual(len(seg.analogsignals), 1)
@@ -130,7 +130,7 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(res.annotations, self.annotations)
 
         self.assertEqual(len(res.segments), 0)
-        self.assertEqual(len(res.recordingchannelgroups), 0)
+        self.assertEqual(len(res.channelindexes), 0)
 
 
 class TestBlock(unittest.TestCase):
@@ -144,8 +144,8 @@ class TestBlock(unittest.TestCase):
 
         self.segs1 = self.blk1.segments
         self.segs2 = self.blk2.segments
-        self.rcgs1 = self.blk1.recordingchannelgroups
-        self.rcgs2 = self.blk2.recordingchannelgroups
+        self.rcgs1 = self.blk1.channelindexes
+        self.rcgs2 = self.blk2.channelindexes
 
         self.units1 = [[unit for unit in rcg.units] for rcg in self.rcgs1]
         self.units2 = [[unit for unit in rcg.units] for rcg in self.rcgs2]
@@ -223,10 +223,10 @@ class TestBlock(unittest.TestCase):
         targ6['seed'] = seed
         self.assertEqual(blk.annotations, targ6)
 
-        self.assertTrue(hasattr(blk, 'recordingchannelgroups'))
+        self.assertTrue(hasattr(blk, 'channelindexes'))
         self.assertTrue(hasattr(blk, 'segments'))
 
-        self.assertEqual(len(blk.recordingchannelgroups), self.nchildren)
+        self.assertEqual(len(blk.channelindexes), self.nchildren)
         self.assertEqual(len(blk.segments), self.nchildren)
 
     def test__creation(self):
@@ -245,7 +245,7 @@ class TestBlock(unittest.TestCase):
         rcgs1a = clone_object(self.rcgs1)
 
         assert_same_sub_schema(rcgs1a + self.rcgs2,
-                               blk1a.recordingchannelgroups)
+                               blk1a.channelindexes)
         assert_same_sub_schema(segs1a + self.segs2,
                                blk1a.segments)
 
@@ -254,7 +254,7 @@ class TestBlock(unittest.TestCase):
         rcgs1a = clone_object(self.rcgs1)
 
         self.assertEqual(self.blk1._container_child_objects,
-                         ('Segment', 'RecordingChannelGroup'))
+                         ('Segment', 'ChannelIndex'))
         self.assertEqual(self.blk1._data_child_objects, ())
         self.assertEqual(self.blk1._single_parent_objects, ())
         self.assertEqual(self.blk1._multi_child_objects, ())
@@ -263,21 +263,21 @@ class TestBlock(unittest.TestCase):
                          ('Unit',))
 
         self.assertEqual(self.blk1._single_child_objects,
-                         ('Segment', 'RecordingChannelGroup'))
+                         ('Segment', 'ChannelIndex'))
 
         self.assertEqual(self.blk1._container_child_containers,
-                         ('segments', 'recordingchannelgroups'))
+                         ('segments', 'channelindexes'))
         self.assertEqual(self.blk1._data_child_containers, ())
         self.assertEqual(self.blk1._single_child_containers,
-                         ('segments', 'recordingchannelgroups'))
+                         ('segments', 'channelindexes'))
         self.assertEqual(self.blk1._single_parent_containers, ())
         self.assertEqual(self.blk1._multi_child_containers, ())
         self.assertEqual(self.blk1._multi_parent_containers, ())
 
         self.assertEqual(self.blk1._child_objects,
-                         ('Segment', 'RecordingChannelGroup'))
+                         ('Segment', 'ChannelIndex'))
         self.assertEqual(self.blk1._child_containers,
-                         ('segments', 'recordingchannelgroups'))
+                         ('segments', 'channelindexes'))
         self.assertEqual(self.blk1._parent_objects, ())
         self.assertEqual(self.blk1._parent_containers, ())
 
@@ -335,7 +335,7 @@ class TestBlock(unittest.TestCase):
 
     def test__size(self):
         targ = {'segments': self.nchildren,
-                'recordingchannelgroups': self.nchildren}
+                'channelindexes': self.nchildren}
         self.assertEqual(self.targobj.size, targ)
 
     def test__filter_none(self):
@@ -718,7 +718,7 @@ class TestBlock(unittest.TestCase):
     #     seg1 = seg1.replace('\n', '\n   ')
     #
     #     targ = ("Block with " +
-    #             ("%s segments, %s recordingchannelgroups\n" %
+    #             ("%s segments, %s channelindexes\n" %
     #              (len(self.segs1), len(self.rcgs1))) +
     #             ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
     #                                                   self.blk1.description)) +

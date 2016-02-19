@@ -91,7 +91,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
+from neo.core import (Block, Segment, ChannelIndex, RecordingChannel,
                       AnalogSignal, Event, SpikeTrain)
 
 # --------------------------------------------------------
@@ -3677,7 +3677,7 @@ class ElphyIO(BaseIO):
     - :class:`Block`
     - :class:`Segment`
     - :class:`RecordingChannel`
-    - :class:`RecordingChannelGroup`
+    - :class:`ChannelIndex`
     - :class:`Event`
     - :class:`SpikeTrain`
 
@@ -4189,21 +4189,21 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_recordingchannelgroup( self, episode ):
+    def read_channelindex( self, episode ):
         """
-        Internal method used to return :class:`RecordingChannelGroup` info.
+        Internal method used to return :class:`ChannelIndex` info.
 
         Parameters:
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment
         """
         n_spikes = self.elphy_file.n_spikes
-        group = RecordingChannelGroup(
+        group = ChannelIndex(
             name="episode %s, group of %s electrodes" % (episode, n_spikes)
         )
         for spk in range(0, n_spikes) :
-            channel = self.read_recordingchannel(episode, spk)
-            group.recordingchannels.append(channel)
+            channel = self.read_channelindex(episode, spk)
+            group.channelindexes.append(channel)
         return group
             
 

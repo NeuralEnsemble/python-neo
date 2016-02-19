@@ -23,7 +23,7 @@ else:
 
 from numpy.testing import assert_array_equal
 from neo.core.analogsignal import AnalogSignal
-from neo.core import Segment, RecordingChannelGroup
+from neo.core import Segment, ChannelIndex
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -197,22 +197,22 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         segment.analogsignals = [signal]
         segment.create_many_to_one_relationship()
 
-        rcg = RecordingChannelGroup(name='rcg1', channel_indexes=np.arange(signal.shape[1]))
+        rcg = ChannelIndex(name='rcg1', channel_indexes=np.arange(signal.shape[1]))
         rcg.analogsignals = [signal]
         rcg.create_many_to_one_relationship()
 
         self.assertEqual(signal._single_parent_objects,
-                         ('Segment', 'RecordingChannelGroup'))
+                         ('Segment', 'ChannelIndex'))
         self.assertEqual(signal._multi_parent_objects, ())
 
         self.assertEqual(signal._single_parent_containers,
-                         ('segment', 'recordingchannelgroup'))
+                         ('segment', 'channelindex'))
         self.assertEqual(signal._multi_parent_containers, ())
 
         self.assertEqual(signal._parent_objects,
-                         ('Segment', 'RecordingChannelGroup'))
+                         ('Segment', 'ChannelIndex'))
         self.assertEqual(signal._parent_containers,
-                         ('segment', 'recordingchannelgroup'))
+                         ('segment', 'channelindex'))
 
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')

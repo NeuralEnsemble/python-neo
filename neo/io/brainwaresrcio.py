@@ -47,7 +47,7 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import (Block, Event,
-                      RecordingChannelGroup, Segment, SpikeTrain, Unit)
+                      ChannelIndex, Segment, SpikeTrain, Unit)
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -78,7 +78,7 @@ class BrainwareSrcIO(BaseIO):
     reading or closed.
 
     Note 1:
-        The first Unit in each RecordingChannelGroup is always
+        The first Unit in each ChannelIndex is always
         UnassignedSpikes, which has a SpikeTrain for each Segment containing
         all the spikes not assigned to any Unit in that Segment.
 
@@ -92,8 +92,8 @@ class BrainwareSrcIO(BaseIO):
         a condition, each repetition is stored as a separate Segment.
 
     Note 4:
-        There is always only one RecordingChannelGroup.  BrainWare stores the
-        equivalent of RecordingChannelGroups in separate files.
+        There is always only one ChannelIndex.  BrainWare stores the
+        equivalent of ChannelIndexes in separate files.
 
     Usage:
         >>> from neo.io.brainwaresrcio import BrainwareSrcIO
@@ -115,7 +115,7 @@ class BrainwareSrcIO(BaseIO):
     is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
-    supported_objects = [Block, RecordingChannelGroup,
+    supported_objects = [Block, ChannelIndex,
                          Segment, SpikeTrain, Event, Unit]
 
     readable_objects = [Block]
@@ -163,8 +163,8 @@ class BrainwareSrcIO(BaseIO):
         # This stores the current Block
         self._blk = None
 
-        # This stores the current RecordingChannelGroup for easy access
-        # It is equivalent to self._blk.recordingchannelgroups[0]
+        # This stores the current ChannelIndex for easy access
+        # It is equivalent to self._blk.channelindexes[0]
         self._rcg = None
 
         # This stores the current Segment for easy access
@@ -289,14 +289,14 @@ class BrainwareSrcIO(BaseIO):
         self._blk = Block(file_origin=self._file_origin)
         if not cascade:
             return self._blk
-        self._rcg = RecordingChannelGroup(file_origin=self._file_origin,
+        self._rcg = ChannelIndex(file_origin=self._file_origin,
                                           channel_indexes=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
         self._unit0 = Unit(name='UnassignedSpikes',
                            file_origin=self._file_origin,
                            elliptic=[], boundaries=[],
                            timestamp=[], max_valid=[])
-        self._blk.recordingchannelgroups.append(self._rcg)
+        self._blk.channelindexes.append(self._rcg)
         self._rcg.units.append(self._unit0)
         self._blk.segments.append(self._seg0)
 

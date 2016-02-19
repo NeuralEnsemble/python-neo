@@ -158,7 +158,7 @@ Some IOs support advanced forms of lazy loading, cascading or both (these featur
   You do not have to do anything else, lazy cascading is now active for the object you just loaded. You can interact with the object in the same way
   as if it was loaded with ``cascade=True``. However, only the objects that are actually accessed are loaded as soon as they are needed::
 
-    >>> print(block.recordingchannelgroups[0].name)  # The first RecordingChannelGroup is loaded
+    >>> print(block.channelindexes[0].name)  # The first ChannelIndex is loaded
     >>> print(block.segments[0].analogsignals[1])  # The first Segment and its second AnalogSignal are loaded
 
   Once an object has been loaded with lazy cascading, it stays in memory::

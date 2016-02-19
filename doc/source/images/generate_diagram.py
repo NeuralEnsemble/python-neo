@@ -213,7 +213,7 @@ def generate_diagram_simple():
                 'Event': (.5+rw*bf*4, 4),
                 'Epoch': (.5+rw*bf*4, .2),
 
-                'RecordingChannelGroup': (.5+rw*bf*.8, 8.5),
+                'ChannelIndex': (.5+rw*bf*.8, 8.5),
 
                 'Unit': (.5+rw*bf*2., 9.5),
 

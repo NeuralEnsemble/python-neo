@@ -55,7 +55,7 @@ from neo.io.baseio import BaseIO
 
 # to import from core
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, AnalogSignal,
-                      RecordingChannelGroup, Block)
+                      ChannelIndex, Block)
 import neo.io.tools
 
 class KwikIO(BaseIO):
@@ -70,7 +70,7 @@ class KwikIO(BaseIO):
     is_writable = False # write is not supported
 
     supported_objects    = [ Block, Segment, AnalogSignal,
-                             RecordingChannelGroup]
+                             ChannelIndex]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
@@ -140,14 +140,14 @@ class KwikIO(BaseIO):
             else:
                 channel_index = np.arange(0,self._attrs['shape'][1])
 
-            rcg = RecordingChannelGroup(name='all channels',
+            rcg = ChannelIndex(name='all channels',
                                  channel_indexes=channel_index)
-            blk.recordingchannelgroups.append(rcg)
+            blk.channelindexes.append(rcg)
 
             ana = self.read_analogsignal(channel_index=channel_index,
                                          lazy=lazy,
                                          cascade=cascade)
-            ana.recordingchannelgroup = rcg
+            ana.channelindex = rcg
             seg.duration = (self._attrs['shape'][0]
                           / self._attrs['kwik']['sample_rate']) * pq.s
 

@@ -39,7 +39,7 @@ import quantities as pq
 
 # needed core neo modules
 from neo.core import (AnalogSignal, Block,
-                      RecordingChannelGroup, Segment)
+                      ChannelIndex, Segment)
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -79,7 +79,7 @@ class BrainwareDamIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, RecordingChannelGroup,
+    supported_objects = [Block, ChannelIndex,
                          Segment, AnalogSignal]
 
     readable_objects = [Block]
@@ -141,13 +141,13 @@ class BrainwareDamIO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = RecordingChannelGroup(file_origin=self._filename,
+        rcg = ChannelIndex(file_origin=self._filename,
                                     channel_ids=np.array([1]),
                                     channel_indexes=np.array([0]),
                                     channel_names=np.array(['Chan1'], dtype='S'))
 
         # load objects into their containers
-        block.recordingchannelgroups.append(rcg)
+        block.channelindexes.append(rcg)
 
         # open the file
         with open(self._path, 'rb') as fobject:
@@ -159,7 +159,7 @@ class BrainwareDamIO(BaseIO):
                     break
 
                 # store the segment and signals
-                seg.analogsignals[0].recordingchannelgroup = rcg
+                seg.analogsignals[0].channelindex = rcg
                 block.segments.append(seg)
 
         # remove the file object

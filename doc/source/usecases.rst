@@ -12,11 +12,11 @@ that we have recorded three trials/episodes. We therefore have a total of
 Our entire dataset is contained in a :class:`Block`, which in turn contains:
 
   * 3 :class:`Segment` objects, each representing data from a single trial,
-  * 1 :class:`RecordingChannelGroup`.
+  * 1 :class:`ChannelIndex`.
 
 .. image:: images/multi_segment_diagram.png
 
-:class:`Segment` and :class:`RecordingChannelGroup` objects provide two different
+:class:`Segment` and :class:`ChannelIndex` objects provide two different
 ways to access the data, corresponding respectively, in this scenario, to access
 by **time** and by **space**.
 
@@ -52,8 +52,8 @@ Perhaps you want to see which physical location produces the strongest response,
     
 .. doctest::
     
-    # We assume that our block has only 1 RecordingChannelGroup
-    rcg = block.recordingchannelgroups[0]:
+    # We assume that our block has only 1 ChannelIndex
+    rcg = block.channelindexes[0]:
 
     index = rcg.channel_indexes
     siglist = [sig[:, index] for sig in rcg.analogsignals]
@@ -90,10 +90,10 @@ in :class:`SpikeTrain` objects.
 Again, our data set is contained in a :class:`Block`, which contains:
 
   * 3 :class:`Segments` (one per trial).
-  * 2 :class:`RecordingChannelGroups` (one per tetrode), which contain:
+  * 2 :class:`ChannelIndexes` (one per tetrode), which contain:
   
-    * 2 :class:`Unit` objects (= 2 neurons) for the first :class:`RecordingChannelGroup`
-    * 5 :class:`Units` for the second :class:`RecordingChannelGroup`.
+    * 2 :class:`Unit` objects (= 2 neurons) for the first :class:`ChannelIndex`
+    * 5 :class:`Units` for the second :class:`ChannelIndex`.
 
 In total we have 3 x 7 = 21 :class:`SpikeTrains` in this :class:`Block`.
 
@@ -135,14 +135,14 @@ Now we can calculate the PSTH averaged over trials for each unit, using the
         plt.title("PSTH of unit %s" % unit.name)
         
 
-**By RecordingChannelGroup**
+**By ChannelIndex**
 
 Here we calculate a PSTH averaged over trials by channel location,
 blending all units:
 
 .. doctest::
 
-    for rcg in block.recordingchannelgroups:
+    for rcg in block.channelindexes:
         stlist = []
         for unit in rcg.units:
             stlist.extend([st - st.t_start for st in unit.spiketrains])
@@ -158,7 +158,7 @@ Spike sorting
 Spike sorting is the process of detecting and classifying high-frequency
 deflections ("spikes") on a group of physically nearby recording channels.
 
-For example, let's say you have defined a RecordingChannelGroup for a tetrode
+For example, let's say you have defined a ChannelIndex for a tetrode
 containing 4 separate channels. Here is an example showing (with fake data)
 how you could iterate over the contained signals and extract spike times.
 (Of course in reality you would use a more sophisticated algorithm.)
@@ -177,7 +177,7 @@ how you could iterate over the contained signals and extract spike times.
                       [0.1, 0.1, 0.1, 0.1],
                       [0.1, 0.1, 0.1, 0.1]],
                      sampling_rate=1000*Hz, units='V'))
-    rcg = RecordingChannelGroup(channel_indexes=[0, 1, 2, 3])
+    rcg = ChannelIndex(channel_indexes=[0, 1, 2, 3])
     rcg.analogsignals.append(seg.analogsignals[0])
 
 

@@ -17,7 +17,7 @@ except ImportError:
 import numpy as np
 import quantities as pq
 
-from neo.core import Block, RecordingChannelGroup, Segment, SpikeTrain, Unit
+from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
 from neo.io import BrainwareF32IO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
@@ -51,13 +51,13 @@ def proc_f32(filename):
 
     # create the objects to store other objects
     block = Block(file_origin=filenameorig)
-    rcg = RecordingChannelGroup(file_origin=filenameorig,
+    rcg = ChannelIndex(file_origin=filenameorig,
                                 channel_indexes=np.array([], dtype=np.int),
                                 channel_names=np.array([], dtype='S'))
     unit = Unit(file_origin=filenameorig)
 
     # load objects into their containers
-    block.recordingchannelgroups.append(rcg)
+    block.channelindexes.append(rcg)
     rcg.units.append(unit)
 
     try:

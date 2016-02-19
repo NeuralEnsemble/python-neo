@@ -37,7 +37,7 @@ There is a simple hierarchy of containers:
     A container for heterogeneous discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time. A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc., depending on the experimental context. May contain any of the data objects.
 
 :py:class:`Block`:
-    The top-level container gathering all of the data, discrete and continuous, for a given recording session. Contains :class:`Segment`, :class:`Unit` and :class:`RecordingChannelGroup` objects.
+    The top-level container gathering all of the data, discrete and continuous, for a given recording session. Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
 
 Grouping objects
 ----------------
@@ -48,19 +48,19 @@ membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
 
-:py:class:`RecordingChannelGroup`:
+:py:class:`ChannelIndex`:
     A set of indices into :py:class:`AnalogSignal` objects, representing logical and/or
     physical recording channels. This has several uses:
       * for linking :py:class:`AnalogSignal` objects recorded from the same (multi)electrode
         across several :py:class:`Segment` objects.
       * for spike sorting of extracellular signals, where spikes may be recorded on more than one
-        recording channel, and the :py:class:`RecordingChannelGroup` can be used to associate each
+        recording channel, and the :py:class:`ChannelIndex` can be used to associate each
         :py:class:`Unit` with the group of recording channels from which it was calculated.
 
 :py:class:`Unit`:
     A Unit gathers all the :class:`SpikeTrain` objects within a common :class:`Block`, possibly
     across several Segments, that have been emitted by the same cell.
-    A :class:`Unit` is linked to the :class:`RecordingChannelGroup` object from which it was detected.
+    A :class:`Unit` is linked to the :class:`ChannelIndex` object from which it was detected.
 
 .. image:: images/base_schematic.png
    :height: 500 px
@@ -91,14 +91,14 @@ In general, an object can access its children with an attribute *childname+s* in
     * :attr:`Block.segments`
     * :attr:`Segments.analogsignals`
     * :attr:`Segments.spiketrains`
-    * :attr:`Block.recordingchannelgroups`
+    * :attr:`Block.channelindexes`
 
 These relationships are bi-directional, i.e. a child object can access its parent:
 
     * :attr:`Segment.block`
     * :attr:`AnalogSignal.segment`
     * :attr:`SpikeTrains.segment`
-    * :attr:`RecordingChannelGroup.block`
+    * :attr:`ChannelIndex.block`
 
 Here is an example showing these relationships in use::
 
@@ -119,14 +119,14 @@ Here is an example showing these relationships in use::
 
 In some cases, a one-to-many relationship is sufficient. Here is a simple example with tetrodes, in which each tetrode has its own group.::
 
-    from neo import Block, RecordingChannelGroup
+    from neo import Block, ChannelIndex
     bl = Block()
     
     # the four tetrodes
     for i in range(4):
-        rcg = RecordingChannelGroup(name = 'Tetrode %d' % i,
+        rcg = ChannelIndex(name = 'Tetrode %d' % i,
                                     channel_indexes=[0, 1, 2, 3])
-        bl.recordingchannelgroups.append(rcg)
+        bl.channelindexes.append(rcg)
 
     # now we load the data and associate it with the created channels
     # ...
@@ -136,19 +136,19 @@ Now consider a more complex example: a 1x4 silicon probe, with a neuron on chann
     bl = Block(name='probe data')
 
     # one group for each neuron
-    rcg0 = RecordingChannelGroup(name='Group 0',
+    rcg0 = ChannelIndex(name='Group 0',
                                  channel_indexes=[0, 1, 2])
-    bl.recordingchannelgroups.append(rcg0)
+    bl.channelindexes.append(rcg0)
 
-    rcg1 = RecordingChannelGroup(name='Group 1',
+    rcg1 = ChannelIndex(name='Group 1',
                                  channel_indexes=[1, 2, 3])
-    bl.recordingchannelgroups.append(rcg1)
+    bl.channelindexes.append(rcg1)
 
     # now we add the spiketrain from Unit 0 to rcg0
     # and add the spiketrain from Unit 1 to rcg1
     # ...
 
-Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`RecordingChannelGroup` contains a reference to the :py:class:`Unit` object.
+Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`ChannelIndex` contains a reference to the :py:class:`Unit` object.
 That unit then contains references to its spiketrains. Also note that recording channels can be
 identified by names/labels as well as, or instead of, integer indices.
 

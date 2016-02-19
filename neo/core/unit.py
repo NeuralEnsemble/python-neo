@@ -26,7 +26,7 @@ class Unit(Container):
     so this object is not contained in the usual :class:`Block`/
     :class:`Segment`/:class:`SpikeTrain` hierarchy.
 
-    A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from
+    A :class:`Unit` is linked to :class:`ChannelIndex` objects from
     which it was detected. With tetrodes, for instance, multiple channels may
     record the same :class:`Unit`.
 
@@ -60,7 +60,7 @@ class Unit(Container):
     '''
 
     _data_child_objects = ('SpikeTrain',)
-    _single_parent_objects = ('RecordingChannelGroup',)
+    _single_parent_objects = ('ChannelIndex',)
     _recommended_attrs = Container._recommended_attrs
 
     def __init__(self, name=None, description=None, file_origin=None,
@@ -70,13 +70,13 @@ class Unit(Container):
         '''
         super(Unit, self).__init__(name=name, description=description,
                                    file_origin=file_origin, **annotations)
-        self.recordingchannelgroup = None
+        self.channelindex = None
 
     @property
     def channel_indexes(self):
         """
         """
-        if self.recordingchannelgroup:
-            return self.recordingchannelgroup.channel_indexes
+        if self.channelindex:
+            return self.channelindex.channel_indexes
         else:
             return None

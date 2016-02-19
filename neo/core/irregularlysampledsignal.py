@@ -104,7 +104,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     '''
 
-    _single_parent_objects = ('Segment', 'RecordingChannelGroup')
+    _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('signal', pq.Quantity, 2))
@@ -148,7 +148,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         obj.times = pq.Quantity(times, units=time_units,
                                 dtype=float, copy=copy)
         obj.segment = None
-        obj.recordingchannelgroup = None
+        obj.channelindex = None
 
         return obj
 

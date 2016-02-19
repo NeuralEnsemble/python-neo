@@ -18,7 +18,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block,
-                      RecordingChannelGroup, Segment)
+                      ChannelIndex, Segment)
 from neo.io import BrainwareDamIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
@@ -58,12 +58,12 @@ def proc_dam(filename):
 
     block = Block(file_origin=filename)
 
-    rcg = RecordingChannelGroup(file_origin=filename,
+    rcg = ChannelIndex(file_origin=filename,
                                 channel_indexes = np.array([0]),
                                 channel_ids = np.array([1]),
                                 channel_names = np.array(['Chan1'], dtype='S'))
 
-    block.recordingchannelgroups.append(rcg)
+    block.channelindexes.append(rcg)
 
     params = [res['params'][0, 0].flatten() for res in damfile['stim']]
     values = [res['values'][0, 0].flatten() for res in damfile['stim']]

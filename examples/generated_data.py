@@ -24,10 +24,10 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     # Create container and grouping objects
     segments = [neo.Segment(index=i) for i in range(n_segments)]
 
-    rcg = neo.RecordingChannelGroup(name='T0')
+    rcg = neo.ChannelIndex(name='T0')
     for i in range(n_channels):
         rc = neo.RecordingChannel(name='C%d' % i, index=i)
-        rc.recordingchannelgroups = [rcg]
+        rc.channelindexes = [rcg]
         rcg.recordingchannels.append(rc)
 
     units = [neo.Unit('U%d' % i) for i in range(n_units)]
@@ -35,7 +35,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
 
     block = neo.Block()
     block.segments = segments
-    block.recordingchannelgroups = [rcg]
+    block.channelindexes = [rcg]
 
     # Create synthetic data
     for seg in segments:
@@ -85,9 +85,9 @@ for seg in block.segments:
 # averaging over trials. For example, perhaps you wish to see which physical
 # location produces the strongest response, and each stimulus was the same:
 
-# We assume that our block has only 1 RecordingChannelGroup and each
+# We assume that our block has only 1 ChannelIndex and each
 # RecordingChannel only has 1 AnalogSignal.
-rcg = block.recordingchannelgroups[0]
+rcg = block.channelindexes[0]
 for rc in rcg.recordingchannels:
     print("Analysing channel %d: %s" % (rc.index, rc.name))
 
@@ -121,9 +121,9 @@ for unit in block.list_units:
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
     plt.title("PSTH of unit %s" % unit.name)
 
-# By RecordingChannelGroup. Here we calculate a PSTH averaged over trials by
+# By ChannelIndex. Here we calculate a PSTH averaged over trials by
 # channel location, blending all Units:
-for rcg in block.recordingchannelgroups:
+for rcg in block.channelindexes:
     stlist = []
     for unit in rcg.units:
         stlist.extend([st - st.t_start for st in unit.spiketrains])

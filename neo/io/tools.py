@@ -12,7 +12,7 @@ import numpy as np
 from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannelGroup,
+                      ChannelIndex,
                       Segment, SpikeTrain, Unit)
 
 
@@ -22,7 +22,7 @@ from neo.core import (AnalogSignal, Block,
 
     # Special case this tricky many-to-many relationship
     # we still need links from recordingchannel to analogsignal
-#    for rcg in block.recordingchannelgroups:
+#    for rcg in block.channelindexes:
 #        for rc in rcg.recordingchannels:
 #            rc.create_many_to_one_relationship()
 
@@ -35,7 +35,7 @@ from neo.core import (AnalogSignal, Block,
 #       * when 'channel_index ' is in AnalogSIgnal the corresponding
 #         RecordingChannel is created.
 #       * 'channel_index ' is then set to None if remove_from_annotation
-#       * only one RecordingChannelGroup is created
+#       * only one ChannelIndex is created
 #
 #     It is a utility at the end of creating a Block for IO.
 #
@@ -62,14 +62,14 @@ from neo.core import (AnalogSignal, Block,
 #     indexes = np.sort(list(recordingchannels.keys())).astype('i')
 #     names = np.array([recordingchannels[idx].name for idx in indexes],
 #                      dtype='S')
-#     rcg = RecordingChannelGroup(name='all channels',
+#     rcg = ChannelIndex(name='all channels',
 #                                 channel_indexes=indexes,
 #                                 channel_names=names)
-#     bl.recordingchannelgroups.append(rcg)
+#     bl.channelindexes.append(rcg)
 #     for ind in indexes:
 #         # many to many relationship
 #         rcg.recordingchannels.append(recordingchannels[ind])
-#         recordingchannels[ind].recordingchannelgroups.append(rcg)
+#         recordingchannels[ind].channelindexes.append(rcg)
 
 
 def iteritems(D):
@@ -86,7 +86,7 @@ class LazyList(collections.MutableSequence):
     respective object.
     """
     _container_objects = set(
-        [Block, Segment, RecordingChannelGroup, Unit])
+        [Block, Segment, ChannelIndex, Unit])
     _neo_objects = _container_objects.union(
         [AnalogSignal, Epoch, Event,
          IrregularlySampledSignal, SpikeTrain])

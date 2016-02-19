@@ -16,7 +16,7 @@ from neo.core import (AnalogSignal,
                       Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannelGroup,
+                      ChannelIndex,
                       Segment, SpikeTrain,
                       Unit,
                       class_by_name)
@@ -302,7 +302,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     n (default=1) is the number of child objects of each type will be created.
     In cases like segment.spiketrains, there will be more than this number
     because there will be n for each unit, of which there will be n for
-    each recordingchannelgroup, of which there will be n.
+    each channelindex, of which there will be n.
     '''
 
     if hasattr(obj_type, 'lower'):
@@ -344,7 +344,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     # need to manually create 'implicit' connections
     if obj_type == 'Block':
         # connect data objects to segment
-        for i, rcg in enumerate(obj.recordingchannelgroups):
+        for i, rcg in enumerate(obj.channelindexes):
             for k, sigarr in enumerate(rcg.analogsignals):
                 obj.segments[k].analogsignals.append(sigarr)
             for k, sigarr in enumerate(rcg.irregularlysampledsignals):
@@ -352,7 +352,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             for j, unit in enumerate(rcg.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
-    #elif obj_type == 'RecordingChannelGroup':
+    #elif obj_type == 'ChannelIndex':
     #    inds = []
     #    names = []
     #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])

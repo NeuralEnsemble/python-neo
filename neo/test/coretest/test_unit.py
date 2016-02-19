@@ -22,7 +22,7 @@ else:
 
 from neo.core.unit import Unit
 from neo.core.container import filterdata
-from neo.core import SpikeTrain, RecordingChannelGroup
+from neo.core import SpikeTrain, ChannelIndex
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal,
                             assert_same_sub_schema)
@@ -143,7 +143,7 @@ class TestUnit(unittest.TestCase):
                                unit1a.spiketrains)
 
     def test__children(self):
-        rcg = RecordingChannelGroup(channel_indexes=np.arange(self.nchildren), name='rcg1')
+        rcg = ChannelIndex(channel_indexes=np.arange(self.nchildren), name='rcg1')
         rcg.units = [self.unit1]
         rcg.create_many_to_one_relationship()
         assert_neo_object_is_compliant(self.unit1)
@@ -152,7 +152,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._container_child_objects, ())
         self.assertEqual(self.unit1._data_child_objects, ('SpikeTrain',))
         self.assertEqual(self.unit1._single_parent_objects,
-                         ('RecordingChannelGroup',))
+                         ('ChannelIndex',))
         self.assertEqual(self.unit1._multi_child_objects, ())
         self.assertEqual(self.unit1._multi_parent_objects, ())
         self.assertEqual(self.unit1._child_properties, ())
@@ -163,16 +163,16 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._data_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_parent_containers,
-                         ('recordingchannelgroup',))
+                         ('channelindex',))
         self.assertEqual(self.unit1._multi_child_containers, ())
         self.assertEqual(self.unit1._multi_parent_containers, ())
 
         self.assertEqual(self.unit1._child_objects, ('SpikeTrain',))
         self.assertEqual(self.unit1._child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._parent_objects,
-                         ('RecordingChannelGroup',))
+                         ('ChannelIndex',))
         self.assertEqual(self.unit1._parent_containers,
-                         ('recordingchannelgroup',))
+                         ('channelindex',))
 
         self.assertEqual(len(self.unit1._single_children), self.nchildren)
         self.assertEqual(len(self.unit1._multi_children), 0)
@@ -362,7 +362,7 @@ class TestUnit(unittest.TestCase):
         res2 = self.targobj.filter(j=1, objects=['SpikeTrain'])
         res3 = self.targobj.filter(j=1, objects=[SpikeTrain])
         res4 = self.targobj.filter(j=1, objects=[SpikeTrain,
-                                                 RecordingChannelGroup])
+                                                 ChannelIndex])
 
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
@@ -373,8 +373,8 @@ class TestUnit(unittest.TestCase):
     def test__filter_single_annotation_obj_none(self):
         targ = []
 
-        res0 = self.targobj.filter(j=1, objects=RecordingChannelGroup)
-        res1 = self.targobj.filter(j=1, objects='RecordingChannelGroup')
+        res0 = self.targobj.filter(j=1, objects=ChannelIndex)
+        res1 = self.targobj.filter(j=1, objects='ChannelIndex')
         res2 = self.targobj.filter(j=1, objects=[])
 
         assert_same_sub_schema(res0, targ)

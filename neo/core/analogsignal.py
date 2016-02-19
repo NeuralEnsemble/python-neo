@@ -129,7 +129,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
             read-only.
             (:attr:`t_start` + arange(:attr:`shape`[0])/:attr:`sampling_rate`)
         :channel_index:
-            access to the channel_index attribute of the principal RecordingChannelGroup
+            access to the channel_index attribute of the principal ChannelIndex
             associated with this signal.
 
     *Slicing*:
@@ -146,7 +146,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
     '''
 
-    _single_parent_objects = ('Segment', 'RecordingChannelGroup')
+    _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
@@ -185,7 +185,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
         obj.segment = None
-        obj.recordingchannelgroup = None
+        obj.channelindex = None
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
@@ -259,8 +259,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     def channel_index(self):
         """
         """
-        if self.recordingchannelgroup:
-            return self.recordingchannelgroup.channel_indexes
+        if self.channelindex:
+            return self.channelindex.channel_indexes
         else:
             return None
 

@@ -25,7 +25,7 @@ else:
 
 from neo.core.segment import Segment
 from neo.core import (AnalogSignal, Block,
-                      Epoch, RecordingChannelGroup, SpikeTrain, Unit)
+                      Epoch, ChannelIndex, SpikeTrain, Unit)
 from neo.core.container import filterdata
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -458,7 +458,7 @@ class TestSegment(unittest.TestCase):
         res2 = self.targobj.filter(j=1, objects=['Epoch'])
         res3 = self.targobj.filter(j=1, objects=[Epoch])
         res4 = self.targobj.filter(j=1, objects=[Epoch,
-                                   RecordingChannelGroup])
+                                   ChannelIndex])
 
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
@@ -476,8 +476,8 @@ class TestSegment(unittest.TestCase):
     def test__filter_single_annotation_obj_none(self):
         targ = []
 
-        res0 = self.targobj.filter(j=1, objects=RecordingChannelGroup)
-        res1 = self.targobj.filter(j=1, objects='RecordingChannelGroup')
+        res0 = self.targobj.filter(j=1, objects=ChannelIndex)
+        res1 = self.targobj.filter(j=1, objects='ChannelIndex')
         res2 = self.targobj.filter(j=1, objects=[])
 
         assert_same_sub_schema(res0, targ)
@@ -684,10 +684,10 @@ class TestSegment(unittest.TestCase):
         signal_types = ['Vm', 'Conductances']
         sig_len = 100
 
-        # recordingchannelgroups
-        rcgs = [RecordingChannelGroup(name='Vm',
+        # channelindexes
+        rcgs = [ChannelIndex(name='Vm',
                                       channel_indexes=unit_with_sig),
-                RecordingChannelGroup(name='Conductance',
+                ChannelIndex(name='Conductance',
                                       channel_indexes=unit_with_sig)]
 
         # Unit
@@ -698,7 +698,7 @@ class TestSegment(unittest.TestCase):
             all_unit.append(un)
 
         blk = Block()
-        blk.recordingchannelgroups = rcgs
+        blk.channelindexes = rcgs
         for s in range(nb_seg):
             seg = Segment(name='Simulation %s' % s)
             for j in range(nb_unit):

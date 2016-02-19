@@ -12,7 +12,7 @@ Classes:
 
 .. autoclass:: Block
 .. autoclass:: Segment
-.. autoclass:: RecordingChannelGroup
+.. autoclass:: ChannelIndex
 .. autoclass:: Unit
 
 .. autoclass:: AnalogSignal
@@ -30,7 +30,7 @@ from __future__ import absolute_import, division, print_function
 
 from neo.core.block import Block
 from neo.core.segment import Segment
-from neo.core.recordingchannelgroup import RecordingChannelGroup
+from neo.core.recordingchannelgroup import ChannelIndex
 from neo.core.unit import Unit
 
 from neo.core.analogsignal import AnalogSignal
@@ -42,7 +42,7 @@ from neo.core.epoch import Epoch
 from neo.core.spiketrain import SpikeTrain
 
 # Block should always be first in this list
-objectlist = [Block, Segment, RecordingChannelGroup,
+objectlist = [Block, Segment, ChannelIndex,
               AnalogSignal, IrregularlySampledSignal,
               Event, Epoch, Unit, SpikeTrain]
 

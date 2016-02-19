@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-This module defines :class:`RecordingChannelGroup`, a container for multiple
+This module defines :class:`ChannelIndex`, a container for multiple
 data channels.
 
-:class:`RecordingChannelGroup` derives from :class:`Container`,
+:class:`ChannelIndex` derives from :class:`Container`,
 from :module:`neo.core.container`.
 '''
 
@@ -16,7 +16,7 @@ import quantities as pq
 from neo.core.container import Container
 
 
-class RecordingChannelGroup(Container):
+class ChannelIndex(Container):
     '''
     A container for multiple data channels.
 
@@ -30,25 +30,25 @@ class RecordingChannelGroup(Container):
 
     *Usage 1* multi :class:`Segment` recording with 2 electrode arrays::
 
-        >>> from neo.core import (Block, Segment, RecordingChannelGroup,
+        >>> from neo.core import (Block, Segment, ChannelIndex,
         ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
-        >>> # create a Block with 3 Segment and 2 RecordingChannelGroup objects
+        >>> # create a Block with 3 Segment and 2 ChannelIndex objects
         ... blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     rcg = RecordingChannelGroup(name='Array probe %d' % ind,
+        ...     rcg = ChannelIndex(name='Array probe %d' % ind,
         ...                                 channel_indexes=np.arange(64))
-        ...     blk.recordingchannelgroups.append(rcg)
+        ...     blk.channelindexes.append(rcg)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.recordingchannelgroups:
+        ...     for rcg in blk.channelindexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                          sampling_rate=10*kHz)
         ...         rcg.analogsignals.append(a)
@@ -56,7 +56,7 @@ class RecordingChannelGroup(Container):
 
     *Usage 2* grouping channels::
 
-        >>> from neo.core import Block, RecordingChannelGroup
+        >>> from neo.core import Block, ChannelIndex
         >>> import numpy as np
         >>>
         >>> # Create a Block
@@ -67,25 +67,25 @@ class RecordingChannelGroup(Container):
         ... sig = AnalogSignal(np.random.randn(1000, 8)*mV, sampling_rate=10*kHz)
         ... blk.segments[0].append(sig)
         ...
-        >>> # Create a new RecordingChannelGroup which groups three channels from the signal
-        ... rcg = RecordingChannelGroup(channel_names=np.array(['ch1', 'ch4', 'ch6']),
+        >>> # Create a new ChannelIndex which groups three channels from the signal
+        ... rcg = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
         ...                             channel_indexes = np.array([0, 3, 5])
         >>> rcg.analogsignals.append(sig)
-        >>> blk.recordingchannelgroups.append(rcg)
+        >>> blk.channelindexes.append(rcg)
 
     *Usage 3* dealing with :class:`Unit` objects::
 
-        >>> from neo.core import Block, RecordingChannelGroup, Unit
+        >>> from neo.core import Block, ChannelIndex, Unit
         >>>
         >>> # Create a Block
         >>> blk = Block()
         >>>
-        >>> # Create a new RecordingChannelGroup and add it to the Block
-        >>> rcg = RecordingChannelGroup(name='octotrode A')
-        >>> blk.recordingchannelgroups.append(rcg)
+        >>> # Create a new ChannelIndex and add it to the Block
+        >>> rcg = ChannelIndex(name='octotrode A')
+        >>> blk.channelindexes.append(rcg)
         >>>
         >>> # create several Unit objects and add them to the
-        >>> # RecordingChannelGroup
+        >>> # ChannelIndex
         ... for ind in range(5):
         ...     unit = Unit(name = 'unit %d' % ind,
         ...                 description='after a long and hard spike sorting')
@@ -127,12 +127,12 @@ class RecordingChannelGroup(Container):
                  name=None, description=None, file_origin=None,
                  coordinates=None, **annotations):
         '''
-        Initialize a new :class:`RecordingChannelGroup` instance.
+        Initialize a new :class:`ChannelIndex` instance.
         '''
         # Inherited initialization
         # Sets universally recommended attributes, and places all others
         # in annotations
-        super(RecordingChannelGroup, self).__init__(name=name,
+        super(ChannelIndex, self).__init__(name=name,
                                                     description=description,
                                                     file_origin=file_origin,
                                                     **annotations)

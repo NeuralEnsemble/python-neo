@@ -19,7 +19,7 @@ from neo import logging_handler
 from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannelGroup,
+                      ChannelIndex,
                       Segment, SpikeTrain, Unit)
 
 read_error = "This type is not supported by this file format for reading"
@@ -161,8 +161,8 @@ class BaseIO(object):
     def read_irregularlysampledsignal(self, **kargs):
         assert(IrregularlySampledSignal in self.readable_objects), read_error
 
-    def read_recordingchannelgroup(self, **kargs):
-        assert(RecordingChannelGroup in self.readable_objects), read_error
+    def read_channelindex(self, **kargs):
+        assert(ChannelIndex in self.readable_objects), read_error
 
     def read_event(self, **kargs):
         assert(Event in self.readable_objects), read_error
@@ -189,8 +189,8 @@ class BaseIO(object):
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
-    def write_recordingchannelgroup(self, rcg, **kargs):
-        assert(RecordingChannelGroup in self.writeable_objects), write_error
+    def write_channelindex(self, rcg, **kargs):
+        assert(ChannelIndex in self.writeable_objects), write_error
 
     def write_event(self, ev, **kargs):
         assert(Event in self.writeable_objects), write_error

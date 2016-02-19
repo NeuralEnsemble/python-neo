@@ -27,25 +27,25 @@ class Block(Container):
 
     *Usage*::
 
-        >>> from neo.core import (Block, Segment, RecordingChannelGroup,
+        >>> from neo.core import (Block, Segment, ChannelIndex,
         ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
-        >>> # create a Block with 3 Segment and 2 RecordingChannelGroup objects
+        >>> # create a Block with 3 Segment and 2 ChannelIndex objects
         ,,, blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     rcg = RecordingChannelGroup(name='Array probe %d' % ind,
+        ...     rcg = ChannelIndex(name='Array probe %d' % ind,
         ...                                 channel_indexes=np.arange(64))
-        ...     blk.recordingchannelgroups.append(rcg)
+        ...     blk.channelindexes.append(rcg)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.recordingchannelgroups:
+        ...     for rcg in blk.channelindexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
         ...         rcg.analogsignals.append(a)
@@ -75,11 +75,11 @@ class Block(Container):
 
     *Container of*:
         :class:`Segment`
-        :class:`RecordingChannelGroup`
+        :class:`ChannelIndex`
 
     '''
 
-    _container_child_objects = ('Segment', 'RecordingChannelGroup')
+    _container_child_objects = ('Segment', 'ChannelIndex')
     _child_properties = ('Unit',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
