@@ -21,6 +21,7 @@ from neo.core import (AnalogSignal,
                       Unit,
                       class_by_name)
 from neo.io.tools import iteritems
+from neo.core.baseneo import _container_name
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
@@ -338,7 +339,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             if (cascade == 'block' and len(child._parent_objects) > 0 and
                     obj_type != child._parent_objects[-1]):
                 continue
-            getattr(obj, childname.lower()+"s").append(child)
+            getattr(obj, _container_name(childname)).append(child)
 
     # need to manually create 'implicit' connections
     if obj_type == 'Block':

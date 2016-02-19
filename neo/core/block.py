@@ -133,4 +133,4 @@ class Block(Container):
         '''
         Return a list of all :class:`Unit` objects in the :class:`Block`.
         '''
-        return self.list_children_by_class('units')
+        return self.list_children_by_class('unit')

@@ -746,10 +746,6 @@ class TestBlock(unittest.TestCase):
                                self.blk1.list_children_by_class('Unit'))
         assert_same_sub_schema(self.units2,
                                self.blk2.list_children_by_class('Unit'))
-        assert_same_sub_schema(self.units1,
-                               self.blk1.list_children_by_class('units'))
-        assert_same_sub_schema(self.units2,
-                               self.blk2.list_children_by_class('units'))
 
 
 if __name__ == "__main__":

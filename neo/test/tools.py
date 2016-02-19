@@ -11,6 +11,7 @@ import quantities as pq
 
 import neo
 from neo.core import objectlist
+from neo.core.baseneo import _reference_name, _container_name
 
 
 def assert_arrays_equal(a, b, dtype=False):
@@ -152,14 +153,14 @@ def assert_neo_object_is_compliant(ob):
     # test bijectivity : parents and children
     for container in getattr(ob, '_single_child_containers', []):
         for i, child in enumerate(getattr(ob, container, [])):
-            assert hasattr(child, classname.lower()), \
+            assert hasattr(child, _reference_name(classname)), \
                 '%s should have %s attribute (2 way relationship)' % \
-                (container, classname.lower())
-            if hasattr(child, classname.lower()):
-                parent = getattr(child, classname.lower())
+                (container, _reference_name(classname))
+            if hasattr(child, _reference_name(classname)):
+                parent = getattr(child, _reference_name(classname))
                 assert parent == ob, \
                     '%s.%s %s is not symetric with %s.%s' % \
-                    (container, classname.lower(), i,
+                    (container, _reference_name(classname), i,
                      classname, container)
 
     # recursive on one to many rel
