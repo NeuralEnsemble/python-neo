@@ -147,7 +147,7 @@ class BrainwareDamIO(BaseIO):
                                     channel_names=np.array(['Chan1'], dtype='S'))
 
         # load objects into their containers
-        block.channelindexes.append(rcg)
+        block.channel_indexes.append(rcg)
 
         # open the file
         with open(self._path, 'rb') as fobject:
@@ -159,7 +159,7 @@ class BrainwareDamIO(BaseIO):
                     break
 
                 # store the segment and signals
-                seg.analogsignals[0].channelindex = rcg
+                seg.analogsignals[0].channel_index = rcg
                 block.segments.append(seg)
 
         # remove the file object

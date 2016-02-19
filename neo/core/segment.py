@@ -185,7 +185,7 @@ class Segment(Container):
             >>>
             >>> blk = Block()
             >>> rcg = ChannelIndex(name='group0')
-            >>> blk.channelindexes = [rcg]
+            >>> blk.channel_indexes = [rcg]
             >>>
             >>> for ind in range(5):
             ...         unit = Unit(name='Unit #%s' % ind, channel_index=ind)

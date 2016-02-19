@@ -534,7 +534,7 @@ class NeoHdf5IO(BaseIO):
 
         if parent_type.lower() in ('recordingchannel', 'unit'):
             # We need to search all recording channels
-            path = block_path + '/channelindexes'
+            path = block_path + '/channel_indexes'
             for n in self._data.iterNodes(path):
                 if not '_type' in n._v_attrs:
                     continue
@@ -547,9 +547,9 @@ class NeoHdf5IO(BaseIO):
 
         if parent_type.lower() == 'segment':
             path = block_path + '/segments'
-        elif parent_type.lower() in ('channelindex',
-                                     'channelindexes'):
-            path = block_path + '/channelindexes'
+        elif parent_type.lower() in ('channel_index',
+                                     'channel_indexes'):
+            path = block_path + '/channel_indexes'
         else:
             return ''
 
@@ -561,7 +561,7 @@ class NeoHdf5IO(BaseIO):
         parts = path.split('/')
         object_folder = parts[-2]
         block_path = '/'.join(parts[:-4])
-        path = block_path + '/channelindexes'
+        path = block_path + '/channel_indexes'
         return self._search_parent(path, object_folder, ref, True)
 
     def _search_parent(self, path, object_folder, ref, multi=False):
@@ -616,9 +616,9 @@ class NeoHdf5IO(BaseIO):
                         ppaths.append(None)
                 self.parent_paths[path] = ppaths
             elif t == 'RecordingChannel':
-                if 'channelindexes' in node._v_attrs:
+                if 'channel_indexes' in node._v_attrs:
                     self.parent_paths[path] = node._f_getAttr(
-                        'channelindexes')
+                        'channel_indexes')
 
         # Set parent objects
         if path in self.parent_paths:
@@ -626,7 +626,7 @@ class NeoHdf5IO(BaseIO):
 
             if t == 'RecordingChannel':  # Set list of parnet channel groups
                 for rcg in self.parent_paths[path]:
-                    o.channelindexes.append(
+                    o.channel_indexes.append(
                         self.get(rcg, cascade='lazy', lazy=lazy))
             else:  # Set parents: Segment and another parent
                 if paths[0] is None:
@@ -650,7 +650,7 @@ class NeoHdf5IO(BaseIO):
             if t == 'RecordingChannel':
                 rcg_paths = self._get_rcgs(path, ref)
                 for rcg in rcg_paths:
-                    o.channelindexes.append(self.get(
+                    o.channel_indexes.append(self.get(
                         rcg, cascade='lazy', lazy=lazy))
                 self.parent_paths[path] = rcg_paths
             else:
@@ -812,7 +812,7 @@ class NeoHdf5IO(BaseIO):
                     # create at least One-to-Many
                     if obj_type == 'ChannelIndex' and not object_ref:
                         for r in relatives:
-                            r.channelindexes = [obj]
+                            r.channel_indexes = [obj]
             # special processor for RC -> RCG
             if obj_type == 'RecordingChannel':
                 if hasattr(node, '_v_parent'):
@@ -820,7 +820,7 @@ class NeoHdf5IO(BaseIO):
                     if hasattr(parent, '_v_parent'):
                         parent = parent._v_parent
                         if 'object_ref' in parent._v_attrs:
-                            obj.channelindexes.append(self.get(
+                            obj.channel_indexes.append(self.get(
                                 parent._v_pathname, lazy=lazy))
         return obj
 

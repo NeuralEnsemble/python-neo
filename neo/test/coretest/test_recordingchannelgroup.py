@@ -219,7 +219,7 @@ class TestChannelIndex(unittest.TestCase):
 
     def test__children(self):
         blk = Block(name='block1')
-        blk.channelindexes = [self.chx1]
+        blk.channel_indexes = [self.chx1]
         blk.create_many_to_one_relationship()
 
         self.assertEqual(self.chx1._container_child_objects, ('Unit',))

@@ -84,8 +84,8 @@ class Test__generate_datasets(unittest.TestCase):
         seg = res.segments[0]
         self.assertEqual(seg.annotations, self.annotations)
 
-        self.assertEqual(len(res.channelindexes), 1)
-        rcg = res.channelindexes[0]
+        self.assertEqual(len(res.channel_indexes), 1)
+        rcg = res.channel_indexes[0]
         self.assertEqual(rcg.annotations, self.annotations)
 
         self.assertEqual(len(seg.analogsignals), 1)
@@ -130,7 +130,7 @@ class Test__generate_datasets(unittest.TestCase):
         self.assertEqual(res.annotations, self.annotations)
 
         self.assertEqual(len(res.segments), 0)
-        self.assertEqual(len(res.channelindexes), 0)
+        self.assertEqual(len(res.channel_indexes), 0)
 
 
 class TestBlock(unittest.TestCase):
@@ -144,8 +144,8 @@ class TestBlock(unittest.TestCase):
 
         self.segs1 = self.blk1.segments
         self.segs2 = self.blk2.segments
-        self.rcgs1 = self.blk1.channelindexes
-        self.rcgs2 = self.blk2.channelindexes
+        self.rcgs1 = self.blk1.channel_indexes
+        self.rcgs2 = self.blk2.channel_indexes
 
         self.units1 = [[unit for unit in rcg.units] for rcg in self.rcgs1]
         self.units2 = [[unit for unit in rcg.units] for rcg in self.rcgs2]
@@ -223,10 +223,10 @@ class TestBlock(unittest.TestCase):
         targ6['seed'] = seed
         self.assertEqual(blk.annotations, targ6)
 
-        self.assertTrue(hasattr(blk, 'channelindexes'))
+        self.assertTrue(hasattr(blk, 'channel_indexes'))
         self.assertTrue(hasattr(blk, 'segments'))
 
-        self.assertEqual(len(blk.channelindexes), self.nchildren)
+        self.assertEqual(len(blk.channel_indexes), self.nchildren)
         self.assertEqual(len(blk.segments), self.nchildren)
 
     def test__creation(self):
@@ -245,7 +245,7 @@ class TestBlock(unittest.TestCase):
         rcgs1a = clone_object(self.rcgs1)
 
         assert_same_sub_schema(rcgs1a + self.rcgs2,
-                               blk1a.channelindexes)
+                               blk1a.channel_indexes)
         assert_same_sub_schema(segs1a + self.segs2,
                                blk1a.segments)
 
@@ -266,10 +266,10 @@ class TestBlock(unittest.TestCase):
                          ('Segment', 'ChannelIndex'))
 
         self.assertEqual(self.blk1._container_child_containers,
-                         ('segments', 'channelindexes'))
+                         ('segments', 'channel_indexes'))
         self.assertEqual(self.blk1._data_child_containers, ())
         self.assertEqual(self.blk1._single_child_containers,
-                         ('segments', 'channelindexes'))
+                         ('segments', 'channel_indexes'))
         self.assertEqual(self.blk1._single_parent_containers, ())
         self.assertEqual(self.blk1._multi_child_containers, ())
         self.assertEqual(self.blk1._multi_parent_containers, ())
@@ -277,7 +277,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.blk1._child_objects,
                          ('Segment', 'ChannelIndex'))
         self.assertEqual(self.blk1._child_containers,
-                         ('segments', 'channelindexes'))
+                         ('segments', 'channel_indexes'))
         self.assertEqual(self.blk1._parent_objects, ())
         self.assertEqual(self.blk1._parent_containers, ())
 
@@ -335,7 +335,7 @@ class TestBlock(unittest.TestCase):
 
     def test__size(self):
         targ = {'segments': self.nchildren,
-                'channelindexes': self.nchildren}
+                'channel_indexes': self.nchildren}
         self.assertEqual(self.targobj.size, targ)
 
     def test__filter_none(self):
@@ -718,7 +718,7 @@ class TestBlock(unittest.TestCase):
     #     seg1 = seg1.replace('\n', '\n   ')
     #
     #     targ = ("Block with " +
-    #             ("%s segments, %s channelindexes\n" %
+    #             ("%s segments, %s channel_indexes\n" %
     #              (len(self.segs1), len(self.rcgs1))) +
     #             ("name: '%s'\ndescription: '%s'\n" % (self.blk1.name,
     #                                                   self.blk1.description)) +

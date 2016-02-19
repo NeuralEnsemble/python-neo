@@ -142,12 +142,12 @@ class KwikIO(BaseIO):
 
             rcg = ChannelIndex(name='all channels',
                                  channel_indexes=channel_index)
-            blk.channelindexes.append(rcg)
+            blk.channel_indexes.append(rcg)
 
             ana = self.read_analogsignal(channel_index=channel_index,
                                          lazy=lazy,
                                          cascade=cascade)
-            ana.channelindex = rcg
+            ana.channel_index = rcg
             seg.duration = (self._attrs['shape'][0]
                           / self._attrs['kwik']['sample_rate']) * pq.s
 

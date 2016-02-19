@@ -126,7 +126,7 @@ def _reference_name(class_name):
     `_container_name("Block")`.
     """
     name_map = {
-        "ChannelIndex": "channelindex"
+        "ChannelIndex": "channel_index"
     }
     return name_map.get(class_name, class_name.lower())
 
@@ -141,7 +141,7 @@ def _container_name(class_name):
     obtained by calling `_container_name_plural("Segment")`.
     """
     name_map = {
-        "ChannelIndex": "channelindexes"
+        "ChannelIndex": "channel_indexes"
     }
     return name_map.get(class_name, _reference_name(class_name) + 's')
 

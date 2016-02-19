@@ -89,7 +89,7 @@ def proc_src(filename):
     chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
     rcg.channel_indexes = chan_nums
     rcg.channel_names = np.array(chan_names, dtype='string_')
-    block.channelindexes.append(rcg)
+    block.channel_indexes.append(rcg)
 
     for rep in srcfile['sets'][0, 0].flatten():
         proc_src_condition(rep, filename, ADperiod, side, block)
@@ -155,7 +155,7 @@ def proc_src_condition(rep, filename, ADperiod, side, block):
     '''Get the condition in a src file that has been processed by the official
     matlab function.  See proc_src for details'''
 
-    rcg = block.channelindexes[0]
+    rcg = block.channel_indexes[0]
 
     stim = rep['stim'].flatten()
     params = [str(res[0]) for res in stim['paramName'][0].flatten()]

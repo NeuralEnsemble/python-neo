@@ -63,7 +63,7 @@ def proc_dam(filename):
                                 channel_ids = np.array([1]),
                                 channel_names = np.array(['Chan1'], dtype='S'))
 
-    block.channelindexes.append(rcg)
+    block.channel_indexes.append(rcg)
 
     params = [res['params'][0, 0].flatten() for res in damfile['stim']]
     values = [res['values'][0, 0].flatten() for res in damfile['stim']]

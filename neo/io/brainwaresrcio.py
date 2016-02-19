@@ -164,7 +164,7 @@ class BrainwareSrcIO(BaseIO):
         self._blk = None
 
         # This stores the current ChannelIndex for easy access
-        # It is equivalent to self._blk.channelindexes[0]
+        # It is equivalent to self._blk.channel_indexes[0]
         self._rcg = None
 
         # This stores the current Segment for easy access
@@ -296,7 +296,7 @@ class BrainwareSrcIO(BaseIO):
                            file_origin=self._file_origin,
                            elliptic=[], boundaries=[],
                            timestamp=[], max_valid=[])
-        self._blk.channelindexes.append(self._rcg)
+        self._blk.channel_indexes.append(self._rcg)
         self._rcg.units.append(self._unit0)
         self._blk.segments.append(self._seg0)
 

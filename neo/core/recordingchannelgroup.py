@@ -44,11 +44,11 @@ class ChannelIndex(Container):
         >>> for ind in range(2):
         ...     rcg = ChannelIndex(name='Array probe %d' % ind,
         ...                                 channel_indexes=np.arange(64))
-        ...     blk.channelindexes.append(rcg)
+        ...     blk.channel_indexes.append(rcg)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.channelindexes:
+        ...     for rcg in blk.channel_indexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                          sampling_rate=10*kHz)
         ...         rcg.analogsignals.append(a)
@@ -71,7 +71,7 @@ class ChannelIndex(Container):
         ... rcg = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
         ...                             channel_indexes = np.array([0, 3, 5])
         >>> rcg.analogsignals.append(sig)
-        >>> blk.channelindexes.append(rcg)
+        >>> blk.channel_indexes.append(rcg)
 
     *Usage 3* dealing with :class:`Unit` objects::
 
@@ -82,7 +82,7 @@ class ChannelIndex(Container):
         >>>
         >>> # Create a new ChannelIndex and add it to the Block
         >>> rcg = ChannelIndex(name='octotrode A')
-        >>> blk.channelindexes.append(rcg)
+        >>> blk.channel_indexes.append(rcg)
         >>>
         >>> # create several Unit objects and add them to the
         >>> # ChannelIndex

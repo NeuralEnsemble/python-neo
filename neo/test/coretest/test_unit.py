@@ -163,7 +163,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._data_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_child_containers, ('spiketrains',))
         self.assertEqual(self.unit1._single_parent_containers,
-                         ('channelindex',))
+                         ('channel_index',))
         self.assertEqual(self.unit1._multi_child_containers, ())
         self.assertEqual(self.unit1._multi_parent_containers, ())
 
@@ -172,7 +172,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.unit1._parent_objects,
                          ('ChannelIndex',))
         self.assertEqual(self.unit1._parent_containers,
-                         ('channelindex',))
+                         ('channel_index',))
 
         self.assertEqual(len(self.unit1._single_children), self.nchildren)
         self.assertEqual(len(self.unit1._multi_children), 0)

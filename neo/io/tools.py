@@ -22,7 +22,7 @@ from neo.core import (AnalogSignal, Block,
 
     # Special case this tricky many-to-many relationship
     # we still need links from recordingchannel to analogsignal
-#    for rcg in block.channelindexes:
+#    for rcg in block.channel_indexes:
 #        for rc in rcg.recordingchannels:
 #            rc.create_many_to_one_relationship()
 
@@ -65,11 +65,11 @@ from neo.core import (AnalogSignal, Block,
 #     rcg = ChannelIndex(name='all channels',
 #                                 channel_indexes=indexes,
 #                                 channel_names=names)
-#     bl.channelindexes.append(rcg)
+#     bl.channel_indexes.append(rcg)
 #     for ind in indexes:
 #         # many to many relationship
 #         rcg.recordingchannels.append(recordingchannels[ind])
-#         recordingchannels[ind].channelindexes.append(rcg)
+#         recordingchannels[ind].channel_indexes.append(rcg)
 
 
 def iteritems(D):

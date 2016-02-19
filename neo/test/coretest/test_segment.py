@@ -698,7 +698,7 @@ class TestSegment(unittest.TestCase):
             all_unit.append(un)
 
         blk = Block()
-        blk.channelindexes = rcgs
+        blk.channel_indexes = rcgs
         for s in range(nb_seg):
             seg = Segment(name='Simulation %s' % s)
             for j in range(nb_unit):

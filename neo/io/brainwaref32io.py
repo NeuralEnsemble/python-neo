@@ -163,7 +163,7 @@ class BrainwareF32IO(BaseIO):
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers
-        block.channelindexes.append(rcg)
+        block.channel_indexes.append(rcg)
         rcg.units.append(self.__unit)
 
         # initialize values

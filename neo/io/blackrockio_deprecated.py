@@ -114,7 +114,7 @@ class BlackrockIO(BaseIO):
         #~ # Add channel hierarchy
         #~ rcg = ChannelIndex(name='allchannels',
             #~ description='group of all channels', file_origin=self.filename)
-        #~ block.channelindexes.append(rcg)
+        #~ block.channel_indexes.append(rcg)
         #~ self.channel_number_to_recording_channel = {}
 
         #~ # Add each channel at a time to hierarchy
@@ -277,7 +277,7 @@ def channel_indexes_in_segment(seg):
         channel_indices.append(sig.recordingchannel.index)
 
     for asa in seg.analogsignals:
-        channel_indices.append(asa.channelindex.channel_indexes)
+        channel_indices.append(asa.channel_index.channel_indexes)
 
     return channel_indices
 

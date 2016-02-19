@@ -35,7 +35,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
 
     block = neo.Block()
     block.segments = segments
-    block.channelindexes = [rcg]
+    block.channel_indexes = [rcg]
 
     # Create synthetic data
     for seg in segments:
@@ -87,7 +87,7 @@ for seg in block.segments:
 
 # We assume that our block has only 1 ChannelIndex and each
 # RecordingChannel only has 1 AnalogSignal.
-rcg = block.channelindexes[0]
+rcg = block.channel_indexes[0]
 for rc in rcg.recordingchannels:
     print("Analysing channel %d: %s" % (rc.index, rc.name))
 
@@ -123,7 +123,7 @@ for unit in block.list_units:
 
 # By ChannelIndex. Here we calculate a PSTH averaged over trials by
 # channel location, blending all Units:
-for rcg in block.channelindexes:
+for rcg in block.channel_indexes:
     stlist = []
     for unit in rcg.units:
         stlist.extend([st - st.t_start for st in unit.spiketrains])

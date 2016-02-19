@@ -206,13 +206,13 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         self.assertEqual(signal._multi_parent_objects, ())
 
         self.assertEqual(signal._single_parent_containers,
-                         ('segment', 'channelindex'))
+                         ('segment', 'channel_index'))
         self.assertEqual(signal._multi_parent_containers, ())
 
         self.assertEqual(signal._parent_objects,
                          ('Segment', 'ChannelIndex'))
         self.assertEqual(signal._parent_containers,
-                         ('segment', 'channelindex'))
+                         ('segment', 'channel_index'))
 
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')

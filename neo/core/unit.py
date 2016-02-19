@@ -70,12 +70,12 @@ class Unit(Container):
         '''
         super(Unit, self).__init__(name=name, description=description,
                                    file_origin=file_origin, **annotations)
-        self.channelindex = None
+        self.channel_index = None
 
     def get_channel_indexes(self):
         """
         """
-        if self.channelindex:
-            return self.channelindex.channel_indexes
+        if self.channel_index:
+            return self.channel_index.channel_indexes
         else:
             return None

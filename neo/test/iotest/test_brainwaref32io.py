@@ -57,7 +57,7 @@ def proc_f32(filename):
     unit = Unit(file_origin=filenameorig)
 
     # load objects into their containers
-    block.channelindexes.append(rcg)
+    block.channel_indexes.append(rcg)
     rcg.units.append(unit)
 
     try:

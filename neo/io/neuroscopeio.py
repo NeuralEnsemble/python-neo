@@ -104,7 +104,7 @@ class NeuroScopeIO(BaseIO):
                                             channel_indexes=np.arange(n_channels, dtype = int))
                 rcg.channel_ids = np.array([int(xml_rc.text) for xml_rc in xml_rcg])
                 rcg.channel_names = np.array(['Channel{0}'.format(id) for id in rcg.channel_ids], dtype = 'S')
-                bl.channelindexes.append(rcg)
+                bl.channel_indexes.append(rcg)
         
             # AnalogSignals
             reader = RawBinarySignalIO(filename = self.filename.replace('.xml', '.dat'))

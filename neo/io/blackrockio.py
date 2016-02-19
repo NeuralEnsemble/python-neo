@@ -93,8 +93,8 @@ class BlackrockIO(BaseIO):
             channel_id = st.annotations['channel_id']
             index = None
             for sig in seg.analogsignals:
-                if channel_id in sig.channelindex.channel_ids:
-                    i = np.where(sig.channelindex.channel_ids==channel_id)[0][0]
+                if channel_id in sig.channel_index.channel_ids:
+                    i = np.where(sig.channel_index.channel_ids==channel_id)[0][0]
                     index = sig.get_channel_index()[i]
                     break
             if index is not None:
@@ -104,7 +104,7 @@ class BlackrockIO(BaseIO):
                 unit = Unit(name=st.name)
                 unit.spiketrains.append(st)
                 rcg.units.append(unit)
-                bl.channelindexes.append(rcg)
+                bl.channel_indexes.append(rcg)
 
         bl.create_many_to_one_relationship()
         
@@ -426,7 +426,7 @@ class BlackrockIO(BaseIO):
                                         name=name,
                                         file_origin=filename_nsx)
             rcg.analogsignals.append(anasig)
-            anasig.channelindex = rcg
+            anasig.channel_index = rcg
             seg.analogsignals.append(anasig)
 
     def read_sif(self, filename_sif, seg, ):

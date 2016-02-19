@@ -4203,7 +4203,7 @@ class ElphyIO(BaseIO):
         )
         for spk in range(0, n_spikes) :
             channel = self.read_channelindex(episode, spk)
-            group.channelindexes.append(channel)
+            group.channel_indexes.append(channel)
         return group
             
 

@@ -148,7 +148,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         obj.times = pq.Quantity(times, units=time_units,
                                 dtype=float, copy=copy)
         obj.segment = None
-        obj.channelindex = None
+        obj.channel_index = None
 
         return obj
 

@@ -185,7 +185,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         obj._sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
 
         obj.segment = None
-        obj.channelindex = None
+        obj.channel_index = None
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
@@ -258,8 +258,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
     def get_channel_index(self):
         """
         """
-        if self.channelindex:
-            return self.channelindex.channel_indexes
+        if self.channel_index:
+            return self.channel_index.channel_indexes
         else:
             return None
 
