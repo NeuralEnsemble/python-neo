@@ -148,8 +148,8 @@ class Segment(Container):
             return []
         indexes = []
         for unit in unit_list:
-            if unit.channel_indexes is not None:
-                indexes.extend(unit.channel_indexes)
+            if unit.get_channel_indexes() is not None:
+                indexes.extend(unit.get_channel_indexes())
 
         return self.take_slice_of_analogsignalarray_by_channelindex(indexes)
 
@@ -165,8 +165,8 @@ class Segment(Container):
 
         sliced_sigarrays = []
         for sigarr in self.analogsignals:
-            if sigarr.channel_indexes is not None:
-                ind = np.in1d(sigarr.channel_indexes, channel_indexes)
+            if sigarr.get_channel_index() is not None:
+                ind = np.in1d(sigarr.get_channel_index(), channel_indexes)
                 sliced_sigarrays.append(sigarr[:, ind])
 
         return sliced_sigarrays

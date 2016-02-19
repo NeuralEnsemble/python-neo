@@ -95,7 +95,7 @@ class BlackrockIO(BaseIO):
             for sig in seg.analogsignals:
                 if channel_id in sig.channelindex.channel_ids:
                     i = np.where(sig.channelindex.channel_ids==channel_id)[0][0]
-                    index = sig.channel_indexes[i]
+                    index = sig.get_channel_index()[i]
                     break
             if index is not None:
                 rcg = ChannelIndex(name = 'Group {0}'.format(channel_id),

@@ -72,8 +72,7 @@ class Unit(Container):
                                    file_origin=file_origin, **annotations)
         self.channelindex = None
 
-    @property
-    def channel_indexes(self):
+    def get_channel_indexes(self):
         """
         """
         if self.channelindex:

@@ -255,20 +255,13 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                  super(AnalogSignal, self).__repr__(), self.t_start,
                  self.t_stop, self.sampling_rate))
 
-    @property
-    def channel_index(self):
+    def get_channel_index(self):
         """
         """
         if self.channelindex:
             return self.channelindex.channel_indexes
         else:
             return None
-
-    @property
-    def channel_indexes(self):
-        """
-        """
-        return self.channel_index
 
     def __getslice__(self, i, j):
         '''

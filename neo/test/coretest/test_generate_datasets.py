@@ -663,8 +663,8 @@ class Test__generate_datasets(unittest.TestCase):
         if cls in ['ChannelIndex', ChannelIndex]:
             for i, unit in enumerate(res.units):
                 for sigarr in res.analogsignals:
-                    self.assertEqual(unit.channel_indexes[0],
-                                     sigarr.channel_index[i])
+                    self.assertEqual(unit.get_channel_indexes()[0],
+                                     sigarr.get_channel_index()[i])
 
     def test__analogsignalarray(self):
         self.check__generate_datasets(AnalogSignal)
