@@ -124,9 +124,9 @@ In some cases, a one-to-many relationship is sufficient. Here is a simple exampl
     
     # the four tetrodes
     for i in range(4):
-        rcg = ChannelIndex(name = 'Tetrode %d' % i,
+        chx = ChannelIndex(name = 'Tetrode %d' % i,
                                     channel_indexes=[0, 1, 2, 3])
-        bl.channelindexes.append(rcg)
+        bl.channelindexes.append(chx)
 
     # now we load the data and associate it with the created channels
     # ...
@@ -136,16 +136,16 @@ Now consider a more complex example: a 1x4 silicon probe, with a neuron on chann
     bl = Block(name='probe data')
 
     # one group for each neuron
-    rcg0 = ChannelIndex(name='Group 0',
+    chx0 = ChannelIndex(name='Group 0',
                                  channel_indexes=[0, 1, 2])
-    bl.channelindexes.append(rcg0)
+    bl.channelindexes.append(chx0)
 
-    rcg1 = ChannelIndex(name='Group 1',
+    chx1 = ChannelIndex(name='Group 1',
                                  channel_indexes=[1, 2, 3])
-    bl.channelindexes.append(rcg1)
+    bl.channelindexes.append(chx1)
 
-    # now we add the spiketrain from Unit 0 to rcg0
-    # and add the spiketrain from Unit 1 to rcg1
+    # now we add the spiketrain from Unit 0 to chx0
+    # and add the spiketrain from Unit 1 to chx1
     # ...
 
 Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`ChannelIndex` contains a reference to the :py:class:`Unit` object.

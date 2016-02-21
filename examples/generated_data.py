@@ -24,18 +24,18 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     # Create container and grouping objects
     segments = [neo.Segment(index=i) for i in range(n_segments)]
 
-    rcg = neo.ChannelIndex(name='T0')
+    chx = neo.ChannelIndex(name='T0')
     for i in range(n_channels):
         rc = neo.RecordingChannel(name='C%d' % i, index=i)
-        rc.channelindexes = [rcg]
-        rcg.recordingchannels.append(rc)
+        rc.channelindexes = [chx]
+        chx.recordingchannels.append(rc)
 
     units = [neo.Unit('U%d' % i) for i in range(n_units)]
-    rcg.units = units
+    chx.units = units
 
     block = neo.Block()
     block.segments = segments
-    block.channel_indexes = [rcg]
+    block.channel_indexes = [chx]
 
     # Create synthetic data
     for seg in segments:
@@ -43,7 +43,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
 
         # Analog signals: Noise with a single sinewave feature
         wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
-        for rc in rcg.recordingchannels:
+        for rc in chx.recordingchannels:
             sig = np.random.randn(data_samples)
             sig[feature_pos:feature_pos + feature_samples] += wave
 
@@ -87,8 +87,8 @@ for seg in block.segments:
 
 # We assume that our block has only 1 ChannelIndex and each
 # RecordingChannel only has 1 AnalogSignal.
-rcg = block.channel_indexes[0]
-for rc in rcg.recordingchannels:
+chx = block.channel_indexes[0]
+for rc in chx.recordingchannels:
     print("Analysing channel %d: %s" % (rc.index, rc.name))
 
     siglist = rc.analogsignals
@@ -123,13 +123,13 @@ for unit in block.list_units:
 
 # By ChannelIndex. Here we calculate a PSTH averaged over trials by
 # channel location, blending all Units:
-for rcg in block.channel_indexes:
+for chx in block.channel_indexes:
     stlist = []
-    for unit in rcg.units:
+    for unit in chx.units:
         stlist.extend([st - st.t_start for st in unit.spiketrains])
     count, bins = np.histogram(np.hstack(stlist))
     plt.figure()
     plt.bar(bins[:-1], count, width=bins[1] - bins[0])
-    plt.title("PSTH blend of recording channel group %s" % rcg.name)
+    plt.title("PSTH blend of recording channel group %s" % chx.name)
 
 plt.show()

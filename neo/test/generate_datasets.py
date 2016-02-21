@@ -344,12 +344,12 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     # need to manually create 'implicit' connections
     if obj_type == 'Block':
         # connect data objects to segment
-        for i, rcg in enumerate(obj.channel_indexes):
-            for k, sigarr in enumerate(rcg.analogsignals):
+        for i, chx in enumerate(obj.channel_indexes):
+            for k, sigarr in enumerate(chx.analogsignals):
                 obj.segments[k].analogsignals.append(sigarr)
-            for k, sigarr in enumerate(rcg.irregularlysampledsignals):
+            for k, sigarr in enumerate(chx.irregularlysampledsignals):
                 obj.segments[k].irregularlysampledsignals.append(sigarr)
-            for j, unit in enumerate(rcg.units):
+            for j, unit in enumerate(chx.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
     #elif obj_type == 'ChannelIndex':

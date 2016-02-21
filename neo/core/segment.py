@@ -184,18 +184,18 @@ class Segment(Container):
             ...                       ChannelIndex)
             >>>
             >>> blk = Block()
-            >>> rcg = ChannelIndex(name='group0')
-            >>> blk.channel_indexes = [rcg]
+            >>> chx = ChannelIndex(name='group0')
+            >>> blk.channel_indexes = [chx]
             >>>
             >>> for ind in range(5):
             ...         unit = Unit(name='Unit #%s' % ind, channel_index=ind)
-            ...         rcg.units.append(unit)
+            ...         chx.units.append(unit)
             ...
             >>>
             >>> for ind in range(3):
             ...     seg = Segment(name='Simulation #%s' % ind)
             ...     blk.segments.append(seg)
-            ...     for unit in rcg.units:
+            ...     for unit in chx.units:
             ...         train = SpikeTrain([1, 2, 3], units='ms', t_start=0.,
             ...                            t_stop=10)
             ...         train.unit = unit
@@ -204,7 +204,7 @@ class Segment(Container):
             ...
             >>>
             >>> seg0 = blk.segments[-1]
-            >>> seg1 = seg0.construct_subsegment_by_unit(rcg.units[:2])
+            >>> seg1 = seg0.construct_subsegment_by_unit(chx.units[:2])
             >>> len(seg0.spiketrains)
             5
             >>> len(seg1.spiketrains)

@@ -158,13 +158,13 @@ class BrainwareF32IO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = ChannelIndex(file_origin=self._filename,
+        chx = ChannelIndex(file_origin=self._filename,
                                     channel_indexes=np.array([], dtype=np.int))
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers
-        block.channel_indexes.append(rcg)
-        rcg.units.append(self.__unit)
+        block.channel_indexes.append(chx)
+        chx.units.append(self.__unit)
 
         # initialize values
         self.__t_stop = None

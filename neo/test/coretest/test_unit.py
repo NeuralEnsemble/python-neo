@@ -143,11 +143,11 @@ class TestUnit(unittest.TestCase):
                                unit1a.spiketrains)
 
     def test__children(self):
-        rcg = ChannelIndex(channel_indexes=np.arange(self.nchildren), name='rcg1')
-        rcg.units = [self.unit1]
-        rcg.create_many_to_one_relationship()
+        chx = ChannelIndex(channel_indexes=np.arange(self.nchildren), name='chx1')
+        chx.units = [self.unit1]
+        chx.create_many_to_one_relationship()
         assert_neo_object_is_compliant(self.unit1)
-        assert_neo_object_is_compliant(rcg)
+        assert_neo_object_is_compliant(chx)
 
         self.assertEqual(self.unit1._container_child_objects, ())
         self.assertEqual(self.unit1._data_child_objects, ('SpikeTrain',))
@@ -203,7 +203,7 @@ class TestUnit(unittest.TestCase):
                                self.trains1a)
 
         self.assertEqual(len(self.unit1.parents), 1)
-        self.assertEqual(self.unit1.parents[0].name, 'rcg1')
+        self.assertEqual(self.unit1.parents[0].name, 'chx1')
 
     def test__size(self):
         targ = {'spiketrains': self.nchildren}

@@ -58,12 +58,12 @@ def proc_dam(filename):
 
     block = Block(file_origin=filename)
 
-    rcg = ChannelIndex(file_origin=filename,
+    chx = ChannelIndex(file_origin=filename,
                                 channel_indexes = np.array([0]),
                                 channel_ids = np.array([1]),
                                 channel_names = np.array(['Chan1'], dtype='S'))
 
-    block.channel_indexes.append(rcg)
+    block.channel_indexes.append(chx)
 
     params = [res['params'][0, 0].flatten() for res in damfile['stim']]
     values = [res['values'][0, 0].flatten() for res in damfile['stim']]

@@ -42,16 +42,16 @@ class ChannelIndex(Container):
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     rcg = ChannelIndex(name='Array probe %d' % ind,
+        ...     chx = ChannelIndex(name='Array probe %d' % ind,
         ...                                 channel_indexes=np.arange(64))
-        ...     blk.channel_indexes.append(rcg)
+        ...     blk.channel_indexes.append(chx)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.channel_indexes:
+        ...     for chx in blk.channel_indexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                          sampling_rate=10*kHz)
-        ...         rcg.analogsignals.append(a)
+        ...         chx.analogsignals.append(a)
         ...         seg.analogsignals.append(a)
 
     *Usage 2* grouping channels::
@@ -68,10 +68,10 @@ class ChannelIndex(Container):
         ... blk.segments[0].append(sig)
         ...
         >>> # Create a new ChannelIndex which groups three channels from the signal
-        ... rcg = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
+        ... chx = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
         ...                             channel_indexes = np.array([0, 3, 5])
-        >>> rcg.analogsignals.append(sig)
-        >>> blk.channel_indexes.append(rcg)
+        >>> chx.analogsignals.append(sig)
+        >>> blk.channel_indexes.append(chx)
 
     *Usage 3* dealing with :class:`Unit` objects::
 
@@ -81,15 +81,15 @@ class ChannelIndex(Container):
         >>> blk = Block()
         >>>
         >>> # Create a new ChannelIndex and add it to the Block
-        >>> rcg = ChannelIndex(name='octotrode A')
-        >>> blk.channel_indexes.append(rcg)
+        >>> chx = ChannelIndex(name='octotrode A')
+        >>> blk.channel_indexes.append(chx)
         >>>
         >>> # create several Unit objects and add them to the
         >>> # ChannelIndex
         ... for ind in range(5):
         ...     unit = Unit(name = 'unit %d' % ind,
         ...                 description='after a long and hard spike sorting')
-        ...     rcg.units.append(unit)
+        ...     chx.units.append(unit)
 
     *Required attributes/properties*:
         :channel_indexes: (numpy.array 1D dtype='i')

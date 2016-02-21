@@ -165,7 +165,7 @@ class BrainwareSrcIO(BaseIO):
 
         # This stores the current ChannelIndex for easy access
         # It is equivalent to self._blk.channel_indexes[0]
-        self._rcg = None
+        self._chx = None
 
         # This stores the current Segment for easy access
         # It is equivalent to self._blk.segments[-1]
@@ -289,15 +289,15 @@ class BrainwareSrcIO(BaseIO):
         self._blk = Block(file_origin=self._file_origin)
         if not cascade:
             return self._blk
-        self._rcg = ChannelIndex(file_origin=self._file_origin,
+        self._chx = ChannelIndex(file_origin=self._file_origin,
                                           channel_indexes=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
         self._unit0 = Unit(name='UnassignedSpikes',
                            file_origin=self._file_origin,
                            elliptic=[], boundaries=[],
                            timestamp=[], max_valid=[])
-        self._blk.channel_indexes.append(self._rcg)
-        self._rcg.units.append(self._unit0)
+        self._blk.channel_indexes.append(self._chx)
+        self._chx.units.append(self._unit0)
         self._blk.segments.append(self._seg0)
 
         # this actually reads the contents of the Block
@@ -317,7 +317,7 @@ class BrainwareSrcIO(BaseIO):
 
         # reset the per-Block attributes
         self._blk = None
-        self._rcg = None
+        self._chx = None
         self._unitdict = {}
 
         # combine the comments into one big event
@@ -470,7 +470,7 @@ class BrainwareSrcIO(BaseIO):
         """
         if isinstance(data_obj, Unit):
             self.logger.warning('Unknown Unit found, adding to Units list')
-            self._rcg.units.append(data_obj)
+            self._chx.units.append(data_obj)
             if data_obj.name:
                 self._unitdict[data_obj.name] = data_obj
         elif isinstance(data_obj, Segment):
@@ -980,8 +980,8 @@ class BrainwareSrcIO(BaseIO):
             self.__read_comment()
 
         # create a channel_index for the numchannels
-        self._rcg.channel_indexes = np.arange(numchannels)
-        self._rcg.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)], dtype='S')
+        self._chx.channel_indexes = np.arange(numchannels)
+        self._chx.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)], dtype='S')
 
         # store what side of the head we are dealing with
         for segment in segments:
@@ -1296,7 +1296,7 @@ class BrainwareSrcIO(BaseIO):
         numelements = np.fromfile(self._fsrc, dtype=np.int16, count=1)[0]
 
         # {sequence} * numelements1 -- the number of lists of Units to read
-        self._rcg.annotations['max_valid'] = []
+        self._chx.annotations['max_valid'] = []
         for i in range(numelements):
 
             # {skip} = byte * 2 (int16) -- skip 2 bytes
@@ -1313,19 +1313,19 @@ class BrainwareSrcIO(BaseIO):
 
             # if there aren't enough Units, create them
             # remember we need to skip the UnassignedSpikes Unit
-            if numunits > len(self._rcg.units) + 1:
-                for ind1 in range(len(self._rcg.units), numunits + 1):
+            if numunits > len(self._chx.units) + 1:
+                for ind1 in range(len(self._chx.units), numunits + 1):
                     unit = Unit(name='unit%s' % ind1,
                                 file_origin=self._file_origin,
                                 elliptic=[], boundaries=[],
                                 timestamp=[], max_valid=[])
-                    self._rcg.units.append(unit)
+                    self._chx.units.append(unit)
 
             # {Block} * numelements -- Units
             for ind1 in range(numunits):
                 # get the Unit with the given index
                 # remember we need to skip the UnassignedSpikes Unit
-                unit = self._rcg.units[ind1 + 1]
+                unit = self._chx.units[ind1 + 1]
 
                 # {skip} = byte * 2 (int16) -- skip 2 bytes
                 self._fsrc.seek(2, 1)
@@ -1348,7 +1348,7 @@ class BrainwareSrcIO(BaseIO):
                 unit.annotations['boundaries'].append(boundaries)
                 unit.annotations['max_valid'].append(max_valid)
 
-        return self._rcg.units[1:maxunit]
+        return self._chx.units[1:maxunit]
 
     def __read_unit_list_timestamped(self):
         """
@@ -1460,7 +1460,7 @@ class BrainwareSrcIO(BaseIO):
         else:
             unit = Unit(name=name, file_origin=self._file_origin,
                         elliptic=[], boundaries=[], timestamp=[], max_valid=[])
-            self._rcg.units.append(unit)
+            self._chx.units.append(unit)
             self._unitdict[name] = unit
 
         # convert the individual spikes to SpikeTrains and add them to the Unit

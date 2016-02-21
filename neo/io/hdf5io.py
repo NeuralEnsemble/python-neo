@@ -555,7 +555,7 @@ class NeoHdf5IO(BaseIO):
 
         return self._search_parent(path, object_folder, ref)
 
-    def _get_rcgs(self, path, ref):
+    def _get_chxs(self, path, ref):
         """ Get ChannelIndex parents for a RecordingChannel
         """
         parts = path.split('/')
@@ -625,9 +625,9 @@ class NeoHdf5IO(BaseIO):
             paths = self.parent_paths[path]
 
             if t == 'RecordingChannel':  # Set list of parnet channel groups
-                for rcg in self.parent_paths[path]:
+                for chx in self.parent_paths[path]:
                     o.channel_indexes.append(
-                        self.get(rcg, cascade='lazy', lazy=lazy))
+                        self.get(chx, cascade='lazy', lazy=lazy))
             else:  # Set parents: Segment and another parent
                 if paths[0] is None:
                     paths[0] = self._get_parent(
@@ -648,11 +648,11 @@ class NeoHdf5IO(BaseIO):
             ref = self._data.getNodeAttr(path, 'object_ref')
 
             if t == 'RecordingChannel':
-                rcg_paths = self._get_rcgs(path, ref)
-                for rcg in rcg_paths:
+                chx_paths = self._get_chxs(path, ref)
+                for chx in chx_paths:
                     o.channel_indexes.append(self.get(
-                        rcg, cascade='lazy', lazy=lazy))
-                self.parent_paths[path] = rcg_paths
+                        chx, cascade='lazy', lazy=lazy))
+                self.parent_paths[path] = chx_paths
             else:
                 for p in o._single_parent_containers:
                     parent = self._get_parent(path, ref, p)

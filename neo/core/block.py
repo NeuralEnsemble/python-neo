@@ -39,16 +39,16 @@ class Block(Container):
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     rcg = ChannelIndex(name='Array probe %d' % ind,
+        ...     chx = ChannelIndex(name='Array probe %d' % ind,
         ...                                 channel_indexes=np.arange(64))
-        ...     blk.channel_indexes.append(rcg)
+        ...     blk.channel_indexes.append(chx)
         ...
         >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.channel_indexes:
+        ...     for chx in blk.channel_indexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignals.append(a)
+        ...         chx.analogsignals.append(a)
         ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:

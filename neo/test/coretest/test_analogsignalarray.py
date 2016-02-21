@@ -197,9 +197,9 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         segment.analogsignals = [signal]
         segment.create_many_to_one_relationship()
 
-        rcg = ChannelIndex(name='rcg1', channel_indexes=np.arange(signal.shape[1]))
-        rcg.analogsignals = [signal]
-        rcg.create_many_to_one_relationship()
+        chx = ChannelIndex(name='chx1', channel_indexes=np.arange(signal.shape[1]))
+        chx.analogsignals = [signal]
+        chx.create_many_to_one_relationship()
 
         self.assertEqual(signal._single_parent_objects,
                          ('Segment', 'ChannelIndex'))
@@ -216,7 +216,7 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
 
         self.assertEqual(len(signal.parents), 2)
         self.assertEqual(signal.parents[0].name, 'seg1')
-        self.assertEqual(signal.parents[1].name, 'rcg1')
+        self.assertEqual(signal.parents[1].name, 'chx1')
 
         assert_neo_object_is_compliant(signal)
 

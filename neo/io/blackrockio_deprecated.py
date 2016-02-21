@@ -112,18 +112,18 @@ class BlackrockIO(BaseIO):
             n_stops = [self.loader.header.n_samples]
 
         #~ # Add channel hierarchy
-        #~ rcg = ChannelIndex(name='allchannels',
+        #~ chx = ChannelIndex(name='allchannels',
             #~ description='group of all channels', file_origin=self.filename)
-        #~ block.channel_indexes.append(rcg)
+        #~ block.channel_indexes.append(chx)
         #~ self.channel_number_to_recording_channel = {}
 
         #~ # Add each channel at a time to hierarchy
         #~ for ch in channel_list:
             #~ ch_object = RecordingChannel(name='channel%d' % ch,
                 #~ file_origin=self.filename, index=ch)
-            #~ rcg.channel_indexes.append(ch_object.index)
-            #~ rcg.channel_names.append(ch_object.name)
-            #~ rcg.recordingchannels.append(ch_object)
+            #~ chx.channel_indexes.append(ch_object.index)
+            #~ chx.channel_names.append(ch_object.name)
+            #~ chx.recordingchannels.append(ch_object)
             #~ self.channel_number_to_recording_channel[ch] = ch_object
 
         # Iterate through n_starts and n_stops and add one Segment

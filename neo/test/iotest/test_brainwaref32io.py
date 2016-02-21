@@ -51,14 +51,14 @@ def proc_f32(filename):
 
     # create the objects to store other objects
     block = Block(file_origin=filenameorig)
-    rcg = ChannelIndex(file_origin=filenameorig,
+    chx = ChannelIndex(file_origin=filenameorig,
                                 channel_indexes=np.array([], dtype=np.int),
                                 channel_names=np.array([], dtype='S'))
     unit = Unit(file_origin=filenameorig)
 
     # load objects into their containers
-    block.channel_indexes.append(rcg)
-    rcg.units.append(unit)
+    block.channel_indexes.append(chx)
+    chx.units.append(unit)
 
     try:
         with np.load(filename) as f32obj:

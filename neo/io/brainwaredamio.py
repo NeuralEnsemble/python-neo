@@ -141,13 +141,13 @@ class BrainwareDamIO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = ChannelIndex(file_origin=self._filename,
+        chx = ChannelIndex(file_origin=self._filename,
                                     channel_ids=np.array([1]),
                                     channel_indexes=np.array([0]),
                                     channel_names=np.array(['Chan1'], dtype='S'))
 
         # load objects into their containers
-        block.channel_indexes.append(rcg)
+        block.channel_indexes.append(chx)
 
         # open the file
         with open(self._path, 'rb') as fobject:
@@ -159,7 +159,7 @@ class BrainwareDamIO(BaseIO):
                     break
 
                 # store the segment and signals
-                seg.analogsignals[0].channel_index = rcg
+                seg.analogsignals[0].channel_index = chx
                 block.segments.append(seg)
 
         # remove the file object

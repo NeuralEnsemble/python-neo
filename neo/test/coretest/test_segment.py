@@ -685,7 +685,7 @@ class TestSegment(unittest.TestCase):
         sig_len = 100
 
         # channelindexes
-        rcgs = [ChannelIndex(name='Vm',
+        chxs = [ChannelIndex(name='Vm',
                                       channel_indexes=unit_with_sig),
                 ChannelIndex(name='Conductance',
                                       channel_indexes=unit_with_sig)]
@@ -698,7 +698,7 @@ class TestSegment(unittest.TestCase):
             all_unit.append(un)
 
         blk = Block()
-        blk.channel_indexes = rcgs
+        blk.channel_indexes = chxs
         for s in range(nb_seg):
             seg = Segment(name='Simulation %s' % s)
             for j in range(nb_unit):
@@ -717,8 +717,8 @@ class TestSegment(unittest.TestCase):
         blk.create_many_to_one_relationship()
         for unit in all_unit:
             assert_neo_object_is_compliant(unit)
-        for rcg in rcgs:
-            assert_neo_object_is_compliant(rcg)
+        for chx in chxs:
+            assert_neo_object_is_compliant(chx)
         assert_neo_object_is_compliant(blk)
 
         # what you want

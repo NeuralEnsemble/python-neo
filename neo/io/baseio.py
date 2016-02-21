@@ -189,7 +189,7 @@ class BaseIO(object):
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
-    def write_channelindex(self, rcg, **kargs):
+    def write_channelindex(self, chx, **kargs):
         assert(ChannelIndex in self.writeable_objects), write_error
 
     def write_event(self, ev, **kargs):

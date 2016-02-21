@@ -140,14 +140,14 @@ class KwikIO(BaseIO):
             else:
                 channel_index = np.arange(0,self._attrs['shape'][1])
 
-            rcg = ChannelIndex(name='all channels',
+            chx = ChannelIndex(name='all channels',
                                  channel_indexes=channel_index)
-            blk.channel_indexes.append(rcg)
+            blk.channel_indexes.append(chx)
 
             ana = self.read_analogsignal(channel_index=channel_index,
                                          lazy=lazy,
                                          cascade=cascade)
-            ana.channel_index = rcg
+            ana.channel_index = chx
             seg.duration = (self._attrs['shape'][0]
                           / self._attrs['kwik']['sample_rate']) * pq.s
 

@@ -98,13 +98,13 @@ class BlackrockIO(BaseIO):
                     index = sig.get_channel_index()[i]
                     break
             if index is not None:
-                rcg = ChannelIndex(name = 'Group {0}'.format(channel_id),
+                chx = ChannelIndex(name = 'Group {0}'.format(channel_id),
                                             channel_indexes=np.array([index]),
                                             channel_ids=np.array([channel_id]))
                 unit = Unit(name=st.name)
                 unit.spiketrains.append(st)
-                rcg.units.append(unit)
-                bl.channel_indexes.append(rcg)
+                chx.units.append(unit)
+                bl.channel_indexes.append(chx)
 
         bl.create_many_to_one_relationship()
         
@@ -420,13 +420,13 @@ class BlackrockIO(BaseIO):
                 channel_indexes = np.arange(anasig.shape[1])
 
             # this assumes there is only ever a single segment
-            rcg = ChannelIndex(channel_indexes=channel_indexes,
+            chx = ChannelIndex(channel_indexes=channel_indexes,
                                         channel_ids=np.array(ch['channel_id']),
                                         channel_names=np.array(ch['label']),
                                         name=name,
                                         file_origin=filename_nsx)
-            rcg.analogsignals.append(anasig)
-            anasig.channel_index = rcg
+            chx.analogsignals.append(anasig)
+            anasig.channel_index = chx
             seg.analogsignals.append(anasig)
 
     def read_sif(self, filename_sif, seg, ):

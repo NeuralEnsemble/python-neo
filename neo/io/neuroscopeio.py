@@ -98,13 +98,13 @@ class NeuroScopeIO(BaseIO):
             bl.segments.append(seg)
             
             # RCG
-            for i, xml_rcg in  enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
-                n_channels = len(xml_rcg)
-                rcg = ChannelIndex(name = 'Group {0}'.format(i),
+            for i, xml_chx in  enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
+                n_channels = len(xml_chx)
+                chx = ChannelIndex(name = 'Group {0}'.format(i),
                                             channel_indexes=np.arange(n_channels, dtype = int))
-                rcg.channel_ids = np.array([int(xml_rc.text) for xml_rc in xml_rcg])
-                rcg.channel_names = np.array(['Channel{0}'.format(id) for id in rcg.channel_ids], dtype = 'S')
-                bl.channel_indexes.append(rcg)
+                chx.channel_ids = np.array([int(xml_rc.text) for xml_rc in xml_chx])
+                chx.channel_names = np.array(['Channel{0}'.format(id) for id in chx.channel_ids], dtype = 'S')
+                bl.channel_indexes.append(chx)
         
             # AnalogSignals
             reader = RawBinarySignalIO(filename = self.filename.replace('.xml', '.dat'))
@@ -121,7 +121,7 @@ class NeuroScopeIO(BaseIO):
                     sig /= amplification
                 sig.segment = seg
                 seg.analogsignals.append(sig)
-                rcg.analogsignals.append(sig)
+                chx.analogsignals.append(sig)
             
         bl.create_many_to_one_relationship()
         return bl

@@ -53,14 +53,14 @@ Perhaps you want to see which physical location produces the strongest response,
 .. doctest::
     
     # We assume that our block has only 1 ChannelIndex
-    rcg = block.channelindexes[0]:
+    chx = block.channelindexes[0]:
 
-    index = rcg.channel_indexes
-    siglist = [sig[:, index] for sig in rcg.analogsignals]
+    index = chx.channel_indexes
+    siglist = [sig[:, index] for sig in chx.analogsignals]
     avg = np.mean(siglist, axis=0)
         
     plt.figure()
-    for index, name in zip(rcg.channel_indexes, rcg.channel_names):
+    for index, name in zip(chx.channel_indexes, chx.channel_names):
         plt.plot(avg[:, index])
         plt.title("Average response on channels %s: %s' % (index, name)
 
@@ -75,7 +75,7 @@ during the experiment and you want to follow up. What was the average response?
 
 .. doctest::
 
-    index = rcg.channel_indexes[5]
+    index = chx.channel_indexes[5]
     avg = np.mean([seg.analogsignals[0][:, index] for seg in block.segments[::2]], axis=1)
     plt.plot(avg)
 
@@ -142,14 +142,14 @@ blending all units:
 
 .. doctest::
 
-    for rcg in block.channelindexes:
+    for chx in block.channelindexes:
         stlist = []
-        for unit in rcg.units:
+        for unit in chx.units:
             stlist.extend([st - st.t_start for st in unit.spiketrains])
         plt.figure()
         count, bins = np.histogram(stlist)
         plt.bar(bins[:-1], count, width=bins[1] - bins[0])
-        plt.title("PSTH blend of tetrode  %s" % rcg.name)
+        plt.title("PSTH blend of tetrode  %s" % chx.name)
 
 
 Spike sorting
@@ -177,13 +177,13 @@ how you could iterate over the contained signals and extract spike times.
                       [0.1, 0.1, 0.1, 0.1],
                       [0.1, 0.1, 0.1, 0.1]],
                      sampling_rate=1000*Hz, units='V'))
-    rcg = ChannelIndex(channel_indexes=[0, 1, 2, 3])
-    rcg.analogsignals.append(seg.analogsignals[0])
+    chx = ChannelIndex(channel_indexes=[0, 1, 2, 3])
+    chx.analogsignals.append(seg.analogsignals[0])
 
 
     # extract spike trains from each channel
     st_list = []
-    for signal in rcg.analogsignals:
+    for signal in chx.analogsignals:
         # use a simple threshhold detector
         spike_mask = np.where(np.min(signal.magnitude, axis=1) < -1.0)[0]   # note, np.min(Quantity) is borked
         
@@ -207,7 +207,7 @@ Unit to the group on which we detected it.
     
     u = Unit()
     u.spiketrains = st_list
-    rcg.units.append(u)
+    chx.units.append(u)
 
 Now the recording channel group (tetrode) contains a list of analogsignals,
 and a single Unit object containing all of the detected spiketrains from those
