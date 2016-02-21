@@ -30,7 +30,7 @@ from __future__ import absolute_import, division, print_function
 
 from neo.core.block import Block
 from neo.core.segment import Segment
-from neo.core.recordingchannelgroup import ChannelIndex
+from neo.core.channelindex import ChannelIndex
 from neo.core.unit import Unit
 
 from neo.core.analogsignal import AnalogSignal

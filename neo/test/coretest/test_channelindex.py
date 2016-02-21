@@ -20,7 +20,7 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
-from neo.core.recordingchannelgroup import ChannelIndex
+from neo.core.channelindex import ChannelIndex
 from neo.core.container import filterdata
 from neo.core import Block, Segment, SpikeTrain
 from neo.test.tools import (assert_neo_object_is_compliant,
