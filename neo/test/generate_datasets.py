@@ -356,7 +356,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     #    inds = []
     #    names = []
     #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
-    #    obj.channel_indexes = np.array(inds, dtype='i')
+    #    obj.indexes = np.array(inds, dtype='i')
     #    obj.channel_names = np.array(names).astype('S')
 
     if hasattr(obj, 'create_many_to_one_relationship'):

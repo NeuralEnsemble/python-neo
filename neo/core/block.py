@@ -40,7 +40,7 @@ class Block(Container):
         ...
         >>> for ind in range(2):
         ...     chx = ChannelIndex(name='Array probe %d' % ind,
-        ...                                 channel_indexes=np.arange(64))
+        ...                        index=np.arange(64))
         ...     blk.channel_indexes.append(chx)
         ...
         >>> # Populate the Block with AnalogSignal objects

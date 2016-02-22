@@ -121,7 +121,7 @@ class BlackrockIO(BaseIO):
         #~ for ch in channel_list:
             #~ ch_object = RecordingChannel(name='channel%d' % ch,
                 #~ file_origin=self.filename, index=ch)
-            #~ chx.channel_indexes.append(ch_object.index)
+            #~ chx.index.append(ch_object.index)
             #~ chx.channel_names.append(ch_object.name)
             #~ chx.recordingchannels.append(ch_object)
             #~ self.channel_number_to_recording_channel[ch] = ch_object
@@ -277,7 +277,7 @@ def channel_indexes_in_segment(seg):
         channel_indices.append(sig.recordingchannel.index)
 
     for asa in seg.analogsignals:
-        channel_indices.append(asa.channel_index.channel_indexes)
+        channel_indices.append(asa.channel_index.index)
 
     return channel_indices
 

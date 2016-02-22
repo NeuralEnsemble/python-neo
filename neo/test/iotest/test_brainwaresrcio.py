@@ -87,7 +87,7 @@ def proc_src(filename):
     chx = proc_src_units(srcfile, filename)
     chan_nums = np.arange(NChannels, dtype='int')
     chan_names = ['Chan{}'.format(i) for i in range(NChannels)]
-    chx.channel_indexes = chan_nums
+    chx.index = chan_nums
     chx.channel_names = np.array(chan_names, dtype='string_')
     block.channel_indexes.append(chx)
 
@@ -127,7 +127,7 @@ def proc_src_units(srcfile, filename):
     '''Get the units in an src file that has been processed by the official
     matlab function.  See proc_src for details'''
     chx = ChannelIndex(file_origin=filename,
-                                channel_indexes=np.array([], dtype=int))
+                       index=np.array([], dtype=int))
     un_unit = Unit(name='UnassignedSpikes', file_origin=filename,
                    elliptic=[], boundaries=[], timestamp=[], max_valid=[])
 

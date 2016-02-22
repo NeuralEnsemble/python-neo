@@ -63,8 +63,8 @@ from neo.core import (AnalogSignal, Block,
 #     names = np.array([recordingchannels[idx].name for idx in indexes],
 #                      dtype='S')
 #     chx = ChannelIndex(name='all channels',
-#                                 channel_indexes=indexes,
-#                                 channel_names=names)
+#                        index=indexes,
+#                        channel_names=names)
 #     bl.channel_indexes.append(chx)
 #     for ind in indexes:
 #         # many to many relationship

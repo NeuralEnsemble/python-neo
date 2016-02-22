@@ -76,6 +76,6 @@ class Unit(Container):
         """
         """
         if self.channel_index:
-            return self.channel_index.channel_indexes
+            return self.channel_index.index
         else:
             return None

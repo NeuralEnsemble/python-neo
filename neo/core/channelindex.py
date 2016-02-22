@@ -43,7 +43,7 @@ class ChannelIndex(Container):
         ...
         >>> for ind in range(2):
         ...     chx = ChannelIndex(name='Array probe %d' % ind,
-        ...                                 channel_indexes=np.arange(64))
+        ...                        index=np.arange(64))
         ...     blk.channel_indexes.append(chx)
         ...
         >>> # Populate the Block with AnalogSignal objects
@@ -117,13 +117,13 @@ class ChannelIndex(Container):
     _container_child_objects = ('Unit',)
     _data_child_objects = ('AnalogSignal', 'IrregularlySampledSignal')
     _single_parent_objects = ('Block',)
-    _necessary_attrs = (('channel_indexes', np.ndarray, 1, np.dtype('i')),)
+    _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
     _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
                            ('channel_ids', np.ndarray, 1, np.dtype('i')),
                            ('coordinates', pq.Quantity, 2)) +
                           Container._recommended_attrs)
 
-    def __init__(self, channel_indexes, channel_names=None, channel_ids=None,
+    def __init__(self, index, channel_names=None, channel_ids=None,
                  name=None, description=None, file_origin=None,
                  coordinates=None, **annotations):
         '''
@@ -133,9 +133,9 @@ class ChannelIndex(Container):
         # Sets universally recommended attributes, and places all others
         # in annotations
         super(ChannelIndex, self).__init__(name=name,
-                                                    description=description,
-                                                    file_origin=file_origin,
-                                                    **annotations)
+                                           description=description,
+                                           file_origin=file_origin,
+                                           **annotations)
 
         # Defaults
         if channel_names is None:
@@ -144,4 +144,4 @@ class ChannelIndex(Container):
         # Store recommended attributes
         self.channel_names = channel_names
         self.channel_ids = channel_ids
-        self.channel_indexes = channel_indexes
+        self.index = index

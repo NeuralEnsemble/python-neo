@@ -59,9 +59,9 @@ def proc_dam(filename):
     block = Block(file_origin=filename)
 
     chx = ChannelIndex(file_origin=filename,
-                                channel_indexes = np.array([0]),
-                                channel_ids = np.array([1]),
-                                channel_names = np.array(['Chan1'], dtype='S'))
+                       index=np.array([0]),
+                       channel_ids=np.array([1]),
+                       channel_names=np.array(['Chan1'], dtype='S'))
 
     block.channel_indexes.append(chx)
 

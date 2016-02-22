@@ -141,7 +141,7 @@ class KwikIO(BaseIO):
                 channel_index = np.arange(0,self._attrs['shape'][1])
 
             chx = ChannelIndex(name='all channels',
-                                 channel_indexes=channel_index)
+                               index=channel_index)
             blk.channel_indexes.append(chx)
 
             ana = self.read_analogsignal(channel_index=channel_index,

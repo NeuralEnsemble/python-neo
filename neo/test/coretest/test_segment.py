@@ -686,9 +686,9 @@ class TestSegment(unittest.TestCase):
 
         # channelindexes
         chxs = [ChannelIndex(name='Vm',
-                                      channel_indexes=unit_with_sig),
+                             index=unit_with_sig),
                 ChannelIndex(name='Conductance',
-                                      channel_indexes=unit_with_sig)]
+                             index=unit_with_sig)]
 
         # Unit
         all_unit = []

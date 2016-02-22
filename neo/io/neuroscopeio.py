@@ -100,8 +100,8 @@ class NeuroScopeIO(BaseIO):
             # RCG
             for i, xml_chx in  enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
                 n_channels = len(xml_chx)
-                chx = ChannelIndex(name = 'Group {0}'.format(i),
-                                            channel_indexes=np.arange(n_channels, dtype = int))
+                chx = ChannelIndex(name='Group {0}'.format(i),
+                                   index=np.arange(n_channels, dtype = int))
                 chx.channel_ids = np.array([int(xml_rc.text) for xml_rc in xml_chx])
                 chx.channel_names = np.array(['Channel{0}'.format(id) for id in chx.channel_ids], dtype = 'S')
                 bl.channel_indexes.append(chx)

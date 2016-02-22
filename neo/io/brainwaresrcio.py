@@ -290,7 +290,7 @@ class BrainwareSrcIO(BaseIO):
         if not cascade:
             return self._blk
         self._chx = ChannelIndex(file_origin=self._file_origin,
-                                          channel_indexes=np.array([], dtype=np.int))
+                                          index=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
         self._unit0 = Unit(name='UnassignedSpikes',
                            file_origin=self._file_origin,
@@ -980,7 +980,7 @@ class BrainwareSrcIO(BaseIO):
             self.__read_comment()
 
         # create a channel_index for the numchannels
-        self._chx.channel_indexes = np.arange(numchannels)
+        self._chx.index = np.arange(numchannels)
         self._chx.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)], dtype='S')
 
         # store what side of the head we are dealing with

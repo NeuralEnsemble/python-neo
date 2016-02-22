@@ -143,7 +143,7 @@ class TestUnit(unittest.TestCase):
                                unit1a.spiketrains)
 
     def test__children(self):
-        chx = ChannelIndex(channel_indexes=np.arange(self.nchildren), name='chx1')
+        chx = ChannelIndex(index=np.arange(self.nchildren), name='chx1')
         chx.units = [self.unit1]
         chx.create_many_to_one_relationship()
         assert_neo_object_is_compliant(self.unit1)

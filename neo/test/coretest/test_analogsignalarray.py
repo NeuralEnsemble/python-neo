@@ -197,7 +197,7 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         segment.analogsignals = [signal]
         segment.create_many_to_one_relationship()
 
-        chx = ChannelIndex(name='chx1', channel_indexes=np.arange(signal.shape[1]))
+        chx = ChannelIndex(name='chx1', index=np.arange(signal.shape[1]))
         chx.analogsignals = [signal]
         chx.create_many_to_one_relationship()
 

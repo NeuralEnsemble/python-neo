@@ -149,23 +149,23 @@ class TestChannelIndex(unittest.TestCase):
         self.trains2 = sum(self.trains2, [])
 
     def test__channelindex__init_defaults(self):
-        chx = ChannelIndex(channel_indexes=np.array([1]))
+        chx = ChannelIndex(index=np.array([1]))
         assert_neo_object_is_compliant(chx)
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.file_origin, None)
         self.assertEqual(chx.analogsignals, [])
         assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
-        assert_arrays_equal(chx.channel_indexes, np.array([1]))
+        assert_arrays_equal(chx.index, np.array([1]))
 
     def test_channelindex__init(self):
         chx = ChannelIndex(file_origin='temp.dat',
-                                    channel_indexes=np.array([1]))
+                           index=np.array([1]))
         assert_neo_object_is_compliant(chx)
         self.assertEqual(chx.file_origin, 'temp.dat')
         self.assertEqual(chx.name, None)
         self.assertEqual(chx.analogsignals, [])
         assert_arrays_equal(chx.channel_names, np.array([], dtype='S'))
-        assert_arrays_equal(chx.channel_indexes, np.array([1]))
+        assert_arrays_equal(chx.index, np.array([1]))
 
     def check_creation(self, chx):
         assert_neo_object_is_compliant(chx)

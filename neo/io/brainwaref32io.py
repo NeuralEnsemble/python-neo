@@ -159,7 +159,7 @@ class BrainwareF32IO(BaseIO):
 
         # create the objects to store other objects
         chx = ChannelIndex(file_origin=self._filename,
-                                    channel_indexes=np.array([], dtype=np.int))
+                                    index=np.array([], dtype=np.int))
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers

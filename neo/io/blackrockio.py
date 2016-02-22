@@ -98,9 +98,9 @@ class BlackrockIO(BaseIO):
                     index = sig.get_channel_index()[i]
                     break
             if index is not None:
-                chx = ChannelIndex(name = 'Group {0}'.format(channel_id),
-                                            channel_indexes=np.array([index]),
-                                            channel_ids=np.array([channel_id]))
+                chx = ChannelIndex(name='Group {0}'.format(channel_id),
+                                   index=np.array([index]),
+                                   channel_ids=np.array([channel_id]))
                 unit = Unit(name=st.name)
                 unit.spiketrains.append(st)
                 chx.units.append(unit)
@@ -420,11 +420,11 @@ class BlackrockIO(BaseIO):
                 channel_indexes = np.arange(anasig.shape[1])
 
             # this assumes there is only ever a single segment
-            chx = ChannelIndex(channel_indexes=channel_indexes,
-                                        channel_ids=np.array(ch['channel_id']),
-                                        channel_names=np.array(ch['label']),
-                                        name=name,
-                                        file_origin=filename_nsx)
+            chx = ChannelIndex(index=channel_indexes,
+                               channel_ids=np.array(ch['channel_id']),
+                               channel_names=np.array(ch['label']),
+                               name=name,
+                               file_origin=filename_nsx)
             chx.analogsignals.append(anasig)
             anasig.channel_index = chx
             seg.analogsignals.append(anasig)
