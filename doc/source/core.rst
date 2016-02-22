@@ -2,13 +2,16 @@
 Neo core
 ********
 
-.. currentmodule:: neo
+.. currentmodule:: neo.core
 
-Introduction
-============
+This figure shows the main data types in Neo:
 
-Objects in Neo represent neural data and collections of data. Neo objects fall
-into three categories: data objects, container objects and grouping objects.
+.. image:: images/base_schematic.png
+   :height: 500 px
+   :alt: Illustration of the main Neo data types
+   :align: center
+
+Neo objects fall into three categories: data objects, container objects and grouping objects.
 
 Data objects
 ------------
@@ -16,28 +19,27 @@ Data objects
 These objects directly represent data as arrays of numerical values with
 associated metadata (units, sampling frequency, etc.).
 
-:py:class:`AnalogSignalArray`:
-    A regular sampling of a single- or multi-channel continuous analog signal.
+  * :py:class:`AnalogSignal`: A regular sampling of a single- or multi-channel continuous analog signal.
+  * :py:class:`IrregularlySampledSignal`: A non-regular sampling of a single- or multi-channel continuous analog signal.
+  * :py:class:`SpikeTrain`: A set of action potentials (spikes) emitted by the same unit in a period of time (with optional waveforms).
+  * :py:class:`Event`: An array of time points representing one or more events in the data.
+  * :py:class:`Epoch`: An array of time intervals representing one or more periods of time in the data.
 
-:py:class:`SpikeTrain`:
-    A set of action potentials (spikes) emitted by the same unit in a period of time (with optional waveforms).
-
-:py:class:`Event`:
-    An array of time points representing one or more events in the data.
-
-:py:class:`Epoch`:
-    An array of time intervals representing one or more periods of time in the data.
 
 Container objects
 -----------------
 
 There is a simple hierarchy of containers:
 
-:py:class:`Segment`:
-    A container for heterogeneous discrete or continous data sharing a common clock (time basis) but not necessarily the same sampling rate, start time or end time. A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run", "recording", etc., depending on the experimental context. May contain any of the data objects.
+  * :py:class:`Segment`: A container for heterogeneous discrete or continous data sharing a common
+    clock (time basis) but not necessarily the same sampling rate, start time or end time.
+    A :py:class:`Segment` can be considered as equivalent to a "trial", "episode", "run",
+    "recording", etc., depending on the experimental context.
+    May contain any of the data objects.
+  * :py:class:`Block`: The top-level container gathering all of the data, discrete and continuous,
+    for a given recording session.
+    Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
 
-:py:class:`Block`:
-    The top-level container gathering all of the data, discrete and continuous, for a given recording session. Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
 
 Grouping objects
 ----------------
@@ -47,25 +49,29 @@ were recorded on which electrodes, which spike trains were obtained from which
 membrane potential signals, etc. They contain references to data objects that
 cut across the simple container hierarchy.
 
+  * :py:class:`ChannelIndex`: A set of indices into :py:class:`AnalogSignal` objects,
+    representing logical and/or physical recording channels. This has two uses:
 
-:py:class:`ChannelIndex`:
-    A set of indices into :py:class:`AnalogSignal` objects, representing logical and/or
-    physical recording channels. This has several uses:
-      * for linking :py:class:`AnalogSignal` objects recorded from the same (multi)electrode
-        across several :py:class:`Segment` objects.
-      * for spike sorting of extracellular signals, where spikes may be recorded on more than one
-        recording channel, and the :py:class:`ChannelIndex` can be used to associate each
-        :py:class:`Unit` with the group of recording channels from which it was calculated.
+      1. for linking :py:class:`AnalogSignal` objects recorded from the same (multi)electrode
+         across several :py:class:`Segment`\s.
+      2. for spike sorting of extracellular signals, where spikes may be recorded on more than one
+         recording channel, and the :py:class:`ChannelIndex` can be used to associate each
+         :py:class:`Unit` with the group of recording channels from which it was obtained.
 
-:py:class:`Unit`:
-    A Unit gathers all the :class:`SpikeTrain` objects within a common :class:`Block`, possibly
-    across several Segments, that have been emitted by the same cell.
-    A :class:`Unit` is linked to the :class:`ChannelIndex` object from which it was detected.
+  * :py:class:`Unit`: A Unit links the :class:`SpikeTrain` objects within a :class:`Block`,
+    possibly across multiple Segments, that were emitted by the same cell.
+    A :class:`Unit` is linked to the :class:`ChannelIndex` object from which the spikes were detected.
 
-.. image:: images/base_schematic.png
-   :height: 500 px
-   :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
-   :align: center
+
+NumPy compatibility
+===================
+
+Neo data objects inherit from :py:class:`Quantity`, which in turn inherits from NumPy
+:py:class:`ndarray`. This means that a Neo :py:class:`AnalogSignal` is also a :py:class:`Quantity`
+and an array, giving you access to all of the methods available for those objects.
+
+For example, you can pass a :py:class:`SpikeTrain` directly to the :py:func:`numpy.histogram`
+function, or an :py:class:`AnalogSignal` directly to the :py:func:`numpy.std` function.
 
 
 Relationships between objects
@@ -91,13 +97,13 @@ In general, an object can access its children with an attribute *childname+s* in
     * :attr:`Block.segments`
     * :attr:`Segments.analogsignals`
     * :attr:`Segments.spiketrains`
-    * :attr:`Block.channelindexes`
+    * :attr:`Block.channel_indexes`
 
 These relationships are bi-directional, i.e. a child object can access its parent:
 
     * :attr:`Segment.block`
     * :attr:`AnalogSignal.segment`
-    * :attr:`SpikeTrains.segment`
+    * :attr:`SpikeTrain.segment`
     * :attr:`ChannelIndex.block`
 
 Here is an example showing these relationships in use::
@@ -180,13 +186,7 @@ For more details, see the :doc:`api_reference`.
 
     
 
-Inheritance
-===========
 
-Some Neo objects (:py:class:`AnalogSignal`, :py:class:`SpikeTrain`) inherit from :py:class:`Quantity`,
-which in turn inherits from NumPy :py:class:`ndarray`. This means that a Neo :py:class:`AnalogSignal` actually is also a :py:class:`Quantity` and an array, giving you access to all of the methods available for those objects.
-
-For example, you can pass a :py:class:`SpikeTrain` directly to the :py:func:`numpy.histogram` function, or an :py:class:`AnalogSignal` directly to the :py:func:`numpy.std` function.
 
 
 Initialization

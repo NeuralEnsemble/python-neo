@@ -15,6 +15,8 @@ Our entire dataset is contained in a :class:`Block`, which in turn contains:
   * 1 :class:`ChannelIndex`.
 
 .. image:: images/multi_segment_diagram.png
+   :width: 75%
+   :align: center
 
 :class:`Segment` and :class:`ChannelIndex` objects provide two different
 ways to access the data, corresponding respectively, in this scenario, to access
@@ -98,6 +100,9 @@ Again, our data set is contained in a :class:`Block`, which contains:
 In total we have 3 x 7 = 21 :class:`SpikeTrains` in this :class:`Block`.
 
 .. image:: images/multi_segment_diagram_spiketrain.png
+   :width: 75%
+   :align: center
+
 
 There are three ways to access the :class:`SpikeTrain` data:
 

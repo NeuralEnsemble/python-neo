@@ -1,6 +1,22 @@
-*************
+=============
 Release notes
-*************
+=============
+
+
+.. toctree::
+   :maxdepth: 1
+
+   releases/0.4.0.rst
+
+
+..   releases/0.2.0.rst
+..   releases/0.2.1.rst
+..   releases/0.3.0.rst
+..   releases/0.3.1.rst
+..   releases/0.3.2.rst
+..   releases/0.3.3.rst
+
+
 
 
 What's new in version 0.4.0?

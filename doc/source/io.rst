@@ -240,9 +240,9 @@ This example changes how the log text is displayed::
 For more complex logging, please see the documentation for the logging_ module.
 
 .. note:: If you wish to implement more advanced logging as describe in the documentation for the logging_ module or elsewhere on the internet, please do so before calling any :mod:`neo` functions or initializing any :mod:`neo` classes.
-This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
-Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
-Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
+          This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
+          Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
+          Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
 
 
 .. _neo_io_API:

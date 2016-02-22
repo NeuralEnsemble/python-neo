@@ -3,17 +3,20 @@
 .. image:: images/neologo.png
     :width: 600 px
     
-Neo is a package for representing electrophysiology data in Python, together
+Neo is a Python package for working with electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for
 writing to a subset of these formats plus non-proprietary formats including HDF5.
 
 The goal of Neo is to improve interoperability between Python tools for
-analyzing, visualizing and generating electrophysiology data (such as
-OpenElectrophy_, NeuroTools_, G-node_, Helmholtz_, PyNN_) by providing a common,
+analyzing, visualizing and generating electrophysiology data, by providing a common,
 shared object model. In order to be as lightweight a dependency as possible,
 Neo is deliberately limited to represention of data, with no functions for data
 analysis or visualization.
+
+Neo is used by a number of other software tools, including OpenElectrophy_
+and SpykeViewer_ (data analysis and visualization), Elephant_ (data analysis),
+the G-node_ suite (databasing) and PyNN_ (simulations).
 
 Neo implements a hierarchical data model well adapted to intracellular and
 extracellular electrophysiology and EEG data with support for multi-electrodes
@@ -42,34 +45,36 @@ Documentation
    io_developers_guide
    authors
 
+
 License
 -------
 
-Neo is distributed under a 3-clause Revised BSD licence (BSD-3-Clause).
+Neo is free software, distributed under a 3-clause Revised BSD licence (BSD-3-Clause).
+
+
+Support
+-------
+
+If you have problems installing the software or questions about usage, documentation or anything
+else related to Neo, you can post to the `NeuralEnsemble mailing list`_. If you find a bug,
+please create a ticket in our `issue tracker`_.
 
 
 Contributing
 ------------
 
-The people behind the project (see :doc:`authors`) are very open to discussion.
-Any feedback is gladly received and highly appreciated!
-Discussion of Neo takes place on the
-`NeuralEnsemble mailing list <http://groups.google.com/group/neuralensemble>`_.
-    
+Any feedback is gladly received and highly appreciated! Neo is a community project,
+and all contributions are welcomed - see the :doc:`developers_guide` for more information.
 `Source code <https://github.com/NeuralEnsemble/python-neo>`_ is on GitHub.
-
-The `bug tracker <https://github.com/NeuralEnsemble/python-neo/issues>`_ is at::
-
-    https://github.com/NeuralEnsemble/python-neo/issues
-
-
 
 
 .. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
-.. _NeuroTools: http://neuralensemble.org/NeuroTools
+.. _Elephant: http://neuralensemble.org/elephant
 .. _G-node: http://www.g-node.org/
 .. _Neuroshare: http://neuroshare.org/
-.. _Helmholtz: https://www.dbunic.cnrs-gif.fr/documentation/helmholtz/
+.. _SpykeViewer: https://spyke-viewer.readthedocs.org/en/latest/
 .. _NiBabel: http://nipy.sourceforge.net/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
 .. _quantities: http://pypi.python.org/pypi/quantities
+.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues
