@@ -1084,9 +1084,9 @@ class BlackrockIO(BaseIO):
 
         bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'bytes_in_headers', nsx_nb)
-        nb_data_points = \
+        nb_data_points = int(
             (self.__get_file_size(filename) - bytes_in_headers) / \
-            (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1
+            (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
 
         # add n_start
         n_starts = [(0 * t_unit).rescale(highest_res)]
@@ -1271,9 +1271,9 @@ class BlackrockIO(BaseIO):
 
         # extract parameters from nsx basic extended and data header
         data_parameters = {
-            'nb_data_points':
+            'nb_data_points': int(
                 (self.__get_file_size(filename) - bytes_in_headers) /
-                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1,
+                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'databl_idx': 1,
             'databl_t_start': t_starts[0],
             'databl_t_stop': t_stops[0]}
