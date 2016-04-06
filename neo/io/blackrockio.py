@@ -1085,7 +1085,7 @@ class BlackrockIO(BaseIO):
         bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'bytes_in_headers', nsx_nb)
         nb_data_points = int(
-            (self.__get_file_size(filename) - bytes_in_headers) / \
+            (self.__get_file_size(filename) - bytes_in_headers) /
             (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
 
         # add n_start
@@ -1422,10 +1422,10 @@ class BlackrockIO(BaseIO):
         if not isinstance(nsx_to_load, types.NoneType):
             for nsx_nb in nsx_to_load:
                 all_channels.extend(
-                    self.__nsx_ext_header[nsx_nb]['electrode_id'])
+                    self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
         else:
             all_channels.extend(
-                self.__nev_ext_header['NEUEVWAV']['electrode_id'])
+                self.__nev_ext_header['NEUEVWAV']['electrode_id'].astype(int))
         all_channels = np.unique(all_channels).tolist()
 
         if hasattr(channels, "__len__") and len(channels) == 0:
@@ -1443,6 +1443,9 @@ class BlackrockIO(BaseIO):
         if channels:
             if len(set(all_channels) & set(channels)) < len(channels):
                 raise ValueError("Unknown channel id in channels.")
+        else:
+            self._print_verbose("No channel is specified, therefore no "
+                                "recordingchannelgroup and unit is loaded.")
 
         return channels
 
@@ -1488,6 +1491,10 @@ class BlackrockIO(BaseIO):
 
             if units:
                 units = dict(zip(channels, [units] * len(channels)))
+
+        if isinstance(units, types.NoneType):
+            self._print_verbose("No units are specified, therefore no "
+                                "unit or spiketrain is loaded.")
 
         return units
 
@@ -1669,7 +1676,7 @@ class BlackrockIO(BaseIO):
         return ev
 
     def __read_spiketrain(
-            self, n_start, n_stop, spikes, channel_id, unit_id,
+            self, n_start, n_stop, spikes, channel_idx, unit_id,
             load_waveforms=False, lazy=False):
         """
         Creates spiketrains for Spikes in nev data.
@@ -1678,10 +1685,10 @@ class BlackrockIO(BaseIO):
 
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
+        name = "Unit {0}".format(1000 * channel_idx + unit_id)
         # define description for spiketrain
         desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
-            channel_id, self.__get_unit_classification(unit_id))
+            channel_idx, self.__get_unit_classification(unit_id))
 
         # get spike times for given time interval
         times = spikes['timestamp'] * event_unit
@@ -1702,8 +1709,8 @@ class BlackrockIO(BaseIO):
 
         # load waveforms if wanted
         if load_waveforms and not lazy:
-            wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
-            wf_size = self.__nev_params('waveform_size')[channel_id]
+            wf_dtype = self.__nev_params('waveform_dtypes')[channel_idx]
+            wf_size = self.__nev_params('waveform_size')[channel_idx]
 
             waveforms = spikes['waveform'].flatten().view(wf_dtype)
             waveforms = waveforms.reshape(spikes.size, 1, wf_size)
@@ -1713,13 +1720,13 @@ class BlackrockIO(BaseIO):
             st.left_sweep = self.__get_left_sweep_waveforms()
 
         # add additional annotations
-        st.annotate(channel_index=int(channel_id))
+        st.annotate(ch_idx=int(channel_idx))
         st.annotate(unit_id=int(unit_id))
 
         return st
 
     def __read_analogsignal(
-            self, n_start, n_stop, signal, channel_id, nsx_nb, lazy=False):
+            self, n_start, n_stop, signal, channel_idx, nsx_nb, lazy=False):
         """
         Creates analogsignal for signal of channel in nsx data.
         """
@@ -1749,14 +1756,14 @@ class BlackrockIO(BaseIO):
             'databl_t_stop', nsx_nb, n_start)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
-        if channel_id in elids_nsx:
-            ch_idx = elids_nsx.index(channel_id)
+        if channel_idx in elids_nsx:
+            ch_idx = elids_nsx.index(channel_idx)
         else:
             return None
 
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_id, labels[channel_id], nsx_nb)
+                channel_idx, labels[channel_idx], nsx_nb)
 
         data_times = np.arange(
             t_start.item(), t_stop.item(),
@@ -1782,12 +1789,13 @@ class BlackrockIO(BaseIO):
             signal=pq.Quantity(sig_ch, units[ch_idx], copy=False),
             sampling_rate=sampling_rate,
             t_start=data_times[0].rescale(nsx_time_unit),
-            name=labels[channel_id],
+            name=labels[channel_idx],
             description=description,
-            channel_index=channel_id,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
 
-        anasig.annotate(nsx=nsx_nb)
+        anasig.annotate(
+            nsx=nsx_nb,
+            ch_idx=channel_idx)
 
         if lazy:
             anasig.lazy_shape = np.shape(sig_ch)
@@ -1795,16 +1803,16 @@ class BlackrockIO(BaseIO):
 
         return anasig
 
-    def __read_unit(self, unit_id, channel_id):
+    def __read_unit(self, unit_id, channel_idx):
         """
         Creates unit with unit id for given channel id.
         """
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
+        name = "Unit {0}".format(1000 * channel_idx + unit_id)
         # define description for spiketrain
         desc = 'Unit from channel: {0}, id: {1}'.format(
-            channel_id, self.__get_unit_classification(unit_id))
+            channel_idx, self.__get_unit_classification(unit_id))
 
         un = Unit(
             name=name,
@@ -1812,30 +1820,25 @@ class BlackrockIO(BaseIO):
             file_origin='.'.join([self._filenames['nev'], 'nev']))
 
         # add additional annotations
-        un.annotate(channel_index=int(channel_id))
+        un.annotate(ch_idx=int(channel_idx))
         un.annotate(unit_id=int(unit_id))
 
         return un
 
     def __read_recordingchannelgroup(
-            self, channels, index=None, units=None, cascade=True):
+            self, channel_idx, index=None, channel_units=None, cascade=True):
         """
         Returns a neo.core.recordingchannelgroup.RecordingChannelGroup with the
         given index for the given channels containing a neo.core.unit.Unit
         object list of the given units.
         """
-        # Arg: channels
-        channels = self.__transform_channels(channels, nsx_to_load=[])
-        # Arg: units
-        units = self.__transform_units(units, channels)
-
-        if isinstance(channels, types.NoneType):
-            self._print_verbose("No channel is specified, therefore no "
-                                "recordingchannelgroup is loaded.")
-            return None
+#        if isinstance(channels, types.NoneType):
+#            self._print_verbose("No channel is specified, therefore no "
+#                                "recordingchannelgroup is loaded.")
+#            return None
 
         rcg = RecordingChannelGroup(
-            channel_indexes=np.array(channels),
+            channel_indexes=np.array([channel_idx]),
             file_origin=self.filename)
 
         if not isinstance(index, types.NoneType):
@@ -1845,8 +1848,8 @@ class BlackrockIO(BaseIO):
             rcg.name = "RecordingChannelGroup"
 
         if self._avail_files['nev']:
-            rcg.channel_names = [
-                self.__nev_params('channel_labels')[i] for i in channels]
+            rcg.channel_names = self.__nev_params(
+                'channel_labels')[channel_idx]
 
         rcg.description = \
             "Container for units and groups analogsignals across segments."
@@ -1858,18 +1861,18 @@ class BlackrockIO(BaseIO):
             # read nev data
             nev_data = self.__nev_data_reader[self.__nev_spec]()
 
-            if not isinstance(units, types.NoneType):
-                for ch_id in units.keys():
-                    # extract first data for channel
-                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
-                    data_ch = nev_data['Spikes'][ch_mask]
-                    if not isinstance(units[ch_id], types.NoneType):
-                        for un_id in units[ch_id]:
-                            if un_id in np.unique(data_ch['unit_class_nb']):
+            if not isinstance(channel_units, types.NoneType):
+                # extract first data for channel
+                ch_mask = (nev_data['Spikes']['packet_id'] == channel_idx)
+                data_ch = nev_data['Spikes'][ch_mask]
 
-                                un = self.__read_unit(ch_id, un_id)
+                for un_id in channel_units:
+                    if un_id in np.unique(data_ch['unit_class_nb']):
 
-                                rcg.units.append(un)
+                        un = self.__read_unit(
+                            unit_id=un_id, channel_idx=channel_idx)
+
+                        rcg.units.append(un)
 
         rcg.create_many_to_one_relationship()
 
@@ -1983,8 +1986,11 @@ class BlackrockIO(BaseIO):
                 for ev_type in ev_dict.keys():
 
                     ev = self.__read_event(
-                        n_start, n_stop, nev_data['NonNeural'],
-                        ev_dict[ev_type], lazy)
+                        n_start=n_start,
+                        n_stop=n_stop,
+                        data=nev_data['NonNeural'],
+                        ev_dict=ev_dict[ev_type],
+                        lazy=lazy)
 
                     if not isinstance(ev, types.NoneType):
                         seg.events.append(ev)
@@ -1997,29 +2003,34 @@ class BlackrockIO(BaseIO):
 
             # get spiketrain
             if not isinstance(units, types.NoneType):
-                for ch_id in units.keys():
+                for ch_idx in units.keys():
                     # extract first data for channel
-                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
+                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_idx)
                     data_ch = nev_data['Spikes'][ch_mask]
-                    if not isinstance(units[ch_id], types.NoneType):
-                        for un_id in units[ch_id]:
+                    if not isinstance(units[ch_idx], types.NoneType):
+                        for un_id in units[ch_idx]:
                             if un_id in np.unique(data_ch['unit_class_nb']):
                                 # extract then data for unit if unit exists
                                 un_mask = (data_ch['unit_class_nb'] == un_id)
                                 data_un = data_ch[un_mask]
 
                                 st = self.__read_spiketrain(
-                                    n_start, n_stop, data_un, ch_id, un_id,
-                                    load_waveforms, lazy)
+                                    n_start=n_start,
+                                    n_stop=n_stop,
+                                    spikes=data_un,
+                                    channel_idx=ch_idx,
+                                    unit_id=un_id,
+                                    load_waveforms=load_waveforms,
+                                    lazy=lazy)
 
                                 seg.spiketrains.append(st)
                             else:
                                 self._print_verbose(
                                     "Unit {0} on channel {1} does not "
-                                    "exist".format(un_id, ch_id))
+                                    "exist".format(un_id, ch_idx))
                     else:
                         self._print_verbose(
-                            "Channel {0} has no units".format(ch_id))
+                            "Channel {0} has no units".format(ch_idx))
 
         if not isinstance(nsx_to_load, types.NoneType):
             for nsx_nb in nsx_to_load:
@@ -2028,10 +2039,15 @@ class BlackrockIO(BaseIO):
                     self.__nsx_data_reader[self.__nsx_spec[nsx_nb]](nsx_nb)
 
                 # read analogsignals
-                for ch_id in channels:
+                for ch_idx in channels:
 
                     anasig = self.__read_analogsignal(
-                        n_start, n_stop, nsx_data, ch_id, nsx_nb, lazy)
+                        n_start=n_start,
+                        n_stop=n_stop,
+                        signal=nsx_data,
+                        channel_idx=ch_idx,
+                        nsx_nb=nsx_nb,
+                        lazy=lazy)
 
                     if not isinstance(anasig, types.NoneType):
                         seg.analogsignals.append(anasig)
@@ -2160,30 +2176,49 @@ class BlackrockIO(BaseIO):
         # read segment
         for seg_idx, (n_start, n_stop) in enumerate(zip(n_starts, n_stops)):
             seg = self.read_segment(
-                n_start, n_stop, index=seg_idx, nsx_to_load=nsx_to_load,
-                channels=channels, units=units, load_waveforms=load_waveforms,
-                load_events=load_events, lazy=lazy, cascade=cascade)
+                n_start=n_start,
+                n_stop=n_stop,
+                index=seg_idx,
+                nsx_to_load=nsx_to_load,
+                channels=channels,
+                units=units,
+                load_waveforms=load_waveforms,
+                load_events=load_events,
+                lazy=lazy,
+                cascade=cascade)
 
             bl.segments.append(seg)
 
         # read recordingchannelgroup
-        rcg = self.__read_recordingchannelgroup(
-            channels=channels, units=units, cascade=cascade)
+        if channels:
+            for i, ch_idx in enumerate(channels):
+                if ch_idx in units.keys() and not \
+                        isinstance(units[ch_idx], types.NoneType):
+                    ch_units = units[ch_idx]
+                else:
+                    ch_units = None
+                rcg = self.__read_recordingchannelgroup(
+                    channel_idx=ch_idx,
+                    index=i,
+                    channel_units=ch_units,
+                    cascade=cascade)
 
-        if not isinstance(rcg, types.NoneType):
+                for seg in bl.segments:
+                    if ch_units:
+                        for un in rcg.units:
+                                sts = seg.filter(
+                                    targdict={'name': un.name},
+                                    objects='SpikeTrain')
+                                for st in sts:
+                                    un.spiketrains.append(st)
 
-            bl.recordingchannelgroups.append(rcg)
+                    anasig = seg.filter(
+                        targdict={'ch_idx': ch_idx},
+                        objects='AnalogSignal')
 
-            if not isinstance(units, types.NoneType):
-                for un in bl.recordingchannelgroups[0].units:
-                    sts = bl.filter(
-                        targdict={'name': un.name},
-                        objects=neo.core.spiketrain.SpikeTrain)
-                    for st in sts:
-                        un.spiketrains.append(st)
+                    rcg.analogsignals.append(anasig)
 
-            anasig = bl.filter(objects=neo.core.analogsignal.AnalogSignal)
-            bl.recordingchannelgroups[0].analogsignals.append(anasig)
+                bl.recordingchannelgroups.append(rcg)
 
         bl.create_many_to_one_relationship()
 
