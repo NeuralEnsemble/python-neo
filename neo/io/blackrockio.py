@@ -2192,11 +2192,12 @@ class BlackrockIO(BaseIO):
         # read recordingchannelgroup
         if channels:
             for i, ch_idx in enumerate(channels):
-                if ch_idx in units.keys() and not \
+                if units and ch_idx in units.keys() and not \
                         isinstance(units[ch_idx], types.NoneType):
                     ch_units = units[ch_idx]
                 else:
                     ch_units = None
+
                 rcg = self.__read_recordingchannelgroup(
                     channel_idx=ch_idx,
                     index=i,

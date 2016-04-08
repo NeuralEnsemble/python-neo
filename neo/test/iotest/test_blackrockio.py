@@ -137,7 +137,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(len(block.segments), 1)
         self.assertEqual(len(block.segments[0].analogsignals), 8)
-        self.assertEqual(len(block.recordingchannelgroups), 1)
+        self.assertEqual(len(block.recordingchannelgroups), 8)
         self.assertEqual(len(block.recordingchannelgroups[0].units), 0)
         self.assertEqual(len(block.segments[0].events), 0)
         self.assertEqual(len(block.segments[0].spiketrains), 0)
@@ -151,8 +151,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(len(block.segments), 2)
         self.assertEqual(len(block.segments[0].analogsignals), 0)
-        self.assertEqual(len(block.recordingchannelgroups), 1)
-        self.assertEqual(len(block.recordingchannelgroups[0].units), 2)
+        self.assertEqual(len(block.recordingchannelgroups), 8)
+        self.assertEqual(len(block.recordingchannelgroups[0].units), 1)
         self.assertEqual(len(block.segments[0].events), 0)
         self.assertEqual(len(block.segments[0].spiketrains), 2)
 
