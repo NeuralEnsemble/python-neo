@@ -1035,8 +1035,10 @@ class BlackrockIO(BaseIO):
         """
         tp = []
         if self._avail_files['nev']:
+            print 'nev', self.__get_nev_rec_times()[0]
             tp.extend(self.__get_nev_rec_times()[0])
         for nsx_i in self._avail_nsx:
+            print nsx_i, self.__nsx_rec_times[self.__nsx_spec[nsx_i]](nsx_i)[0]
             tp.extend(self.__nsx_rec_times[self.__nsx_spec[nsx_i]](nsx_i)[0])
 
         return min(tp)
@@ -1255,7 +1257,7 @@ class BlackrockIO(BaseIO):
         return nsx_parameters[param_name]
 
     def __get_nsx_databl_param_variant_a(
-            self, param_name, nsx_nb, n_start=None):
+            self, param_name, nsx_nb, n_start=None, n_stop=None):
         """
         Returns data block parameter (param_name) for a given nsx (nsx_nb) for
         file spec 2.1. Arg 'n_start' should not be specified! It is only set
@@ -1280,7 +1282,8 @@ class BlackrockIO(BaseIO):
 
         return data_parameters[param_name]
 
-    def __get_nsx_databl_param_variant_b(self, param_name, nsx_nb, n_start):
+    def __get_nsx_databl_param_variant_b(
+            self, param_name, nsx_nb, n_start, n_stop):
         """
         Returns data block parameter (param_name) for a given nsx (nsx_nb) with
         a wanted n_start for file spec 2.2 and 2.3.
@@ -1290,16 +1293,39 @@ class BlackrockIO(BaseIO):
 
         # data header
         for d_bl in self.__nsx_data_header[nsx_nb].keys():
-            if t_starts[d_bl - 1] <= n_start < t_stops[d_bl - 1]:
-                # from "data header" with corresponding t_start and t_stop
-                data_parameters = {
-                    'nb_data_points':
-                        self.__nsx_data_header[nsx_nb][d_bl]['nb_data_points'],
-                    'databl_idx': d_bl,
-                    'databl_t_start': t_starts[d_bl - 1],
-                    'databl_t_stop': t_stops[d_bl - 1]}
+            # from "data header" with corresponding t_start and t_stop
+            data_parameters = {
+                'nb_data_points':
+                    self.__nsx_data_header[nsx_nb][d_bl]['nb_data_points'],
+                'databl_idx': d_bl,
+                'databl_t_start': t_starts[d_bl - 1],
+                'databl_t_stop': t_stops[d_bl - 1]}
+            if t_starts[d_bl - 1] <= n_start < n_stop <= t_stops[d_bl - 1]:
+                return data_parameters[param_name]
+            elif n_start < t_starts[d_bl - 1] < n_stop <= t_stops[d_bl - 1]:
+                self._print_verbose(
+                    "User n_start (%s) is smaller than the corresponding "
+                    "t_start of the available ns%i datablock" % (
+                        str(n_start), nsx_nb))
+                return data_parameters[param_name]
+            elif t_starts[d_bl - 1] <= n_start < t_stops[d_bl - 1] < n_stop:
+                self._print_verbose(
+                    "User n_stop (%s) is larger than the corresponding t_stop "
+                    "of the available ns%i datablock" % (str(n_stop), nsx_nb))
+                return data_parameters[param_name]
+            elif n_start < t_starts[d_bl - 1] < t_stops[d_bl - 1] < n_stop:
+                self._print_verbose(
+                    "User n_start (%s) and is smaller than the corresponding "
+                    "t_start and user n_stop (%s) is larger than the "
+                    "corresponding t_stop of the available ns%i datablock" % (
+                        str(n_start), str(n_stop), nsx_nb))
+                return data_parameters[param_name]
+            else:
+                continue
 
-        return data_parameters[param_name]
+        raise ValueError(
+            "User n_start and n_stop are all smaller or larger than the "
+            "t_start and t_stops of all available ns%i datablocks" % nsx_nb)
 
     def __get_nonneural_evtypes_variant_a(self, data):
         """
@@ -1749,11 +1775,11 @@ class BlackrockIO(BaseIO):
         labels = self.__nev_params('channel_labels')
 
         dbl_idx = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_idx', nsx_nb, n_start)
+            'databl_idx', nsx_nb, n_start, n_stop)
         t_start = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_t_start', nsx_nb, n_start)
+            'databl_t_start', nsx_nb, n_start, n_stop)
         t_stop = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_t_stop', nsx_nb, n_start)
+            'databl_t_stop', nsx_nb, n_start, n_stop)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
         if channel_idx in elids_nsx:
