@@ -1035,10 +1035,8 @@ class BlackrockIO(BaseIO):
         """
         tp = []
         if self._avail_files['nev']:
-            print 'nev', self.__get_nev_rec_times()[0]
             tp.extend(self.__get_nev_rec_times()[0])
         for nsx_i in self._avail_nsx:
-            print nsx_i, self.__nsx_rec_times[self.__nsx_spec[nsx_i]](nsx_i)[0]
             tp.extend(self.__nsx_rec_times[self.__nsx_spec[nsx_i]](nsx_i)[0])
 
         return min(tp)
