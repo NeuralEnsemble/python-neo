@@ -1744,8 +1744,9 @@ class BlackrockIO(BaseIO):
             st.left_sweep = self.__get_left_sweep_waveforms()
 
         # add additional annotations
-        st.annotate(ch_idx=int(channel_idx))
-        st.annotate(unit_id=int(unit_id))
+        st.annotate(
+            ch_idx=int(channel_idx),
+            unit_id=int(unit_id))
 
         return st
 
@@ -1874,6 +1875,30 @@ class BlackrockIO(BaseIO):
         if self._avail_files['nev']:
             rcg.channel_names = self.__nev_params(
                 'channel_labels')[channel_idx]
+
+            # additional annotations from nev
+            get_idx = list(
+                self.__nev_ext_header['NEUEVWAV']['electrode_id']).index(
+                    channel_idx)
+            rcg.annotate(
+                connector_ID=self.__nev_ext_header[
+                    'NEUEVWAV']['physical_connector'][get_idx],
+                connector_pinID=self.__nev_ext_header[
+                    'NEUEVWAV']['connector_pin'][get_idx],
+                dig_factor=self.__nev_ext_header[
+                    'NEUEVWAV']['digitization_factor'][get_idx],
+                connector_pin=self.__nev_ext_header[
+                    'NEUEVWAV']['connector_pin'][get_idx],
+                energy_threshold=self.__nev_ext_header[
+                    'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                hi_threshold=self.__nev_ext_header[
+                    'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                lo_threshold=self.__nev_ext_header[
+                    'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                nb_sorted_units=self.__nev_ext_header[
+                    'NEUEVWAV']['nb_sorted_units'][get_idx],
+                waveform_size=self.__waveform_size[self.__nev_spec](
+                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
 
         rcg.description = \
             "Container for units and groups analogsignals across segments."
