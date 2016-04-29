@@ -2265,11 +2265,11 @@ class BlackrockIO(BaseIO):
                                 for st in sts:
                                     un.spiketrains.append(st)
 
-                    anasig = seg.filter(
+                    anasigs = seg.filter(
                         targdict={'ch_idx': ch_idx},
                         objects='AnalogSignal')
-
-                    rcg.analogsignals.append(anasig)
+                    for anasig in anasigs:
+                        rcg.analogsignals.append(anasig)
 
                 bl.recordingchannelgroups.append(rcg)
 
