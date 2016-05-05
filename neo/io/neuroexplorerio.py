@@ -99,7 +99,7 @@ class NeuroExplorerIO(BaseIO):
         offset = 544
         for i in range(globalHeader['nvar']):
             entityHeader = HeaderReader(fid , EntityHeader ).read_f(offset = offset+i*208)
-            entityHeader['name'] = entityHeader['name'].replace('\x00','')
+            entityHeader['name'] = entityHeader['name'].decode().replace('\x00','')
 
             #print 'i',i, entityHeader['type']
 
