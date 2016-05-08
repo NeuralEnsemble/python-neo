@@ -1147,8 +1147,15 @@ class BlackrockIO(BaseIO):
         Returns labels for all channels for file spec 2.1
         """
         elids = self.__nev_ext_header['NEUEVWAV']['electrode_id']
+        labels = []
 
-        return dict([(i, str(i)) for i in elids])
+        for elid in elids:
+            if elid < 129:
+                labels.append('chan%i' % elid)
+            else:
+                labels.append('ainp%i' % (elid - 129 + 1))
+
+        return dict(zip(elids, labels))
 
     def __get_channel_labels_variant_b(self):
         """
