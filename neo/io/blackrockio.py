@@ -1210,7 +1210,15 @@ class BlackrockIO(BaseIO):
         2.1.
         """
         # (several are assumed from Blackrock manual)
+        labels = []
+        for elid in self.__nsx_ext_header[nsx_nb]['electrode_id']:
+            if elid < 129:
+                labels.append('chan%i' % elid)
+            else:
+                labels.append('ainp%i' % (elid - 129 + 1))
+
         nsx_parameters = {
+            'labels': labels,
             'units': np.array(
                 ['mV'] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': np.array(
@@ -1238,6 +1246,8 @@ class BlackrockIO(BaseIO):
         2.2 and 2.3.
         """
         nsx_parameters = {
+            'labels':
+                self.__nsx_ext_header[nsx_nb]['electrode_label'],
             'units':
                 self.__nsx_ext_header[nsx_nb]['units'],
             'min_analog_val':
@@ -1780,8 +1790,8 @@ class BlackrockIO(BaseIO):
             'min_digital_val', nsx_nb)
         units = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'units', nsx_nb)
-
-        labels = self.__nev_params('channel_labels')
+        labels = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            'labels', nsx_nb)
 
         dbl_idx = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
             'databl_idx', nsx_nb, n_start, n_stop)
@@ -1798,7 +1808,7 @@ class BlackrockIO(BaseIO):
 
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_idx, labels[channel_idx], nsx_nb)
+                channel_idx, labels[ch_idx], nsx_nb)
 
         data_times = np.arange(
             t_start.item(), t_stop.item(),
@@ -1824,13 +1834,14 @@ class BlackrockIO(BaseIO):
             signal=pq.Quantity(sig_ch, units[ch_idx], copy=False),
             sampling_rate=sampling_rate,
             t_start=data_times[0].rescale(nsx_time_unit),
-            name=labels[channel_idx],
+            name=labels[ch_idx],
             description=description,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
 
         anasig.annotate(
             nsx=nsx_nb,
-            ch_idx=channel_idx)
+            ch_idx=channel_idx,
+            ch_label=labels[ch_idx])
 
         if lazy:
             anasig.lazy_shape = np.shape(sig_ch)
