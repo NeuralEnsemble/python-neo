@@ -1408,7 +1408,8 @@ class BlackrockIO(BaseIO):
         elif 1 <= un_id <= 16:
             return '{0}'.format(un_id)
         elif 17 <= un_id <= 244:
-            return 'unused'
+            raise ValueError(
+                "Unit id {0} is not used by daq system".format(un_id))
         elif un_id == 255:
             return 'noise'
         else:
@@ -1499,7 +1500,8 @@ class BlackrockIO(BaseIO):
                     if u.lower() == 'none':
                         units[ch] = None
                     elif u.lower() == 'all':
-                        units[ch] = range(256)
+                        units[ch] = range(17)
+                        units[ch].append(255)
                     else:
                         raise ValueError("Invalid unit specification.")
         else:
@@ -1509,7 +1511,8 @@ class BlackrockIO(BaseIO):
                 if units.lower() == 'none':
                     units = None
                 elif units.lower() == 'all':
-                    units = range(256)
+                    units = range(17)
+                    units.append(255)
                 else:
                     raise ValueError("Invalid unit specification.")
             if isinstance(units, int):
