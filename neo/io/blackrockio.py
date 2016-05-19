@@ -1199,8 +1199,12 @@ class BlackrockIO(BaseIO):
         all_ch = self.__nev_params('channel_ids')
         wf_size = self.__nev_params('waveform_size')
 
-        wf_left_sweep = dict(
-            [(ch, (wfs / 2) * wf_t_unit) for ch, wfs in zip(all_ch, wf_size)])
+        # default value: threshold crossing after 10 samples of waveform
+        wf_left_sweep = dict([(ch, 10 * wf_t_unit) for ch in all_ch])
+
+        # non-default: threshold crossing at center of waveform
+        # wf_left_sweep = dict(
+        #     [(ch, (wf_size[ch] / 2) * wf_t_unit) for ch in all_ch])
 
         return wf_left_sweep
 
@@ -1761,7 +1765,7 @@ class BlackrockIO(BaseIO):
 
             st.waveforms = waveforms[mask] * self.__nev_params('waveform_unit')
             st.sampling_rate = self.__nev_params('waveform_sampling_rate')
-            st.left_sweep = self.__get_left_sweep_waveforms()
+            st.left_sweep = self.__get_left_sweep_waveforms()[channel_idx]
 
         # add additional annotations
         st.annotate(
