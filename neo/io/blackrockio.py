@@ -1801,14 +1801,15 @@ class BlackrockIO(BaseIO):
             'databl_t_stop', nsx_nb, n_start, n_stop)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
+        print elids_nsx
         if channel_idx in elids_nsx:
-            ch_idx = elids_nsx.index(channel_idx)
+            idx_ch = elids_nsx.index(channel_idx)
         else:
             return None
 
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_idx, labels[ch_idx], nsx_nb)
+                channel_idx, labels[idx_ch], nsx_nb)
 
         data_times = np.arange(
             t_start.item(), t_stop.item(),
@@ -1816,32 +1817,32 @@ class BlackrockIO(BaseIO):
         mask = (data_times >= n_start) & (data_times < n_stop)
         data_times = data_times[mask].astype(float)
 
-        sig_ch = signal[dbl_idx][:, ch_idx][mask].astype(float)
+        sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(float)
 
         # transform dig value to pysical value
-        sym_ana = (max_ana[ch_idx] == -min_ana[ch_idx])
-        sym_dig = (max_dig[ch_idx] == -min_dig[ch_idx])
+        sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
+        sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
         if sym_ana and sym_dig:
-            sig_ch *= float(max_ana[ch_idx]) / float(max_dig[ch_idx])
+            sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
         else:
             # general case
-            sig_ch -= min_dig[ch_idx]
-            sig_ch *= float(max_ana[ch_idx] - min_ana) / \
-                float(max_dig[ch_idx] - min_dig)
-            sig_ch += float(min_ana[ch_idx])
+            sig_ch -= min_dig[idx_ch]
+            sig_ch *= float(max_ana[idx_ch] - min_ana) / \
+                float(max_dig[idx_ch] - min_dig)
+            sig_ch += float(min_ana[idx_ch])
 
         anasig = AnalogSignal(
-            signal=pq.Quantity(sig_ch, units[ch_idx], copy=False),
+            signal=pq.Quantity(sig_ch, units[idx_ch], copy=False),
             sampling_rate=sampling_rate,
             t_start=data_times[0].rescale(nsx_time_unit),
-            name=labels[ch_idx],
+            name=labels[idx_ch],
             description=description,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
 
         anasig.annotate(
             nsx=nsx_nb,
             ch_idx=channel_idx,
-            ch_label=labels[ch_idx])
+            ch_label=labels[idx_ch])
 
         if lazy:
             anasig.lazy_shape = np.shape(sig_ch)
