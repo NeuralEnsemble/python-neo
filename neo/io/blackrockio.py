@@ -1805,7 +1805,6 @@ class BlackrockIO(BaseIO):
             'databl_t_stop', nsx_nb, n_start, n_stop)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
-        print elids_nsx
         if channel_idx in elids_nsx:
             idx_ch = elids_nsx.index(channel_idx)
         else:
