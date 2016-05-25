@@ -1236,7 +1236,8 @@ class BlackrockIO(BaseIO):
             'timestamp_resolution': 30000,
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb].dtype.itemsize +
-                self.__nsx_ext_header[nsx_nb].dtype.itemsize,
+                self.__nsx_ext_header[nsx_nb].dtype.itemsize *
+                self.__nsx_basic_header[nsx_nb]['channel_count'],
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
@@ -1923,7 +1924,7 @@ class BlackrockIO(BaseIO):
                 nb_sorted_units=self.__nev_ext_header[
                     'NEUEVWAV']['nb_sorted_units'][get_idx],
                 waveform_size=self.__waveform_size[self.__nev_spec](
-                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
+                )[channel_idx] * self.__nev_params('waveform_time_unit'))
 
         rcg.description = \
             "Container for units and groups analogsignals across segments."
@@ -2020,8 +2021,8 @@ class BlackrockIO(BaseIO):
 
         seg = Segment(file_origin=self.filename)
         seg.annotate(
-                t_min=n_start,
-                t_max=n_stop)
+            t_min=n_start,
+            t_max=n_stop)
 
         # set user defined annotations if they were provided
         if isinstance(index, types.NoneType):
@@ -2284,11 +2285,11 @@ class BlackrockIO(BaseIO):
                 for seg in bl.segments:
                     if ch_units:
                         for un in rcg.units:
-                                sts = seg.filter(
-                                    targdict={'name': un.name},
-                                    objects='SpikeTrain')
-                                for st in sts:
-                                    un.spiketrains.append(st)
+                            sts = seg.filter(
+                                targdict={'name': un.name},
+                                objects='SpikeTrain')
+                            for st in sts:
+                                un.spiketrains.append(st)
 
                     anasigs = seg.filter(
                         targdict={'ch_idx': ch_idx},
