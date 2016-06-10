@@ -201,7 +201,7 @@ class BlackrockIO(BaseIO):
         
         # channel label
         neuelbl_header = ext_header['NEUEVLBL']
-        channel_labels = dict(zip(neuelbl_header['channel_id'], neuelbl_header['channel_label']))
+        channel_labels = dict(zip(neuelbl_header['channel_id'], iter(neuelbl_header['channel_label'])))
         
         # TODO ext_header['DIGLABEL'] is there only one label ???? because no id in that case
         # TODO ECOMMENT + CCOMMENT for annotations
