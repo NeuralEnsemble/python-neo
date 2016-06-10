@@ -160,7 +160,7 @@ class BlackrockIO(BaseIO):
         return seg
 
     def read_nev(self, filename_nev, seg, lazy, cascade, load_waveforms = False):
-        # basic hedaer
+        # basic header
         dt = [('header_id','S8'),
                     ('ver_major','uint8'),
                     ('ver_minor','uint8'),
