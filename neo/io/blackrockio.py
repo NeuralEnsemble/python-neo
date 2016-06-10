@@ -369,7 +369,7 @@ class BlackrockIO(BaseIO):
         if not cascade:
             return
         
-        # extented header = channel information
+        # extended header = channel information
         dt1 = [('header_id','S2'),
                     ('channel_id', 'uint16'),
                     ('label', 'S16'),
@@ -390,7 +390,7 @@ class BlackrockIO(BaseIO):
         channels_header = ch= np.memmap(filename_nsx, shape = nb_channel,
                     offset = np.dtype(dt0).itemsize,   dtype = dt1)
         
-        #read data
+        # read data
         dt2 = [('header_id','uint8'),
                     ('n_start','uint32'),
                     ('nb_sample','uint32'),
@@ -401,20 +401,20 @@ class BlackrockIO(BaseIO):
         data = np.memmap(filename_nsx, dtype = 'int16', shape = (nb_sample, nb_channel),
                         offset = nsx_header['header_size'] +np.dtype(dt2).itemsize )
         
-        # create ne objects
+        # create new objects
         for i in range(nb_channel):
             unit = str(channels_header['units'][i])
             if lazy:
                 sig = [ ]
             else:
                 sig = data[:,i].astype(float)
-                # dig value to pysical value
+                # dig value to physical value
                 if ch['max_analog_val'][i] == -ch['min_analog_val'][i] and\
                      ch['max_digital_val'][i] == -ch['min_digital_val'][i]:
-                    #when symetric it is simple
+                    # when symmetric it is simple
                     sig *= float(ch['max_analog_val'][i])/float(ch['max_digital_val'][i])
                 else:
-                    #general case
+                    # general case
                     sig -= ch['min_digital_val'][i]
                     sig *= float(ch['max_analog_val'][i] - ch['min_analog_val'])/\
                                     float(ch['max_digital_val'][i] - ch['min_digital_val'])
