@@ -403,7 +403,7 @@ class BlackrockIO(BaseIO):
         
         # create new objects
         for i in range(nb_channel):
-            unit = str(channels_header['units'][i])
+            unit = channels_header['units'][i].decode()
             if lazy:
                 sig = [ ]
             else:
