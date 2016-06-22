@@ -66,15 +66,22 @@ class Spike2IO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self , filename = None) :
+    ced_units = False
+
+    def __init__(self , filename = None, ced_units = False) :
         """
         This class read a smr file.
 
         Arguments:
             filename : the filename
+            ced_units: whether a spike trains should be added for each unit
+                as determined by Spike2's spike sorting (True), or if a spike
+                channel should be considered a single unit and will ignore
+                Spike2's spike sorting (False). Defaults to False.
         """
         BaseIO.__init__(self)
         self.filename = filename
+        self.ced_units = ced_units
 
     def read_segment(self ,
                                             take_ideal_sampling_rate = False,
@@ -130,14 +137,16 @@ class Spike2IO(BaseIO):
             elif channelHeader.kind in  [2, 3, 4, 5, 8] :
                 ea = self.readOneChannelEventOrSpike( fid, i, header , lazy = lazy)
                 if ea is not None:
-                    addannotations(ea, channelHeader)
-                    seg.eventarrays.append(ea)
+                    for ev in ea:
+                        addannotations(ev, channelHeader)
+                        seg.eventarrays.append(ev)
 
             elif channelHeader.kind in  [6,7] :
                 sptr = self.readOneChannelEventOrSpike( fid, i, header, lazy = lazy )
                 if sptr is not None:
-                    addannotations(sptr, channelHeader)
-                    seg.spiketrains.append(sptr)
+                    for sp in sptr:
+                        addannotations(sp, channelHeader)
+                        seg.spiketrains.append(sp)
 
         fid.close()
 
@@ -199,7 +208,7 @@ class Spike2IO(BaseIO):
         # read AnalogSignal
         channelHeader = header.channelHeaders[channel_num]
 
-        
+
         # data type
         if channelHeader.kind == 1:
             dt = np.dtype('i2')
@@ -327,19 +336,19 @@ class Spike2IO(BaseIO):
             if blockHeader.succ_block > 0 :
                 fid.seek(blockHeader.succ_block)
         #~ print 'totalitems' , totalitems
-        
+
         if lazy :
             if channelHeader.kind in [2, 3, 4 , 5 , 8]:
                 ea = EventArray(  )
                 ea.annotate(channel_index = channel_num)
                 ea.lazy_shape = totalitems
-                return ea
+                return [ea]
 
             elif channelHeader.kind in [6 ,7]:
                 sptr = SpikeTrain([ ]*pq.s, t_stop=1e99)  # correct value for t_stop to be put in later
-                sptr.annotate(channel_index = channel_num)
+                sptr.annotate(channel_index = channel_num, ced_unit = 0)
                 sptr.lazy_shape = totalitems
-                return sptr
+                return [sptr]
 
         else:
             alltrigs = np.zeros( totalitems , dtype = dt)
@@ -369,7 +378,7 @@ class Spike2IO(BaseIO):
                     ea.labels = alltrigs['marker'].astype('S32')
                 if channelHeader.kind == 8:
                     ea.annotate(extra_labels = alltrigs['label'])
-                return ea
+                return [ea]
 
             elif channelHeader.kind in [6 ,7]:
                 # spiketrains
@@ -407,14 +416,27 @@ class Spike2IO(BaseIO):
                     t_stop = alltimes.max() # can get better value from associated AnalogSignal(s) ?
                 else:
                     t_stop = 0.0
-                sptr = SpikeTrain(alltimes,
-                                            waveforms = waveforms*unit,
-                                            sampling_rate = (1./sample_interval)*pq.Hz,
-                                            t_stop = t_stop
-                                            )
-                sptr.annotate(channel_index = channel_num)
 
-                return sptr
+                if not self.ced_units:
+                    sptr = SpikeTrain(alltimes,
+                                                waveforms = waveforms*unit,
+                                                sampling_rate = (1./sample_interval)*pq.Hz,
+                                                t_stop = t_stop
+                                                )
+                    sptr.annotate(channel_index = channel_num, ced_unit = 0)
+                    return [sptr]
+
+                sptrs = []
+                for i in set(alltrigs['marker'] & 255):
+                    sptr = SpikeTrain(alltimes[alltrigs['marker'] == i],
+                                                waveforms = waveforms[alltrigs['marker'] == i]*unit,
+                                                sampling_rate = (1./sample_interval)*pq.Hz,
+                                                t_stop = t_stop
+                                                )
+                    sptr.annotate(channel_index = channel_num, ced_unit = i)
+                    sptrs.append(sptr)
+
+                return sptrs
 
 
 
