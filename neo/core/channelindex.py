@@ -145,3 +145,4 @@ class ChannelIndex(Container):
         self.channel_names = channel_names
         self.channel_ids = channel_ids
         self.index = index
+        self.coordinates = coordinates

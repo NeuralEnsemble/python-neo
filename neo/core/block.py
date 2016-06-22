@@ -61,8 +61,6 @@ class Block(Container):
         :file_datetime: (datetime) The creation date and time of the original
             data file.
         :rec_datetime: (datetime) The date and time of the original recording.
-        :index: (int) You can use this to define an ordering of your Block.
-            It is not used by Neo in any way.
 
     *Properties available on this object*:
         :list_units: descends through hierarchy and returns a list of

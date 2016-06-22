@@ -303,6 +303,20 @@ class AnalogSignal(BaseNeo, pq.Quantity):
             raise IndexError("index should be an integer, tuple or slice")
         return obj
 
+    def __setitem__(self, i, value):
+        """
+        Set an item or slice defined by :attr:`i` to `value`.
+        """
+        # because AnalogSignals are always at least two-dimensional,
+        # we need to handle the case where `i` is an integer
+        if isinstance(i, int):
+            i = slice(i, i + 1)
+        elif isinstance(i, tuple):
+            j, k = i
+            if isinstance(k, int):
+                i = (j, slice(k, k + 1))
+        return super(AnalogSignal, self).__setitem__(i, value)
+
     # sampling_rate attribute is handled as a property so type checking can
     # be done
     @property
