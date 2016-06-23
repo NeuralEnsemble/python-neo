@@ -160,7 +160,7 @@ class BlackrockIO(BaseIO):
         return seg
 
     def read_nev(self, filename_nev, seg, lazy, cascade, load_waveforms = False):
-        # basic hedaer
+        # basic header
         dt = [('header_id','S8'),
                     ('ver_major','uint8'),
                     ('ver_minor','uint8'),
@@ -201,8 +201,12 @@ class BlackrockIO(BaseIO):
         
         # channel label
         neuelbl_header = ext_header['NEUEVLBL']
-        channel_labels = dict(zip(neuelbl_header['channel_id'], neuelbl_header['channel_label']))
-        
+        # Sometimes when making the channel labels we have only one channel and so must address it differently.
+        try:
+            channel_labels = dict(zip(neuelbl_header['channel_id'], neuelbl_header['channel_label']))
+        except TypeError:
+            channel_labels = dict([(neuelbl_header['channel_id'], neuelbl_header['channel_label'])])
+
         # TODO ext_header['DIGLABEL'] is there only one label ???? because no id in that case
         # TODO ECOMMENT + CCOMMENT for annotations
         # TODO NEUEVFLT for annotations
@@ -365,7 +369,7 @@ class BlackrockIO(BaseIO):
         if not cascade:
             return
         
-        # extented header = channel information
+        # extended header = channel information
         dt1 = [('header_id','S2'),
                     ('channel_id', 'uint16'),
                     ('label', 'S16'),
@@ -386,7 +390,7 @@ class BlackrockIO(BaseIO):
         channels_header = ch= np.memmap(filename_nsx, shape = nb_channel,
                     offset = np.dtype(dt0).itemsize,   dtype = dt1)
         
-        #read data
+        # read data
         dt2 = [('header_id','uint8'),
                     ('n_start','uint32'),
                     ('nb_sample','uint32'),
@@ -397,20 +401,20 @@ class BlackrockIO(BaseIO):
         data = np.memmap(filename_nsx, dtype = 'int16', shape = (nb_sample, nb_channel),
                         offset = nsx_header['header_size'] +np.dtype(dt2).itemsize )
         
-        # create ne objects
+        # create new objects
         for i in range(nb_channel):
-            unit = str(channels_header['units'][i])
+            unit = channels_header['units'][i].decode()
             if lazy:
                 sig = [ ]
             else:
                 sig = data[:,i].astype(float)
-                # dig value to pysical value
+                # dig value to physical value
                 if ch['max_analog_val'][i] == -ch['min_analog_val'][i] and\
                      ch['max_digital_val'][i] == -ch['min_digital_val'][i]:
-                    #when symetric it is simple
+                    # when symmetric it is simple
                     sig *= float(ch['max_analog_val'][i])/float(ch['max_digital_val'][i])
                 else:
-                    #general case
+                    # general case
                     sig -= ch['min_digital_val'][i]
                     sig *= float(ch['max_analog_val'][i] - ch['min_analog_val'])/\
                                     float(ch['max_digital_val'][i] - ch['min_digital_val'])
@@ -434,7 +438,7 @@ def get_window_datetime(buf):
     """This transform a buffer of 16 bytes window datetime type
      n python datetime object
     """
-    buf = buffer(buf.copy())
+
     dt = [('year', 'uint16'), ('mouth', 'uint16'), ('weekday', 'uint16'),
                 ('day', 'uint16'), ('hour', 'uint16'), ('min', 'uint16'),
                 ('sec', 'uint16'), ('usec', 'uint16'),]
