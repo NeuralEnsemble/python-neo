@@ -257,7 +257,7 @@ class TdtIO(BaseIO):
                 file_ext.append( os.path.splitext( file )[1].lower() )
 
         file_ext = set(file_ext)
-        tdt_ext  = {'.tbk', '.tdx', '.tev', '.tsq'}
+        tdt_ext  = set(['.tbk', '.tdx', '.tev', '.tsq'])
         if file_ext >= tdt_ext:    # if containing all the necessary files
             return True
         else:
