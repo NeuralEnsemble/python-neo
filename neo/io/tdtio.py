@@ -104,6 +104,8 @@ class TdtIO(BaseIO):
 
         if blockname == 'TempBlk': return None
 
+        if not self.is_tdtblock(blockname): return None    # if not a tdt block
+
         subdir = os.path.join(self.dirname, blockname)
         if not os.path.isdir(subdir): return None
 
@@ -237,12 +239,30 @@ class TdtIO(BaseIO):
         if not cascade : return bl
 
         for blockname in os.listdir(self.dirname):
-            seg = self.read_segment(blockname, lazy, cascade)
-            bl.segments.append(seg)
+            if self.is_tdtblock(blockname):    # if the folder is a tdt block
+                seg = self.read_segment(blockname, lazy, cascade)
+                bl.segments.append(seg)
 
         bl.create_many_to_one_relationship()
         return bl
 
+
+    # to determine if this folder is a TDT block, based on the extension of the files inside it
+    # to deal with unexpected files in the tank, e.g. .DS_Store on Mac machines
+    def is_tdtblock(self, blockname):
+
+        file_ext = list()
+        blockpath = os.path.join(self.dirname, blockname)  # get block path
+        if os.path.isdir(blockpath):
+            for file in os.listdir( blockpath ):   # for every file, get extension, convert to lowercase and append
+                file_ext.append( os.path.splitext( file )[1].lower() )
+
+        file_ext = set(file_ext)
+        tdt_ext  = set(['.tbk', '.tdx', '.tev', '.tsq'])
+        if file_ext >= tdt_ext:    # if containing all the necessary files
+            return True
+        else:
+            return False
 
 tdt_event_type = [
    #(0x0,'EVTYPE_UNKNOWN'),

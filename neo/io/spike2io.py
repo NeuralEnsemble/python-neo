@@ -66,15 +66,22 @@ class Spike2IO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, filename=None):
+    ced_units = False
+
+    def __init__(self, filename=None, ced_units=False):
         """
-        This class read a smr file.
+        This class reads an smr file.
 
         Arguments:
             filename : the filename
+            ced_units: whether a spike trains should be added for each unit
+                as determined by Spike2's spike sorting (True), or if a spike
+                channel should be considered a single unit and will ignore
+                Spike2's spike sorting (False). Defaults to False.
         """
         BaseIO.__init__(self)
         self.filename = filename
+        self.ced_units = ced_units
 
     def read_segment(self, take_ideal_sampling_rate=False,
                      lazy=False, cascade=True):
@@ -132,11 +139,12 @@ class Spike2IO(BaseIO):
                     seg.events.append(ea)
 
             elif channelHeader.kind in [6, 7]:
-                sptr = self.read_one_channel_event_or_spike(
+                sptrs = self.read_one_channel_event_or_spike(
                     fid, i, header, lazy=lazy)
-                if sptr is not None:
-                    addannotations(sptr, channelHeader)
-                    seg.spiketrains.append(sptr)
+                if sptrs is not None:
+                    for sptr in sptrs:
+                        addannotations(sptr, channelHeader)
+                        seg.spiketrains.append(sptr)
 
         fid.close()
 
@@ -165,23 +173,21 @@ class Spike2IO(BaseIO):
                       ('offset', 'f4'),
                       ('unit', 'S6'), ]
                 channelHeader += HeaderReader(fid, np.dtype(dt))
+                
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, np.dtype(
-                        [('divide', 'i4')]))  # i8
-                else:
-                    channelHeader += HeaderReader(fid, np.dtype(
-                        [('interleave', 'i4')]))  # i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i2')]) )
+                else :
+                    channelHeader +=HeaderReader(fid, np.dtype([ ('interleave' , 'i2')]) )
+                
             if channelHeader.kind in [7, 9]:
                 dt = [('min', 'f4'),
                       ('max', 'f4'),
                       ('unit', 'S6'), ]
                 channelHeader += HeaderReader(fid, np.dtype(dt))
                 if header.system_id < 6:
-                    channelHeader += HeaderReader(fid, np.dtype(
-                        [('divide', 'i4')]))  # i8
-                else:
-                    channelHeader += HeaderReader(fid, np.dtype(
-                        [('interleave', 'i4')]))  # i8
+                    channelHeader += HeaderReader(fid, np.dtype([ ('divide' , 'i2')]))
+                else :
+                    channelHeader += HeaderReader(fid, np.dtype([ ('interleave' , 'i2')]) )
             if channelHeader.kind in [4]:
                 dt = [('init_low', 'u1'),
                       ('next_low', 'u1'), ]
@@ -352,7 +358,7 @@ class Spike2IO(BaseIO):
             elif channelHeader.kind in [6, 7]:
                 # correct value for t_stop to be put in later
                 sptr = SpikeTrain([] * pq.s, t_stop=1e99)
-                sptr.annotate(channel_index=channel_num)
+                sptr.annotate(channel_index=channel_num, ced_unit = 0)
                 sptr.lazy_shape = totalitems
                 return sptr
         else:
@@ -431,13 +437,27 @@ class Spike2IO(BaseIO):
                     t_stop = alltimes.max()
                 else:
                     t_stop = 0.0
-                sptr = SpikeTrain(alltimes,
-                                  waveforms=waveforms * unit,
-                                  sampling_rate=(1. / sample_interval) * pq.Hz,
-                                  t_stop=t_stop)
-                sptr.annotate(channel_index=channel_num)
 
-                return sptr
+                if not self.ced_units:
+                    sptr = SpikeTrain(alltimes,
+                                                waveforms = waveforms*unit,
+                                                sampling_rate = (1./sample_interval)*pq.Hz,
+                                                t_stop = t_stop
+                                                )
+                    sptr.annotate(channel_index = channel_num, ced_unit = 0)
+                    return [sptr]
+
+                sptrs = []
+                for i in set(alltrigs['marker'] & 255):
+                    sptr = SpikeTrain(alltimes[alltrigs['marker'] == i],
+                                                waveforms = waveforms[alltrigs['marker'] == i]*unit,
+                                                sampling_rate = (1./sample_interval)*pq.Hz,
+                                                t_stop = t_stop
+                                                )
+                    sptr.annotate(channel_index = channel_num, ced_unit = i)
+                    sptrs.append(sptr)
+
+                return sptrs
 
 
 class HeaderReader(object):
