@@ -73,9 +73,13 @@ def _check_waveform_dimensions(spiketrain):
     Verify that waveform is compliant with the waveform definition as
     quantity array 3D (spike, channel_index, time)
     '''
+
+    if not spiketrain.size:
+        return
+
     waveforms = spiketrain.waveforms
 
-    if not (spiketrain.size and waveforms.size):
+    if not (waveforms and waveforms.size):
         return
 
     if waveforms.shape[0] != len(spiketrain):
