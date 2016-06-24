@@ -68,6 +68,21 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         raise ValueError("The last spike (%s) is after t_stop (%s)" %
                          (value, t_stop))
 
+def _check_waveform_dimensions(spiketrain):
+    '''
+    Verify that waveform is compliant with the waveform definition as
+    quantity array 3D (spike, channel_index, time)
+    '''
+    waveforms = spiketrain.waveforms
+
+    if not (spiketrain.size and waveforms.size):
+        return
+
+    if waveforms.shape[0] != len(spiketrain):
+        raise ValueError("Spiketrain length (%s) does not match to number of "
+                         "waveforms present (%s)" % (len(spiketrain),
+                                                     waveforms.shape[0]))
+
 
 def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
                     copy=True, sampling_rate=1.0 * pq.Hz,
@@ -434,6 +449,42 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             value = pq.Quantity(value, units=self.units)
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setslice__(i, j, value)
+
+    def _copy_data_complement(self, other):
+        '''
+        Copy the metadata from another :class:`SpikeTrain`.
+        '''
+        for attr in ("t_start", "t_stop", "waveforms", "left_sweep",
+                     "sampling_rate", "name", "file_origin", "description",
+                     "annotations"):
+            setattr(self, attr, getattr(other, attr, None))
+
+    def duplicate_with_new_data(self, signal, t_start=None, t_stop=None,
+                                waveforms=None):
+        '''
+        Create a new :class:`SpikeTrain` with the same metadata
+        but different data (times, t_start, t_stop)
+        '''
+        # using previous t_start and t_stop if no values are provided
+        if t_start is None:
+            t_start = self.t_start
+        if t_stop is None:
+            t_stop = self.t_stop
+        if waveforms is None:
+            waveforms = self.waveforms
+
+        new_st = self.__class__(signal, t_stop,waveforms=waveforms,
+                                units=self.units)
+        new_st._copy_data_complement(self)
+
+        # overwriting t_start and t_stop with new values
+        new_st.t_start = t_start
+        new_st.t_stop = t_stop
+
+        # consistency check
+        _check_time_in_range(new_st, new_st.t_start, new_st.t_stop, view=True)
+        _check_waveform_dimensions(new_st)
+        return new_st
 
     def time_slice(self, t_start, t_stop):
         '''

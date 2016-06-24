@@ -21,7 +21,8 @@ else:
 from neo.core.epoch import Epoch
 from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant,
-                            assert_arrays_equal, assert_same_sub_schema)
+                            assert_arrays_equal, assert_arrays_almost_equal,
+                            assert_same_sub_schema)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values,
                                         fake_neo, TEST_ANNOTATIONS)
 
@@ -227,6 +228,23 @@ class TestEpoch(unittest.TestCase):
                 (epc.name, epc.description, pretty(epc.annotations)))
 
         self.assertEqual(prepr, targ)
+
+class TestDuplicateWithNewData(unittest.TestCase):
+    def setUp(self):
+        self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
+        self.durations = np.array([0.2, 0.4, 1.1, 2.4, 0.2, 2.0])
+        self.quant = pq.ms
+        self.epoch = Epoch(self.data*self.quant,
+                           durations=self.durations*self.quant)
+
+    def test_duplicate_with_new_data(self):
+        signal1 = self.epoch
+        new_data = np.sort(np.random.uniform(0, 100, (self.epoch))) * pq.ms
+        signal1b = signal1.duplicate_with_new_data(new_data)
+        assert_arrays_almost_equal(np.asarray(signal1b),
+                                   np.asarray(new_data), 1e-12)
+        assert_arrays_almost_equal(np.asarray(signal1b.durations),
+                                   np.asarray(signal1.durations), 1e-12)
 
 
 if __name__ == "__main__":
