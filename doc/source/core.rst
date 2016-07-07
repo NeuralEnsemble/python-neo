@@ -8,7 +8,8 @@ Introduction
 ============
 
 Objects in Neo represent neural data and collections of data. Neo objects fall
-into three categories: data objects, container objects and grouping objects.
+into four categories: data objects, container objects, grouping objects,
+and collection objects.
 
 Data objects
 ------------
@@ -57,27 +58,48 @@ cut across the simple container hierarchy.
     Links :py:class:`AnalogSignal`, :py:class:`SpikeTrain`
     objects that come from the same logical and/or physical channel inside a :py:class:`Block`, possibly across  several :py:class:`Segment` objects.
 
-:py:class:`RecordingChannelGroup`:
-    A group for associated :py:class:`RecordingChannel` objects. This has several possible uses: 
-      * for linking several :py:class:`AnalogSignalArray` objects across several  :py:class:`Segment` objects inside a  :py:class:`Block`.
-      * for multielectrode arrays, where spikes may be recorded on more than one recording channel, 
-        and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`Unit` with the
-        group of recording channels from which it was calculated.
-      * for grouping several :py:class:`RecordingChannel` objects. There are many use cases for this.
-        For instance, for intracellular recording, it is common to record both membrane potentials and currents at the same time, 
-        so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded. For multielectrode arrays,
-        :py:class:`RecordingChannelGroup` is used to gather all :py:class:`RecordingChannel` objects of the same array.
-        
 :py:class:`Unit`:
     A Unit gathers all the :class:`SpikeTrain` objects within a common :class:`Block`, possibly across several
-    Segments, that have been emitted by the same cell. 
+    Segments, that have been emitted by the same cell.
     A :class:`Unit` is linked to :class:`RecordingChannelGroup` objects from which it was detected.
     This replaces the :class:`Neuron` class in the previous version of Neo (v0.1).
 
 .. image:: images/base_schematic.png
    :height: 500 px
-   :alt: Neo : Neurotools/OpenElectrophy shared base architecture 
+   :alt: Neo : Neurotools/OpenElectrophy shared base architecture
    :align: center
+
+Collection objects
+------------------
+
+These objects are used to group together related objects in a Container or Grouping.
+It is tied to a particular Container or Grouping object, and can be used to organize the objects stored in that Container or Grouping object.
+There is one generic collection class, :py:class:`Collection`, which can be attached to any Container or Grouping object,
+and two specialized collection classes, :py:class:`RecordingChannelGroup` and :py:class:`StimulusCondition`, both of which attach to :py:class:`Block` but group different objects.
+
+:py:class:`Collection`:
+    A generic collection.  It can be attached to any Container or Grouping
+    object.  Possible example use-cases include:
+        * a :py:class:`Collection` attached to a :py:class:`Segment` could be used for organizing :py:class:`Event` objects into different categories, such as comments, triggers, errors, etc.
+        * a :py:class:`Collection` attached to a :py:class:`Unit` could be used to for organizing :py:class:`Spiketrain` objects that are part of a single burst of activity,
+          part of the same repetition of a periodic stimulus, or occur at the same phase of a periodic stimulus.
+        * a :py:class:`Collection: atached to a :py:class:`RecordingChannel: could be used for organizing :py:class:`AnalogSignal` objects by what unit has activity in that :py:class:`AnalogSignal`.
+
+:py:class:`RecordingChannelGroup`:
+    A collection attached to a :py:class:`Block` for associated :py:class:`RecordingChannel`, :py:class:`Unit`, and :py:class:`AnalogSignal` objects.
+    This has several possible uses:
+      * for linking several :py:class:`AnalogSignalArray` objects across several  :py:class:`Segment` objects inside a  :py:class:`Block`.
+      * for multielectrode arrays, where spikes may be recorded on more than one recording channel,
+        and so the :py:class:`RecordingChannelGroup` can be used to associate each :py:class:`Unit` with the
+        group of recording channels from which it was calculated.
+      * for grouping several :py:class:`RecordingChannel` objects. There are many use cases for this.
+        For instance, for intracellular recording, it is common to record both membrane potentials and currents at the same time,
+        so each :py:class:`RecordingChannelGroup` may correspond to the particular property that is being recorded. For multielectrode arrays,
+        :py:class:`RecordingChannelGroup` is used to gather all :py:class:`RecordingChannel` objects of the same array.
+
+:py:class:`StimulusCondition`:
+    A collection attached to a :py:class:`Block` for associated :py:class:`Segment` objects.
+    The primary use-case is for organizing repeated presentions of the identical stimuli.
 
 
 Relationships between objects
@@ -86,31 +108,29 @@ Relationships between objects
 Container objects like :py:class:`Block` or :py:class:`Segment` are gateways to
 access other objects. For example, a :class:`Block` can access a :class:`Segment`
 with::
-     
+
     >>> bl = Block()
     >>> bl.segments
     # gives a list of segments
 
 A :class:`Segment` can access the :class:`AnalogSignal` objects that it contains with::
-    
+
     >>> seg = Segment()
     >>> seg.analogsignals
     # gives a list a AnalogSignals
-    
+
 In the :ref:`neo_diagram` below, these *one to many* relationships are represented by cyan arrows.
 In general, an object can access its children with an attribute *childname+s* in lower case, e.g.
 
     * :attr:`Block.segments`
     * :attr:`Segments.analogsignals`
     * :attr:`Segments.spiketrains`
-    * :attr:`Block.recordingchannelgroups`
 
 These relationships are bi-directional, i.e. a child object can access its parent:
 
     * :attr:`Segment.block`
     * :attr:`AnalogSignal.segment`
     * :attr:`SpikeTrains.segment`
-    * :attr:`RecordingChannelGroup.block`
 
 Here is an example showing these relationships in use::
 
@@ -128,58 +148,75 @@ Here is an example showing these relationships in use::
         print(seg)
         print(seg.block) # parent access
 
+In addition to these relationships, it is also possible to use collection objects to further organize data.
+Collection objects are attached to a container or grouping objects, and can organize the objects stored in the object the collection is attached to.
+Compatible objects can also be added directly to a collection, in which case they will be added to the attached container or grouping object as well.
 
-On the :ref:`neo_diagram` you can also see a magenta line reflecting the *many-to-many* relationship between :py:class:`RecordingChannel` and :py:class:`RecordingChannelGroup`. This means that each group can contain multiple channels, and each channel can belong to multiple groups.
+Here is a simple example with tetrodes, in which each tetrode has its own group.::
 
-In some cases, a one-to-many relationship is sufficient. Here is a simple example with tetrodes, in which each tetrode has its own group.::
+    >>> from neo import *
+    >>> bl = Block()
+    ...
+    >>> # the four tetrodes
+    ... for i in range(4):
+    ...     rcg = RecordingChannelGroup(name='Tetrode %d' % i)
+    ...     bl.recordingchannelgroups.append(rcg)
+    ...     for j in range(4):
+    ...         rc = RecordingChannel(index=j, name='rc %d' %j)
+    ...         rcg.recordingchannels.append(rc)
+    ...         rc.recordingchannelgroups.append(rcg)
+    ...
+    >>> len(bl.recordingchannels)
+    16
+    >>> len(bl.recordingchannelgroups[0].recordingchannels)
+    4
+    >>> bl.recordingchannelgroups[0].recordingchannels[0] in bl.recordingchannels
+    True
+    >>> bl.recordingchannels[10] in bl.recordingchannelgroups[0].recordingchannels
+    False
 
-    from neo import *
-    bl = Block()
-    
-    # creating individual channel
-    all_rc= [ ]
-    for i in range(16):
-        rc = RecordingChannel( index= i, name ='rc %d' %i)
-        all_rc.append(rc)
-    
-    # the four tetrodes
-    for i in range(4):
-        rcg = RecordingChannelGroup( name = 'Tetrode %d' % i )
-        for rc in all_rc[i*4:(i+1)*4]:
-            rcg.recordingchannels.append(rc)
-            rc.recordingchannelgroups.append(rcg)
-        bl.recordingchannelgroups.append(rcg)
 
-    # now we load the data and associate it with the created channels
-    # ...
 
-Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3. We create a group for each neuron to hold the `Unit` object associated with this spikesorting group. Each group also contains the channels on which that neuron spiked. The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
+Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3.
+Each channel records two signals.  The first signal records activity from the first neuron on channels 0,1,2 and the other second records activity from the second neuron on a channels 1,2,3.
+The second signal from channel 0 and the first signal from channel 3 record nothing.
+We create a group for each neuron to hold the `Unit` object associated with this spikesorting group.
+Each group also contains the channels on which that neuron spiked.
+The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
 
-    from neo import *
-    bl = Block(name='probe data')
-
-    # create individual channels
-    all_rc = []
-    for i in range(4):
-        rc = RecordingChannel(index=i, name='channel %d' % i)
-        all_rc.append(rc)
-
-    # one group for each neuron
-    rcg0 = RecordingChannelGroup(name='Group 0', index=0)
-    for i in [0, 1, 2]:
-        rcg1.recordingchannels.append(all_rc[i])
-        rc[i].recordingchannelgroups.append(rcg0)
-    bl.recordingchannelgroups.append(rcg0)
-
-    rcg1 = RecordingChannelGroup(name='Group 1', index=1)
-    for i in [1, 2, 3]:
-        rcg1.recordingchannels.append(all_rc[i])
-        rc[i].recordingchannelgroups.append(rcg1)
-    bl.recordingchannelgroups.append(rcg1)
-
-    # now we add the spiketrain from Unit 0 to rcg0
-    # and add the spiketrain from Unit 1 to rcg1
-    # ...
+    >>> from neo import *
+    >>> import numpy as np
+    >>> quantities import mV, kHz
+    >>> bl = Block(name='probe data')
+    >>>
+    >>> # create individual channels
+    >>> for i in range(4):
+    ...     rc = RecordingChannel(index=i, name='channel %d' % i)
+    ...     bl.recordingchannels.append(rc)
+    ...     # two signals and two collections
+    ...     for j in range(2):
+    ...         sig = AnalogSignal(np.random.random(100)*mV,
+    ...                            sampling_rate=1.*kHz)
+    ...         col = Collection(name='Unit %s' % j, index=j)
+    ...         rc.analogsignals.append(sig)
+    ...         rc.collections.append(col)
+    ...
+    >>> # one group for each neuron
+    ... rcg0 = RecordingChannelGroup(name='Group 0', index=0)
+    >>> rcg1 = RecordingChannelGroup(name='Group 1', index=1)
+    >>> bl.recordingchannelgroups.append(rcg0)
+    >>> bl.recordingchannelgroups.append(rcg1)
+    >>>
+    >>> for i in [0, 1, 2]:
+    ...     rcg1.recordingchannels.append(all_rc[i])
+    ...     rc[i].recordingchannelgroups.append(rcg0)
+    ...     rc[i].collections[0].append(rc[i].analogsignals[0])
+    >>>
+    >>> for i in [1, 2, 3]:
+    ...     rcg1.recordingchannels.append(all_rc[i])
+    ...     rc[i].recordingchannelgroups.append(rcg1)
+    ...     rc[i].collections[1].append(rc[i].analogsignals[1])
+    >>>
 
 Note that because neurons are sorted from groups of channels in this situation, it is natural that the :py:class:`RecordingChannelGroup` contains the :py:class:`Unit` object. That unit then contains its spiketrains.
 
@@ -200,7 +237,6 @@ Attributes:
   * In white = recommended
 Relationship:
   * In cyan = one to many
-  * In magenta = many to many
   * In yellow = properties (deduced from other relationships)
 
 
@@ -211,7 +247,7 @@ Relationship:
 
 For more details, see the :doc:`api_reference`.
 
-    
+
 
 Inheritance
 ===========
@@ -264,7 +300,7 @@ Finally, let's consider "additional arguments". These are the ones you define fo
     >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_stop=10.0, rat_name='Fred')
     >>> print(st.annotations)
     {'rat_name': 'Fred'}
-    
+
 Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.
 
 Annotations
