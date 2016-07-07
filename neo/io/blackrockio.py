@@ -109,7 +109,7 @@ class BlackrockIO(BaseIO):
                 rcg0.recordingchannels.append(rc)
                 rc.recordingchannelgroups.append(rcg0)
             if len(rc.recordingchannelgroups) == 1:
-                rcg = RecordingChannelGroup(name = 'Group {}'.format(chan))
+                rcg = RecordingChannelGroup(name = 'Group {0}'.format(chan))
                 rcg.recordingchannels.append(rc)
                 rc.recordingchannelgroups.append(rcg)
                 bl.recordingchannelgroups.append(rcg)
@@ -176,9 +176,9 @@ class BlackrockIO(BaseIO):
                     
                 ]
         nev_header = h = np.fromfile(filename_nev, count = 1, dtype = dt)[0]
-        version = '{}.{}'.format(h['ver_major'], h['ver_minor'])
-        assert h['header_id'].decode('ascii') == 'NEURALEV' or version == '2.1', 'Unsupported version {}'.format(version)
-        version = '{}.{}'.format(h['ver_major'], h['ver_minor'])
+        version = '{0}.{1}'.format(h['ver_major'], h['ver_minor'])
+        assert h['header_id'].decode('ascii') == 'NEURALEV' or version == '2.1', 'Unsupported version {0}'.format(version)
+        version = '{0}.{1}'.format(h['ver_major'], h['ver_minor'])
         seg.annotate(blackrock_version = version)
         seg.rec_datetime = get_window_datetime(nev_header['window_datetime'])
         sr = float(h['sampling_rate'])
@@ -215,7 +215,7 @@ class BlackrockIO(BaseIO):
         # read data packet and markers
         dt0 =  [('samplepos', 'uint32'),
                     ('id', 'uint16'), 
-                    ('value', 'S{}'.format(h['packet_size']-6)),
+                    ('value', 'S{0}'.format(h['packet_size']-6)),
             ]
         data = np.memmap( filename_nev, offset = h['header_size'], dtype = dt0)
         all_ids = np.unique(data['id'])
@@ -249,7 +249,7 @@ class BlackrockIO(BaseIO):
                     ('reason', 'uint8'), 
                     ('reserved0', 'uint8'), 
                     ('digital_port', 'uint16'), 
-                    ('reserved1', 'S{}'.format(h['packet_size']-10)),
+                    ('reserved1', 'S{0}'.format(h['packet_size']-10)),
                 ]
         data_trigger = data.view(dt_trig)[mask]
         # Digital Triggers (PaquetID 0)
@@ -260,7 +260,7 @@ class BlackrockIO(BaseIO):
         if version in ['2.1', '2.2' ]:
             for i in range(5):
                 is_analog = (data_trigger ['reason']&(2**(i+1)))>0
-                create_event_array_trig_or_analog(is_analog, 'Analog trigger {}'.format(i), labelmode = None)
+                create_event_array_trig_or_analog(is_analog, 'Analog trigger {0}'.format(i), labelmode = None)
         
         # Comments
         mask = (data['id']==0xFFF) 
@@ -269,7 +269,7 @@ class BlackrockIO(BaseIO):
                     ('charset', 'uint8'), 
                     ('reserved0', 'uint8'), 
                     ('color', 'uint32'), 
-                    ('comment', 'S{}'.format(h['packet_size']-12)),
+                    ('comment', 'S{0}'.format(h['packet_size']-12)),
                 ]
         data_comments = data.view(dt_comments)[mask]
         if data_comments.size>0:
@@ -319,8 +319,8 @@ class BlackrockIO(BaseIO):
                 elif cluster_id==255:
                     name =  'noise'
                 else:
-                    name = 'Cluster {}'.format(cluster_id)
-                name = 'Channel {} '.format(channel_id)+name
+                    name = 'Cluster {0}'.format(cluster_id)
+                name = 'Channel {0} '.format(channel_id)+name
                 
                 data_spike_chan_clus = data_spike_chan[data_spike_chan['cluster']==cluster_id]
                 n_spike = data_spike_chan_clus.size
@@ -360,7 +360,7 @@ class BlackrockIO(BaseIO):
                     ('nb_channel', 'uint32'),
                 ]
         nsx_header = h = np.fromfile(filename_nsx, count = 1, dtype = dt0)[0]
-        version = '{}.{}'.format(h['ver_major'], h['ver_minor'])
+        version = '{0}.{1}'.format(h['ver_major'], h['ver_minor'])
         seg.annotate(blackrock_version = version)
         seg.rec_datetime = get_window_datetime(nsx_header['window_datetime'])
         nb_channel = h['nb_channel']
