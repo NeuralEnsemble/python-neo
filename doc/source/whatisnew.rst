@@ -7,6 +7,11 @@ What's new in version 0.4.0?
 ----------------------------
 
   * added StimfitIO
+  * added KwikIO
+  * significant improvements to AxonIO, BlackrockIO, BrainwareSrcIO, NeuroshareIO, PlexonIO, Spike2IO, TdtIO,
+  * many test suite improvements
+  * Container base class
+
 
 What's new in version 0.3.3?
 ----------------------------
