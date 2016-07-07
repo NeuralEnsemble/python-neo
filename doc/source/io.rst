@@ -158,7 +158,7 @@ Some IOs support advanced forms of lazy loading, cascading or both (these featur
   You do not have to do anything else, lazy cascading is now active for the object you just loaded. You can interact with the object in the same way
   as if it was loaded with ``cascade=True``. However, only the objects that are actually accessed are loaded as soon as they are needed::
 
-    >>> print(block.recordingchannelgroups[0].name)  # The first RecordingChannelGroup is loaded
+    >>> print(block.channelindexes[0].name)  # The first ChannelIndex is loaded
     >>> print(block.segments[0].analogsignals[1])  # The first Segment and its second AnalogSignal are loaded
 
   Once an object has been loaded with lazy cascading, it stays in memory::
@@ -240,9 +240,9 @@ This example changes how the log text is displayed::
 For more complex logging, please see the documentation for the logging_ module.
 
 .. note:: If you wish to implement more advanced logging as describe in the documentation for the logging_ module or elsewhere on the internet, please do so before calling any :mod:`neo` functions or initializing any :mod:`neo` classes.
-This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
-Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
-Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
+          This is because the default handler is created when :mod:`neo` is imported, but it is not attached to the :mod:`neo` logger until a class that uses logging is initialized or a function that uses logging is called.
+          Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
+          Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
 
 
 .. _neo_io_API:

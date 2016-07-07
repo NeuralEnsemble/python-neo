@@ -343,27 +343,49 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
         self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
         self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError,
-                          self.base1.merge_annotations, self.base2)
+        self.base1.merge_annotations(self.base2)
+        self.assertEqual(self.base1.annotations,
+                         {'val1': 1,
+                          'val2': 2.2,
+                          'val3': 'MERGE CONFLICT',
+                          'val4': [4, 4.4],
+                          'val5': True})
 
     def test_merge__different_type_AssertionError(self):
         self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
         self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError, self.base1.merge, self.base2)
+        self.base1.merge(self.base2)
+        self.assertEqual(self.base1.annotations,
+                         {'val1': 1,
+                          'val2': 2.2,
+                          'val3': 'MERGE CONFLICT',
+                          'val4': [4, 4.4],
+                          'val5': True})
 
     def test_merge_annotations__unmergable_unequal_AssertionError(self):
         self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': True}
         self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError,
-                          self.base1.merge_annotations, self.base2)
+        self.base1.merge_annotations(self.base2)
+        self.assertEqual(self.base1.annotations,
+                         {'val1': 1,
+                          'val2': 2.2,
+                          'val3': 'MERGE CONFLICT',
+                          'val4': [4, 4.4],
+                          'val5': True})
 
     def test_merge__unmergable_unequal_AssertionError(self):
         self.base1.annotations = {'val1': 1, 'val2': 2.2, 'val3': True}
         self.base2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError, self.base1.merge, self.base2)
+        self.base1.merge(self.base2)
+        self.assertEqual(self.base1.annotations,
+                         {'val1': 1,
+                          'val2': 2.2,
+                          'val3': 'MERGE CONFLICT',
+                          'val4': [4, 4.4],
+                          'val5': True})
 
 
 class TestBaseNeoCoreTypes(unittest.TestCase):

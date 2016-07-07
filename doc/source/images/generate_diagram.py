@@ -102,8 +102,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     for name, pos in rect_pos.items():
         htotal = all_h[name]
         obj = objs[name]
-        allrelationship = (getattr(obj, '_child_containers', []) +
-                           getattr(obj, '_multi_parent_containers', []))
+        allrelationship = (list(getattr(obj, '_child_containers', [])) +
+                           list(getattr(obj, '_multi_parent_containers', [])))
 
         rect = Rectangle(pos, rect_width, htotal,
                          facecolor='w', edgecolor='k', linewidth=2.)
@@ -125,8 +125,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # multi relationship
-        relationship = (getattr(obj, '_multi_child_objects', []) +
-                        getattr(obj, '_multi_parent_containers', []))
+        relationship = (list(getattr(obj, '_multi_child_objects', [])) +
+                        list(getattr(obj, '_multi_parent_containers', [])))
         pos2 = (pos[1]+htotal - line_heigth*(1.5+len(relationship)) -
                 rect_height)
         rect_height = len(relationship)*line_heigth
@@ -210,22 +210,17 @@ def generate_diagram_simple():
 
                 'Segment': (.5+rw*bf*1, .5),
 
-                'Event': (.5+rw*bf*4, 6),
-                'EventArray': (.5+rw*bf*4, 4),
-                'Epoch': (.5+rw*bf*4, 2),
-                'EpochArray': (.5+rw*bf*4, .2),
+                'Event': (.5+rw*bf*4, 4),
+                'Epoch': (.5+rw*bf*4, .2),
 
-                'RecordingChannelGroup': (.5+rw*bf*.8, 8.5),
-                'RecordingChannel': (.5+rw*bf*1.2, 5.5),
+                'ChannelIndex': (.5+rw*bf*.8, 8.5),
 
                 'Unit': (.5+rw*bf*2., 9.5),
 
                 'SpikeTrain': (.5+rw*bf*3, 9.5),
-                'Spike': (.5+rw*bf*3, 7.5),
 
                 'IrregularlySampledSignal': (.5+rw*bf*3, 4.9),
-                'AnalogSignal': (.5+rw*bf*3, 2.7),
-                'AnalogSignalArray': (.5+rw*bf*3, .5),
+                'AnalogSignal': (.5+rw*bf*3, .5),
                 }
     generate_diagram('simple_generated_diagram.svg',
                      rect_pos, rect_width, figsize)

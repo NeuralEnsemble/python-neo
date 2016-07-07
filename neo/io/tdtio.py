@@ -2,10 +2,12 @@
 """
 Class for reading data from from Tucker Davis TTank format.
 Terminology:
-TDT hold data with tanks (actually a directory). And tanks hold sub block (sub directories).
+TDT hold data with tanks (actually a directory). And tanks hold sub block
+(sub directories).
 Tanks correspond to neo.Block and tdt block correspond to neo.Segment.
 
-Note the name Block is ambiguous because it does not refer to same thing in TDT terminilogy and neo.
+Note the name Block is ambiguous because it does not refer to same thing in TDT
+terminology and neo.
 
 
 Depend on:
@@ -25,7 +27,7 @@ import quantities as pq
 import itertools
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
 from neo.io.tools import iteritems
 
 PY3K = (sys.version_info[0] == 3)
@@ -50,15 +52,16 @@ class TdtIO(BaseIO):
         >>> print bl.segments
         [<neo.core.segment.Segment object at 0x1060a4d10>]
         >>> print bl.segments[0].analogsignals
-        [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,  1.33056641,
-                1.3458252 ,  1.3671875 ], dtype=float32) * pA, [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
-        >>> print bl.segments[0].eventarrays
+        [<AnalogSignal(array([ 2.18811035,  2.19726562,  2.21252441, ...,
+            1.33056641, 1.3458252 ,  1.3671875 ], dtype=float32) * pA,
+            [0.0 s, 191.2832 s], sampling rate: 10000.0 Hz)>]
+        >>> print bl.segments[0].events
         []
     """
     is_readable        = True
     is_writable        = False
 
-    supported_objects  = [Block, Segment , AnalogSignal, EventArray]
+    supported_objects  = [Block, Segment , AnalogSignal, Event]
     readable_objects   = [Block, Segment]
     writeable_objects  = []
 
@@ -79,7 +82,6 @@ class TdtIO(BaseIO):
 
     def __init__(self , dirname=None) :
         """
-        This class read a WinEDR wcp file.
 
         **Arguments**
         Arguments:
@@ -154,14 +156,13 @@ class TdtIO(BaseIO):
                         else:
                             times = (tsq[mask3]['timestamp'] - global_t_start) * pq.s
                             labels = tsq[mask3]['eventoffset'].view('float64').astype('S')
-                        ea = EventArray(times           = times,
-                                        name            = code ,
-                                        channel_index   = int(channel),
-                                        labels          = labels
-                                        )
+                        ea = Event(times=times,
+                                   name=code,
+                                   channel_index=int(channel),
+                                   labels=labels)
                         if lazy:
                             ea.lazy_shape = np.sum(mask3)
-                        seg.eventarrays.append(ea)
+                        seg.events.append(ea)
 
                     elif type_label == 'EVTYPE_SNIP':
                         sortcodes = np.unique(tsq[mask3]['sortcode'])
@@ -188,7 +189,7 @@ class TdtIO(BaseIO):
                                 t_start = 0 *pq.s
                                 t_stop = 0 *pq.s
                             st = SpikeTrain(times           = times,
-                                            name            = 'Chan{} Code{}'.format(channel,sortcode),
+                                            name            = 'Chan{0} Code{1}'.format(channel,sortcode),
                                             t_start         = t_start,
                                             t_stop          = t_stop,
                                             waveforms       = waveforms,
@@ -220,7 +221,7 @@ class TdtIO(BaseIO):
                             signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
 
                         anasig = AnalogSignal(signal        = signal* pq.V,
-                                              name          = '{} {}'.format(code, channel),
+                                              name          = '{0} {1}'.format(code, channel),
                                               sampling_rate = sr * pq.Hz,
                                               t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
                                               channel_index = int(channel)
@@ -257,7 +258,7 @@ class TdtIO(BaseIO):
                 file_ext.append( os.path.splitext( file )[1].lower() )
 
         file_ext = set(file_ext)
-        tdt_ext  = {'.tbk', '.tdx', '.tev', '.tsq'}
+        tdt_ext  = set(['.tbk', '.tdx', '.tev', '.tsq'])
         if file_ext >= tdt_ext:    # if containing all the necessary files
             return True
         else:

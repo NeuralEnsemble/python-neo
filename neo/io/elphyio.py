@@ -91,8 +91,8 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment, RecordingChannelGroup, RecordingChannel,
-                      AnalogSignal, AnalogSignalArray, EventArray, SpikeTrain)
+from neo.core import (Block, Segment, ChannelIndex, RecordingChannel,
+                      AnalogSignal, Event, SpikeTrain)
 
 # --------------------------------------------------------
 # OBJECTS
@@ -3677,8 +3677,8 @@ class ElphyIO(BaseIO):
     - :class:`Block`
     - :class:`Segment`
     - :class:`RecordingChannel`
-    - :class:`RecordingChannelGroup`
-    - :class:`EventArray`
+    - :class:`ChannelIndex`
+    - :class:`Event`
     - :class:`SpikeTrain`
 
     Usage:
@@ -3687,7 +3687,7 @@ class ElphyIO(BaseIO):
         >>> seg = r.read_block(lazy=False, cascade=True)
         >>> print(seg.analogsignals)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(seg.spiketrains)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        >>> print(seg.eventarrays)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        >>> print(seg.events)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(anasig._data_description)
         >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
 
@@ -3698,7 +3698,7 @@ class ElphyIO(BaseIO):
     is_readable = True # This class can read data
     is_writable = False # This class can write data
     # This class is able to directly or indirectly handle the following objects
-    supported_objects  = [ Block, Segment, AnalogSignalArray, SpikeTrain ] #, AnalogSignal
+    supported_objects  = [ Block, Segment, AnalogSignal, SpikeTrain ]
     # This class can return a Block
     readable_objects    = [ Block ]
     # This class is not able to write objects
@@ -4189,21 +4189,21 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_recordingchannelgroup( self, episode ):
+    def read_channelindex( self, episode ):
         """
-        Internal method used to return :class:`RecordingChannelGroup` info.
+        Internal method used to return :class:`ChannelIndex` info.
 
         Parameters:
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment
         """
         n_spikes = self.elphy_file.n_spikes
-        group = RecordingChannelGroup(
+        group = ChannelIndex(
             name="episode %s, group of %s electrodes" % (episode, n_spikes)
         )
         for spk in range(0, n_spikes) :
-            channel = self.read_recordingchannel(episode, spk)
-            group.recordingchannels.append(channel)
+            channel = self.read_channelindex(episode, spk)
+            group.channel_indexes.append(channel)
         return group
             
 
@@ -4226,7 +4226,7 @@ class ElphyIO(BaseIO):
 
 
 
-    def read_eventarray( self, episode, evt ):
+    def read_event( self, episode, evt ):
         """
         Internal method used to return a list of elphy :class:`EventArray` acquired from event channels.
 
@@ -4236,11 +4236,11 @@ class ElphyIO(BaseIO):
             evt : index of the event.
         """
         event = self.elphy_file.get_event(episode, evt)
-        event_array = EventArray(
+        neo_event = Event(
             times=event.times * pq.s,
             channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
         )
-        return event_array
+        return neo_event
     
 
 

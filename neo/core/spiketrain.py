@@ -199,8 +199,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if units is None:
             # No keyword units, so get from `times`
             try:
-                units = times.units
-                dim = units.dimensionality
+                dim = times.units.dimensionality
             except AttributeError:
                 raise ValueError('you must specify units')
         else:
@@ -209,18 +208,21 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             else:
                 dim = pq.quantity.validate_dimensionality(units)
 
-            if (hasattr(times, 'dimensionality') and
-                    times.dimensionality.items() != dim.items()):
-                if not copy:
-                    raise ValueError("cannot rescale and return view")
+            if hasattr(times, 'dimensionality'):
+                if times.dimensionality.items() == dim.items():
+                    units = None  # units will be taken from times, avoids copying
                 else:
-                    # this is needed because of a bug in python-quantities
-                    # see issue # 65 in python-quantities github
-                    # remove this if it is fixed
-                    times = times.rescale(dim)
+                    if not copy:
+                        raise ValueError("cannot rescale and return view")
+                    else:
+                        # this is needed because of a bug in python-quantities
+                        # see issue # 65 in python-quantities github
+                        # remove this if it is fixed
+                        times = times.rescale(dim)
 
         if dtype is None:
-            dtype = getattr(times, 'dtype', np.float)
+            if not hasattr(times, 'dtype'):
+                dtype = np.float
         elif hasattr(times, 'dtype') and times.dtype != dtype:
             if not copy:
                 raise ValueError("cannot change dtype and return view")
@@ -240,29 +242,27 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
                 not isinstance(list(dim.keys())[0], pq.UnitTime)):
-            ValueError("Unit %s has dimensions %s, not [time]" %
-                       (units, dim.simplified))
+            ValueError("Unit has dimensions %s, not [time]" % dim.simplified)
 
         # Construct Quantity from data
-        obj = pq.Quantity.__new__(cls, times, units=dim, dtype=dtype,
-                                  copy=copy)
+        obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
 
         # if the dtype and units match, just copy the values here instead
-        # of doing the much more epxensive creation of a new Quantity
+        # of doing the much more expensive creation of a new Quantity
         # using items() is orders of magnitude faster
         if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
                 hasattr(t_start, 'dimensionality') and
                 t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
-            obj.t_start = pq.Quantity(t_start, units=dim, dtype=dtype)
+            obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
                 t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
-            obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=dtype)
+            obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
 
         # Store attributes
         obj.waveforms = waveforms

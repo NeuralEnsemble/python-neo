@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-This module implements :class:`IrregularlySampledSignal` an analog signal with
-samples taken at arbitrary time points.
+This module implements :class:`IrregularlySampledSignal`, an array of analog
+signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` derives from :class:`BaseNeo`, from
 :module:`neo.core.baseneo`, and from :class:`quantites.Quantity`, which
@@ -19,7 +19,7 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-# needed for python 3 compatibility
+# needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
@@ -29,23 +29,24 @@ from neo.core.baseneo import BaseNeo
 
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
-                                  copy=True, name=None, description=None, file_origin=None,
+                                  copy=True, name=None, file_origin=None, description=None,
                                   annotations=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     return cls(times=times, signal=signal, units=units, time_units=time_units, 
-               dtype=dtype, copy=copy, name=name, description=description, 
-               file_origin=file_origin, **annotations)
+               dtype=dtype, copy=copy, name=name, file_origin=file_origin,
+               description=description, **annotations)
 
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     '''
-    An analog signal with samples taken at arbitrary time points.
+    An array of one or more analog signal with samples taken at arbitrary time points.
 
-    A representation of a continuous, analog signal acquired at time
-    :attr:`t_start` with a varying sampling interval.
+    A representation of one or more continuous, analog signals acquired at time
+    :attr:`t_start` with a varying sampling interval. Each channel is sampled
+    at the same time points.
 
     *Usage*::
 
@@ -55,15 +56,17 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         >>> irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
         ...                                   units='mV', time_units='ms')
         >>> irsig1 = IrregularlySampledSignal([0.01, 0.03, 0.12]*s,
-        ...                                   [4, 5, 6]*nA)
+        ...                                   [[4, 5], [5, 4], [6, 3]]*nA)
 
     *Required attributes/properties*:
-        :times: (quantity array 1D, numpy array 1D, or list) The data itself.
-        :signal: (quantity array 1D, numpy array 1D, or list) The time of each
-            data point. Must have the same size as :attr:`times`.
-        :units: (quantity units) Required if the signal is a list or NumPy
-            array, not if it is a :class:`Quantity`.
-        :time_units: (quantity units) Required if :attr`times` is a list or
+        :times: (quantity array 1D, numpy array 1D, or list)
+            The time of each data point. Must have the same size as :attr:`signal`.
+        :signal: (quantity array 2D, numpy array 2D, or list (data, channel))
+            The data itself.
+        :units: (quantity units)
+            Required if the signal is a list or NumPy array, not if it is
+            a :class:`Quantity`.
+        :time_units: (quantity units) Required if :attr:`times` is a list or
             NumPy array, not if it is a :class:`Quantity`.
 
     *Recommended attributes/properties*:.
@@ -82,13 +85,13 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     *Properties available on this object*:
         :sampling_intervals: (quantity array 1D) Interval between each adjacent
             pair of samples.
-            (:attr:`times[1:]` - :attr:`times`[:-1])
+            (``times[1:] - times[:-1]``)
         :duration: (quantity scalar) Signal duration, read-only.
-            (:attr:`times`[-1] - :attr:`times`[0])
+            (``times[-1] - times[0]``)
         :t_start: (quantity scalar) Time when signal begins, read-only.
-            (:attr:`times`[0])
+            (``times[0]``)
         :t_stop: (quantity scalar) Time when signal ends, read-only.
-            (:attr:`times`[-1])
+            (``times[-1]``)
 
     *Slicing*:
         :class:`IrregularlySampledSignal` objects can be sliced. When this
@@ -101,13 +104,14 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     '''
 
-    _single_parent_objects = ('Segment', 'RecordingChannel')
+    _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1),
-                       ('signal', pq.Quantity, 1))
+                        ('signal', pq.Quantity, 2))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
-                copy=True, name=None, description=None, file_origin=None,
+                copy=True, name=None, file_origin=None,
+                description=None,
                 **annotations):
         '''
         Construct a new :class:`IrregularlySampledSignal` instance.
@@ -115,9 +119,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         '''
-        if len(times) != len(signal):
-            raise ValueError("times array and signal array must " +
-                             "have same length")
         if units is None:
             if hasattr(signal, "units"):
                 units = signal.units
@@ -139,15 +140,20 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         # should check time units have correct dimensions
         obj = pq.Quantity.__new__(cls, signal, units=units,
                                   dtype=dtype, copy=copy)
+        if obj.ndim == 1:
+            obj = obj.reshape(-1, 1)
+        if len(times) != obj.shape[0]:
+            raise ValueError("times array and signal array must "
+                             "have same length")
         obj.times = pq.Quantity(times, units=time_units,
                                 dtype=float, copy=copy)
         obj.segment = None
-        obj.recordingchannel = None
+        obj.channel_index = None
 
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
-                 copy=True, name=None, description=None, file_origin=None,
+                 copy=True, name=None, file_origin=None, description=None,
                  **annotations):
         '''
         Initializes a newly constructed :class:`IrregularlySampledSignal`
@@ -169,8 +175,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                                self.dtype,
                                                True, 
                                                self.name, 
-                                               self.description, 
                                                self.file_origin,
+                                               self.description,
                                                self.annotations)
 
     def __array_finalize__(self, obj):
@@ -211,18 +217,35 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
         Doesn't get called in Python 3, :meth:`__getitem__` is called instead
         '''
-        obj = super(IrregularlySampledSignal, self).__getslice__(i, j)
-        obj.times = self.times.__getslice__(i, j)
-        return obj
+        return self.__getitem__(slice(i, j))
+
 
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
-        if isinstance(obj, IrregularlySampledSignal):
+        if isinstance(i, int):  # a single point in time across all channels
+            obj = pq.Quantity(obj.magnitude, units=obj.units)
+        elif isinstance(i, tuple):
+            j, k = i
+            if isinstance(j, int):  # a single point in time across some channels
+                obj = pq.Quantity(obj.magnitude, units=obj.units)
+            else:
+                if isinstance(j, slice):
+                    obj.times = self.times.__getitem__(j)
+                elif isinstance(j, np.ndarray):
+                    raise NotImplementedError("Arrays not yet supported")
+                else:
+                    raise TypeError("%s not supported" % type(j))
+                if isinstance(k, int):
+                    obj = obj.reshape(-1, 1)
+        elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
+        else:
+            raise IndexError("index should be an integer, tuple or slice")
         return obj
+
 
     @property
     def duration(self):
@@ -305,7 +328,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         Copy the metadata from another :class:`IrregularlySampledSignal`.
         '''
         for attr in ("times", "name", "file_origin",
-                     "description", "channel_index", "annotations"):
+                     "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __add__(self, other, *args):
@@ -365,7 +388,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         stepwise at sampling times.
         '''
         if interpolation is None:
-            return (self[:-1]*self.sampling_intervals).sum()/self.duration
+            return (self[:-1]*self.sampling_intervals.reshape(-1, 1)).sum()/self.duration
         else:
             raise NotImplementedError
 

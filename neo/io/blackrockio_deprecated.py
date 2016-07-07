@@ -11,7 +11,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment,
-                      RecordingChannel, RecordingChannelGroup, AnalogSignal)
+                      RecordingChannel, ChannelIndex, AnalogSignal)
 from neo.io import tools
 
 
@@ -24,7 +24,7 @@ class BlackrockIO(BaseIO):
     is_writable        = True # write is not supported
 
     # This IO can only manipulate continuous data, not spikes or events
-    supported_objects  = [Block, Segment, AnalogSignal, RecordingChannelGroup, RecordingChannel]
+    supported_objects  = [Block, Segment, AnalogSignal, ChannelIndex, RecordingChannel]
 
     # Keep things simple by always returning a block
     readable_objects    = [Block]
@@ -79,7 +79,7 @@ class BlackrockIO(BaseIO):
         n_stops). If these parameters are not specified, the default is
         to store all data in one Segment.
 
-        The Block also contains one RecordingChannelGroup for all channels.
+        The Block also contains one ChannelIndex for all channels.
 
         n_starts: list or array of starting times of each Segment in
             samples from the beginning of the file.
@@ -112,18 +112,18 @@ class BlackrockIO(BaseIO):
             n_stops = [self.loader.header.n_samples]
 
         #~ # Add channel hierarchy
-        #~ rcg = RecordingChannelGroup(name='allchannels',
+        #~ chx = ChannelIndex(name='allchannels',
             #~ description='group of all channels', file_origin=self.filename)
-        #~ block.recordingchannelgroups.append(rcg)
+        #~ block.channel_indexes.append(chx)
         #~ self.channel_number_to_recording_channel = {}
 
         #~ # Add each channel at a time to hierarchy
         #~ for ch in channel_list:
             #~ ch_object = RecordingChannel(name='channel%d' % ch,
                 #~ file_origin=self.filename, index=ch)
-            #~ rcg.channel_indexes.append(ch_object.index)
-            #~ rcg.channel_names.append(ch_object.name)
-            #~ rcg.recordingchannels.append(ch_object)
+            #~ chx.index.append(ch_object.index)
+            #~ chx.channel_names.append(ch_object.name)
+            #~ chx.recordingchannels.append(ch_object)
             #~ self.channel_number_to_recording_channel[ch] = ch_object
 
         # Iterate through n_starts and n_stops and add one Segment
@@ -276,8 +276,8 @@ def channel_indexes_in_segment(seg):
     for sig in seg.analogsignals:
         channel_indices.append(sig.recordingchannel.index)
 
-    for asa in seg.analogsignalarrays:
-        channel_indices.append(asa.recordingchannelgroup.channel_indexes)
+    for asa in seg.analogsignals:
+        channel_indices.append(asa.channel_index.index)
 
     return channel_indices
 

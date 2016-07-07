@@ -2,24 +2,29 @@
 Neo
 ===
 
-Neo is a package for representing electrophysiology data in Python, together
+Neo is a Python package for working with electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, and support for
 writing to a subset of these formats plus non-proprietary formats including HDF5.
 
 The goal of Neo is to improve interoperability between Python tools for
-analyzing, visualizing and generating electrophysiology data (such as
-OpenElectrophy, NeuroTools, G-node, Helmholtz, PyNN) by providing a common,
+analyzing, visualizing and generating electrophysiology data by providing a common,
 shared object model. In order to be as lightweight a dependency as possible,
 Neo is deliberately limited to represention of data, with no functions for data
 analysis or visualization.
 
+Neo is used by a number of other software tools, including OpenElectrophy_
+and SpykeViewer_ (data analysis and visualization), Elephant_ (data analysis),
+the G-node_ suite (databasing) and PyNN_ (simulations).
+
 Neo implements a hierarchical data model well adapted to intracellular and
 extracellular electrophysiology and EEG data with support for multi-electrodes
-(for example tetrodes). Neo's data objects build on the quantities_ package,
+(for example tetrodes). Neo's data objects build on the quantities package,
 which in turn builds on NumPy by adding support for physical dimensions. Thus
-neo objects behave just like normal NumPy arrays, but with additional metadata,
+Neo objects behave just like normal NumPy arrays, but with additional metadata,
 checks for dimensional consistency and automatic unit conversion.
+
+A project with similar aims but for neuroimaging file formats is `NiBabel`_.
 
 Code status
 -----------
@@ -44,5 +49,17 @@ More information
 
 For installation instructions, see doc/source/install.rst
 
-:copyright: Copyright 2010-2014 by the Neo team, see AUTHORS.
+:copyright: Copyright 2010-2016 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
+
+
+.. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
+.. _Elephant: http://neuralensemble.org/elephant
+.. _G-node: http://www.g-node.org/
+.. _Neuroshare: http://neuroshare.org/
+.. _SpykeViewer: https://spyke-viewer.readthedocs.org/en/latest/
+.. _NiBabel: http://nipy.sourceforge.net/nibabel/
+.. _PyNN: http://neuralensemble.org/PyNN
+.. _quantities: http://pypi.python.org/pypi/quantities
+.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _`issue tracker`: https://github.c

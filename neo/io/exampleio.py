@@ -4,7 +4,7 @@ Class for "reading" fake data from an imaginary file.
 
 For the user, it generates a :class:`Segment` or a :class:`Block` with a
 sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
-:class:`EventArray`.
+:class:`Event`.
 
 For a developer, it is just an example showing guidelines for someone who wants
 to develop a new IO module.
@@ -38,7 +38,7 @@ else:
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Event
 
 
 # I need to subclass BaseIO
@@ -48,7 +48,7 @@ class ExampleIO(BaseIO):
 
     For the user, it generates a :class:`Segment` or a :class:`Block` with a
     sinusoidal :class:`AnalogSignal`, a :class:`SpikeTrain` and an
-    :class:`EventArray`.
+    :class:`Event`.
 
     For a developer, it is just an example showing guidelines for someone who wants
     to develop a new IO module.
@@ -68,8 +68,8 @@ class ExampleIO(BaseIO):
          [<SpikeTrain(array([ -0.83799524,   6.24017951,   7.76366686,   4.45573701,
             12.60644415,  10.68328994,   8.07765735,   4.89967804,
         ...
-        >>> print(seg.eventarrays)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        [<EventArray: TriggerB@9.6976 s, TriggerA@10.2612 s, TriggerB@2.2777 s, TriggerA@6.8607 s, ...
+        >>> print(seg.events)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+        [<Event: TriggerB@9.6976 s, TriggerA@10.2612 s, TriggerB@2.2777 s, TriggerA@6.8607 s, ...
         >>> anasig = r.read_analogsignal(lazy=True, cascade=False)
         >>> print(anasig._data_description)
         {'shape': (150000,)}
@@ -77,12 +77,12 @@ class ExampleIO(BaseIO):
 
     """
 
-    is_readable = True # This class can only read data
-    is_writable = False # write is not supported
+    is_readable = True  # This class can only read data
+    is_writable = False  # write is not supported
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray ]
+    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, Event ]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
@@ -198,22 +198,22 @@ class ExampleIO(BaseIO):
                     seg.spiketrains += [ sptr ]
 
 
-            # create an EventArray that mimic triggers.
-            # note that ExampleIO  do not allow to acess directly to EventArray
+            # create an Event that mimic triggers.
+            # note that ExampleIO  do not allow to acess directly to Event
             # for that you need read_segment(cascade = True)
-            eva = EventArray()
+
             if lazy:
                 # in lazy case no data are readed
                 # eva is empty
-                pass
+                eva = Event()
             else:
                 # otherwise it really contain data
                 n = 1000
 
                 # neo.io support quantities my vector use second for unit
-                eva.times = timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s
+                eva = Event(timevect[(np.random.rand(n)*timevect.size).astype('i')]* pq.s)
                 # all duration are the same
-                eva.durations = np.ones(n)*500*pq.ms
+                eva.durations = np.ones(n)*500*pq.ms  # Event doesn't have durations. Is Epoch intended here?
                 # label
                 l = [ ]
                 for i in range(n):
@@ -221,7 +221,7 @@ class ExampleIO(BaseIO):
                     else : l.append( 'TriggerB' )
                 eva.labels = np.array( l )
 
-            seg.eventarrays += [ eva ]
+            seg.events += [ eva ]
 
         seg.create_many_to_one_relationship()
         return seg

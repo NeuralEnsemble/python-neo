@@ -38,10 +38,10 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import (AnalogSignal, Block, RecordingChannel,
-                      RecordingChannelGroup, Segment)
+from neo.core import (AnalogSignal, Block,
+                      ChannelIndex, Segment)
 
-# need to subclass BaseI
+# need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
 
@@ -79,7 +79,7 @@ class BrainwareDamIO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, RecordingChannelGroup, RecordingChannel,
+    supported_objects = [Block, ChannelIndex,
                          Segment, AnalogSignal]
 
     readable_objects = [Block]
@@ -131,7 +131,7 @@ class BrainwareDamIO(BaseIO):
         # neither of which should pass silently
         if kargs:
             raise NotImplementedError('This method does not have any '
-                                      'argument implemented yet')
+                                      'arguments implemented yet')
         self._fsrc = None
 
         block = Block(file_origin=self._filename)
@@ -141,15 +141,13 @@ class BrainwareDamIO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = RecordingChannelGroup(file_origin=self._filename)
-        rchan = RecordingChannel(file_origin=self._filename,
-                                 index=1, name='Chan1')
+        chx = ChannelIndex(file_origin=self._filename,
+                                    channel_ids=np.array([1]),
+                                    index=np.array([0]),
+                                    channel_names=np.array(['Chan1'], dtype='S'))
 
         # load objects into their containers
-        rcg.recordingchannels.append(rchan)
-        block.recordingchannelgroups.append(rcg)
-        rcg.channel_indexes = np.array([1])
-        rcg.channel_names = np.array(['Chan1'], dtype='S')
+        block.channel_indexes.append(chx)
 
         # open the file
         with open(self._path, 'rb') as fobject:
@@ -161,8 +159,8 @@ class BrainwareDamIO(BaseIO):
                     break
 
                 # store the segment and signals
+                seg.analogsignals[0].channel_index = chx
                 block.segments.append(seg)
-                rchan.analogsignals.append(seg.analogsignals[0])
 
         # remove the file object
         self._fsrc = None

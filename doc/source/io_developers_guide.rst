@@ -60,7 +60,7 @@ enable advanced lazy loading:
   Because the links of objects can point to previously loaded objects, you need to cache all loaded objects in the IO. If :meth:`load_lazy_cascade`
   is called with the address of a previously loaded object, return the object instead of loading it again. Also, a call to :meth:`load_lazy_cascade`
   might require you to load additional objects further up in the hierarchy. For example, if a :class:`SpikeTrain` is accessed through a
-  :class:`Segment`, its :class:`Unit` and the :class:`RecordingChannelGroup` of the :class:`Unit` might have to be loaded at that point as well
+  :class:`Segment`, its :class:`Unit` and the :class:`ChannelIndex` of the :class:`Unit` might have to be loaded at that point as well
   if they have not been accessed before.
 
   Note that you are free to restrict lazy cascading to certain objects. For example, you could use the ``LazyList`` only for the ``analogsignals``

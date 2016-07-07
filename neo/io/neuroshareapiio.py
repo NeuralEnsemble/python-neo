@@ -36,7 +36,7 @@ else:
 from neo.io.baseio import BaseIO
 
 #import objects from neo.core
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray, EpochArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Event, Epoch
 
 
 # create an object based on BaseIO
@@ -45,12 +45,12 @@ class NeuroshareapiIO(BaseIO):
     #setting some class parameters
     is_readable = True # This class can only read data
     is_writable = False # write is not supported
-    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray ]
+    supported_objects  = [ Segment , AnalogSignal, SpikeTrain, Event, Epoch ]
     
     has_header         = False
     is_streameable     = False
 
-    readable_objects    = [ Segment , AnalogSignal, SpikeTrain, EventArray, EpochArray]
+    readable_objects    = [ Segment , AnalogSignal, SpikeTrain, Event, Epoch]
     # This class is not able to write objects
     writeable_objects   = [ ]
 
@@ -307,7 +307,7 @@ class NeuroshareapiIO(BaseIO):
             #transform t_start into index (reading will start from this index)           
             startat = int(t_start*self.metadata["sampRate"])
             #get the number of bins to read in
-            bins = int((segment_duration+t_start) * self.metadata["sampRate"])
+            bins = int(segment_duration * self.metadata["sampRate"])
             
             #if the number of bins to read is bigger than 
             #the total number of bins, read only till the end of analog object
@@ -393,7 +393,7 @@ class NeuroshareapiIO(BaseIO):
         """function to read digital timestamps. this function only reads the event
         onset. to get digital event durations, use the epoch function (to be implemented)."""
         if lazy:
-            eva = EventArray(file_origin = self.filename)        
+            eva = Event(file_origin = self.filename)
         else:
             #create temporary empty lists to store data
             tempNames = list()
@@ -419,8 +419,8 @@ class NeuroshareapiIO(BaseIO):
                     #append the time stamp to them empty list
                     tempTimeStamp.append(tempData)
                 #create an event array        
-            eva = EventArray(labels = np.array(tempNames,dtype = "S"),
-    			     times = np.array(tempTimeStamp)*pq.s,
+            eva = Event(labels = np.array(tempNames,dtype = "S"),
+    			        times = np.array(tempTimeStamp)*pq.s,
 			     file_origin = self.filename,                            
                              description = "the trigger events (without durations)")       
         return eva
@@ -434,8 +434,8 @@ class NeuroshareapiIO(BaseIO):
         onset and offset and outputs onset and duration. to get only onsets use
         the event array function"""
         if lazy:
-            epa = EpochArray(file_origin = self.filename,
-                             times=None, durations=None, labels=None)
+            epa = Epoch(file_origin = self.filename,
+                        times=None, durations=None, labels=None)
         else:
             #create temporary empty lists to store data
             tempNames = list()
@@ -468,11 +468,11 @@ class NeuroshareapiIO(BaseIO):
                     #if onOrOff == 255:
                     #pass
                     durations.append(tempData1-tempData)
-            epa = EpochArray(file_origin = self.filename,
-                                 times = np.array(tempTimeStamp)*pq.s, 
-                                 durations = np.array(durations)*pq.s, 
-                                 labels = np.array(tempNames,dtype = "S"),
-                                 description = "digital events with duration")
+            epa = Epoch(file_origin = self.filename,
+                        times = np.array(tempTimeStamp)*pq.s,
+                        durations = np.array(durations)*pq.s,
+                        labels = np.array(tempNames,dtype = "S"),
+                        description = "digital events with duration")
             return epa
         
         

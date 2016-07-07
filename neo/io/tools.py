@@ -9,11 +9,11 @@ import collections
 
 import numpy as np
 
-from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, EpochArray, Event, EventArray,
+from neo.core import (AnalogSignal, Block,
+                      Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannel, RecordingChannelGroup,
-                      Segment, Spike, SpikeTrain, Unit)
+                      ChannelIndex,
+                      Segment, SpikeTrain, Unit)
 
 
 #def finalize_block(block):
@@ -22,54 +22,54 @@ from neo.core import (AnalogSignal, AnalogSignalArray, Block,
 
     # Special case this tricky many-to-many relationship
     # we still need links from recordingchannel to analogsignal
-#    for rcg in block.recordingchannelgroups:
-#        for rc in rcg.recordingchannels:
+#    for chx in block.channel_indexes:
+#        for rc in chx.recordingchannels:
 #            rc.create_many_to_one_relationship()
 
 
-def populate_RecordingChannel(bl, remove_from_annotation=True):
-    """
-    When a Block is
-    Block>Segment>AnalogSIgnal
-    this function auto create all RecordingChannel following these rules:
-      * when 'channel_index ' is in AnalogSIgnal the corresponding
-        RecordingChannel is created.
-      * 'channel_index ' is then set to None if remove_from_annotation
-      * only one RecordingChannelGroup is created
-
-    It is a utility at the end of creating a Block for IO.
-
-    Usage:
-    >>> populate_RecordingChannel(a_block)
-    """
-    recordingchannels = {}
-    for seg in bl.segments:
-        for anasig in seg.analogsignals:
-            if getattr(anasig, 'channel_index', None) is not None:
-                ind = int(anasig.channel_index)
-                if ind not in recordingchannels:
-                    recordingchannels[ind] = RecordingChannel(index=ind)
-                    if 'channel_name' in anasig.annotations:
-                        channel_name = anasig.annotations['channel_name']
-                        recordingchannels[ind].name = channel_name
-                        if remove_from_annotation:
-                            anasig.annotations.pop('channel_name')
-                recordingchannels[ind].analogsignals.append(anasig)
-                anasig.recordingchannel = recordingchannels[ind]
-                if remove_from_annotation:
-                    anasig.channel_index = None
-
-    indexes = np.sort(list(recordingchannels.keys())).astype('i')
-    names = np.array([recordingchannels[idx].name for idx in indexes],
-                     dtype='S')
-    rcg = RecordingChannelGroup(name='all channels',
-                                channel_indexes=indexes,
-                                channel_names=names)
-    bl.recordingchannelgroups.append(rcg)
-    for ind in indexes:
-        # many to many relationship
-        rcg.recordingchannels.append(recordingchannels[ind])
-        recordingchannels[ind].recordingchannelgroups.append(rcg)
+# def populate_RecordingChannel(bl, remove_from_annotation=True):
+#     """
+#     When a Block is
+#     Block>Segment>AnalogSIgnal
+#     this function auto create all RecordingChannel following these rules:
+#       * when 'channel_index ' is in AnalogSIgnal the corresponding
+#         RecordingChannel is created.
+#       * 'channel_index ' is then set to None if remove_from_annotation
+#       * only one ChannelIndex is created
+#
+#     It is a utility at the end of creating a Block for IO.
+#
+#     Usage:
+#     >>> populate_RecordingChannel(a_block)
+#     """
+#     recordingchannels = {}
+#     for seg in bl.segments:
+#         for anasig in seg.analogsignals:
+#             if getattr(anasig, 'channel_index', None) is not None:
+#                 ind = int(anasig.channel_index)
+#                 if ind not in recordingchannels:
+#                     recordingchannels[ind] = RecordingChannel(index=ind)
+#                     if 'channel_name' in anasig.annotations:
+#                         channel_name = anasig.annotations['channel_name']
+#                         recordingchannels[ind].name = channel_name
+#                         if remove_from_annotation:
+#                             anasig.annotations.pop('channel_name')
+#                 recordingchannels[ind].analogsignals.append(anasig)
+#                 anasig.recordingchannel = recordingchannels[ind]
+#                 if remove_from_annotation:
+#                     anasig.channel_index = None
+#
+#     indexes = np.sort(list(recordingchannels.keys())).astype('i')
+#     names = np.array([recordingchannels[idx].name for idx in indexes],
+#                      dtype='S')
+#     chx = ChannelIndex(name='all channels',
+#                        index=indexes,
+#                        channel_names=names)
+#     bl.channel_indexes.append(chx)
+#     for ind in indexes:
+#         # many to many relationship
+#         chx.recordingchannels.append(recordingchannels[ind])
+#         recordingchannels[ind].channel_indexes.append(chx)
 
 
 def iteritems(D):
@@ -86,10 +86,10 @@ class LazyList(collections.MutableSequence):
     respective object.
     """
     _container_objects = set(
-        [Block, Segment, RecordingChannelGroup, RecordingChannel, Unit])
+        [Block, Segment, ChannelIndex, Unit])
     _neo_objects = _container_objects.union(
-        [AnalogSignal, AnalogSignalArray, Epoch, EpochArray, Event, EventArray,
-         IrregularlySampledSignal, Spike, SpikeTrain])
+        [AnalogSignal, Epoch, Event,
+         IrregularlySampledSignal, SpikeTrain])
 
     def __init__(self, io, lazy, items=None):
         """

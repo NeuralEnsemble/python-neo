@@ -84,7 +84,7 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
-from neo.io.tools import populate_RecordingChannel
+
 
 class AlphaOmegaIO(BaseIO):
     """
@@ -104,14 +104,13 @@ class AlphaOmegaIO(BaseIO):
     """
 
     is_readable        = True  # This is a reading only class
-    is_writable        = False # writting is not supported
+    is_writable        = False # writing is not supported
 
-    # This class is able to directly or inderectly read the following kind of
+    # This class is able to directly or indirectly read the following kind of
     # objects
     supported_objects  = [ Block, Segment , AnalogSignal]
     # TODO: Add support for other objects that should be extractable from .map
-    # files (AnalogSignalArray, Event, EventArray, Epoch?, Epoch Array?,
-    # Spike?, SpikeTrain?)
+    # files (Event, Epoch?, Epoch Array?, SpikeTrain?)
 
     # This class can only return a Block
     readable_objects   = [ Block ]
@@ -220,7 +219,7 @@ class AlphaOmegaIO(BaseIO):
                               'pos': pos_block})
 
                 if m_TypeBlock == '2':
-                    # The beggining of the block of type '2' is identical for
+                    # The beginning of the block of type '2' is identical for
                     # all types of channels, but the following part depends on
                     # the type of channel. So we need a special case here.
 
@@ -355,9 +354,9 @@ class AlphaOmegaIO(BaseIO):
                                            file_origin = \
                                                os.path.basename(self.filename),
                                            units = pq.dimensionless)
-
-                ana_sig.channel_index = \
-                            file_blocks[list_chan[ind_chan]]['m_numChannel']
+# todo apibreak: create ChannelIndex for each signals
+#                ana_sig.channel_index = \
+#                            file_blocks[list_chan[ind_chan]]['m_numChannel']
                 ana_sig.annotate(channel_name = \
                             file_blocks[list_chan[ind_chan]]['m_Name'])
                 ana_sig.annotate(channel_type = \
@@ -386,7 +385,6 @@ class AlphaOmegaIO(BaseIO):
                 # copy
                 seg.annotate(alphamap_version = version)
         if cascade:
-            populate_RecordingChannel(blck, remove_from_annotation = True)
             blck.create_many_to_one_relationship()
 
         return blck

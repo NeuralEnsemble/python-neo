@@ -32,7 +32,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, AnalogSignal, SpikeTrain, EventArray
+from neo.core import Segment, AnalogSignal, SpikeTrain, Event
 
 ns_OK = 0 #Function successful
 ns_LIBERROR = -1 #Generic linked library error
@@ -102,7 +102,7 @@ class NeurosharectypesIO(BaseIO):
     is_readable        = True
     is_writable        = False
 
-    supported_objects            = [Segment , AnalogSignal, EventArray, SpikeTrain ]
+    supported_objects            = [Segment , AnalogSignal, Event, SpikeTrain ]
     readable_objects    = [Segment]
     writeable_objects    = [ ]
 
@@ -188,7 +188,7 @@ class NeurosharectypesIO(BaseIO):
                 pdTimeStamp  = ctypes.c_double(0.)
                 pdwDataRetSize = ctypes.c_uint32(0)
 
-                ea = EventArray(name = str(entityInfo.szEntityLabel),)
+                ea = Event(name = str(entityInfo.szEntityLabel),)
                 if not lazy:
                     times = [ ]
                     labels = [ ]

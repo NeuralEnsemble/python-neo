@@ -39,11 +39,11 @@ class Segment(Container):
         >>> seg.spiketrains.append(train1)
         >>>
         >>> sig0 = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV',
-        ...                     sampling_rate=1*Hz)
+        ...                          sampling_rate=1*Hz)
         >>> seg.analogsignals.append(sig0)
         >>>
         >>> sig1 = AnalogSignal(signal=[100.01, 103.3, 109.3], units='nA',
-        ...                     sampling_period=.1*s)
+        ...                          sampling_period=.1*s)
         >>> seg.analogsignals.append(sig1)
 
     *Required attributes/properties*:
@@ -67,28 +67,22 @@ class Segment(Container):
 
     *Container of*:
         :class:`Epoch`
-        :class:`EpochArray`
         :class:`Event`
-        :class:`EventArray`
         :class:`AnalogSignal`
-        :class:`AnalogSignalArray`
         :class:`IrregularlySampledSignal`
-        :class:`Spike`
         :class:`SpikeTrain`
 
     '''
 
-    _data_child_objects = ('AnalogSignal', 'AnalogSignalArray',
-                           'Epoch', 'EpochArray',
-                           'Event', 'EventArray',
-                           'IrregularlySampledSignal',
-                           'Spike', 'SpikeTrain')
+    _data_child_objects = ('AnalogSignal',
+                           'Epoch', 'Event',
+                           'IrregularlySampledSignal', 'SpikeTrain')
     _single_parent_objects = ('Block',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
                           Container._recommended_attrs)
-    _repr_pretty_containers = ('analogsignals', 'analogsignalarrays')
+    _repr_pretty_containers = ('analogsignals',)
 
     def __init__(self, name=None, description=None, file_origin=None,
                  file_datetime=None, rec_datetime=None, index=None,
@@ -103,18 +97,37 @@ class Segment(Container):
         self.rec_datetime = rec_datetime
         self.index = index
 
-    def take_spikes_by_unit(self, unit_list=None):
+    # t_start attribute is handled as a property so type checking can be done
+    @property
+    def t_start(self):
         '''
-        Return :class:`Spike` objects in the :class:`Segment` that are also in
-        a :class:`Unit` in the :attr:`unit_list` provided.
+        Time when first signal begins.
         '''
-        if unit_list is None:
-            return []
-        spike_list = []
-        for spike in self.spikes:
-            if spike.unit in unit_list:
-                spike_list.append(spike)
-        return spike_list
+        t_starts = [sig.t_start for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals]
+        t_starts += [e.times[0] for e in self.epochs + self.events if len(e.times) > 0]
+
+        # t_start is not defined if no children are present
+        if len(t_starts)==0:
+            return None
+
+        t_start = min(t_starts)
+        return t_start
+
+    # t_stop attribute is handled as a property so type checking can be done
+    @property
+    def t_stop(self):
+        '''
+        Time when last signal ends.
+        '''
+        t_stops = [sig.t_stop for sig in self.analogsignals +  self.spiketrains + self.irregularlysampledsignals]
+        t_stops += [e.times[-1] for e in self.epochs + self.events if len(e.times) > 0]
+
+        # t_stop is not defined if no children are present
+        if len(t_stops)==0:
+            return None
+
+        t_stop = max(t_stops)
+        return t_stop
 
     def take_spiketrains_by_unit(self, unit_list=None):
         '''
@@ -129,37 +142,37 @@ class Segment(Container):
                 spiketrain_list.append(spiketrain)
         return spiketrain_list
 
-    def take_analogsignal_by_unit(self, unit_list=None):
-        '''
-        Return :class:`AnalogSignal` objects in the :class:`Segment` that are
-        have the same :attr:`channel_index` as any of the :class:`Unit: objects
-        in the :attr:`unit_list` provided.
-        '''
-        if unit_list is None:
-            return []
-        channel_indexes = []
-        for unit in unit_list:
-            if unit.channel_indexes is not None:
-                channel_indexes.extend(unit.channel_indexes)
-        return self.take_analogsignal_by_channelindex(channel_indexes)
-
-    def take_analogsignal_by_channelindex(self, channel_indexes=None):
-        '''
-        Return :class:`AnalogSignal` objects in the :class:`Segment` that have
-        a :attr:`channel_index` that is in the :attr:`channel_indexes`
-        provided.
-        '''
-        if channel_indexes is None:
-            return []
-        anasig_list = []
-        for anasig in self.analogsignals:
-            if anasig.channel_index in channel_indexes:
-                anasig_list.append(anasig)
-        return anasig_list
+    # def take_analogsignal_by_unit(self, unit_list=None):
+    #     '''
+    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that are
+    #     have the same :attr:`channel_index` as any of the :class:`Unit: objects
+    #     in the :attr:`unit_list` provided.
+    #     '''
+    #     if unit_list is None:
+    #         return []
+    #     channel_indexes = []
+    #     for unit in unit_list:
+    #         if unit.channel_indexes is not None:
+    #             channel_indexes.extend(unit.channel_indexes)
+    #     return self.take_analogsignal_by_channelindex(channel_indexes)
+    #
+    # def take_analogsignal_by_channelindex(self, channel_indexes=None):
+    #     '''
+    #     Return :class:`AnalogSignal` objects in the :class:`Segment` that have
+    #     a :attr:`channel_index` that is in the :attr:`channel_indexes`
+    #     provided.
+    #     '''
+    #     if channel_indexes is None:
+    #         return []
+    #     anasig_list = []
+    #     for anasig in self.analogsignals:
+    #         if anasig.channel_index in channel_indexes:
+    #             anasig_list.append(anasig)
+    #     return anasig_list
 
     def take_slice_of_analogsignalarray_by_unit(self, unit_list=None):
         '''
-        Return slices of the :class:`AnalogSignalArray` objects in the
+        Return slices of the :class:`AnalogSignal` objects in the
         :class:`Segment` that correspond to a :attr:`channel_index`  of any of
         the :class:`Unit` objects in the :attr:`unit_list` provided.
         '''
@@ -167,8 +180,8 @@ class Segment(Container):
             return []
         indexes = []
         for unit in unit_list:
-            if unit.channel_indexes is not None:
-                indexes.extend(unit.channel_indexes)
+            if unit.get_channel_indexes() is not None:
+                indexes.extend(unit.get_channel_indexes())
 
         return self.take_slice_of_analogsignalarray_by_channelindex(indexes)
 
@@ -183,9 +196,9 @@ class Segment(Container):
             return []
 
         sliced_sigarrays = []
-        for sigarr in self.analogsignalarrays:
-            if sigarr.channel_indexes is not None:
-                ind = np.in1d(sigarr.channel_indexes, channel_indexes)
+        for sigarr in self.analogsignals:
+            if sigarr.get_channel_index() is not None:
+                ind = np.in1d(sigarr.get_channel_index(), channel_indexes)
                 sliced_sigarrays.append(sigarr[:, ind])
 
         return sliced_sigarrays
@@ -193,28 +206,28 @@ class Segment(Container):
     def construct_subsegment_by_unit(self, unit_list=None):
         '''
         Return a new :class:`Segment that contains the :class:`AnalogSignal`,
-        :class:`AnalogSignalArray`, :class:`Spike`:, and :class:`SpikeTrain`
+        :class:`AnalogSignal`, and :class:`SpikeTrain`
         objects common to both the current :class:`Segment` and any
         :class:`Unit` in the :attr:`unit_list` provided.
 
         *Example*::
 
             >>> from neo.core import (Segment, Block, Unit, SpikeTrain,
-            ...                       RecordingChannelGroup)
+            ...                       ChannelIndex)
             >>>
             >>> blk = Block()
-            >>> rcg = RecordingChannelGroup(name='group0')
-            >>> blk.recordingchannelgroups = [rcg]
+            >>> chx = ChannelIndex(name='group0')
+            >>> blk.channel_indexes = [chx]
             >>>
             >>> for ind in range(5):
             ...         unit = Unit(name='Unit #%s' % ind, channel_index=ind)
-            ...         rcg.units.append(unit)
+            ...         chx.units.append(unit)
             ...
             >>>
             >>> for ind in range(3):
             ...     seg = Segment(name='Simulation #%s' % ind)
             ...     blk.segments.append(seg)
-            ...     for unit in rcg.units:
+            ...     for unit in chx.units:
             ...         train = SpikeTrain([1, 2, 3], units='ms', t_start=0.,
             ...                            t_stop=10)
             ...         train.unit = unit
@@ -223,7 +236,7 @@ class Segment(Container):
             ...
             >>>
             >>> seg0 = blk.segments[-1]
-            >>> seg1 = seg0.construct_subsegment_by_unit(rcg.units[:2])
+            >>> seg1 = seg0.construct_subsegment_by_unit(chx.units[:2])
             >>> len(seg0.spiketrains)
             5
             >>> len(seg1.spiketrains)
@@ -231,10 +244,8 @@ class Segment(Container):
 
         '''
         seg = Segment()
-        seg.analogsignals = self.take_analogsignal_by_unit(unit_list)
-        seg.spikes = self.take_spikes_by_unit(unit_list)
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
-        seg.analogsignalarrays = \
+        seg.analogsignals = \
             self.take_slice_of_analogsignalarray_by_unit(unit_list)
         #TODO copy others attributes
         return seg

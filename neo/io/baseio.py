@@ -16,11 +16,11 @@ import collections
 import logging
 
 from neo import logging_handler
-from neo.core import (AnalogSignal, AnalogSignalArray, Block,
-                      Epoch, EpochArray, Event, EventArray,
+from neo.core import (AnalogSignal, Block,
+                      Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannel, RecordingChannelGroup,
-                      Segment, Spike, SpikeTrain, Unit)
+                      ChannelIndex,
+                      Segment, SpikeTrain, Unit)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -155,35 +155,20 @@ class BaseIO(object):
     def read_spiketrain(self, **kargs):
         assert(SpikeTrain in self.readable_objects), read_error
 
-    def read_spike(self, **kargs):
-        assert(Spike in self.readable_objects), read_error
-
     def read_analogsignal(self, **kargs):
         assert(AnalogSignal in self.readable_objects), read_error
 
     def read_irregularlysampledsignal(self, **kargs):
         assert(IrregularlySampledSignal in self.readable_objects), read_error
 
-    def read_analogsignalarray(self, **kargs):
-        assert(AnalogSignalArray in self.readable_objects), read_error
-
-    def read_recordingchannelgroup(self, **kargs):
-        assert(RecordingChannelGroup in self.readable_objects), read_error
-
-    def read_recordingchannel(self, **kargs):
-        assert(RecordingChannel in self.readable_objects), read_error
+    def read_channelindex(self, **kargs):
+        assert(ChannelIndex in self.readable_objects), read_error
 
     def read_event(self, **kargs):
         assert(Event in self.readable_objects), read_error
 
-    def read_eventarray(self, **kargs):
-        assert(EventArray in self.readable_objects), read_error
-
     def read_epoch(self, **kargs):
         assert(Epoch in self.readable_objects), read_error
-
-    def read_epocharray(self, **kargs):
-        assert(EpochArray in self.readable_objects), read_error
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
@@ -198,32 +183,17 @@ class BaseIO(object):
     def write_spiketrain(self, sptr, **kargs):
         assert(SpikeTrain in self.writeable_objects), write_error
 
-    def write_spike(self, sp, **kargs):
-        assert(Spike in self.writeable_objects), write_error
-
     def write_analogsignal(self, anasig,  **kargs):
         assert(AnalogSignal in self.writeable_objects), write_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert(IrregularlySampledSignal in self.writeable_objects), write_error
 
-    def write_analogsignalarray(self, anasigar, **kargs):
-        assert(AnalogSignalArray in self.writeable_objects), write_error
-
-    def write_recordingchannelgroup(self, rcg, **kargs):
-        assert(RecordingChannelGroup in self.writeable_objects), write_error
-
-    def write_recordingchannel(self, rc, **kargs):
-        assert(RecordingChannel in self.writeable_objects), write_error
+    def write_channelindex(self, chx, **kargs):
+        assert(ChannelIndex in self.writeable_objects), write_error
 
     def write_event(self, ev, **kargs):
         assert(Event in self.writeable_objects), write_error
 
-    def write_eventarray(self, ea,  **kargs):
-        assert(EventArray in self.writeable_objects), write_error
-
     def write_epoch(self, ep, **kargs):
         assert(Epoch in self.writeable_objects), write_error
-
-    def write_epocharray(self, epa,  **kargs):
-        assert(EpochArray in self.writeable_objects), write_error

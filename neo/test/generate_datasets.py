@@ -12,15 +12,16 @@ import numpy as np
 from numpy.random import rand
 import quantities as pq
 
-from neo.core import (AnalogSignal, AnalogSignalArray,
+from neo.core import (AnalogSignal,
                       Block,
-                      Epoch, EpochArray, Event, EventArray,
+                      Epoch, Event,
                       IrregularlySampledSignal,
-                      RecordingChannel, RecordingChannelGroup,
+                      ChannelIndex,
                       Segment, SpikeTrain,
                       Unit,
                       class_by_name)
-from neo.io.tools import populate_RecordingChannel, iteritems
+from neo.io.tools import iteritems
+from neo.core.baseneo import _container_name
 
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
@@ -40,8 +41,8 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
                                               supported_objects=objects, **kws)
             bl.segments.append(seg)
 
-    if RecordingChannel in objects:
-        populate_RecordingChannel(bl)
+    #if RecordingChannel in objects:
+    #    populate_RecordingChannel(bl)
 
     bl.create_many_to_one_relationship()
     return bl
@@ -57,23 +58,23 @@ def generate_one_simple_segment(seg_name='segment 0',
                                 nb_spiketrain=6,
                                 spikerate_range=[.5*pq.Hz, 12*pq.Hz],
 
-                                event_array_types={'stim': ['a', 'b',
-                                                            'c', 'd'],
-                                                   'enter_zone': ['one',
-                                                                  'two'],
-                                                   'color': ['black',
-                                                             'yellow',
-                                                             'green'],
-                                                   },
-                                event_array_size_range=[5, 20],
+                                event_types={'stim': ['a', 'b',
+                                                      'c', 'd'],
+                                             'enter_zone': ['one',
+                                                            'two'],
+                                             'color': ['black',
+                                                       'yellow',
+                                                       'green'],
+                                             },
+                                event_size_range=[5, 20],
 
-                                epoch_array_types={'animal state': ['Sleep',
-                                                                    'Freeze',
-                                                                    'Escape'],
-                                                   'light': ['dark',
-                                                             'lighted']
-                                                   },
-                                epoch_array_duration_range=[.5, 3.],
+                                epoch_types={'animal state': ['Sleep',
+                                                              'Freeze',
+                                                              'Escape'],
+                                             'light': ['dark',
+                                                       'lighted']
+                                             },
+                                epoch_duration_range=[.5, 3.],
 
                                 ):
     if supported_objects and Segment not in supported_objects:
@@ -82,9 +83,9 @@ def generate_one_simple_segment(seg_name='segment 0',
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
             anasig = AnalogSignal(rand(int(sampling_rate * duration)),
-                                  sampling_rate=sampling_rate, t_start=t_start,
-                                  units=pq.mV, channel_index=a,
-                                  name='sig %d for segment %s' % (a, seg.name))
+                                       sampling_rate=sampling_rate, t_start=t_start,
+                                       units=pq.mV, channel_index=a,
+                                       name='sig %d for segment %s' % (a, seg.name))
             seg.analogsignals.append(anasig)
 
     if SpikeTrain in supported_objects:
@@ -102,36 +103,36 @@ def generate_one_simple_segment(seg_name='segment 0',
             sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
 
-    if EventArray in supported_objects:
-        for name, labels in iteritems(event_array_types):
-            ea_size = rand()*np.diff(event_array_size_range)
-            ea_size += event_array_size_range[0]
+    if Event in supported_objects:
+        for name, labels in iteritems(event_types):
+            evt_size = rand()*np.diff(event_size_range)
+            evt_size += event_size_range[0]
             labels = np.array(labels, dtype='S')
-            labels = labels[(rand(ea_size)*len(labels)).astype('i')]
-            ea = EventArray(times=rand(ea_size)*duration, labels=labels)
-            seg.eventarrays.append(ea)
+            labels = labels[(rand(evt_size)*len(labels)).astype('i')]
+            evt = Event(times=rand(evt_size)*duration, labels=labels)
+            seg.events.append(evt)
 
-    if EpochArray in supported_objects:
-        for name, labels in iteritems(epoch_array_types):
+    if Epoch in supported_objects:
+        for name, labels in iteritems(epoch_types):
             t = 0
             times = []
             durations = []
             while t < duration:
                 times.append(t)
-                dur = rand()*np.diff(epoch_array_duration_range)
-                dur += epoch_array_duration_range[0]
+                dur = rand()*np.diff(epoch_duration_range)
+                dur += epoch_duration_range[0]
                 durations.append(dur)
                 t = t+dur
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(len(times))*len(labels)).astype('i')]
-            epa = EpochArray(times=pq.Quantity(times, units=pq.s),
-                             durations=pq.Quantity([x[0] for x in durations],
-                                                   units=pq.s),
-                             labels=labels,
-                             )
-            seg.epocharrays.append(epa)
+            epc = Epoch(times=pq.Quantity(times, units=pq.s),
+                        durations=pq.Quantity([x[0] for x in durations],
+                                              units=pq.s),
+                        labels=labels,
+                        )
+            seg.epochs.append(epc)
 
-    # TODO : Spike, Event, Epoch
+    # TODO : Spike, Event
 
     seg.create_many_to_one_relationship()
     return seg
@@ -220,10 +221,12 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         data = np.array(0.0)
     elif name == 't_stop':
         data = np.array(1.0)
-    elif n and obj == 'AnalogSignalArray':
-        if name == 'channel_index':
-            data = np.random.random(n)*1000.
-        elif name == 'signal':
+    elif n and name == 'channel_indexes':
+        data = np.arange(n)
+    elif n and name == 'channel_names':
+        data = np.array(["ch%d" % i for i in range(n)])
+    elif n and obj == 'AnalogSignal':
+        if name == 'signal':
             size = []
             for _ in range(int(dim)):
                 size.append(np.random.randint(5) + 1)
@@ -262,7 +265,7 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     If annotate is True (default), also add annotations to the values.
     """
 
-    if hasattr(cls, 'lower'):
+    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls, basestring), no?
         cls = class_by_name[cls]
 
     kwargs = {}  # assign attributes
@@ -294,13 +297,12 @@ def get_annotations():
 def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     '''
     Create a fake NEO object of a given type. Follows one-to-many
-    and many-to-many relationships if cascade. RC, when requested cascade, will
-    not create RGCs to avoid dead-locks.
+    and many-to-many relationships if cascade.
 
     n (default=1) is the number of child objects of each type will be created.
     In cases like segment.spiketrains, there will be more than this number
     because there will be n for each unit, of which there will be n for
-    each recordingchannelgroup, of which there will be n.
+    each channelindex, of which there will be n.
     '''
 
     if hasattr(obj_type, 'lower'):
@@ -337,38 +339,25 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             if (cascade == 'block' and len(child._parent_objects) > 0 and
                     obj_type != child._parent_objects[-1]):
                 continue
-            getattr(obj, childname.lower()+"s").append(child)
+            getattr(obj, _container_name(childname)).append(child)
 
     # need to manually create 'implicit' connections
     if obj_type == 'Block':
         # connect data objects to segment
-        for i, rcg in enumerate(obj.recordingchannelgroups):
-            for k, sigarr in enumerate(rcg.analogsignalarrays):
-                obj.segments[k].analogsignalarrays.append(sigarr)
-            for j, unit in enumerate(rcg.units):
-                for k, spike in enumerate(unit.spikes):
-                    obj.segments[k].spikes.append(spike)
+        for i, chx in enumerate(obj.channel_indexes):
+            for k, sigarr in enumerate(chx.analogsignals):
+                obj.segments[k].analogsignals.append(sigarr)
+            for k, sigarr in enumerate(chx.irregularlysampledsignals):
+                obj.segments[k].irregularlysampledsignals.append(sigarr)
+            for j, unit in enumerate(chx.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
-            for j, rchan in enumerate(rcg.recordingchannels):
-                for k, sig in enumerate(rchan.analogsignals):
-                    obj.segments[k].analogsignals.append(sig)
-                for k, irsig in enumerate(rchan.irregularlysampledsignals):
-                    obj.segments[k].irregularlysampledsignals.append(irsig)
-    elif obj_type == 'RecordingChannelGroup':
-        inds = []
-        names = []
-        chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
-        for sigarr in obj.analogsignalarrays:
-            sigarr.channel_index = chinds[:sigarr.shape[1]]
-        for i, rchan in enumerate(obj.recordingchannels):
-            for sig in rchan.analogsignals:
-                sig.channel_index = chinds[i].tolist()
-            inds.append(rchan.index)
-            names.append(rchan.name)
-            rchan.recordingchannelgroups.append(obj)
-        obj.channel_indexes = np.array(inds)
-        obj.channel_names = np.array(names).astype('S')
+    #elif obj_type == 'ChannelIndex':
+    #    inds = []
+    #    names = []
+    #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])
+    #    obj.indexes = np.array(inds, dtype='i')
+    #    obj.channel_names = np.array(names).astype('S')
 
     if hasattr(obj, 'create_many_to_one_relationship'):
         obj.create_many_to_one_relationship()

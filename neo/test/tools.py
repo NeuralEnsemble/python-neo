@@ -11,6 +11,7 @@ import quantities as pq
 
 import neo
 from neo.core import objectlist
+from neo.core.baseneo import _reference_name, _container_name
 
 
 def assert_arrays_equal(a, b, dtype=False):
@@ -121,7 +122,7 @@ def assert_neo_object_is_compliant(ob):
         if (hasattr(ob, '_quantity_attr') and
                 ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
-            # object inherits from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            # object inherits from Quantity (AnalogSignal, SpikeTrain, ...)
             ndim = ioattr[2]
             assert ob.ndim == ndim, \
                 '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
@@ -152,14 +153,14 @@ def assert_neo_object_is_compliant(ob):
     # test bijectivity : parents and children
     for container in getattr(ob, '_single_child_containers', []):
         for i, child in enumerate(getattr(ob, container, [])):
-            assert hasattr(child, classname.lower()), \
+            assert hasattr(child, _reference_name(classname)), \
                 '%s should have %s attribute (2 way relationship)' % \
-                (container, classname.lower())
-            if hasattr(child, classname.lower()):
-                parent = getattr(child, classname.lower())
+                (container, _reference_name(classname))
+            if hasattr(child, _reference_name(classname)):
+                parent = getattr(child, _reference_name(classname))
                 assert parent == ob, \
                     '%s.%s %s is not symetric with %s.%s' % \
-                    (container, classname.lower(), i,
+                    (container, _reference_name(classname), i,
                      classname, container)
 
     # recursive on one to many rel
@@ -275,7 +276,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
         attrname, attrtype = ioattr[0], ioattr[1]
         #~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
-            # object is hinerited from Quantity (AnalogSIgnal, SpikeTrain, ...)
+            # object is hinerited from Quantity (AnalogSignal, SpikeTrain, ...)
             try:
                 assert_arrays_almost_equal(ob1.magnitude, ob2.magnitude,
                                            threshold=threshold,
@@ -428,7 +429,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
             # FIXME: it is a workaround for recordingChannelGroup.channel_names
             # which is nupy.array but allowed to be loaded when lazy == True
-            if ob.__class__ == neo.RecordingChannelGroup:
+            if ob.__class__ == neo.ChannelIndex:
                 continue
 
             ndim = ioattr[2]
@@ -444,10 +445,9 @@ def assert_sub_schema_is_lazy_loaded(ob):
                     'because of %s attribute' % attrname
 
 
-lazy_shape_arrays = {'SpikeTrain': 'times', 'Spike': 'waveform',
+lazy_shape_arrays = {'SpikeTrain': 'times',
                      'AnalogSignal': 'signal',
-                     'AnalogSignalArray': 'signal',
-                     'EventArray': 'times', 'EpochArray': 'times'}
+                     'Event': 'times', 'Epoch': 'times'}
 
 
 def assert_lazy_sub_schema_can_be_loaded(ob, io):

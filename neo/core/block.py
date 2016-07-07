@@ -27,29 +27,29 @@ class Block(Container):
 
     *Usage*::
 
-        >>> from neo.core import (Block, Segment, RecordingChannelGroup,
-        ...                       AnalogSignalArray)
+        >>> from neo.core import (Block, Segment, ChannelIndex,
+        ...                       AnalogSignal)
         >>> from quantities import nA, kHz
         >>> import numpy as np
         >>>
-        >>> # create a Block with 3 Segment and 2 RecordingChannelGroup objects
+        >>> # create a Block with 3 Segment and 2 ChannelIndex objects
         ,,, blk = Block()
         >>> for ind in range(3):
         ...     seg = Segment(name='segment %d' % ind, index=ind)
         ...     blk.segments.append(seg)
         ...
         >>> for ind in range(2):
-        ...     rcg = RecordingChannelGroup(name='Array probe %d' % ind,
-        ...                                 channel_indexes=np.arange(64))
-        ...     blk.recordingchannelgroups.append(rcg)
+        ...     chx = ChannelIndex(name='Array probe %d' % ind,
+        ...                        index=np.arange(64))
+        ...     blk.channel_indexes.append(chx)
         ...
-        >>> # Populate the Block with AnalogSignalArray objects
+        >>> # Populate the Block with AnalogSignal objects
         ... for seg in blk.segments:
-        ...     for rcg in blk.recordingchannelgroups:
-        ...         a = AnalogSignalArray(np.random.randn(10000, 64)*nA,
+        ...     for chx in blk.channel_indexes:
+        ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
         ...                               sampling_rate=10*kHz)
-        ...         rcg.analogsignalarrays.append(a)
-        ...         seg.analogsignalarrays.append(a)
+        ...         chx.analogsignals.append(a)
+        ...         seg.analogsignals.append(a)
 
     *Required attributes/properties*:
         None
@@ -61,28 +61,24 @@ class Block(Container):
         :file_datetime: (datetime) The creation date and time of the original
             data file.
         :rec_datetime: (datetime) The date and time of the original recording.
-        :index: (int) You can use this to define an ordering of your Block.
-            It is not used by Neo in any way.
 
     *Properties available on this object*:
         :list_units: descends through hierarchy and returns a list of
             :class:`Unit` objects existing in the block. This shortcut exists
             because a common analysis case is analyzing all neurons that
             you recorded in a session.
-        :list_recordingchannels: descends through hierarchy and returns
-            a list of :class:`RecordingChannel` objects existing in the block.
 
     Note: Any other additional arguments are assumed to be user-specific
             metadata and stored in :attr:`annotations`.
 
     *Container of*:
         :class:`Segment`
-        :class:`RecordingChannelGroup`
+        :class:`ChannelIndex`
 
     '''
 
-    _container_child_objects = ('Segment', 'RecordingChannelGroup')
-    _child_properties = ('Unit', 'RecordingChannel')
+    _container_child_objects = ('Segment', 'ChannelIndex')
+    _child_properties = ('Unit',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
                            ('index', int)) +
@@ -135,12 +131,4 @@ class Block(Container):
         '''
         Return a list of all :class:`Unit` objects in the :class:`Block`.
         '''
-        return self.list_children_by_class('units')
-
-    @property
-    def list_recordingchannels(self):
-        '''
-        Return a list of all :class:`RecordingChannel` objects in the
-        :class:`Block`.
-        '''
-        return self.list_children_by_class('recordingchannels')
+        return self.list_children_by_class('unit')

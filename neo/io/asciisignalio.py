@@ -138,7 +138,7 @@ class AsciiSignalIO(BaseIO):
             sig = np.genfromtxt(self.filename,
                                         delimiter = delimiter,
                                         usecols = usecols ,
-                                        skiprows = skiprows,
+                                        skip_header = skiprows,
                                         dtype = 'f')
             if len(sig.shape) ==1:
                 sig = sig[:, np.newaxis]

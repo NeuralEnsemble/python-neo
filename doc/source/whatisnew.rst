@@ -1,22 +1,43 @@
-*************
+=============
 Release notes
-*************
+=============
 
 
-What's new in version 0.4.0?
-----------------------------
+.. toctree::
+   :maxdepth: 1
+
+   releases/0.5.0.rst
+
+
+..   releases/0.2.0.rst
+..   releases/0.2.1.rst
+..   releases/0.3.0.rst
+..   releases/0.3.1.rst
+..   releases/0.3.2.rst
+..   releases/0.3.3.rst
+
+
+
+
+Version 0.4.0
+-------------
 
   * added StimfitIO
+  * added KwikIO
+  * significant improvements to AxonIO, BlackrockIO, BrainwareSrcIO, NeuroshareIO, PlexonIO, Spike2IO, TdtIO,
+  * many test suite improvements
+  * Container base class
 
-What's new in version 0.3.3?
-----------------------------
+
+Version 0.3.3
+-------------
 
   * fix a bug in PlexonIO where some EventArrays only load 1 element.
   * fix a bug in BrainwareSrcIo for segments with no spikes.
 
 
-What's new in version 0.3.2?
-----------------------------
+Version 0.3.2
+-------------
 
   * cleanup ot io test code, with additional helper functions and methods
   * added BrainwareDamIo
@@ -24,16 +45,16 @@ What's new in version 0.3.2?
   * added BrainwareSrcIo
 
 
-What's new in version 0.3.1?
-----------------------------
+Version 0.3.1
+-------------
 
   * lazy/cascading improvement
   * load_lazy_olbject() in neo.io added
   * added NeuroscopeIO
 
 
-What's new in version 0.3.0?
-----------------------------
+Version 0.3.0
+-------------
 
   * various bug fixes in neo.io
   * added ElphyIO
@@ -42,8 +63,8 @@ What's new in version 0.3.0?
   * python3 compatibility improved
 
 
-What's new in version 0.2.1?
-----------------------------
+Version 0.2.1
+-------------
 
  * assorted bug fixes
  * added :func:`time_slice()` method to the :class:`SpikeTrain` and :class:`AnalogSignalArray` classes.
@@ -56,8 +77,8 @@ What's new in version 0.2.1?
  * development was mostly moved to GitHub, although the issue tracker is still at neuralensemble.org/neo
 
 
-What's new in version 0.2?
---------------------------
+Version 0.2.0
+-------------
 
 New features compared to neo 0.1:
  * new schema more consistent.

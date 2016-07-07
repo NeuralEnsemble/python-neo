@@ -36,7 +36,7 @@ import numpy as np
 import quantities as pq
 
 # needed core neo modules
-from neo.core import Block, RecordingChannelGroup, Segment, SpikeTrain, Unit
+from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
 
 # need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -63,8 +63,8 @@ class BrainwareF32IO(BaseIO):
     reading or closed.
 
     Note 1:
-        There is always only one RecordingChannelGroup.  BrainWare stores the
-        equivalent of RecordingChannelGroups in separate files.
+        There is always only one ChannelIndex.  BrainWare stores the
+        equivalent of ChannelIndexes in separate files.
 
     Usage:
         >>> from neo.io.brainwaref32io import BrainwareF32IO
@@ -84,7 +84,7 @@ class BrainwareF32IO(BaseIO):
 
     # This class is able to directly or indirectly handle the following objects
     # You can notice that this greatly simplifies the full Neo object hierarchy
-    supported_objects = [Block, RecordingChannelGroup,
+    supported_objects = [Block, ChannelIndex,
                          Segment, SpikeTrain, Unit]
 
     readable_objects = [Block]
@@ -158,12 +158,13 @@ class BrainwareF32IO(BaseIO):
             return block
 
         # create the objects to store other objects
-        rcg = RecordingChannelGroup(file_origin=self._filename)
+        chx = ChannelIndex(file_origin=self._filename,
+                                    index=np.array([], dtype=np.int))
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers
-        block.recordingchannelgroups.append(rcg)
-        rcg.units.append(self.__unit)
+        block.channel_indexes.append(chx)
+        chx.units.append(self.__unit)
 
         # initialize values
         self.__t_stop = None

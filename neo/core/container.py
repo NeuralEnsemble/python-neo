@@ -10,7 +10,7 @@ defined in :module:`neo.core.analogsignalarray`.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
-from neo.core.baseneo import BaseNeo
+from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 
 
 def unique_objs(objs):
@@ -245,7 +245,7 @@ class Container(BaseNeo):
         Containers for child objects that are a container and
         have a single parent.
         """
-        return tuple([child.lower() + 's' for child in
+        return tuple([_container_name(child) for child in
                       self._container_child_objects])
 
     @property
@@ -253,7 +253,7 @@ class Container(BaseNeo):
         """
         Containers for child objects that have data and have a single parent.
         """
-        return tuple([child.lower() + 's' for child in
+        return tuple([_container_name(child) for child in
                       self._data_child_objects])
 
     @property
@@ -261,7 +261,7 @@ class Container(BaseNeo):
         """
         Containers for child objects with a single parent.
         """
-        return tuple([child.lower() + 's' for child in
+        return tuple([_container_name(child) for child in
                       self._single_child_objects])
 
     @property
@@ -269,7 +269,7 @@ class Container(BaseNeo):
         """
         Containers for child objects that can have multiple parents.
         """
-        return tuple([child.lower() + 's' for child in
+        return tuple([_container_name(child) for child in
                       self._multi_child_objects])
 
     @property
@@ -427,12 +427,10 @@ class Container(BaseNeo):
         """
         if not hasattr(cls, 'lower'):
             cls = cls.__name__
-        cls = cls.lower()
-        if cls[-1] != 's':
-            cls = cls + 's'
-        objs = list(getattr(self, cls, []))
+        container_name = _container_name(cls)
+        objs = list(getattr(self, container_name, []))
         for child in self.container_children_recur:
-            objs.extend(getattr(child, cls, []))
+            objs.extend(getattr(child, container_name, []))
         return objs
 
     def create_many_to_one_relationship(self, force=False, recursive=True):
@@ -452,12 +450,11 @@ class Container(BaseNeo):
         If recursive is True desecend into child objects and create
         relationships there
         """
-        classname = self.__class__.__name__.lower()
+        parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
-            if (hasattr(child, classname) and
-                    getattr(child, classname) is None or force):
-                setattr(child, classname, self)
-
+            if (hasattr(child, parent_name) and
+                    getattr(child, parent_name) is None or force):
+                setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
                 child.create_many_to_one_relationship(force=force,
@@ -472,16 +469,16 @@ class Container(BaseNeo):
         If recursive is True desecend into child objects and create
         relationships there
         """
-        classname = self.__class__.__name__.lower() + 's'
+        parent_name = _container_name(self.__class__.__name__)
         for child in self._multi_children:
-            if not hasattr(child, classname):
+            if not hasattr(child, parent_name):
                 continue
             if append:
-                target = getattr(child, classname)
+                target = getattr(child, parent_name)
                 if not self in target:
                     target.append(self)
                 continue
-            setattr(child, classname, [self])
+            setattr(child, parent_name, [self])
 
         if recursive:
             for child in self.container_children:
@@ -545,7 +542,7 @@ class Container(BaseNeo):
             for obj in getattr(other, container):
                 if id(obj) in ids:
                     continue
-                if hasattr(obj, 'merge') and obj.name in lookup:
+                if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)

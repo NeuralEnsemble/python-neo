@@ -96,7 +96,7 @@ def merge_annotations(A, B):
         For arrays or lists: concatenate
         For dicts: merge recursively
         For strings: concatenate with ';'
-        Otherwise: fail if the annotations are not equal
+        Otherwise: warn if the annotations are not equal
     """
     merged = {}
     for name in A:
@@ -104,8 +104,9 @@ def merge_annotations(A, B):
             try:
                 merged[name] = merge_annotation(A[name], B[name])
             except BaseException as exc:
-                exc.args += ('key %s' % name,)
-                raise
+                #exc.args += ('key %s' % name,)
+                #raise
+                merged[name] = "MERGE CONFLICT"  # temporary hack
         else:
             merged[name] = A[name]
     for name in B:
@@ -113,6 +114,36 @@ def merge_annotations(A, B):
             merged[name] = B[name]
     logger.debug("Merging annotations: A=%s B=%s merged=%s", A, B, merged)
     return merged
+
+
+def _reference_name(class_name):
+    """
+    Given the name of a class, return an attribute name to be used for
+    references to instances of that class.
+
+    For example, a Segment object has a parent Block object, referenced by
+    `segment.block`. The attribute name `block` is obtained by calling
+    `_container_name("Block")`.
+    """
+    name_map = {
+        "ChannelIndex": "channel_index"
+    }
+    return name_map.get(class_name, class_name.lower())
+
+
+def _container_name(class_name):
+    """
+    Given the name of a class, return an attribute name to be used for
+    lists (or other containers) containing instances of that class.
+
+    For example, a Block object contains a list of Segment objects,
+    referenced by `block.segments`. The attribute name `segments` is
+    obtained by calling `_container_name_plural("Segment")`.
+    """
+    name_map = {
+        "ChannelIndex": "channel_indexes"
+    }
+    return name_map.get(class_name, _reference_name(class_name) + 's')
 
 
 class BaseNeo(object):
@@ -288,7 +319,7 @@ class BaseNeo(object):
         """
         Containers for parent objects whose children can have a single parent.
         """
-        return tuple([parent.lower() for parent in
+        return tuple([_reference_name(parent) for parent in
                       self._single_parent_objects])
 
     @property
@@ -296,7 +327,7 @@ class BaseNeo(object):
         """
         Containers for parent objects whose children can have multiple parents.
         """
-        return tuple([parent.lower() + 's' for parent in
+        return tuple([_container_name(parent) for parent in
                       self._multi_parent_objects])
 
     @property
