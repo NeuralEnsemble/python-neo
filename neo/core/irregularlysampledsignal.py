@@ -63,7 +63,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
             data point. Must have the same size as :attr:`times`.
         :units: (quantity units) Required if the signal is a list or NumPy
             array, not if it is a :class:`Quantity`.
-        :time_units: (quantity units) Required if :attr`times` is a list or
+        :time_units: (quantity units) Required if :attr:`times` is a list or
             NumPy array, not if it is a :class:`Quantity`.
 
     *Recommended attributes/properties*:.
@@ -82,13 +82,13 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     *Properties available on this object*:
         :sampling_intervals: (quantity array 1D) Interval between each adjacent
             pair of samples.
-            (:attr:`times[1:]` - :attr:`times`[:-1])
+            (``times[1:] - times[:-1]``)
         :duration: (quantity scalar) Signal duration, read-only.
-            (:attr:`times`[-1] - :attr:`times`[0])
+            (``times[-1] - times[0]``)
         :t_start: (quantity scalar) Time when signal begins, read-only.
-            (:attr:`times`[0])
+            (``times[0]``)
         :t_stop: (quantity scalar) Time when signal ends, read-only.
-            (:attr:`times`[-1])
+            (``times[-1]``)
 
     *Slicing*:
         :class:`IrregularlySampledSignal` objects can be sliced. When this
