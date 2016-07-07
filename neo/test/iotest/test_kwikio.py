@@ -12,10 +12,15 @@ try:
     import unittest2 as unittest
 except ImportError:
     import unittest
-
+try:
+    import h5py
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 from neo.io import KwikIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
+@unittest.skipUnless(HAVE_H5PY, "requires h5py")
 class TestKwikIO(BaseTestIO, unittest.TestCase):
     ioclass = KwikIO
     files_to_test = ['experiment1.kwik']
