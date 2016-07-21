@@ -469,6 +469,13 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
             raise MergeError("Cannot merge these two signals as the sample times differ.")
         if self.segment != other.segment:
             raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[0] != other.lazy_shape[0]:
+                    raise MergeError("Cannot merge signals of different length.")
+                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
         if other.units != self.units:
             other = other.rescale(self.units)
         stack = np.hstack(map(np.array, (self, other)))
@@ -487,4 +494,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                          dtype=self.dtype, copy=False,
                                          **kwargs)
         signal.segment = self.segment
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
         return signal

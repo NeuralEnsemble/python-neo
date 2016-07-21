@@ -47,8 +47,9 @@ class NeoHdf5IO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self._data = h5py.File(filename, 'r')
         self.object_refs = {}
+        self._lazy = False
 
-    def read_all_blocks(self, lazy=False, cascade=True, merge_singles=False, **kargs):
+    def read_all_blocks(self, lazy=False, cascade=True, merge_singles=True, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
@@ -57,10 +58,8 @@ class NeoHdf5IO(BaseIO):
          `AnalogSignal` objects into multichannel objects, and similarly for single `Epoch`,
          `Event` and `IrregularlySampledSignal` objects.
         """
-        if cascade is not True:
-            raise ValueError("cascade = {} is not supported".format(cascade))
-        if lazy is True:
-            raise ValueError("lazy loading is not supported")
+        self._lazy = lazy
+        self._cascade = cascade
         self.merge_singles = merge_singles
 
         blocks = []
@@ -69,31 +68,38 @@ class NeoHdf5IO(BaseIO):
                 blocks.append(self._read_block(node))
         return blocks
 
+    def read_block(self, lazy=False, cascade=True, **kargs):
+        """
+        Load the first block in the file.
+        """
+        return self.read_all_blocks(lazy=lazy, cascade=cascade)[0]
+
     def _read_block(self, node):
         attributes = self._get_standard_attributes(node)
         block = Block(**attributes)
 
-        for name, child_node in node['segments'].iteritems():
-            if "Segment" in name:
-                block.segments.append(self._read_segment(child_node, parent=block))
+        if self._cascade:
+            for name, child_node in node['segments'].iteritems():
+                if "Segment" in name:
+                    block.segments.append(self._read_segment(child_node, parent=block))
 
-        if len(node['recordingchannelgroups']) > 0:
-            for name, child_node in node['recordingchannelgroups'].iteritems():
-                if "RecordingChannelGroup" in name:
-                    block.channel_indexes.append(self._read_recordingchannelgroup(child_node, parent=block))
-            self._resolve_channel_indexes(block)
-        elif self.merge_singles:
-            # if no RecordingChannelGroups are defined, merging
-            # takes place here.
-            for segment in block.segments:
-                if hasattr(segment, 'unmerged_analogsignals'):
-                    segment.analogsignals.extend(
-                            self._merge_data_objects(segment.unmerged_analogsignals))
-                    del segment.unmerged_analogsignals
-                if hasattr(segment, 'unmerged_irregularlysampledsignals'):
-                    segment.irregularlysampledsignals.extend(
-                            self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
-                    del segment.unmerged_irregularlysampledsignals
+            if len(node['recordingchannelgroups']) > 0:
+                for name, child_node in node['recordingchannelgroups'].iteritems():
+                    if "RecordingChannelGroup" in name:
+                        block.channel_indexes.append(self._read_recordingchannelgroup(child_node, parent=block))
+                self._resolve_channel_indexes(block)
+            elif self.merge_singles:
+                # if no RecordingChannelGroups are defined, merging
+                # takes place here.
+                for segment in block.segments:
+                    if hasattr(segment, 'unmerged_analogsignals'):
+                        segment.analogsignals.extend(
+                                self._merge_data_objects(segment.unmerged_analogsignals))
+                        del segment.unmerged_analogsignals
+                    if hasattr(segment, 'unmerged_irregularlysampledsignals'):
+                        segment.irregularlysampledsignals.extend(
+                                self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
+                        del segment.unmerged_irregularlysampledsignals
         return block
 
     def _read_segment(self, node, parent):
@@ -162,6 +168,10 @@ class NeoHdf5IO(BaseIO):
         signal = AnalogSignal(self._get_quantity(node["signal"]),
                               sampling_rate=sampling_rate, t_start=t_start,
                               **attributes)
+        if self._lazy:
+            signal.lazy_shape = node["signal"].shape
+            if len(signal.lazy_shape) == 1:
+                signal.lazy_shape = (signal.lazy_shape[0], 1)
         signal.segment = parent
         self.object_refs[node.attrs["object_ref"]] = signal
         return signal
@@ -175,6 +185,10 @@ class NeoHdf5IO(BaseIO):
                                           signal=self._get_quantity(node["signal"]),
                                           **attributes)
         signal.segment = parent
+        if self._lazy:
+            signal.lazy_shape = node["signal"].shape
+            if len(signal.lazy_shape) == 1:
+                signal.lazy_shape = (signal.lazy_shape[0], 1)
         return signal
 
     def _read_spiketrain(self, node, parent):
@@ -186,6 +200,8 @@ class NeoHdf5IO(BaseIO):
                                 t_start=t_start, t_stop=t_stop,
                                 **attributes)
         spiketrain.segment = parent
+        if self._lazy:
+            spiketrain.lazy_shape = node["times"].shape
         self.object_refs[node.attrs["object_ref"]] = spiketrain
         return spiketrain
 
@@ -193,9 +209,14 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        labels = node["labels"].value
+        if self._lazy:
+            labels = np.array((), dtype=node["labels"].dtype)
+        else:
+            labels = node["labels"].value
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
+        if self._lazy:
+            epoch.lazy_shape = node["times"].shape
         return epoch
 
     def _read_epoch(self, node, parent):
@@ -204,10 +225,15 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        labels = node["labels"].value
-        epoch = Event(times=times, labels=labels, **attributes)
-        epoch.segment = parent
-        return epoch
+        if self._lazy:
+            labels = np.array((), dtype=node["labels"].dtype)
+        else:
+            labels = node["labels"].value
+        event = Event(times=times, labels=labels, **attributes)
+        event.segment = parent
+        if self._lazy:
+            event.lazy_shape = node["times"].shape
+        return event
 
     def _read_event(self, node, parent):
         return self._read_eventarray(node, parent)
@@ -273,12 +299,10 @@ class NeoHdf5IO(BaseIO):
             merged_objects = [objects.pop(0)]
             while objects:
                 obj = objects.pop(0)
-                #print(type(obj), obj.annotations['object_ref'])
                 try:
                     combined_obj_ref = merged_objects[-1].annotations['object_ref']
                     merged_objects[-1] = merged_objects[-1].merge(obj)
                     merged_objects[-1].annotations['object_ref'] = combined_obj_ref + "-" + obj.annotations['object_ref']
-                    #print merged_objects[-1].annotations['object_ref']
                 except MergeError:
                     merged_objects.append(obj)
             for obj in merged_objects:
@@ -288,7 +312,10 @@ class NeoHdf5IO(BaseIO):
             return objects
 
     def _get_quantity(self, node):
-        value = node.value
+        if self._lazy and len(node.shape) > 0:
+            value = np.array((), dtype=node.dtype)
+        else:
+            value = node.value
         unit_str = [x for x in node.attrs.keys() if "unit" in x][0].split("__")[1]
         units = getattr(pq, unit_str)
         return value * units
