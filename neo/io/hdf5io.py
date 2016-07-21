@@ -10,7 +10,12 @@ import logging
 import pickle
 import numpy as np
 import quantities as pq
-import h5py
+try:
+    import h5py
+except ImportError as err:
+    HAVE_H5PY = False
+else:
+    HAVE_H5PY = True
 
 from neo.core import (objectlist, Block, Segment, AnalogSignal, SpikeTrain,
                       Epoch, Event, IrregularlySampledSignal, ChannelIndex,
@@ -44,6 +49,8 @@ class NeoHdf5IO(BaseIO):
     is_writable = False
 
     def __init__(self, filename):
+        if not HAVE_H5PY:
+            raise ImportError("h5py is not available")
         BaseIO.__init__(self, filename=filename)
         self._data = h5py.File(filename, 'r')
         self.object_refs = {}
