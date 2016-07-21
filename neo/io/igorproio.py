@@ -65,18 +65,31 @@ class IgorIO(BaseIO):
 
     def read_block(self, lazy=False, cascade=True):
         block = Block(file_origin=self.filename)
-        block.segments.append(self.read_segment(lazy=lazy, cascade=cascade))
+        if cascade:
+            block.segments.append(self.read_segment(lazy=lazy, cascade=cascade))
+            block.segments[-1].block = block
         return block
 
     def read_segment(self, lazy=False, cascade=True):
         segment = Segment(file_origin=self.filename)
-        segment.analogsignals.append(self.read_analogsignal(lazy=lazy, cascade=cascade))
+        if cascade:
+            segment.analogsignals.append(self.read_analogsignal(lazy=lazy, cascade=cascade))
+            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, lazy=False, cascade=True):
-        content = bw.load(self.filename)['wave']
-        assert content['padding'].size == 0, "Cannot handle non-empty padding"
-        signal = content['wData']
+        data = bw.load(self.filename)
+        version = data['version']
+        if version > 3:
+            raise IOError("Igor binary wave file format version {0} is not supported.".format(version))
+        content = data['wave']
+        if "padding" in content:
+            assert content['padding'].size == 0, "Cannot handle non-empty padding"
+        if lazy:
+            # not really lazy, since the `igor` module loads the data anyway
+            signal = np.array((), dtype=content['wData'].dtype)
+        else:
+            signal = content['wData']
         note = content['note']
         header = content['wave_header']
         name = header['bname']
@@ -95,11 +108,16 @@ class IgorIO(BaseIO):
         else:
             annotations = {'note': note}
 
-        return AnalogSignal(signal, units=units, copy=False, t_start=t_start,
-                            sampling_period=sampling_period, name=name,
-                            file_origin=self.filename, **annotations)
+        signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
+                              sampling_period=sampling_period, name=name,
+                              file_origin=self.filename, **annotations)
+        if lazy:
+            signal.lazy_shape = content['wData'].shape
+        return signal
 
 
+# the following function is to handle the annotations in the
+# Igor data files from the Blue Brain Project NMC Portal
 def key_value_string_parser(itemsep=";", kvsep=":"):
     """
     Parses a string into a dict.
@@ -109,7 +127,7 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
         kvsep - character which separates the key and value within an item
 
     Returns:
-        a function which takes the string to be parses as the sole argument and returns a dict.
+        a function which takes the string to be parsed as the sole argument and returns a dict.
 
     Example:
 
