@@ -11,13 +11,16 @@ Author: Andrew Davison
 """
 
 from __future__ import absolute_import
-from datetime import datetime
 from warnings import warn
 import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
-import igor.binarywave as bw
+try:
+    import igor.binarywave as bw
+    HAVE_IGOR = True
+except ImportError:
+    HAVE_IGOR = False
 
 
 class IgorIO(BaseIO):
@@ -78,6 +81,8 @@ class IgorIO(BaseIO):
         return segment
 
     def read_analogsignal(self, lazy=False, cascade=True):
+        if not HAVE_IGOR:
+            raise Exception("igor package not installed. Try `pip install igor`")
         data = bw.load(self.filename)
         version = data['version']
         if version > 3:
