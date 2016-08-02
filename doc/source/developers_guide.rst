@@ -228,7 +228,7 @@ However, the pep8 and flake8 programs does not check for all PEP 8 issues.
 In particular, they does not check that the import statements are in the
 correct order.
 
-Also, please do not use ``from __ import *``.  This is slow, can lead to
+Also, please do not use ``from xyz import *``.  This is slow, can lead to
 conflicts, and makes it difficult for code analysis software.
 
 

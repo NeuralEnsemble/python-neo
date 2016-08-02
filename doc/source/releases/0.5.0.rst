@@ -1,0 +1,122 @@
+==============================
+Neo 0.5.0-alpha1 release notes
+==============================
+
+DATE
+
+
+For Neo 0.5, we have taken the opportunity to simplify the Neo object model.
+
+Although this will require an initial time investment for anyone who has written code with
+an earlier version of Neo, the benefits will be greater simplicity, both in your own code and
+within the Neo code base, which should allow us to move more quickly in fixing bugs, improving
+performance and adding new features.
+
+More detail on these changes follows:
+
+
+Merging of "single-value" and "array" versions of data classes
+==============================================================
+
+In previous versions of Neo, we had :class:`AnalogSignal` for one-dimensional (single channel)
+signals, and :class:`AnalogSignalArray` for two-dimensional (multi-channel) signals.
+In Neo 0.5.0, these have been merged under the name :class:`AnalogSignal`.
+:class:`AnalogSignal` has the same behaviour as the old :class:`AnalogSignalArray`.
+
+It is still possible to create an :class:`AnalogSignal` from a one-dimensional array, but
+this will be converted to an array with shape `(n, 1)`, e.g.:
+
+.. code-block:: python
+
+    >>> signal = neo.AnalogSignal([0.0, 0.1, 0.2, 0.5, 0.6, 0.5, 0.4, 0.3, 0.0],
+    ...                           sampling_rate=10*kHz,
+    ...                           units=nA)
+    >>> signal.shape
+    (9, 1)
+
+Multi-channel arrays are created as before, but using :class:`AnalogSignal` instead of
+:class:`AnalogSignalArray`:
+
+.. code-block:: python
+
+    >>> signal = neo.AnalogSignal([[0.0, 0.1, 0.2, 0.5, 0.6, 0.5, 0.4, 0.3, 0.0],
+    ...                            [0.0, 0.2, 0.4, 0.7, 0.9, 0.8, 0.7, 0.6, 0.3]],
+    ...                           sampling_rate=10*kHz,
+    ...                           units=nA)
+    >>> signal.shape
+    (9, 2)
+
+
+Similarly, the :class:`Epoch` and :class:`EpochArray` classes have been merged into an
+array-valued class :class:`Epoch`, ditto for :class:`Event` and `EventArray`, and the
+:class:`Spike` class, whose main function was to contain the waveform data for an individual spike,
+has been suppressed; waveform data are now available as the :attr`waveforms` attribute
+of the :class:`SpikeTrain` class.
+
+
+Recording channels
+==================
+
+As a consequence of the removal of "single-value" data classes, information on recording channels
+and the relationship between analog signals and spike trains is also stored differently.
+
+In Neo 0.5, we have introduced a new class, :class:`ChannelIndex`, which replaces both
+:class:`RecordingChannel` and :class:`RecordingChannelGroup`.
+
+In older versions of Neo, a :class:`RecordingChannel` object held metadata about a logical
+recording channel (a name and/or integer index) together with references to one or more
+:class:`AnalogSignal`\s recorded on that channel at different points in time
+(different :class:`Segment`\s); redundantly, the :class:`AnalogSignal` also had a
+:attr:`channel_index` attribute, which could be used in addition to or instead of creating a
+:class:`RecordingChannel`.
+
+Metadata about :class:`AnalogSignalArray`\s could be contained in a :class:`RecordingChannelGroup`
+in a similar way, i.e. :class:`RecordingChannelGroup` functioned as an array-valued version of
+`RecordingChannel`, but :class:`RecordingChannelGroup` could also be used to group together
+individual :class:`RecordingChannel` objects.
+
+With Neo 0.5, information about the channel names and ids of an :class:`AnalogSignal` is contained
+in a :class:`ChannelIndex`, e.g.:
+
+.. code-block:: python
+
+    >>> signal = neo.AnalogSignal([[0.0, 0.1, 0.2, 0.5, 0.6, 0.5, 0.4, 0.3, 0.0],
+    ...                            [0.0, 0.2, 0.4, 0.7, 0.9, 0.8, 0.7, 0.6, 0.3]],
+    ...                            [0.0, 0.1, 0.3, 0.6, 0.8, 0.7, 0.6, 0.5, 0.3]],
+    ...                           sampling_rate=10*kHz,
+    ...                           units=nA)
+    >>> channels = neo.ChannelIndex(index=[0, 1, 2],
+    ...                             channel_names=["chan1", "chan2", "chan3"])
+    >>> signal.channel_index = channels
+
+In this use, it replaces :class:`RecordingChannel`.
+
+:class:`ChannelIndex` may also be used to group together a subset of the channels of a
+multi-channel signal, for example:
+
+.. code-block:: python
+
+    >>> channel_group = neo.ChannelIndex(index=[0, 2])
+    >>> channel_group.analogsignals.append(signal)
+    >>> unit = neo.Unit()  # will contain the spike train recorded from channels 0 and 2.
+    >>> unit.channel_index = channel_group
+
+
+Checklist for updating code from 0.3/0.4 to 0.5
+===============================================
+
+To update your code from Neo 0.3/0.4 to 0.5, run through the following checklist:
+
+    * Change all usages of :class:`AnalogSignalArray` to :class:`AnalogSignal`.
+    * Change all usages of :class:`EpochArray` to :class:`Epoch`.
+    * Change all usages of :class:`EventArray` to :class:`Event`.
+
+.. note:: in each of these cases, the datastructure is still an array, it just has a shorter name.
+
+    * Where you have a list of (single channel) :class:`AnalogSignal`\s all of the same length,
+      consider converting them to a single, multi-channel :class:`AnalogSignal`.
+    * Replace :class:`RecordingChannel` and :class:`RecordingChannelGroup` with
+      :class:`ChannelIndex`.
+
+
+.. https://github.com/NeuralEnsemble/python-neo/issues?utf8=✓&q=is%3Aissue%20is%3Aclosed%20created%3A%3E2014-02-01%20

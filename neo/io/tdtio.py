@@ -189,7 +189,7 @@ class TdtIO(BaseIO):
                                 t_start = 0 *pq.s
                                 t_stop = 0 *pq.s
                             st = SpikeTrain(times           = times,
-                                            name            = 'Chan{} Code{}'.format(channel,sortcode),
+                                            name            = 'Chan{0} Code{1}'.format(channel,sortcode),
                                             t_start         = t_start,
                                             t_stop          = t_stop,
                                             waveforms       = waveforms,
@@ -221,7 +221,7 @@ class TdtIO(BaseIO):
                             signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
 
                         anasig = AnalogSignal(signal        = signal* pq.V,
-                                              name          = '{} {}'.format(code, channel),
+                                              name          = '{0} {1}'.format(code, channel),
                                               sampling_rate = sr * pq.Hz,
                                               t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
                                               channel_index = int(channel)

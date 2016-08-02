@@ -19,7 +19,7 @@ the G-node_ suite (databasing) and PyNN_ (simulations).
 
 Neo implements a hierarchical data model well adapted to intracellular and
 extracellular electrophysiology and EEG data with support for multi-electrodes
-(for example tetrodes). Neo's data objects build on the quantities_ package,
+(for example tetrodes). Neo's data objects build on the quantities package,
 which in turn builds on NumPy by adding support for physical dimensions. Thus
 Neo objects behave just like normal NumPy arrays, but with additional metadata,
 checks for dimensional consistency and automatic unit conversion.
@@ -49,7 +49,7 @@ More information
 
 For installation instructions, see doc/source/install.rst
 
-:copyright: Copyright 2010-2014 by the Neo team, see doc/source/authors.rst
+:copyright: Copyright 2010-2016 by the Neo team, see doc/source/authors.rst.
 :license: 3-Clause Revised BSD License, see LICENSE.txt for details.
 
 
