@@ -2,6 +2,12 @@
 Release notes
 *************
 
+What's new in version 0.4.1?
+----------------------------
+
+  * relaxed confict-checking on merge, to restore compatibility with Neo 0.3. More rigourous
+    conflict checking can be enabled as an option.
+
 
 What's new in version 0.4.0?
 ----------------------------
