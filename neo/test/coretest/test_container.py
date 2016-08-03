@@ -143,13 +143,13 @@ class Test_Container_merge(unittest.TestCase):
         self.cont1.annotations = {'val1': 1, 'val2': 2.2, 'val3': 'tester'}
         self.cont2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError, self.cont1.merge, self.cont2)
+        self.assertRaises(AssertionError, self.cont1.merge, self.cont2, strict=True)
 
     def test_merge__unmergable_unequal_AssertionError(self):
         self.cont1.annotations = {'val1': 1, 'val2': 2.2, 'val3': True}
         self.cont2.annotations = {'val3': False, 'val4': [4, 4.4],
                                   'val5': True}
-        self.assertRaises(AssertionError, self.cont1.merge, self.cont2)
+        self.assertRaises(AssertionError, self.cont1.merge, self.cont2, strict=True)
 
 
 @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")

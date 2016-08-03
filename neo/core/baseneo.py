@@ -86,7 +86,7 @@ def merge_annotation(a, b):
         return a
 
 
-def merge_annotations(A, B):
+def merge_annotations(A, B, strict=True):
     """
     Merge two sets of annotations.
 
@@ -104,8 +104,11 @@ def merge_annotations(A, B):
             try:
                 merged[name] = merge_annotation(A[name], B[name])
             except BaseException as exc:
-                exc.args += ('key %s' % name,)
-                raise
+                if strict:
+                    exc.args += ('key %s' % name,)
+                    raise
+                else:
+                    merged[name] = "MERGE CONFLICT: {0}".format(exc)
         else:
             merged[name] = A[name]
     for name in B:
@@ -332,7 +335,7 @@ class BaseNeo(object):
         """
         return self._necessary_attrs + self._recommended_attrs
 
-    def merge_annotations(self, other):
+    def merge_annotations(self, other, strict=False):
         """
         Merge annotations from the other object into this one.
 
@@ -342,10 +345,13 @@ class BaseNeo(object):
             For arrays or lists: concatenate the two arrays
             For dicts: merge recursively
             For strings: concatenate with ';'
-            Otherwise: fail if the annotations are not equal
+            Otherwise: if the annotations are not equal, raise an Exception
+                       if `strict` is True, or replace the annotation with a
+                       "merge conflict" warning if `strict` is False
         """
         merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+                                               other.annotations,
+                                               strict=strict)
         self.annotations.update(merged_annotations)
 
     def merge(self, other):
@@ -354,4 +360,4 @@ class BaseNeo(object):
 
         See :meth:`merge_annotations` for details of the merge operation.
         """
-        self.merge_annotations(other)
+        raise NotImplementedError("Automated merge is not implemented for this class.")

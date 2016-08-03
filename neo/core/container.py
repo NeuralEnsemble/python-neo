@@ -511,7 +511,7 @@ class Container(BaseNeo):
                 child.create_relationship(force=force, append=append,
                                           recursive=True)
 
-    def merge(self, other):
+    def merge(self, other, strict=False):
         """
         Merge the contents of another object into this one.
 
@@ -531,7 +531,7 @@ class Container(BaseNeo):
                 if id(obj) in ids:
                     continue
                 if obj.name in lookup:
-                    lookup[obj.name].merge(obj)
+                    lookup[obj.name].merge(obj, strict=strict)
                 else:
                     lookup[obj.name] = obj
                     ids.append(id(obj))
@@ -558,8 +558,7 @@ class Container(BaseNeo):
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
 
-        # use the BaseNeo merge as well
-        super(Container, self).merge(other)
+        self.merge_annotations(other, strict=strict)
 
     def _repr_pretty_(self, pp, cycle):
         """
