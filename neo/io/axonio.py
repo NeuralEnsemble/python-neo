@@ -419,10 +419,11 @@ class AxonIO(BaseIO):
             # hack for reading channels names and units
             fid.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = fid.read(sections['StringsSection']['uBytes'])
-            goodstart = big_string.lower().find(b'clampex')
-            if goodstart == -1:
-                goodstart = big_string.lower().find(b'axoscope')
-
+            goodstart=-1
+            for key in [b'clampex', b'axoscope', b'clampfit']:
+                goodstart = big_string.lower().find(key)
+                if goodstart!=-1: break
+            assert goodstart!=-1, 'This file do not contain clampex, axoscope or clampfit in the header'
             big_string = big_string[goodstart:]
             strings = big_string.split(b'\x00')
 
