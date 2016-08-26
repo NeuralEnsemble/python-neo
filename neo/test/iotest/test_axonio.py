@@ -24,6 +24,8 @@ class TestAxonIO(BaseTestIO, unittest.TestCase):
                      'File_axon_4.abf',
                      'File_axon_5.abf',
                      'File_axon_6.abf',
+                     'File_axon_7.abf',
+                     
                      ]
     files_to_download = files_to_test
     ioclass = AxonIO
