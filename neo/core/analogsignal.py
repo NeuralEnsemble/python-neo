@@ -24,7 +24,7 @@ import logging
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo, merge_annotations
+from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
 logger = logging.getLogger("Neo")
 
@@ -588,16 +588,27 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
     def merge(self, other):
         '''
-        Merge the another :class:`AnalogSignal` into this one.
+        Merge another :class:`AnalogSignal` into this one.
 
         The :class:`AnalogSignal` objects are concatenated horizontally
         (column-wise, :func:`np.hstack`).
 
         If the attributes of the two :class:`AnalogSignal` are not
-        compatible, and Exception is raised.
+        compatible, an Exception is raised.
         '''
-        assert self.sampling_rate == other.sampling_rate
-        assert self.t_start == other.t_start
+        if self.sampling_rate != other.sampling_rate:
+            raise MergeError("Cannot merge, different sampling rates")
+        if self.t_start != other.t_start:
+            raise MergeError("Cannot merge, different t_start")
+        if self.segment != other.segment:
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[0] != other.lazy_shape[0]:
+                    raise MergeError("Cannot merge signals of different length.")
+                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
         if other.units != self.units:
             other = other.rescale(self.units)
         stack = np.hstack(map(np.array, (self, other)))
@@ -612,7 +623,11 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
-        return AnalogSignal(stack, units=self.units, dtype=self.dtype,
-                                 copy=False, t_start=self.t_start,
-                                 sampling_rate=self.sampling_rate,
-                                 **kwargs)
+        signal = AnalogSignal(stack, units=self.units, dtype=self.dtype,
+                              copy=False, t_start=self.t_start,
+                              sampling_rate=self.sampling_rate,
+                              **kwargs)
+        signal.segment = self.segment
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+        return signal
