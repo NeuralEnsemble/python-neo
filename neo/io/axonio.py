@@ -157,7 +157,7 @@ class AxonIO(BaseIO):
 
         bl = Block()
         bl.file_origin = os.path.basename(self.filename)
-        bl.annotate(abf_version=version)
+        bl.annotate(abf_version=str(version))
 
         # date and time
         if version < 2.:
@@ -258,7 +258,7 @@ class AxonIO(BaseIO):
 
                 if not lazy:
                     subdata = data[pos:pos+length]
-                    subdata = subdata.reshape((subdata.size/nbchannel,
+                    subdata = subdata.reshape((int(subdata.size/nbchannel),
                                                nbchannel)).astype('f')
                     if dt == np.dtype('i2'):
                         if version < 2.:
