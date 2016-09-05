@@ -592,7 +592,6 @@ class NixIOTest(unittest.TestCase):
         return blk
 
 
-@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOWriteTest(NixIOTest):
 
     def setUp(self):
@@ -848,7 +847,6 @@ class NixIOWriteTest(NixIOTest):
         self.assertEqual(val, section["val"])
 
 
-@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
 
     filename = "testfile_readtest.h5"
@@ -956,7 +954,6 @@ class NixIOReadTest(NixIOTest):
         self.assertEqual(np.shape(segment.analogsignals[0]), (100, 3))
 
 
-@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOHashTest(NixIOTest):
 
     def setUp(self):
@@ -1055,7 +1052,6 @@ class NixIOHashTest(NixIOTest):
         self._hash_test(SpikeTrain, argfuncs)
 
 
-@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOPartialWriteTest(NixIOTest):
 
     filename = "testfile_partialwrite.h5"
