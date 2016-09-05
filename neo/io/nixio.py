@@ -12,7 +12,7 @@ Module for reading data from files in the NIX format.
 
 Author: Achilleas Koutsou
 
-This IO supports both writina and reading of NIX files. Reading is supported
+This IO supports both writing and reading of NIX files. Reading is supported
 only if the NIX file was created using this IO.
 """
 
