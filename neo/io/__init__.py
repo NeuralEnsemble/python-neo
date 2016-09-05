@@ -66,6 +66,8 @@ Classes:
 
 .. autoclass:: neo.io.WinWcpIO
 
+.. autoclass:: neo.io.NixIO
+
 """
 
 import os.path
@@ -117,6 +119,7 @@ from neo.io.kwikio import KwikIO
 from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
+from neo.io.nixio import NixIO
 
 
 iolist = [
@@ -149,7 +152,8 @@ iolist = [
           TdtIO,
           KwikIO,
           WinEdrIO,
-          WinWcpIO
+          WinWcpIO,
+          NixIO
 ]
 
 
