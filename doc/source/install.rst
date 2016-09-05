@@ -88,13 +88,15 @@ BrainwareDamIO     Yes      Yes
 BrainwareF32IO     Yes      Yes
 BrainwareSrcIO     Yes      Yes
 ElanIO             Yes      No
-HDF5IO             Yes      No
+IgorIO             Yes      Yes
+NeoHdf5IO          Yes      Yes
 KlustakwikIO       Yes      No
 KwikIO             Yes      Yes
 MicromedIO         Yes      No
 NeoMatlabIO        Yes      Yes
 NeuroExplorerIO    Yes      No
 NeuroscopeIO       Yes      Yes
+NixIO              Yes      Yes
 PickleIO           Yes      Yes
 PlexonIO           Yes      No
 PyNNIO             Yes      Yes
@@ -104,6 +106,7 @@ TdtIO              Yes      No
 WinEdrIO           Yes      Yes
 WinWcpIO           Yes      Yes
 ================== ======== ========
+
 
 
 

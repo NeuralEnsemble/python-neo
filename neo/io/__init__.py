@@ -32,7 +32,11 @@ Classes:
 
 .. autoclass:: neo.io.ElphyIO
 
+.. autoclass:: neo.io.IgorIO
+
 .. autoclass:: neo.io.KlustaKwikIO
+
+.. autoclass:: neo.io.KwikIO
 
 .. autoclass:: neo.io.MicromedIO
 
@@ -45,6 +49,8 @@ Classes:
 .. autoclass:: neo.io.NeuroScopeIO
 
 .. autoclass:: neo.io.NeuroshareIO
+
+.. autoclass:: neo.io.NixIO
 
 .. autoclass:: neo.io.PickleIO
 
@@ -59,8 +65,6 @@ Classes:
 .. autoclass:: neo.io.StimfitIO
 
 .. autoclass:: neo.io.TdtIO
-
-.. autoclass:: neo.io.KwikIO
 
 .. autoclass:: neo.io.WinEdrIO
 
@@ -100,12 +104,15 @@ from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
 #from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
+from neo.io.igorproio import IgorIO
 from neo.io.klustakwikio import KlustaKwikIO
+from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
+from neo.io.nixio import NixIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.pynnio import PyNNNumpyIO
@@ -113,7 +120,6 @@ from neo.io.pynnio import PyNNTextIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
-from neo.io.kwikio import KwikIO
 from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
@@ -132,8 +138,11 @@ iolist = [
           ElanIO,
           #ElphyIO,
           ExampleIO,
+          IgorIO,
           KlustaKwikIO,
+          KwikIO,
           MicromedIO,
+          NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
           NeoHdf5IO,
           NeoMatlabIO,
           NeuroExplorerIO,
@@ -147,7 +156,6 @@ iolist = [
           Spike2IO,
           StimfitIO,
           TdtIO,
-          KwikIO,
           WinEdrIO,
           WinWcpIO
 ]
