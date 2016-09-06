@@ -35,6 +35,10 @@ except NameError:
 logger = logging.getLogger("Neo")
 
 
+class MergeError(Exception):
+    pass
+
+
 def _check_annotations(value):
     """
     Recursively check that value is either of a "simple" type (number, string,

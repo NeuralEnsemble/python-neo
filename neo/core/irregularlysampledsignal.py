@@ -25,7 +25,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import quantities as pq
 
-from neo.core.baseneo import BaseNeo
+from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
@@ -370,6 +370,28 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         '''
         return self.__mul__(-1) + other
 
+    def _repr_pretty_(self, pp, cycle):
+        '''
+        Handle pretty-printing the :class:`IrregularlySampledSignal`.
+        '''
+        pp.text("{cls} with {channels} channels of length {length}; "
+                "units {units}; datatype {dtype} ".format(
+                    cls=self.__class__.__name__,
+                    channels=self.shape[1],
+                    length=self.shape[0],
+                    units=self.units.dimensionality.string,
+                    dtype=self.dtype))
+        if self._has_repr_pretty_attrs_():
+            pp.breakable()
+            self._repr_pretty_attrs_(pp, cycle)
+
+        def _pp(line):
+            pp.breakable()
+            with pp.group(indent=1):
+                pp.text(line)
+        for line in ["sample times: {0}".format(self.times)]:
+            _pp(line)
+
     @property
     def sampling_intervals(self):
         '''
@@ -431,3 +453,47 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
         return new
+
+    def merge(self, other):
+        '''
+        Merge another :class:`IrregularlySampledSignal` with this one, and return the
+        merged signal.
+
+        The :class:`IrregularlySampledSignal` objects are concatenated horizontally
+        (column-wise, :func:`np.hstack`).
+
+        If the attributes of the two :class:`IrregularlySampledSignal` are not
+        compatible, a :class:`MergeError` is raised.
+        '''
+        if not np.array_equal(self.times, other.times):
+            raise MergeError("Cannot merge these two signals as the sample times differ.")
+        if self.segment != other.segment:
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[0] != other.lazy_shape[0]:
+                    raise MergeError("Cannot merge signals of different length.")
+                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+        stack = np.hstack(map(np.array, (self, other)))
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        kwargs.update(merged_annotations)
+        signal = IrregularlySampledSignal(self.times, stack, units=self.units,
+                                         dtype=self.dtype, copy=False,
+                                         **kwargs)
+        signal.segment = self.segment
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+        return signal
