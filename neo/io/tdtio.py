@@ -142,21 +142,21 @@ class TdtIO(BaseIO):
         #if exists an external sortcode in ./sort/[sortname]/*.SortResult (generated after offline sortting)
         sortresult_filename = None
         if sortname is not ''
-        try:
-            for file in os.listdir(os.path.join(subdir, 'sort', sortname)):
-                if file.endswith(".SortResult"):
-                    sortresult_filename = os.path.join(subdir, 'sort', sortname, file)
+            try:
+                for file in os.listdir(os.path.join(subdir, 'sort', sortname)):
+                    if file.endswith(".SortResult"):
+                        sortresult_filename = os.path.join(subdir, 'sort', sortname, file)
 
-                    # get new sortcode
-                    newsorcode = np.fromfile(sortresult_filename,'int8')[1024:]  # the first 1024 byte is file header
-                    # update the sort code with the info from this file
-                    tsq['sortcode'][1:-1]=newsorcode
-                    # print('sortcode updated')
-                    break
-        except OSError:
-            sortresult_filename = None
-        except IOError:
-            sortresult_filename = None
+                        # get new sortcode
+                        newsorcode = np.fromfile(sortresult_filename,'int8')[1024:]  # the first 1024 byte is file header
+                        # update the sort code with the info from this file
+                        tsq['sortcode'][1:-1]=newsorcode
+                        # print('sortcode updated')
+                        break
+            except OSError:
+                sortresult_filename = None
+            except IOError:
+                sortresult_filename = None
 
 
         for type_code, type_label in tdt_event_type:
