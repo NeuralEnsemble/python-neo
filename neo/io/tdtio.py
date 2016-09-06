@@ -93,7 +93,7 @@ class TdtIO(BaseIO):
         if self.dirname.endswith('/'):
             self.dirname = self.dirname[:-1]
 
-    def read_segment(self, blockname=None, lazy=False, cascade=True, sortname=''):
+    def read_segment(self, blockname=None, lazy=False, cascade=True):
         """
         Read a single segment from the tank. Note that TDT blocks are Neo
         segments, and TDT tanks are Neo blocks, so here the 'blockname' argument
@@ -137,27 +137,6 @@ class TdtIO(BaseIO):
             tev_array = np.fromfile(tev_filename, dtype='uint8')
         except IOError:
             tev_filename = None
-
-
-        #if exists an external sortcode in ./sort/[sortname]/*.SortResult (generated after offline sortting)
-        sortresult_filename = None
-        if sortname is not ''
-        try:
-            for file in os.listdir(os.path.join(subdir, 'sort', sortname)):
-                if file.endswith(".SortResult"):
-                    sortresult_filename = os.path.join(subdir, 'sort', sortname, file)
-
-                    # get new sortcode
-                    newsorcode = np.fromfile(sortresult_filename,'int8')[1024:]  # the first 1024 byte is file header
-                    # update the sort code with the info from this file
-                    tsq['sortcode'][1:-1]=newsorcode
-                    # print('sortcode updated')
-                    break
-        except OSError:
-            sortresult_filename = None
-        except IOError:
-            sortresult_filename = None
-
 
         for type_code, type_label in tdt_event_type:
             mask1 = tsq['evtype']==type_code
@@ -252,7 +231,7 @@ class TdtIO(BaseIO):
                         seg.analogsignals.append(anasig)
         return seg
 
-    def read_block(self, lazy=False, cascade=True, sortname=''):
+    def read_block(self, lazy=False, cascade=True):
         bl = Block()
         tankname = os.path.basename(self.dirname)
         bl.file_origin = tankname
@@ -261,7 +240,7 @@ class TdtIO(BaseIO):
 
         for blockname in os.listdir(self.dirname):
             if self.is_tdtblock(blockname):    # if the folder is a tdt block
-                seg = self.read_segment(blockname, lazy, cascade, sortname)
+                seg = self.read_segment(blockname, lazy, cascade)
                 bl.segments.append(seg)
 
         bl.create_many_to_one_relationship()
