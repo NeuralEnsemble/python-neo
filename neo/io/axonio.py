@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading data from pCLAMP and AxoScope
+Class for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 - abf = Axon binary file
@@ -103,8 +103,8 @@ def clean_string(s):
 
 class AxonIO(BaseIO):
     """
-
-    Class for reading abf (axon binary file) file.
+    Class for reading data from pCLAMP and AxoScope
+    files (.abf version 1 and 2), developed by Molecular Device/Axon Technologies.
 
     Usage:
         >>> from neo import io

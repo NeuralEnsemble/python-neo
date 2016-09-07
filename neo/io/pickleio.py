@@ -23,7 +23,11 @@ from neo.core import (Block, Segment,
 
 class PickleIO(BaseIO):
     """
+    A class for reading and writing Neo data from/to the Python "pickle" format.
 
+    Note that files in this format may not be readable if using a different version
+    of Neo to that used to create the file. It should therefore not be used for
+    long-term storage, but rather for intermediate results in a pipeline.
     """
     is_readable = True
     is_writable = True

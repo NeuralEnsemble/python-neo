@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading data from Plexion acquisition system (.plx)
+Class for reading data from Plexon acquisition system (.plx)
 
 Compatible with versions 100 to 106.
 Other versions have not been tested.
@@ -28,7 +28,10 @@ from neo.io.tools import iteritems
 
 class PlexonIO(BaseIO):
     """
-    Class for reading plx file.
+    Class for reading data from Plexon acquisition systems (.plx)
+
+    Compatible with versions 100 to 106.
+    Other versions have not been tested.
 
     Usage:
         >>> from neo import io

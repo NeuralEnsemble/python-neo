@@ -58,7 +58,7 @@ cut across the simple container hierarchy.
          recording channel, and the :py:class:`ChannelIndex` can be used to associate each
          :py:class:`Unit` with the group of recording channels from which it was obtained.
 
-  * :py:class:`Unit`: A Unit links the :class:`SpikeTrain` objects within a :class:`Block`,
+  * :py:class:`Unit`: links the :class:`SpikeTrain` objects within a :class:`Block`,
     possibly across multiple Segments, that were emitted by the same cell.
     A :class:`Unit` is linked to the :class:`ChannelIndex` object from which the spikes were detected.
 
@@ -89,7 +89,7 @@ A :class:`Segment` can access the :class:`AnalogSignal` objects that it contains
     
     >>> seg = Segment()
     >>> seg.analogsignals
-    # gives a list a AnalogSignals
+    # gives a list of AnalogSignals
     
 In the :ref:`neo_diagram` below, these *one to many* relationships are represented by cyan arrows.
 In general, an object can access its children with an attribute *childname+s* in lower case, e.g.
@@ -130,24 +130,24 @@ In some cases, a one-to-many relationship is sufficient. Here is a simple exampl
     
     # the four tetrodes
     for i in range(4):
-        chx = ChannelIndex(name = 'Tetrode %d' % i,
-                                    channel_indexes=[0, 1, 2, 3])
+        chx = ChannelIndex(name='Tetrode %d' % i,
+                           channel_indexes=[0, 1, 2, 3])
         bl.channelindexes.append(chx)
 
     # now we load the data and associate it with the created channels
     # ...
 
-Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3. We create a group for each neuron to hold the `Unit` object associated with this spikesorting group. Each group also contains the channels on which that neuron spiked. The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
+Now consider a more complex example: a 1x4 silicon probe, with a neuron on channels 0,1,2 and another neuron on channels 1,2,3. We create a group for each neuron to hold the :class:`Unit` object associated with this spike sorting group. Each group also contains the channels on which that neuron spiked. The relationship is many-to-many because channels 1 and 2 occur in multiple groups.::
 
     bl = Block(name='probe data')
 
     # one group for each neuron
     chx0 = ChannelIndex(name='Group 0',
-                                 channel_indexes=[0, 1, 2])
+                        channel_indexes=[0, 1, 2])
     bl.channelindexes.append(chx0)
 
     chx1 = ChannelIndex(name='Group 1',
-                                 channel_indexes=[1, 2, 3])
+                        channel_indexes=[1, 2, 3])
     bl.channelindexes.append(chx1)
 
     # now we add the spiketrain from Unit 0 to chx0
@@ -173,7 +173,6 @@ Attributes:
   * In white = recommended
 Relationship:
   * In cyan = one to many
-  * In magenta = many to many
   * In yellow = properties (deduced from other relationships)
 
 

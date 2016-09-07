@@ -25,15 +25,17 @@ Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
 
    * scipy >= 0.12.0 for NeoMatlabIO
-   * pytables >= 2.4 for Hdf5IO
-
-For SciPy on Debian/Ubuntu, you can install these using::
-
-    $ apt-get install python-scipy python-tables
+   * h5py >= 2.5 for Hdf5IO, KwikIO
+   * igor >= 0.2 for IgorIO
+   * nixio >= 1.2 for NixIO
+   * stfio for StimfitIO
 
 
 Installing from the Python Package Index
 ========================================
+
+.. warning:: alpha and beta releases cannot be installed from PyPI. These instructions
+             will only be valid once neo-0.5.0 is released.
 
 If you have pip_ installed::
 
@@ -45,12 +47,12 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/n/neo/neo-0.4.0.tar.gz
+    http://pypi.python.org/packages/source/n/neo/neo-0.5.0.tar.gz
 
 Then::
 
-    $ tar xzf neo-0.4.0.tar.gz
-    $ cd neo-0.4.0
+    $ tar xzf neo-0.5.0.tar.gz
+    $ cd neo-0.5.0
     $ python setup.py install
     
 or::

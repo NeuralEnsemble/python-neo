@@ -22,7 +22,7 @@ Our entire dataset is contained in a :class:`Block`, which in turn contains:
 ways to access the data, corresponding respectively, in this scenario, to access
 by **time** and by **space**.
 
-.. note:: segments do not always represent trials, they can be used for many
+.. note:: Segments do not always represent trials, they can be used for many
           purposes: segments could represent parallel recordings for different
           subjects, or different steps in a current clamp protocol.
 
@@ -190,7 +190,7 @@ how you could iterate over the contained signals and extract spike times.
     st_list = []
     for signal in chx.analogsignals:
         # use a simple threshhold detector
-        spike_mask = np.where(np.min(signal.magnitude, axis=1) < -1.0)[0]   # note, np.min(Quantity) is borked
+        spike_mask = np.where(np.min(signal.magnitude, axis=1) < -1.0)[0]
         
         # create a spike train
         spike_times = signal.times[spike_mask]
@@ -200,7 +200,7 @@ how you could iterate over the contained signals and extract spike times.
         wf_list = []
         for spike_idx in np.nonzero(spike_mask)[0]:
             wf_list.append(signal[spike_idx-1:spike_idx+2, :])
-        st.waveforms = np.array(wf_list)  # should really be 3D AnalogSignal
+        st.waveforms = np.array(wf_list)
         
         st_list.append(st)
 

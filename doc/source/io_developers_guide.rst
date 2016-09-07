@@ -10,7 +10,7 @@ IO developers' guide
 Guidelines for IO implementation
 ================================
 
-Receipe to develop an IO module for a new data format:
+Recipe to develop an IO module for a new data format:
     1. Fully understand the object model. See :doc:`core`. If in doubt ask the `mailing list`_.
     2. Fully understand :mod:`neo.io.exampleio`, It is a fake IO to explain the API. If in doubt ask the list.
     3. Copy/paste ``exampleio.py`` and choose clear file and class names for your IO.
