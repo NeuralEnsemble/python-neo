@@ -18,15 +18,15 @@ from neo.core.container import Container
 
 class ChannelIndex(Container):
     '''
-    A container for multiple data channels.
+    A container for indexing/grouping data channels.
 
     This container has several purposes:
 
       * Grouping all :class:`AnalogSignal`\s inside a :class:`Block`
         across :class:`Segment`\s;
       * Indexing a subset of the channels within an :class:`AnalogSignal`;
-      * Container of  :class:`Unit`\s. A neuron discharge (:class:`Unit`)
-        can be seen by several electrodes (4 in tetrode case).
+      * Container of :class:`Unit`\s. A neuron discharge (:class:`Unit`)
+        can be seen by several electrodes (e.g. 4 for tetrodes).
 
     *Usage 1* multi :class:`Segment` recording with 2 electrode arrays::
 
@@ -69,7 +69,7 @@ class ChannelIndex(Container):
         ...
         >>> # Create a new ChannelIndex which groups three channels from the signal
         ... chx = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
-        ...                             channel_indexes = np.array([0, 3, 5])
+        ...                    channel_indexes = np.array([0, 3, 5])
         >>> chx.analogsignals.append(sig)
         >>> blk.channel_indexes.append(chx)
 
@@ -105,7 +105,7 @@ class ChannelIndex(Container):
             Physical or logical coordinates of all channels.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Container of*:
         :class:`AnalogSignal`

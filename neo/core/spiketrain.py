@@ -148,7 +148,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             Must be True when you request a change of units or dtype.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Properties available on this object*:
         :sampling_period: (quantity scalar) Interval between two samples.

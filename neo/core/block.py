@@ -18,12 +18,10 @@ from neo.core.container import Container, unique_objs
 
 class Block(Container):
     '''
-    Main container for data.
-
     Main container gathering all the data, whether discrete or continous, for a
     given recording session.
 
-    A block is not necessarily temporally homogeneous, in contrast to Segment.
+    A block is not necessarily temporally homogeneous, in contrast to :class:`Segment`.
 
     *Usage*::
 
@@ -47,7 +45,7 @@ class Block(Container):
         ... for seg in blk.segments:
         ...     for chx in blk.channel_indexes:
         ...         a = AnalogSignal(np.random.randn(10000, 64)*nA,
-        ...                               sampling_rate=10*kHz)
+        ...                          sampling_rate=10*kHz)
         ...         chx.analogsignals.append(a)
         ...         seg.analogsignals.append(a)
 
@@ -69,7 +67,7 @@ class Block(Container):
             you recorded in a session.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Container of*:
         :class:`Segment`

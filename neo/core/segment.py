@@ -39,11 +39,11 @@ class Segment(Container):
         >>> seg.spiketrains.append(train1)
         >>>
         >>> sig0 = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV',
-        ...                          sampling_rate=1*Hz)
+        ...                     sampling_rate=1*Hz)
         >>> seg.analogsignals.append(sig0)
         >>>
         >>> sig1 = AnalogSignal(signal=[100.01, 103.3, 109.3], units='nA',
-        ...                          sampling_period=.1*s)
+        ...                     sampling_period=.1*s)
         >>> seg.analogsignals.append(sig1)
 
     *Required attributes/properties*:
@@ -60,7 +60,7 @@ class Segment(Container):
             your Segment. For instance you could use this for trial numbers.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Properties available on this object*:
         :all_data: (list) A list of all child objects in the :class:`Segment`.

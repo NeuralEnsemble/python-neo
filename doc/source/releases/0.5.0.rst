@@ -48,9 +48,9 @@ Multi-channel arrays are created as before, but using :class:`AnalogSignal` inst
 
 
 Similarly, the :class:`Epoch` and :class:`EpochArray` classes have been merged into an
-array-valued class :class:`Epoch`, ditto for :class:`Event` and `EventArray`, and the
+array-valued class :class:`Epoch`, ditto for :class:`Event` and :class:`EventArray`, and the
 :class:`Spike` class, whose main function was to contain the waveform data for an individual spike,
-has been suppressed; waveform data are now available as the :attr`waveforms` attribute
+has been suppressed; waveform data are now available as the :attr:`waveforms` attribute
 of the :class:`SpikeTrain` class.
 
 
@@ -72,7 +72,7 @@ recording channel (a name and/or integer index) together with references to one 
 
 Metadata about :class:`AnalogSignalArray`\s could be contained in a :class:`RecordingChannelGroup`
 in a similar way, i.e. :class:`RecordingChannelGroup` functioned as an array-valued version of
-`RecordingChannel`, but :class:`RecordingChannelGroup` could also be used to group together
+:class:`RecordingChannel`, but :class:`RecordingChannelGroup` could also be used to group together
 individual :class:`RecordingChannel` objects.
 
 With Neo 0.5, information about the channel names and ids of an :class:`AnalogSignal` is contained
@@ -107,16 +107,26 @@ Checklist for updating code from 0.3/0.4 to 0.5
 
 To update your code from Neo 0.3/0.4 to 0.5, run through the following checklist:
 
-    * Change all usages of :class:`AnalogSignalArray` to :class:`AnalogSignal`.
-    * Change all usages of :class:`EpochArray` to :class:`Epoch`.
-    * Change all usages of :class:`EventArray` to :class:`Event`.
+    1. Change all usages of :class:`AnalogSignalArray` to :class:`AnalogSignal`.
+    2. Change all usages of :class:`EpochArray` to :class:`Epoch`.
+    3. Change all usages of :class:`EventArray` to :class:`Event`.
+    4. Where you have a list of (single channel) :class:`AnalogSignal`\s all of the same length,
+       consider converting them to a single, multi-channel :class:`AnalogSignal`.
+    5. Replace :class:`RecordingChannel` and :class:`RecordingChannelGroup` with
+       :class:`ChannelIndex`.
 
-.. note:: in each of these cases, the datastructure is still an array, it just has a shorter name.
 
-    * Where you have a list of (single channel) :class:`AnalogSignal`\s all of the same length,
-      consider converting them to a single, multi-channel :class:`AnalogSignal`.
-    * Replace :class:`RecordingChannel` and :class:`RecordingChannelGroup` with
-      :class:`ChannelIndex`.
+.. note:: in points 1-3, the data structure is still an array, it just has a shorter name.
 
+
+Other changes
+=============
+
+    * added :class:`NixIO` (`about the NIX format`_)
+    * added :class:`IgorIO`
+    * :class:`NeoHdf5IO` is now read-only. It will read data files produced by earlier versions
+      of Neo, but another HDF5-based IO, e.g. :class:`NixIO`, should be used for writing data.
 
 .. https://github.com/NeuralEnsemble/python-neo/issues?utf8=✓&q=is%3Aissue%20is%3Aclosed%20created%3A%3E2014-02-01%20
+
+.. _`about the NIX format`: http://zzz

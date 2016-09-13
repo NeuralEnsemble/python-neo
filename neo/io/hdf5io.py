@@ -40,6 +40,11 @@ def disjoint_groups(groups):
 
 
 class NeoHdf5IO(BaseIO):
+    """
+    Class for reading HDF5 format files created by Neo version 0.4 or earlier.
+
+    Writing to HDF5 is not supported by this IO; we recommend using NixIO for this.
+    """
     supported_objects = objectlist
     readable_objects = objectlist
     name = 'NeoHdf5 IO'

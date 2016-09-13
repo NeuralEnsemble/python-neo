@@ -42,7 +42,7 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
     '''
-    An array of one or more analog signal with samples taken at arbitrary time points.
+    An array of one or more analog signals with samples taken at arbitrary time points.
 
     A representation of one or more continuous, analog signals acquired at time
     :attr:`t_start` with a varying sampling interval. Each channel is sampled
@@ -80,7 +80,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         :copy: (bool) True by default.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Properties available on this object*:
         :sampling_intervals: (quantity array 1D) Interval between each adjacent

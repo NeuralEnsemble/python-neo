@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is an example for plotting neo object with maplotlib.
+This is an example for plotting a Neo object with matplotlib.
 """
 
 import urllib

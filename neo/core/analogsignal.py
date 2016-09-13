@@ -65,7 +65,7 @@ def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
 
 class AnalogSignal(BaseNeo, pq.Quantity):
     '''
-    Array of one or more continuous analog signals
+    Array of one or more continuous analog signals.
 
     A representation of several continuous, analog signals that
     have the same duration, sampling rate and start time.
@@ -98,7 +98,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         :units: (quantity units) Required if the signal is a list or NumPy
                 array, not if it is a :class:`Quantity`
         :t_start: (quantity scalar) Time when signal begins
-        :sampling_rate: *or* :sampling_period: (quantity scalar) Number of
+        :sampling_rate: *or* **sampling_period** (quantity scalar) Number of
                                                samples per unit time or
                                                interval between two samples.
                                                If both are specified, they are
@@ -114,7 +114,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         :copy: (bool) True by default.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`.
+    metadata and stored in :attr:`annotations`.
 
     *Properties available on this object*:
         :sampling_rate: (quantity scalar) Number of samples per unit time.
@@ -134,12 +134,11 @@ class AnalogSignal(BaseNeo, pq.Quantity):
 
     *Slicing*:
         :class:`AnalogSignal` objects can be sliced. When taking a single
-        row (dimension 1, e.g. [:, 0]), a :class:`AnalogSignal` is returned.
-        When taking a single element, a :class:`~quantities.Quantity` is
-        returned.  Otherwise a :class:`AnalogSignal` (actually a view) is
+        column (dimension 0, e.g. [0, :]) or a single element,
+        a :class:`~quantities.Quantity` is returned.
+        Otherwise an :class:`AnalogSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`t_start`
         is changed if the start index along dimension 1 is greater than 1.
-        Getting a single item returns a :class:`~quantity.Quantity` scalar.
 
     *Operations available on this object*:
         == != + * /

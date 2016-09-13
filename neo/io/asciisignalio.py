@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Class for reading/writing analog signals in a text file.
-Each columns represents a AnalogSignal. All AnalogSignal have the same sampling rate.
+Each column represents an AnalogSignal. All AnalogSignals have the same sampling rate.
 Covers many case when part of a file can be viewed as a CSV format.
 
 Supported : Read/Write
@@ -24,7 +24,7 @@ class AsciiSignalIO(BaseIO):
     """
 
     Class for reading signal in generic ascii format.
-    Columns respresents signal. They share all the same sampling rate.
+    Columns respresents signals. They all share the same sampling rate.
     The sampling rate is externally known or the first columns could hold the time
     vector.
 

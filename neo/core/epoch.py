@@ -53,7 +53,7 @@ class Epoch(BaseNeo, pq.Quantity):
         :file_origin: (str) Filesystem path or URL of the original data file.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`,
+    metadata and stored in :attr:`annotations`,
 
     '''
 
