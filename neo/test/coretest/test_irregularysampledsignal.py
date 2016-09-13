@@ -513,10 +513,11 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
         res = pretty(self.signal1)
-        targ = ("IrregularlySampledSignal\n" +
-                "name: '%s'\ndescription: '%s'\nannotations: %s" %
-                (self.signal1.name, self.signal1.description,
-                 pretty(self.signal1.annotations)))
+        signal = self.signal1
+        targ = (("IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s \n" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)) +
+                ("name: '%s'\ndescription: '%s'\n" % (signal.name, signal.description)) +
+                ("annotations: %s\n" % str(signal.annotations)) +
+                ("sample times: %s" % (signal.times[:10],)))
         self.assertEqual(res, targ)
 
 
