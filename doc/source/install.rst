@@ -34,12 +34,11 @@ Neo will still install but the IO module that uses them will fail on loading:
 Installing from the Python Package Index
 ========================================
 
-.. warning:: alpha and beta releases cannot be installed from PyPI. These instructions
-             will only be valid once neo-0.5.0 is released.
+.. warning:: alpha and beta releases cannot be installed from PyPI.
 
 If you have pip_ installed::
 
-    $ pip install neo
+    $ pip install https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0alpha1.zip
     
 This will automatically download and install the latest release (again
 you may need to have administrator privileges on the machine you are installing
@@ -47,12 +46,12 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/n/neo/neo-0.5.0.tar.gz
+    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0alpha1.zip
 
 Then::
 
-    $ tar xzf neo-0.5.0.tar.gz
-    $ cd neo-0.5.0
+    $ unzip neo-0.5.0alpha1.zip
+    $ cd neo-0.5.0alpha1
     $ python setup.py install
     
 or::
