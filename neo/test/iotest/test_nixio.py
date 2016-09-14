@@ -801,54 +801,52 @@ class NixIOWriteTest(NixIOTest):
 
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test", "Test")
-        tovalue = self.io._to_value
+        writeprop = self.io._write_property
 
         # quantity
-        # qvalue = pq.Quantity(10, "mV")
-        # section["qvalue"] = tovalue(qvalue)
-        # self.assertEqual(section["qvalue"], 10)
+        qvalue = pq.Quantity(10, "mV")
+        writeprop(section, "qvalue", qvalue)
+        self.assertEqual(section["qvalue"], 10)
+        self.assertEqual(section.props["qvalue"].unit, "mV")
 
         # datetime
         dt = self.rdate()
-        section["dt"] = tovalue(dt)
+        writeprop(section, "dt", dt)
         self.assertEqual(datetime.fromtimestamp(section["dt"]), dt)
 
         # string
         randstr = self.rsentence()
-        section["randstr"] = tovalue(randstr)
+        writeprop(section, "randstr", randstr)
         self.assertEqual(section["randstr"], randstr)
 
         # bytes
         bytestring = b"bytestring"
-        section["randbytes"] = tovalue(bytestring)
+        writeprop(section, "randbytes", bytestring)
         self.assertEqual(section["randbytes"], bytestring.decode())
 
         # iterables
         # mdlist = [[1, 2, 3], [4, 5, 6]]
-        # self.assertIs(tovalue(mdlist), None)
+        # self.assertIs(toprop(mdlist), None)
         #
         # mdarray = np.random.random((10, 3))
-        # self.assertIs(tovalue(mdarray), None)
+        # self.assertIs(toprop(mdarray), None)
 
         randlist = np.random.random(10).tolist()
-        section["randlist"] = tovalue(randlist)
+        writeprop(section, "randlist", randlist)
         self.assertEqual(randlist, section["randlist"])
 
         randarray = np.random.random(10)
-        section["randarray"] = tovalue(randarray)
+        writeprop(section, "randarray", randarray)
         np.testing.assert_almost_equal(randarray, section["randarray"])
-
-        empty = []
-        self.assertIs(tovalue(empty), None)
 
         # numpy item
         npval = np.float64(2398)
-        section["npval"] = tovalue(npval)
+        writeprop(section, "npval", npval)
         self.assertEqual(npval, section["npval"])
 
         # number
         val = 42
-        section["val"] = tovalue(val)
+        writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
 
 
