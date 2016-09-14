@@ -652,19 +652,18 @@ class NixIO(BaseIO):
             nixchan.definition = nixsource.definition
             chanpath = loc + "/channelindex/" + channame
             chanmd = self._get_or_init_metadata(nixchan, chanpath)
-            chanmd["index"] = self._to_property(int(channel))
+            chanmd["index"] = nixio.Value(int(channel))
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
-                nixcoordunits = self._to_property(coordunits)
                 nixcoords = tuple(
-                    self._to_property(c.rescale(coordunits).magnitude.item())
+                    nixio.Value(c.rescale(coordunits).magnitude.item())
                     for c in coords
                 )
                 if "coordinates" in chanmd:
                     del chanmd["coordinates"]
-                chanmd.create_property("coordinates", nixcoords)
-                chanmd["coordinates.units"] = nixcoordunits
+                chanprop = chanmd.create_property("coordinates", nixcoords)
+                chanprop.unit = coordunits
 
     def write_analogsignal(self, anasig, loc=""):
         """
@@ -890,13 +889,13 @@ class NixIO(BaseIO):
             metadata = self._get_or_init_metadata(nixobj, path)
             for k, v in attr["annotations"].items():
                 prop = self._to_property(v)
-                metadata.create_property(k, prop["values"])
-                metadata.unit = prop["unit"]
+                metadata[k] = prop["values"]
+                metadata.props[k].unit = prop["unit"]
 
     def _write_data(self, nixobj, attr, path):
         if isinstance(nixobj, list):
             metadata = self._get_or_init_metadata(nixobj[0], path)
-            metadata["t_start.units"] = self._to_property(attr["t_start.units"])
+            metadata["t_start.units"] = nixio.Value(attr["t_start.units"])
             for obj in nixobj:
                 obj.unit = attr["data.units"]
                 if attr["type"] == "analogsignal":
@@ -930,9 +929,13 @@ class NixIO(BaseIO):
                 labeldim.labels = attr["labels"]
             metadata = self._get_or_init_metadata(nixobj, path)
             if "t_start" in attr:
-                metadata["t_start"] = self._to_property(attr["t_start"])
+                t_start = self._to_property(attr["t_start"])
+                metadata["t_start"] = t_start["values"]
+                metadata.props["t_start"].unit = t_start["unit"]
             if "t_stop" in attr:
-                metadata["t_stop"] = self._to_property(attr["t_stop"])
+                t_stop = self._to_property(attr["t_stop"])
+                metadata["t_stop"] = t_stop["values"]
+                metadata.props["t_stop"].unit = t_stop["unit"]
             if "waveforms" in attr:
                 wfname = nixobj.name + ".waveforms"
                 if wfname in parentblock.data_arrays:
@@ -949,9 +952,7 @@ class NixIO(BaseIO):
                 wftime = wfda.append_sampled_dimension(
                     attr["sampling_interval"]
                 )
-                metadata["sampling_interval.units"] = self._to_property(
-                    attr["sampling_interval.units"]
-                )
+                metadata["sampling_interval.units"] = attr["sampling_interval.units"]
                 wftime.unit = attr["times.units"]
                 wftime.label = "time"
                 if wfname in metadata.sections:
@@ -960,9 +961,9 @@ class NixIO(BaseIO):
                     wfpath = path + "/waveforms/" + wfname
                     wfda.metadata = self._get_or_init_metadata(wfda, wfpath)
                 if "left_sweep" in attr:
-                    wfda.metadata["left_sweep"] = self._to_property(
-                        attr["left_sweep"]
-                    )
+                    left_sweep = self._to_property(attr["left_sweep"])
+                    wfda.metadata["left_sweep"] = left_sweep["values"]
+                    wfda.metadata.props["left_sweep"].unit= left_sweep["unit"]
 
     def _update_maps(self, obj, lazy):
         objidx = self._find_lazy_loaded(obj)
