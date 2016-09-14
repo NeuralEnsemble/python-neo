@@ -186,7 +186,6 @@ class NixIOTest(unittest.TestCase):
             np.testing.assert_almost_equal(sig.magnitude, da)
             self.assertEqual(neounit, da.unit)
             timedim = da.dimensions[0]
-            chandim = da.dimensions[1]
             if isinstance(neosig, AnalogSignal):
                 self.assertIsInstance(timedim, nixtypes["SampledDimension"])
                 self.assertEqual(
@@ -203,7 +202,6 @@ class NixIOTest(unittest.TestCase):
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
                                  str(neosig.times.dimensionality))
-            self.assertIsInstance(chandim, nixtypes["SetDimension"])
 
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
@@ -825,12 +823,6 @@ class NixIOWriteTest(NixIOTest):
         self.assertEqual(section["randbytes"], bytestring.decode())
 
         # iterables
-        # mdlist = [[1, 2, 3], [4, 5, 6]]
-        # self.assertIs(toprop(mdlist), None)
-        #
-        # mdarray = np.random.random((10, 3))
-        # self.assertIs(toprop(mdarray), None)
-
         randlist = np.random.random(10).tolist()
         writeprop(section, "randlist", randlist)
         self.assertEqual(randlist, section["randlist"])
@@ -848,6 +840,14 @@ class NixIOWriteTest(NixIOTest):
         val = 42
         writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
+
+        # multi-dimensional data -- UNSUPORTED
+        # mdlist = [[1, 2, 3], [4, 5, 6]]
+        # writeprop(section, "mdlist", mdlist)
+
+        # mdarray = np.random.random((10, 3))
+        # writeprop(section, "mdarray", mdarray)
+
 
 
 class NixIOReadTest(NixIOTest):
