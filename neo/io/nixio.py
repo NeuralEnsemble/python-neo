@@ -881,16 +881,14 @@ class NixIO(BaseIO):
             nixobj.force_created_at(calculate_timestamp(attr["created_at"]))
         if "file_datetime" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["file_datetime"] = self._to_property(attr["file_datetime"])
+            metadata["file_datetime"] = attr["file_datetime"]
         if "rec_datetime" in attr and attr["rec_datetime"]:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["rec_datetime"] = self._to_property(attr["rec_datetime"])
+            metadata["rec_datetime"] = attr["rec_datetime"]
         if "annotations" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
             for k, v in attr["annotations"].items():
-                prop = self._to_property(v)
-                metadata[k] = prop["values"]
-                metadata.props[k].unit = prop["unit"]
+                self._write_property(metadata, k, v)
 
     def _write_data(self, nixobj, attr, path):
         if isinstance(nixobj, list):
@@ -929,13 +927,9 @@ class NixIO(BaseIO):
                 labeldim.labels = attr["labels"]
             metadata = self._get_or_init_metadata(nixobj, path)
             if "t_start" in attr:
-                t_start = self._to_property(attr["t_start"])
-                metadata["t_start"] = t_start["values"]
-                metadata.props["t_start"].unit = t_start["unit"]
+                self._write_property(metadata, "t_start", attr["t_start"])
             if "t_stop" in attr:
-                t_stop = self._to_property(attr["t_stop"])
-                metadata["t_stop"] = t_stop["values"]
-                metadata.props["t_stop"].unit = t_stop["unit"]
+                self._write_property(metadata, "t_stop", attr["t_stop"])
             if "waveforms" in attr:
                 wfname = nixobj.name + ".waveforms"
                 if wfname in parentblock.data_arrays:
@@ -961,9 +955,8 @@ class NixIO(BaseIO):
                     wfpath = path + "/waveforms/" + wfname
                     wfda.metadata = self._get_or_init_metadata(wfda, wfpath)
                 if "left_sweep" in attr:
-                    left_sweep = self._to_property(attr["left_sweep"])
-                    wfda.metadata["left_sweep"] = left_sweep["values"]
-                    wfda.metadata.props["left_sweep"].unit= left_sweep["unit"]
+                    self._write_property(wfda.metadata, "left_sweep",
+                                         attr["left_sweep"])
 
     def _update_maps(self, obj, lazy):
         objidx = self._find_lazy_loaded(obj)
@@ -1104,29 +1097,28 @@ class NixIO(BaseIO):
             attr["left_sweep.units"] = cls._get_units(neoobj.left_sweep)
         return attr
 
-    def _to_property(self, v):
+    def _write_property(self, section, name, v):
         """
-        Helper function for converting arbitrary variables to nix metadata
-        properties. The function returns a dictionary with two keys:
-        values and unit, which are then used to create a nix.Property.
+        Create a metadata property with a given name and value on the provided
+        metadata section.
 
-
-
-        :param v: The value to be converted
-        :return: dictionary: {"values": [nix.Value()], "unit": str or None}
+        :param section: The metadata section to hold the new property
+        :param name: The name of the property
+        :param v: The value to write
+        :return: The newly created property
         """
-        ret = {"values": None, "unit": None}
+
         if isinstance(v, pq.Quantity):
-            ret["values"] = [nixio.Value(v.magnitude.item())]
-            ret["unit"] = str(v.dimensionality)
+            section[name] = nixio.Value(v.magnitude.item())
+            section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            ret["values"] = [nixio.Value(calculate_timestamp(v))]
+            section[name] = [nixio.Value(calculate_timestamp(v))]
         elif isinstance(v, string_types):
-            ret["values"] = [nixio.Value(v)]
+            section[name] = [nixio.Value(v)]
         elif isinstance(v, bytes):
-            ret["values"] = [nixio.Value(v.decode())]
+            section[name] = [nixio.Value(v.decode())]
         elif isinstance(v, Iterable):
-            ret["values"] = []
+            values = []
             for item in v:
                 if isinstance(item, Iterable):
                     self.logger.warn("Multidimensional arrays and nested "
@@ -1137,12 +1129,13 @@ class NixIO(BaseIO):
                     item = nixio.Value(item.item())
                 else:
                     item = nixio.Value(item)
-                ret["values"].append(item)
+                values.append(item)
+            section[name] = values
         elif type(v).__module__ == "numpy":
-            ret["values"] = [nixio.Value(v.item())]
+            section[name] = [nixio.Value(v.item())]
         else:
-            ret["values"] = [nixio.Value(v)]
-        return ret
+            section[name] = [nixio.Value(v)]
+        return section.props[name]
 
     @staticmethod
     def _get_contained_signals(obj):
