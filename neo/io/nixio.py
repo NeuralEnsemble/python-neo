@@ -906,7 +906,6 @@ class NixIO(BaseIO):
                     timedim.unit = attr["times.units"]
                 timedim.label = "time"
                 timedim.offset = attr["t_start"]
-                obj.append_set_dimension()
         else:
             nixobj.positions.unit = attr["data.units"]
             blockpath = "/" + path.split("/")[1]
