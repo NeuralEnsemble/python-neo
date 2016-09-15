@@ -1154,13 +1154,16 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.dataquant = self.data*pq.ms
         self.train = SpikeTrain(self.dataquant, t_stop=10.0*pq.ms,
-                                 waveforms=self.waveforms)
+                                waveforms=self.waveforms)
 
     def test_duplicate_with_new_data(self):
         signal1 = self.train
-        new_data = np.sort(np.random.uniform(0, 100, (self.train))) * pq.ms
         new_t_start = -10*pq.s
         new_t_stop = 10*pq.s
+        new_data = np.sort(np.random.uniform(new_t_start.magnitude,
+                                             new_t_stop.magnitude,
+                                             len(self.train))) * pq.ms
+
         signal1b = signal1.duplicate_with_new_data(new_data,
                                                    t_start=new_t_start,
                                                    t_stop=new_t_stop)
