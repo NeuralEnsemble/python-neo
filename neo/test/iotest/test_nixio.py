@@ -284,7 +284,13 @@ class NixIOTest(unittest.TestCase):
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
-                self.assertEqual(nixmd[str(k)], v)
+                if isinstance(v, pq.Quantity):
+                    self.assertEqual(nixmd.props[str(k)].unit,
+                                     str(v.dimensionality))
+                    np.testing.assert_almost_equal(nixmd[str(k)],
+                                                   v.magnitude)
+                else:
+                    self.assertEqual(nixmd[str(k)], v)
 
     @classmethod
     def create_full_nix_file(cls, filename):
@@ -581,7 +587,10 @@ class NixIOTest(unittest.TestCase):
         seg.events.append(event)
 
         spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s)
-        spiketrain.annotate(**cls.rdict(6))
+        d = cls.rdict(6)
+        d["quantity"] = pq.Quantity(10, "mV")
+        d["qarray"] = pq.Quantity(range(10), "mA")
+        spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
         chx = ChannelIndex(name="achx", index=[1, 2])
@@ -750,6 +759,8 @@ class NixIOWriteTest(NixIOTest):
 
         for srcunit in blk.sources:  # units
             self.assertIn(srcunit.name, blkmd.sections)
+
+        self.write_and_compare([neoblk])
 
     def test_anonymous_objects_write(self):
         nblocks = 2
