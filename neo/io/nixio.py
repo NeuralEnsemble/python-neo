@@ -1109,7 +1109,10 @@ class NixIO(BaseIO):
         """
 
         if isinstance(v, pq.Quantity):
-            section[name] = nixio.Value(v.magnitude.item())
+            if len(v.shape):
+                section[name] = list(nixio.Value(vv) for vv in v.magnitude)
+            else:
+                section[name] = nixio.Value(v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
             section[name] = [nixio.Value(calculate_timestamp(v))]
@@ -1119,18 +1122,23 @@ class NixIO(BaseIO):
             section[name] = [nixio.Value(v.decode())]
         elif isinstance(v, Iterable):
             values = []
+            unit = None
             for item in v:
-                if isinstance(item, Iterable):
+                if isinstance(item, pq.Quantity):
+                    unit = str(item.dimensionality)
+                    item = nixio.Value(item.magnitude.item())
+                elif isinstance(item, Iterable):
                     self.logger.warn("Multidimensional arrays and nested "
                                      "containers are not currently supported "
                                      "when writing to NIX.")
                     return None
-                if type(item).__module__ == "numpy":
+                elif type(item).__module__ == "numpy":
                     item = nixio.Value(item.item())
                 else:
                     item = nixio.Value(item)
                 values.append(item)
             section[name] = values
+            section.props[name].unit = unit
         elif type(v).__module__ == "numpy":
             section[name] = [nixio.Value(v.item())]
         else:
@@ -1171,10 +1179,13 @@ class NixIO(BaseIO):
         if nix_obj.metadata:
             for prop in nix_obj.metadata.props:
                 values = prop.values
+                values = list(v.value for v in values)
+                if prop.unit:
+                    values = pq.Quantity(values, prop.unit)
                 if len(values) == 1:
-                    neo_attrs[prop.name] = values[0].value
+                    neo_attrs[prop.name] = values[0]
                 else:
-                    neo_attrs[prop.name] = list(v.value for v in values)
+                    neo_attrs[prop.name] = values
 
         if isinstance(nix_obj, (nixtypes["Block"], nixtypes["Group"])):
             if "rec_datetime" not in neo_attrs:
