@@ -79,7 +79,7 @@ def _check_waveform_dimensions(spiketrain):
 
     waveforms = spiketrain.waveforms
 
-    if not (waveforms and waveforms.size):
+    if (waveforms is None) or (not waveforms.size):
         return
 
     if waveforms.shape[0] != len(spiketrain):
@@ -477,8 +477,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if waveforms is None:
             waveforms = self.waveforms
 
-        new_st = self.__class__(signal, t_stop,waveforms=waveforms,
-                                units=self.units)
+        new_st = self.__class__(signal,t_start=t_start, t_stop=t_stop,
+                                waveforms=waveforms, units=self.units)
         new_st._copy_data_complement(self)
 
         # overwriting t_start and t_stop with new values
