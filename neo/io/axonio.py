@@ -560,7 +560,7 @@ class AxonIO(BaseIO):
                 t_start = 0 * pq.s  # TODO: Possibly check with episode array
                 name = header['listDACInfo'][DACNum]['DACChNames']
                 unit = header['listDACInfo'][DACNum]['DACChUnits'].\
-                    replace(b'\xb5', b'u')  # \xb5 is µ
+                    replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
                 signal = np.ones(nSam) *\
                     header['listDACInfo'][DACNum]['fDACHoldingLevel'] *\
                     pq.Quantity(1, unit)
