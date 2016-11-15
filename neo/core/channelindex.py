@@ -140,6 +140,8 @@ class ChannelIndex(Container):
         # Defaults
         if channel_names is None:
             channel_names = np.array([], dtype='S')
+        if channel_ids is None:
+            channel_ids = np.array([], dtype='i')
 
         # Store recommended attributes
         self.channel_names = channel_names

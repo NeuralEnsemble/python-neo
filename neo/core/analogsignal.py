@@ -25,6 +25,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.channelindex import ChannelIndex
 
 logger = logging.getLogger("Neo")
 
@@ -627,6 +628,17 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                               sampling_rate=self.sampling_rate,
                               **kwargs)
         signal.segment = self.segment
+        # merge channel_index (move to ChannelIndex.merge()?)
+        if self.channel_index and other.channel_index:
+            signal.channel_index = ChannelIndex(
+                    index=np.arange(signal.shape[1]),
+                    channel_ids=np.hstack([self.channel_index.channel_ids,
+                                           other.channel_index.channel_ids]),
+                    channel_names=np.hstack([self.channel_index.channel_names,
+                                             other.channel_index.channel_names]))
+        else:
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
+
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
         return signal
