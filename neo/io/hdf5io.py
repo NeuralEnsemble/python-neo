@@ -305,8 +305,8 @@ class NeoHdf5IO(BaseIO):
         """
         if not self.connected:
             try:
-                if tb.isHDF5File(filename):
-                    self._data = tb.openFile(filename, mode='a',
+                if tb.is_hdf5_file(filename):
+                    self._data = tb.open_file(filename, mode='a',
                                              title=filename)
                     self.connected = True
                 else:
@@ -314,7 +314,7 @@ class NeoHdf5IO(BaseIO):
                                     filename)
             except IOError:
                 # create a new file if specified file not found
-                self._data = tb.openFile(filename, mode='w', title=filename)
+                self._data = tb.open_file(filename, mode='w', title=filename)
                 self.connected = True
             except:
                 raise NameError("Incorrect file path, couldn't find or "
