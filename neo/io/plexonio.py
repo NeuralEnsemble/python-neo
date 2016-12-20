@@ -477,11 +477,10 @@ class HeaderReader():
             val = list(struct.unpack(fmt, buf))
             for i, ival in enumerate(val):
                 if hasattr(ival, 'replace'):
-                    val[i] = ival.replace(str.encode('\x03'), str.encode(''))
-                    val[i] = ival.replace(str.encode('\x00'), str.encode(''))
+                    ival = ival.replace(str.encode('\x03'), str.encode(''))
+                    ival = ival.replace(str.encode('\x00'), str.encode(''))
+                    val[i] = ival.decode("utf-8")
             if len(val) == 1:
                 val = val[0]
-            if fmt[-1] == 's':
-                val = val.decode("utf-8")
             d[key] = val
         return d
