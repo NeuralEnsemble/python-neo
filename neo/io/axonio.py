@@ -580,7 +580,7 @@ class AxonIO(BaseIO):
                         i_end = i_last + epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end-i_begin
-                        ana_sig[i_begin:i_end] = np.ones(len(range(dif))) *\
+                        ana_sig[i_begin:i_end] = np.ones((dif, 1)) *\
                             pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)
