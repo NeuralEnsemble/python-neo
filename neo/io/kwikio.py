@@ -113,7 +113,7 @@ class KwikIO(BaseIO):
             SI units of the raw trace according to voltage_gain given to klusta
         cluster_metadata: str, default = "all"
             Which clusters to load, possibilities are "noise", "unsorted",
-            "good"
+            "good", "all", if all is selected noise is omitted.
         """
         assert isinstance(cluster_metadata, str)
         blk = Block()
@@ -131,7 +131,7 @@ class KwikIO(BaseIO):
                 for cluster_id in model.cluster_ids:
                     meta = model.cluster_metadata[cluster_id]
                     if cluster_metadata == 'all':
-                        if meta != 'noise':
+                        if meta == 'noise':
                             continue
                     elif cluster_metadata != meta:
                         continue
@@ -143,11 +143,11 @@ class KwikIO(BaseIO):
                                              'channel_group': model.channel_group})
                     sptr.channel_index = chx
                     seg.spiketrains.append(sptr)
-                    if get_raw_data:
-                        ana = self.read_analogsignal(model, raw_data_units,
-                                                     lazy, cascade)
-                        ana.channel_index = chx
-                        seg.analogsignals.append(ana)
+                if get_raw_data:
+                    ana = self.read_analogsignal(model, raw_data_units,
+                                                 lazy, cascade)
+                    ana.channel_index = chx
+                    seg.analogsignals.append(ana)
 
             seg.duration = model.duration * pq.s
 
@@ -166,7 +166,7 @@ class KwikIO(BaseIO):
             SI units of the raw trace according to voltage_gain given to klusta
         """
         arr = model.traces[:]*model.metadata['voltage_gain']
-        ana = AnalogSignal(arr, sampling_rate=model.sample_rate,
+        ana = AnalogSignal(arr, sampling_rate=model.sample_rate*pq.Hz,
                            units=units,
                            file_origin=model.metadata['raw_data_files'])
         return ana
