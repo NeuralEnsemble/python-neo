@@ -3,7 +3,7 @@
 Class for reading data from a .kwik dataset
 
 Depends on: scipy
-            h5py >= 2.5.0
+            phy
 
 Supported: Read
 
@@ -23,24 +23,7 @@ from __future__ import division
 import numpy as np
 import quantities as pq
 import os
-# version checking
-from distutils import version
-# check h5py
-# try:
-#     import h5py
-# except ImportError as err:
-#     HAVE_H5PY = False
-#     H5PY_ERR = err
-# else:
-#     if version.LooseVersion(h5py.__version__) < '2.5.0':
-#         HAVE_H5PY = False
-#         H5PY_ERR = ImportError("your h5py version is too old to " +
-#                                  "support KwikIO, you need at least 2.5.0 " +
-#                                  "You have %s" % h5py.__version__)
-#     else:
-#         HAVE_H5PY = True
-#         H5PY_ERR = None
-# check scipy
+
 try:
     from scipy import stats
 except ImportError as err:
@@ -115,37 +98,60 @@ class KwikIO(BaseIO):
                    cascade=True,
                    get_waveforms=True,
                    cluster_metadata='all',
+                   raw_data_units='uV',
+                   get_raw_data=False,
                    ):
         """
 
         """
-
+        assert isinstance(cluster_metadata, str)
         blk = Block()
         if cascade:
             seg = Segment(file_origin=self.filename)
             blk.segments += [seg]
             for model in self.models:
+                group_meta = {'group': model.channel_group}
+                group_meta.update(model.metadata)
                 chx = ChannelIndex(name='channel_group #%i' % model.channel_group,
                                    index=model.channels,
-                                   **{'group': model.channel_group})
+                                   **group_meta)
                 blk.channel_indexes.append(chx)
                 clusters = model.spike_clusters
                 for cluster_id in model.cluster_ids:
                     meta = model.cluster_metadata[cluster_id]
-                    if cluster_metadata != 'all':
-                        if meta != cluster_metadata:
+                    if cluster_metadata == 'all':
+                        if meta != 'noise':
                             continue
-                    sptr = self.read_spiketrain(cluster_id=cluster_id, model=model,
-                                           lazy=lazy, cascade=cascade,
-                                           get_waveforms=get_waveforms)
+                    elif cluster_metadata != meta:
+                        continue
+                    sptr = self.read_spiketrain(cluster_id=cluster_id,
+                                                model=model, lazy=lazy,
+                                                cascade=cascade,
+                                                get_waveforms=get_waveforms)
                     sptr.annotations.update({'cluster_metadata': meta,
                                              'channel_group': model.channel_group})
                     sptr.channel_index = chx
                     seg.spiketrains.append(sptr)
+                    if get_raw_data:
+                        ana = self.read_analogsignal(model, raw_data_units,
+                                                     lazy, cascade)
+                        ana.channel_index = chx
+                        seg.analogsignals.append(ana)
+
             seg.duration = model.duration * pq.s
 
         blk.create_many_to_one_relationship()
         return blk
+
+    def read_analogsignal(self, model, units='uV',
+                          lazy=False,
+                          cascade=True,
+                          ):
+        arr = model.traces[:]*model.metadata['voltage_gain']
+        ana = AnalogSignal(arr, sampling_rate=model.sample_rate,
+                           units=units,
+                           file_origin=model.metadata['raw_data_files'])
+        return ana
 
     def read_spiketrain(self, cluster_id, model,
                         lazy=False,
@@ -162,13 +168,13 @@ class KwikIO(BaseIO):
         idx = np.argwhere(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
-            time, spike, channel_index = w.shape
-            w = w.reshape(spike, channel_index, time)
+            time, amplitude, channel_index = w.shape
+            w = w.reshape(amplitude, channel_index, time)
         else:
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
                           t_stop=model.duration, waveforms=w, units='s',
-                          sampling_rate=model.sample_rate,
+                          sampling_rate=model.sample_rate*pq.Hz,
                           file_origin=self.filename,
                           **{'cluster_id': cluster_id})
         return sptr
