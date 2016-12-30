@@ -96,13 +96,24 @@ class KwikIO(BaseIO):
     def read_block(self,
                    lazy=False,
                    cascade=True,
-                   get_waveforms=True,
+                   get_waveforms=False,
                    cluster_metadata='all',
                    raw_data_units='uV',
                    get_raw_data=False,
                    ):
         """
+        Reads a block with segments and channel_indexes
 
+        Parameters:
+        get_waveforms: bool, default = False
+            Wether or not to get the waveforms
+        get_raw_data: bool, default = False
+            Wether or not to get the raw traces
+        raw_data_units: str, default = "uV"
+            SI units of the raw trace according to voltage_gain given to klusta
+        cluster_metadata: str, default = "all"
+            Which clusters to load, possibilities are "noise", "unsorted",
+            "good"
         """
         assert isinstance(cluster_metadata, str)
         blk = Block()
@@ -147,6 +158,13 @@ class KwikIO(BaseIO):
                           lazy=False,
                           cascade=True,
                           ):
+        """
+        Reads analogsignals
+
+        Parameters:
+        units: str, default = "uV"
+            SI units of the raw trace according to voltage_gain given to klusta
+        """
         arr = model.traces[:]*model.metadata['voltage_gain']
         ana = AnalogSignal(arr, sampling_rate=model.sample_rate,
                            units=units,
@@ -158,6 +176,17 @@ class KwikIO(BaseIO):
                         cascade=True,
                         get_waveforms=True,
                         ):
+        """
+        Reads sorted spiketrains
+
+        Parameters:
+        get_waveforms: bool, default = False
+            Wether or not to get the waveforms
+        cluster_id: int,
+            Which cluster to load, according to cluster id from klusta
+        model: klusta.kwik.KwikModel
+            A KwikModel object obtained by klusta.kwik.KwikModel(fname)
+        """
         try:
             if ((not(cluster_id in model.cluster_ids))):
                 raise ValueError
