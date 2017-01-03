@@ -58,7 +58,7 @@ class KwikIO(BaseIO):
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
 
-    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal
+    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal,
                          ChannelIndex]
 
     # This class can return either a Block or a Segment
