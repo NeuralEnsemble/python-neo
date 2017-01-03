@@ -10,11 +10,7 @@ Supported: Read
 Author: Mikkel E. Lepperød @CINPLA
 
 """
-# TODO: units
-# TODO: enable reading of all otputfiles
-# TODO: enable writing to file
-# TODO: stimulus and tracking data
-# TODO: enable read all datasets
+# TODO: writing to file
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -62,7 +58,7 @@ class KwikIO(BaseIO):
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
 
-    supported_objects = [Block, Segment, SpikeTrain,
+    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal
                          ChannelIndex]
 
     # This class can return either a Block or a Segment
