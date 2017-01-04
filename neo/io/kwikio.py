@@ -138,6 +138,9 @@ class KwikIO(BaseIO):
                     sptr.annotations.update({'cluster_metadata': meta,
                                              'channel_group': model.channel_group})
                     sptr.channel_index = chx
+                    unit = Unit()
+                    unit.spiketrains.append(sptr)
+                    chx.units.append(unit)
                     seg.spiketrains.append(sptr)
                 if get_raw_data:
                     ana = self.read_analogsignal(model, raw_data_units,
