@@ -119,8 +119,10 @@ class KwikIO(BaseIO):
             for model in self.models:
                 group_meta = {'group': model.channel_group}
                 group_meta.update(model.metadata)
-                chx = ChannelIndex(name='channel_group #%i' % model.channel_group,
-                                   index=model.channels,
+                group_id = model.channel_group
+                chx = ChannelIndex(name='channel_group #%i' % group_id,
+                                   index=group_id,
+                                   channel_ids=model.channels
                                    **group_meta)
                 blk.channel_indexes.append(chx)
                 clusters = model.spike_clusters
