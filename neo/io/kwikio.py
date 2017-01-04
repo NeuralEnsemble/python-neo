@@ -117,9 +117,9 @@ class KwikIO(BaseIO):
             seg = Segment(file_origin=self.filename)
             blk.segments += [seg]
             for model in self.models:
-                group_meta = {'group': model.channel_group}
-                group_meta.update(model.metadata)
                 group_id = model.channel_group
+                group_meta = {'group': group_id}
+                group_meta.update(model.metadata)
                 chx = ChannelIndex(name='channel_group #%i' % group_id,
                                    index=group_id,
                                    channel_ids=model.channels
