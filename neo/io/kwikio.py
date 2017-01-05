@@ -118,11 +118,10 @@ class KwikIO(BaseIO):
             blk.segments += [seg]
             for model in self.models:
                 group_id = model.channel_group
-                group_meta = {'group': group_id}
+                group_meta = {'channel_group': group_id}
                 group_meta.update(model.metadata)
-                chx = ChannelIndex(name='channel_group #%i' % group_id,
-                                   index=group_id,
-                                   channel_ids=model.channels,
+                chx = ChannelIndex(name='channel group #{}'.format(group_id),
+                                   index=model.channels,
                                    **group_meta)
                 blk.channel_indexes.append(chx)
                 clusters = model.spike_clusters
@@ -143,6 +142,7 @@ class KwikIO(BaseIO):
                     unit = Unit()
                     unit.spiketrains.append(sptr)
                     chx.units.append(unit)
+                    unit.channel_index = chx
                     seg.spiketrains.append(sptr)
                 if get_raw_data:
                     ana = self.read_analogsignal(model, raw_data_units,
