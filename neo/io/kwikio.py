@@ -92,7 +92,7 @@ class KwikIO(BaseIO):
     def read_block(self,
                    lazy=False,
                    cascade=True,
-                   get_waveforms=False,
+                   get_waveforms=True,
                    cluster_metadata='all',
                    raw_data_units='uV',
                    get_raw_data=False,
@@ -122,7 +122,7 @@ class KwikIO(BaseIO):
                 group_meta.update(model.metadata)
                 chx = ChannelIndex(name='channel_group #%i' % group_id,
                                    index=group_id,
-                                   channel_ids=model.channels
+                                   channel_ids=model.channels,
                                    **group_meta)
                 blk.channel_indexes.append(chx)
                 clusters = model.spike_clusters
@@ -198,8 +198,8 @@ class KwikIO(BaseIO):
         idx = np.argwhere(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
-            time, amplitude, channel_index = w.shape
-            w = w.reshape(amplitude, channel_index, time)
+            num_spikes, samples_per_spike, num_chans = w.shape
+            w = w.reshape(num_spikes, num_chans, samples_per_spike)
         else:
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
