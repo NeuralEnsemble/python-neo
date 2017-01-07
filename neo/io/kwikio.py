@@ -198,8 +198,8 @@ class KwikIO(BaseIO):
         idx = np.argwhere(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
-            num_spikes, samples_per_spike, num_chans = w.shape
-            w = w.reshape(num_spikes, num_chans, samples_per_spike)
+            # klusta: num_spikes, samples_per_spike, num_chans = w.shape
+            w = w.swapaxes(1, 2)
         else:
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
