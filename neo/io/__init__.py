@@ -32,6 +32,8 @@ Classes:
 
 .. autoclass:: neo.io.ElphyIO
 
+.. autoclass:: neo.io.ExdirIO
+
 .. autoclass:: neo.io.IgorIO
 
 .. autoclass:: neo.io.KlustaKwikIO
@@ -110,6 +112,7 @@ from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
 #from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
+from neo.io.exdirio import ExdirIO
 from neo.io.igorproio import IgorIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
@@ -147,6 +150,7 @@ iolist = [
           ElanIO,
           #ElphyIO,
           ExampleIO,
+          ExdirIO,
           IgorIO,
           KlustaKwikIO,
           KwikIO,
