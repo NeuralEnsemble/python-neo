@@ -623,7 +623,7 @@ class BlackrockIO(BaseIO):
             ('nb_ext_headers', 'uint32')]
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        print(nev_basic_header) ###
+        #print(nev_basic_header) ###
         # extended header
         # this consist in N block with code 8bytes + 24 data bytes
         # the data bytes depend on the code and need to be converted
@@ -1820,7 +1820,7 @@ class BlackrockIO(BaseIO):
         
         if lazy:
             period = self.__nsx_basic_header[nsx_nb]['period']
-            length = int(((n_stop.rescale(nsx_time_unit)-t_start.rescale(nsx_time_unit))/\
+            length = int(((n_stop.rescale(nsx_time_unit)-n_start.rescale(nsx_time_unit))/\
                             self.__nsx_basic_header[nsx_nb]['period']).magnitude)
             lazy_shape = (length, )
             sig_ch = []
@@ -1846,7 +1846,7 @@ class BlackrockIO(BaseIO):
                     float(max_dig[idx_ch] - min_dig)
                 sig_ch += float(min_ana[idx_ch])
             
-            t_start=data_times[0].rescale(nsx_time_unit),
+            t_start=data_times[0].rescale(nsx_time_unit)
             
         anasig = AnalogSignal(
             signal=pq.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
