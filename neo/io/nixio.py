@@ -308,7 +308,8 @@ class NixIO(BaseIO):
             signaldata = pq.Quantity(np.empty(0), unit)
             lazy_shape = (len(nix_da_group[0]), len(nix_da_group))
         else:
-            signaldata = pq.Quantity(np.transpose(nix_da_group), unit)
+            signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+            signaldata = pq.Quantity(signaldata, unit)
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
