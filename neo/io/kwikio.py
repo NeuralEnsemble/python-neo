@@ -118,7 +118,7 @@ class KwikIO(BaseIO):
             blk.segments += [seg]
             for model in self.models:
                 group_id = model.channel_group
-                group_meta = {'channel_group': group_id}
+                group_meta = {'group_id': group_id}
                 group_meta.update(model.metadata)
                 chx = ChannelIndex(name='channel group #{}'.format(group_id),
                                    index=model.channels,
@@ -137,7 +137,7 @@ class KwikIO(BaseIO):
                                                 cascade=cascade,
                                                 get_waveforms=get_waveforms)
                     sptr.annotations.update({'cluster_metadata': meta,
-                                             'channel_group': model.channel_group})
+                                             'group_id': model.channel_group})
                     sptr.channel_index = chx
                     unit = Unit()
                     unit.spiketrains.append(sptr)
