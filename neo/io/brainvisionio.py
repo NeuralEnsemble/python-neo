@@ -22,7 +22,7 @@ from neo.core import Segment, AnalogSignal, Event
 
 class BrainVisionIO(BaseIO):
     """
-    Class for reading/writing data from BrainVision product (brainAmp,
+    Class for reading/writing data from BrainVision products (brainAmp,
     brain analyser...)
 
     Usage:

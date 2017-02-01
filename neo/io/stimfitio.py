@@ -49,10 +49,28 @@ else:
 
 class StimfitIO(BaseIO):
     """
-    Class for converting a stfio Recording to a neo object.
+    Class for converting a stfio Recording to a Neo object.
     Provides a standardized representation of the data as defined by the neo
     project; this is useful to explore the data with an increasing number of
-    electrophysiology software tools that rely on the neo standard.
+    electrophysiology software tools that rely on the Neo standard.
+
+    stfio is a standalone file i/o Python module that ships with the Stimfit
+    program (http://www.stimfit.org). It is a Python wrapper around Stimfit's file
+    i/o library (libstfio) that natively provides support for the following file
+    types:
+
+     - ABF (Axon binary file format; pClamp 6--9)
+     - ABF2 (Axon binary file format 2; pClamp 10+)
+     - ATF (Axon text file format)
+     - AXGX/AXGD (Axograph X file format)
+     - CFS (Cambridge electronic devices filing system)
+     - HEKA (HEKA binary file format)
+     - HDF5 (Hierarchical data format 5; only hdf5 files written by Stimfit or
+       stfio are supported)
+
+    In addition, libstfio can use the biosig file i/o library as an additional file
+    handling backend (http://biosig.sourceforge.net/), extending support to more
+    than 30 additional file formats (http://pub.ist.ac.at/~schloegl/biosig/TESTED).
 
     Example usage:
         >>> import neo

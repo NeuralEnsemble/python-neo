@@ -25,19 +25,20 @@ Certain IO modules have additional dependencies. If these are not satisfied,
 Neo will still install but the IO module that uses them will fail on loading:
 
    * scipy >= 0.12.0 for NeoMatlabIO
-   * pytables >= 2.4 for Hdf5IO
-
-For SciPy on Debian/Ubuntu, you can install these using::
-
-    $ apt-get install python-scipy python-tables
+   * h5py >= 2.5 for Hdf5IO, KwikIO
+   * igor >= 0.2 for IgorIO
+   * nixio >= 1.2 for NixIO
+   * stfio for StimfitIO
 
 
 Installing from the Python Package Index
 ========================================
 
+.. warning:: alpha and beta releases cannot be installed from PyPI.
+
 If you have pip_ installed::
 
-    $ pip install neo
+    $ pip install https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0alpha1.zip
     
 This will automatically download and install the latest release (again
 you may need to have administrator privileges on the machine you are installing
@@ -45,12 +46,12 @@ on).
     
 To download and install manually, download:
 
-    http://pypi.python.org/packages/source/n/neo/neo-0.4.0.tar.gz
+    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0alpha1.zip
 
 Then::
 
-    $ tar xzf neo-0.4.0.tar.gz
-    $ cd neo-0.4.0
+    $ unzip neo-0.5.0alpha1.zip
+    $ cd neo-0.5.0alpha1
     $ python setup.py install
     
 or::
@@ -88,13 +89,15 @@ BrainwareDamIO     Yes      Yes
 BrainwareF32IO     Yes      Yes
 BrainwareSrcIO     Yes      Yes
 ElanIO             Yes      No
-HDF5IO             Yes      No
+IgorIO             Yes      Yes
+NeoHdf5IO          Yes      Yes
 KlustakwikIO       Yes      No
 KwikIO             Yes      Yes
 MicromedIO         Yes      No
 NeoMatlabIO        Yes      Yes
 NeuroExplorerIO    Yes      No
 NeuroscopeIO       Yes      Yes
+NixIO              Yes      Yes
 PickleIO           Yes      Yes
 PlexonIO           Yes      No
 PyNNIO             Yes      Yes
@@ -104,6 +107,7 @@ TdtIO              Yes      No
 WinEdrIO           Yes      Yes
 WinWcpIO           Yes      Yes
 ================== ======== ========
+
 
 
 

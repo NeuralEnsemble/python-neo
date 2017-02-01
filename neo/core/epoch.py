@@ -53,7 +53,7 @@ class Epoch(BaseNeo, pq.Quantity):
         :file_origin: (str) Filesystem path or URL of the original data file.
 
     Note: Any other additional arguments are assumed to be user-specific
-            metadata and stored in :attr:`annotations`,
+    metadata and stored in :attr:`annotations`,
 
     '''
 
@@ -162,3 +162,20 @@ class Epoch(BaseNeo, pq.Quantity):
                                                other.annotations)
         kwargs.update(merged_annotations)
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
+
+    def _copy_data_complement(self, other):
+        '''
+        Copy the metadata from another :class:`Epoch`.
+        '''
+        for attr in ("labels", "durations", "name", "file_origin",
+                     "description", "annotations"):
+            setattr(self, attr, getattr(other, attr, None))
+
+    def duplicate_with_new_data(self, signal):
+        '''
+        Create a new :class:`Epoch` with the same metadata
+        but different data (times, durations)
+        '''
+        new = self.__class__(times=signal)
+        new._copy_data_complement(self)
+        return new

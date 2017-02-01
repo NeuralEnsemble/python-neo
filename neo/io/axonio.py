@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Classe for reading data from pCLAMP and AxoScope
+Class for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
 
 - abf = Axon binary file
@@ -103,8 +103,8 @@ def clean_string(s):
 
 class AxonIO(BaseIO):
     """
-
-    Class for reading abf (axon binary file) file.
+    Class for reading data from pCLAMP and AxoScope
+    files (.abf version 1 and 2), developed by Molecular Device/Axon Technologies.
 
     Usage:
         >>> from neo import io
@@ -560,7 +560,7 @@ class AxonIO(BaseIO):
                 t_start = 0 * pq.s  # TODO: Possibly check with episode array
                 name = header['listDACInfo'][DACNum]['DACChNames']
                 unit = header['listDACInfo'][DACNum]['DACChUnits'].\
-                    replace(b'\xb5', b'u')  # \xb5 is µ
+                    replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
                 signal = np.ones(nSam) *\
                     header['listDACInfo'][DACNum]['fDACHoldingLevel'] *\
                     pq.Quantity(1, unit)
@@ -580,7 +580,7 @@ class AxonIO(BaseIO):
                         i_end = i_last + epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end-i_begin
-                        ana_sig[i_begin:i_end] = np.ones(len(range(dif))) *\
+                        ana_sig[i_begin:i_end] = np.ones((dif, 1)) *\
                             pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)

@@ -38,8 +38,8 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 2.6, 2.7, or 3.3
-    * numpy_ >= 1.3.0
+    * Python_ 2.6, 2.7, 3.3-3.5
+    * numpy_ >= 1.7.1
     * quantities_ >= 0.9.0
     * if using Python 2.6, unittest2_ >= 0.5.1
     * Setuptools >= 0.7
@@ -47,9 +47,11 @@ Requirements
     * Sphinx_ >= 0.6.4 (for building documentation)
     * (optional) tox_ >= 0.9 (makes it easier to test with multiple Python versions)
     * (optional) coverage_ >= 2.85 (for measuring test coverage)
-    * (optional) scipy >= 0.8 (for Matlab IO)
-    * (optional) pytables >= >= 2.2 (for HDF5 IO)
+    * (optional) scipy >= 0.12 (for MatlabIO)
+    * (optional) h5py >= 2.5 (for KwikIO, NeoHdf5IO)
 
+We strongly recommend you develop within a virtual environment (from virtualenv, venv or conda).
+It is best to have at least one virtual environment with Python 2.7 and one with Python 3.x.
 
 Getting the source code
 -----------------------
@@ -82,6 +84,10 @@ An alternate solution is to install Neo with the *develop* option, this avoids
 reinstalling when there are changes in the code::
 
     $ sudo python setup.py develop
+
+or using the "-e" option to pip::
+
+    $ pip install -e python-neo
 
 To update to the latest version from the repository::
 
@@ -154,12 +160,12 @@ method or function does.  If this may not be clear, one or more examples may
 be included.  Examples that are only a few lines do not need to include
 imports or setup, but more complicated examples should have them.
 
-Examples can be tested easily using th iPython %doctest_mode magic.  This will
+Examples can be tested easily using the iPython `%doctest_mode` magic.  This will
 strip >>> and ... from the beginning of each line of the example, so the
 example can be copied and pasted as-is.
 
 The documentation is written in `reStructuredText`_, using the `Sphinx`_
-documentation system. Any mention of another neo module, class, attribute,
+documentation system. Any mention of another Neo module, class, attribute,
 method, or function should be properly marked up so automatic
 links can be generated.  The same goes for quantities or numpy.
 
@@ -168,7 +174,7 @@ To build the documentation::
     $ cd python-neo/doc
     $ make html
 
-Then open `some/directory/neo_trunk/doc/build/html/index.html` in your browser.
+Then open `some/directory/python-neo/doc/build/html/index.html` in your browser.
 
 Committing your changes
 -----------------------
@@ -196,7 +202,7 @@ Python 3
 --------
 
 Neo core should work with both recent versions of Python 2 (versions 2.6 and
-2.7) and Python 3 (version 3.3). Neo IO modules should ideally work with both
+2.7) and Python 3 (version 3.3 or newer). Neo IO modules should ideally work with both
 Python 2 and 3, but certain modules may only work with one or the other
 (see :doc:`install`).
 
@@ -212,20 +218,20 @@ of Python 2 and at least one version of Python 3. There is generally no problem
 in having multiple versions of Python installed on your computer at once: e.g.,
 on Ubuntu Python 2 is available as `python` and Python 3 as `python3`, while
 on Arch Linux Python 2 is `python2` and Python 3 `python`. See `PEP394`_ for
-more on this.
+more on this. Using virtual environments makes this very straightforward.
 
 
 Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 2.6, 2.7, and 3.3.
+Python 2.6, 2.7, and 3.3 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.
 
-However, the pep8 and flake8 programs does not check for all PEP 8 issues.
-In particular, they does not check that the import statements are in the
+However, the pep8 and flake8 programs do not check for all PEP 8 issues.
+In particular, they do not check that the import statements are in the
 correct order.
 
 Also, please do not use ``from xyz import *``.  This is slow, can lead to
@@ -237,7 +243,7 @@ Making a release
 
 .. TODO: discuss branching/tagging policy.
 
-Add a section in /doc/src/whatisnew.rst for the release.
+Add a section in :file:`/doc/source/whatisnew.rst` for the release.
 
 First check that the version string (in :file:`neo/version.py`,
 :file:`setup.py`, :file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
@@ -252,7 +258,7 @@ have the necessary permissions to do this)::
     $ python setup.py sdist upload
     $ python setup.py upload_docs --upload-dir=doc/build/html
 
-.. should we also distribute via software.incf.org
+.. talk about readthedocs
 
 Finally, tag the release in the Git repository and push it::
 

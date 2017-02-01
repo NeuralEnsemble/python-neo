@@ -7,7 +7,7 @@ Examples
 Introduction
 =============
 
-A set of examples in neo/examples/ illustrates the use of neo classes.
+A set of examples in :file:`neo/examples/` illustrates the use of Neo classes.
 
 
 

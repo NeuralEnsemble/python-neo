@@ -25,7 +25,7 @@ from neo.core import Segment, AnalogSignal, SpikeTrain, Epoch, Event
 
 class NeuroExplorerIO(BaseIO):
     """
-    Class for reading nex file.
+    Class for reading nex files.
 
     Usage:
         >>> from neo import io

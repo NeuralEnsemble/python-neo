@@ -26,7 +26,9 @@ else:
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain,
                                  _check_time_in_range, _new_spiketrain)
 from neo.core import Segment, Unit
-from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
+from neo.test.tools import  (assert_arrays_equal,
+                             assert_arrays_almost_equal,
+                             assert_neo_object_is_compliant)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values,
                                         fake_neo, TEST_ANNOTATIONS)
 
@@ -1135,6 +1137,41 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_start, result.t_start)
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
+class TestDuplicateWithNewData(unittest.TestCase):
+    def setUp(self):
+        self.waveforms = np.array([[[0., 1.],
+                                    [0.1, 1.1]],
+                                   [[2., 3.],
+                                    [2.1, 3.1]],
+                                   [[4., 5.],
+                                    [4.1, 5.1]],
+                                   [[6., 7.],
+                                    [6.1, 7.1]],
+                                   [[8., 9.],
+                                    [8.1, 9.1]],
+                                   [[10., 11.],
+                                    [10.1, 11.1]]]) * pq.mV
+        self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
+        self.dataquant = self.data*pq.ms
+        self.train = SpikeTrain(self.dataquant, t_stop=10.0*pq.ms,
+                                waveforms=self.waveforms)
+
+    def test_duplicate_with_new_data(self):
+        signal1 = self.train
+        new_t_start = -10*pq.s
+        new_t_stop = 10*pq.s
+        new_data = np.sort(np.random.uniform(new_t_start.magnitude,
+                                             new_t_stop.magnitude,
+                                             len(self.train))) * pq.ms
+
+        signal1b = signal1.duplicate_with_new_data(new_data,
+                                                   t_start=new_t_start,
+                                                   t_stop=new_t_stop)
+        assert_arrays_almost_equal(np.asarray(signal1b),
+                                   np.asarray(new_data), 1e-12)
+        self.assertEqual(signal1b.t_start, new_t_start)
+        self.assertEqual(signal1b.t_stop, new_t_stop)
+        self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
 
 class TestAttributesAnnotations(unittest.TestCase):
     def test_set_universally_recommended_attributes(self):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading data from Plexion acquisition system (.plx)
+Class for reading data from Plexon acquisition system (.plx)
 
 Compatible with versions 100 to 106.
 Other versions have not been tested.
@@ -13,6 +13,7 @@ Supported: Read
 Author: sgarcia
 
 """
+from __future__ import unicode_literals, print_function, division
 
 import datetime
 import struct
@@ -28,7 +29,10 @@ from neo.io.tools import iteritems
 
 class PlexonIO(BaseIO):
     """
-    Class for reading plx file.
+    Class for reading data from Plexon acquisition systems (.plx)
+
+    Compatible with versions 100 to 106.
+    Other versions have not been tested.
 
     Usage:
         >>> from neo import io
@@ -98,7 +102,7 @@ class PlexonIO(BaseIO):
         seg.file_origin = os.path.basename(self.filename)
         seg.annotate(plexon_version=global_header['Version'])
 
-        for key, val in global_header.iteritems():
+        for key, val in global_header.items():
             seg.annotate(**{key: val})
 
         if not cascade:
@@ -331,7 +335,7 @@ class PlexonIO(BaseIO):
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
-            for key, val in dspChannelHeaders[chan].iteritems():
+            for key, val in dspChannelHeaders[chan].items():
                 sptr.annotate(**{key: val})
 
             if lazy:
@@ -473,7 +477,9 @@ class HeaderReader():
             val = list(struct.unpack(fmt, buf))
             for i, ival in enumerate(val):
                 if hasattr(ival, 'replace'):
-                    val[i] = ival.replace('\x00', '')
+                    ival = ival.replace(str.encode('\x03'), str.encode(''))
+                    ival = ival.replace(str.encode('\x00'), str.encode(''))
+                    val[i] = ival.decode("utf-8")
             if len(val) == 1:
                 val = val[0]
             d[key] = val

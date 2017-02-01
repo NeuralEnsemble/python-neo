@@ -186,7 +186,6 @@ class NixIOTest(unittest.TestCase):
             np.testing.assert_almost_equal(sig.magnitude, da)
             self.assertEqual(neounit, da.unit)
             timedim = da.dimensions[0]
-            chandim = da.dimensions[1]
             if isinstance(neosig, AnalogSignal):
                 self.assertIsInstance(timedim, nixtypes["SampledDimension"])
                 self.assertEqual(
@@ -203,7 +202,6 @@ class NixIOTest(unittest.TestCase):
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
                                  str(neosig.times.dimensionality))
-            self.assertIsInstance(chandim, nixtypes["SetDimension"])
 
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
@@ -286,7 +284,13 @@ class NixIOTest(unittest.TestCase):
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
-                self.assertEqual(nixmd[str(k)], v)
+                if isinstance(v, pq.Quantity):
+                    self.assertEqual(nixmd.props[str(k)].unit,
+                                     str(v.dimensionality))
+                    np.testing.assert_almost_equal(nixmd[str(k)],
+                                                   v.magnitude)
+                else:
+                    self.assertEqual(nixmd[str(k)], v)
 
     @classmethod
     def create_full_nix_file(cls, filename):
@@ -583,7 +587,10 @@ class NixIOTest(unittest.TestCase):
         seg.events.append(event)
 
         spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s)
-        spiketrain.annotate(**cls.rdict(6))
+        d = cls.rdict(6)
+        d["quantity"] = pq.Quantity(10, "mV")
+        d["qarray"] = pq.Quantity(range(10), "mA")
+        spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
         chx = ChannelIndex(name="achx", index=[1, 2])
@@ -753,6 +760,8 @@ class NixIOWriteTest(NixIOTest):
         for srcunit in blk.sources:  # units
             self.assertIn(srcunit.name, blkmd.sections)
 
+        self.write_and_compare([neoblk])
+
     def test_anonymous_objects_write(self):
         nblocks = 2
         nsegs = 2
@@ -801,55 +810,55 @@ class NixIOWriteTest(NixIOTest):
 
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test", "Test")
-        tovalue = self.io._to_value
+        writeprop = self.io._write_property
 
         # quantity
-        # qvalue = pq.Quantity(10, "mV")
-        # section["qvalue"] = tovalue(qvalue)
-        # self.assertEqual(section["qvalue"], 10)
+        qvalue = pq.Quantity(10, "mV")
+        writeprop(section, "qvalue", qvalue)
+        self.assertEqual(section["qvalue"], 10)
+        self.assertEqual(section.props["qvalue"].unit, "mV")
 
         # datetime
         dt = self.rdate()
-        section["dt"] = tovalue(dt)
+        writeprop(section, "dt", dt)
         self.assertEqual(datetime.fromtimestamp(section["dt"]), dt)
 
         # string
         randstr = self.rsentence()
-        section["randstr"] = tovalue(randstr)
+        writeprop(section, "randstr", randstr)
         self.assertEqual(section["randstr"], randstr)
 
         # bytes
         bytestring = b"bytestring"
-        section["randbytes"] = tovalue(bytestring)
+        writeprop(section, "randbytes", bytestring)
         self.assertEqual(section["randbytes"], bytestring.decode())
 
         # iterables
-        # mdlist = [[1, 2, 3], [4, 5, 6]]
-        # self.assertIs(tovalue(mdlist), None)
-        #
-        # mdarray = np.random.random((10, 3))
-        # self.assertIs(tovalue(mdarray), None)
-
         randlist = np.random.random(10).tolist()
-        section["randlist"] = tovalue(randlist)
+        writeprop(section, "randlist", randlist)
         self.assertEqual(randlist, section["randlist"])
 
         randarray = np.random.random(10)
-        section["randarray"] = tovalue(randarray)
+        writeprop(section, "randarray", randarray)
         np.testing.assert_almost_equal(randarray, section["randarray"])
-
-        empty = []
-        self.assertIs(tovalue(empty), None)
 
         # numpy item
         npval = np.float64(2398)
-        section["npval"] = tovalue(npval)
+        writeprop(section, "npval", npval)
         self.assertEqual(npval, section["npval"])
 
         # number
         val = 42
-        section["val"] = tovalue(val)
+        writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
+
+        # multi-dimensional data -- UNSUPORTED
+        # mdlist = [[1, 2, 3], [4, 5, 6]]
+        # writeprop(section, "mdlist", mdlist)
+
+        # mdarray = np.random.random((10, 3))
+        # writeprop(section, "mdarray", mdarray)
+
 
 
 class NixIOReadTest(NixIOTest):

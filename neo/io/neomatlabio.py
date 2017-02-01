@@ -28,10 +28,10 @@ except ImportError as err:
     HAVE_SCIPY = False
     SCIPY_ERR = err
 else:
-    if version.LooseVersion(scipy.version.version) < '0.8':
+    if version.LooseVersion(scipy.version.version) < '0.12.0':
         HAVE_SCIPY = False
         SCIPY_ERR = ImportError("your scipy version is too old to support " +
-                                "MatlabIO, you need at least 0.8. " +
+                                "MatlabIO, you need at least 0.12.0. " +
                                 "You have %s" % scipy.version.version)
     else:
         HAVE_SCIPY = True
