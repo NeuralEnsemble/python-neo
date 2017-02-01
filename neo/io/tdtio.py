@@ -141,7 +141,7 @@ class TdtIO(BaseIO):
 
         #if exists an external sortcode in ./sort/[sortname]/*.SortResult (generated after offline sortting)
         sortresult_filename = None
-        if sortname is not ''
+        if sortname is not '':
             try:
                 for file in os.listdir(os.path.join(subdir, 'sort', sortname)):
                     if file.endswith(".SortResult"):
