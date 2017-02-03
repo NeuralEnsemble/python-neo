@@ -427,16 +427,17 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             obj.waveforms = obj.waveforms[i:j]
         return obj
 
-    def __add__(self,time):
+    def __add__(self, time):
         '''
-        Shifts the time point of all spikes by the amount in :attr:`time`.
+        Shifts the time point of all spikes by the amount in :attr:`time`
+        (:class:`Quantity`)
 
-        Raises an exception of new time points fall outside :attr:`t_start` or
+        Raises an exception if new time points fall outside :attr:`t_start` or
         :attr:`t_stop`
         '''
         spikes = self.view(pq.Quantity)
         check_has_dimensions_time(time)
-        _check_time_in_range(spikes+time, self.t_start, self.t_stop)
+        _check_time_in_range(spikes + time, self.t_start, self.t_stop)
         return SpikeTrain(times=spikes+time, t_stop=self.t_stop, units=self.units,
                           sampling_rate=self.sampling_rate,
                           t_start=self.t_start, waveforms=self.waveforms,
