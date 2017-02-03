@@ -427,6 +427,42 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             obj.waveforms = obj.waveforms[i:j]
         return obj
 
+    def __add__(self, time):
+        '''
+        Shifts the time point of all spikes by adding the amount in
+        :attr:`time` (:class:`Quantity`)
+
+        Raises an exception if new time points fall outside :attr:`t_start` or
+        :attr:`t_stop`
+        '''
+        spikes = self.view(pq.Quantity)
+        check_has_dimensions_time(time)
+        _check_time_in_range(spikes + time, self.t_start, self.t_stop)
+        return SpikeTrain(times=spikes + time, t_stop=self.t_stop,
+                          units=self.units, sampling_rate=self.sampling_rate,
+                          t_start=self.t_start, waveforms=self.waveforms,
+                          left_sweep=self.left_sweep, name=self.name,
+                          file_origin=self.file_origin,
+                          description=self.description, **self.annotations)
+
+    def __sub__(self, time):
+        '''
+        Shifts the time point of all spikes by subtracting the amount in
+        :attr:`time` (:class:`Quantity`)
+
+        Raises an exception if new time points fall outside :attr:`t_start` or
+        :attr:`t_stop`
+        '''
+        spikes = self.view(pq.Quantity)
+        check_has_dimensions_time(time)
+        _check_time_in_range(spikes - time, self.t_start, self.t_stop)
+        return SpikeTrain(times=spikes - time, t_stop=self.t_stop,
+                          units=self.units, sampling_rate=self.sampling_rate,
+                          t_start=self.t_start, waveforms=self.waveforms,
+                          left_sweep=self.left_sweep, name=self.name,
+                          file_origin=self.file_origin,
+                          description=self.description, **self.annotations)
+
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
