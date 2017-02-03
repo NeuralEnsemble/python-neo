@@ -429,8 +429,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __add__(self, time):
         '''
-        Shifts the time point of all spikes by the amount in :attr:`time`
-        (:class:`Quantity`)
+        Shifts the time point of all spikes by adding the amount in
+        :attr:`time` (:class:`Quantity`)
 
         Raises an exception if new time points fall outside :attr:`t_start` or
         :attr:`t_stop`
@@ -447,8 +447,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __sub__(self, time):
         '''
-        Shifts the time point of all spikes by the amount in :attr:`time`
-        (:class:`Quantity`)
+        Shifts the time point of all spikes by subtracting the amount in
+        :attr:`time` (:class:`Quantity`)
 
         Raises an exception if new time points fall outside :attr:`t_start` or
         :attr:`t_stop`

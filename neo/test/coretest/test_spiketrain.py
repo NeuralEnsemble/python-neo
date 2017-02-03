@@ -1364,8 +1364,14 @@ class TestChanging(unittest.TestCase):
         train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
         self.assertRaises(ValueError, train.__add__(10 * pq.ms))
-        self.assertRaises(ValueError, train.__add__(-10 * pq.ms))
         assert_arrays_equal(train + 1 * pq.ms, data + 1 * pq.ms)
+
+    def test__subtracting_time(self):
+        data = [3, 4, 5] * pq.ms
+        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        assert_neo_object_is_compliant(train)
+        self.assertRaises(ValueError, train.__sub__(10 * pq.ms))
+        assert_arrays_equal(train - 1 * pq.ms, data - 1 * pq.ms)
 
     def test__rescale(self):
         data = [3, 4, 5] * pq.ms
