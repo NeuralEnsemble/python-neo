@@ -745,6 +745,11 @@ class TestConstructor(unittest.TestCase):
                           np.arange(t_start, t_stop+5), units='ms',
                           t_start=t_start, t_stop=t_stop)
 
+    def test__create_with_len_times_different_size_than_waveform_shape1_ValueError(self):
+        self.assertRaises(ValueError, SpikeTrain,
+                          times=np.arange(10), units='s',
+                          t_stop=4, waveforms=np.ones((10,6,50)))
+
     def test_defaults(self):
         # default recommended attributes
         train1 = SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)

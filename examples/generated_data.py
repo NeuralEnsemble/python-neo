@@ -24,7 +24,8 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     # Create container and grouping objects
     segments = [neo.Segment(index=i) for i in range(n_segments)]
 
-    chx = neo.ChannelIndex(name='T0')
+    chx = neo.ChannelIndex(index =1, name='T0')
+
     for i in range(n_channels):
         rc = neo.RecordingChannel(name='C%d' % i, index=i)
         rc.channelindexes = [chx]
