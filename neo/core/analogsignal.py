@@ -239,7 +239,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
 
         # The additional arguments
-        self.annotations = getattr(obj, 'annotations', None)
+        self.annotations = getattr(obj, 'annotations', {})
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)

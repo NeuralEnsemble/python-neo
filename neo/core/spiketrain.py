@@ -378,7 +378,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         self.unit = getattr(obj, 'unit', None)
 
         # The additional arguments
-        self.annotations = getattr(obj, 'annotations', None)
+        self.annotations = getattr(obj, 'annotations', {})
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
