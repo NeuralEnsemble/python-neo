@@ -110,8 +110,8 @@ class NixIO(BaseIO):
             filemode = nix.FileMode.Overwrite
         else:
             raise ValueError("Invalid mode specified '{}'. "
-                             "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite), "
-                             "'ow' (Overwrite).".format(mode))
+                             "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
+                             " 'ow' (Overwrite).".format(mode))
         self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
         self._object_map = dict()
         self._lazy_loaded = list()
@@ -344,7 +344,8 @@ class NixIO(BaseIO):
                 durations = pq.Quantity(np.empty(0), nix_mtag.extents.unit)
                 labels = np.empty(0, dtype='S')
             else:
-                durations = pq.Quantity(nix_mtag.extents, nix_mtag.extents.unit)
+                durations = pq.Quantity(nix_mtag.extents,
+                                        nix_mtag.extents.unit)
                 labels = np.array(nix_mtag.positions.dimensions[0].labels,
                                   dtype="S")
             eest = Epoch(times=times, durations=durations, labels=labels,
@@ -393,7 +394,8 @@ class NixIO(BaseIO):
                 wfda = nix_mtag.features[0].data
                 wftime = self._get_time_dimension(wfda)
                 if lazy:
-                    eest.waveforms = pq.Quantity(np.empty((0, 0, 0)), wfda.unit)
+                    eest.waveforms = pq.Quantity(np.empty((0, 0, 0)),
+                                                 wfda.unit)
                     eest.sampling_period = pq.Quantity(1, wftime.unit)
                     eest.left_sweep = pq.Quantity(0, wftime.unit)
                 else:
@@ -481,8 +483,8 @@ class NixIO(BaseIO):
 
     def load_lazy_cascade(self, path, lazy):
         """
-        Loads the object at the location specified by the path and all children.
-        Data is loaded if lazy is False.
+        Loads the object at the location specified by the path and all
+        children. Data is loaded if lazy is False.
 
         :param path: Location of object in file
         :param lazy: Do not load data if True
@@ -547,7 +549,7 @@ class NixIO(BaseIO):
             nixobj = parentobj.create_group(attr["name"], "neo.segment")
         elif attr["type"] == "channelindex":
             nixobj = parentobj.create_source(attr["name"],
-                                               "neo.channelindex")
+                                             "neo.channelindex")
         elif attr["type"] in ("analogsignal", "irregularlysampledsignal"):
             blockpath = "/" + loc.split("/")[1]
             parentblock = self._get_object_at(blockpath)
@@ -590,8 +592,8 @@ class NixIO(BaseIO):
 
     def write_channelindex(self, chx, loc=""):
         """
-        Convert the provided ``chx`` (ChannelIndex) to a NIX Source and write it
-        to the NIX file at the location defined by ``loc``.
+        Convert the provided ``chx`` (ChannelIndex) to a NIX Source and write
+        it to the NIX file at the location defined by ``loc``.
 
         :param chx: The Neo ChannelIndex to be written
         :param loc: Path to the parent of the new CHX
@@ -647,8 +649,8 @@ class NixIO(BaseIO):
     def write_analogsignal(self, anasig, loc=""):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
-        DataArray objects and write them to the NIX file at the location defined
-        by ``loc``. All DataArray objects created from the same
+        DataArray objects and write them to the NIX file at the location
+        defined by ``loc``. All DataArray objects created from the same
         AnalogSignal have their metadata section point to the same object.
 
         :param anasig: The Neo AnalogSignal to be written
@@ -925,7 +927,8 @@ class NixIO(BaseIO):
                 wftime = wfda.append_sampled_dimension(
                     attr["sampling_interval"]
                 )
-                metadata["sampling_interval.units"] = attr["sampling_interval.units"]
+                metadata["sampling_interval.units"] =\
+                    attr["sampling_interval.units"]
                 wftime.unit = attr["times.units"]
                 wftime.label = "time"
                 if wfname in metadata.sections:
@@ -964,9 +967,9 @@ class NixIO(BaseIO):
     @classmethod
     def resolve_name_conflicts(cls, objects):
         """
-        Given a list of neo objects, change their names such that no two objects
-        share the same name. Objects with no name are renamed based on their
-        type.
+        Given a list of neo objects, change their names such that no two
+        objects share the same name. Objects with no name are renamed based on
+        their type.
         If a container object is supplied (Block, Segment, or RCG), conflicts
         are resolved for the child objects.
 
@@ -1094,11 +1097,11 @@ class NixIO(BaseIO):
                 section[name] = nix.Value(v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section[name] = [nix.Value(calculate_timestamp(v))]
+            section[name] = nix.Value(calculate_timestamp(v))
         elif isinstance(v, string_types):
-            section[name] = [nix.Value(v)]
+            section[name] = nix.Value(v)
         elif isinstance(v, bytes):
-            section[name] = [nix.Value(v.decode())]
+            section[name] = nix.Value(v.decode())
         elif isinstance(v, Iterable):
             values = []
             unit = None
@@ -1119,9 +1122,9 @@ class NixIO(BaseIO):
             section[name] = values
             section.props[name].unit = unit
         elif type(v).__module__ == "numpy":
-            section[name] = [nix.Value(v.item())]
+            section[name] = nix.Value(v.item())
         else:
-            section[name] = [nix.Value(v)]
+            section[name] = nix.Value(v)
         return section.props[name]
 
     @staticmethod
@@ -1184,9 +1187,9 @@ class NixIO(BaseIO):
         """
         Groups data arrays that were generated by the same Neo Signal object.
 
-        :param paths: A list of paths (strings) of all the signals to be grouped
-        :return: A list of paths (strings) of signal groups. The last part of
-        each path is the common name of the signals in the group.
+        :param paths: A list of paths (strings) of all the signals to be
+        grouped :return: A list of paths (strings) of signal groups. The last
+        part of each path is the common name of the signals in the group.
         """
         grouppaths = list(".".join(p.split(".")[:-1])
                           for p in paths)

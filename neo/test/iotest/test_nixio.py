@@ -78,7 +78,7 @@ class NixIOTest(unittest.TestCase):
             if len(neochx.channel_names):
                 neochanname = neochx.channel_names[neochanpos]
                 if ((not isinstance(neochanname, str)) and
-                         isinstance(neochanname, bytes)):
+                        isinstance(neochanname, bytes)):
                     neochanname = neochanname.decode()
                 nixchanname = nixchan.name
                 self.assertEqual(neochanname, nixchanname)
@@ -111,10 +111,13 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(len(neoasigs), len(nixasigs))
 
             # IrregularlySampledSignals referencing CHX
-            neoisigs = list(sig.name for sig in neochx.irregularlysampledsignals)
-            nixisigs = list(set(da.metadata.name for da in nixblock.data_arrays
-                                if da.type == "neo.irregularlysampledsignal" and
-                                nixchx in da.sources))
+            neoisigs = list(sig.name for sig in
+                            neochx.irregularlysampledsignals)
+            nixisigs = list(
+                set(da.metadata.name for da in nixblock.data_arrays
+                    if da.type == "neo.irregularlysampledsignal" and
+                    nixchx in da.sources)
+            )
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
             for sidx, neounit in enumerate(neochx.units):
@@ -472,7 +475,6 @@ class NixIOTest(unittest.TestCase):
             for siggroup in allsignalgroups:
                 mtag_ev.references.extend(siggroup)
 
-
         # CHX
         nixchx = blk.create_source(cls.rword(10),
                                    "neo.channelindex")
@@ -610,7 +612,7 @@ class NixIOWriteTest(NixIOTest):
         self.writer = NixIO(self.filename, "ow")
         self.io = self.writer
         self.reader = nix.File.open(self.filename,
-                                      nix.FileMode.ReadOnly)
+                                    nix.FileMode.ReadOnly)
 
     def tearDown(self):
         del self.writer
@@ -808,7 +810,8 @@ class NixIOWriteTest(NixIOTest):
         self.compare_blocks(blocks, self.reader.blocks)
 
     def test_to_value(self):
-        section = self.io.nix_file.create_section("Metadata value test", "Test")
+        section = self.io.nix_file.create_section("Metadata value test",
+                                                  "Test")
         writeprop = self.io._write_property
 
         # quantity
@@ -850,14 +853,6 @@ class NixIOWriteTest(NixIOTest):
         val = 42
         writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
-
-        # multi-dimensional data -- UNSUPORTED
-        # mdlist = [[1, 2, 3], [4, 5, 6]]
-        # writeprop(section, "mdlist", mdlist)
-
-        # mdarray = np.random.random((10, 3))
-        # writeprop(section, "mdarray", mdarray)
-
 
 
 class NixIOReadTest(NixIOTest):
@@ -1160,4 +1155,3 @@ class NixIOPartialWriteTest(NixIOTest):
 class CommonTests(BaseTestIO, unittest.TestCase):
 
     ioclass = NixIO
-
