@@ -35,7 +35,7 @@ from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
 from neo.test.iotest.common_io_test import BaseTestIO
 
 try:
-    import nixio
+    import nixio as nix
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
@@ -186,7 +186,7 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(neounit, da.unit)
             timedim = da.dimensions[0]
             if isinstance(neosig, AnalogSignal):
-                self.assertIsInstance(timedim, nixio.pycore.SampledDimension)
+                self.assertIsInstance(timedim, nix.pycore.SampledDimension)
                 self.assertEqual(
                     pq.Quantity(timedim.sampling_interval, timedim.unit),
                     neosig.sampling_period
@@ -196,7 +196,7 @@ class NixIOTest(unittest.TestCase):
                     self.assertEqual(da.metadata["t_start.units"],
                                      str(neosig.t_start.dimensionality))
             elif isinstance(neosig, IrregularlySampledSignal):
-                self.assertIsInstance(timedim, nixio.pycore.RangeDimension)
+                self.assertIsInstance(timedim, nix.pycore.RangeDimension)
                 np.testing.assert_almost_equal(neosig.times.magnitude,
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
@@ -260,10 +260,10 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(np.shape(neowf), np.shape(nixwf))
             self.assertEqual(nixwf.unit, str(neowf.units.dimensionality))
             np.testing.assert_almost_equal(neowf.magnitude, nixwf)
-            self.assertIsInstance(nixwf.dimensions[0], nixio.pycore.SetDimension)
-            self.assertIsInstance(nixwf.dimensions[1], nixio.pycore.SetDimension)
+            self.assertIsInstance(nixwf.dimensions[0], nix.pycore.SetDimension)
+            self.assertIsInstance(nixwf.dimensions[1], nix.pycore.SetDimension)
             self.assertIsInstance(nixwf.dimensions[2],
-                                  nixio.pycore.SampledDimension)
+                                  nix.pycore.SampledDimension)
 
     def compare_attr(self, neoobj, nixobj):
         if neoobj.name:
@@ -293,7 +293,7 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_full_nix_file(cls, filename):
-        nixfile = nixio.File.open(filename, nixio.FileMode.Overwrite)
+        nixfile = nix.File.open(filename, nix.FileMode.Overwrite)
 
         nix_block_a = nixfile.create_block(cls.rword(10), "neo.block")
         nix_block_a.definition = cls.rsentence(5, 10)
@@ -398,7 +398,7 @@ class NixIOTest(unittest.TestCase):
             )
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property(
-                "t_stop", nixio.Value(max(times_da).item()+1)
+                "t_stop", nix.Value(max(times_da).item()+1)
             )
 
             waveforms = cls.rquant((10, 8, 5), 1)
@@ -406,7 +406,7 @@ class NixIOTest(unittest.TestCase):
             wfda = blk.create_data_array(wfname, "neo.waveforms",
                                          data=waveforms)
             wfda.unit = "mV"
-            mtag_st.create_feature(wfda, nixio.LinkType.Indexed)
+            mtag_st.create_feature(wfda, nix.LinkType.Indexed)
             wfda.append_set_dimension()  # spike dimension
             wfda.append_set_dimension()  # channel dimension
             wftimedim = wfda.append_sampled_dimension(0.1)
@@ -416,7 +416,7 @@ class NixIOTest(unittest.TestCase):
                 wfname, "neo.waveforms.metadata"
             )
             wfda.metadata.create_property("left_sweep",
-                                          [nixio.Value(20)]*5)
+                                          [nix.Value(20)]*5)
             allspiketrains.append(mtag_st)
 
         # Epochs
@@ -488,11 +488,11 @@ class NixIOTest(unittest.TestCase):
             nixrc.metadata = nixchx.metadata.create_section(
                 nixrc.name, "neo.channelindex.metadata"
             )
-            nixrc.metadata.create_property("index", nixio.Value(idx))
-            dims = tuple(map(nixio.Value, cls.rquant(3, 1)))
+            nixrc.metadata.create_property("index", nix.Value(idx))
+            dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
-                                           nixio.Value("um"))
+                                           nix.Value("um"))
 
         nunits = 1
         stsperunit = np.array_split(allspiketrains, nunits)
@@ -609,8 +609,8 @@ class NixIOWriteTest(NixIOTest):
         self.filename = "nixio_testfile_write.h5"
         self.writer = NixIO(self.filename, "ow")
         self.io = self.writer
-        self.reader = nixio.File.open(self.filename,
-                                      nixio.FileMode.ReadOnly)
+        self.reader = nix.File.open(self.filename,
+                                      nix.FileMode.ReadOnly)
 
     def tearDown(self):
         del self.writer

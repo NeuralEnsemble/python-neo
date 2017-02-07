@@ -34,7 +34,7 @@ from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
 from neo.io.tools import LazyList
 
 try:
-    import nixio
+    import nixio as nix
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
@@ -99,16 +99,16 @@ class NixIO(BaseIO):
         BaseIO.__init__(self, filename)
         self.filename = filename
         if mode == "ro":
-            filemode = nixio.FileMode.ReadOnly
+            filemode = nix.FileMode.ReadOnly
         elif mode == "rw":
-            filemode = nixio.FileMode.ReadWrite
+            filemode = nix.FileMode.ReadWrite
         elif mode == "ow":
-            filemode = nixio.FileMode.Overwrite
+            filemode = nix.FileMode.Overwrite
         else:
             raise ValueError("Invalid mode specified '{}'. "
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite), "
                              "'ow' (Overwrite).".format(mode))
-        self.nix_file = nixio.File.open(self.filename, filemode, backend="h5py")
+        self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
         self._object_map = dict()
         self._lazy_loaded = list()
         self._object_hashes = dict()
@@ -287,7 +287,7 @@ class NixIO(BaseIO):
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
-                isinstance(timedim, nixio.pycore.SampledDimension)):
+                isinstance(timedim, nix.pycore.SampledDimension)):
             if lazy:
                 sampling_period = pq.Quantity(1, timedim.unit)
                 t_start = pq.Quantity(0, timedim.unit)
@@ -308,7 +308,7 @@ class NixIO(BaseIO):
                 t_start=t_start, **neo_attrs
             )
         elif neo_type == "neo.irregularlysampledsignal"\
-                or isinstance(timedim, nixio.pycore.RangeDimension):
+                or isinstance(timedim, nix.pycore.RangeDimension):
             if lazy:
                 times = pq.Quantity(np.empty(0), timedim.unit)
             else:
@@ -627,12 +627,12 @@ class NixIO(BaseIO):
             nixchan.definition = nixsource.definition
             chanpath = loc + "/channelindex/" + channame
             chanmd = self._get_or_init_metadata(nixchan, chanpath)
-            chanmd["index"] = nixio.Value(int(channel))
+            chanmd["index"] = nix.Value(int(channel))
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
                 nixcoords = tuple(
-                    nixio.Value(c.rescale(coordunits).magnitude.item())
+                    nix.Value(c.rescale(coordunits).magnitude.item())
                     for c in coords
                 )
                 if "coordinates" in chanmd:
@@ -868,7 +868,7 @@ class NixIO(BaseIO):
     def _write_data(self, nixobj, attr, path):
         if isinstance(nixobj, list):
             metadata = self._get_or_init_metadata(nixobj[0], path)
-            metadata["t_start.units"] = nixio.Value(attr["t_start.units"])
+            metadata["t_start.units"] = nix.Value(attr["t_start.units"])
             for obj in nixobj:
                 obj.unit = attr["data.units"]
                 if attr["type"] == "analogsignal":
@@ -915,7 +915,7 @@ class NixIO(BaseIO):
                     data=attr["waveforms"]
                 )
                 wfda.unit = attr["waveforms.units"]
-                nixobj.create_feature(wfda, nixio.LinkType.Indexed)
+                nixobj.create_feature(wfda, nix.LinkType.Indexed)
                 wfda.append_set_dimension()
                 wfda.append_set_dimension()
                 wftime = wfda.append_sampled_dimension(
@@ -1085,39 +1085,39 @@ class NixIO(BaseIO):
 
         if isinstance(v, pq.Quantity):
             if len(v.shape):
-                section[name] = list(nixio.Value(vv) for vv in v.magnitude)
+                section[name] = list(nix.Value(vv) for vv in v.magnitude)
             else:
-                section[name] = nixio.Value(v.magnitude.item())
+                section[name] = nix.Value(v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section[name] = [nixio.Value(calculate_timestamp(v))]
+            section[name] = [nix.Value(calculate_timestamp(v))]
         elif isinstance(v, string_types):
-            section[name] = [nixio.Value(v)]
+            section[name] = [nix.Value(v)]
         elif isinstance(v, bytes):
-            section[name] = [nixio.Value(v.decode())]
+            section[name] = [nix.Value(v.decode())]
         elif isinstance(v, Iterable):
             values = []
             unit = None
             for item in v:
                 if isinstance(item, pq.Quantity):
                     unit = str(item.dimensionality)
-                    item = nixio.Value(item.magnitude.item())
+                    item = nix.Value(item.magnitude.item())
                 elif isinstance(item, Iterable):
                     self.logger.warn("Multidimensional arrays and nested "
                                      "containers are not currently supported "
                                      "when writing to NIX.")
                     return None
                 elif type(item).__module__ == "numpy":
-                    item = nixio.Value(item.item())
+                    item = nix.Value(item.item())
                 else:
-                    item = nixio.Value(item)
+                    item = nix.Value(item)
                 values.append(item)
             section[name] = values
             section.props[name].unit = unit
         elif type(v).__module__ == "numpy":
-            section[name] = [nixio.Value(v.item())]
+            section[name] = [nix.Value(v.item())]
         else:
-            section[name] = [nixio.Value(v)]
+            section[name] = [nix.Value(v)]
         return section.props[name]
 
     @staticmethod
@@ -1162,7 +1162,7 @@ class NixIO(BaseIO):
                 else:
                     neo_attrs[prop.name] = values
 
-        if isinstance(nix_obj, (nixio.pycore.Block, nixio.pycore.Group)):
+        if isinstance(nix_obj, (nix.pycore.Block, nix.pycore.Group)):
             if "rec_datetime" not in neo_attrs:
                 neo_attrs["rec_datetime"] = None
 
