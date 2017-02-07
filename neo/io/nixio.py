@@ -22,7 +22,6 @@ import time
 from datetime import datetime
 from collections import Iterable
 import itertools
-from six import string_types
 from hashlib import md5
 
 import quantities as pq
@@ -38,6 +37,11 @@ try:
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
+
+try:
+    string_types = basestring
+except NameError:
+    string_types = str
 
 
 def stringify(value):

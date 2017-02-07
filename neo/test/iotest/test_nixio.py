@@ -25,7 +25,6 @@ except ImportError:
     import mock
 import string
 import itertools
-from six import string_types
 
 import numpy as np
 import quantities as pq
@@ -41,6 +40,7 @@ except ImportError:
     HAVE_NIX = False
 
 from neo.io.nixio import NixIO
+from neo.io.nixio import string_types
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
