@@ -41,7 +41,6 @@ except ImportError:
     HAVE_NIX = False
 
 from neo.io.nixio import NixIO
-from neo.io.nixio import nixtypes
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
@@ -187,7 +186,7 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(neounit, da.unit)
             timedim = da.dimensions[0]
             if isinstance(neosig, AnalogSignal):
-                self.assertIsInstance(timedim, nixtypes["SampledDimension"])
+                self.assertIsInstance(timedim, nixio.pycore.SampledDimension)
                 self.assertEqual(
                     pq.Quantity(timedim.sampling_interval, timedim.unit),
                     neosig.sampling_period
@@ -197,7 +196,7 @@ class NixIOTest(unittest.TestCase):
                     self.assertEqual(da.metadata["t_start.units"],
                                      str(neosig.t_start.dimensionality))
             elif isinstance(neosig, IrregularlySampledSignal):
-                self.assertIsInstance(timedim, nixtypes["RangeDimension"])
+                self.assertIsInstance(timedim, nixio.pycore.RangeDimension)
                 np.testing.assert_almost_equal(neosig.times.magnitude,
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
@@ -261,10 +260,10 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(np.shape(neowf), np.shape(nixwf))
             self.assertEqual(nixwf.unit, str(neowf.units.dimensionality))
             np.testing.assert_almost_equal(neowf.magnitude, nixwf)
-            self.assertIsInstance(nixwf.dimensions[0], nixtypes["SetDimension"])
-            self.assertIsInstance(nixwf.dimensions[1], nixtypes["SetDimension"])
+            self.assertIsInstance(nixwf.dimensions[0], nixio.pycore.SetDimension)
+            self.assertIsInstance(nixwf.dimensions[1], nixio.pycore.SetDimension)
             self.assertIsInstance(nixwf.dimensions[2],
-                                  nixtypes["SampledDimension"])
+                                  nixio.pycore.SampledDimension)
 
     def compare_attr(self, neoobj, nixobj):
         if neoobj.name:

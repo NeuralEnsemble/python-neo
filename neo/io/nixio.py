@@ -48,35 +48,6 @@ def stringify(value):
     return str(value)
 
 
-def nix_type_dict():
-    pycore = nixio.pycore
-
-    typedict = {
-        "Block": (pycore.Block,),
-        "Group": (pycore.Group,),
-        "SampledDimension": (pycore.SampledDimension,),
-        "RangeDimension": (pycore.RangeDimension,),
-        "SetDimension": (pycore.SetDimension,)
-    }
-
-    try:
-        ccore = nixio.core
-        typedict["Block"] += (ccore.Block,)
-        typedict["Group"] += (ccore.Group,)
-        typedict["SampledDimension"] += (ccore.SampledDimension,)
-        typedict["RangeDimension"] += (ccore.RangeDimension,)
-        typedict["SetDimension"] += (ccore.SetDimension,)
-    except AttributeError:
-        pass
-
-    return typedict
-
-if HAVE_NIX:
-    nixtypes = nix_type_dict()
-else:
-    nixtypes = {}
-
-
 def calculate_timestamp(dt):
     try:
         return int(dt)
@@ -316,7 +287,7 @@ class NixIO(BaseIO):
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
-                isinstance(timedim, nixtypes["SampledDimension"])):
+                isinstance(timedim, nixio.pycore.SampledDimension)):
             if lazy:
                 sampling_period = pq.Quantity(1, timedim.unit)
                 t_start = pq.Quantity(0, timedim.unit)
@@ -337,7 +308,7 @@ class NixIO(BaseIO):
                 t_start=t_start, **neo_attrs
             )
         elif neo_type == "neo.irregularlysampledsignal"\
-                or isinstance(timedim, nixtypes["RangeDimension"]):
+                or isinstance(timedim, nixio.pycore.RangeDimension):
             if lazy:
                 times = pq.Quantity(np.empty(0), timedim.unit)
             else:
@@ -1191,7 +1162,7 @@ class NixIO(BaseIO):
                 else:
                     neo_attrs[prop.name] = values
 
-        if isinstance(nix_obj, (nixtypes["Block"], nixtypes["Group"])):
+        if isinstance(nix_obj, (nixio.pycore.Block, nixio.pycore.Group)):
             if "rec_datetime" not in neo_attrs:
                 neo_attrs["rec_datetime"] = None
 
