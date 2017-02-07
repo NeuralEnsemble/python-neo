@@ -212,7 +212,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         '''
-        if  len(times)!=0 and waveforms is not None and len(times) != waveforms.shape[0]:
+        if  len(times)!=0 and waveforms is not None and len(times) != waveforms.shape[0]: #len(times)!=0 has been used to workaround a bug occuring during neo import)
             raise ValueError("the number of waveforms should be equal to the number of spikes")
         
         # Make sure units are consistent
