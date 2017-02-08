@@ -107,6 +107,7 @@ def generate_one_simple_segment(seg_name='segment 0',
         for name, labels in iteritems(event_types):
             evt_size = rand()*np.diff(event_size_range)
             evt_size += event_size_range[0]
+            evt_size = int(evt_size)
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(evt_size)*len(labels)).astype('i')]
             evt = Event(times=rand(evt_size)*duration, labels=labels)
