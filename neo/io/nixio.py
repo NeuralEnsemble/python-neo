@@ -88,7 +88,7 @@ class NixIO(BaseIO):
         "units": "sources"
     }
 
-    def __init__(self, filename, mode="ro"):
+    def __init__(self, filename, mode="rw"):
         """
         Initialise IO instance and NIX file.
 
