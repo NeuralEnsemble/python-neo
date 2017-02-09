@@ -41,10 +41,11 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
+        waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
+        shape = waveforms.shape[0]
+        times = get_fake_value('times', pq.Quantity, seed=0, dim=1, shape=waveforms.shape[0])
         t_start = get_fake_value('t_start', pq.Quantity, seed=1, dim=0)
         t_stop = get_fake_value('t_stop', pq.Quantity, seed=2, dim=0)
-        waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
         left_sweep = get_fake_value('left_sweep', pq.Quantity, seed=4, dim=0)
         sampling_rate = get_fake_value('sampling_rate', pq.Quantity,
                                        seed=5, dim=0)
