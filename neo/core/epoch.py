@@ -179,3 +179,23 @@ class Epoch(BaseNeo, pq.Quantity):
         new = self.__class__(times=signal)
         new._copy_data_complement(self)
         return new
+
+    def time_slice(self, t_start, t_stop):
+        '''
+        Creates a new :class:`Epoch` corresponding to the time slice of
+        the original :class:`Epoch` between (and including) times
+        :attr:`t_start` and :attr:`t_stop`. Either parameter can also be None
+        to use infinite endpoints for the time interval.
+        '''
+        _t_start = t_start
+        _t_stop = t_stop
+        if t_start is None:
+            _t_start = -np.inf
+        if t_stop is None:
+            _t_stop = np.inf
+
+        indices = (self.times >= _t_start) & (self.times <= _t_stop)
+
+        new_epc = self.duplicate_with_new_data(self.times[indices])
+        new_epc = self.__class__(times=self.times[indices],durations=self.durations[indices],labels=self.labels[indices],**self.annotations)
+        return new_epc
