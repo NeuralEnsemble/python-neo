@@ -196,6 +196,8 @@ class Epoch(BaseNeo, pq.Quantity):
 
         indices = (self.times >= _t_start) & (self.times <= _t_stop)
 
-        new_epc = self.duplicate_with_new_data(self.times[indices])
-        new_epc = self.__class__(times=self.times[indices],durations=self.durations[indices],labels=self.labels[indices],**self.annotations)
+        new_epc = self.__class__(times=self.times[indices],
+                                 durations=self.durations[indices],
+                                 labels=self.labels[indices],
+                                 **self.annotations)
         return new_epc
