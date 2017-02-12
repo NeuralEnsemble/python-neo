@@ -236,7 +236,7 @@ class TestEpoch(unittest.TestCase):
         epc2 = epc.time_slice(10*pq.s,20*pq.s)
         assert_arrays_equal(epc2.times,[10, 20] * pq.s)
         assert_arrays_equal(epc2.durations,[10, 5] * pq.ms)
-        self.assertEqual(epc2.labels,['btn0','btn1'])
+        assert_arrays_equal(epc2.labels,['btn0','btn1'])
         self.assertEqual(epc.annotations, epc2.annotations)
 
 class TestDuplicateWithNewData(unittest.TestCase):
