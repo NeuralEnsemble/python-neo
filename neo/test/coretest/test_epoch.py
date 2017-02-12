@@ -235,7 +235,7 @@ class TestEpoch(unittest.TestCase):
                     labels=['btn0', 'btn1', 'btn2'], foo='bar')
 
         epc2 = epc.time_slice(10*pq.s,20*pq.s)
-        self.assertEqual(epc2.times,[10, 20] * pq.ms)
+        self.assertEqual(epc2.times,[10, 20] * pq.s)
         self.assertEqual(epc2.durations,[10, 5] * pq.ms)
         self.assertEqual(epc2.labels,['btn0','btn1'])
         self.assertEqual(epc.annotations, epc2.annotations)

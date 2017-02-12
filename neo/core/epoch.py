@@ -198,6 +198,6 @@ class Epoch(BaseNeo, pq.Quantity):
 
         new_epc = self.__class__(times=self.times[indices],
                                  durations=self.durations[indices],
-                                 labels=self.labels[indices],
+                                 labels=np.array(self.labels)[indices],
                                  **self.annotations)
         return new_epc
