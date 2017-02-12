@@ -230,13 +230,14 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(prepr, targ)
 
     def test__time_slice(self):
-        epc = Epoch(times=[10, 20, 30]*pq.s, durations=[10, 5, 7] * pq.ms,
-                    labels=['btn0', 'btn1', 'btn2'], foo='bar')
+        epc = Epoch(times=[10, 20, 30] * pq.s, durations=[10, 5, 7] * pq.ms,
+                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'),
+                    foo='bar')
 
-        epc2 = epc.time_slice(10*pq.s,20*pq.s)
-        assert_arrays_equal(epc2.times,[10, 20] * pq.s)
-        assert_arrays_equal(epc2.durations,[10, 5] * pq.ms)
-        assert_arrays_equal(epc2.labels,['btn0','btn1'])
+        epc2 = epc.time_slice(10 * pq.s, 20 * pq.s)
+        assert_arrays_equal(epc2.times, [10, 20] * pq.s)
+        assert_arrays_equal(epc2.durations, [10, 5] * pq.ms)
+        assert_arrays_equal(epc2.labels, np.array(['btn0','btn1'], dtype='S'))
         self.assertEqual(epc.annotations, epc2.annotations)
 
 class TestDuplicateWithNewData(unittest.TestCase):
