@@ -224,17 +224,14 @@ class TestEvent(unittest.TestCase):
         evt = Event(data, foo='bar')
 
         evt1 = evt.time_slice(2.2 * pq.ms, 4.2 * pq.ms)
-        self.assertEqual(evt1.times,[3, 4] * pq.ms)
+        assert_arrays_equal(evt1.times,[3, 4] * pq.ms)
         self.assertEqual(evt.annotations, evt1.annotations)
 
         evt2 = evt.time_slice(None, 4.2 * pq.ms)
-        self.assertEqual(evt2.times,[2, 3, 4] * pq.ms)
+        assert_arrays_equal(evt2.times,[2, 3, 4] * pq.ms)
 
         evt3 = evt.time_slice(2.2 * pq.ms, None)
-        self.assertEqual(evt3.times, [3, 4, 5] * pq.ms)
-
-        evt4 = evt.time_slice(None, None)
-        self.assertEqual(evt, evt4)
+        assert_arrays_equal(evt3.times, [3, 4, 5] * pq.ms)
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
