@@ -234,7 +234,7 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(evt3.times, [3, 4, 5] * pq.ms)
 
         evt4 = evt.time_slice(None, None)
-        self.assertEqual(evt1, evt4)
+        self.assertEqual(evt, evt4)
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
