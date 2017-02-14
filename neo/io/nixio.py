@@ -78,7 +78,10 @@ else:
 
 
 def calculate_timestamp(dt):
-    return int(time.mktime(dt.timetuple()))
+    try:
+        return int(dt)
+    except ValueError:
+        return int(time.mktime(dt.timetuple()))
 
 
 class NixIO(BaseIO):
