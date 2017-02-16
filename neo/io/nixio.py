@@ -53,10 +53,9 @@ def stringify(value):
 
 
 def calculate_timestamp(dt):
-    try:
-        return int(dt)
-    except ValueError:
+    if isinstance(dt, datetime):
         return int(time.mktime(dt.timetuple()))
+    return int(dt)
 
 
 class NixIO(BaseIO):
