@@ -16,7 +16,7 @@ This IO supports both writing and reading of NIX files. Reading is supported
 only if the NIX file was created using this IO.
 """
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
 
 import time
 from datetime import datetime
@@ -1289,3 +1289,19 @@ class NixIO(BaseIO):
         strupdate(type(obj).__name__)
 
         return objhash.hexdigest()
+
+    def close(self):
+        """
+        Closes the open nix file and resets maps.
+        """
+        if (hasattr(self, "nix_file") and
+                self.nix_file and self.nix_file.is_open()):
+            self.nix_file.close()
+            self.nix_file = None
+            self._object_map = None
+            self._lazy_loaded = None
+            self._object_hashes = None
+            self._block_read_counter = None
+
+    def __del__(self):
+        self.close()
