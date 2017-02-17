@@ -117,6 +117,12 @@ class NixIO(BaseIO):
         self._object_hashes = dict()
         self._block_read_counter = 0
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def read_all_blocks(self, cascade=True, lazy=False):
         blocks = list()
         for blk in self.nix_file.blocks:
