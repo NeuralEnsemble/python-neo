@@ -296,7 +296,8 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_full_nix_file(cls, filename):
-        nixfile = nix.File.open(filename, nix.FileMode.Overwrite)
+        nixfile = nix.File.open(filename, nix.FileMode.Overwrite,
+                                backend="h5py")
 
         nix_block_a = nixfile.create_block(cls.rword(10), "neo.block")
         nix_block_a.definition = cls.rsentence(5, 10)
@@ -612,7 +613,8 @@ class NixIOWriteTest(NixIOTest):
         self.writer = NixIO(self.filename, "ow")
         self.io = self.writer
         self.reader = nix.File.open(self.filename,
-                                    nix.FileMode.ReadOnly)
+                                    nix.FileMode.ReadOnly,
+                                    backend="h5py")
 
     def tearDown(self):
         self.writer.close()
