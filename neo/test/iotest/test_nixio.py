@@ -1157,3 +1157,4 @@ class NixIOPartialWriteTest(NixIOTest):
 class CommonTests(BaseTestIO, unittest.TestCase):
 
     ioclass = NixIO
+    read_and_write_is_bijective = False
