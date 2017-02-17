@@ -615,7 +615,7 @@ class NixIOWriteTest(NixIOTest):
                                     nix.FileMode.ReadOnly)
 
     def tearDown(self):
-        del self.writer
+        self.writer.close()
         self.reader.close()
         os.remove(self.filename)
 
@@ -878,7 +878,7 @@ class NixIOReadTest(NixIOTest):
             cls.nixfile.close()
 
     def tearDown(self):
-        del self.io
+        self.io.close()
 
     def test_all_read(self):
         neo_blocks = self.io.read_all_blocks(cascade=True, lazy=False)
@@ -1085,7 +1085,7 @@ class NixIOPartialWriteTest(NixIOTest):
 
     def tearDown(self):
         self.restore_methods()
-        del self.io
+        self.io.close()
 
     def restore_methods(self):
         for name, method in self.original_methods.items():
