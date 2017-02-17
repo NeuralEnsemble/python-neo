@@ -727,7 +727,7 @@ class NixIOWriteTest(NixIOTest):
         seg.spiketrains.append(spiketrain)
         self.write_and_compare([block])
 
-        waveforms = self.rquant((20, 5, 10), pq.mV)
+        waveforms = self.rquant((3, 5, 10), pq.mV)
         spiketrain = SpikeTrain(times=[1, 1.1, 1.2]*pq.ms, t_stop=1.5*pq.s,
                                 name="spikes with wf",
                                 description="spikes for waveform test",
