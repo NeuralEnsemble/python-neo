@@ -1153,6 +1153,44 @@ class NixIOPartialWriteTest(NixIOTest):
         self.compare_blocks(self.neo_blocks, self.io.nix_file.blocks)
 
 
+class NixIOContextTests(NixIOTest):
+
+    filename = "context_test.h5"
+
+    def test_context_write(self):
+        neoblock = Block(name=self.rword(), description=self.rsentence())
+        with NixIO(self.filename, "ow") as iofile:
+            iofile.write_block(neoblock)
+
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly,
+                                backend="h5py")
+        self.compare_blocks([neoblock], nixfile.blocks)
+        nixfile.close()
+
+        neoblock.annotate(**self.rdict(5))
+        with NixIO(self.filename, "rw") as iofile:
+            iofile.write_block(neoblock)
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly,
+                                backend="h5py")
+        self.compare_blocks([neoblock], nixfile.blocks)
+        nixfile.close()
+
+    def test_context_read(self):
+        nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite,
+                                backend="h5py")
+        name_one = self.rword()
+        name_two = self.rword()
+        nixfile.create_block(name_one, "neo.block")
+        nixfile.create_block(name_two, "neo.block")
+        nixfile.close()
+
+        with NixIO(self.filename, "ro") as iofile:
+            blocks = iofile.read_all_blocks()
+
+        self.assertEqual(blocks[0].name, name_one)
+        self.assertEqual(blocks[1].name, name_two)
+
+
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class CommonTests(BaseTestIO, unittest.TestCase):
 
