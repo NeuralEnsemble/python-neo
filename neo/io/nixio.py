@@ -867,10 +867,15 @@ class NixIO(BaseIO):
             nixobj.force_created_at(calculate_timestamp(attr["created_at"]))
         if "file_datetime" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["file_datetime"] = attr["file_datetime"]
+            self._write_property(metadata,
+                                 "file_datetime", attr["file_datetime"])
+            # metadata["file_datetime"] = attr["file_datetime"]
         if "rec_datetime" in attr and attr["rec_datetime"]:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["rec_datetime"] = attr["rec_datetime"]
+            # metadata["rec_datetime"] = attr["rec_datetime"]
+            self._write_property(metadata,
+                                 "rec_datetime", attr["rec_datetime"])
+
         if "annotations" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
             for k, v in attr["annotations"].items():
@@ -1177,9 +1182,9 @@ class NixIO(BaseIO):
         if isinstance(nix_obj, (nix.pycore.Block, nix.pycore.Group)):
             if "rec_datetime" not in neo_attrs:
                 neo_attrs["rec_datetime"] = None
-
-        #     neo_attrs["rec_datetime"] = datetime.fromtimestamp(
-        #         nix_obj.created_at)
+            neo_attrs["rec_datetime"] = datetime.fromtimestamp(
+                nix_obj.created_at
+            )
         if "file_datetime" in neo_attrs:
             neo_attrs["file_datetime"] = datetime.fromtimestamp(
                 neo_attrs["file_datetime"]
