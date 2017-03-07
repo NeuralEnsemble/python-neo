@@ -1,8 +1,8 @@
-==============================
-Neo 0.5.0-alpha1 release notes
-==============================
+=============================
+Neo 0.5.0-beta1 release notes
+=============================
 
-13th September 2016
+8th March 2017
 
 
 For Neo 0.5, we have taken the opportunity to simplify the Neo object model.
@@ -127,6 +127,7 @@ Other changes
     * :class:`NeoHdf5IO` is now read-only. It will read data files produced by earlier versions
       of Neo, but another HDF5-based IO, e.g. :class:`NixIO`, should be used for writing data.
 
+
 .. https://github.com/NeuralEnsemble/python-neo/issues?utf8=✓&q=is%3Aissue%20is%3Aclosed%20created%3A%3E2014-02-01%20
 
-.. _`about the NIX format`: http://zzz
+.. _`about the NIX format`: https://github.com/G-Node/nix/wiki
