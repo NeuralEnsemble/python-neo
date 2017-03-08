@@ -497,3 +497,36 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
         return signal
+
+    def time_slice (self, t_start, t_stop):
+        '''
+        Creates a new :class:`IrregularlySampledSignal` corresponding to the time slice of
+        the original :class:`IrregularlySampledSignal` between times
+        `t_start` and `t_stop`. Either parameter can also be None
+        to use infinite endpoints for the time interval.
+        '''
+        _t_start = t_start
+        _t_stop = t_stop
+
+        if t_start is None:
+            _t_start = -np.inf
+        if t_stop is None:
+            _t_stop = np.inf
+        indices = (self.times >= _t_start) & (self.times <= _t_stop)
+
+        count = 0
+        id_start = None
+        id_stop = None
+        for i in indices :
+            if id_start == None :
+                if i == True :
+                    id_start = count
+            else :
+                if i == False : 
+                    id_stop = count
+                    break
+            count += 1
+        
+        new_st = self[id_start:id_stop]
+
+        return new_st
