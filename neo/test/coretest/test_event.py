@@ -231,6 +231,24 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
+class TestEventFunctions(unittest.TestCase):
 
+    def test__pickle(self):
+
+        event1 = Event(np.arange(0, 30, 10)*pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
+                       units='s')                      
+        fobj = open('./pickle', 'wb')
+        pickle.dump(event1, fobj)
+        fobj.close()
+
+        fobj = open('./pickle', 'rb')
+        try:
+            event2 = pickle.load(fobj)
+        except ValueError:
+            event2 = None
+
+        fobj.close()
+        assert_array_equal(event1.times, event2.times)
+        os.remove('./pickle')
 if __name__ == "__main__":
     unittest.main()
