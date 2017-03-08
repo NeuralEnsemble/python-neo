@@ -194,10 +194,9 @@ class Epoch(BaseNeo, pq.Quantity):
         if t_stop is None:
             _t_stop = np.inf
 
-        indices = (self.times >= _t_start) & (self.times <= _t_stop)
+        indices = (self >= _t_start) & (self <= _t_stop)
 
-        new_epc = self.__class__(times=self.times[indices],
-                                 durations=self.durations[indices],
-                                 labels=np.array(self.labels)[indices],
-                                 **self.annotations)
+        new_epc = self[indices]
+        new_epc.durations = self.durations[indices]
+        new_epc.labels = self.labels[indices]
         return new_epc
