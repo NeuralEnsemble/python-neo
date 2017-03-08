@@ -3,18 +3,14 @@
 Class for reading data from a .kwik dataset
 
 Depends on: scipy
-            h5py >= 2.5.0
+            phy
 
 Supported: Read
 
 Author: Mikkel E. Lepperød @CINPLA
 
 """
-# TODO: units
-# TODO: enable reading of all otputfiles
-# TODO: enable writing to file
-# TODO: stimulus and tracking data
-# TODO: enable read all datasets
+# TODO: writing to file
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
@@ -23,24 +19,7 @@ from __future__ import division
 import numpy as np
 import quantities as pq
 import os
-#version checking
-from distutils import version
-# check h5py
-try:
-    import h5py
-except ImportError as err:
-    HAVE_H5PY = False
-    H5PY_ERR = err
-else:
-    if version.LooseVersion(h5py.__version__) < '2.5.0':
-        HAVE_H5PY = False
-        H5PY_ERR = ImportError("your h5py version is too old to " +
-                                 "support KwikIO, you need at least 2.5.0 " +
-                                 "You have %s" % h5py.__version__)
-    else:
-        HAVE_H5PY = True
-        H5PY_ERR = None
-# check scipy
+
 try:
     from scipy import stats
 except ImportError as err:
@@ -50,6 +29,15 @@ else:
     HAVE_SCIPY = True
     SCIPY_ERR = None
 
+try:
+    from klusta import kwik
+except ImportError as err:
+    HAVE_KWIK = False
+    KWIK_ERR = err
+else:
+    HAVE_KWIK = True
+    KWIK_ERR = None
+
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
 
@@ -57,6 +45,7 @@ from neo.io.baseio import BaseIO
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, AnalogSignal,
                       ChannelIndex, Block)
 import neo.io.tools
+
 
 class KwikIO(BaseIO):
     """
@@ -66,128 +55,156 @@ class KwikIO(BaseIO):
 
     """
 
-    is_readable = True # This class can only read data
-    is_writable = False # write is not supported
+    is_readable = True  # This class can only read data
+    is_writable = False  # write is not supported
 
-    supported_objects    = [ Block, Segment, AnalogSignal,
-                             ChannelIndex]
+    supported_objects = [Block, Segment, SpikeTrain, AnalogSignal,
+                         ChannelIndex]
 
     # This class can return either a Block or a Segment
     # The first one is the default ( self.read )
     # These lists should go from highest object to lowest object because
     # common_io_test assumes it.
-    readable_objects  = [ Block ]
+    readable_objects = [Block]
 
     # This class is not able to write objects
-    writeable_objects   = [ ]
+    writeable_objects = []
 
-    has_header         = False
-    is_streameable     = False
+    has_header = False
+    is_streameable = False
 
-    name               = 'Kwik'
-    description        = 'This IO reads experimental data from a .kwik dataset'
-    extensions         = [ 'kwik' ]
+    name = 'Kwik'
+    description = 'This IO reads experimental data from a .kwik dataset'
+    extensions = ['kwik']
     mode = 'file'
 
-    def __init__(self, filename, dataset=0) :
+    def __init__(self, filename):
         """
         Arguments:
             filename : the filename
-            dataset: points to a specific dataset in the .kwik and .raw.kwd file,
-                     however this can be an issue to change in e.g. OpenElectrophy or Spykeviewer
         """
         BaseIO.__init__(self)
-        self._filename = filename
-        self._path, file = os.path.split(filename)
-        self._kwik = h5py.File(filename, 'r')
-        self._dataset = dataset
-        try:
-            rawfile = self._kwik['recordings'][str(self._dataset)]['raw'].attrs['hdf5_path'] # klustakwik/phy and newest version of open ephys
-            rawfile = rawfile.split('/')[0]
-        except:
-            rawfile = file.split('.')[0] + '_100.raw.kwd' # first version of open ephys files
-        self._kwd = h5py.File(self._path + os.sep + rawfile, 'r')
-        self._attrs = {}
-        self._attrs['kwik'] = self._kwik['recordings'][str(self._dataset)].attrs
-        self._attrs['kwd'] = self._kwd['recordings'][str(self._dataset)].attrs
-        self._attrs['shape'] = self._kwd['recordings'][str(self._dataset)]['data'].shape
-        try:
-            self._attrs['app_data'] = self._kwd['recordings'][str(self._dataset)]['application_data'].attrs # TODO: find bitvolt conversion in phy generated data
-        except:
-            self._attrs['app_data'] = False
+        self.filename = os.path.abspath(filename)
+        model = kwik.KwikModel(self.filename) # TODO this group is loaded twice
+        self.models = [kwik.KwikModel(self.filename, channel_group=grp)
+                       for grp in model.channel_groups]
 
     def read_block(self,
-                     lazy=False,
-                     cascade=True,
-                     channel_index=None
-                    ):
+                   lazy=False,
+                   cascade=True,
+                   get_waveforms=True,
+                   cluster_metadata='all',
+                   raw_data_units='uV',
+                   get_raw_data=False,
+                   ):
         """
-        Arguments:
-            Channel_index: can be int, iterable or None to select one, many or all channel(s)
+        Reads a block with segments and channel_indexes
 
+        Parameters:
+        get_waveforms: bool, default = False
+            Wether or not to get the waveforms
+        get_raw_data: bool, default = False
+            Wether or not to get the raw traces
+        raw_data_units: str, default = "uV"
+            SI units of the raw trace according to voltage_gain given to klusta
+        cluster_metadata: str, default = "all"
+            Which clusters to load, possibilities are "noise", "unsorted",
+            "good", "all", if all is selected noise is omitted.
         """
-
+        assert isinstance(cluster_metadata, str)
         blk = Block()
         if cascade:
-            seg = Segment( file_origin=self._filename )
-            blk.segments += [ seg ]
+            seg = Segment(file_origin=self.filename)
+            blk.segments += [seg]
+            for model in self.models:
+                group_id = model.channel_group
+                group_meta = {'group_id': group_id}
+                group_meta.update(model.metadata)
+                chx = ChannelIndex(name='channel group #{}'.format(group_id),
+                                   index=model.channels,
+                                   **group_meta)
+                blk.channel_indexes.append(chx)
+                clusters = model.spike_clusters
+                for cluster_id in model.cluster_ids:
+                    meta = model.cluster_metadata[cluster_id]
+                    if cluster_metadata == 'all':
+                        if meta == 'noise':
+                            continue
+                    elif cluster_metadata != meta:
+                        continue
+                    sptr = self.read_spiketrain(cluster_id=cluster_id,
+                                                model=model, lazy=lazy,
+                                                cascade=cascade,
+                                                get_waveforms=get_waveforms)
+                    sptr.annotations.update({'cluster_metadata': meta,
+                                             'group_id': model.channel_group})
+                    sptr.channel_index = chx
+                    unit = Unit()
+                    unit.spiketrains.append(sptr)
+                    chx.units.append(unit)
+                    unit.channel_index = chx
+                    seg.spiketrains.append(sptr)
+                if get_raw_data:
+                    ana = self.read_analogsignal(model, raw_data_units,
+                                                 lazy, cascade)
+                    ana.channel_index = chx
+                    seg.analogsignals.append(ana)
 
+            seg.duration = model.duration * pq.s
 
-
-            if channel_index:
-                if type(channel_index) is int: channel_index = [ channel_index ]
-                if type(channel_index) is list: channel_index = np.array( channel_index )
-            else:
-                channel_index = np.arange(0,self._attrs['shape'][1])
-
-            chx = ChannelIndex(name='all channels',
-                               index=channel_index)
-            blk.channel_indexes.append(chx)
-
-            ana = self.read_analogsignal(channel_index=channel_index,
-                                         lazy=lazy,
-                                         cascade=cascade)
-            ana.channel_index = chx
-            seg.duration = (self._attrs['shape'][0]
-                          / self._attrs['kwik']['sample_rate']) * pq.s
-
-            # neo.tools.populate_RecordingChannel(blk)
         blk.create_many_to_one_relationship()
         return blk
 
-    def read_analogsignal(self,
-                      channel_index=None,
-                      lazy=False,
-                      cascade=True,
-                      ):
+    def read_analogsignal(self, model, units='uV',
+                          lazy=False,
+                          cascade=True,
+                          ):
         """
-        Read raw traces
-        Arguments:
-            channel_index: must be integer array
+        Reads analogsignals
+
+        Parameters:
+        units: str, default = "uV"
+            SI units of the raw trace according to voltage_gain given to klusta
         """
-        if self._attrs['app_data']:
-            bit_volts = self._attrs['app_data']['channel_bit_volts']
-            sig_unit = 'uV'
+        arr = model.traces[:]*model.metadata['voltage_gain']
+        ana = AnalogSignal(arr, sampling_rate=model.sample_rate*pq.Hz,
+                           units=units,
+                           file_origin=model.metadata['raw_data_files'])
+        return ana
+
+    def read_spiketrain(self, cluster_id, model,
+                        lazy=False,
+                        cascade=True,
+                        get_waveforms=True,
+                        ):
+        """
+        Reads sorted spiketrains
+
+        Parameters:
+        get_waveforms: bool, default = False
+            Wether or not to get the waveforms
+        cluster_id: int,
+            Which cluster to load, according to cluster id from klusta
+        model: klusta.kwik.KwikModel
+            A KwikModel object obtained by klusta.kwik.KwikModel(fname)
+        """
+        try:
+            if ((not(cluster_id in model.cluster_ids))):
+                raise ValueError
+        except ValueError:
+                print("Exception: cluster_id (%d) not found !! " % cluster_id)
+                return
+        clusters = model.spike_clusters
+        idx = np.argwhere(clusters == cluster_id)
+        if get_waveforms:
+            w = model.all_waveforms[idx]
+            # klusta: num_spikes, samples_per_spike, num_chans = w.shape
+            w = w.swapaxes(1, 2)
         else:
-            bit_volts = np.ones((self._attrs['shape'][1])) # TODO: find conversion in phy generated files
-            sig_unit =  'bit'
-        if lazy:
-            anasig = AnalogSignal([],
-                                  units=sig_unit,
-                                  sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
-                                  t_start=self._attrs['kwik']['start_time']*pq.s,
-                                  )
-            # we add the attribute lazy_shape with the size if loaded
-            anasig.lazy_shape = self._attrs['shape'][0]
-        else:
-            data = self._kwd['recordings'][str(self._dataset)]['data'].value[:, channel_index]
-            data = data * bit_volts[channel_index]
-            anasig = AnalogSignal(data,
-                                       units=sig_unit,
-                                       sampling_rate=self._attrs['kwik']['sample_rate']*pq.Hz,
-                                       t_start=self._attrs['kwik']['start_time']*pq.s,
-                                       )
-            data = []  # delete from memory
-        # for attributes out of neo you can annotate
-        anasig.annotate(info='raw traces')
-        return anasig
+            w = None
+        sptr = SpikeTrain(times=model.spike_times[idx],
+                          t_stop=model.duration, waveforms=w, units='s',
+                          sampling_rate=model.sample_rate*pq.Hz,
+                          file_origin=self.filename,
+                          **{'cluster_id': cluster_id})
+        return sptr
