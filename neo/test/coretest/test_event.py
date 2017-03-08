@@ -10,6 +10,9 @@ except ImportError:
 
 import numpy as np
 import quantities as pq
+import pickle
+import os
+from numpy.testing import assert_array_equal
 
 try:
     from IPython.lib.pretty import pretty
