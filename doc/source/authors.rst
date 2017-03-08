@@ -22,6 +22,10 @@ and may not be the current affiliation of a contributor.
 * Domenico Guarino [2]
 * Achilleas Koutsou [5]
 * Erik Li [9]
+* Georg Raiser [10]
+* Joffrey Gonin [2]
+* Kyler Brown [?]
+* Mikkel Elle Lepperød [11]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France 
@@ -32,5 +36,7 @@ and may not be the current affiliation of a contributor.
 7. Centre de Neurosciences Integratives et Cignitives, UMR 5228 - CNRS - Université Bordeaux I - Université Bordeaux II
 8. Neural Information Processing Group, TU Berlin, Germany
 9. Department of Neurobiology & Anatomy, Drexel University College of Medicine, Philadelphia, PA, USA
+10. University of Konstanz, Konstanz, Germany
+11. Centre for Integrative Neuroplasticity (CINPLA), University of Oslo, Norway
 
 If we've somehow missed you off the list we're very sorry - please let us know.
