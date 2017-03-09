@@ -51,7 +51,7 @@ import re
 import types
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 import neo
 from neo.io.baseio import BaseIO
@@ -1003,7 +1003,7 @@ class BlackrockIO(BaseIO):
             'max_res': self.__nev_basic_header['timestamp_resolution'],
             'channel_ids': self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
             'channel_labels': self.__channel_labels[self.__nev_spec](),
-            'event_unit': pq.CompoundUnit("1.0/{0} * s".format(
+            'event_unit': Units.CompoundUnit("1.0/{0} * s".format(
                 self.__nev_basic_header['timestamp_resolution'])),
             'nb_units': dict(zip(
                 self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
@@ -1012,10 +1012,10 @@ class BlackrockIO(BaseIO):
             'waveform_size': self.__waveform_size[self.__nev_spec](),
             'waveform_dtypes': self.__get_waveforms_dtype(),
             'waveform_sampling_rate':
-                self.__nev_basic_header['sample_resolution'] * pq.Hz,
-            'waveform_time_unit': pq.CompoundUnit("1.0/{0} * s".format(
+                self.__nev_basic_header['sample_resolution'] * Units.Hz,
+            'waveform_time_unit': Units.CompoundUnit("1.0/{0} * s".format(
                 self.__nev_basic_header['sample_resolution'])),
-            'waveform_unit': pq.uV}
+            'waveform_unit': Units.uV}
 
         return nev_parameters[param_name]
 
@@ -1241,8 +1241,8 @@ class BlackrockIO(BaseIO):
                 self.__nsx_ext_header[nsx_nb].dtype.itemsize *
                 self.__nsx_basic_header[nsx_nb]['channel_count'],
             'sampling_rate':
-                30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+                30000 / self.__nsx_basic_header[nsx_nb]['period'] * Units.Hz,
+            'time_unit': Units.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
         return nsx_parameters[param_name]
@@ -1271,8 +1271,8 @@ class BlackrockIO(BaseIO):
                 self.__nsx_basic_header[nsx_nb]['bytes_in_headers'],
             'sampling_rate':
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+                self.__nsx_basic_header[nsx_nb]['period'] * Units.Hz,
+            'time_unit': Units.CompoundUnit("1.0/{0}*s".format(
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
                 self.__nsx_basic_header[nsx_nb]['period']))}
 
@@ -1557,7 +1557,7 @@ class BlackrockIO(BaseIO):
         """
         highest_res = self.__nev_params('event_unit')
 
-        if isinstance(n, pq.Quantity):
+        if isinstance(n, Units.Quantity):
             n = [n.rescale(highest_res)]
         elif hasattr(n, "__len__"):
             n = [tp.rescale(highest_res) if tp is not None
@@ -1838,7 +1838,7 @@ class BlackrockIO(BaseIO):
             sig_ch += float(min_ana[idx_ch])
 
         anasig = AnalogSignal(
-            signal=pq.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
+            signal=Units.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
             sampling_rate=sampling_rate,
             t_start=data_times[0].rescale(nsx_time_unit),
             name=labels[idx_ch],
@@ -1914,11 +1914,11 @@ class BlackrockIO(BaseIO):
                 connector_pin=self.__nev_ext_header[
                     b'NEUEVWAV']['connector_pin'][get_idx],
                 energy_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                    b'NEUEVWAV']['energy_threshold'][get_idx] * Units.uV,
                 hi_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                    b'NEUEVWAV']['hi_threshold'][get_idx] * Units.uV,
                 lo_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                    b'NEUEVWAV']['lo_threshold'][get_idx] * Units.uV,
                 nb_sorted_units=self.__nev_ext_header[
                     b'NEUEVWAV']['nb_sorted_units'][get_idx],
                 waveform_size=self.__waveform_size[self.__nev_spec](

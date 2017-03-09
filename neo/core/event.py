@@ -12,14 +12,15 @@ from __future__ import absolute_import, division, print_function
 import sys
 
 import numpy as np
-import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
+
+from neo import units as Units
 
 PY_VER = sys.version_info[0]
 
 
-class Event(BaseNeo, pq.Quantity):
+class Event(BaseNeo, Units.Quantity):
     '''
     Array of events.
 
@@ -55,13 +56,13 @@ class Event(BaseNeo, pq.Quantity):
 
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
+    _necessary_attrs = (('times', Units.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
                 file_origin=None, **annotations):
         if times is None:
-            times = np.array([]) * pq.s
+            times = np.array([]) * Units.s
         if labels is None:
             labels = np.array([], dtype='S')
         if units is None:
@@ -75,16 +76,16 @@ class Event(BaseNeo, pq.Quantity):
             if hasattr(units, 'dimensionality'):
                 dim = units.dimensionality
             else:
-                dim = pq.quantity.validate_dimensionality(units)
+                dim = Units.quantity.validate_dimensionality(units)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
+                not isinstance(list(dim.keys())[0], Units.UnitTime)):
             ValueError("Unit %s has dimensions %s, not [time]" %
                        (units, dim.simplified))
 
-        obj = pq.Quantity.__new__(cls, times, units=dim)
+        obj = Units.Quantity.__new__(cls, times, units=dim)
         obj.labels = labels
         obj.segment = None
         return obj
@@ -121,7 +122,7 @@ class Event(BaseNeo, pq.Quantity):
 
     @property
     def times(self):
-        return pq.Quantity(self)
+        return Units.Quantity(self)
 
     def merge(self, other):
         '''

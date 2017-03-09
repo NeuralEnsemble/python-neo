@@ -17,7 +17,7 @@ import os
 import struct
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, Epoch, Event
@@ -95,19 +95,19 @@ class NeuroExplorerIO(BaseIO):
             if entity_header['type'] == 0:
                 # neuron
                 if lazy:
-                    spike_times = [] * pq.s
+                    spike_times = [] * Units.s
                 else:
                     spike_times = np.memmap(self.filename, np.dtype('i4'), 'r',
                                             shape=(entity_header['n']),
                                             offset=entity_header['offset'])
                     spike_times = spike_times.astype('f8') / global_header[
-                        'freq'] * pq.s
+                        'freq'] * Units.s
                 sptr = SpikeTrain(
                     times=spike_times,
                     t_start=global_header['tbeg'] /
-                    global_header['freq'] * pq.s,
+                    global_header['freq'] * Units.s,
                     t_stop=global_header['tend'] /
-                    global_header['freq'] * pq.s,
+                    global_header['freq'] * Units.s,
                     name=entity_header['name'])
                 if lazy:
                     sptr.lazy_shape = entity_header['n']
@@ -117,13 +117,13 @@ class NeuroExplorerIO(BaseIO):
             if entity_header['type'] == 1:
                 # event
                 if lazy:
-                    event_times = [] * pq.s
+                    event_times = [] * Units.s
                 else:
                     event_times = np.memmap(self.filename, np.dtype('i4'), 'r',
                                             shape=(entity_header['n']),
                                             offset=entity_header['offset'])
                     event_times = event_times.astype('f8') / global_header[
-                        'freq'] * pq.s
+                        'freq'] * Units.s
                 labels = np.array([''] * event_times.size, dtype='S')
                 evar = Event(times=event_times, labels=labels,
                              channel_name=entity_header['name'])
@@ -134,20 +134,20 @@ class NeuroExplorerIO(BaseIO):
             if entity_header['type'] == 2:
                 # interval
                 if lazy:
-                    start_times = [] * pq.s
-                    stop_times = [] * pq.s
+                    start_times = [] * Units.s
+                    stop_times = [] * Units.s
                 else:
                     start_times = np.memmap(self.filename, np.dtype('i4'), 'r',
                                             shape=(entity_header['n']),
                                             offset=entity_header['offset'])
                     start_times = start_times.astype('f8') / global_header[
-                        'freq'] * pq.s
+                        'freq'] * Units.s
                     stop_times = np.memmap(self.filename, np.dtype('i4'), 'r',
                                            shape=(entity_header['n']),
                                            offset=entity_header['offset'] +
                                            entity_header['n'] * 4)
                     stop_times = stop_times.astype('f') / global_header[
-                        'freq'] * pq.s
+                        'freq'] * Units.s
                 epar = Epoch(times=start_times,
                              durations=stop_times - start_times,
                              labels=np.array([''] * start_times.size,
@@ -160,7 +160,7 @@ class NeuroExplorerIO(BaseIO):
             if entity_header['type'] == 3:
                 # spiketrain and wavefoms
                 if lazy:
-                    spike_times = [] * pq.s
+                    spike_times = [] * Units.s
                     waveforms = None
                 else:
 
@@ -168,7 +168,7 @@ class NeuroExplorerIO(BaseIO):
                                             shape=(entity_header['n']),
                                             offset=entity_header['offset'])
                     spike_times = spike_times.astype('f8') / global_header[
-                        'freq'] * pq.s
+                        'freq'] * Units.s
 
                     waveforms = np.memmap(self.filename, np.dtype('i2'), 'r',
                                           shape=(entity_header['n'], 1,
@@ -177,20 +177,20 @@ class NeuroExplorerIO(BaseIO):
                                           entity_header['n'] * 4)
                     waveforms = (waveforms.astype('f') *
                                  entity_header['ADtoMV'] +
-                                 entity_header['MVOffset']) * pq.mV
-                t_stop = global_header['tend'] / global_header['freq'] * pq.s
+                                 entity_header['MVOffset']) * Units.mV
+                t_stop = global_header['tend'] / global_header['freq'] * Units.s
                 if spike_times.size > 0:
                     t_stop = max(t_stop, max(spike_times))
                 sptr = SpikeTrain(
                     times=spike_times,
                     t_start=global_header['tbeg'] /
-                    global_header['freq'] * pq.s,
+                    global_header['freq'] * Units.s,
                     #~ t_stop = max(globalHeader['tend']/
-                    #~ globalHeader['freq']*pq.s,max(spike_times)),
+                    #~ globalHeader['freq']*Units.s,max(spike_times)),
                     t_stop=t_stop, name=entity_header['name'],
                     waveforms=waveforms,
-                    sampling_rate=entity_header['WFrequency'] * pq.Hz,
-                    left_sweep=0 * pq.ms)
+                    sampling_rate=entity_header['WFrequency'] * Units.Hz,
+                    left_sweep=0 * Units.ms)
                 if lazy:
                     sptr.lazy_shape = entity_header['n']
                 sptr.annotate(channel_index=entity_header['WireNumber'])
@@ -216,7 +216,7 @@ class NeuroExplorerIO(BaseIO):
                 del timestamps, fragment_starts
 
                 if lazy:
-                    signal = [] * pq.mV
+                    signal = [] * Units.mV
                 else:
                     signal = np.memmap(self.filename, np.dtype('i2'), 'r',
                                        shape=(entity_header['NPointsWave']),
@@ -224,11 +224,11 @@ class NeuroExplorerIO(BaseIO):
                     signal = signal.astype('f')
                     signal *= entity_header['ADtoMV']
                     signal += entity_header['MVOffset']
-                    signal = signal * pq.mV
+                    signal = signal * Units.mV
 
                 ana_sig = AnalogSignal(
-                    signal=signal, t_start=t_start * pq.s,
-                    sampling_rate=entity_header['WFrequency'] * pq.Hz,
+                    signal=signal, t_start=t_start * Units.s,
+                    sampling_rate=entity_header['WFrequency'] * Units.Hz,
                     name=entity_header['name'],
                     channel_index=entity_header['WireNumber'])
                 if lazy:
@@ -238,14 +238,14 @@ class NeuroExplorerIO(BaseIO):
             if entity_header['type'] == 6:
                 # markers  : TO TEST
                 if lazy:
-                    times = [] * pq.s
+                    times = [] * Units.s
                     labels = np.array([], dtype='S')
                     markertype = None
                 else:
                     times = np.memmap(self.filename, np.dtype('i4'), 'r',
                                       shape=(entity_header['n']),
                                       offset=entity_header['offset'])
-                    times = times.astype('f8') / global_header['freq'] * pq.s
+                    times = times.astype('f8') / global_header['freq'] * Units.s
                     fid.seek(entity_header['offset'] + entity_header['n'] * 4)
                     markertype = fid.read(64).replace('\x00', '')
                     labels = np.memmap(

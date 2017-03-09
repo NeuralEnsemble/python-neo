@@ -33,7 +33,7 @@ from os import path
 
 # numpy and quantities are already required by neo
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 # needed core neo modules
 from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
@@ -286,16 +286,16 @@ class BrainwareF32IO(BaseIO):
             self.__spiketimes = []
 
         if self.__lazy:
-            train = SpikeTrain(pq.Quantity([], dtype=np.float32,
-                                           units=pq.ms),
-                               t_start=0*pq.ms, t_stop=self.__t_stop * pq.ms,
+            train = SpikeTrain(Units.Quantity([], dtype=np.float32,
+                                           units=Units.ms),
+                               t_start=0*Units.ms, t_stop=self.__t_stop * Units.ms,
                                file_origin=self._filename)
             train.lazy_shape = len(self.__spiketimes)
         else:
-            times = pq.Quantity(self.__spiketimes, dtype=np.float32,
-                                units=pq.ms)
+            times = Units.Quantity(self.__spiketimes, dtype=np.float32,
+                                units=Units.ms)
             train = SpikeTrain(times,
-                               t_start=0*pq.ms, t_stop=self.__t_stop * pq.ms,
+                               t_start=0*Units.ms, t_stop=self.__t_stop * Units.ms,
                                file_origin=self._filename)
 
         self.__seg.spiketrains = [train]

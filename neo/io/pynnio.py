@@ -15,7 +15,7 @@ Authors: Andrew Davison, Pierre Yger
 
 from itertools import chain
 import numpy
-import quantities as pq
+from neo import units as Units
 import warnings
 
 from neo.io.baseio import BaseIO
@@ -29,9 +29,9 @@ except NameError:
 
 
 UNITS_MAP = {
-    'spikes': pq.ms,
-    'v': pq.mV,
-    'gsyn': pq.UnitQuantity('microsiemens', 1e-6*pq.S, 'uS', 'µS'), # checked
+    'spikes': Units.ms,
+    'v': Units.mV,
+    'gsyn': Units.UnitQuantity('microsiemens', 1e-6*Units.S, 'uS', 'µS'), # checked
 }
 
 
@@ -69,7 +69,7 @@ class BasePyNNIO(BaseIO):
         if lazy and data.size > 0:
             signal = AnalogSignal([],
                                   units=self._determine_units(metadata),
-                                  sampling_period=metadata['dt']*pq.ms)
+                                  sampling_period=metadata['dt']*Units.ms)
             signal.lazy_shape = None
         else:
             arr = numpy.vstack(self._extract_array(data, channel_index)
@@ -77,7 +77,7 @@ class BasePyNNIO(BaseIO):
             if len(arr) > 0:
                 signal = AnalogSignal(arr.T,
                                       units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms)
+                                      sampling_period=metadata['dt']*Units.ms)
         if signal is not None:
             signal.annotate(label=metadata["label"],
                             variable=metadata["variable"])
@@ -87,12 +87,12 @@ class BasePyNNIO(BaseIO):
         spiketrain = None
         if lazy:
             if channel_index in data[:, 1]:
-                spiketrain = SpikeTrain([], units=pq.ms, t_stop=0.0)
+                spiketrain = SpikeTrain([], units=Units.ms, t_stop=0.0)
                 spiketrain.lazy_shape = None
         else:
             spike_times = self._extract_array(data, channel_index)
             if len(spike_times) > 0:
-                spiketrain = SpikeTrain(spike_times, units=pq.ms, t_stop=spike_times.max())
+                spiketrain = SpikeTrain(spike_times, units=Units.ms, t_stop=spike_times.max())
         if spiketrain is not None:
             spiketrain.annotate(label=metadata["label"],
                                 channel_index=channel_index,
@@ -139,7 +139,7 @@ class BasePyNNIO(BaseIO):
         if 'label' not in metadata:
             metadata['label'] = 'unknown'
         if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
-            metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
+            metadata['dt'] = s0.sampling_period.rescale(Units.ms).magnitude
         metadata['n'] = n
         data = numpy.empty((n, 2))
         # if the 'variable' annotation is a standard one from PyNN, we rescale

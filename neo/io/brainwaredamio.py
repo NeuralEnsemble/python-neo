@@ -35,7 +35,7 @@ import os.path
 
 # numpy and quantities are already required by neo
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 # needed core neo modules
 from neo.core import (AnalogSignal, Block,
@@ -228,17 +228,17 @@ class BrainwareDamIO(BaseIO):
 
         # handle lazy loading
         if lazy:
-            sig = AnalogSignal([], t_start=t_start*pq.d,
+            sig = AnalogSignal([], t_start=t_start*Units.d,
                                file_origin=self._filename,
-                               sampling_period=1.*pq.s,
-                               units=pq.mV,
+                               sampling_period=1.*Units.s,
+                               units=Units.mV,
                                dtype=np.float)
             sig.lazy_shape = len(signal)
         else:
-            sig = AnalogSignal(signal.astype(np.float)*pq.mV,
-                               t_start=t_start*pq.d,
+            sig = AnalogSignal(signal.astype(np.float)*Units.mV,
+                               t_start=t_start*Units.d,
                                file_origin=self._filename,
-                               sampling_period=1.*pq.s,
+                               sampling_period=1.*Units.s,
                                copy=False)
         # Note: setting the sampling_period to 1 s is arbitrary
 

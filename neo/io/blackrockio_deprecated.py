@@ -7,7 +7,7 @@ import logging
 import struct
 
 import numpy as np
-import quantities as pq
+from neo import units as Units 
 
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment,
@@ -56,7 +56,7 @@ class BlackrockIO(BaseIO):
     write_params       = None
 
 
-    def __init__(self, filename, full_range=8192.*pq.mV) :
+    def __init__(self, filename, full_range=8192.*Units.mV) :
         """Initialize Blackrock reader.
 
         **Arguments**
@@ -186,8 +186,8 @@ class BlackrockIO(BaseIO):
 
             # Create an AnalogSignal with the data in it
             anasig = AnalogSignal(signal=sig,
-                sampling_rate=self.header.f_samp*pq.Hz,
-                t_start=t_start*pq.s, file_origin=self.filename,
+                sampling_rate=self.header.f_samp*Units.Hz,
+                t_start=t_start*Units.s, file_origin=self.filename,
                 description='Channel %d from %f to %f' % (ch, t_start, t_stop),
                 channel_index=int(ch))
 

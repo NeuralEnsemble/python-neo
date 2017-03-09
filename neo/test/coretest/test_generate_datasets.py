@@ -14,7 +14,7 @@ except ImportError:
 from datetime import datetime
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.core import (class_by_name, Block, Segment,
                       ChannelIndex, Unit,
@@ -334,12 +334,12 @@ class Test__get_fake_value(unittest.TestCase):
 
     def test__t_start(self):
         name = 't_start'
-        datatype = pq.Quantity
-        targ = 0.0 * pq.millisecond
+        datatype = Units.Quantity
+        targ = 0.0 * Units.millisecond
 
         res = get_fake_value(name, datatype)
-        self.assertTrue(isinstance(res, pq.Quantity))
-        self.assertEqual(res.units, pq.millisecond)
+        self.assertTrue(isinstance(res, Units.Quantity))
+        self.assertEqual(res.units, Units.millisecond)
         assert_arrays_equal(targ, res)
 
         self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
@@ -347,12 +347,12 @@ class Test__get_fake_value(unittest.TestCase):
 
     def test__t_stop(self):
         name = 't_stop'
-        datatype = pq.Quantity
-        targ = 1.0 * pq.millisecond
+        datatype = Units.Quantity
+        targ = 1.0 * Units.millisecond
 
         res = get_fake_value(name, datatype)
-        self.assertTrue(isinstance(res, pq.Quantity))
-        self.assertEqual(res.units, pq.millisecond)
+        self.assertTrue(isinstance(res, Units.Quantity))
+        self.assertEqual(res.units, Units.millisecond)
         assert_arrays_equal(targ, res)
 
         self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
@@ -360,12 +360,12 @@ class Test__get_fake_value(unittest.TestCase):
 
     def test__sampling_rate(self):
         name = 'sampling_rate'
-        datatype = pq.Quantity
-        targ = 10000.0 * pq.Hz
+        datatype = Units.Quantity
+        targ = 10000.0 * Units.Hz
 
         res = get_fake_value(name, datatype)
-        self.assertTrue(isinstance(res, pq.Quantity))
-        self.assertEqual(res.units, pq.Hz)
+        self.assertTrue(isinstance(res, Units.Quantity))
+        self.assertEqual(res.units, Units.Hz)
         assert_arrays_equal(targ, res)
 
         self.assertRaises(ValueError, get_fake_value, name, datatype, dim=1)
@@ -447,30 +447,30 @@ class Test__get_fake_value(unittest.TestCase):
 
     def test__quantity(self):
         name = 'test__quantity'
-        datatype = pq.Quantity
+        datatype = Units.Quantity
         dim = 2
 
         size = []
         units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = pq.Quantity(np.random.random(size)*1000, units=units)
+        targ = Units.Quantity(np.random.random(size)*1000, units=units)
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
-        self.assertTrue(isinstance(res, pq.Quantity))
-        self.assertEqual(res.units, getattr(pq, units))
+        self.assertTrue(isinstance(res, Units.Quantity))
+        self.assertEqual(res.units, getattr(Units, units))
         assert_arrays_equal(targ, res)
 
     def test__quantity_force_units(self):
         name = 'test__quantity'
         datatype = np.ndarray
         dim = 2
-        units = pq.ohm
+        units = Units.ohm
 
         size = []
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = pq.Quantity(np.random.random(size)*1000, units=units)
+        targ = Units.Quantity(np.random.random(size)*1000, units=units)
 
         res = get_fake_value(name, datatype, dim=dim, seed=0, units=units)
         self.assertTrue(isinstance(res, np.ndarray))

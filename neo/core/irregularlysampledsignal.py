@@ -23,10 +23,10 @@ the old object.
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
+from neo import units as Units
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
@@ -40,7 +40,7 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
                description=description, **annotations)
 
 
-class IrregularlySampledSignal(BaseNeo, pq.Quantity):
+class IrregularlySampledSignal(BaseNeo, Units.Quantity):
     '''
     An array of one or more analog signals with samples taken at arbitrary time points.
 
@@ -106,8 +106,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('signal', pq.Quantity, 2))
+    _necessary_attrs = (('times', Units.Quantity, 1),
+                        ('signal', Units.Quantity, 2))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, file_origin=None,
@@ -124,7 +124,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                 units = signal.units
             else:
                 raise ValueError("Units must be specified")
-        elif isinstance(signal, pq.Quantity):
+        elif isinstance(signal, Units.Quantity):
              # could improve this test, what if units is a string?
             if units != signal.units:
                 signal = signal.rescale(units)
@@ -133,19 +133,19 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                 time_units = times.units
             else:
                 raise ValueError("Time units must be specified")
-        elif isinstance(times, pq.Quantity):
+        elif isinstance(times, Units.Quantity):
             # could improve this test, what if units is a string?
             if time_units != times.units:
                 times = times.rescale(time_units)
         # should check time units have correct dimensions
-        obj = pq.Quantity.__new__(cls, signal, units=units,
+        obj = Units.Quantity.__new__(cls, signal, units=units,
                                   dtype=dtype, copy=copy)
         if obj.ndim == 1:
             obj = obj.reshape(-1, 1)
         if len(times) != obj.shape[0]:
             raise ValueError("times array and signal array must "
                              "have same length")
-        obj.times = pq.Quantity(times, units=time_units,
+        obj.times = Units.Quantity(times, units=time_units,
                                 dtype=float, copy=copy)
         obj.segment = None
         obj.channel_index = None
@@ -226,11 +226,11 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
         if isinstance(i, int):  # a single point in time across all channels
-            obj = pq.Quantity(obj.magnitude, units=obj.units)
+            obj = Units.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
             if isinstance(j, int):  # a single point in time across some channels
-                obj = pq.Quantity(obj.magnitude, units=obj.units)
+                obj = Units.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
                     obj.times = self.times.__getitem__(j)
@@ -435,15 +435,15 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         Return a copy of the :class:`IrregularlySampledSignal` converted to the
         specified units
         '''
-        to_dims = pq.quantity.validate_dimensionality(units)
+        to_dims = Units.quantity.validate_dimensionality(units)
         if self.dimensionality == to_dims:
             to_u = self.units
             signal = np.array(self)
         else:
-            to_u = pq.Quantity(1.0, to_dims)
-            from_u = pq.Quantity(1.0, self.dimensionality)
+            to_u = Units.Quantity(1.0, to_dims)
+            from_u = Units.Quantity(1.0, self.dimensionality)
             try:
-                cf = pq.quantity.get_conversion_factor(from_u, to_u)
+                cf = Units.quantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
                 raise ValueError('Unable to convert between units of "%s" \
                                  and "%s"' % (from_u._dimensionality,

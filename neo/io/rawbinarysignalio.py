@@ -14,7 +14,7 @@ Author: sgarcia
 import os
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal
@@ -82,9 +82,9 @@ class RawBinarySignalIO(BaseIO):
                                         cascade = True,
                                         lazy = False,
 
-                                        sampling_rate = 1.*pq.Hz,
-                                        t_start = 0.*pq.s,
-                                        unit = pq.V,
+                                        sampling_rate = 1.*Units.Hz,
+                                        t_start = 0.*Units.s,
+                                        unit = Units.V,
 
                                         nbchannel = 1,
                                         bytesoffset = 0,
@@ -114,13 +114,13 @@ class RawBinarySignalIO(BaseIO):
 
         if type(sampling_rate) == float or type(sampling_rate)==int:
             # if not quantitities Hz by default
-            sampling_rate = sampling_rate*pq.Hz
+            sampling_rate = sampling_rate*Units.Hz
 
         if type(t_start) == float or type(t_start)==int:
             # if not quantitities s by default
-            t_start = t_start*pq.s
+            t_start = t_start*Units.s
 
-        unit = pq.Quantity(1, unit)
+        unit = Units.Quantity(1, unit)
 
         if lazy:
             sig = []

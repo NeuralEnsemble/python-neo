@@ -25,7 +25,7 @@ import os
 import re
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, Event
@@ -150,7 +150,7 @@ class ElanIO(BaseIO):
 
         # sampling rate sample
         l = f.readline()
-        sampling_rate = 1. / float(l) * pq.Hz
+        sampling_rate = 1. / float(l) * Units.Hz
 
         # nb channel
         l = f.readline()
@@ -207,13 +207,13 @@ class ElanIO(BaseIO):
                     (max_physic[c] - min_physic[c]) + min_physic[c]
 
             try:
-                unit = pq.Quantity(1, units[c])
+                unit = Units.Quantity(1, units[c])
             except:
-                unit = pq.Quantity(1, '')
+                unit = Units.Quantity(1, '')
 
             ana_sig = AnalogSignal(
                 sig * unit, sampling_rate=sampling_rate,
-                t_start=0. * pq.s, name=labels[c], channel_index=c)
+                t_start=0. * Units.s, name=labels[c], channel_index=c)
             if lazy:
                 ana_sig.lazy_shape = data.shape[0]
             ana_sig.annotate(channel_name=labels[c])
@@ -230,11 +230,11 @@ class ElanIO(BaseIO):
             labels.append(str(r[0][1]))
             reject_codes.append(str(r[0][2]))
         if lazy:
-            times = [] * pq.S
+            times = [] * Units.S
             labels = np.array([], dtype='S')
             reject_codes = []
         else:
-            times = np.array(times) * pq.s
+            times = np.array(times) * Units.s
             labels = np.array(labels)
             reject_codes = np.array(reject_codes)
         ea = Event(times=times, labels=labels, reject_codes=reject_codes)
@@ -308,9 +308,9 @@ class ElanIO(BaseIO):
         #~ for i, anaSig in enumerate(seg._analogsignals) :
         #~ # in elan file unit is supposed to be in microV to have a big range
         #~ # so auto translate
-        #~ if anaSig.units == pq.V or anaSig.units == pq.mV:
+        #~ if anaSig.units == Units.V or anaSig.units == Units.mV:
         #~ s = anaSig.rescale('uV').magnitude
-        #~ elif anaSig.units == pq.uV:
+        #~ elif anaSig.units == Units.uV:
         #~ s = anaSig.magnitude
         #~ else:
         #~ # automatic range in arbitrry unit

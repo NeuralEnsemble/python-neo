@@ -9,7 +9,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 try:
     from IPython.lib.pretty import pretty
@@ -36,7 +36,7 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1)
+        times = get_fake_value('times', Units.Quantity, seed=0, dim=1)
         labels = get_fake_value('labels', np.ndarray, seed=1, dim=1, dtype='S')
         name = get_fake_value('name', str, seed=2, obj=Event)
         description = get_fake_value('description', str,
@@ -92,7 +92,7 @@ class Test__generate_datasets(unittest.TestCase):
 class TestEvent(unittest.TestCase):
     def test_Event_creation(self):
         params = {'test2': 'y1', 'test3': True}
-        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+        evt = Event([1.1, 1.5, 1.7]*Units.ms,
                     labels=np.array(['test event 1',
                                      'test event 2',
                                      'test event 3'], dtype='S'),
@@ -102,7 +102,7 @@ class TestEvent(unittest.TestCase):
         evt.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(evt)
 
-        assert_arrays_equal(evt.times, [1.1, 1.5, 1.7]*pq.ms)
+        assert_arrays_equal(evt.times, [1.1, 1.5, 1.7]*Units.ms)
         assert_arrays_equal(evt.labels, np.array(['test event 1',
                                                   'test event 2',
                                                   'test event 3'], dtype='S'))
@@ -116,7 +116,7 @@ class TestEvent(unittest.TestCase):
 
     def test_Event_repr(self):
         params = {'test2': 'y1', 'test3': True}
-        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+        evt = Event([1.1, 1.5, 1.7]*Units.ms,
                     labels=np.array(['test event 1',
                                      'test event 2',
                                      'test event 3'], dtype='S'),
@@ -139,21 +139,21 @@ class TestEvent(unittest.TestCase):
         paramstarg = {'test2': 'yes;no',
                       'test3': True,
                       'test4': False}
-        evt1 = Event([1.1, 1.5, 1.7]*pq.ms,
+        evt1 = Event([1.1, 1.5, 1.7]*Units.ms,
                      labels=np.array(['test event 1 1',
                                       'test event 1 2',
                                       'test event 1 3'], dtype='S'),
                      name='test', description='tester 1',
                      file_origin='test.file',
                      test1=1, **params1)
-        evt2 = Event([2.1, 2.5, 2.7]*pq.us,
+        evt2 = Event([2.1, 2.5, 2.7]*Units.us,
                      labels=np.array(['test event 2 1',
                                       'test event 2 2',
                                       'test event 2 3'], dtype='S'),
                      name='test', description='tester 2',
                      file_origin='test.file',
                      test1=1, **params2)
-        evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027]*pq.ms,
+        evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027]*Units.ms,
                         labels=np.array(['test event 1 1',
                                          'test event 1 2',
                                          'test event 1 3',
@@ -174,7 +174,7 @@ class TestEvent(unittest.TestCase):
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
-        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+        evt = Event([1.1, 1.5, 1.7]*Units.ms,
                     labels=np.array(['test event 1',
                                      'test event 2',
                                      'test event 3'], dtype='S'),
@@ -204,7 +204,7 @@ class TestEvent(unittest.TestCase):
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
-        evt = Event([1.1, 1.5, 1.7]*pq.ms,
+        evt = Event([1.1, 1.5, 1.7]*Units.ms,
                     labels=np.array(['test event 1',
                                      'test event 2',
                                      'test event 3'], dtype='S'),
@@ -222,12 +222,12 @@ class TestEvent(unittest.TestCase):
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
-        self.dataquant = self.data*pq.ms
+        self.dataquant = self.data*Units.ms
         self.event = Event(self.dataquant)
 
     def test_duplicate_with_new_data(self):
         signal1 = self.event
-        new_data = np.sort(np.random.uniform(0, 100, (self.event))) * pq.ms
+        new_data = np.sort(np.random.uniform(0, 100, (self.event))) * Units.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)

@@ -25,7 +25,7 @@ import itertools
 from six import string_types
 from hashlib import md5
 
-import quantities as pq
+from neo import units as Units
 import numpy as np
 
 from neo.io.baseio import BaseIO
@@ -276,7 +276,7 @@ class NixIO(BaseIO):
         if "coordinates" in chx[0]:
             coord_units = chx[0]["coordinates.units"]
             coord_values = list(c["coordinates"] for c in chx)
-            neo_attrs["coordinates"] = pq.Quantity(coord_values, coord_units)
+            neo_attrs["coordinates"] = Units.Quantity(coord_values, coord_units)
         rcg = ChannelIndex(**neo_attrs)
         self._object_map[nix_source.id] = rcg
         return rcg
@@ -305,30 +305,30 @@ class NixIO(BaseIO):
 
         unit = nix_da_group[0].unit
         if lazy:
-            signaldata = pq.Quantity(np.empty(0), unit)
+            signaldata = Units.Quantity(np.empty(0), unit)
             lazy_shape = (len(nix_da_group[0]), len(nix_da_group))
         else:
             signaldata = np.array([d[:] for d in nix_da_group]).transpose()
-            signaldata = pq.Quantity(signaldata, unit)
+            signaldata = Units.Quantity(signaldata, unit)
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
                 isinstance(timedim, nixtypes["SampledDimension"])):
             if lazy:
-                sampling_period = pq.Quantity(1, timedim.unit)
-                t_start = pq.Quantity(0, timedim.unit)
+                sampling_period = Units.Quantity(1, timedim.unit)
+                t_start = Units.Quantity(0, timedim.unit)
             else:
                 if "sampling_interval.units" in metadata.props:
                     sample_units = metadata["sampling_interval.units"]
                 else:
                     sample_units = timedim.unit
-                sampling_period = pq.Quantity(timedim.sampling_interval,
+                sampling_period = Units.Quantity(timedim.sampling_interval,
                                               sample_units)
                 if "t_start.units" in metadata.props:
                     tsunits = metadata["t_start.units"]
                 else:
                     tsunits = timedim.unit
-                t_start = pq.Quantity(timedim.offset, tsunits)
+                t_start = Units.Quantity(timedim.offset, tsunits)
             neo_signal = AnalogSignal(
                 signal=signaldata, sampling_period=sampling_period,
                 t_start=t_start, **neo_attrs
@@ -336,9 +336,9 @@ class NixIO(BaseIO):
         elif neo_type == "neo.irregularlysampledsignal"\
                 or isinstance(timedim, nixtypes["RangeDimension"]):
             if lazy:
-                times = pq.Quantity(np.empty(0), timedim.unit)
+                times = Units.Quantity(np.empty(0), timedim.unit)
             else:
-                times = pq.Quantity(timedim.ticks, timedim.unit)
+                times = Units.Quantity(timedim.ticks, timedim.unit)
             neo_signal = IrregularlySampledSignal(
                 signal=signaldata, times=times, **neo_attrs
             )
@@ -356,17 +356,17 @@ class NixIO(BaseIO):
 
         time_unit = nix_mtag.positions.unit
         if lazy:
-            times = pq.Quantity(np.empty(0), time_unit)
+            times = Units.Quantity(np.empty(0), time_unit)
             lazy_shape = np.shape(nix_mtag.positions)
         else:
-            times = pq.Quantity(nix_mtag.positions, time_unit)
+            times = Units.Quantity(nix_mtag.positions, time_unit)
             lazy_shape = None
         if neo_type == "neo.epoch":
             if lazy:
-                durations = pq.Quantity(np.empty(0), nix_mtag.extents.unit)
+                durations = Units.Quantity(np.empty(0), nix_mtag.extents.unit)
                 labels = np.empty(0, dtype='S')
             else:
-                durations = pq.Quantity(nix_mtag.extents, nix_mtag.extents.unit)
+                durations = Units.Quantity(nix_mtag.extents, nix_mtag.extents.unit)
                 labels = np.array(nix_mtag.positions.dimensions[0].labels,
                                   dtype="S")
             eest = Epoch(times=times, durations=durations, labels=labels,
@@ -385,7 +385,7 @@ class NixIO(BaseIO):
                     del neo_attrs["t_start.units"]
                 else:
                     t_start_units = time_unit
-                t_start = pq.Quantity(neo_attrs["t_start"], t_start_units)
+                t_start = Units.Quantity(neo_attrs["t_start"], t_start_units)
                 del neo_attrs["t_start"]
             else:
                 t_start = None
@@ -395,7 +395,7 @@ class NixIO(BaseIO):
                     del neo_attrs["t_stop.units"]
                 else:
                     t_stop_units = time_unit
-                t_stop = pq.Quantity(neo_attrs["t_stop"], t_stop_units)
+                t_stop = Units.Quantity(neo_attrs["t_stop"], t_stop_units)
                 del neo_attrs["t_stop"]
             else:
                 t_stop = None
@@ -415,20 +415,20 @@ class NixIO(BaseIO):
                 wfda = nix_mtag.features[0].data
                 wftime = self._get_time_dimension(wfda)
                 if lazy:
-                    eest.waveforms = pq.Quantity(np.empty((0, 0, 0)), wfda.unit)
-                    eest.sampling_period = pq.Quantity(1, wftime.unit)
-                    eest.left_sweep = pq.Quantity(0, wftime.unit)
+                    eest.waveforms = Units.Quantity(np.empty((0, 0, 0)), wfda.unit)
+                    eest.sampling_period = Units.Quantity(1, wftime.unit)
+                    eest.left_sweep = Units.Quantity(0, wftime.unit)
                 else:
-                    eest.waveforms = pq.Quantity(wfda, wfda.unit)
+                    eest.waveforms = Units.Quantity(wfda, wfda.unit)
                     if interval_units is None:
                         interval_units = wftime.unit
-                    eest.sampling_period = pq.Quantity(
+                    eest.sampling_period = Units.Quantity(
                         wftime.sampling_interval, interval_units
                     )
                     if left_sweep_units is None:
                         left_sweep_units = wftime.unit
                     if "left_sweep" in wfda.metadata:
-                        eest.left_sweep = pq.Quantity(
+                        eest.left_sweep = Units.Quantity(
                             wfda.metadata["left_sweep"], left_sweep_units
                         )
         else:
@@ -546,14 +546,14 @@ class NixIO(BaseIO):
         newhash = self._hash_object(obj)
         if oldhash != newhash:
             attr = self._neo_attr_to_nix(obj)
-            if isinstance(obj, pq.Quantity):
+            if isinstance(obj, Units.Quantity):
                 attr.update(self._neo_data_to_nix(obj))
             if oldhash is None:
                 nixobj = self._create_nix_obj(loc, attr)
             else:
                 nixobj = self._get_object_at(objpath)
             self._write_attr_annotations(nixobj, attr, objpath)
-            if isinstance(obj, pq.Quantity):
+            if isinstance(obj, Units.Quantity):
                 self._write_data(nixobj, attr, objpath)
         else:
             nixobj = self._get_object_at(objpath)
@@ -1109,7 +1109,7 @@ class NixIO(BaseIO):
         :return: The newly created property
         """
 
-        if isinstance(v, pq.Quantity):
+        if isinstance(v, Units.Quantity):
             if len(v.shape):
                 section[name] = list(nixio.Value(vv) for vv in v.magnitude)
             else:
@@ -1125,7 +1125,7 @@ class NixIO(BaseIO):
             values = []
             unit = None
             for item in v:
-                if isinstance(item, pq.Quantity):
+                if isinstance(item, Units.Quantity):
                     unit = str(item.dimensionality)
                     item = nixio.Value(item.magnitude.item())
                 elif isinstance(item, Iterable):
@@ -1182,7 +1182,7 @@ class NixIO(BaseIO):
                 values = prop.values
                 values = list(v.value for v in values)
                 if prop.unit:
-                    values = pq.Quantity(values, prop.unit)
+                    values = Units.Quantity(values, prop.unit)
                 if len(values) == 1:
                     neo_attrs[prop.name] = values[0]
                 else:

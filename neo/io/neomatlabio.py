@@ -18,7 +18,7 @@ from distutils import version
 import re
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 # check scipy
 try:
@@ -143,7 +143,8 @@ class NeoMatlabIO(BaseIO):
         This Python code generates the same block as in the previous scenario::
 
             import neo
-            import quantities as pq
+            from neo.units import Units
+            Units = Units() 
             from scipy import rand, array
 
             bl = neo.Block(name='my block with neo')
@@ -151,13 +152,13 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s, sampling_rate=100*pq.Hz)
+                    anasig = neo.AnalogSignal(rand(100)*Units.mV, t_start=0*Units.s, sampling_rate=100*Units.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
-                    sptr = neo.SpikeTrain(rand(40)*pq.ms, t_start=0*pq.ms, t_stop=10*pq.ms)
+                    sptr = neo.SpikeTrain(rand(40)*Units.ms, t_start=0*Units.ms, t_stop=10*Units.ms)
                     seg.spiketrains.append(sptr)
-                ev = neo.Event([0, 10, 30]*pq.ms, labels=array(['trig0', 'trig1', 'trig2']))
-                ep = neo.Epoch([10, 20]*pq.ms, durations=[4, 10]*pq.ms, labels=array(['a0', 'a1']))
+                ev = neo.Event([0, 10, 30]*Units.ms, labels=array(['trig0', 'trig1', 'trig2']))
+                ep = neo.Epoch([10, 20]*Units.ms, durations=[4, 10]*Units.ms, labels=array(['a0', 'a1']))
                 seg.events.append(ev)
                 seg.epochs.append(ep)
 
@@ -295,7 +296,7 @@ class NeoMatlabIO(BaseIO):
             if getattr(ob, attrname) is None:
                 continue
 
-            if attrtype == pq.Quantity:
+            if attrtype == Units.Quantity:
                 #ndim = attr[2]
                 struct[attrname] = getattr(ob, attrname).magnitude
                 struct[attrname + '_units'] = getattr(
@@ -313,7 +314,7 @@ class NeoMatlabIO(BaseIO):
         # check if hinerits Quantity
         #~ is_quantity = False
         #~ for attr in cl._necessary_attrs:
-            #~ if attr[0] == '' and attr[1] == pq.Quantity:
+            #~ if attr[0] == '' and attr[1] == Units.Quantity:
                 #~ is_quantity = True
                 #~ break
         #~ is_quantiy = hasattr(cl, '_quantity_attr')
@@ -327,7 +328,7 @@ class NeoMatlabIO(BaseIO):
                 getattr(struct, quantity_attr + '_units')))
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
                 # put fake value for now, put correct value later
-                data_complement["sampling_rate"] = 0 * pq.kHz
+                data_complement["sampling_rate"] = 0 * Units.kHz
             if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_stop"] = arr.max()
@@ -396,17 +397,17 @@ class NeoMatlabIO(BaseIO):
                         ob.lazy_shape = item.shape
                     else:
                         item = item.astype(dt)
-                elif attrtype == pq.Quantity:
+                elif attrtype == Units.Quantity:
                     ndim = dict_attributes[attrname][1]
                     units = str(getattr(struct, attrname+'_units'))
                     if ndim == 0:
-                        item = pq.Quantity(item, units)
+                        item = Units.Quantity(item, units)
                     else:
                         if lazy:
-                            item = pq.Quantity([], units)
+                            item = Units.Quantity([], units)
                             item.lazy_shape = item.shape
                         else:
-                            item = pq.Quantity(item, units)
+                            item = Units.Quantity(item, units)
                 else:
                     item = attrtype(item)
 

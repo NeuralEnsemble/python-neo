@@ -32,7 +32,7 @@ from __future__ import absolute_import
 import sys
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
@@ -132,9 +132,9 @@ class StimfitIO(BaseIO):
         if not cascade:
             return bl
 
-        dt = np.round(self.stfio_rec.dt * 1e-3, 9) * pq.s  # ms to s
+        dt = np.round(self.stfio_rec.dt * 1e-3, 9) * Units.s  # ms to s
         sampling_rate = 1.0/dt
-        t_start = 0 * pq.s
+        t_start = 0 * Units.s
 
         # iterate over sections first:
         for j, recseg in enumerate(self.stfio_rec[0]):
@@ -146,14 +146,14 @@ class StimfitIO(BaseIO):
                 name = recsig.name
                 unit = recsig.yunits
                 try:
-                    pq.Quantity(1, unit)
+                    Units.Quantity(1, unit)
                 except:
                     unit = ''
 
                 if lazy:
-                    signal = pq.Quantity([], unit)
+                    signal = Units.Quantity([], unit)
                 else:
-                    signal = pq.Quantity(recsig[j], unit)
+                    signal = Units.Quantity(recsig[j], unit)
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                       t_start=t_start, name=str(name),
                                       channel_index=i)

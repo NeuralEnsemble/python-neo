@@ -15,7 +15,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.core import Block, ChannelIndex, Segment, SpikeTrain, Unit
 from neo.io import BrainwareF32IO
@@ -85,7 +85,7 @@ def proc_f32(filename):
 
             paramnames = ['Param%s' % i for i in range(len(stim))]
             params = dict(zip(paramnames, stim))
-            train = SpikeTrain(trainpts, units=pq.ms,
+            train = SpikeTrain(trainpts, units=Units.ms,
                                t_start=0, t_stop=sweeplength,
                                file_origin=filenameorig)
 

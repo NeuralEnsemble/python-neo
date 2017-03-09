@@ -14,7 +14,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 try:
     from IPython.lib.pretty import pretty
@@ -737,7 +737,7 @@ class TestSegment(unittest.TestCase):
                 anasigarr = AnalogSignal(np.zeros((sig_len,
                                                         len(unit_with_sig))),
                                               units='nA',
-                                              sampling_rate=1000.*pq.Hz,
+                                              sampling_rate=1000.*Units.Hz,
                                               channel_indexes=unit_with_sig)
                 seg.analogsignals.append(anasigarr)
 

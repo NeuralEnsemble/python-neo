@@ -43,7 +43,7 @@ import sys
 
 # numpy and quantities are already required by neo
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 # needed core neo modules
 from neo.core import (Block, Event,
@@ -494,22 +494,22 @@ class BrainwareSrcIO(BaseIO):
                                     'skipping', type(data_obj))
 
     _default_datetime = datetime(1, 1, 1)
-    _default_t_start = pq.Quantity(0., units=pq.ms, dtype=np.float32)
-    _init_default_spiketrain = SpikeTrain(times=pq.Quantity([], units=pq.ms,
+    _default_t_start = Units.Quantity(0., units=Units.ms, dtype=np.float32)
+    _init_default_spiketrain = SpikeTrain(times=Units.Quantity([], units=Units.ms,
                                                             dtype=np.float32),
-                                          t_start=pq.Quantity(0, units=pq.ms,
+                                          t_start=Units.Quantity(0, units=Units.ms,
                                                               dtype=np.float32
                                                               ),
-                                          t_stop=pq.Quantity(1, units=pq.ms,
+                                          t_stop=Units.Quantity(1, units=Units.ms,
                                                              dtype=np.float32),
-                                          waveforms=pq.Quantity([[[]]],
+                                          waveforms=Units.Quantity([[[]]],
                                                                 dtype=np.int8,
-                                                                units=pq.mV),
+                                                                units=Units.mV),
                                           dtype=np.float32, copy=False,
                                           timestamp=_default_datetime,
                                           respwin=np.array([], dtype=np.int32),
                                           dama_index=-1,
-                                          trig2=pq.Quantity([], units=pq.ms,
+                                          trig2=Units.Quantity([], units=Units.ms,
                                                             dtype=np.uint8),
                                           side='')
 
@@ -519,7 +519,7 @@ class BrainwareSrcIO(BaseIO):
         with single events into one long Event
         """
         if not events or self._lazy:
-            event = Event(times=pq.Quantity([], units=pq.s),
+            event = Event(times=Units.Quantity([], units=Units.s),
                           labels=np.array([], dtype='S'),
                           senders=np.array([], dtype='S'),
                           t_start=0)
@@ -537,7 +537,7 @@ class BrainwareSrcIO(BaseIO):
 
         times = np.array(times, dtype=np.float32)
         t_start = times.min()
-        times = pq.Quantity(times-t_start, units=pq.d).rescale(pq.s)
+        times = Units.Quantity(times-t_start, units=Units.d).rescale(Units.s)
 
         labels = np.array(labels)
         senders = np.array(senders)
@@ -593,7 +593,7 @@ class BrainwareSrcIO(BaseIO):
             # get the times of the spiketrains and combine them
             waveforms = [itrain.waveforms for itrain in spiketrains]
             rawtrains = np.array(np.concatenate(spiketrains, axis=1))
-            times = pq.Quantity(rawtrains, units=pq.ms, copy=False)
+            times = Units.Quantity(rawtrains, units=Units.ms, copy=False)
             lens1 = np.array([wave.shape[1] for wave in waveforms])
             lens2 = np.array([wave.shape[2] for wave in waveforms])
             if lens1.max() != lens1.min() or lens2.max() != lens2.min():
@@ -611,7 +611,7 @@ class BrainwareSrcIO(BaseIO):
             # extract the trig2 annotation
             trig2 = np.array(np.concatenate([itrain.annotations['trig2'] for
                                              itrain in spiketrains], axis=1))
-            trig2 = pq.Quantity(trig2, units=pq.ms)
+            trig2 = Units.Quantity(trig2, units=Units.ms)
         elif hasattr(spiketrains[0], 'units'):
             return self._combine_spiketrains([spiketrains])
         else:
@@ -619,7 +619,7 @@ class BrainwareSrcIO(BaseIO):
             times = np.concatenate(times, axis=0)
 
             # get the times of the SpikeTrains and combine them
-            times = pq.Quantity(times, units=pq.ms, copy=False)
+            times = Units.Quantity(times, units=Units.ms, copy=False)
 
             # get the waveforms of the SpikeTrains and combine them
             # these should be a 3D array with the first axis being the spike,
@@ -628,8 +628,8 @@ class BrainwareSrcIO(BaseIO):
             waveforms = np.concatenate(waveforms, axis=0)
 
             # extract the trig2 annotation
-            trig2 = pq.Quantity(np.hstack(trig2),
-                                units=pq.ms, copy=False)
+            trig2 = Units.Quantity(np.hstack(trig2),
+                                units=Units.ms, copy=False)
 
         if not times.size:
             return self._default_spiketrain.copy()
@@ -639,10 +639,10 @@ class BrainwareSrcIO(BaseIO):
 
         if self._lazy:
             timesshape = times.shape
-            times = pq.Quantity([], units=pq.ms, copy=False)
-            waveforms = pq.Quantity([[[]]], units=pq.mV)
+            times = Units.Quantity([], units=Units.ms, copy=False)
+            waveforms = Units.Quantity([[[]]], units=Units.mV)
         else:
-            waveforms = pq.Quantity(waveforms, units=pq.mV, copy=False)
+            waveforms = Units.Quantity(waveforms, units=Units.mV, copy=False)
 
         train = SpikeTrain(times=times, copy=False,
                            t_start=self._default_t_start.copy(), t_stop=t_stop,
@@ -788,7 +788,7 @@ class BrainwareSrcIO(BaseIO):
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
 
-        comment = Event(times=pq.Quantity(time, units=pq.d), labels=text,
+        comment = Event(times=Units.Quantity(time, units=Units.d), labels=text,
                         sender=sender, file_origin=self._file_origin)
 
         self._seg0.events.append(comment)
@@ -924,8 +924,8 @@ class BrainwareSrcIO(BaseIO):
             trains = zip(*trains)
 
         # int32 -- SpikeTrain length in ms
-        spiketrainlen = pq.Quantity(np.fromfile(self._fsrc, dtype=np.int32,
-                                    count=1)[0], units=pq.ms, copy=False)
+        spiketrainlen = Units.Quantity(np.fromfile(self._fsrc, dtype=np.int32,
+                                    count=1)[0], units=Units.ms, copy=False)
 
         segments = []
         for train in trains:
@@ -1092,9 +1092,9 @@ class BrainwareSrcIO(BaseIO):
         """
 
         # float32 -- DA conversion clock period in microsec
-        sampling_period = pq.Quantity(np.fromfile(self._fsrc,
+        sampling_period = Units.Quantity(np.fromfile(self._fsrc,
                                                   dtype=np.float32, count=1),
-                                      units=pq.us, copy=False)[0]
+                                      units=Units.us, copy=False)[0]
 
         # segment_collection -- this is based off a segment_collection
         segments = self.__read_segment_list()
@@ -1447,8 +1447,8 @@ class BrainwareSrcIO(BaseIO):
         # int32 -- SpikeTrain length in ms
         # int32 * 4 -- response and spon period boundaries
         parts = np.fromfile(self._fsrc, dtype=np.int32, count=5)
-        t_stop = pq.Quantity(parts[0].astype('float32'),
-                             units=pq.ms, copy=False)
+        t_stop = Units.Quantity(parts[0].astype('float32'),
+                             units=Units.ms, copy=False)
         respwin = parts[1:]
 
         # (data_obj) -- list of SpikeTrains

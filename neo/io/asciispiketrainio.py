@@ -13,7 +13,7 @@ Author: sgarcia
 import os
 
 import numpy as np
-import quantities as pq
+from neo import units as Units
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, SpikeTrain
@@ -80,8 +80,8 @@ class AsciiSpikeTrainIO(BaseIO):
                             lazy = False,
                             cascade = True,
                             delimiter = '\t',
-                            t_start = 0.*pq.s,
-                            unit = pq.s,
+                            t_start = 0.*Units.s,
+                            unit = Units.s,
                             ):
         """
         Arguments:
@@ -89,7 +89,7 @@ class AsciiSpikeTrainIO(BaseIO):
             t_start : time start of all spiketrain 0 by default
             unit : unit of spike times, can be a str or directly a Quantities
         """
-        unit = pq.Quantity(1, unit)
+        unit = Units.Quantity(1, unit)
 
         seg = Segment(file_origin = os.path.basename(self.filename))
         if not cascade:
