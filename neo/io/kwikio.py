@@ -17,7 +17,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 import os
 
 try:
@@ -150,7 +150,7 @@ class KwikIO(BaseIO):
                     ana.channel_index = chx
                     seg.analogsignals.append(ana)
 
-            seg.duration = model.duration * pq.s
+            seg.duration = model.duration * un.s
 
         blk.create_many_to_one_relationship()
         return blk
@@ -167,7 +167,7 @@ class KwikIO(BaseIO):
             SI units of the raw trace according to voltage_gain given to klusta
         """
         arr = model.traces[:]*model.metadata['voltage_gain']
-        ana = AnalogSignal(arr, sampling_rate=model.sample_rate*pq.Hz,
+        ana = AnalogSignal(arr, sampling_rate=model.sample_rate*un.Hz,
                            units=units,
                            file_origin=model.metadata['raw_data_files'])
         return ana
@@ -204,7 +204,7 @@ class KwikIO(BaseIO):
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
                           t_stop=model.duration, waveforms=w, units='s',
-                          sampling_rate=model.sample_rate*pq.Hz,
+                          sampling_rate=model.sample_rate*un.Hz,
                           file_origin=self.filename,
                           **{'cluster_id': cluster_id})
         return sptr

@@ -12,31 +12,21 @@ from __future__ import absolute_import, division, print_function
 import sys
 
 import numpy as np
+import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
 
-from neo import units as un
-
 PY_VER = sys.version_info[0]
 
-def _new_event(cls, signal, times = None, labels=None, units=None, name=None, 
-               file_origin=None, description=None,
-               annotations=None):
-    '''
-    A function to map Event.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
-    '''
-    return Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
-                 description=description, **annotations)
 
-class Event(BaseNeo, un.Quantity):
+class Event(BaseNeo, pq.Quantity):
     '''
     Array of events.
 
     *Usage*::
 
         >>> from neo.core import Event
-        >>> from neo.units import s
+        >>> from quantities import s
         >>> import numpy as np
         >>>
         >>> evt = Event(np.arange(0, 30, 10)*s,
@@ -65,13 +55,13 @@ class Event(BaseNeo, un.Quantity):
 
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', un.Quantity, 1),
+    _necessary_attrs = (('times', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
                 file_origin=None, **annotations):
         if times is None:
-            times = np.array([]) * un.s
+            times = np.array([]) * pq.s
         if labels is None:
             labels = np.array([], dtype='S')
         if units is None:
@@ -85,17 +75,16 @@ class Event(BaseNeo, un.Quantity):
             if hasattr(units, 'dimensionality'):
                 dim = units.dimensionality
             else:
-                dim = un.quantity.validate_dimensionality(units)
+                dim = pq.quantity.validate_dimensionality(units)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], un.UnitTime)):
+                not isinstance(list(dim.keys())[0], pq.UnitTime)):
             ValueError("Unit %s has dimensions %s, not [time]" %
                        (units, dim.simplified))
 
-        obj = un.Quantity(times, units=dim).view(cls)
-
+        obj = pq.Quantity.__new__(cls, times, units=dim)
         obj.labels = labels
         obj.segment = None
         return obj
@@ -107,14 +96,6 @@ class Event(BaseNeo, un.Quantity):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
-    def __reduce__(self):
-        '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
-        works
-        '''
-        return _new_event, (self.__class__, self.times, np.array(self), self.labels, self.units,
-                            self.name, self.file_origin, self.description,
-                            self.annotations)
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
@@ -140,7 +121,7 @@ class Event(BaseNeo, un.Quantity):
 
     @property
     def times(self):
-        return un.Quantity(self)
+        return pq.Quantity(self)
 
     def merge(self, other):
         '''
@@ -185,22 +166,3 @@ class Event(BaseNeo, un.Quantity):
         new = self.__class__(times=signal)
         new._copy_data_complement(self)
         return new
-
-    def time_slice(self, t_start, t_stop):
-        '''
-        Creates a new :class:`Event` corresponding to the time slice of
-        the original :class:`Event` between (and including) times
-        :attr:`t_start` and :attr:`t_stop`. Either parameter can also be None
-        to use infinite endpoints for the time interval.
-        '''
-        _t_start = t_start
-        _t_stop = t_stop
-        if t_start is None:
-            _t_start = -np.inf
-        if t_stop is None:
-            _t_stop = np.inf
-
-        indices = (self >= _t_start) & (self <= _t_stop)
-        new_evt = self[indices]
-
-        return new_evt

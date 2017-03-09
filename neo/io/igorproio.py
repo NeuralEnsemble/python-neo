@@ -13,7 +13,7 @@ Author: Andrew Davison
 from __future__ import absolute_import
 from warnings import warn
 import numpy as np
-import quantities as pq
+from neo import units as un
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 try:
@@ -102,8 +102,8 @@ class IgorIO(BaseIO):
         assert header['topFullScale'] == 0
         units = "".join(header['dataUnits'])
         time_units = "".join(header['xUnits']) or "s"
-        t_start = pq.Quantity(header['hsB'], time_units)
-        sampling_period = pq.Quantity(header['hsA'], time_units)
+        t_start = un.Quantity(header['hsB'], time_units)
+        sampling_period = un.Quantity(header['hsA'], time_units)
         if self.parse_notes:
             try:
                 annotations = self.parse_notes(note)

@@ -14,7 +14,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.core import Segment, AnalogSignal, SpikeTrain
 from neo.io import PyNNNumpyIO, PyNNTextIO
@@ -105,16 +105,16 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         self.assertEqual(as0.shape, (101, NCELLS))
         assert_array_equal(as0[:, 0],
                            AnalogSignal(np.arange(0, 101, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
-                                        units=pq.mV))
+                                        sampling_period=0.1*un.ms,
+                                        t_start=0*un.s,
+                                        units=un.mV))
         as4 = as0[:, 4]
         self.assertIsInstance(as4, AnalogSignal)
         assert_array_equal(as4,
                            AnalogSignal(np.arange(4, 105, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
-                                        units=pq.mV))
+                                        sampling_period=0.1*un.ms,
+                                        t_start=0*un.s,
+                                        units=un.mV))
         # test annotations (stuff from file metadata)
 
     def test_read_analogsignal_using_eager(self):
@@ -123,9 +123,9 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         self.assertIsInstance(sig, AnalogSignal)
         assert_array_equal(sig[:, 3],
                            AnalogSignal(np.arange(3, 104, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
-                                        units=pq.mV))
+                                        sampling_period=0.1*un.ms,
+                                        t_start=0*un.s,
+                                        units=un.mV))
         # should test annotations: 'channel_index', etc.
 
     def test_read_spiketrain_should_fail_with_analogsignal_file(self):
@@ -147,16 +147,16 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         self.assertIsInstance(st0, SpikeTrain)
         assert_arrays_equal(st0,
                             SpikeTrain(np.arange(0, 101, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=101*pq.ms,
-                                       units=pq.ms))
+                                       t_start=0*un.s,
+                                       t_stop=101*un.ms,
+                                       units=un.ms))
         st4 = segment.spiketrains[4]
         self.assertIsInstance(st4, SpikeTrain)
         assert_arrays_equal(st4,
                             SpikeTrain(np.arange(4, 105, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=105*pq.ms,
-                                       units=pq.ms))
+                                       t_start=0*un.s,
+                                       t_stop=105*un.ms,
+                                       units=un.ms))
         # test annotations (stuff from file metadata)
 
     def test_read_spiketrain_using_eager(self):
@@ -165,9 +165,9 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         self.assertIsInstance(st3, SpikeTrain)
         assert_arrays_equal(st3,
                             SpikeTrain(np.arange(3, 104, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=104*pq.s,
-                                       units=pq.ms))
+                                       t_start=0*un.s,
+                                       t_stop=104*un.s,
+                                       units=un.ms))
         # should test annotations: 'channel_index', etc.
 
     def test_read_analogsignal_should_fail_with_spiketrain_file(self):

@@ -10,7 +10,7 @@ from datetime import datetime
 
 import numpy as np
 from numpy.random import rand
-import quantities as pq
+from neo import units as un
 
 from neo.core import (AnalogSignal,
                       Block,
@@ -51,12 +51,12 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
 def generate_one_simple_segment(seg_name='segment 0',
                                 supported_objects=[],
                                 nb_analogsignal=4,
-                                t_start=0.*pq.s,
-                                sampling_rate=10*pq.kHz,
-                                duration=6.*pq.s,
+                                t_start=0.*un.s,
+                                sampling_rate=10*un.kHz,
+                                duration=6.*un.s,
 
                                 nb_spiketrain=6,
-                                spikerate_range=[.5*pq.Hz, 12*pq.Hz],
+                                spikerate_range=[.5*un.Hz, 12*un.Hz],
 
                                 event_types={'stim': ['a', 'b',
                                                       'c', 'd'],
@@ -84,7 +84,7 @@ def generate_one_simple_segment(seg_name='segment 0',
         for a in range(nb_analogsignal):
             anasig = AnalogSignal(rand(int(sampling_rate * duration)),
                                        sampling_rate=sampling_rate, t_start=t_start,
-                                       units=pq.mV, channel_index=a,
+                                       units=un.mV, channel_index=a,
                                        name='sig %d for segment %s' % (a, seg.name))
             seg.analogsignals.append(anasig)
 
@@ -126,9 +126,9 @@ def generate_one_simple_segment(seg_name='segment 0',
                 t = t+dur
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(len(times))*len(labels)).astype('i')]
-            epc = Epoch(times=pq.Quantity(times, units=pq.s),
-                        durations=pq.Quantity([x[0] for x in durations],
-                                              units=pq.s),
+            epc = Epoch(times=un.Quantity(times, units=un.s),
+                        durations=un.Quantity([x[0] for x in durations],
+                                              units=un.s),
                         labels=labels,
                         )
             seg.epochs.append(epc)
@@ -198,7 +198,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         return datetime.fromtimestamp(1000000000*np.random.random())
 
     if (name in ['t_start', 't_stop', 'sampling_rate'] and
-            (datatype != pq.Quantity or dim)):
+            (datatype != un.Quantity or dim)):
         raise ValueError('%s must be a 0D Quantity, not a %sD %s' % (name, dim,
                                                                      datatype))
 
@@ -209,12 +209,12 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
     elif name in ['t_start', 't_stop',
                   'time', 'times',
                   'duration', 'durations']:
-        units = pq.millisecond
+        units = un.millisecond
     elif name == 'sampling_rate':
-        units = pq.Hz
-    elif datatype == pq.Quantity:
+        units = un.Hz
+    elif datatype == un.Quantity:
         units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
-        units = getattr(pq, units)
+        units = getattr(un, units)
 
     if name == 'sampling_rate':
         data = np.array(10000.0)
@@ -254,7 +254,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         return data
     if datatype == list:
         return data.tolist()
-    if datatype == pq.Quantity:
+    if datatype == un.Quantity:
         return data * units  # set the units
 
     # we have gone through everything we know, so it must be something invalid
@@ -296,7 +296,7 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
 
                 np.random.seed(0)
                 new_times = np.concatenate([new_times, np.random.random(dif)])
-                kwargs["times"] = pq.Quantity(new_times, units=pq.ms)
+                kwargs["times"] = un.Quantity(new_times, units=un.ms)
             else :
                 kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]] 
 

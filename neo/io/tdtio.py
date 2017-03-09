@@ -23,7 +23,7 @@ import struct
 import sys
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 import itertools
 
 from neo.io.baseio import BaseIO
@@ -174,10 +174,10 @@ class TdtIO(BaseIO):
 
                     if type_label in ['EVTYPE_STRON', 'EVTYPE_STROFF']:
                         if lazy:
-                            times = [ ]*pq.s
+                            times = [ ]*un.s
                             labels = np.array([ ], dtype=str)
                         else:
-                            times = (tsq[mask3]['timestamp'] - global_t_start) * pq.s
+                            times = (tsq[mask3]['timestamp'] - global_t_start) * un.s
                             labels = tsq[mask3]['eventoffset'].view('float64').astype('S')
                         ea = Event(times=times,
                                    name=code,
@@ -195,29 +195,29 @@ class TdtIO(BaseIO):
                             sr = tsq[mask4]['frequency'][0]
                             waveformsize = tsq[mask4]['size'][0]-10
                             if lazy:
-                                times = [ ]*pq.s
+                                times = [ ]*un.s
                                 waveforms = None
                             else:
-                                times = (tsq[mask4]['timestamp'] - global_t_start) * pq.s
+                                times = (tsq[mask4]['timestamp'] - global_t_start) * un.s
                                 dt = np.dtype(data_formats[ tsq[mask3]['dataformat'][0]])
                                 waveforms = get_chunks(tsq[mask4]['size'],tsq[mask4]['eventoffset'], tev_array).view(dt)
                                 waveforms = waveforms.reshape(nb_spike, -1, waveformsize)
-                                waveforms = waveforms * pq.mV
+                                waveforms = waveforms * un.mV
                             if nb_spike > 0:
-                             #   t_start = (tsq['timestamp'][0] - global_t_start) * pq.s # this hould work but not
-                                t_start = 0 *pq.s
-                                t_stop = (tsq['timestamp'][-1] - global_t_start) * pq.s
+                             #   t_start = (tsq['timestamp'][0] - global_t_start) * un.s # this hould work but not
+                                t_start = 0 *un.s
+                                t_stop = (tsq['timestamp'][-1] - global_t_start) * un.s
 
                             else:
-                                t_start = 0 *pq.s
-                                t_stop = 0 *pq.s
+                                t_start = 0 *un.s
+                                t_stop = 0 *un.s
                             st = SpikeTrain(times           = times,
                                             name            = 'Chan{0} Code{1}'.format(channel,sortcode),
                                             t_start         = t_start,
                                             t_stop          = t_stop,
                                             waveforms       = waveforms,
-                                            left_sweep      = waveformsize/2./sr * pq.s,
-                                            sampling_rate   = sr * pq.Hz,
+                                            left_sweep      = waveformsize/2./sr * un.s,
+                                            sampling_rate   = sr * un.Hz,
                                             )
                             st.annotate(channel_index=channel)
                             if lazy:
@@ -243,10 +243,10 @@ class TdtIO(BaseIO):
                                 sig_array = tev_array
                             signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
 
-                        anasig = AnalogSignal(signal        = signal* pq.V,
+                        anasig = AnalogSignal(signal        = signal* un.V,
                                               name          = '{0} {1}'.format(code, channel),
-                                              sampling_rate = sr * pq.Hz,
-                                              t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
+                                              sampling_rate = sr * un.Hz,
+                                              t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * un.s,
                                               channel_index = int(channel)
                                               )
                         if lazy:

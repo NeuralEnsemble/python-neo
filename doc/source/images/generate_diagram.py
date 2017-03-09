@@ -10,7 +10,8 @@ Author: sgarcia
 from datetime import datetime
 
 import numpy as np
-import quantities as pq
+from neo import units as un
+
 from matplotlib import pyplot
 from matplotlib.patches import Rectangle, ArrowStyle, FancyArrowPatch
 from matplotlib.font_manager import FontProperties
@@ -173,7 +174,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
             else:
                 t1 = attrname
 
-            if attrtype == pq.Quantity:
+            if attrtype == un.Quantity:
                 if attr[2] == 0:
                     t2 = 'Quantity scalar'
                 else:

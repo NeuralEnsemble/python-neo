@@ -42,7 +42,7 @@ import os
 from io import open, BufferedReader
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, Event
@@ -235,10 +235,10 @@ class AxonIO(BaseIO):
             # sampling_rate
             if version < 2.:
                 sampling_rate = 1. / (header['fADCSampleInterval'] *
-                                      nbchannel * 1.e-6) * pq.Hz
+                                      nbchannel * 1.e-6) * un.Hz
             elif version >= 2.:
                 sampling_rate = 1.e6 / \
-                    header['protocol']['fADCSequenceInterval'] * pq.Hz
+                    header['protocol']['fADCSequenceInterval'] * un.Hz
 
             # construct block
             # one sweep = one segment in a block
@@ -288,17 +288,17 @@ class AxonIO(BaseIO):
                     if (fSynchTimeUnit == 0):
                         t_start = float(episode_array[j]['offset']) / sampling_rate
                     else:
-                        t_start = float(episode_array[j]['offset']) * fSynchTimeUnit *1e-6* pq.s
+                        t_start = float(episode_array[j]['offset']) * fSynchTimeUnit *1e-6* un.s
                     t_start = t_start.rescale('s')
                     try:
-                        pq.Quantity(1, unit)
+                        un.Quantity(1, unit)
                     except:
                         unit = ''
 
                     if lazy:
-                        signal = [] * pq.Quantity(1, unit)
+                        signal = [] * un.Quantity(1, unit)
                     else:
-                        signal = pq.Quantity(subdata[:, n], unit)
+                        signal = un.Quantity(subdata[:, n], unit)
 
                     anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                           t_start=t_start,
@@ -325,10 +325,10 @@ class AxonIO(BaseIO):
                 # attach all tags to the first segment.
                 seg = bl.segments[0]
                 if lazy:
-                    ea = Event(times=[] * pq.s, labels=np.array([], dtype='S'))
+                    ea = Event(times=[] * un.s, labels=np.array([], dtype='S'))
                     ea.lazy_shape = len(times)
                 else:
-                    ea = Event(times=times * pq.s, labels=labels,
+                    ea = Event(times=times * un.s, labels=labels,
                                comments=comments)
                 seg.events.append(ea)
 
@@ -548,7 +548,7 @@ class AxonIO(BaseIO):
             'lNumSamplesPerEpisode'] / nADC)  # Number of samples per episode
         nEpi = header['lActualEpisodes']  # Actual number of episodes
         sampling_rate = 1.e6 / header['protocol'][
-            'fADCSequenceInterval'] * pq.Hz
+            'fADCSequenceInterval'] * un.Hz
 
         # Make a list of segments with analog signals with just holding levels
         # List of segments relates to number of episodes, as for recorded data
@@ -557,13 +557,13 @@ class AxonIO(BaseIO):
             seg = Segment(index=epiNum)
             # One analog signal for each DAC in segment (episode)
             for DACNum in range(nDAC):
-                t_start = 0 * pq.s  # TODO: Possibly check with episode array
+                t_start = 0 * un.s  # TODO: Possibly check with episode array
                 name = header['listDACInfo'][DACNum]['DACChNames']
                 unit = header['listDACInfo'][DACNum]['DACChUnits'].\
                     replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
                 signal = np.ones(nSam) *\
                     header['listDACInfo'][DACNum]['fDACHoldingLevel'] *\
-                    pq.Quantity(1, unit)
+                    un.Quantity(1, unit)
                 ana_sig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                        t_start=t_start, name=name.decode("utf-8"),
                                        channel_index=DACNum)
@@ -581,7 +581,7 @@ class AxonIO(BaseIO):
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end-i_begin
                         ana_sig[i_begin:i_end] = np.ones((dif, 1)) *\
-                            pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
+                            un.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)
                         i_last += epoch['lEpochInitDuration']

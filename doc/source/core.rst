@@ -66,7 +66,7 @@ cut across the simple container hierarchy.
 NumPy compatibility
 ===================
 
-Neo data objects inherit from :py:class:`Quantity`, which in turn inherits from NumPy
+Neo data objects inherit from :py:class:`Quantity` (by using units module), which in turn inherits from NumPy
 :py:class:`ndarray`. This means that a Neo :py:class:`AnalogSignal` is also a :py:class:`Quantity`
 and an array, giving you access to all of the methods available for those objects.
 
