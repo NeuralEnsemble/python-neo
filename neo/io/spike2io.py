@@ -469,6 +469,7 @@ class HeaderReader(object):
                     l = np.fromstring(self.array[name].decode('iso-8859-1')[0], 'u1')
                 else:
                     l = np.fromstring(self.array[name][0], 'u1')
+                l = l[0]
                 return self.array[name][1:l+1]
             else:
                 return self.array[name]
