@@ -16,19 +16,19 @@ import numpy as np
 
 from neo.core.baseneo import BaseNeo, merge_annotations
 
-from neo import units as Units
+from neo import units as un
 
 PY_VER = sys.version_info[0]
 
 
-class Epoch(BaseNeo, Units.Quantity):
+class Epoch(BaseNeo, un.Quantity):
     '''
     Array of epochs.
 
     *Usage*::
 
         >>> from neo.core import Epoch
-        >>> from quantities import s, ms
+        >>> from neo.units import s, ms
         >>> import numpy as np
         >>>
         >>> epc = Epoch(times=np.arange(0, 30, 10)*s,
@@ -61,16 +61,16 @@ class Epoch(BaseNeo, Units.Quantity):
 
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', Units.Quantity, 1),
-                        ('durations', Units.Quantity, 1),
+    _necessary_attrs = (('times', un.Quantity, 1),
+                        ('durations', un.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __new__(cls, times=None, durations=None, labels=None, units=None,
                 name=None, description=None, file_origin=None, **annotations):
         if times is None:
-            times = np.array([]) * Units.s
+            times = np.array([]) * un.s
         if durations is None:
-            durations = np.array([]) * Units.s
+            durations = np.array([]) * un.s
         if labels is None:
             labels = np.array([], dtype='S')
         if units is None:
@@ -89,11 +89,11 @@ class Epoch(BaseNeo, Units.Quantity):
         # this approach is much faster than comparing the
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], Units.UnitTime)):
+                not isinstance(list(dim.keys())[0], un.UnitTime)):
             ValueError("Unit %s has dimensions %s, not [time]" %
                        (units, dim.simplified))
 
-        obj = Units.Quantity.__new__(cls, times, units=dim)
+        obj = un.Quantity.__new__(cls, times, units=dim)
         obj.durations = durations
         obj.labels = labels
         obj.segment = None
@@ -133,7 +133,7 @@ class Epoch(BaseNeo, Units.Quantity):
 
     @property
     def times(self):
-        return Units.Quantity(self)
+        return un.Quantity(self)
 
     def merge(self, other):
         '''

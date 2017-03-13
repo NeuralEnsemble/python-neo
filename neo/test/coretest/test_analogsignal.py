@@ -15,7 +15,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 try:
     from IPython.lib.pretty import pretty
@@ -64,65 +64,65 @@ class Test__generate_datasets(unittest.TestCase):
 class TestAnalogSignalConstructor(unittest.TestCase):
     def test__create_from_list(self):
         data = range(10)
-        rate = 1000*Units.Hz
+        rate = 1000*un.Hz
         signal = AnalogSignal(data, sampling_rate=rate, units="mV")
         assert_neo_object_is_compliant(signal)
-        self.assertEqual(signal.t_start, 0*Units.ms)
+        self.assertEqual(signal.t_start, 0*un.ms)
         self.assertEqual(signal.t_stop, len(data)/rate)
-        self.assertEqual(signal[9, 0], 9000*Units.uV)
+        self.assertEqual(signal[9, 0], 9000*un.uV)
 
     def test__create_from_np_array(self):
         data = np.arange(10.0)
-        rate = 1*Units.kHz
+        rate = 1*un.kHz
         signal = AnalogSignal(data, sampling_rate=rate, units="uV")
         assert_neo_object_is_compliant(signal)
-        self.assertEqual(signal.t_start, 0*Units.ms)
+        self.assertEqual(signal.t_start, 0*un.ms)
         self.assertEqual(signal.t_stop, data.size/rate)
-        self.assertEqual(signal[9, 0], 0.009*Units.mV)
+        self.assertEqual(signal[9, 0], 0.009*un.mV)
 
     def test__create_from_quantities_array(self):
-        data = np.arange(10.0) * Units.mV
-        rate = 5000*Units.Hz
+        data = np.arange(10.0) * un.mV
+        rate = 5000*un.Hz
         signal = AnalogSignal(data, sampling_rate=rate)
         assert_neo_object_is_compliant(signal)
-        self.assertEqual(signal.t_start, 0*Units.ms)
+        self.assertEqual(signal.t_start, 0*un.ms)
         self.assertEqual(signal.t_stop, data.size/rate)
-        self.assertEqual(signal[9, 0], 0.009*Units.V)
+        self.assertEqual(signal[9, 0], 0.009*un.V)
 
     def test__create_from_array_no_units_ValueError(self):
         data = np.arange(10.0)
         self.assertRaises(ValueError, AnalogSignal, data,
-                          sampling_rate=1 * Units.kHz)
+                          sampling_rate=1 * un.kHz)
 
     def test__create_from_quantities_array_inconsistent_units_ValueError(self):
-        data = np.arange(10.0) * Units.mV
+        data = np.arange(10.0) * un.mV
         self.assertRaises(ValueError, AnalogSignal, data,
-                          sampling_rate=1 * Units.kHz, units="nA")
+                          sampling_rate=1 * un.kHz, units="nA")
 
     def test__create_without_sampling_rate_or_period_ValueError(self):
-        data = np.arange(10.0) * Units.mV
+        data = np.arange(10.0) * un.mV
         self.assertRaises(ValueError, AnalogSignal, data)
 
     def test__create_with_None_sampling_rate_should_raise_ValueError(self):
-        data = np.arange(10.0) * Units.mV
+        data = np.arange(10.0) * un.mV
         self.assertRaises(ValueError, AnalogSignal, data, sampling_rate=None)
 
     def test__create_with_None_t_start_should_raise_ValueError(self):
-        data = np.arange(10.0) * Units.mV
-        rate = 5000 * Units.Hz
+        data = np.arange(10.0) * un.mV
+        rate = 5000 * un.Hz
         self.assertRaises(ValueError, AnalogSignal, data,
                           sampling_rate=rate, t_start=None)
 
     def test__create_inconsistent_sampling_rate_and_period_ValueError(self):
-        data = np.arange(10.0) * Units.mV
+        data = np.arange(10.0) * un.mV
         self.assertRaises(ValueError, AnalogSignal, data,
-                          sampling_rate=1 * Units.kHz, sampling_period=5 * Units.s)
+                          sampling_rate=1 * un.kHz, sampling_period=5 * un.s)
 
     def test__create_with_copy_true_should_return_copy(self):
-        data = np.arange(10.0) * Units.mV
-        rate = 5000*Units.Hz
+        data = np.arange(10.0) * un.mV
+        rate = 5000*un.Hz
         signal = AnalogSignal(data, copy=True, sampling_rate=rate)
-        data[3] = 99*Units.mV
+        data[3] = 99*un.mV
         assert_neo_object_is_compliant(signal)
         self.assertNotEqual(signal[3, 0], 99*Units.mV)
 

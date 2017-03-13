@@ -14,7 +14,7 @@ import os
 import re
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, Event
@@ -73,7 +73,7 @@ class BrainVisionIO(BaseIO):
             'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
         nb_channel = int(header['Common Infos']['NumberOfChannels'])
         sampling_rate = 1.e6 / float(
-            header['Common Infos']['SamplingInterval']) * Units.Hz
+            header['Common Infos']['SamplingInterval']) * un.Hz
 
         fmt = header['Binary Infos']['BinaryFormat']
         fmts = { 'INT_16':np.int16,  'INT_32':np.int32, 'IEEE_FLOAT_32':np.float32,}
@@ -97,7 +97,7 @@ class BrainVisionIO(BaseIO):
         for c in range(nb_channel):
             name, ref, res, units = header['Channel Infos'][
                 'Ch%d' % (c + 1,)].split(',')
-            units = Units.Quantity(1, units.replace('µ', 'u'))
+            units = un.Quantity(1, units.replace('µ', 'u'))
             if lazy:
                 signal = [] * units
             else:
@@ -126,7 +126,7 @@ class BrainVisionIO(BaseIO):
             times.append(float(pos) / sampling_rate.magnitude)
             labels.append(label)
         all_types = np.array(all_types)
-        times = np.array(times) * Units.s
+        times = np.array(times) * un.s
         labels = np.array(labels, dtype='S')
         for type_ in np.unique(all_types):
             ind = type_ == all_types

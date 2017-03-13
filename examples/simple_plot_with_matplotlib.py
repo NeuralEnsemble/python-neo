@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot
 
 import neo
-from neo import units as Units
+from neo import units as un
 
 
 url = 'https://portal.g-node.org/neo/'
@@ -26,8 +26,8 @@ for seg in bl.segments:
     ax1 = fig.add_subplot(2, 1, 1)
     ax2 = fig.add_subplot(2, 1, 2)
     ax1.set_title(seg.file_origin)
-    mint = 0 * Units.s
-    maxt = np.inf * Units.s
+    mint = 0 * un.s
+    maxt = np.inf * un.s
     for i, asig in enumerate(seg.analogsignals):
         times = asig.times.rescale('s').magnitude
         asig = asig.rescale('mV').magnitude

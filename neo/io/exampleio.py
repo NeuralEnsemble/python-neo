@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 # note neo.core needs only numpy and quantities
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 # but my specific IO can depend on many other packages
 try:
@@ -211,9 +211,9 @@ class ExampleIO(BaseIO):
                 n = 1000
 
                 # neo.io support quantities my vector use second for unit
-                eva = Event(timevect[(np.random.rand(n)*timevect.size).astype('i')]* Units.s)
+                eva = Event(timevect[(np.random.rand(n)*timevect.size).astype('i')]* un.s)
                 # all duration are the same
-                eva.durations = np.ones(n)*500*Units.ms  # Event doesn't have durations. Is Epoch intended here?
+                eva.durations = np.ones(n)*500*un.ms  # Event doesn't have durations. Is Epoch intended here?
                 # label
                 l = [ ]
                 for i in range(n):
@@ -246,16 +246,16 @@ class ExampleIO(BaseIO):
 
 
         if lazy:
-            anasig = AnalogSignal([], units='V', sampling_rate=sr * Units.Hz,
-                                  t_start=t_start * Units.s,
+            anasig = AnalogSignal([], units='V', sampling_rate=sr * un.Hz,
+                                  t_start=t_start * un.s,
                                   channel_index=channel_index)
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = tvect.shape
         else:
             # create analogsignal (sinus of 3 Hz)
             sig = np.sin(2*np.pi*tvect*sinus_freq + channel_index/5.*2*np.pi)+np.random.rand(tvect.size)
-            anasig = AnalogSignal(sig, units= 'V', sampling_rate=sr * Units.Hz,
-                                  t_start=t_start * Units.s,
+            anasig = AnalogSignal(sig, units= 'V', sampling_rate=sr * un.Hz,
+                                  t_start=t_start * un.s,
                                   channel_index=channel_index)
 
         # for attributes out of neo you can annotate
@@ -295,8 +295,8 @@ class ExampleIO(BaseIO):
                      t_start)
 
         # create a spiketrain
-        spiketr = SpikeTrain(times, t_start = t_start*Units.s, t_stop = (t_start+segment_duration)*Units.s ,
-                                            units = Units.s,
+        spiketr = SpikeTrain(times, t_start = t_start*un.s, t_stop = (t_start+segment_duration)*un.s ,
+                                            units = un.s,
                                             name = 'it is a spiketrain from exampleio',
                                             )
 
@@ -317,9 +317,9 @@ class ExampleIO(BaseIO):
             # in our case it is mono electrode so dim 1 is size 1
             waveforms  = np.tile( w[np.newaxis,np.newaxis,:], ( num_spike_by_spiketrain ,1, 1) )
             waveforms *=  np.random.randn(*waveforms.shape)/6+1
-            spiketr.waveforms = waveforms*Units.mV
-            spiketr.sampling_rate = sr * Units.Hz
-            spiketr.left_sweep = 1.5* Units.s
+            spiketr.waveforms = waveforms*un.mV
+            spiketr.sampling_rate = sr * un.Hz
+            spiketr.left_sweep = 1.5* un.s
 
         # for attributes out of neo you can annotate
         spiketr.annotate(channel_index = channel_index)

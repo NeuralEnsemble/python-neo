@@ -84,7 +84,7 @@ from time import time
 
 # note neo.core needs only numpy and quantities
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -4163,10 +4163,10 @@ class ElphyIO(BaseIO):
             analog_signal = AnalogSignal(
                 signal.data['y'],
                 units = signal.y_unit,
-                t_start = signal.t_start * getattr(Units, signal.x_unit.strip()),
-                t_stop = signal.t_stop * getattr(Units, signal.x_unit.strip()),
-                #sampling_rate = signal.sampling_frequency * Units.kHz,
-                sampling_period = signal.sampling_period * getattr(Units, signal.x_unit.strip()),
+                t_start = signal.t_start * getattr(un, signal.x_unit.strip()),
+                t_stop = signal.t_stop * getattr(un, signal.x_unit.strip()),
+                #sampling_rate = signal.sampling_frequency * un.kHz,
+                sampling_period = signal.sampling_period * getattr(un, signal.x_unit.strip()),
                 channel_name="episode %s, channel %s" % ( int(episode+1), int(channel+1) )
             )
             analog_signal.segment = segment
@@ -4236,7 +4236,7 @@ class ElphyIO(BaseIO):
         """
         event = self.elphy_file.get_event(episode, evt)
         neo_event = Event(
-            times=event.times * Units.s,
+            times=event.times * un.s,
             channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
         )
         return neo_event
@@ -4255,7 +4255,7 @@ class ElphyIO(BaseIO):
         """
         block = self.elphy_file.layout.episode_block(episode)
         spike = self.elphy_file.get_spiketrain(episode, spk)
-        spikes = spike.times * Units.s
+        spikes = spike.times * un.s
         #print "read_spiketrain() - spikes: %s" % (len(spikes))
         #print "read_spiketrain() - spikes:",spikes
         dct = {

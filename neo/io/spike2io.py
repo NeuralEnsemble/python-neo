@@ -27,7 +27,7 @@ import os
 import sys
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, Event
@@ -215,7 +215,7 @@ class Spike2IO(BaseIO):
 
         # sample rate
         if take_ideal_sampling_rate:
-            sampling_rate = channelHeader.ideal_rate * Units.Hz
+            sampling_rate = channelHeader.ideal_rate * un.Hz
         else:
             if header.system_id in [1, 2, 3, 4, 5]:  # Before version 5
                 #~ print channel_num, channelHeader.divide, \
@@ -225,7 +225,7 @@ class Spike2IO(BaseIO):
             else:
                 sample_interval = (channelHeader.l_chan_dvd *
                                    header.us_per_time * header.dtime_base)
-            sampling_rate = (1. / sample_interval) * Units.Hz
+            sampling_rate = (1. / sample_interval) * un.Hz
 
         # read blocks header to preallocate memory by jumping block to block
         if channelHeader.blocks==0:
@@ -255,23 +255,23 @@ class Spike2IO(BaseIO):
 
         ana_sigs = []
         if channelHeader.unit in unit_convert:
-            unit = Units.Quantity(1, unit_convert[channelHeader.unit])
+            unit = un.Quantity(1, unit_convert[channelHeader.unit])
         else:
             # print channelHeader.unit
             try:
-                unit = Units.Quantity(1, channelHeader.unit)
+                unit = un.Quantity(1, channelHeader.unit)
             except:
-                unit = Units.Quantity(1, '')
+                unit = un.Quantity(1, '')
 
         for b, bs in enumerate(blocksize):
             if lazy:
                 signal = [] * unit
             else:
-                signal = Units.Quantity(np.empty(bs, dtype='f4'), units=unit)
+                signal = un.Quantity(np.empty(bs, dtype='f4'), units=unit)
             ana_sig = AnalogSignal(
                 signal, sampling_rate=sampling_rate,
                 t_start=(starttimes[b] * header.us_per_time *
-                         header.dtime_base * Units.s),
+                         header.dtime_base * un.s),
                 channel_index=channel_num)
             ana_sigs.append(ana_sig)
 
@@ -357,7 +357,7 @@ class Spike2IO(BaseIO):
 
             elif channelHeader.kind in [6, 7]:
                 # correct value for t_stop to be put in later
-                sptr = SpikeTrain([] * Units.s, t_stop=1e99)
+                sptr = SpikeTrain([] * un.s, t_stop=1e99)
                 sptr.annotate(channel_index=channel_num, ced_unit = 0)
                 sptr.lazy_shape = totalitems
                 return sptr
@@ -380,7 +380,7 @@ class Spike2IO(BaseIO):
 
             ## Step 3 convert in neo standard class: eventarrays or spiketrains
             alltimes = alltrigs['tick'].astype(
-                'f') * header.us_per_time * header.dtime_base * Units.s
+                'f') * header.us_per_time * header.dtime_base * un.s
 
             if channelHeader.kind in [2, 3, 4, 5, 8]:
                 #events
@@ -424,13 +424,13 @@ class Spike2IO(BaseIO):
                                        header.dtime_base)
 
                 if channelHeader.unit in unit_convert:
-                    unit = Units.Quantity(1, unit_convert[channelHeader.unit])
+                    unit = un.Quantity(1, unit_convert[channelHeader.unit])
                 else:
                     #print channelHeader.unit
                     try:
-                        unit = Units.Quantity(1, channelHeader.unit)
+                        unit = un.Quantity(1, channelHeader.unit)
                     except:
-                        unit = Units.Quantity(1, '')
+                        unit = un.Quantity(1, '')
 
                 if len(alltimes) > 0:
                     # can get better value from associated AnalogSignal(s) ?
@@ -441,7 +441,7 @@ class Spike2IO(BaseIO):
                 if not self.ced_units:
                     sptr = SpikeTrain(alltimes,
                                                 waveforms = waveforms*unit,
-                                                sampling_rate = (1./sample_interval)*Units.Hz,
+                                                sampling_rate = (1./sample_interval)*un.Hz,
                                                 t_stop = t_stop
                                                 )
                     sptr.annotate(channel_index = channel_num, ced_unit = 0)
@@ -451,7 +451,7 @@ class Spike2IO(BaseIO):
                 for i in set(alltrigs['marker'] & 255):
                     sptr = SpikeTrain(alltimes[alltrigs['marker'] == i],
                                                 waveforms = waveforms[alltrigs['marker'] == i]*unit,
-                                                sampling_rate = (1./sample_interval)*Units.Hz,
+                                                sampling_rate = (1./sample_interval)*un.Hz,
                                                 t_stop = t_stop
                                                 )
                     sptr.annotate(channel_index = channel_num, ced_unit = i)

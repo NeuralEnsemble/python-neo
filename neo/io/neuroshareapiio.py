@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 # note neo.core needs only numpy and quantities
 import numpy as np
-from neo import units as Units 
+from neo import units as un
 
 import os
 
@@ -289,8 +289,8 @@ class NeuroshareapiIO(BaseIO):
             segment_duration=float(self.metadata["TimeSpan"])
             
         if lazy:
-            anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * Units.Hz,
-                                  t_start=t_start * Units.s,
+            anasig = AnalogSignal([], units="V", sampling_rate =  self.metadata["sampRate"] * un.Hz,
+                                  t_start=t_start * un.s,
                                   )
             #create a dummie time vector                     
             tvect = np.arange(t_start, t_start+ segment_duration , 1./self.metadata["sampRate"])                                  
@@ -316,9 +316,9 @@ class NeuroshareapiIO(BaseIO):
             #read the data from the sig object
             sig,_,_ = sig.get_data(index = startat, count = bins)
             #store it to the 'AnalogSignal' object
-            anasig = AnalogSignal(sig, units = sigUnits, sampling_rate=self.metadata["sampRate"] * Units.Hz,
-                                  t_start=t_start * Units.s,
-                                  t_stop = (t_start+segment_duration)*Units.s,
+            anasig = AnalogSignal(sig, units = sigUnits, sampling_rate=self.metadata["sampRate"] * un.Hz,
+                                  t_start=t_start * un.s,
+                                  t_stop = (t_start+segment_duration)*un.s,
                                   channel_index=channel_index)
 
             # annotate from which electrode the signal comes from
@@ -350,9 +350,9 @@ class NeuroshareapiIO(BaseIO):
         
         if lazy:
             # we add the attribute lazy_shape with the size if lazy
-            spiketr = SpikeTrain(times,units = Units.s, 
+            spiketr = SpikeTrain(times,units = un.s, 
                        t_stop = t_start+segment_duration,
-                       t_start = t_start*Units.s,lazy_shape = 40)
+                       t_start = t_start*un.s,lazy_shape = 40)
         
         else:
             #get the spike data from a specific channel index
@@ -375,12 +375,12 @@ class NeuroshareapiIO(BaseIO):
                 times.append(timeStamp)
                 
             #create a spike train object
-            spiketr = SpikeTrain(times,units = Units.s, 
+            spiketr = SpikeTrain(times,units = un.s, 
                          t_stop = t_start+segment_duration,
-                         t_start = t_start*Units.s,
+                         t_start = t_start*un.s,
                          name ="spikes from electrode"+tempSpks.label[-3:],
-                         waveforms = waveforms*Units.volt,
-                         sampling_rate = sr * Units.Hz,
+                         waveforms = waveforms*un.volt,
+                         sampling_rate = sr * un.Hz,
                          file_origin = self.filename,
                          annotate = ("channel_index:"+ str(channel_index)))
             
@@ -420,7 +420,7 @@ class NeuroshareapiIO(BaseIO):
                     tempTimeStamp.append(tempData)
                 #create an event array        
             eva = Event(labels = np.array(tempNames,dtype = "S"),
-    			        times = np.array(tempTimeStamp)*Units.s,
+    			        times = np.array(tempTimeStamp)*un.s,
 			     file_origin = self.filename,                            
                              description = "the trigger events (without durations)")       
         return eva
@@ -469,8 +469,8 @@ class NeuroshareapiIO(BaseIO):
                     #pass
                     durations.append(tempData1-tempData)
             epa = Epoch(file_origin = self.filename,
-                        times = np.array(tempTimeStamp)*Units.s,
-                        durations = np.array(durations)*Units.s,
+                        times = np.array(tempTimeStamp)*un.s,
+                        durations = np.array(durations)*un.s,
                         labels = np.array(tempNames,dtype = "S"),
                         description = "digital events with duration")
             return epa

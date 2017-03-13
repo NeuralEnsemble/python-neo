@@ -17,7 +17,7 @@ import struct
 import sys
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
@@ -125,9 +125,9 @@ class WinWcpIO(BaseIO):
 
                 unit = header['YU%d'%c]
                 try :
-                    unit = Units.Quantity(1., unit)
+                    unit = un.Quantity(1., unit)
                 except:
-                    unit = Units.Quantity(1., '')
+                    unit = un.Quantity(1., '')
 
                 if lazy:
                     signal = [ ] * unit
@@ -138,10 +138,10 @@ class WinWcpIO(BaseIO):
                     signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG * unit
                 anaSig = AnalogSignal(signal,
                                       sampling_rate=
-                                      Units.Hz /
+                                      un.Hz /
                                       analysisHeader['SamplingInterval'] ,
                                       t_start=analysisHeader['TimeRecorded'] *
-                                      Units.s,
+                                      un.s,
                                       name=header['YN%d'%c], channel_index=c)
 
                 if lazy:

@@ -29,7 +29,7 @@ except NameError:
     file = io.BufferedReader
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, Event
@@ -198,7 +198,7 @@ class NeurosharectypesIO(BaseIO):
                                             ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize) )
                         times.append(pdTimeStamp.value)
                         labels.append(str(pData.value))
-                    ea.times = times*Units.s
+                    ea.times = times*un.s
                     ea.labels = np.array(labels, dtype ='S')
                 else :
                     ea.lazy_shape = entityInfo.dwItemCount
@@ -212,7 +212,7 @@ class NeurosharectypesIO(BaseIO):
                 dwIndexCount = entityInfo.dwItemCount
 
                 if lazy:
-                    signal = [ ]*Units.Quantity(1, pAnalogInfo.szUnits)
+                    signal = [ ]*un.Quantity(1, pAnalogInfo.szUnits)
                 else:
                     pdwContCount = ctypes.c_uint32(0)
                     pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
@@ -225,7 +225,7 @@ class NeurosharectypesIO(BaseIO):
                                      dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
                         total_read += pdwContCount.value
                             
-                    signal =  Units.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
+                    signal =  un.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
 
                 #t_start
                 dwIndex = 0
@@ -233,8 +233,8 @@ class NeurosharectypesIO(BaseIO):
                 neuroshare.ns_GetTimeByIndex( hFile,  dwEntityID,  dwIndex, ctypes.byref(pdTime))
 
                 anaSig = AnalogSignal(signal,
-                                                    sampling_rate = pAnalogInfo.dSampleRate*Units.Hz,
-                                                    t_start = pdTime.value * Units.s,
+                                                    sampling_rate = pAnalogInfo.dSampleRate*un.Hz,
+                                                    t_start = pdTime.value * un.s,
                                                     name = str(entityInfo.szEntityLabel),
                                                     )
                 anaSig.annotate( probe_info = str(pAnalogInfo.szProbeInfo))
@@ -263,7 +263,7 @@ class NeurosharectypesIO(BaseIO):
                                     ctypes.byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
 
                 if lazy:
-                    sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel), t_stop = 0.*Units.s)
+                    sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel), t_stop = 0.*un.s)
                     sptr.lazy_shape = entityInfo.dwItemCount
                 else:
                     pdTimeStamp  = ctypes.c_double(0.)
@@ -284,11 +284,11 @@ class NeurosharectypesIO(BaseIO):
                         times[dwIndex] = pdTimeStamp.value
                         waveforms[dwIndex, :,:] = pData[:nsample*nsource].reshape(nsample ,nsource).transpose()
                     
-                    sptr = SpikeTrain(times = Units.Quantity(times, units = 's', copy = False),
+                    sptr = SpikeTrain(times = un.Quantity(times, units = 's', copy = False),
                                         t_stop = times.max(),
-                                        waveforms = Units.Quantity(waveforms, units = str(pdwSegmentInfo.szUnits), copy = False ),
-                                        left_sweep = nsample/2./float(pdwSegmentInfo.dSampleRate)*Units.s,
-                                        sampling_rate = float(pdwSegmentInfo.dSampleRate)*Units.Hz,
+                                        waveforms = un.Quantity(waveforms, units = str(pdwSegmentInfo.szUnits), copy = False ),
+                                        left_sweep = nsample/2./float(pdwSegmentInfo.dSampleRate)*un.s,
+                                        sampling_rate = float(pdwSegmentInfo.dSampleRate)*un.Hz,
                                         name = str(entityInfo.szEntityLabel),
                                         )
                 seg.spiketrains.append(sptr)
@@ -302,15 +302,15 @@ class NeurosharectypesIO(BaseIO):
                                  ctypes.byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
 
                 if lazy:
-                    times = [ ]*Units.s
-                    t_stop = 0*Units.s
+                    times = [ ]*un.s
+                    t_stop = 0*un.s
                 else:
                     pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
                     dwStartIndex = 0
                     dwIndexCount = entityInfo.dwItemCount
                     neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
                         dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
-                    times = pData*Units.s
+                    times = pData*un.s
                     t_stop = times.max()
                 sptr = SpikeTrain(times, t_stop =t_stop,
                                                 name = str(entityInfo.szEntityLabel),)

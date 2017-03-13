@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import neo
-from neo import units as Units
+from neo import units as un
 
 
 def generate_block(n_segments=3, n_channels=8, n_units=3,
@@ -48,7 +48,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
             sig = np.random.randn(data_samples)
             sig[feature_pos:feature_pos + feature_samples] += wave
 
-            signal = neo.AnalogSignal(sig * Units.mV, sampling_rate=1 * Units.kHz)
+            signal = neo.AnalogSignal(sig * un.mV, sampling_rate=1 * un.kHz)
             seg.analogsignals.append(signal)
             rc.analogsignals.append(signal)
 
@@ -59,7 +59,7 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
             feature_spikes = np.random.rand(5) * feature_len + feature_time
             spikes = np.hstack([random_spikes, feature_spikes])
 
-            train = neo.SpikeTrain(spikes * Units.s, 1 * Units.s)
+            train = neo.SpikeTrain(spikes * un.s, 1 * un.s)
             seg.spiketrains.append(train)
             u.spiketrains.append(train)
 

@@ -26,7 +26,7 @@ import numpy as np
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
-from neo import units as Units
+from neo import units as un
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
@@ -40,7 +40,7 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
                description=description, **annotations)
 
 
-class IrregularlySampledSignal(BaseNeo, Units.Quantity):
+class IrregularlySampledSignal(BaseNeo, un.Quantity):
     '''
     An array of one or more analog signals with samples taken at arbitrary time points.
 
@@ -106,8 +106,8 @@ class IrregularlySampledSignal(BaseNeo, Units.Quantity):
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
-    _necessary_attrs = (('times', Units.Quantity, 1),
-                        ('signal', Units.Quantity, 2))
+    _necessary_attrs = (('times', un.Quantity, 1),
+                        ('signal', un.Quantity, 2))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, file_origin=None,
@@ -124,7 +124,7 @@ class IrregularlySampledSignal(BaseNeo, Units.Quantity):
                 units = signal.units
             else:
                 raise ValueError("Units must be specified")
-        elif isinstance(signal, Units.Quantity):
+        elif isinstance(signal, un.Quantity):
              # could improve this test, what if units is a string?
             if units != signal.units:
                 signal = signal.rescale(units)
@@ -145,7 +145,7 @@ class IrregularlySampledSignal(BaseNeo, Units.Quantity):
         if len(times) != obj.shape[0]:
             raise ValueError("times array and signal array must "
                              "have same length")
-        obj.times = Units.Quantity(times, units=time_units,
+        obj.times = un.Quantity(times, units=time_units,
                                 dtype=float, copy=copy)
         obj.segment = None
         obj.channel_index = None
@@ -226,11 +226,11 @@ class IrregularlySampledSignal(BaseNeo, Units.Quantity):
         '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
         if isinstance(i, int):  # a single point in time across all channels
-            obj = Units.Quantity(obj.magnitude, units=obj.units)
+            obj = un.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
             if isinstance(j, int):  # a single point in time across some channels
-                obj = Units.Quantity(obj.magnitude, units=obj.units)
+                obj = un.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
                     obj.times = self.times.__getitem__(j)
@@ -435,15 +435,15 @@ class IrregularlySampledSignal(BaseNeo, Units.Quantity):
         Return a copy of the :class:`IrregularlySampledSignal` converted to the
         specified units
         '''
-        to_dims = Units.quantity.validate_dimensionality(units)
+        to_dims = un.quantity.validate_dimensionality(units)
         if self.dimensionality == to_dims:
             to_u = self.units
             signal = np.array(self)
         else:
-            to_u = Units.Quantity(1.0, to_dims)
-            from_u = Units.Quantity(1.0, self.dimensionality)
+            to_u = un.Quantity(1.0, to_dims)
+            from_u = un.Quantity(1.0, self.dimensionality)
             try:
-                cf = Units.quantity.get_conversion_factor(from_u, to_u)
+                cf = un.quantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
                 raise ValueError('Unable to convert between units of "%s" \
                                  and "%s"' % (from_u._dimensionality,

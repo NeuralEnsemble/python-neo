@@ -20,7 +20,7 @@ import struct
 import os
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, Event
@@ -264,7 +264,7 @@ class PlexonIO(BaseIO):
                 times = evarrays[chan]['times']
                 labels = evarrays[chan]['labels']
             ea = Event(
-                times*Units.s,
+                times*un.s,
                 labels=labels,
                 channel_name=eventHeaders[chan]['Name'],
                 channel_index=chan
@@ -291,10 +291,10 @@ class PlexonIO(BaseIO):
                         slowChannelHeaders[chan]['PreampGain'])
                 signal = sigarrays[chan] * gain
             anasig = AnalogSignal(
-                signal * Units.V,
+                signal * un.V,
                 sampling_rate=float(
-                    slowChannelHeaders[chan]['ADFreq']) * Units.Hz,
-                t_start=t_starts[chan] * Units.s,
+                    slowChannelHeaders[chan]['ADFreq']) * un.Hz,
+                t_start=t_starts[chan] * un.s,
                 channel_index=slowChannelHeaders[chan]['Channel'],
                 channel_name=slowChannelHeaders[chan]['Name'])
             if lazy:
@@ -324,13 +324,13 @@ class PlexonIO(BaseIO):
                         gain = global_header['SpikeMaxMagnitudeMV'] / (
                             .5 * 2. ** (global_header['BitsPerSpikeSample']) *
                             global_header['SpikePreAmpGain'])
-                    waveforms = swfarrays[chan, unit] * gain * Units.V
+                    waveforms = swfarrays[chan, unit] * gain * un.V
                 else:
                     waveforms = None
             sptr = SpikeTrain(
                 times,
                 units='s', 
-                t_stop=t_stop*Units.s,
+                t_stop=t_stop*un.s,
                 waveforms=waveforms
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])

@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 import os
 #version checking
 from distutils import version
@@ -149,7 +149,7 @@ class KwikIO(BaseIO):
                                          cascade=cascade)
             ana.channel_index = chx
             seg.duration = (self._attrs['shape'][0]
-                          / self._attrs['kwik']['sample_rate']) * Units.s
+                          / self._attrs['kwik']['sample_rate']) * un.s
 
             # neo.tools.populate_RecordingChannel(blk)
         blk.create_many_to_one_relationship()
@@ -174,8 +174,8 @@ class KwikIO(BaseIO):
         if lazy:
             anasig = AnalogSignal([],
                                   units=sig_unit,
-                                  sampling_rate=self._attrs['kwik']['sample_rate']*Units.Hz,
-                                  t_start=self._attrs['kwik']['start_time']*Units.s,
+                                  sampling_rate=self._attrs['kwik']['sample_rate']*un.Hz,
+                                  t_start=self._attrs['kwik']['start_time']*un.s,
                                   )
             # we add the attribute lazy_shape with the size if loaded
             anasig.lazy_shape = self._attrs['shape'][0]
@@ -184,8 +184,8 @@ class KwikIO(BaseIO):
             data = data * bit_volts[channel_index]
             anasig = AnalogSignal(data,
                                        units=sig_unit,
-                                       sampling_rate=self._attrs['kwik']['sample_rate']*Units.Hz,
-                                       t_start=self._attrs['kwik']['start_time']*Units.s,
+                                       sampling_rate=self._attrs['kwik']['sample_rate']*un.Hz,
+                                       t_start=self._attrs['kwik']['start_time']*un.s,
                                        )
             data = []  # delete from memory
         # for attributes out of neo you can annotate

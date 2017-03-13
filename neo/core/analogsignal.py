@@ -26,7 +26,7 @@ import numpy as np
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.channelindex import ChannelIndex
 
-from neo import units as Units
+from neo import units as un
 
 logger = logging.getLogger("Neo")
 
@@ -50,7 +50,7 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
-                          t_start=0*Units.s, sampling_rate=None,
+                          t_start=0*un.s, sampling_rate=None,
                           sampling_period=None, name=None, file_origin=None,
                           description=None,
                           annotations=None):
@@ -65,7 +65,7 @@ def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
                **annotations)
 
 
-class AnalogSignal(BaseNeo, Units.Quantity):
+class AnalogSignal(BaseNeo, un.Quantity):
     '''
     Array of one or more continuous analog signals.
 
@@ -83,7 +83,7 @@ class AnalogSignal(BaseNeo, Units.Quantity):
         
         >>>
         >>> sigarr = AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
-        ...                            sampling_rate=1*Units.Hz)
+        ...                            sampling_rate=1*un.Hz)
         >>>
         >>> sigarr
         <AnalogSignal(array([[1, 2, 3],
@@ -149,13 +149,13 @@ class AnalogSignal(BaseNeo, Units.Quantity):
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
-    _necessary_attrs = (('signal', Units.Quantity, 2),
-                        ('sampling_rate', Units.Quantity, 0),
-                        ('t_start', Units.Quantity, 0))
+    _necessary_attrs = (('signal', un.Quantity, 2),
+                        ('sampling_rate', un.Quantity, 0),
+                        ('t_start', un.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
-                t_start=0 * Units.s, sampling_rate=None, sampling_period=None,
+                t_start=0 * un.s, sampling_rate=None, sampling_period=None,
                 name=None, file_origin=None, description=None,
                 **annotations):
         '''
@@ -169,12 +169,12 @@ class AnalogSignal(BaseNeo, Units.Quantity):
         if units is None:
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
-        elif isinstance(signal, Units.Quantity):
+        elif isinstance(signal, un.Quantity):
             # could improve this test, what if units is a string?
             if units != signal.units:
                 signal = signal.rescale(units)
 
-        obj = Units.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = un.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
 
         if obj.ndim == 1:
             obj.shape = (-1, 1)
@@ -190,7 +190,7 @@ class AnalogSignal(BaseNeo, Units.Quantity):
         return obj
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
-                 t_start=0 * Units.s, sampling_rate=None, sampling_period=None,
+                 t_start=0 * un.s, sampling_rate=None, sampling_period=None,
                  name=None, file_origin=None, description=None,
                  **annotations):
         '''
@@ -236,7 +236,7 @@ class AnalogSignal(BaseNeo, Units.Quantity):
         copied over here.
         '''
         super(AnalogSignal, self).__array_finalize__(obj)
-        self._t_start = getattr(obj, '_t_start', 0 * Units.s)
+        self._t_start = getattr(obj, '_t_start', 0 * un.s)
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
 
         # The additional arguments
@@ -278,11 +278,11 @@ class AnalogSignal(BaseNeo, Units.Quantity):
         '''
         obj = super(AnalogSignal, self).__getitem__(i)
         if isinstance(i, int):  # a single point in time across all channels
-            obj = Units.Quantity(obj.magnitude, units=obj.units)
+            obj = un.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
             if isinstance(j, int):  # extract a quantity array
-                obj = Units.Quantity(obj.magnitude, units=obj.units)
+                obj = un.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
                     if j.start:
@@ -415,10 +415,10 @@ class AnalogSignal(BaseNeo, Units.Quantity):
             to_u = self.units
             signal = np.array(self)
         else:
-            to_u = Units.Quantity(1.0, to_dims)
-            from_u = Units.Quantity(1.0, self.dimensionality)
+            to_u = un.Quantity(1.0, to_dims)
+            from_u = un.Quantity(1.0, self.dimensionality)
             try:
-                cf = Units.quantity.get_conversion_factor(from_u, to_u)
+                cf = un.quantity.get_conversion_factor(from_u, to_u)
             except AssertionError:
                 raise ValueError('Unable to convert between units of "%s" \
                                  and "%s"' % (from_u._dimensionality,

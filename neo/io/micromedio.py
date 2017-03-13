@@ -22,7 +22,7 @@ except NameError:
     file = io.BufferedReader
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, Epoch, Event
@@ -139,8 +139,8 @@ class MicromedIO(BaseIO):
         f.seek(pos, 0)
         code = np.fromfile(f, dtype='u2', count=Num_Chan)
 
-        units = {-1: Units.nano * Units.V, 0: Units.uV, 1: Units.mV, 2: 1, 100: Units.percent,
-                 101: Units.dimensionless, 102: Units.dimensionless}
+        units = {-1: un.nano * un.V, 0: un.uV, 1: un.mV, 2: 1, 100: un.percent,
+                 101: un.dimensionless, 102: un.dimensionless}
 
         for c in range(Num_Chan):
             zname2, pos, length = zones['LABCOD']
@@ -154,10 +154,10 @@ class MicromedIO(BaseIO):
             if k in units.keys():
                 unit = units[k]
             else:
-                unit = Units.uV
+                unit = un.uV
 
             f.seek(8, 1)
-            sampling_rate, = f.read_f('H') * Units.Hz
+            sampling_rate, = f.read_f('H') * un.Hz
             sampling_rate *= Rate_Min
 
             if lazy:
@@ -177,7 +177,7 @@ class MicromedIO(BaseIO):
             seg.analogsignals.append(ana_sig)
 
         sampling_rate = np.mean(
-            [ana_sig.sampling_rate for ana_sig in seg.analogsignals]) * Units.Hz
+            [ana_sig.sampling_rate for ana_sig in seg.analogsignals]) * un.Hz
 
         # Read trigger and notes
         for zname, label_dtype in [('TRIGGER', 'u2'), ('NOTE', 'S40')]:

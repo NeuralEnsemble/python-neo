@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import logging
 import pickle
 import numpy as np
-from neo import units as Units
+from neo import units as un
 try:
     import h5py
 except ImportError as err:
@@ -329,7 +329,7 @@ class NeoHdf5IO(BaseIO):
         else:
             value = node.value
         unit_str = [x for x in node.attrs.keys() if "unit" in x][0].split("__")[1]
-        units = getattr(Units, unit_str)
+        units = getattr(un, unit_str)
         return value * units
 
     def _get_standard_attributes(self, node):
