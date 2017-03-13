@@ -6,4 +6,4 @@ API Reference
 .. testsetup:: *
 
     from neo import SpikeTrain
-    import quantities as pq
+    from neo import units as un

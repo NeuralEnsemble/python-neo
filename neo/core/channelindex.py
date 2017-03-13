@@ -32,7 +32,7 @@ class ChannelIndex(Container):
 
         >>> from neo.core import (Block, Segment, ChannelIndex,
         ...                       AnalogSignal)
-        >>> from quantities import nA, kHz
+        >>> from neo.units import nA, kHz
         >>> import numpy as np
         >>>
         >>> # create a Block with 3 Segment and 2 ChannelIndex objects

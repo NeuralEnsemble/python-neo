@@ -1557,7 +1557,7 @@ class BlackrockIO(BaseIO):
         """
         highest_res = self.__nev_params('event_unit')
 
-        if isinstance(n, Units.Quantity):
+        if isinstance(n, un.Quantity):
             n = [n.rescale(highest_res)]
         elif hasattr(n, "__len__"):
             n = [tp.rescale(highest_res) if tp is not None
@@ -1867,16 +1867,16 @@ class BlackrockIO(BaseIO):
         desc = 'Unit from channel: {0}, id: {1}'.format(
             channel_idx, self.__get_unit_classification(unit_id))
 
-        un = Unit(
+        unit_to_return = Unit(
             name=name,
             description=desc,
             file_origin='.'.join([self._filenames['nev'], 'nev']))
 
         # add additional annotations
-        un.annotate(ch_idx=int(channel_idx))
-        un.annotate(unit_id=int(unit_id))
+        unit_to_return.annotate(ch_idx=int(channel_idx))
+        unit_to_return.annotate(unit_id=int(unit_id))
 
-        return un
+        return unit_to_return
 
     def __read_recordingchannelgroup(
             self, channel_idx, index=None, channel_units=None, cascade=True):
@@ -1885,6 +1885,7 @@ class BlackrockIO(BaseIO):
         given index for the given channels containing a neo.core.unit.Unit
         object list of the given units.
         """
+        from neo import units as un
 
         rcg = ChannelIndex(
             np.array([channel_idx]),

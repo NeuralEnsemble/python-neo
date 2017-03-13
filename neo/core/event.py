@@ -27,7 +27,7 @@ class Event(BaseNeo, un.Quantity):
     *Usage*::
 
         >>> from neo.core import Event
-        >>> from quantities import s
+        >>> from neo.units import s
         >>> import numpy as np
         >>>
         >>> evt = Event(np.arange(0, 30, 10)*s,

@@ -17,7 +17,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 import neo
 from neo.test.iotest.common_io_test import BaseTestIO
@@ -103,7 +103,7 @@ class testRead(unittest.TestCase):
         self.assertEqual(len(seg.spiketrains), 4)
 
         for st in seg.spiketrains:
-            self.assertEqual(st.units, np.array(1.0) * Units.s)
+            self.assertEqual(st.units, np.array(1.0) * un.s)
             self.assertEqual(st.t_start, 0.0)
 
         self.assertEqual(seg.spiketrains[0].name, 'unit 1 from group 0')

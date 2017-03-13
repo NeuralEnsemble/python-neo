@@ -51,7 +51,7 @@ class IrregularlySampledSignal(BaseNeo, un.Quantity):
     *Usage*::
 
         >>> from neo.core import IrregularlySampledSignal
-        >>> from quantities import s, nA
+        >>> from neo.units import s, nA
         >>>
         >>> irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],
         ...                                   units='mV', time_units='ms')
@@ -133,12 +133,12 @@ class IrregularlySampledSignal(BaseNeo, un.Quantity):
                 time_units = times.units
             else:
                 raise ValueError("Time units must be specified")
-        elif isinstance(times, Units.Quantity):
+        elif isinstance(times, un.Quantity):
             # could improve this test, what if units is a string?
             if time_units != times.units:
                 times = times.rescale(time_units)
         # should check time units have correct dimensions
-        obj = Units.Quantity.__new__(cls, signal, units=units,
+        obj = un.Quantity.__new__(cls, signal, units=units,
                                   dtype=dtype, copy=copy)
         if obj.ndim == 1:
             obj = obj.reshape(-1, 1)

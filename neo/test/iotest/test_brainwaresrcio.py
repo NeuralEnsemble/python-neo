@@ -16,7 +16,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.core import (Block, Event,
                       ChannelIndex, Segment, SpikeTrain, Unit)
@@ -111,7 +111,7 @@ def proc_src_comments(srcfile, filename):
 
     timeStamps = np.array(timeStamps, dtype=np.float32)
     t_start = timeStamps.min()
-    timeStamps = Units.Quantity(timeStamps-t_start, units=Units.d).rescale(Units.s)
+    timeStamps = un.Quantity(timeStamps-t_start, units=un.d).rescale(un.s)
     texts = np.array(texts, dtype='S')
     senders = np.array(senders, dtype='S')
     t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
@@ -256,12 +256,12 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen,
         shapes = np.array([[[]]])
         trig2 = np.array([])
 
-    times = Units.Quantity(times, units=Units.ms, dtype=np.float32)
-    t_start = Units.Quantity(0, units=Units.ms, dtype=np.float32)
-    t_stop = Units.Quantity(sweepLen, units=Units.ms, dtype=np.float32)
-    trig2 = Units.Quantity(trig2, units=Units.ms, dtype=np.uint8)
-    waveforms = Units.Quantity(shapes, dtype=np.int8, units=Units.mV)
-    sampling_period = Units.Quantity(ADperiod, units=Units.us)
+    times = un.Quantity(times, units=un.ms, dtype=np.float32)
+    t_start = un.Quantity(0, units=un.ms, dtype=np.float32)
+    t_stop = un.Quantity(sweepLen, units=un.ms, dtype=np.float32)
+    trig2 = un.Quantity(trig2, units=un.ms, dtype=np.uint8)
+    waveforms = un.Quantity(shapes, dtype=np.int8, units=un.mV)
+    sampling_period = un.Quantity(ADperiod, units=un.us)
 
     train = SpikeTrain(times=times, t_start=t_start, t_stop=t_stop,
                        trig2=trig2, dtype=np.float32, timestamp=timeStamp,

@@ -11,7 +11,7 @@ except ImportError:
 import os
 import pickle
 import numpy as np
-from neo import units as Units
+from neo import units as un
 from numpy.testing import assert_array_equal
 
 try:
@@ -38,8 +38,8 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        times = get_fake_value('times', Units.Quantity, seed=0, dim=1)
-        signal = get_fake_value('signal', Units.Quantity, seed=1, dim=2)
+        times = get_fake_value('times', un.Quantity, seed=0, dim=1)
+        signal = get_fake_value('signal', un.Quantity, seed=1, dim=2)
         name = get_fake_value('name', str, seed=2,
                               obj=IrregularlySampledSignal)
         description = get_fake_value('description', str, seed=3,
@@ -99,17 +99,17 @@ class Test__generate_datasets(unittest.TestCase):
 class TestIrregularlySampledSignalConstruction(unittest.TestCase):
     def test_IrregularlySampledSignal_creation_times_units_signal_units(self):
         params = {'test2': 'y1', 'test3': True}
-        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*Units.ms,
-                                       signal=[20., 40., 60.]*Units.mV,
+        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*un.ms,
+                                       signal=[20., 40., 60.]*un.mV,
                                        name='test', description='tester',
                                        file_origin='test.file',
                                        test1=1, **params)
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*Units.ms)
+        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*un.ms)
         assert_array_equal(np.asarray(sig).flatten(), np.array([20., 40., 60.]))
-        self.assertEqual(sig.units, Units.mV)
+        self.assertEqual(sig.units, un.mV)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
@@ -122,16 +122,16 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         params = {'test2': 'y1', 'test3': True}
         sig = IrregularlySampledSignal([1.1, 1.5, 1.7],
                                        signal=[20., 40., 60.],
-                                       units=Units.V, time_units=Units.s,
+                                       units=un.V, time_units=un.s,
                                        name='test', description='tester',
                                        file_origin='test.file',
                                        test1=1, **params)
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*Units.s)
+        assert_array_equal(sig.times, [1.1, 1.5, 1.7]*un.s)
         assert_array_equal(np.asarray(sig).flatten(), np.array([20., 40., 60.]))
-        self.assertEqual(sig.units, Units.V)
+        self.assertEqual(sig.units, un.V)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
@@ -142,18 +142,18 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
 
     def test_IrregularlySampledSignal_creation_units_rescale(self):
         params = {'test2': 'y1', 'test3': True}
-        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*Units.s,
-                                       signal=[2., 4., 6.]*Units.V,
-                                       units=Units.mV, time_units=Units.ms,
+        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*un.s,
+                                       signal=[2., 4., 6.]*un.V,
+                                       units=un.mV, time_units=un.ms,
                                        name='test', description='tester',
                                        file_origin='test.file',
                                        test1=1, **params)
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
-        assert_array_equal(sig.times, [1100, 1500, 1700]*Units.ms)
+        assert_array_equal(sig.times, [1100, 1500, 1700]*un.ms)
         assert_array_equal(np.asarray(sig).flatten(), np.array([2000., 4000., 6000.]))
-        self.assertEqual(sig.units, Units.mV)
+        self.assertEqual(sig.units, un.mV)
         self.assertEqual(sig.name, 'test')
         self.assertEqual(sig.description, 'tester')
         self.assertEqual(sig.file_origin, 'test.file')
@@ -163,29 +163,29 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         self.assertTrue(sig.annotations['test3'])
 
     def test_IrregularlySampledSignal_different_lens_ValueError(self):
-        times = [1.1, 1.5, 1.7]*Units.ms
-        signal = [20., 40., 60., 70.]*Units.mV
+        times = [1.1, 1.5, 1.7]*un.ms
+        signal = [20., 40., 60., 70.]*un.mV
         self.assertRaises(ValueError, IrregularlySampledSignal, times, signal)
 
     def test_IrregularlySampledSignal_no_signal_units_ValueError(self):
-        times = [1.1, 1.5, 1.7]*Units.ms
+        times = [1.1, 1.5, 1.7]*un.ms
         signal = [20., 40., 60.]
         self.assertRaises(ValueError, IrregularlySampledSignal, times, signal)
 
     def test_IrregularlySampledSignal_no_time_units_ValueError(self):
         times = [1.1, 1.5, 1.7]
-        signal = [20., 40., 60.]*Units.mV
+        signal = [20., 40., 60.]*un.mV
         self.assertRaises(ValueError, IrregularlySampledSignal, times, signal)
 
 
 class TestIrregularlySampledSignalProperties(unittest.TestCase):
     def setUp(self):
-        self.times = [np.arange(10.0)*Units.s,
-                      np.arange(-100.0, 100.0, 10.0)*Units.ms,
-                      np.arange(100)*Units.ns]
-        self.data = [np.arange(10.0)*Units.nA,
-                     np.arange(-100.0, 100.0, 10.0)*Units.mV,
-                     np.random.uniform(size=100)*Units.uV]
+        self.times = [np.arange(10.0)*un.s,
+                      np.arange(-100.0, 100.0, 10.0)*un.ms,
+                      np.arange(100)*un.ns]
+        self.data = [np.arange(10.0)*un.nA,
+                     np.arange(-100.0, 100.0, 10.0)*un.mV,
+                     np.random.uniform(size=100)*un.uV]
         self.signals = [IrregularlySampledSignal(t, signal=D,
                                                  testattr='test')
                         for D, t in zip(self.data, self.times)]
@@ -219,8 +219,8 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
                                        threshold=1e-15)
 
     def test_IrregularlySampledSignal_repr(self):
-        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*Units.s,
-                                       signal=[2., 4., 6.]*Units.V,
+        sig = IrregularlySampledSignal([1.1, 1.5, 1.7]*un.s,
+                                       signal=[2., 4., 6.]*un.V,
                                        name='test', description='tester',
                                        file_origin='test.file',
                                        test1=1)
@@ -265,9 +265,9 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
 class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def setUp(self):
         self.data1 = np.arange(10.0)
-        self.data1quant = self.data1 * Units.mV
+        self.data1quant = self.data1 * un.mV
         self.time1 = np.logspace(1, 5, 10)
-        self.time1quant = self.time1*Units.ms
+        self.time1quant = self.time1*un.ms
         self.signal1 = IrregularlySampledSignal(self.time1quant,
                                                 signal=self.data1quant,
                                                 name='spam',
@@ -304,26 +304,26 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, self.signal1.annotations)
 
     def test__getitem_should_return_single_quantity(self):
-        self.assertEqual(self.signal1[0], 0*Units.mV)
-        self.assertEqual(self.signal1[9], 9*Units.mV)
+        self.assertEqual(self.signal1[0], 0*un.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
         self.assertRaises(IndexError, self.signal1.__getitem__, 10)
 
     def test__getitem_out_of_bounds_IndexError(self):
         self.assertRaises(IndexError, self.signal1.__getitem__, 10)
 
     def test_comparison_operators(self):
-        assert_array_equal(self.signal1 >= 5*Units.mV,
+        assert_array_equal(self.signal1 >= 5*un.mV,
                             np.array([[False, False, False, False, False,
                                       True, True, True, True, True]]).T)
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
-        self.assertRaises(ValueError, self.signal1.__gt__, 5*Units.nA)
+        self.assertRaises(ValueError, self.signal1.__gt__, 5*un.nA)
 
     def test_simple_statistics(self):
         targmean = self.signal1[:-1]*np.diff(self.time1quant).reshape(-1, 1)
         targmean = targmean.sum()/(self.time1quant[-1] - self.time1quant[0])
-        self.assertEqual(self.signal1.max(), 9*Units.mV)
-        self.assertEqual(self.signal1.min(), 0*Units.mV)
+        self.assertEqual(self.signal1.max(), 9*un.mV)
+        self.assertEqual(self.signal1.min(), 0*un.mV)
         self.assertEqual(self.signal1.mean(), targmean)
 
     def test_mean_interpolation_NotImplementedError(self):
@@ -334,7 +334,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
 
     def test__rescale_same(self):
         result = self.signal1.copy()
-        result = result.rescale(Units.mV)
+        result = result.rescale(un.mV)
 
         self.assertIsInstance(result, IrregularlySampledSignal)
         assert_neo_object_is_compliant(result)
@@ -343,14 +343,14 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(result.units, 1*Units.mV)
+        self.assertEqual(result.units, 1*un.mV)
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1))
         assert_array_equal(result.times, self.time1quant)
         assert_same_sub_schema(result, self.signal1)
 
     def test__rescale_new(self):
         result = self.signal1.copy()
-        result = result.rescale(Units.uV)
+        result = result.rescale(un.uV)
 
         self.assertIsInstance(result, IrregularlySampledSignal)
         assert_neo_object_is_compliant(result)
@@ -359,20 +359,20 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(result.units, 1*Units.uV)
+        self.assertEqual(result.units, 1*un.uV)
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1)*1000., 1e-10)
         assert_array_equal(result.times, self.time1quant)
 
     def test__rescale_new_incompatible_ValueError(self):
-        self.assertRaises(ValueError, self.signal1.rescale, Units.nA)
+        self.assertRaises(ValueError, self.signal1.rescale, un.nA)
 
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def setUp(self):
         self.data1 = np.arange(10.0)
-        self.data1quant = self.data1 * Units.mV
+        self.data1quant = self.data1 * un.mV
         self.time1 = np.logspace(1, 5, 10)
-        self.time1quant = self.time1*Units.ms
+        self.time1quant = self.time1*un.ms
         self.signal1 = IrregularlySampledSignal(self.time1quant,
                                                 signal=self.data1quant,
                                                 name='spam',
@@ -388,7 +388,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(self.signal1.annotations, {'arg1': 'test'})
 
     def test__add_const_quantity_should_preserve_data_complement(self):
-        result = self.signal1 + 0.065*Units.V
+        result = self.signal1 + 0.065*un.V
         self.assertIsInstance(result, IrregularlySampledSignal)
         assert_neo_object_is_compliant(result)
         self.assertEqual(result.name, 'spam')
@@ -398,12 +398,12 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1) + 65)
         assert_array_equal(result.times, self.time1quant)
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], 74*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], 74*un.mV)
 
     def test__add_two_consistent_signals_should_preserve_data_complement(self):
         data2 = np.arange(10.0, 20.0)
-        data2quant = data2*Units.mV
+        data2quant = data2*un.mV
         signal2 = IrregularlySampledSignal(self.time1quant, signal=data2quant)
         assert_neo_object_is_compliant(signal2)
 
@@ -441,7 +441,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertRaises(ValueError, self.signal1.__add__, signal2)
 
     def test__subtract_const_should_preserve_data_complement(self):
-        result = self.signal1 - 65*Units.mV
+        result = self.signal1 - 65*un.mV
         self.assertIsInstance(result, IrregularlySampledSignal)
         assert_neo_object_is_compliant(result)
         self.assertEqual(result.name, 'spam')
@@ -449,13 +449,13 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], -56*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], -56*un.mV)
         assert_array_equal(result.magnitude, (self.data1 - 65).reshape(-1, 1))
         assert_array_equal(result.times, self.time1quant)
 
     def test__subtract_from_const_should_return_signal(self):
-        result = 10*Units.mV - self.signal1
+        result = 10*un.mV - self.signal1
         self.assertIsInstance(result, IrregularlySampledSignal)
         assert_neo_object_is_compliant(result)
         self.assertEqual(result.name, 'spam')
@@ -463,8 +463,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], 1*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], 1*un.mV)
         assert_array_equal(result.magnitude, (10 - self.data1).reshape(-1, 1))
         assert_array_equal(result.times, self.time1quant)
 
@@ -477,8 +477,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], 18*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], 18*un.mV)
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)*2)
         assert_array_equal(result.times, self.time1quant)
 
@@ -491,8 +491,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], 18*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], 18*un.mV)
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)*2)
         assert_array_equal(result.times, self.time1quant)
 
@@ -505,8 +505,8 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(self.signal1[9], 9*Units.mV)
-        self.assertEqual(result[9], 18*Units.mV)
+        self.assertEqual(self.signal1[9], 9*un.mV)
+        self.assertEqual(result[9], 18*un.mV)
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1)/0.5)
         assert_array_equal(result.times, self.time1quant)
 
@@ -524,7 +524,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
 
 class TestAnalogSignalFunctions(unittest.TestCase):
     def test__pickle(self):
-        signal1 = IrregularlySampledSignal(np.arange(10.0)/100*Units.s,
+        signal1 = IrregularlySampledSignal(np.arange(10.0)/100*un.s,
                                            np.arange(10.0), units="mV")
 
         fobj = open('./pickle', 'wb')
@@ -544,9 +544,9 @@ class TestAnalogSignalFunctions(unittest.TestCase):
 
 class TestIrregularlySampledSignalEquality(unittest.TestCase):
     def test__signals_with_different_times_should_be_not_equal(self):
-            signal1 = IrregularlySampledSignal(np.arange(10.0)/100*Units.s,
+            signal1 = IrregularlySampledSignal(np.arange(10.0)/100*un.s,
                                                np.arange(10.0), units="mV")
-            signal2 = IrregularlySampledSignal(np.arange(10.0)/100*Units.ms,
+            signal2 = IrregularlySampledSignal(np.arange(10.0)/100*un.ms,
                                                np.arange(10.0), units="mV")
             self.assertNotEqual(signal1, signal2)
 

@@ -84,7 +84,7 @@ class Epoch(BaseNeo, un.Quantity):
             if hasattr(units, 'dimensionality'):
                 dim = units.dimensionality
             else:
-                dim = Units.quantity.validate_dimensionality(units)
+                dim = un.quantity.validate_dimensionality(units)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality

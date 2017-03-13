@@ -410,7 +410,7 @@ class AnalogSignal(BaseNeo, un.Quantity):
         Return a copy of the AnalogSignal converted to the specified
         units
         '''
-        to_dims = Units.quantity.validate_dimensionality(units)
+        to_dims = un.quantity.validate_dimensionality(units)
         if self.dimensionality == to_dims:
             to_u = self.units
             signal = np.array(self)

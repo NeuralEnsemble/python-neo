@@ -225,7 +225,7 @@ class SpikeTrain(BaseNeo, un.Quantity):
             if hasattr(units, 'dimensionality'):
                 dim = units.dimensionality
             else:
-                dim = Units.quantity.validate_dimensionality(units)
+                dim = un.quantity.validate_dimensionality(units)
 
             if hasattr(times, 'dimensionality'):
                 if times.dimensionality.items() == dim.items():

@@ -15,7 +15,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.core import (AnalogSignal, Block,
                       ChannelIndex, Segment)
@@ -73,10 +73,10 @@ def proc_dam(filename):
 
     fulldam = zip(stimIndexes, timestamps, signals, stims)
     for stimIndex, timestamp, signal, stim in fulldam:
-        sig = AnalogSignal(signal=signal*Units.mV,
-                           t_start=timestamp*Units.d,
+        sig = AnalogSignal(signal=signal*un.mV,
+                           t_start=timestamp*un.d,
                            file_origin=filename,
-                           sampling_period=1.*Units.s)
+                           sampling_period=1.*un.s)
         segment = Segment(file_origin=filename,
                           index=stimIndex,
                           **stim)

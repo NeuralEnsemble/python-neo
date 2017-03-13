@@ -14,7 +14,7 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as Units
+from neo import units as un 
 
 try:
     from IPython.lib.pretty import pretty
@@ -720,9 +720,9 @@ class TestSegment(unittest.TestCase):
         # Unit
         all_unit = []
         for u in range(nb_unit):
-            un = Unit(name='Unit #%d' % u, channel_indexes=np.array([u]))
-            assert_neo_object_is_compliant(un)
-            all_unit.append(un)
+            uni = Unit(name='Unit #%d' % u, channel_indexes=np.array([u]))
+            assert_neo_object_is_compliant(uni)
+            all_unit.append(uni)
 
         blk = Block()
         blk.channel_indexes = chxs
@@ -737,7 +737,7 @@ class TestSegment(unittest.TestCase):
                 anasigarr = AnalogSignal(np.zeros((sig_len,
                                                         len(unit_with_sig))),
                                               units='nA',
-                                              sampling_rate=1000.*Units.Hz,
+                                              sampling_rate=1000. * un.Hz,
                                               channel_indexes=unit_with_sig)
                 seg.analogsignals.append(anasigarr)
 

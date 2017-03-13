@@ -28,7 +28,7 @@ import itertools
 from six import string_types
 
 import numpy as np
-from neo import units as Units
+from neo import units as un
 
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
@@ -189,7 +189,7 @@ class NixIOTest(unittest.TestCase):
             if isinstance(neosig, AnalogSignal):
                 self.assertIsInstance(timedim, nixtypes["SampledDimension"])
                 self.assertEqual(
-                    Units.Quantity(timedim.sampling_interval, timedim.unit),
+                    un.Quantity(timedim.sampling_interval, timedim.unit),
                     neosig.sampling_period
                 )
                 self.assertEqual(timedim.offset, neosig.t_start.magnitude)
@@ -284,7 +284,7 @@ class NixIOTest(unittest.TestCase):
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
-                if isinstance(v, Units.Quantity):
+                if isinstance(v, un.Quantity):
                     self.assertEqual(nixmd.props[str(k)].unit,
                                      str(v.dimensionality))
                     np.testing.assert_almost_equal(nixmd[str(k)],
@@ -560,8 +560,8 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_all_annotated(cls):
-        times = cls.rquant(1, Units.s)
-        signal = cls.rquant(1, Units.V)
+        times = cls.rquant(1, un.s)
+        signal = cls.rquant(1, un.V)
         blk = Block()
         blk.annotate(**cls.rdict(3))
 
@@ -569,12 +569,12 @@ class NixIOTest(unittest.TestCase):
         seg.annotate(**cls.rdict(4))
         blk.segments.append(seg)
 
-        asig = AnalogSignal(signal=signal, sampling_rate=Units.Hz)
+        asig = AnalogSignal(signal=signal, sampling_rate=un.Hz)
         asig.annotate(**cls.rdict(2))
         seg.analogsignals.append(asig)
 
         isig = IrregularlySampledSignal(times=times, signal=signal,
-                                        time_units=Units.s)
+                                        time_units=un.s)
         isig.annotate(**cls.rdict(2))
         seg.irregularlysampledsignals.append(isig)
 
@@ -586,10 +586,10 @@ class NixIOTest(unittest.TestCase):
         event.annotate(**cls.rdict(4))
         seg.events.append(event)
 
-        spiketrain = SpikeTrain(times=times, t_stop=Units.s, units=Units.s)
+        spiketrain = SpikeTrain(times=times, t_stop=un.s, units=un.s)
         d = cls.rdict(6)
-        d["quantity"] = Units.Quantity(10, "mV")
-        d["qarray"] = Units.Quantity(range(10), "mA")
+        d["quantity"] = un.Quantity(10, "mV")
+        d["qarray"] = un.Quantity(range(10), "mA")
         spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
@@ -655,8 +655,8 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        asig = AnalogSignal(signal=self.rquant((10, 3), Units.mV),
-                            sampling_rate=Units.Quantity(10, "Hz"))
+        asig = AnalogSignal(signal=self.rquant((10, 3), un.mV),
+                            sampling_rate=un.Quantity(10, "Hz"))
         seg.analogsignals.append(asig)
         self.write_and_compare([block])
 
@@ -665,18 +665,18 @@ class NixIOWriteTest(NixIOTest):
         anotherblock.segments.append(seg)
         irsig = IrregularlySampledSignal(
             signal=np.random.random((20, 3)),
-            times=self.rquant(20, Units.ms, True),
-            units=Units.A
+            times=self.rquant(20, un.ms, True),
+            units=un.A
         )
         seg.irregularlysampledsignals.append(irsig)
         self.write_and_compare([anotherblock])
 
         block.segments[0].analogsignals.append(
-            AnalogSignal(signal=[10.0, 1.0, 3.0], units=Units.S,
-                         sampling_period=Units.Quantity(3, "s"),
+            AnalogSignal(signal=[10.0, 1.0, 3.0], units=un.S,
+                         sampling_period=un.Quantity(3, "s"),
                          dtype=np.double, name="signal42",
                          description="this is an analogsignal",
-                         t_start=45 * Units.ms),
+                         t_start=45 * un.ms),
         )
         self.write_and_compare([block, anotherblock])
 
@@ -695,7 +695,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        epoch = Epoch(times=[1, 1, 10, 3]*Units.ms, durations=[3, 3, 3, 1]*Units.ms,
+        epoch = Epoch(times=[1, 1, 10, 3]*un.ms, durations=[3, 3, 3, 1]*un.ms,
                       labels=np.array(["one", "two", "three", "four"]),
                       name="test epoch", description="an epoch for testing")
 
@@ -707,7 +707,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        event = Event(times=np.arange(0, 30, 10)*Units.s,
+        event = Event(times=np.arange(0, 30, 10)*un.s,
                       labels=np.array(["0", "1", "2"]),
                       name="event name",
                       description="event description")
@@ -719,13 +719,13 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        spiketrain = SpikeTrain(times=[3, 4, 5]*Units.s, t_stop=10.0,
+        spiketrain = SpikeTrain(times=[3, 4, 5]*un.s, t_stop=10.0,
                                 name="spikes!", description="sssssspikes")
         seg.spiketrains.append(spiketrain)
         self.write_and_compare([block])
 
-        waveforms = self.rquant((20, 5, 10), Units.mV)
-        spiketrain = SpikeTrain(times=[1, 1.1, 1.2]*Units.ms, t_stop=1.5*Units.s,
+        waveforms = self.rquant((20, 5, 10), un.mV)
+        spiketrain = SpikeTrain(times=[1, 1.1, 1.2]*un.ms, t_stop=1.5*un.s,
                                 name="spikes with wf",
                                 description="spikes for waveform test",
                                 waveforms=waveforms)
@@ -733,7 +733,7 @@ class NixIOWriteTest(NixIOTest):
         seg.spiketrains.append(spiketrain)
         self.write_and_compare([block])
 
-        spiketrain.left_sweep = np.random.random(10)*Units.ms
+        spiketrain.left_sweep = np.random.random(10)*un.ms
         self.write_and_compare([block])
 
     def test_metadata_structure_write(self):
@@ -773,8 +773,8 @@ class NixIOWriteTest(NixIOTest):
         nchx = 5
         nunits = 10
 
-        times = self.rquant(1, Units.s)
-        signal = self.rquant(1, Units.V)
+        times = self.rquant(1, un.s)
+        signal = self.rquant(1, un.V)
         blocks = []
         for blkidx in range(nblocks):
             blk = Block()
@@ -784,20 +784,20 @@ class NixIOWriteTest(NixIOTest):
                 blk.segments.append(seg)
                 for anaidx in range(nanasig):
                     seg.analogsignals.append(AnalogSignal(signal=signal,
-                                                          sampling_rate=Units.Hz))
+                                                          sampling_rate=un.Hz))
                 for irridx in range(nirrseg):
                     seg.irregularlysampledsignals.append(
                         IrregularlySampledSignal(times=times,
                                                  signal=signal,
-                                                 time_units=Units.s)
+                                                 time_units=un.s)
                     )
                 for epidx in range(nepochs):
                     seg.epochs.append(Epoch(times=times, durations=times))
                 for evidx in range(nevents):
                     seg.events.append(Event(times=times))
                 for stidx in range(nspiketrains):
-                    seg.spiketrains.append(SpikeTrain(times=times, t_stop=Units.s,
-                                                      units=Units.s))
+                    seg.spiketrains.append(SpikeTrain(times=times, t_stop=un.s,
+                                                      units=un.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
                                    index=[1, 2])
@@ -813,7 +813,7 @@ class NixIOWriteTest(NixIOTest):
         writeprop = self.io._write_property
 
         # quantity
-        qvalue = Units.Quantity(10, "mV")
+        qvalue = un.Quantity(10, "mV")
         writeprop(section, "qvalue", qvalue)
         self.assertEqual(section["qvalue"], 10)
         self.assertEqual(section.props["qvalue"].unit, "mV")
@@ -1001,7 +1001,7 @@ class NixIOHashTest(NixIOTest):
                     "file_datetime": self.rdate,
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(Block, argfuncs)
         self._hash_test(Segment, argfuncs)
         self._hash_test(Unit, argfuncs)
@@ -1011,58 +1011,58 @@ class NixIOHashTest(NixIOTest):
                     "description": self.rsentence,
                     "index": lambda: np.random.random(10).tolist(),
                     "channel_names": lambda: self.rsentence(10).split(" "),
-                    "coordinates": lambda: [(np.random.random() * Units.cm,
-                                             np.random.random() * Units.cm,
-                                             np.random.random() * Units.cm)]*10,
+                    "coordinates": lambda: [(np.random.random() * un.cm,
+                                             np.random.random() * un.cm,
+                                             np.random.random() * un.cm)]*10,
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(ChannelIndex, argfuncs)
 
     def test_analogsignal_hash(self):
         argfuncs = {"name": self.rword,
                     "description": self.rsentence,
-                    "signal": lambda: self.rquant((10, 10), Units.mV),
-                    "sampling_rate": lambda: np.random.random() * Units.Hz,
-                    "t_start": lambda: np.random.random() * Units.sec,
-                    "t_stop": lambda: np.random.random() * Units.sec,
+                    "signal": lambda: self.rquant((10, 10), un.mV),
+                    "sampling_rate": lambda: np.random.random() * un.Hz,
+                    "t_start": lambda: np.random.random() * un.sec,
+                    "t_stop": lambda: np.random.random() * un.sec,
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(AnalogSignal, argfuncs)
 
     def test_irregularsignal_hash(self):
         argfuncs = {"name": self.rword,
                     "description": self.rsentence,
-                    "signal": lambda: self.rquant((10, 10), Units.mV),
-                    "times": lambda: self.rquant(10, Units.ms, True),
+                    "signal": lambda: self.rquant((10, 10), un.mV),
+                    "times": lambda: self.rquant(10, un.ms, True),
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(IrregularlySampledSignal, argfuncs)
 
     def test_event_hash(self):
         argfuncs = {"name": self.rword,
                     "description": self.rsentence,
-                    "times": lambda: self.rquant(10, Units.ms),
-                    "durations": lambda: self.rquant(10, Units.ms),
+                    "times": lambda: self.rquant(10, un.ms),
+                    "durations": lambda: self.rquant(10, un.ms),
                     "labels": lambda: self.rsentence(10).split(" "),
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(Event, argfuncs)
         self._hash_test(Epoch, argfuncs)
 
     def test_spiketrain_hash(self):
         argfuncs = {"name": self.rword,
                     "description": self.rsentence,
-                    "times": lambda: self.rquant(10, Units.ms, True),
-                    "t_start": lambda: -np.random.random() * Units.sec,
-                    "t_stop": lambda: np.random.random() * 100 * Units.sec,
-                    "waveforms": lambda: self.rquant((10, 10, 20), Units.mV),
+                    "times": lambda: self.rquant(10, un.ms, True),
+                    "t_start": lambda: -np.random.random() * un.sec,
+                    "t_stop": lambda: np.random.random() * 100 * un.sec,
+                    "waveforms": lambda: self.rquant((10, 10, 20), un.mV),
                     # annotations
                     self.rword(): self.rword,
-                    self.rword(): lambda: self.rquant((10, 10), Units.mV)}
+                    self.rword(): lambda: self.rquant((10, 10), un.mV)}
         self._hash_test(SpikeTrain, argfuncs)
 
 
