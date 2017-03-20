@@ -304,6 +304,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.signal1 = AnalogSignal(self.data1quant, sampling_rate=1*pq.kHz,
                                          name='spam', description='eggs',
                                          file_origin='testfile.txt', arg1='test')
+        self.signal1.segment = 1
+        self.signal1.channel_index = 5
 
     def test__compliant(self):
         assert_neo_object_is_compliant(self.signal1)
@@ -332,6 +334,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.name, self.signal1.name)
         self.assertEqual(result.description, self.signal1.description)
         self.assertEqual(result.annotations, self.signal1.annotations)
+
+    def test__slice_should_let_access_to_parents_objects(self):
+        result =  self.signal1.time_slice(1*pq.ms,3*pq.ms)
+        self.assertEqual(result.segment, self.signal1.segment)
+        self.assertEqual(result.channel_index, self.signal1.channel_index)
 
     def test__slice_should_change_sampling_period(self):
         result1 = self.signal1[:2, 0]
@@ -368,6 +375,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result1.magnitude, self.data1[:2].reshape(-1, 1))
         assert_array_equal(result2.magnitude, self.data1[::2].reshape(-1, 1))
         assert_array_equal(result3.magnitude, self.data1[1:7:2].reshape(-1, 1))
+
+    def test__copy_should_let_access_to_parents_objects(self):
+        ##copy
+        result =  self.signal1.copy()
+        self.assertEqual(result.segment, self.signal1.segment)
+        self.assertEqual(result.channel_index, self.signal1.channel_index)
+        ## deep copy (not fixed yet)
+        #result = copy.deepcopy(self.signal1)
+        #self.assertEqual(result.segment, self.signal1.segment)
+        #self.assertEqual(result.channel_index, self.signal1.channel_index)
 
     def test__getitem_should_return_single_quantity(self):
         result1 = self.signal1[0, 0]
