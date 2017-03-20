@@ -26,17 +26,19 @@ and may not be the current affiliation of a contributor.
 * Joffrey Gonin [2]
 * Kyler Brown [?]
 * Mikkel Elle Lepperød [11]
+* C Daniel Meliza [12]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
-2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France 
+2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
 3. University of California, Berkeley
-4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France 
-5. G-Node, Ludwig-Maximilians-Universität, Munich, Germany 
+4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France
+5. G-Node, Ludwig-Maximilians-Universität, Munich, Germany
 6. Institut de Neurosciences de la Timone, CNRS UMR 7289 - Université d'Aix-Marseille, Marseille, France
 7. Centre de Neurosciences Integratives et Cignitives, UMR 5228 - CNRS - Université Bordeaux I - Université Bordeaux II
 8. Neural Information Processing Group, TU Berlin, Germany
 9. Department of Neurobiology & Anatomy, Drexel University College of Medicine, Philadelphia, PA, USA
 10. University of Konstanz, Konstanz, Germany
 11. Centre for Integrative Neuroplasticity (CINPLA), University of Oslo, Norway
+12. University of Virginia
 
 If we've somehow missed you off the list we're very sorry - please let us know.
