@@ -44,6 +44,10 @@ Classes:
 
 .. autoclass:: neo.io.NeoMatlabIO
 
+.. autoclass:: neo.io.NESTSpikeIO
+
+.. autoclass:: neo.io.NESTMultimeterIO
+
 .. autoclass:: neo.io.NeuroExplorerIO
 
 .. autoclass:: neo.io.NeuroScopeIO
@@ -110,6 +114,8 @@ from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
+from neo.io.nestio import NESTSpikeIO
+from neo.io.nestio import NESTMultimeterIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
@@ -145,6 +151,8 @@ iolist = [
           NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
           NeoHdf5IO,
           NeoMatlabIO,
+          NESTSpikeIO,
+          NESTMultimeterIO,
           NeuroExplorerIO,
           NeuroScopeIO,
           NeuroshareIO,
