@@ -623,7 +623,7 @@ class BlackrockIO(BaseIO):
             ('nb_ext_headers', 'uint32')]
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        #print(nev_basic_header) ###
+        
         # extended header
         # this consist in N block with code 8bytes + 24 data bytes
         # the data bytes depend on the code and need to be converted
@@ -970,7 +970,7 @@ class BlackrockIO(BaseIO):
                     ('node_id', 'uint16'),
                     ('node_count', 'uint16'),
                     ('point_count', 'uint16'),
-                    ('tracking_points', 'uint16', ((data_size - 14) / 2, ))]},
+                    ('tracking_points', 'uint16', ((data_size - 14) // 2, ))]},
             'ButtonTrigger': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1817,19 +1817,17 @@ class BlackrockIO(BaseIO):
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
                 channel_idx, labels[idx_ch], nsx_nb)
+
+        data_times = np.arange(
+            t_start.item(), t_stop.item(),
+            self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
+        mask = (data_times >= n_start) & (data_times < n_stop)
         
         if lazy:
-            period = self.__nsx_basic_header[nsx_nb]['period']
-            length = int(((n_stop.rescale(nsx_time_unit)-n_start.rescale(nsx_time_unit))/\
-                            self.__nsx_basic_header[nsx_nb]['period']).magnitude)
-            lazy_shape = (length, )
-            sig_ch = []
+            lazy_shape = (np.sum(maks), )
+            sig_ch =  np.array([], dtype='float32')
             t_start = n_start.rescale('s')
         else:
-            data_times = np.arange(
-                t_start.item(), t_stop.item(),
-                self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
-            mask = (data_times >= n_start) & (data_times < n_stop)
         
             data_times = data_times[mask].astype(float)
             sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
