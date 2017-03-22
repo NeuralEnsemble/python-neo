@@ -14,7 +14,7 @@ if os.environ.get('TRAVIS') == 'true' and \
 
 setup(
     name = "neo",
-    version = '0.5.0alpha1',
+    version = '0.5.0',
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
     install_requires=install_requires,
     author = "Neo authors and contributors",
@@ -36,5 +36,6 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering']
 )

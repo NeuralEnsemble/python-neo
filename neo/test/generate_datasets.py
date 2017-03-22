@@ -107,6 +107,7 @@ def generate_one_simple_segment(seg_name='segment 0',
         for name, labels in iteritems(event_types):
             evt_size = rand()*np.diff(event_size_range)
             evt_size += event_size_range[0]
+            evt_size = int(evt_size)
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(evt_size)*len(labels)).astype('i')]
             evt = Event(times=rand(evt_size)*duration, labels=labels)
@@ -161,7 +162,7 @@ def generate_from_supported_objects(supported_objects):
 
 
 def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
-                   units=None, obj=None, n=None):
+                   units=None, obj=None, n=None, shape=None):
     """
     Returns default value for a given attribute based on neo.core
 
@@ -193,7 +194,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         return np.random.randint(100)
     if datatype == float:
         return 1000. * np.random.random()
-    if datatype == datetime:
+    if datatype == datetime:      
         return datetime.fromtimestamp(1000000000*np.random.random())
 
     if (name in ['t_start', 't_stop', 'sampling_rate'] and
@@ -218,30 +219,37 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
     if name == 'sampling_rate':
         data = np.array(10000.0)
     elif name == 't_start':
-        data = np.array(0.0)
+        data = np.array(0.0)   
     elif name == 't_stop':
-        data = np.array(1.0)
+        data = np.array(1.0)   
     elif n and name == 'channel_indexes':
-        data = np.arange(n)
+        data = np.arange(n)    
     elif n and name == 'channel_names':
-        data = np.array(["ch%d" % i for i in range(n)])
+        data = np.array(["ch%d" % i for i in range(n)])      
     elif n and obj == 'AnalogSignal':
         if name == 'signal':
             size = []
             for _ in range(int(dim)):
                 size.append(np.random.randint(5) + 1)
             size[1] = n
-            data = np.random.random(size)*1000.
+            data = np.random.random(size)*1000.        
     else:
         size = []
         for _ in range(int(dim)):
-            size.append(np.random.randint(5) + 1)
+            if shape is None :
+                if name == "times":
+                    size.append(5)
+                else :
+                    size.append(np.random.randint(5) + 1)
+            else:
+                size.append(shape)
+
         data = np.random.random(size)
         if name not in ['time', 'times']:
             data *= 1000.
     if np.dtype(dtype) != np.float64:
         data = data.astype(dtype)
-
+        
     if datatype == np.ndarray:
         return data
     if datatype == list:
@@ -275,6 +283,23 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
         else:
             iseed = None
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
+    
+    if 'waveforms' in kwargs :   #everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[0]
+        if len(kwargs["times"]) != kwargs["waveforms"].shape[0] :
+            if len(kwargs["times"]) < kwargs["waveforms"].shape[0] :
+                
+                dif = kwargs["waveforms"].shape[0] - len(kwargs["times"])
+
+                new_times =[]
+                for i in kwargs["times"].magnitude :
+                    new_times.append(i)
+
+                np.random.seed(0)
+                new_times = np.concatenate([new_times, np.random.random(dif)])
+                kwargs["times"] = pq.Quantity(new_times, units=pq.ms)
+            else :
+                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]] 
+
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
         kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]

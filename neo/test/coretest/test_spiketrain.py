@@ -41,12 +41,15 @@ class Test__generate_datasets(unittest.TestCase):
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
-        times = get_fake_value('times', un.Quantity, seed=0, dim=1)
+
+        waveforms = get_fake_value('waveforms', un.Quantity, seed=3, dim=3)
+        shape = waveforms.shape[0]
+        times = get_fake_value('times', un.Quantity, seed=0, dim=1, shape=waveforms.shape[0])
         t_start = get_fake_value('t_start', un.Quantity, seed=1, dim=0)
         t_stop = get_fake_value('t_stop', un.Quantity, seed=2, dim=0)
-        waveforms = get_fake_value('waveforms', un.Quantity, seed=3, dim=3)
         left_sweep = get_fake_value('left_sweep', un.Quantity, seed=4, dim=0)
         sampling_rate = get_fake_value('sampling_rate', un.Quantity,
+
                                        seed=5, dim=0)
         name = get_fake_value('name', str, seed=6, obj=SpikeTrain)
         description = get_fake_value('description', str,
@@ -745,6 +748,11 @@ class TestConstructor(unittest.TestCase):
                           np.arange(t_start, t_stop+5), units='ms',
                           t_start=t_start, t_stop=t_stop)
 
+    def test__create_with_len_times_different_size_than_waveform_shape1_ValueError(self):
+        self.assertRaises(ValueError, SpikeTrain,
+                          times=np.arange(10), units='s',
+                          t_stop=4, waveforms=np.ones((10,6,50)))
+
     def test_defaults(self):
         # default recommended attributes
         train1 = SpikeTrain([3, 4, 5], units='sec', t_stop=10.0)
@@ -1358,6 +1366,20 @@ class TestChanging(unittest.TestCase):
                               0, 3,  [3, 4, 11] * un.ms)
             self.assertRaises(ValueError, train.__setslice__,
                               0, 3, [0, 4, 5] * un.ms)
+
+    def test__adding_time(self):
+        data = [3, 4, 5] * pq.ms
+        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        assert_neo_object_is_compliant(train)
+        self.assertRaises(ValueError, train.__add__, 10 * pq.ms)
+        assert_arrays_equal(train + 1 * pq.ms, data + 1 * pq.ms)
+
+    def test__subtracting_time(self):
+        data = [3, 4, 5] * pq.ms
+        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        assert_neo_object_is_compliant(train)
+        self.assertRaises(ValueError, train.__sub__, 10 * pq.ms)
+        assert_arrays_equal(train - 1 * pq.ms, data - 1 * pq.ms)
 
     def test__rescale(self):
         data = [3, 4, 5] * un.ms

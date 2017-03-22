@@ -313,7 +313,7 @@ class BlackrockIO(BaseIO):
             '2.1': self.__get_nonneural_evtypes_variant_a,
             '2.2': self.__get_nonneural_evtypes_variant_a,
             '2.3': self.__get_nonneural_evtypes_variant_b}
-
+        
         # Load file spec and headers of available nev file
         if self._avail_files['nev']:
             # read nev file specification
@@ -538,8 +538,9 @@ class BlackrockIO(BaseIO):
                 'offset_to_data_block': offset + dh.dtype.itemsize}
 
             # data size = number of data points * (2bytes * number of channels)
-            data_size = dh['nb_data_points'] * \
-                self.__nsx_basic_header[nsx_nb]['channel_count'] * 2
+            #int for avoid overflow problem
+            data_size = int(dh['nb_data_points']) * \
+                int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
             # define new offset (to possible next data block)
             offset = data_header[index]['offset_to_data_block'] + data_size
 
@@ -622,7 +623,7 @@ class BlackrockIO(BaseIO):
             ('nb_ext_headers', 'uint32')]
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        print(nev_basic_header) ###
+        
         # extended header
         # this consist in N block with code 8bytes + 24 data bytes
         # the data bytes depend on the code and need to be converted
@@ -638,12 +639,12 @@ class BlackrockIO(BaseIO):
         raw_ext_header = np.memmap(
             filename, offset=offset_dt0, dtype=dt1, shape=shape)
 
-        print(raw_ext_header['packet_id'][:10])
+        #print(raw_ext_header['packet_id'][:10])
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
             mask = (raw_ext_header['packet_id'] == packet_id)
             assert isinstance(mask, np.ndarray)
-            print(packet_id, mask.shape)
+            #print(packet_id, mask.shape)
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
@@ -969,7 +970,7 @@ class BlackrockIO(BaseIO):
                     ('node_id', 'uint16'),
                     ('node_count', 'uint16'),
                     ('point_count', 'uint16'),
-                    ('tracking_points', 'uint16', ((data_size - 14) / 2, ))]},
+                    ('tracking_points', 'uint16', ((data_size - 14) // 2, ))]},
             'ButtonTrigger': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1821,38 +1822,47 @@ class BlackrockIO(BaseIO):
             t_start.item(), t_stop.item(),
             self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
         mask = (data_times >= n_start) & (data_times < n_stop)
-        data_times = data_times[mask].astype(float)
-
-        sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(float)
-
-        # transform dig value to pysical value
-        sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
-        sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
-        if sym_ana and sym_dig:
-            sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+        
+        if lazy:
+            lazy_shape = (np.sum(mask), )
+            sig_ch =  np.array([], dtype='float32')
+            t_start = n_start.rescale('s')
         else:
-            # general case
-            sig_ch -= min_dig[idx_ch]
-            sig_ch *= float(max_ana[idx_ch] - min_ana) / \
-                float(max_dig[idx_ch] - min_dig)
-            sig_ch += float(min_ana[idx_ch])
-
+        
+            data_times = data_times[mask].astype(float)
+            sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
+            
+            # transform dig value to pysical value
+            sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
+            sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
+            if sym_ana and sym_dig:
+                sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+            else:
+                # general case
+                sig_ch -= min_dig[idx_ch]
+                sig_ch *= float(max_ana[idx_ch] - min_ana) / \
+                    float(max_dig[idx_ch] - min_dig)
+                sig_ch += float(min_ana[idx_ch])
+            
+            t_start=data_times[0].rescale(nsx_time_unit)
+            
         anasig = AnalogSignal(
             signal=un.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
             sampling_rate=sampling_rate,
-            t_start=data_times[0].rescale(nsx_time_unit),
+            t_start=t_start,
             name=labels[idx_ch],
             description=description,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
 
+        if lazy:
+            anasig.lazy_shape = lazy_shape
+        
+        
         anasig.annotate(
             nsx=nsx_nb,
             ch_idx=channel_idx,
             ch_label=labels[idx_ch])
 
-        if lazy:
-            anasig.lazy_shape = np.shape(sig_ch)
-            anasig.signal = []
 
         return anasig
 
@@ -2331,6 +2341,7 @@ class BlackrockIO(BaseIO):
                     "====================================\n"
                 for i, el in enumerate(avail_el):
                     output += "Electrode ID %i: " % el
+                    output += "label %s: " % self.__nev_params('channel_labels')[el]
                     output += "connector: %i, " % con[i]
                     output += "pin: %i, " % pin[i]
                     output += 'nb_units: %i\n' % nb_units[i]

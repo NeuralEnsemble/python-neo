@@ -366,6 +366,182 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, un.nA)
 
+    def test_time_slice(self):
+        targdataquant = [[1.0], [2.0], [3.0]] * pq.mV
+        targtime = np.logspace(1, 5, 10)
+        targtimequant = targtime [1:4] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = 15
+        t_stop = 250
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+    
+    def test_time_slice_out_of_boundries(self):
+        targdataquant = self.data1quant
+        targtimequant = self.time1quant
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = 0
+        t_stop = 2500000
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+    def test_time_slice_empty(self):
+        targdataquant = [] * pq.mV
+        targtimequant = [] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = 15
+        t_stop = 250
+        result = targ_signal.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+    def test_time_slice_none_stop(self):
+        targdataquant = [[1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0], [8.0], [9.0]] * pq.mV
+        targtime = np.logspace(1, 5, 10)
+        targtimequant = targtime [1:10] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = 15
+        t_stop = None
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+    def test_time_slice_none_start(self):
+        targdataquant = [[0.0], [1.0], [2.0], [3.0]] * pq.mV
+        targtime = np.logspace(1, 5, 10)
+        targtimequant = targtime [0:4] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = None
+        t_stop = 250
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+    def test_time_slice_none_both(self):
+        targdataquant = [[0.0], [1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0], [8.0], [9.0]] * pq.mV
+        targtime = np.logspace(1, 5, 10)
+        targtimequant = targtime [0:10] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = None
+        t_stop = None
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
+
+    def test_time_slice_differnt_units(self):
+        targdataquant = [[1.0], [2.0], [3.0]] * pq.mV
+        targtime = np.logspace(1, 5, 10)
+        targtimequant = targtime [1:4] *pq.ms
+        targ_signal = IrregularlySampledSignal(targtimequant,
+                                                signal=targdataquant,
+                                                name='spam',
+                                                description='eggs',
+                                                file_origin='testfile.txt',
+                                                arg1='test')
+
+        t_start = 15
+        t_stop = 250
+
+        t_start = 0.015  * pq.s
+        t_stop = .250 * pq.s
+
+        result = self.signal1.time_slice(t_start, t_stop)
+
+        assert_array_equal(result, targ_signal)
+        assert_array_equal(result.times, targtimequant)
+        self.assertEqual(result.units, 1*pq.mV)
+        self.assertIsInstance(result, IrregularlySampledSignal)
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(result.name, 'spam')
+        self.assertEqual(result.description, 'eggs')
+        self.assertEqual(result.file_origin, 'testfile.txt')
+        self.assertEqual(result.annotations, {'arg1': 'test'})
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def setUp(self):

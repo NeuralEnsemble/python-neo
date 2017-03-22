@@ -238,7 +238,7 @@ class AnalogSignal(BaseNeo, un.Quantity):
         super(AnalogSignal, self).__array_finalize__(obj)
         self._t_start = getattr(obj, '_t_start', 0 * un.s)
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
-
+       
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
 
@@ -246,6 +246,10 @@ class AnalogSignal(BaseNeo, un.Quantity):
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
+
+        # Parents objects
+        self.segment = getattr(obj, 'segment', None)
+        self.channel_index = getattr(obj, 'channel_index', None)
 
     def __repr__(self):
         '''

@@ -16,13 +16,12 @@ This IO supports both writing and reading of NIX files. Reading is supported
 only if the NIX file was created using this IO.
 """
 
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
 
 import time
 from datetime import datetime
 from collections import Iterable
 import itertools
-from six import string_types
 from hashlib import md5
 
 from neo import units as un
@@ -34,10 +33,15 @@ from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
 from neo.io.tools import LazyList
 
 try:
-    import nixio
+    import nixio as nix
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
+
+try:
+    string_types = basestring
+except NameError:
+    string_types = str
 
 
 def stringify(value):
@@ -48,37 +52,10 @@ def stringify(value):
     return str(value)
 
 
-def nix_type_dict():
-    pycore = nixio.pycore
-
-    typedict = {
-        "Block": (pycore.Block,),
-        "Group": (pycore.Group,),
-        "SampledDimension": (pycore.SampledDimension,),
-        "RangeDimension": (pycore.RangeDimension,),
-        "SetDimension": (pycore.SetDimension,)
-    }
-
-    try:
-        ccore = nixio.core
-        typedict["Block"] += (ccore.Block,)
-        typedict["Group"] += (ccore.Group,)
-        typedict["SampledDimension"] += (ccore.SampledDimension,)
-        typedict["RangeDimension"] += (ccore.RangeDimension,)
-        typedict["SetDimension"] += (ccore.SetDimension,)
-    except AttributeError:
-        pass
-
-    return typedict
-
-if HAVE_NIX:
-    nixtypes = nix_type_dict()
-else:
-    nixtypes = {}
-
-
 def calculate_timestamp(dt):
-    return int(time.mktime(dt.timetuple()))
+    if isinstance(dt, datetime):
+        return int(time.mktime(dt.timetuple()))
+    return int(dt)
 
 
 class NixIO(BaseIO):
@@ -110,7 +87,7 @@ class NixIO(BaseIO):
         "units": "sources"
     }
 
-    def __init__(self, filename, mode="ro"):
+    def __init__(self, filename, mode="rw"):
         """
         Initialise IO instance and NIX file.
 
@@ -125,20 +102,26 @@ class NixIO(BaseIO):
         BaseIO.__init__(self, filename)
         self.filename = filename
         if mode == "ro":
-            filemode = nixio.FileMode.ReadOnly
+            filemode = nix.FileMode.ReadOnly
         elif mode == "rw":
-            filemode = nixio.FileMode.ReadWrite
+            filemode = nix.FileMode.ReadWrite
         elif mode == "ow":
-            filemode = nixio.FileMode.Overwrite
+            filemode = nix.FileMode.Overwrite
         else:
             raise ValueError("Invalid mode specified '{}'. "
-                             "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite), "
-                             "'ow' (Overwrite).".format(mode))
-        self.nix_file = nixio.File.open(self.filename, filemode, backend="h5py")
+                             "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
+                             " 'ow' (Overwrite).".format(mode))
+        self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
         self._object_map = dict()
         self._lazy_loaded = list()
         self._object_hashes = dict()
         self._block_read_counter = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
     def read_all_blocks(self, cascade=True, lazy=False):
         blocks = list()
@@ -313,7 +296,7 @@ class NixIO(BaseIO):
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
-                isinstance(timedim, nixtypes["SampledDimension"])):
+                isinstance(timedim, nix.pycore.SampledDimension)):
             if lazy:
                 sampling_period = un.Quantity(1, timedim.unit)
                 t_start = un.Quantity(0, timedim.unit)
@@ -334,7 +317,7 @@ class NixIO(BaseIO):
                 t_start=t_start, **neo_attrs
             )
         elif neo_type == "neo.irregularlysampledsignal"\
-                or isinstance(timedim, nixtypes["RangeDimension"]):
+                or isinstance(timedim, nix.pycore.RangeDimension):
             if lazy:
                 times = un.Quantity(np.empty(0), timedim.unit)
             else:
@@ -366,7 +349,10 @@ class NixIO(BaseIO):
                 durations = un.Quantity(np.empty(0), nix_mtag.extents.unit)
                 labels = np.empty(0, dtype='S')
             else:
-                durations = un.Quantity(nix_mtag.extents, nix_mtag.extents.unit)
+
+                durations = un.Quantity(nix_mtag.extents,
+                                        nix_mtag.extents.unit)
+
                 labels = np.array(nix_mtag.positions.dimensions[0].labels,
                                   dtype="S")
             eest = Epoch(times=times, durations=durations, labels=labels,
@@ -415,9 +401,12 @@ class NixIO(BaseIO):
                 wfda = nix_mtag.features[0].data
                 wftime = self._get_time_dimension(wfda)
                 if lazy:
-                    eest.waveforms = un.Quantity(np.empty((0, 0, 0)), wfda.unit)
+
+                    eest.waveforms = un.Quantity(np.empty((0, 0, 0)),
+                                                 wfda.unit)
                     eest.sampling_period = un.Quantity(1, wftime.unit)
                     eest.left_sweep = un.Quantity(0, wftime.unit)
+
                 else:
                     eest.waveforms = un.Quantity(wfda, wfda.unit)
                     if interval_units is None:
@@ -503,8 +492,8 @@ class NixIO(BaseIO):
 
     def load_lazy_cascade(self, path, lazy):
         """
-        Loads the object at the location specified by the path and all children.
-        Data is loaded if lazy is False.
+        Loads the object at the location specified by the path and all
+        children. Data is loaded if lazy is False.
 
         :param path: Location of object in file
         :param lazy: Do not load data if True
@@ -569,7 +558,7 @@ class NixIO(BaseIO):
             nixobj = parentobj.create_group(attr["name"], "neo.segment")
         elif attr["type"] == "channelindex":
             nixobj = parentobj.create_source(attr["name"],
-                                               "neo.channelindex")
+                                             "neo.channelindex")
         elif attr["type"] in ("analogsignal", "irregularlysampledsignal"):
             blockpath = "/" + loc.split("/")[1]
             parentblock = self._get_object_at(blockpath)
@@ -612,8 +601,8 @@ class NixIO(BaseIO):
 
     def write_channelindex(self, chx, loc=""):
         """
-        Convert the provided ``chx`` (ChannelIndex) to a NIX Source and write it
-        to the NIX file at the location defined by ``loc``.
+        Convert the provided ``chx`` (ChannelIndex) to a NIX Source and write
+        it to the NIX file at the location defined by ``loc``.
 
         :param chx: The Neo ChannelIndex to be written
         :param loc: Path to the parent of the new CHX
@@ -653,12 +642,12 @@ class NixIO(BaseIO):
             nixchan.definition = nixsource.definition
             chanpath = loc + "/channelindex/" + channame
             chanmd = self._get_or_init_metadata(nixchan, chanpath)
-            chanmd["index"] = nixio.Value(int(channel))
+            chanmd["index"] = nix.Value(int(channel))
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
                 nixcoords = tuple(
-                    nixio.Value(c.rescale(coordunits).magnitude.item())
+                    nix.Value(c.rescale(coordunits).magnitude.item())
                     for c in coords
                 )
                 if "coordinates" in chanmd:
@@ -669,8 +658,8 @@ class NixIO(BaseIO):
     def write_analogsignal(self, anasig, loc=""):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
-        DataArray objects and write them to the NIX file at the location defined
-        by ``loc``. All DataArray objects created from the same
+        DataArray objects and write them to the NIX file at the location
+        defined by ``loc``. All DataArray objects created from the same
         AnalogSignal have their metadata section point to the same object.
 
         :param anasig: The Neo AnalogSignal to be written
@@ -882,10 +871,15 @@ class NixIO(BaseIO):
             nixobj.force_created_at(calculate_timestamp(attr["created_at"]))
         if "file_datetime" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["file_datetime"] = attr["file_datetime"]
+            self._write_property(metadata,
+                                 "file_datetime", attr["file_datetime"])
+            # metadata["file_datetime"] = attr["file_datetime"]
         if "rec_datetime" in attr and attr["rec_datetime"]:
             metadata = self._get_or_init_metadata(nixobj, path)
-            metadata["rec_datetime"] = attr["rec_datetime"]
+            # metadata["rec_datetime"] = attr["rec_datetime"]
+            self._write_property(metadata,
+                                 "rec_datetime", attr["rec_datetime"])
+
         if "annotations" in attr:
             metadata = self._get_or_init_metadata(nixobj, path)
             for k, v in attr["annotations"].items():
@@ -894,7 +888,7 @@ class NixIO(BaseIO):
     def _write_data(self, nixobj, attr, path):
         if isinstance(nixobj, list):
             metadata = self._get_or_init_metadata(nixobj[0], path)
-            metadata["t_start.units"] = nixio.Value(attr["t_start.units"])
+            metadata["t_start.units"] = nix.Value(attr["t_start.units"])
             for obj in nixobj:
                 obj.unit = attr["data.units"]
                 if attr["type"] == "analogsignal":
@@ -941,13 +935,14 @@ class NixIO(BaseIO):
                     data=attr["waveforms"]
                 )
                 wfda.unit = attr["waveforms.units"]
-                nixobj.create_feature(wfda, nixio.LinkType.Indexed)
+                nixobj.create_feature(wfda, nix.LinkType.Indexed)
                 wfda.append_set_dimension()
                 wfda.append_set_dimension()
                 wftime = wfda.append_sampled_dimension(
                     attr["sampling_interval"]
                 )
-                metadata["sampling_interval.units"] = attr["sampling_interval.units"]
+                metadata["sampling_interval.units"] =\
+                    attr["sampling_interval.units"]
                 wftime.unit = attr["times.units"]
                 wftime.label = "time"
                 if wfname in metadata.sections:
@@ -986,9 +981,9 @@ class NixIO(BaseIO):
     @classmethod
     def resolve_name_conflicts(cls, objects):
         """
-        Given a list of neo objects, change their names such that no two objects
-        share the same name. Objects with no name are renamed based on their
-        type.
+        Given a list of neo objects, change their names such that no two
+        objects share the same name. Objects with no name are renamed based on
+        their type.
         If a container object is supplied (Block, Segment, or RCG), conflicts
         are resolved for the child objects.
 
@@ -1111,39 +1106,39 @@ class NixIO(BaseIO):
 
         if isinstance(v, un.Quantity):
             if len(v.shape):
-                section[name] = list(nixio.Value(vv) for vv in v.magnitude)
+                section[name] = list(nix.Value(vv) for vv in v.magnitude)
             else:
-                section[name] = nixio.Value(v.magnitude.item())
+                section[name] = nix.Value(v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section[name] = [nixio.Value(calculate_timestamp(v))]
+            section[name] = nix.Value(calculate_timestamp(v))
         elif isinstance(v, string_types):
-            section[name] = [nixio.Value(v)]
+            section[name] = nix.Value(v)
         elif isinstance(v, bytes):
-            section[name] = [nixio.Value(v.decode())]
+            section[name] = nix.Value(v.decode())
         elif isinstance(v, Iterable):
             values = []
             unit = None
             for item in v:
                 if isinstance(item, un.Quantity):
                     unit = str(item.dimensionality)
-                    item = nixio.Value(item.magnitude.item())
+                    item = nix.Value(item.magnitude.item())
                 elif isinstance(item, Iterable):
                     self.logger.warn("Multidimensional arrays and nested "
                                      "containers are not currently supported "
                                      "when writing to NIX.")
                     return None
                 elif type(item).__module__ == "numpy":
-                    item = nixio.Value(item.item())
+                    item = nix.Value(item.item())
                 else:
-                    item = nixio.Value(item)
+                    item = nix.Value(item)
                 values.append(item)
             section[name] = values
             section.props[name].unit = unit
         elif type(v).__module__ == "numpy":
-            section[name] = [nixio.Value(v.item())]
+            section[name] = nix.Value(v.item())
         else:
-            section[name] = [nixio.Value(v)]
+            section[name] = nix.Value(v)
         return section.props[name]
 
     @staticmethod
@@ -1188,12 +1183,12 @@ class NixIO(BaseIO):
                 else:
                     neo_attrs[prop.name] = values
 
-        if isinstance(nix_obj, (nixtypes["Block"], nixtypes["Group"])):
+        if isinstance(nix_obj, (nix.pycore.Block, nix.pycore.Group)):
             if "rec_datetime" not in neo_attrs:
                 neo_attrs["rec_datetime"] = None
-
-        #     neo_attrs["rec_datetime"] = datetime.fromtimestamp(
-        #         nix_obj.created_at)
+            neo_attrs["rec_datetime"] = datetime.fromtimestamp(
+                nix_obj.created_at
+            )
         if "file_datetime" in neo_attrs:
             neo_attrs["file_datetime"] = datetime.fromtimestamp(
                 neo_attrs["file_datetime"]
@@ -1206,9 +1201,9 @@ class NixIO(BaseIO):
         """
         Groups data arrays that were generated by the same Neo Signal object.
 
-        :param paths: A list of paths (strings) of all the signals to be grouped
-        :return: A list of paths (strings) of signal groups. The last part of
-        each path is the common name of the signals in the group.
+        :param paths: A list of paths (strings) of all the signals to be
+        grouped :return: A list of paths (strings) of signal groups. The last
+        part of each path is the common name of the signals in the group.
         """
         grouppaths = list(".".join(p.split(".")[:-1])
                           for p in paths)
@@ -1309,3 +1304,19 @@ class NixIO(BaseIO):
         strupdate(type(obj).__name__)
 
         return objhash.hexdigest()
+
+    def close(self):
+        """
+        Closes the open nix file and resets maps.
+        """
+        if (hasattr(self, "nix_file") and
+                self.nix_file and self.nix_file.is_open()):
+            self.nix_file.close()
+            self.nix_file = None
+            self._object_map = None
+            self._lazy_loaded = None
+            self._object_hashes = None
+            self._block_read_counter = None
+
+    def __del__(self):
+        self.close()
