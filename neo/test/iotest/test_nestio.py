@@ -166,6 +166,26 @@ class TestNestIO_Analogsignals(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(len(seg.analogsignals), 50)
 
+    def test_read_block(self):
+        """
+        Tests if signals are correctly stored in a block.
+        """
+
+        filename = get_test_file_full_path(
+                ioclass=NestIO,
+                filename='0gid-1time-2gex-1262-0.dat',
+                directory=self.local_test_dir, clean=False)
+        r = NestIO(filenames=filename)
+
+        id_list_to_test = range(1, 10)
+        blk = r.read_block(gid_list=id_list_to_test,
+                          t_stop=1000. * pq.ms,
+                          sampling_period=pq.ms, lazy=False,
+                          id_column_dat=0, time_column_dat=1,
+                          value_columns_dat=2, value_types='V_m')
+
+        self.assertTrue(len(blk.segments[0].analogsignals) == len(id_list_to_test))
+
     def test_wrong_input(self):
         """
         Tests two cases of wrong user input, namely
@@ -758,7 +778,7 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
             self.testIO.get_columns(condition=lambda x: True)
 
         self.assertTrue('no condition_column ID provided' in
-                        context.exception.message)
+                        str(context.exception))
 
     def test_correct_condition_selection(self):
         """

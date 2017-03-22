@@ -27,6 +27,10 @@ and may not be the current affiliation of a contributor.
 * Kyler Brown [?]
 * Mikkel Elle Lepperød [11]
 * C Daniel Meliza [12]
+* Julia Sprenger [13]
+* Maximilian Schmidt [13]
+* Johanna Senk [13]
+
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -40,5 +44,7 @@ and may not be the current affiliation of a contributor.
 10. University of Konstanz, Konstanz, Germany
 11. Centre for Integrative Neuroplasticity (CINPLA), University of Oslo, Norway
 12. University of Virginia
+13. INM-6, Forschungszentrum Jülich, Germany
+
 
 If we've somehow missed you off the list we're very sorry - please let us know.

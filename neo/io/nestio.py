@@ -17,11 +17,12 @@ from __future__ import absolute_import
 
 import os.path
 import warnings
+from datetime import datetime
 import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import Segment, SpikeTrain, AnalogSignal
+from neo.core import Block, Segment, SpikeTrain, AnalogSignal
 
 value_type_dict = {'V': pq.mV,
                    'I': pq.pA,
@@ -50,8 +51,8 @@ class NestIO(BaseIO):
     is_readable = True  # class supports reading, but not writing
     is_writable = False
 
-    supported_objects = [SpikeTrain, AnalogSignal]
-    readable_objects = [SpikeTrain, AnalogSignal]
+    supported_objects = [SpikeTrain, AnalogSignal, Segment, Block]
+    readable_objects = [SpikeTrain, AnalogSignal, Segment, Block]
 
     has_header = False
     is_streameable = False
@@ -452,6 +453,21 @@ class NestIO(BaseIO):
         selected_ids = gid_ids + id_shifts
         return selected_ids
 
+    def read_block(self, gid_list=None, time_unit=pq.ms, t_start=None,
+                   t_stop=None, sampling_period=None, id_column_dat=0,
+                   time_column_dat=1, value_columns_dat=2,
+                   id_column_gdf=0, time_column_gdf=1, value_types=None,
+                   value_units=None, lazy=False, cascade=True):
+        seg = self.read_segment(gid_list, time_unit, t_start,
+                                t_stop, sampling_period, id_column_dat,
+                                time_column_dat, value_columns_dat,
+                                id_column_gdf, time_column_gdf, value_types,
+                                value_units, lazy, cascade)
+        blk = Block(file_origin=seg.file_origin, file_datetime=seg.file_datetime)
+        blk.segments.append(seg)
+        seg.block = blk
+        return blk
+
     def read_segment(self, gid_list=None, time_unit=pq.ms, t_start=None,
                      t_stop=None, sampling_period=None, id_column_dat=0,
                      time_column_dat=1, value_columns_dat=2,
@@ -511,7 +527,10 @@ class NestIO(BaseIO):
             gid_list = [None]
 
         # create an empty Segment
-        seg = Segment()
+        seg = Segment(file_origin=",".join(self.filenames))
+        seg.file_datetime = datetime.fromtimestamp(os.stat(self.filenames[0]).st_mtime)
+        # todo: rather than take the first file for the timestamp, we should take the oldest
+        #       in practice, there won't be much difference
 
         if cascade:
             # Load analogsignals and attach to Segment
