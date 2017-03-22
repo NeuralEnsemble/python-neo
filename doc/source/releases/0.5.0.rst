@@ -1,8 +1,8 @@
-=============================
-Neo 0.5.0-beta1 release notes
-=============================
+=======================
+Neo 0.5.0 release notes
+=======================
 
-8th March 2017
+22nd March 2017
 
 
 For Neo 0.5, we have taken the opportunity to simplify the Neo object model.
@@ -124,10 +124,12 @@ Other changes
 
     * added :class:`NixIO` (`about the NIX format`_)
     * added :class:`IgorIO`
+    * added :class:`NestIO` (for data files produced by the `NEST simulator`_)
     * :class:`NeoHdf5IO` is now read-only. It will read data files produced by earlier versions
       of Neo, but another HDF5-based IO, e.g. :class:`NixIO`, should be used for writing data.
-
+    * many fixes/improvements to existing IO modules. All IO modules should now work with Python 3.
 
 .. https://github.com/NeuralEnsemble/python-neo/issues?utf8=✓&q=is%3Aissue%20is%3Aclosed%20created%3A%3E2014-02-01%20
 
 .. _`about the NIX format`: https://github.com/G-Node/nix/wiki
+.. _`NEST simulator`: http://nest-simulator.org

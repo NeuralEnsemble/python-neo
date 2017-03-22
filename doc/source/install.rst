@@ -38,7 +38,7 @@ Installing from the Python Package Index
 
 If you have pip_ installed::
 
-    $ pip install https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0beta1.zip
+    $ pip install https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0.zip
     
 This will automatically download and install the latest release (again
 you may need to have administrator privileges on the machine you are installing
@@ -46,12 +46,12 @@ on).
     
 To download and install manually, download:
 
-    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0beta1.zip
+    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0.zip
 
 Then::
 
-    $ unzip neo-0.5.0beta1.zip
-    $ cd neo-0.5.0beta1
+    $ unzip neo-0.5.0.zip
+    $ cd neo-0.5.0
     $ python setup.py install
     
 or::
