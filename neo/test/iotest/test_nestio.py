@@ -695,7 +695,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
                                t_stop=1. * un.ms)
         self.assertEqual(st.size, 0)
 
-
+ 
 class TestNestIO_multiple_signal_types(BaseTestIO, unittest.TestCase):
     ioclass = NestIO
     files_to_test = []
