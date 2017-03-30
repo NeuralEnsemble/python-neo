@@ -9,8 +9,11 @@ except ImportError:
     import unittest
 
 import numpy as np
-from neo import units as un
 
+from neo import units as un
+import pickle
+import os
+from numpy.testing import assert_array_equal
 
 try:
     from IPython.lib.pretty import pretty
@@ -503,6 +506,25 @@ class TestDuplicateWithNewData(unittest.TestCase):
         assert_arrays_almost_equal(np.asarray(signal1b.durations),
                                    np.asarray(signal1.durations), 1e-12)
 
+class TestEventFunctions(unittest.TestCase):
+
+    def test__pickle(self):
+
+        epoch1 = Epoch(np.arange(0, 30, 10)*un.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
+                       units='s')
+        fobj = open('./pickle', 'wb')
+        pickle.dump(epoch1, fobj)
+        fobj.close()
+
+        fobj = open('./pickle', 'rb')
+        try:
+            epoch2 = pickle.load(fobj)
+        except ValueError:
+            epoch2 = None
+
+        fobj.close()
+        assert_array_equal(epoch1.times, epoch2.times)
+        os.remove('./pickle')
 
 if __name__ == "__main__":
     unittest.main()

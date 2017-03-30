@@ -14,11 +14,11 @@ if os.environ.get('TRAVIS') == 'true' and \
 
 setup(
     name = "neo",
-    version = '0.5.0',
+    version = '0.5.1dev',
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
     install_requires=install_requires,
     author = "Neo authors and contributors",
-    author_email = "sgarcia at olfac.univ-lyon1.fr",
+    author_email = "samuel.garcia@cnrs.fr",
     description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats",
     long_description = long_description,
     license = "BSD-3-Clause",

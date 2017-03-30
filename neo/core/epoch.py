@@ -20,6 +20,14 @@ from neo import units as un
 
 PY_VER = sys.version_info[0]
 
+def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
+                name=None, description=None, file_origin=None, annotations = None):
+    '''
+    A function to map Event.__new__ to function that
+    does not do the unit checking. This is needed for pickle to work. 
+    '''
+    return Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
+                 description=description, **annotations)
 
 class Epoch(BaseNeo, un.Quantity):
     '''
@@ -106,6 +114,14 @@ class Epoch(BaseNeo, un.Quantity):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+    def __reduce__(self):
+        '''
+        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        works
+        '''
+        return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
+                            self.name, self.file_origin, self.description,
+                            self.annotations)      
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
