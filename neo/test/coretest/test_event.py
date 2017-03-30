@@ -15,6 +15,7 @@ import pickle
 import os
 from numpy.testing import assert_array_equal
 
+
 try:
     from IPython.lib.pretty import pretty
 except ImportError as err:

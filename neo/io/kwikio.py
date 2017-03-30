@@ -114,6 +114,7 @@ class KwikIO(BaseIO):
         assert isinstance(cluster_metadata, str)
         blk = Block()
         if cascade:
+
             seg = Segment(file_origin=self.filename)
             blk.segments += [seg]
             for model in self.models:
@@ -166,6 +167,7 @@ class KwikIO(BaseIO):
         units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
         """
+
         arr = model.traces[:]*model.metadata['voltage_gain']
         ana = AnalogSignal(arr, sampling_rate=model.sample_rate*un.Hz,
                            units=units,
@@ -195,7 +197,7 @@ class KwikIO(BaseIO):
                 print("Exception: cluster_id (%d) not found !! " % cluster_id)
                 return
         clusters = model.spike_clusters
-        idx = np.argwhere(clusters == cluster_id)
+        idx = un.argwhere(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
             # klusta: num_spikes, samples_per_spike, num_chans = w.shape
@@ -208,3 +210,4 @@ class KwikIO(BaseIO):
                           file_origin=self.filename,
                           **{'cluster_id': cluster_id})
         return sptr
+

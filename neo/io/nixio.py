@@ -352,6 +352,7 @@ class NixIO(BaseIO):
 
                 durations = un.Quantity(nix_mtag.extents,
                                         nix_mtag.extents.unit)
+
                 labels = np.array(nix_mtag.positions.dimensions[0].labels,
                                   dtype="S")
             eest = Epoch(times=times, durations=durations, labels=labels,
@@ -401,7 +402,7 @@ class NixIO(BaseIO):
                 wftime = self._get_time_dimension(wfda)
                 if lazy:
 
-                    eest.waveforms = un.Quantity(un.empty((0, 0, 0)),
+                    eest.waveforms = un.Quantity(np.empty((0, 0, 0)),
                                                  wfda.unit)
                     eest.sampling_period = un.Quantity(1, wftime.unit)
                     eest.left_sweep = un.Quantity(0, wftime.unit)
