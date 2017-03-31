@@ -395,7 +395,7 @@ class NixIOTest(unittest.TestCase):
             )
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property(
-                "t_stop", nix.Value(max(times_da).item()+1)
+                "t_stop", nix.Value(times[-1]+1.0)
             )
 
             waveforms = cls.rquant((10, 8, 5), 1)
@@ -796,7 +796,8 @@ class NixIOWriteTest(NixIOTest):
                 for evidx in range(nevents):
                     seg.events.append(Event(times=times))
                 for stidx in range(nspiketrains):
-                    seg.spiketrains.append(SpikeTrain(times=times, t_stop=pq.s,
+                    seg.spiketrains.append(SpikeTrain(times=times,
+                                                      t_stop=times[-1]+pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
