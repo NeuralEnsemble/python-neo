@@ -438,6 +438,9 @@ class NixIOTest(unittest.TestCase):
             mtag_ep = blk.create_multi_tag(
                 epname, "neo.epoch", times_da
             )
+            mtag_ep.metadata = group.metadata.create_section(
+                epname, epname+".metadata"
+            )
             group.multi_tags.append(mtag_ep)
             mtag_ep.definition = cls.rsentence(2)
             mtag_ep.extents = extents_da
@@ -460,6 +463,9 @@ class NixIOTest(unittest.TestCase):
 
             mtag_ev = blk.create_multi_tag(
                 evname, "neo.event", times_da
+            )
+            mtag_ev.metadata = group.metadata.create_section(
+                evname, evname+".metadata"
             )
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
@@ -495,6 +501,9 @@ class NixIOTest(unittest.TestCase):
         for idx in range(nunits):
             unitname = "{}-unit{}".format(cls.rword(5), idx)
             nixunit = nixchx.create_source(unitname, "neo.unit")
+            nixunit.metadata = nixchx.metadata.create_section(
+                unitname, unitname+".metadata"
+            )
             nixunit.definition = cls.rsentence(4, 10)
             for st in stsperunit[idx]:
                 st.sources.append(nixchx)
