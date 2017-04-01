@@ -24,7 +24,6 @@ try:
 except ImportError:
     import mock
 import string
-import itertools
 
 import numpy as np
 import quantities as pq

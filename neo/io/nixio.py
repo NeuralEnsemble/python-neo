@@ -924,9 +924,11 @@ class NixIO(BaseIO):
                 labeldim = nixobj.positions.append_set_dimension()
                 labeldim.labels = attr["labels"]
             if "t_start" in attr:
-                self._write_property(metadata, "t_start", attr["t_start"])
+                metadata["t_start"] = nix.Value(attr["t_start"])
+                metadata["t_start.units"] = nix.Value(attr["t_start.units"])
             if "t_stop" in attr:
-                self._write_property(metadata, "t_stop", attr["t_stop"])
+                metadata["t_stop"] = nix.Value(attr["t_stop"])
+                metadata["t_stop.units"] = nix.Value(attr["t_stop.units"])
             if "waveforms" in attr:
                 wfname = nixobj.name + ".waveforms"
                 if wfname in parentblock.data_arrays:
