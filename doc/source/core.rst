@@ -131,7 +131,7 @@ In some cases, a one-to-many relationship is sufficient. Here is a simple exampl
     # the four tetrodes
     for i in range(4):
         chx = ChannelIndex(name='Tetrode %d' % i,
-                           channel_indexes=[0, 1, 2, 3])
+                           index=[0, 1, 2, 3])
         bl.channelindexes.append(chx)
 
     # now we load the data and associate it with the created channels
@@ -143,11 +143,11 @@ Now consider a more complex example: a 1x4 silicon probe, with a neuron on chann
 
     # one group for each neuron
     chx0 = ChannelIndex(name='Group 0',
-                        channel_indexes=[0, 1, 2])
+                        index=[0, 1, 2])
     bl.channelindexes.append(chx0)
 
     chx1 = ChannelIndex(name='Group 1',
-                        channel_indexes=[1, 2, 3])
+                        index=[1, 2, 3])
     bl.channelindexes.append(chx1)
 
     # now we add the spiketrain from Unit 0 to chx0

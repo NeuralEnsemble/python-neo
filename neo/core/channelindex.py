@@ -58,6 +58,7 @@ class ChannelIndex(Container):
 
         >>> from neo.core import Block, ChannelIndex
         >>> import numpy as np
+        >>> from quantities import mV, kHz
         >>>
         >>> # Create a Block
         ... blk = Block()
