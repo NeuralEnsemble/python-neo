@@ -69,7 +69,7 @@ class ChannelIndex(Container):
         ...
         >>> # Create a new ChannelIndex which groups three channels from the signal
         ... chx = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
-        ...                    channel_indexes = np.array([0, 3, 5])
+        ...                    index=np.array([0, 3, 5])
         >>> chx.analogsignals.append(sig)
         >>> blk.channel_indexes.append(chx)
 
