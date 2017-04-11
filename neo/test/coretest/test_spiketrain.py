@@ -1488,19 +1488,74 @@ class TestChanging(unittest.TestCase):
             self.assertRaises(ValueError, train.__setslice__,
                               0, 3, [0, 4, 5] * pq.ms)
 
-    def test__adding_time(self):
+    def test__adding_time_scalar(self):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
-        self.assertRaises(ValueError, train.__add__, 10 * pq.ms)
-        assert_arrays_equal(train + 1 * pq.ms, data + 1 * pq.ms)
+        # t_start and t_stop are also changed
+        self.assertEqual((train + 10 * pq.ms).t_start, 10.5 * pq.ms)
+        self.assertEqual((train + 11 * pq.ms).t_stop, 21.0 * pq.ms)
 
-    def test__subtracting_time(self):
+        assert_arrays_equal(train + 1 * pq.ms, data + 1 * pq.ms)
+        self.assertIsInstance(train + 10 * pq.ms, SpikeTrain)
+
+    def test__adding_time_array(self):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
         assert_neo_object_is_compliant(train)
-        self.assertRaises(ValueError, train.__sub__, 10 * pq.ms)
+        delta = [-2, 2, 4] * pq.ms
+        assert_arrays_equal(train + delta, np.array([1, 6, 9]) * pq.ms)
+        self.assertIsInstance(train + delta, SpikeTrain)
+        # if new times are within t_start and t_stop, they
+        # are not changed
+        self.assertEqual((train + delta).t_start, train.t_start)
+        self.assertEqual((train + delta).t_stop, train.t_stop)
+        # if new times are outside t_start and/or t_stop, these are
+        # expanded to fit
+        delta = [-4, 2, 6] * pq.ms
+        self.assertEqual((train + delta).t_start, -1 * pq.ms)
+        self.assertEqual((train + delta).t_stop, 11 * pq.ms)
+
+    def test__adding_two_spike_trains(self):
+        data = [3, 4, 5] * pq.ms
+        train1 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        self.assertRaises(TypeError, train1.__add__, train2)
+
+    def test__subtracting_time_scalar(self):
+        data = [3, 4, 5] * pq.ms
+        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        assert_neo_object_is_compliant(train)
+        # t_start and t_stop are also changed
+        self.assertEqual((train - 1 * pq.ms).t_start, -0.5 * pq.ms)
+        self.assertEqual((train - 3.0 * pq.ms).t_stop, 7.0 * pq.ms)
         assert_arrays_equal(train - 1 * pq.ms, data - 1 * pq.ms)
+        self.assertIsInstance(train - 5 * pq.ms, SpikeTrain)
+
+    def test__subtracting_time_array(self):
+        data = [3, 4, 5] * pq.ms
+        train = SpikeTrain(data, copy=False, t_start=0.5, t_stop=10.0)
+        assert_neo_object_is_compliant(train)
+        delta = [2, 1, -2] * pq.ms
+        self.assertIsInstance(train - delta, SpikeTrain)
+        # if new times are within t_start and t_stop, they
+        # are not changed
+        self.assertEqual((train - delta).t_start, train.t_start)
+        self.assertEqual((train - delta).t_stop, train.t_stop)
+        # if new times are outside t_start and/or t_stop, these are
+        # expanded to fit
+        delta = [4, 1, -6] * pq.ms
+        self.assertEqual((train - delta).t_start, -1 * pq.ms)
+        self.assertEqual((train - delta).t_stop, 11 * pq.ms)
+
+    def test__subtracting_two_spike_trains(self):
+        train1 = SpikeTrain([3, 4, 5] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
+        train2 = SpikeTrain([4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
+        train3 = SpikeTrain([3, 4, 5, 6] * pq.ms, copy=False, t_start=0.5, t_stop=10.0)
+        self.assertRaises(TypeError, train1.__sub__, train3)
+        self.assertRaises(TypeError, train3.__sub__, train1)
+        self.assertIsInstance(train1 - train2, pq.Quantity)
+        self.assertNotIsInstance(train1 - train2, SpikeTrain)
 
     def test__rescale(self):
         data = [3, 4, 5] * pq.ms
