@@ -456,6 +456,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.mV)
 
+    def test_as_array(self):
+        sig_as_arr = self.signal1.as_array()
+        self.assertIsInstance(sig_as_arr, np.ndarray)
+        assert_array_equal(self.data1, sig_as_arr.flat)
+
+    def test_as_quantity(self):
+        sig_as_q = self.signal1.as_quantity()
+        self.assertIsInstance(sig_as_q, pq.Quantity)
+        assert_array_equal(self.data1, sig_as_q.magnitude.flat)
+
 
 class TestAnalogSignalEquality(unittest.TestCase):
     def test__signals_with_different_data_complement_should_be_not_equal(self):
