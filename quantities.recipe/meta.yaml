@@ -1,0 +1,65 @@
+package:
+  name: quantities
+  version: "0.11.1"
+
+source:
+  fn: quantities-0.11.1.zip
+  url: https://pypi.python.org/packages/source/q/quantities/quantities-0.11.1.zip
+  md5: f4c6287bfd2e93322b25a7c1311a0243
+#  patches:
+   # List any patch files here
+   # - fix.patch
+
+# build:
+  # noarch_python: True
+  # preserve_egg_dir: True
+  # entry_points:
+    # Put any entry points (scripts to be generated automatically) here. The
+    # syntax is module:function.  For example
+    #
+    # - quantities = quantities:main
+    #
+    # Would create an entry point called quantities that calls quantities.main()
+
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  # number: 1
+
+requirements:
+  build:
+    - python
+    - numpy
+
+  run:
+    - python
+    - numpy
+
+test:
+  # Python imports
+  imports:
+    - quantities
+    - quantities.constants
+    - quantities.tests
+    - quantities.units
+
+  # commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+
+
+  # You can also put a file called run_test.py in the recipe that will be run
+  # at test time.
+
+  # requires:
+    # Put any additional test requirements here.  For example
+    # - nose
+
+about:
+  home: http://packages.python.org/quantities
+  license: BSD
+  summary: 'Support for physical quantities with units, based on numpy'
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml
