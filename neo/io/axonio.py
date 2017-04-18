@@ -455,6 +455,7 @@ class AxonIO(BaseIO):
                 else:
                     protocol[key] = np.array(val)
             header['protocol'] = protocol
+            header['sProtocolPath'] = strings[header['uProtocolPathIndex']-1]
 
             # tags
             listTag = []
