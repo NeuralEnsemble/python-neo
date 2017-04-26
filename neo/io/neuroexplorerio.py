@@ -206,9 +206,11 @@ class NeuroExplorerIO(BaseIO):
                                        shape=(entity_header['n']),
                                        offset=entity_header['offset'])
                 timestamps = timestamps.astype('f8') / global_header['freq']
+
+                fragment_starts_offset = entity_header['offset'] + entity_header['n']*4
                 fragment_starts = np.memmap(self.filename, np.dtype('i4'), 'r',
                                             shape=(entity_header['n']),
-                                            offset=entity_header['offset'])
+                                            offset=fragment_starts_offset)
                 fragment_starts = fragment_starts.astype('f8') / global_header[
                     'freq']
                 t_start = timestamps[0] - fragment_starts[0] / float(
@@ -218,9 +220,10 @@ class NeuroExplorerIO(BaseIO):
                 if lazy:
                     signal = [] * pq.mV
                 else:
+                    signal_offset = fragment_starts_offset + entity_header['n']*4
                     signal = np.memmap(self.filename, np.dtype('i2'), 'r',
                                        shape=(entity_header['NPointsWave']),
-                                       offset=entity_header['offset'])
+                                       offset=signal_offset)
                     signal = signal.astype('f')
                     signal *= entity_header['ADtoMV']
                     signal += entity_header['MVOffset']
