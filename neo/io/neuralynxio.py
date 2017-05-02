@@ -1909,7 +1909,7 @@ class NeuralynxIO(BaseIO):
                              'header of file %s' % filename)
 
     def __get_filename_and_times_from_txt_header(self, text_header, version):
-        if parse_version(version) <= parse_version('5.5.1'):
+        if parse_version(version) <= parse_version('5.6.4'):
             datetime1_regex = re.compile('## Time Opened \(m/d/y\): '
                                          '(?P<date>\S+)'
                                          '  \(h:m:s\.ms\) '
