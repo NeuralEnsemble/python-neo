@@ -1914,28 +1914,29 @@ class BlackrockIO(BaseIO):
                 rcg.channel_names = channel_labels[channel_idx]
 
             # additional annotations from nev
-            get_idx = list(
-                self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
-                    channel_idx)
-            rcg.annotate(
-                connector_ID=self.__nev_ext_header[
-                    b'NEUEVWAV']['physical_connector'][get_idx],
-                connector_pinID=self.__nev_ext_header[
-                    b'NEUEVWAV']['connector_pin'][get_idx],
-                dig_factor=self.__nev_ext_header[
-                    b'NEUEVWAV']['digitization_factor'][get_idx],
-                connector_pin=self.__nev_ext_header[
-                    b'NEUEVWAV']['connector_pin'][get_idx],
-                energy_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
-                hi_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
-                lo_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
-                nb_sorted_units=self.__nev_ext_header[
-                    b'NEUEVWAV']['nb_sorted_units'][get_idx],
-                waveform_size=self.__waveform_size[self.__nev_spec](
-                )[channel_idx] * self.__nev_params('waveform_time_unit'))
+            if channel_idx in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
+                get_idx = list(
+                    self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
+                        channel_idx)
+                rcg.annotate(
+                    connector_ID=self.__nev_ext_header[
+                        b'NEUEVWAV']['physical_connector'][get_idx],
+                    connector_pinID=self.__nev_ext_header[
+                        b'NEUEVWAV']['connector_pin'][get_idx],
+                    dig_factor=self.__nev_ext_header[
+                        b'NEUEVWAV']['digitization_factor'][get_idx],
+                    connector_pin=self.__nev_ext_header[
+                        b'NEUEVWAV']['connector_pin'][get_idx],
+                    energy_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                    hi_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                    lo_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                    nb_sorted_units=self.__nev_ext_header[
+                        b'NEUEVWAV']['nb_sorted_units'][get_idx],
+                    waveform_size=self.__waveform_size[self.__nev_spec](
+                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
 
         rcg.description = \
             "Container for units and groups analogsignals across segments."
