@@ -3,13 +3,13 @@
 Class for reading data from NeuroExplorer (.nex)
 
 Documentation for dev :
-http://www.neuroexplorer.com/code.html
+http://www.neuroexplorer.com/downloads/HowToReadAndWriteNexAndNex5FilesInMatlab.zip
 
 Depend on:
 
 Supported : Read
 
-Author: sgarcia,luc estebanez
+Author: sgarcia,luc estebanez, mark hollenbeck
 
 """
 
