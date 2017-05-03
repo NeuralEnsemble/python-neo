@@ -1914,7 +1914,7 @@ class BlackrockIO(BaseIO):
                 rcg.channel_names = channel_labels[channel_idx]
 
             # additional annotations from nev
-            if channel_idx in list(self.__nev_ext_header[b'NEUEVWAV']['electrode_id']):
+            if channel_idx in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
                 get_idx = list(
                     self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
                         channel_idx)
