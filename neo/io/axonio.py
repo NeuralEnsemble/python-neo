@@ -317,7 +317,7 @@ class AxonIO(BaseIO):
                 comments = []
                 for i, tag in enumerate(header['listTag']):
                     times.append(tag['lTagTime']/sampling_rate)
-                    labels.append(tag['nTagType'].decode("utf-8"))
+                    labels.append(str(tag['nTagType']))
                     comments.append(clean_string(tag['sComment']))
                 times = np.array(times)
                 labels = np.array(labels, dtype='S')
