@@ -300,6 +300,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, int):
                     obj = obj.reshape(-1, 1)
+                if self.channel_index:
+                    obj.channel_index = self.channel_index.__getitem__(k)
         elif isinstance(i, slice):
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
@@ -646,3 +648,20 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
         return signal
+
+    def as_array(self, units=None):
+        """
+        Return the signal as a plain NumPy array.
+
+        If `units` is specified, first rescale to those units.
+        """
+        if units:
+            return self.rescale(units).magnitude
+        else:
+            return self.magnitude
+
+    def as_quantity(self):
+        """
+        Return the signal as a quantities array.
+        """
+        return self.view(pq.Quantity)

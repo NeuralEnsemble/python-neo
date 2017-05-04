@@ -14,6 +14,7 @@ except ImportError:
     import unittest
 
 import numpy as np
+from numpy.testing import assert_array_equal
 import quantities as pq
 
 try:
@@ -1758,6 +1759,20 @@ class TestMiscellaneous(unittest.TestCase):
                            t_start=t_start64, t_stop=t_stop64,
                            dtype=np.float64)
         assert_neo_object_is_compliant(train)
+
+    def test_as_array(self):
+        data = np.arange(10.0)
+        st = SpikeTrain(data, t_stop=10.0, units='ms')
+        st_as_arr = st.as_array()
+        self.assertIsInstance(st_as_arr, np.ndarray)
+        assert_array_equal(data, st_as_arr)
+
+    def test_as_quantity(self):
+        data = np.arange(10.0)
+        st = SpikeTrain(data, t_stop=10.0, units='ms')
+        st_as_q = st.as_quantity()
+        self.assertIsInstance(st_as_q, pq.Quantity)
+        assert_array_equal(data * pq.ms, st_as_q)
 
 
 if __name__ == "__main__":
