@@ -19,7 +19,7 @@ except ImportError:
 from numpy.testing import assert_equal
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.blackrockio import BlackrockIO
 
@@ -92,9 +92,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # Load data using a negative time and a time exceeding the end of the
         # recording
-        too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
+        too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * un.s
         block = b.read_block(
-            n_starts=[-100 * pq.ms], n_stops=[too_large_tstop],
+            n_starts=[-100 * un.ms], n_stops=[too_large_tstop],
             channels=range(1, 9), nsx_to_load=[5], units='all',
             load_events=False, load_waveforms=False)
         lenb = len(block.segments[0].analogsignals[0])
@@ -144,7 +144,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # NOTE: channel 6 does not contain any unit
         block = b.read_block(
-            n_starts=[None, 3000 * pq.ms], n_stops=[1000 * pq.ms, None],
+            n_starts=[None, 3000 * un.ms], n_stops=[1000 * un.ms, None],
             channels=range(1, 9), nsx_to_load='none',
             units={1: 0, 5: 0, 6: 0}, load_events=True,
             load_waveforms=True)

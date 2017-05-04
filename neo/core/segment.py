@@ -27,7 +27,7 @@ class Segment(Container):
 
     *Usage*::
         >>> from neo.core import Segment, SpikeTrain, AnalogSignal
-        >>> from quantities import Hz, s
+        >>> from neo.units import Hz, s
         >>>
         >>> seg = Segment(index=5)
         >>>

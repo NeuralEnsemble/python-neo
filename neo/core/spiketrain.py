@@ -22,10 +22,10 @@ the old object.
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import quantities as pq
 
 from neo.core.baseneo import BaseNeo
 
+from neo import units as un
 
 def check_has_dimensions_time(*values):
     '''
@@ -36,7 +36,7 @@ def check_has_dimensions_time(*values):
     for value in values:
         dim = value.dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
+                not isinstance(list(dim.keys())[0], un.UnitTime)):
             errmsgs.append("value %s has dimensions %s, not [time]" %
                            (value, dim.simplified))
     if errmsgs:
@@ -89,8 +89,8 @@ def _check_waveform_dimensions(spiketrain):
 
 
 def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
-                    copy=True, sampling_rate=1.0 * pq.Hz,
-                    t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
+                    copy=True, sampling_rate=1.0 * un.Hz,
+                    t_start=0.0 * un.s, waveforms=None, left_sweep=None,
                     name=None, file_origin=None, description=None,
                     annotations=None):
     '''
@@ -104,7 +104,7 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
                       description, **annotations)
 
 
-class SpikeTrain(BaseNeo, pq.Quantity):
+class SpikeTrain(BaseNeo, un.Quantity):
     '''
     :class:`SpikeTrain` is a :class:`Quantity` array of spike times.
 
@@ -114,7 +114,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     *Usage*::
 
         >>> from neo.core import SpikeTrain
-        >>> from quantities import s
+        >>> from neo.units import s
         >>>
         >>> train = SpikeTrain([3, 4, 5]*s, t_stop=10.0)
         >>> train2 = train[1:3]
@@ -194,16 +194,16 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                       ('t_start', pq.Quantity, 0),
-                       ('t_stop', pq.Quantity, 0))
-    _recommended_attrs = ((('waveforms', pq.Quantity, 3),
-                           ('left_sweep', pq.Quantity, 0),
-                           ('sampling_rate', pq.Quantity, 0)) +
+    _necessary_attrs = (('times', un.Quantity, 1),
+                       ('t_start', un.Quantity, 0),
+                       ('t_stop', un.Quantity, 0))
+    _recommended_attrs = ((('waveforms', un.Quantity, 3),
+                           ('left_sweep', un.Quantity, 0),
+                           ('sampling_rate', un.Quantity, 0)) +
                           BaseNeo._recommended_attrs)
 
     def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
-                sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
+                sampling_rate=1.0 * un.Hz, t_start=0.0 * un.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,
                 **annotations):
         '''
@@ -228,7 +228,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             if hasattr(units, 'dimensionality'):
                 dim = units.dimensionality
             else:
-                dim = pq.quantity.validate_dimensionality(units)
+                dim = un.quantity.validate_dimensionality(units)
 
             if hasattr(times, 'dimensionality'):
                 if times.dimensionality.items() == dim.items():
@@ -263,11 +263,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # this approach is orders of magnitude faster than comparing the
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
+                not isinstance(list(dim.keys())[0], un.UnitTime)):
             ValueError("Unit has dimensions %s, not [time]" % dim.simplified)
 
         # Construct Quantity from data
-        obj = pq.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
+        obj = un.Quantity(times, units=units, dtype=dtype, copy=copy).view(cls)
 
         # if the dtype and units match, just copy the values here instead
         # of doing the much more expensive creation of a new Quantity
@@ -277,14 +277,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                 t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
-            obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
+            obj.t_start = un.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
                 t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
-            obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
+            obj.t_stop = un.Quantity(t_stop, units=dim, dtype=obj.dtype)
 
         # Store attributes
         obj.waveforms = waveforms
@@ -301,7 +301,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         return obj
 
     def __init__(self, times, t_stop, units=None,  dtype=np.float,
-                 copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
+                 copy=True, sampling_rate=1.0 * un.Hz, t_start=0.0 * un.s,
                  waveforms=None, left_sweep=None, name=None, file_origin=None,
                  description=None, **annotations):
         '''
@@ -322,9 +322,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Return a copy of the :class:`SpikeTrain` converted to the specified
         units
         '''
-        if self.dimensionality == pq.quantity.validate_dimensionality(units):
+        if self.dimensionality == un.quantity.validate_dimensionality(units):
             return self.copy()
-        spikes = self.view(pq.Quantity)
+        spikes = self.view(un.Quantity)
         return SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
                           sampling_rate=self.sampling_rate,
                           t_start=self.t_start, waveforms=self.waveforms,
@@ -438,7 +438,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Raises an exception if new time points fall outside :attr:`t_start` or
         :attr:`t_stop`
         '''
-        spikes = self.view(pq.Quantity)
+        spikes = self.view(un.Quantity)
         check_has_dimensions_time(time)
         _check_time_in_range(spikes + time, self.t_start, self.t_stop)
         return SpikeTrain(times=spikes + time, t_stop=self.t_stop,
@@ -456,7 +456,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Raises an exception if new time points fall outside :attr:`t_start` or
         :attr:`t_stop`
         '''
-        spikes = self.view(pq.Quantity)
+        spikes = self.view(un.Quantity)
         check_has_dimensions_time(time)
         _check_time_in_range(spikes - time, self.t_start, self.t_stop)
         return SpikeTrain(times=spikes - time, t_stop=self.t_stop,
@@ -480,7 +480,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Set the value the item or slice :attr:`i`.
         '''
         if not hasattr(value, "units"):
-            value = pq.Quantity(value, units=self.units)
+            value = un.Quantity(value, units=self.units)
             # or should we be strict: raise ValueError("Setting a value
             # requires a quantity")?
         # check for values outside t_start, t_stop
@@ -489,7 +489,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
     def __setslice__(self, i, j, value):
         if not hasattr(value, "units"):
-            value = pq.Quantity(value, units=self.units)
+            value = un.Quantity(value, units=self.units)
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setslice__(i, j, value)
 

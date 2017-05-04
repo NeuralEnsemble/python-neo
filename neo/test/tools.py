@@ -7,7 +7,7 @@ import hashlib
 import os
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 import neo
 from neo.core import objectlist
@@ -121,7 +121,7 @@ def assert_neo_object_is_compliant(ob):
 
         if (hasattr(ob, '_quantity_attr') and
                 ob._quantity_attr == attrname and
-                (attrtype == pq.Quantity or attrtype == np.ndarray)):
+                (attrtype == un.Quantity or attrtype == np.ndarray)):
             # object inherits from Quantity (AnalogSignal, SpikeTrain, ...)
             ndim = ioattr[2]
             assert ob.ndim == ndim, \
@@ -139,7 +139,7 @@ def assert_neo_object_is_compliant(ob):
                 assert issubclass(type(obattr), attrtype), \
                     '%s in %s is %s should be %s' % \
                     (attrname, classname, type(obattr), attrtype)
-                if attrtype == pq.Quantity or attrtype == np.ndarray:
+                if attrtype == un.Quantity or attrtype == np.ndarray:
                     ndim = ioattr[2]
                     assert obattr.ndim == ndim,  \
                         '%s.%s dimension is %d should be %d' % \
@@ -313,7 +313,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
                                                  getattr(ob2, attrname))
             continue
 
-        if attrtype == pq.Quantity:
+        if attrtype == un.Quantity:
             # Compare magnitudes
             mag1 = getattr(ob1, attrname).magnitude
             mag2 = getattr(ob2, attrname).magnitude
@@ -425,7 +425,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
         if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
             continue
         #~ print 'hjkjh'
-        if (attrtype == pq.Quantity or attrtype == np.ndarray):
+        if (attrtype == un.Quantity or attrtype == np.ndarray):
 
             # FIXME: it is a workaround for recordingChannelGroup.channel_names
             # which is nupy.array but allowed to be loaded when lazy == True

@@ -11,7 +11,7 @@ except ImportError:
     import unittest
 import numpy as np
 from numpy.testing import assert_array_equal
-from quantities import kHz, mV, ms, second, nA
+from neo.units import kHz, mV, ms, second, nA
 try:
     import h5py
     HAVE_H5PY = True

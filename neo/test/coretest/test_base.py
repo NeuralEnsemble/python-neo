@@ -14,7 +14,8 @@ except ImportError:
     import unittest
 
 import numpy as np
-import quantities as pq
+from neo import units as un
+
 
 try:
     from IPython.lib.pretty import pretty
@@ -985,28 +986,28 @@ class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
 
     def test_quantities_array_int(self):
         '''test to make sure int type quantites arrays are accepted'''
-        value = pq.Quantity([1, 2, 3, 4, 5], dtype=np.int, units=pq.s)
+        value = un.Quantity([1, 2, 3, 4, 5], dtype=np.int, units=un.s)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_array_uint(self):
         '''test to make sure uint type quantites arrays are accepted'''
-        value = pq.Quantity([1, 2, 3, 4, 5], dtype=np.uint, units=pq.meter)
+        value = un.Quantity([1, 2, 3, 4, 5], dtype=np.uint, units=un.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_array_float(self):
         '''test to make sure float type quantites arrays are accepted'''
-        value = [1, 2, 3, 4, 5] * pq.kg
+        value = [1, 2, 3, 4, 5] * un.kg
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_array_str(self):
         '''test to make sure str type quantites arrays are accepted'''
-        value = pq.Quantity([1, 2, 3, 4, 5], dtype=np.str, units=pq.meter)
+        value = un.Quantity([1, 2, 3, 4, 5], dtype=np.str, units=un.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -1023,28 +1024,28 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
 
     def test_quantities_scalar_int(self):
         '''test to make sure int type quantites scalars are accepted'''
-        value = pq.Quantity(99, dtype=np.int, units=pq.s)
+        value = un.Quantity(99, dtype=np.int, units=un.s)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_scalar_uint(self):
         '''test to make sure uint type quantites scalars are accepted'''
-        value = pq.Quantity(99, dtype=np.uint, units=pq.meter)
+        value = un.Quantity(99, dtype=np.uint, units=un.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_scalar_float(self):
         '''test to make sure float type quantites scalars are accepted'''
-        value = 99 * pq.kg
+        value = 99 * un.kg
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
 
     def test_quantities_scalar_str(self):
         '''test to make sure str type quantites scalars are accepted'''
-        value = pq.Quantity(99, dtype=np.str, units=pq.meter)
+        value = un.Quantity(99, dtype=np.str, units=un.meter)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)

@@ -19,7 +19,7 @@ import struct
 import sys
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal
@@ -119,9 +119,9 @@ class WinEdrIO(BaseIO):
 
             unit = header['YU%d'%c]
             try :
-                unit = pq.Quantity(1., unit)
+                unit = un.Quantity(1., unit)
             except:
-                unit = pq.Quantity(1., '')
+                unit = un.Quantity(1., '')
 
             if lazy:
                 signal = [ ] * unit
@@ -129,8 +129,8 @@ class WinEdrIO(BaseIO):
                 signal = (data[:,header['YO%d'%c]].astype('f4')-YZ) *AD/( YCF*YAG*(ADCMAX+1)) * unit
 
             ana = AnalogSignal(signal,
-                               sampling_rate=pq.Hz / DT,
-                               t_start=0. * pq.s,
+                               sampling_rate=un.Hz / DT,
+                               t_start=0. * un.s,
                                name=header['YN%d' % c],
                                channel_index=c)
             if lazy:

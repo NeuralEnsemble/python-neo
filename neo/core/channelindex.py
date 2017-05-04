@@ -11,7 +11,7 @@ from :module:`neo.core.container`.
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.core.container import Container
 
@@ -32,7 +32,7 @@ class ChannelIndex(Container):
 
         >>> from neo.core import (Block, Segment, ChannelIndex,
         ...                       AnalogSignal)
-        >>> from quantities import nA, kHz
+        >>> from neo.units import nA, kHz
         >>> import numpy as np
         >>>
         >>> # create a Block with 3 Segment and 2 ChannelIndex objects
@@ -121,7 +121,7 @@ class ChannelIndex(Container):
     _necessary_attrs = (('index', np.ndarray, 1, np.dtype('i')),)
     _recommended_attrs = ((('channel_names', np.ndarray, 1, np.dtype('S')),
                            ('channel_ids', np.ndarray, 1, np.dtype('i')),
-                           ('coordinates', pq.Quantity, 2)) +
+                           ('coordinates', un.Quantity, 2)) +
                           Container._recommended_attrs)
 
     def __init__(self, index, channel_names=None, channel_ids=None,

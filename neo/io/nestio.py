@@ -19,15 +19,15 @@ import os.path
 import warnings
 from datetime import datetime
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, SpikeTrain, AnalogSignal
 
-value_type_dict = {'V': pq.mV,
-                   'I': pq.pA,
-                   'g': pq.CompoundUnit("10^-9*S"),
-                   'no type': pq.dimensionless}
+value_type_dict = {'V': un.mV,
+                   'I': un.pA,
+                   'g': un.CompoundUnit("10^-9*S"),
+                   'no type': un.dimensionless}
 
 
 class NestIO(BaseIO):
@@ -41,8 +41,8 @@ class NestIO(BaseIO):
         files = ['membrane_voltages-1261-0.dat',
                  'spikes-1258-0.gdf']
         r = NestIO(filenames=files)
-        seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
-                             t_stop=600 * pq.ms,
+        seg = r.read_segment(gid_list=[], t_start=400 * un.ms,
+                             t_stop=600 * un.ms,
                              id_column_gdf=0, time_column_gdf=1,
                              id_column_dat=0, time_column_dat=1,
                              value_columns_dat=2)
@@ -261,8 +261,8 @@ class NestIO(BaseIO):
         Checks input times for existence and setting default values if
         necessary.
 
-        t_start: pq.quantity.Quantity, start time of the time range to load.
-        t_stop: pq.quantity.Quantity, stop time of the time range to load.
+        t_start: un.quantity.Quantity, start time of the time range to load.
+        t_stop: un.quantity.Quantity, stop time of the time range to load.
         mandatory: bool, if True times can not be None and an error will be
                 raised. if False, time values of None will be replaced by
                 -infinity or infinity, respectively. default: True.
@@ -271,15 +271,15 @@ class NestIO(BaseIO):
             if mandatory:
                 raise ValueError('No t_start specified.')
             else:
-                t_stop = np.inf * pq.s
+                t_stop = np.inf * un.s
         if t_start is None:
             if mandatory:
                 raise ValueError('No t_stop specified.')
             else:
-                t_start = -np.inf * pq.s
+                t_start = -np.inf * un.s
 
         for time in (t_start, t_stop):
-            if not isinstance(time, pq.quantity.Quantity):
+            if not isinstance(time, un.quantity.Quantity):
                 raise TypeError('Time value (%s) is not a quantity.' % time)
         return t_start, t_stop
 
@@ -318,7 +318,7 @@ class NestIO(BaseIO):
                              'not match (%i,%i,%i)' % (len(value_types),
                                                        len(value_units),
                                                        len(value_columns)))
-        if not all([isinstance(vunit, pq.UnitQuantity) for vunit in
+        if not all([isinstance(vunit, un.UnitQuantity) for vunit in
                     value_units]):
             raise ValueError('No value unit or standard value type specified.')
 
@@ -353,13 +353,13 @@ class NestIO(BaseIO):
         """
         Checks sampling period, times and time unit for consistency.
 
-        sampling_period: pq.quantity.Quantity, sampling period of data to load.
+        sampling_period: un.quantity.Quantity, sampling period of data to load.
         time_column: int, column id of times in data to load.
-        time_unit: pq.quantity.Quantity, unit of time used in the data to load.
+        time_unit: un.quantity.Quantity, unit of time used in the data to load.
         data: numpy array, the data to be loaded / interpreted.
 
         Returns
-        pq.quantities.Quantity object, the updated sampling period.
+        un.quantities.Quantity object, the updated sampling period.
         """
         if sampling_period is None:
             if time_column is not None:
@@ -373,9 +373,9 @@ class NestIO(BaseIO):
             else:
                 raise ValueError('Can not estimate sampling rate without time '
                                  'column id provided.')
-            sampling_period = pq.CompoundUnit(str(dt) + '*'
+            sampling_period = un.CompoundUnit(str(dt) + '*'
                                               + time_unit.units.u_symbol)
-        elif not isinstance(sampling_period, pq.UnitQuantity):
+        elif not isinstance(sampling_period, un.UnitQuantity):
             raise ValueError("sampling_period is not specified as a unit.")
         return sampling_period
 
@@ -388,8 +388,8 @@ class NestIO(BaseIO):
         id_column: int, id of the column containing gids.
         time_column: int, id of the column containing times.
         gid_list: list of int, gid to be loaded.
-        t_start: pq.quantity.Quantity, start of the time range to be loaded.
-        t_stop: pq.quantity.Quantity, stop of the time range to be loaded.
+        t_start: un.quantity.Quantity, start of the time range to be loaded.
+        t_stop: un.quantity.Quantity, stop of the time range to be loaded.
 
         Returns
         updated [condition, condition_column, sorting_column].
@@ -424,9 +424,9 @@ class NestIO(BaseIO):
         gid: int, gid to be loaded.
         id_column: int, id of the column containing gids.
         time_column: int, id of the column containing times.
-        t_start: pq.quantity.Quantity, start of the time range to load.
-        t_stop: pq.quantity.Quantity, stop of the time range to load.
-        time_unit: pq.quantity.Quantity, time unit of the data to load.
+        t_start: un.quantity.Quantity, start of the time range to load.
+        t_stop: un.quantity.Quantity, stop of the time range to load.
+        time_unit: un.quantity.Quantity, time unit of the data to load.
         data: numpy array, data to load.
 
         Returns
@@ -453,7 +453,7 @@ class NestIO(BaseIO):
         selected_ids = gid_ids + id_shifts
         return selected_ids
 
-    def read_block(self, gid_list=None, time_unit=pq.ms, t_start=None,
+    def read_block(self, gid_list=None, time_unit=un.ms, t_start=None,
                    t_stop=None, sampling_period=None, id_column_dat=0,
                    time_column_dat=1, value_columns_dat=2,
                    id_column_gdf=0, time_column_gdf=1, value_types=None,
@@ -468,7 +468,7 @@ class NestIO(BaseIO):
         seg.block = blk
         return blk
 
-    def read_segment(self, gid_list=None, time_unit=pq.ms, t_start=None,
+    def read_segment(self, gid_list=None, time_unit=un.ms, t_start=None,
                      t_stop=None, sampling_period=None, id_column_dat=0,
                      time_column_dat=1, value_columns_dat=2,
                      id_column_gdf=0, time_column_gdf=1, value_types=None,
@@ -486,7 +486,7 @@ class NestIO(BaseIO):
             trains of all neurons.
         time_unit : Quantity (time), optional, default: quantities.ms
             The time unit of recorded time stamps in DAT as well as GDF files.
-        t_start : Quantity (time), optional, default: 0 * pq.ms
+        t_start : Quantity (time), optional, default: 0 * un.ms
             Start time of SpikeTrain.
         t_stop : Quantity (time), default: None
             Stop time of SpikeTrain. t_stop must be specified, the default None
@@ -558,7 +558,7 @@ class NestIO(BaseIO):
 
         return seg
 
-    def read_analogsignal(self, gid=None, time_unit=pq.ms, t_start=None,
+    def read_analogsignal(self, gid=None, time_unit=un.ms, t_start=None,
                           t_stop=None, sampling_period=None, id_column=0,
                           time_column=1, value_column=2, value_type=None,
                           value_unit=None, lazy=False):
@@ -574,7 +574,7 @@ class NestIO(BaseIO):
             neurons.
         time_unit : Quantity (time), optional, default: quantities.ms
             The time unit of recorded time stamps.
-        t_start : Quantity (time), optional, default: 0 * pq.ms
+        t_start : Quantity (time), optional, default: 0 * un.ms
             Start time of SpikeTrain.
         t_stop : Quantity (time), default: None
             Stop time of SpikeTrain. t_stop must be specified, the default None
@@ -612,7 +612,7 @@ class NestIO(BaseIO):
                                          lazy=lazy)[0]
 
     def read_spiketrain(
-            self, gdf_id=None, time_unit=pq.ms, t_start=None, t_stop=None,
+            self, gdf_id=None, time_unit=un.ms, t_start=None, t_stop=None,
             id_column=0, time_column=1, lazy=False, cascade=True, **args):
         """
         Reads a SpikeTrain with specified neuron ID from the GDF data.

@@ -22,7 +22,7 @@ import os
 from xml.etree import ElementTree
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
@@ -87,7 +87,7 @@ class NeuroScopeIO(BaseIO):
         acq = root.find('acquisitionSystem')
         nbits = int(acq.find('nBits').text)
         nbchannel = int(acq.find('nChannels').text)
-        sampling_rate = float(acq.find('samplingRate').text)*pq.Hz
+        sampling_rate = float(acq.find('samplingRate').text)*un.Hz
         voltage_range = float(acq.find('voltageRange').text)
         #offset = int(acq.find('offset').text)
         amplification = float(acq.find('amplification').text)
@@ -110,8 +110,8 @@ class NeuroScopeIO(BaseIO):
             reader = RawBinarySignalIO(filename = self.filename.replace('.xml', '.dat'))
             seg2 = reader.read_segment(cascade = True, lazy = lazy,
                                                         sampling_rate = sampling_rate,
-                                                        t_start = 0.*pq.s,
-                                                        unit = pq.V, nbchannel = nbchannel,
+                                                        t_start = 0.*un.s,
+                                                        unit = un.V, nbchannel = nbchannel,
                                                         bytesoffset = 0,
                                                         dtype = np.int16 if nbits<=16 else np.int32,
                                                         rangemin = -voltage_range/2.,

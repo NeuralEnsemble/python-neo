@@ -80,11 +80,11 @@ except NameError:
 
 # note neo.core need only numpy and quantities
 import numpy as np
-import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 
+from neo import units as un
 
 class AlphaOmegaIO(BaseIO):
     """
@@ -333,7 +333,7 @@ class AlphaOmegaIO(BaseIO):
                         ind += count
 
                 sampling_rate = \
-                    file_blocks[list_chan[ind_chan]]['m_SampleRate'] * pq.kHz
+                    file_blocks[list_chan[ind_chan]]['m_SampleRate'] * un.kHz
                 t_start = (start_index / sampling_rate).simplified
                 if lazy:
                     ana_sig = AnalogSignal([],
@@ -343,7 +343,7 @@ class AlphaOmegaIO(BaseIO):
                                                [list_chan[ind_chan]]['m_Name'],
                                            file_origin = \
                                                os.path.basename(self.filename),
-                                           units = pq.dimensionless)
+                                           units = un.dimensionless)
                     ana_sig.lazy_shape = chan_len[ind_chan]
                 else:
                     ana_sig = AnalogSignal(temp_array,
@@ -353,7 +353,7 @@ class AlphaOmegaIO(BaseIO):
                                                [list_chan[ind_chan]]['m_Name'],
                                            file_origin = \
                                                os.path.basename(self.filename),
-                                           units = pq.dimensionless)
+                                           units = un.dimensionless)
 # todo apibreak: create ChannelIndex for each signals
 #                ana_sig.channel_index = \
 #                            file_blocks[list_chan[ind_chan]]['m_numChannel']

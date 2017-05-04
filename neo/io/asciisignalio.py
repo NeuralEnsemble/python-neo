@@ -14,7 +14,7 @@ import csv
 import os
 
 import numpy as np
-import quantities as pq
+from neo import units as un
 
 from neo.io.baseio import BaseIO
 from neo.core import AnalogSignal, Segment
@@ -91,10 +91,10 @@ class AsciiSignalIO(BaseIO):
                                         skiprows =0,
 
                                         timecolumn = None,
-                                        sampling_rate = 1.*pq.Hz,
-                                        t_start = 0.*pq.s,
+                                        sampling_rate = 1.*un.Hz,
+                                        t_start = 0.*un.s,
 
-                                        unit = pq.V,
+                                        unit = un.V,
 
                                         method = 'genfromtxt',
 
@@ -123,13 +123,13 @@ class AsciiSignalIO(BaseIO):
 
         if type(sampling_rate) == float or type(sampling_rate)==int:
             # if not quantitities Hz by default
-            sampling_rate = sampling_rate*pq.Hz
+            sampling_rate = sampling_rate*un.Hz
 
         if type(t_start) == float or type(t_start)==int:
             # if not quantitities s by default
-            t_start = t_start*pq.s
+            t_start = t_start*un.s
 
-        unit = pq.Quantity(1, unit)
+        unit = un.Quantity(1, unit)
 
 
 
@@ -161,8 +161,8 @@ class AsciiSignalIO(BaseIO):
             sig = np.array( tab , dtype = 'f')
 
         if timecolumn is not None:
-            sampling_rate = 1./np.mean(np.diff(sig[:,timecolumn])) * pq.Hz
-            t_start = sig[0,timecolumn] * pq.s
+            sampling_rate = 1./np.mean(np.diff(sig[:,timecolumn])) * un.Hz
+            t_start = sig[0,timecolumn] * un.s
 
 
 
