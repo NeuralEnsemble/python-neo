@@ -157,10 +157,14 @@ class ChannelIndex(Container):
         index = self.index.__getitem__(i)
         if self.channel_names.size > 0:
             channel_names = self.channel_names[index]
+            if not channel_names.shape:
+                channel_names = [channel_names]
         else:
             channel_names = None
         if self.channel_ids.size > 0:
             channel_ids = self.channel_ids[index]
+            if not channel_ids.shape:
+                channel_ids = [channel_ids]
         else:
             channel_ids = None
         obj = ChannelIndex(index=np.arange(index.size),
