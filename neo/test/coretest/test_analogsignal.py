@@ -384,11 +384,12 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                               units="mV")
         self.assertEqual(signal.shape, (100, n))
         signal.channel_index = ChannelIndex(index=np.arange(n, dtype=int),
-                                            channel_names=["channel{}".format(i) for i in range(n)])
+                                            channel_names=["channel{0}".format(i) for i in range(n)])
         odd_channels = signal[:, 1::2]
         self.assertEqual(odd_channels.shape, (100, n//2))
         assert_array_equal(odd_channels.channel_index.index, np.arange(n//2, dtype=int))
-        assert_array_equal(odd_channels.channel_index.channel_names, ["channel{}".format(i) for i in range(1, n, 2)])
+        assert_array_equal(odd_channels.channel_index.channel_names, ["channel{0}".format(i) for i in range(1, n, 2)])
+        assert_array_equal(signal.channel_index.channel_names, ["channel{0}".format(i) for i in range(n)])
 
     def test__copy_should_let_access_to_parents_objects(self):
         ##copy
