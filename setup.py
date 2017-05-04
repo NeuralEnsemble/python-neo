@@ -22,7 +22,7 @@ if os.environ.get('TRAVIS') == 'true' and \
 
 setup(
     name = "neo",
-    version = '0.5.1dev',
+    version = '0.5.1',
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest'],
     install_requires=install_requires,
     extras_require=extras_require,
