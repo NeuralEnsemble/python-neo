@@ -543,6 +543,17 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
+    def test_as_array(self):
+        sig_as_arr = self.signal1.as_array()
+        self.assertIsInstance(sig_as_arr, np.ndarray)
+        assert_array_equal(self.data1, sig_as_arr.flat)
+
+    def test_as_quantity(self):
+        sig_as_q = self.signal1.as_quantity()
+        self.assertIsInstance(sig_as_q, pq.Quantity)
+        assert_array_equal(self.data1, sig_as_q.magnitude.flat)
+
+
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def setUp(self):
         self.data1 = np.arange(10.0)
