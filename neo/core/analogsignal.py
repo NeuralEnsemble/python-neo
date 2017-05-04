@@ -300,6 +300,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, int):
                     obj = obj.reshape(-1, 1)
+                if self.channel_index:
+                    obj.channel_index = self.channel_index.__getitem__(k)
         elif isinstance(i, slice):
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
