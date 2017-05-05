@@ -641,6 +641,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         signal1 = AnalogSignal([1, 2, 3, 4], sampling_period=1*pq.ms,
                                     units=pq.S)
         signal1.annotations['index'] = 2
+        signal1.channel_index = ChannelIndex(index=[0])
 
         fobj = open('./pickle', 'wb')
         pickle.dump(signal1, fobj)
@@ -653,6 +654,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
             signal2 = None
 
         assert_array_equal(signal1, signal2)
+        assert_array_equal(signal2.channel_index.index, np.array([0]))
         fobj.close()
         os.remove('./pickle')
 
