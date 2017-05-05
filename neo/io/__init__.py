@@ -167,13 +167,21 @@ iolist = [
 ]
 
 
-def get_io(filename):
+def get_io(filename, mode=None):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
     extension = os.path.splitext(filename)[1][1:]
     for io in iolist:
         if extension in io.extensions:
-            return io(filename=filename)
+            if mode is None:
+                return io(filename)
+            else:
+                try:
+                    return io(filename, mode=mode)
+                except Exception:
+                    raise IOError("File extension '" + extension +
+                                  "' is not compatible " +
+                                  "with mode {}".format(mode))
 
-    raise IOError("file extension %s not registered" % extension)
+    raise IOError("File extension %s not registered" % extension)
