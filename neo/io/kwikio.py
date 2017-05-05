@@ -83,6 +83,8 @@ class KwikIO(BaseIO):
         Arguments:
             filename : the filename
         """
+        if not HAVE_KWIK:
+            raise KWIK_ERR
         BaseIO.__init__(self)
         self.filename = os.path.abspath(filename)
         model = kwik.KwikModel(self.filename) # TODO this group is loaded twice
@@ -93,7 +95,7 @@ class KwikIO(BaseIO):
                    lazy=False,
                    cascade=True,
                    get_waveforms=True,
-                   cluster_metadata='all',
+                   cluster_group=None,
                    raw_data_units='uV',
                    get_raw_data=False,
                    ):
@@ -107,11 +109,10 @@ class KwikIO(BaseIO):
             Wether or not to get the raw traces
         raw_data_units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
-        cluster_metadata: str, default = "all"
+        cluster_group: str, default = None
             Which clusters to load, possibilities are "noise", "unsorted",
-            "good", "all", if all is selected noise is omitted.
+            "good", if None all is loaded.
         """
-        assert isinstance(cluster_metadata, str)
         blk = Block()
         if cascade:
             seg = Segment(file_origin=self.filename)
@@ -127,19 +128,21 @@ class KwikIO(BaseIO):
                 clusters = model.spike_clusters
                 for cluster_id in model.cluster_ids:
                     meta = model.cluster_metadata[cluster_id]
-                    if cluster_metadata == 'all':
-                        if meta == 'noise':
-                            continue
-                    elif cluster_metadata != meta:
+                    if cluster_group is None:
+                        pass
+                    elif cluster_group != meta:
                         continue
                     sptr = self.read_spiketrain(cluster_id=cluster_id,
                                                 model=model, lazy=lazy,
                                                 cascade=cascade,
-                                                get_waveforms=get_waveforms)
-                    sptr.annotations.update({'cluster_metadata': meta,
+                                                get_waveforms=get_waveforms,
+                                                raw_data_units=raw_data_units)
+                    sptr.annotations.update({'cluster_group': meta,
                                              'group_id': model.channel_group})
                     sptr.channel_index = chx
-                    unit = Unit()
+                    unit = Unit(cluster_group=meta,
+                                group_id=model.channel_group,
+                                name='unit #{}'.format(cluster_id))
                     unit.spiketrains.append(sptr)
                     chx.units.append(unit)
                     unit.channel_index = chx
@@ -176,6 +179,7 @@ class KwikIO(BaseIO):
                         lazy=False,
                         cascade=True,
                         get_waveforms=True,
+                        raw_data_units=None
                         ):
         """
         Reads sorted spiketrains
@@ -200,6 +204,7 @@ class KwikIO(BaseIO):
             w = model.all_waveforms[idx]
             # klusta: num_spikes, samples_per_spike, num_chans = w.shape
             w = w.swapaxes(1, 2)
+            w = pq.Quantity(w, raw_data_units)
         else:
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
