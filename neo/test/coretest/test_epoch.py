@@ -512,7 +512,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_duplicate_with_new_data(self):
         signal1 = self.epoch
-        new_data = np.sort(np.random.uniform(0, 100, (self.epoch))) * pq.ms
+        new_data = np.sort(np.random.uniform(0, 100, self.epoch.size)) * pq.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
