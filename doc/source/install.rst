@@ -26,6 +26,7 @@ Neo will still install but the IO module that uses them will fail on loading:
 
    * scipy >= 0.12.0 for NeoMatlabIO
    * h5py >= 2.5 for Hdf5IO, KwikIO
+   * klusta for KwikIO
    * igor >= 0.2 for IgorIO
    * nixio >= 1.2 for NixIO
    * stfio for StimfitIO
@@ -38,7 +39,7 @@ Installing from the Python Package Index
 
 If you have pip_ installed::
 
-    $ pip install https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0.zip
+    $ pip install neo
     
 This will automatically download and install the latest release (again
 you may need to have administrator privileges on the machine you are installing
@@ -46,12 +47,12 @@ on).
     
 To download and install manually, download:
 
-    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.0.zip
+    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.1.zip
 
 Then::
 
-    $ unzip neo-0.5.0.zip
-    $ cd neo-0.5.0
+    $ unzip neo-0.5.1.zip
+    $ cd neo-0.5.1
     $ python setup.py install
     
 or::
