@@ -411,10 +411,12 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_duplicate_with_new_data(self):
         signal1 = self.event
-        new_data = np.sort(np.random.uniform(0, 100, (self.event))) * pq.ms
+        new_data = np.sort(np.random.uniform(0, 100, (self.event.size))) * pq.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
+
+
 class TestEventFunctions(unittest.TestCase):
 
     def test__pickle(self):

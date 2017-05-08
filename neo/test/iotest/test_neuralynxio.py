@@ -160,7 +160,7 @@ class TestCheetah_v551(CommonTests, unittest.TestCase):
         nio = NeuralynxIO(self.sn, use_cache='never')
         seg = Segment('testsegment')
 
-        for el_id, el_dict in nio.parameters_ncs.iteritems():
+        for el_id, el_dict in nio.parameters_ncs.items():
             filepath = nio.parameters_ncs[el_id]['recording_file_name']
             filename = filepath.split('/')[-1].split('\\')[-1].split('.')[0]
             nio.read_ncs(filename, seg, t_start=t_start, t_stop=t_stop)
@@ -185,7 +185,7 @@ class TestCheetah_v551(CommonTests, unittest.TestCase):
         nio = NeuralynxIO(self.sn, use_cache='never')
         seg = Segment('testsegment')
 
-        for el_id, el_dict in nio.parameters_nse.iteritems():
+        for el_id, el_dict in nio.parameters_nse.items():
             filepath = nio.parameters_nse[el_id]['recording_file_name']
             filename = filepath.split('/')[-1].split('\\')[-1].split('.')[0]
             nio.read_nse(filename, seg, t_start=t_start, t_stop=t_stop,
