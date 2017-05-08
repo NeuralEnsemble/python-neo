@@ -1766,7 +1766,7 @@ class BlackrockIO(BaseIO):
             wf_size = self.__nev_params('waveform_size')[channel_idx]
 
             waveforms = spikes['waveform'].flatten().view(wf_dtype)
-            waveforms = waveforms.reshape(spikes.size, 1, wf_size)
+            waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
 
             st.waveforms = waveforms[mask] * self.__nev_params('waveform_unit')
             st.sampling_rate = self.__nev_params('waveform_sampling_rate')
