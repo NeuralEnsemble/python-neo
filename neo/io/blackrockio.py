@@ -319,6 +319,8 @@ class BlackrockIO(BaseIO):
             # read nev file specification
             self.__nev_spec = self.__extract_nev_file_spec()
 
+            self._print_verbose('Specification Version ' + self.__nev_spec)
+
             # read nev headers
             self.__nev_basic_header, self.__nev_ext_header = \
                 self.__nev_header_reader[self.__nev_spec]()
@@ -593,7 +595,7 @@ class BlackrockIO(BaseIO):
         """
         filename = '.'.join([self._filenames['nev'], 'nev'])
 
-        # basic hedaer
+        # basic header
         dt0 = [
             # Set to "NEURALEV"
             ('file_type_id', 'S8'),
@@ -623,7 +625,7 @@ class BlackrockIO(BaseIO):
             ('nb_ext_headers', 'uint32')]
 
         nev_basic_header = np.fromfile(filename, count=1, dtype=dt0)[0]
-        
+
         # extended header
         # this consist in N block with code 8bytes + 24 data bytes
         # the data bytes depend on the code and need to be converted
@@ -639,17 +641,16 @@ class BlackrockIO(BaseIO):
         raw_ext_header = np.memmap(
             filename, offset=offset_dt0, dtype=dt1, shape=shape)
 
-        #print(raw_ext_header['packet_id'][:10])
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
             mask = (raw_ext_header['packet_id'] == packet_id)
             assert isinstance(mask, np.ndarray)
-            #print(packet_id, mask.shape)
+
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
             nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
-        ###print(nev_ext_header['NEUEVWAV']) ###
+
         return nev_basic_header, nev_ext_header
 
     def __read_nev_header_variant_a(self):
@@ -1167,7 +1168,7 @@ class BlackrockIO(BaseIO):
         elids = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
         labels = self.__nev_ext_header[b'NEUEVLBL']['label']
 
-        return dict(zip(elids, labels))
+        return dict(zip(elids, labels)) if len(labels) > 0 else None
 
     def __get_waveform_size_variant_a(self):
         """
@@ -1765,7 +1766,7 @@ class BlackrockIO(BaseIO):
             wf_size = self.__nev_params('waveform_size')[channel_idx]
 
             waveforms = spikes['waveform'].flatten().view(wf_dtype)
-            waveforms = waveforms.reshape(spikes.size, 1, wf_size)
+            waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
 
             st.waveforms = waveforms[mask] * self.__nev_params('waveform_unit')
             st.sampling_rate = self.__nev_params('waveform_sampling_rate')
@@ -1906,33 +1907,36 @@ class BlackrockIO(BaseIO):
         else:
             rcg.name = "ChannelIndex"
 
+
         if self._avail_files['nev']:
-            rcg.channel_names = self.__nev_params(
-                'channel_labels')[channel_idx]
+            channel_labels = self.__nev_params('channel_labels')
+            if channel_labels is not None:
+                rcg.channel_names = channel_labels[channel_idx]
 
             # additional annotations from nev
-            get_idx = list(
-                self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
-                    channel_idx)
-            rcg.annotate(
-                connector_ID=self.__nev_ext_header[
-                    b'NEUEVWAV']['physical_connector'][get_idx],
-                connector_pinID=self.__nev_ext_header[
-                    b'NEUEVWAV']['connector_pin'][get_idx],
-                dig_factor=self.__nev_ext_header[
-                    b'NEUEVWAV']['digitization_factor'][get_idx],
-                connector_pin=self.__nev_ext_header[
-                    b'NEUEVWAV']['connector_pin'][get_idx],
-                energy_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
-                hi_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
-                lo_threshold=self.__nev_ext_header[
-                    b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
-                nb_sorted_units=self.__nev_ext_header[
-                    b'NEUEVWAV']['nb_sorted_units'][get_idx],
-                waveform_size=self.__waveform_size[self.__nev_spec](
-                )[channel_idx] * self.__nev_params('waveform_time_unit'))
+            if channel_idx in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
+                get_idx = list(
+                    self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
+                        channel_idx)
+                rcg.annotate(
+                    connector_ID=self.__nev_ext_header[
+                        b'NEUEVWAV']['physical_connector'][get_idx],
+                    connector_pinID=self.__nev_ext_header[
+                        b'NEUEVWAV']['connector_pin'][get_idx],
+                    dig_factor=self.__nev_ext_header[
+                        b'NEUEVWAV']['digitization_factor'][get_idx],
+                    connector_pin=self.__nev_ext_header[
+                        b'NEUEVWAV']['connector_pin'][get_idx],
+                    energy_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                    hi_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                    lo_threshold=self.__nev_ext_header[
+                        b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                    nb_sorted_units=self.__nev_ext_header[
+                        b'NEUEVWAV']['nb_sorted_units'][get_idx],
+                    waveform_size=self.__waveform_size[self.__nev_spec](
+                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
 
         rcg.description = \
             "Container for units and groups analogsignals across segments."
@@ -2340,7 +2344,11 @@ class BlackrockIO(BaseIO):
                     "====================================\n"
                 for i, el in enumerate(avail_el):
                     output += "Electrode ID %i: " % el
-                    output += "label %s: " % self.__nev_params('channel_labels')[el]
+
+                    channel_labels = self.__nev_params('channel_labels')
+                    if channel_labels is not None:
+                        output += "label %s: " % channel_labels[el]
+
                     output += "connector: %i, " % con[i]
                     output += "pin: %i, " % pin[i]
                     output += 'nb_units: %i\n' % nb_units[i]
