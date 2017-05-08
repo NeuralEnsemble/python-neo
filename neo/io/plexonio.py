@@ -333,7 +333,7 @@ class PlexonIO(BaseIO):
                 t_stop=t_stop*pq.s,
                 waveforms=waveforms,
                 sampling_rate=float(
-                    slowChannelHeaders[chan]['ADFreq']) * pq.Hz,
+                    global_header['WaveformFreq']) * pq.Hz,
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
