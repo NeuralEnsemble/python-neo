@@ -23,6 +23,7 @@ from datetime import datetime
 from collections import Iterable
 import itertools
 from hashlib import md5
+from uuid import uuid4
 
 import quantities as pq
 import numpy as np
@@ -506,21 +507,21 @@ class NixIO(BaseIO):
         :param neo_blocks: List (or iterable) containing Neo blocks
         :return: A list containing the new NIX Blocks
         """
-        self.resolve_name_conflicts(neo_blocks)
         for bl in neo_blocks:
             self.write_block(bl)
 
     def _write_object(self, obj, loc=""):
+        objtype = type(obj).__name__.lower()
         if isinstance(obj, Block):
             containerstr = "/"
         else:
-            objtype = type(obj).__name__.lower()
             if objtype == "channelindex":
                 containerstr = "/channel_indexes/"
             else:
                 containerstr = "/" + type(obj).__name__.lower() + "s/"
-        self.resolve_name_conflicts(obj)
-        objpath = loc + containerstr + obj.name
+        nix_name = "neo.{}.{}".format(objtype, self._generate_nix_name())
+        obj.annotate(nix_name=nix_name)
+        objpath = loc + containerstr + nix_name
         oldhash = self._object_hashes.get(objpath)
         if oldhash is None:
             try:
@@ -531,6 +532,7 @@ class NixIO(BaseIO):
         newhash = self._hash_object(obj)
         if oldhash != newhash:
             attr = self._neo_attr_to_nix(obj)
+            attr["name"] = nix_name
             if isinstance(obj, pq.Quantity):
                 attr.update(self._neo_data_to_nix(obj))
             if oldhash is None:
@@ -863,6 +865,9 @@ class NixIO(BaseIO):
             return
         else:
             nixobj.definition = attr["definition"]
+        if "neo_name" in attr:
+            metadata = self._get_or_init_metadata(nixobj, path)
+            metadata["neo_name"] = attr["neo_name"]
         if "created_at" in attr:
             nixobj.force_created_at(calculate_timestamp(attr["created_at"]))
         if "file_datetime" in attr:
@@ -974,73 +979,15 @@ class NixIO(BaseIO):
         else:
             return None
 
-    @classmethod
-    def resolve_name_conflicts(cls, objects):
-        """
-        Given a list of neo objects, change their names such that no two
-        objects share the same name. Objects with no name are renamed based on
-        their type.
-        If a container object is supplied (Block, Segment, or RCG), conflicts
-        are resolved for the child objects.
-
-        :param objects: List of Neo objects or Neo container object
-        """
-        if isinstance(objects, list):
-            if not len(objects):
-                return
-            names = [obj.name for obj in objects]
-            for idx, cn in enumerate(names):
-                if not cn:
-                    cn = cls._generate_name(objects[idx])
-                else:
-                    names[idx] = ""
-                if cn not in names:
-                    newname = cn
-                else:
-                    suffix = 1
-                    newname = "{}-{}".format(cn, suffix)
-                    while newname in names:
-                        suffix += 1
-                        newname = "{}-{}".format(cn, suffix)
-                names[idx] = newname
-            for obj, n in zip(objects, names):
-                obj.name = n
-            return
-        if not objects.name:
-            objects.name = cls._generate_name(objects)
-        if isinstance(objects, Block):
-            block = objects
-            allchildren = block.segments + block.channel_indexes
-            cls.resolve_name_conflicts(allchildren)
-            allchildren = list()
-            for seg in block.segments:
-                allchildren.extend(seg.analogsignals +
-                                   seg.irregularlysampledsignals +
-                                   seg.events +
-                                   seg.epochs +
-                                   seg.spiketrains)
-            cls.resolve_name_conflicts(allchildren)
-        elif isinstance(objects, Segment):
-            seg = objects
-            cls.resolve_name_conflicts(seg.analogsignals +
-                                       seg.irregularlysampledsignals +
-                                       seg.events +
-                                       seg.epochs +
-                                       seg.spiketrains)
-        elif isinstance(objects, ChannelIndex):
-            rcg = objects
-            cls.resolve_name_conflicts(rcg.units)
-
     @staticmethod
-    def _generate_name(neoobj):
-        neotype = type(neoobj).__name__
-        return "neo.{}".format(neotype)
+    def _generate_nix_name():
+        return uuid4().hex
 
     @staticmethod
     def _neo_attr_to_nix(neoobj):
         neotype = type(neoobj).__name__
         attrs = dict()
-        attrs["name"] = neoobj.name
+        attrs["neo_name"] = neoobj.name
         attrs["type"] = neotype.lower()
         attrs["definition"] = neoobj.description
         if isinstance(neoobj, (Block, Segment)):
