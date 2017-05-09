@@ -1117,11 +1117,7 @@ class NixIO(BaseIO):
     @staticmethod
     def _nix_attr_to_neo(nix_obj):
         neo_attrs = dict()
-        # neo_attrs["name"] = stringify(nix_obj.name)
-        neo_name = nix_obj.metadata["neo_name"]\
-            if "neo_name" in nix_obj.metadata else None
-        neo_attrs["name"] = neo_name
-
+        neo_attrs["nix_name"] = nix_obj.name
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.props:
@@ -1133,6 +1129,7 @@ class NixIO(BaseIO):
                     neo_attrs[prop.name] = values[0]
                 else:
                     neo_attrs[prop.name] = values
+        neo_attrs["name"] = neo_attrs.get("neo_name")
 
         if isinstance(nix_obj, (nix.pycore.Block, nix.pycore.Group)):
             if "rec_datetime" not in neo_attrs:

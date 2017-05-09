@@ -155,12 +155,10 @@ class NixIOTest(unittest.TestCase):
             if self.io._find_lazy_loaded(sig) is not None:
                 sig = self.io.load_lazy_object(sig)
             dalist = list()
-            for idx in itertools.count():
-                nixname = "{}.{}".format(sig.annotations["nix_name"], idx)
-                if nixname in data_arrays:
-                    dalist.append(data_arrays[nixname])
-                else:
-                    break
+            nixname = sig.annotations["nix_name"]
+            for da in data_arrays:
+                if da.metadata["nix_name"] == nixname:
+                    dalist.append(da)
             _, nsig = np.shape(sig)
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
@@ -279,6 +277,8 @@ class NixIOTest(unittest.TestCase):
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
+                if k == "nix_name":
+                    continue
                 if isinstance(v, pq.Quantity):
                     self.assertEqual(nixmd.props[str(k)].unit,
                                      str(v.dimensionality))
