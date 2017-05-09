@@ -254,8 +254,9 @@ class NixIO(BaseIO):
         chx = list(self._nix_attr_to_neo(c)
                    for c in nix_source.sources
                    if c.type == "neo.channelindex")
-        neo_attrs["channel_names"] = np.array([c["name"] for c in chx],
-                                              dtype="S")
+        chan_names = list(c["neo_name"] for c in chx if "neo_name" in c)
+        if chan_names:
+            neo_attrs["channel_names"] = chan_names
         neo_attrs["index"] = np.array([c["index"] for c in chx])
         if "coordinates" in chx[0]:
             coord_units = chx[0]["coordinates.units"]
@@ -628,10 +629,8 @@ class NixIO(BaseIO):
         """
         nixsource = self._get_mapped_object(chx)
         for idx, channel in enumerate(chx.index):
-            if len(chx.channel_names):
-                channame = stringify(chx.channel_names[idx])
-            else:
-                channame = "{}.ChannelIndex{}".format(chx.name, idx)
+            channame = "{}.ChannelIndex{}".format(chx.annotations["nix_name"],
+                                                  idx)
             if channame in nixsource.sources:
                 nixchan = nixsource.sources[channame]
             else:
@@ -640,6 +639,9 @@ class NixIO(BaseIO):
             nixchan.definition = nixsource.definition
             chanpath = loc + "/channelindex/" + channame
             chanmd = self._get_or_init_metadata(nixchan, chanpath)
+            if len(chx.channel_names):
+                neochanname = stringify(chx.channel_names[idx])
+                chanmd["neo_name"] = nix.Value(neochanname)
             chanmd["index"] = nix.Value(int(channel))
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
