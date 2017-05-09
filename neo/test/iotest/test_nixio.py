@@ -54,13 +54,10 @@ class NixIOTest(unittest.TestCase):
             self.compare_attr(neoblock, nixblock)
             self.assertEqual(len(neoblock.segments), len(nixblock.groups))
             for idx, neoseg in enumerate(neoblock.segments):
-                nixgrp = nixblock.groups[neoseg.name]
+                nixgrp = nixblock.groups[neoseg.annotations["nix_name"]]
                 self.compare_segment_group(neoseg, nixgrp)
             for idx, neochx in enumerate(neoblock.channel_indexes):
-                if neochx.name:
-                    nixsrc = nixblock.sources[neochx.name]
-                else:
-                    nixsrc = nixblock.sources[idx]
+                nixsrc = nixblock.sources[neochx.annotations["nix_name"]]
                 self.compare_chx_source(neochx, nixsrc)
             self.check_refs(neoblock, nixblock)
 
@@ -80,13 +77,13 @@ class NixIOTest(unittest.TestCase):
                 if ((not isinstance(neochanname, str)) and
                         isinstance(neochanname, bytes)):
                     neochanname = neochanname.decode()
-                nixchanname = nixchan.name
+                nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
         for neounit in neochx.units:
-            nixunit = nixsrc.sources[neounit.name]
+            nixunit = nixsrc.sources[neounit.annotations["nix_name"]]
             self.compare_attr(neounit, nixunit)
 
     def check_refs(self, neoblock, nixblock):
@@ -98,12 +95,10 @@ class NixIOTest(unittest.TestCase):
         :param nixblock: The corresponding NIX block
         """
         for idx, neochx in enumerate(neoblock.channel_indexes):
-            if neochx.name:
-                nixchx = nixblock.sources[neochx.name]
-            else:
-                nixchx = nixblock.sources[idx]
+            nixchx = nixblock.sources[neochx.annotations["nix_name"]]
             # AnalogSignals referencing CHX
-            neoasigs = list(sig.name for sig in neochx.analogsignals)
+            neoasigs = list(sig.annotations["nix_name"]
+                            for sig in neochx.analogsignals)
             nixasigs = list(set(da.metadata.name for da in nixblock.data_arrays
                                 if da.type == "neo.analogsignal" and
                                 nixchx in da.sources))
@@ -111,7 +106,7 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(len(neoasigs), len(nixasigs))
 
             # IrregularlySampledSignals referencing CHX
-            neoisigs = list(sig.name for sig in
+            neoisigs = list(sig.annotations["nix_name"] for sig in
                             neochx.irregularlysampledsignals)
             nixisigs = list(
                 set(da.metadata.name for da in nixblock.data_arrays
@@ -121,18 +116,17 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
             for sidx, neounit in enumerate(neochx.units):
-                if neounit.name:
-                    nixunit = nixchx.sources[neounit.name]
-                else:
-                    nixunit = nixchx.sources[sidx]
-                neosts = list(st.name for st in neounit.spiketrains)
+                nixunit = nixchx.sources[neounit.annotations["nix_name"]]
+                neosts = list(st.annotations["nix_name"]
+                              for st in neounit.spiketrains)
                 nixsts = list(mt for mt in nixblock.multi_tags
                               if mt.type == "neo.spiketrain" and
                               nixunit.name in mt.sources)
                 # SpikeTrains must also reference CHX
                 for nixst in nixsts:
-                    self.assertIn(nixchx.name, nixst.sources)
-                nixsts = list(st.name for st in nixsts)
+                    self.assertIn(nixchx.annotations["nix_name"],
+                                  nixst.sources)
+                nixsts = list(st.annotations["nix_name"] for st in nixsts)
                 self.assertEqual(len(neosts), len(nixsts))
                 for neoname in neosts:
                     if neoname:
@@ -162,7 +156,7 @@ class NixIOTest(unittest.TestCase):
                 sig = self.io.load_lazy_object(sig)
             dalist = list()
             for idx in itertools.count():
-                nixname = "{}.{}".format(sig.name, idx)
+                nixname = "{}.{}".format(sig.annotations["nix_name"], idx)
                 if nixname in data_arrays:
                     dalist.append(data_arrays[nixname])
                 else:
@@ -210,7 +204,7 @@ class NixIOTest(unittest.TestCase):
         for eest in eestlist:
             if self.io._find_lazy_loaded(eest) is not None:
                 eest = self.io.load_lazy_object(eest)
-            mtag = mtaglist[eest.name]
+            mtag = mtaglist[eest.annotations["nix_name"]]
             if isinstance(eest, Epoch):
                 self.compare_epoch_mtag(eest, mtag)
             elif isinstance(eest, Event):
@@ -269,12 +263,11 @@ class NixIOTest(unittest.TestCase):
                                   nix.pycore.SampledDimension)
 
     def compare_attr(self, neoobj, nixobj):
-        if neoobj.name:
-            if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
-                nix_name = ".".join(nixobj.name.split(".")[:-1])
-            else:
-                nix_name = nixobj.name
-            self.assertEqual(neoobj.name, nix_name)
+        if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
+            nix_name = ".".join(nixobj.name.split(".")[:-1])
+        else:
+            nix_name = nixobj.name
+        self.assertEqual(neoobj.annotations["nix_name"], nix_name)
         self.assertEqual(neoobj.description, nixobj.definition)
         if hasattr(neoobj, "rec_datetime") and neoobj.rec_datetime:
             self.assertEqual(neoobj.rec_datetime,
@@ -651,6 +644,10 @@ class NixIOWriteTest(NixIOTest):
         self.write_and_compare([block])
 
         chx.annotate(**self.rdict(3))
+        self.write_and_compare([block])
+
+        chx.channel_names = ["one", "two", "three", "five",
+                             "eight", "xiii"]
         self.write_and_compare([block])
 
     def test_signals_write(self):
