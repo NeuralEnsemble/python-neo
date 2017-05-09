@@ -987,7 +987,10 @@ class NixIO(BaseIO):
     def _neo_attr_to_nix(neoobj):
         neotype = type(neoobj).__name__
         attrs = dict()
-        attrs["neo_name"] = neoobj.name
+        # NIX metadata does not support None values
+        # The property will be excluded to signify 'name is None'
+        if neoobj.name is not None:
+            attrs["neo_name"] = neoobj.name
         attrs["type"] = neotype.lower()
         attrs["definition"] = neoobj.description
         if isinstance(neoobj, (Block, Segment)):
