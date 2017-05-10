@@ -248,10 +248,9 @@ class TdtIO(BaseIO):
                             signal = get_chunks(tsq[mask3]['size'],tsq[mask3]['eventoffset'],  sig_array).view(dt)
 
                         anasig = AnalogSignal(signal        = signal* pq.V,
-                                              name          = '{0} {1}'.format(code, channel),
+                                              name          = '{0} {1}'.format(signame, channel),
                                               sampling_rate = sr * pq.Hz,
-                                              t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s,
-                                              channel_index = int(channel)
+                                              t_start       = (tsq[mask3]['timestamp'][0] - global_t_start) * pq.s
                                               )
                         if lazy:
                             anasig.lazy_shape = shape
