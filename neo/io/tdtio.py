@@ -24,7 +24,11 @@ import sys
 
 import numpy as np
 import quantities as pq
-import itertools
+
+try:
+    from itertools import izip as zip
+except ImportError:  # zip already exists without import in python 3.x
+    pass
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
@@ -38,7 +42,7 @@ def get_chunks(sizes, offsets, big_array):
     # sizes are not!!
     # so need this (I really do not knwo why...):
     sizes = (sizes -10)  * 4 #
-    all = np.concatenate([ big_array[o:o+s] for s, o in itertools.izip(sizes, offsets) ])
+    all = np.concatenate([ big_array[o:o+s] for s, o in zip(sizes, offsets) ])
     return all
 
 class TdtIO(BaseIO):
