@@ -285,8 +285,8 @@ class NixIO(BaseIO):
         nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
-        neo_attrs["name"] = stringify(metadata.name)
         neo_type = nix_da_group[0].type
+        neo_attrs["nix_name"] = metadata.name  # use the common base name
 
         unit = nix_da_group[0].unit
         if lazy:
@@ -456,7 +456,8 @@ class NixIO(BaseIO):
             ref_das = self._get_referers(nix_obj, parent_block.data_arrays)
             ref_signals = self._get_mapped_objects(ref_das)
             # deduplicate by name
-            ref_signals = list(dict((s.name, s) for s in ref_signals).values())
+            ref_signals = list(dict((s.annotations["nix_name"], s)
+                                    for s in ref_signals).values())
             for sig in ref_signals:
                 if isinstance(sig, AnalogSignal):
                     neo_obj.analogsignals.append(sig)
