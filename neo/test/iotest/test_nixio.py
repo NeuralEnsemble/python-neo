@@ -103,7 +103,8 @@ class NixIOTest(unittest.TestCase):
                                 if da.type == "neo.analogsignal" and
                                 nixchx in da.sources))
 
-            self.assertEqual(len(neoasigs), len(nixasigs))
+            self.assertEqual(len(neoasigs), len(nixasigs),
+                             neochx.analogsignals)
 
             # IrregularlySampledSignals referencing CHX
             neoisigs = list(sig.annotations["nix_name"] for sig in
@@ -124,9 +125,8 @@ class NixIOTest(unittest.TestCase):
                               nixunit.name in mt.sources)
                 # SpikeTrains must also reference CHX
                 for nixst in nixsts:
-                    self.assertIn(nixchx.annotations["nix_name"],
-                                  nixst.sources)
-                nixsts = list(st.annotations["nix_name"] for st in nixsts)
+                    self.assertIn(nixchx.name, nixst.sources)
+                nixsts = list(st.name for st in nixsts)
                 self.assertEqual(len(neosts), len(nixsts))
                 for neoname in neosts:
                     if neoname:
@@ -157,7 +157,7 @@ class NixIOTest(unittest.TestCase):
             dalist = list()
             nixname = sig.annotations["nix_name"]
             for da in data_arrays:
-                if da.metadata["nix_name"] == nixname:
+                if da.metadata.name == nixname:
                     dalist.append(da)
             _, nsig = np.shape(sig)
             self.assertEqual(nsig, len(dalist))
@@ -477,14 +477,14 @@ class NixIOTest(unittest.TestCase):
         )
         chantype = "neo.channelindex"
         # 3 channels
-        for idx in [2, 5, 9]:
-            channame = cls.rword(20)
+        for idx, chan in enumerate([2, 5, 9]):
+            channame = "{}.ChannelIndex{}".format(nixchx.name, idx)
             nixrc = nixchx.create_source(channame, chantype)
             nixrc.definition = cls.rsentence(13)
             nixrc.metadata = nixchx.metadata.create_section(
                 nixrc.name, "neo.channelindex.metadata"
             )
-            nixrc.metadata.create_property("index", nix.Value(idx))
+            nixrc.metadata.create_property("index", nix.Value(chan))
             dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
@@ -929,7 +929,7 @@ class NixIOReadTest(NixIOTest):
         for block in neo_blocks:
             self.assertIsInstance(block.segments, LazyList)
             self.assertIsInstance(block.channel_indexes, LazyList)
-            name = block.name
+            name = block.annotations["nix_name"]
             block = self.io.load_lazy_cascade("/" + name, lazy=False)
             self.assertIsInstance(block.segments, list)
             self.assertIsInstance(block.channel_indexes, list)
@@ -946,7 +946,7 @@ class NixIOReadTest(NixIOTest):
         self.io._read_cascade.assert_not_called()
         for block in neo_blocks:
             self.assertEqual(len(block.segments), 0)
-            nix_block = self.io.nix_file.blocks[block.name]
+            nix_block = self.io.nix_file.blocks[block.annotations["nix_name"]]
             self.compare_attr(block, nix_block)
 
     def test_lazy_load_subschema(self):
@@ -954,7 +954,7 @@ class NixIOReadTest(NixIOTest):
         segpath = "/" + blk.name + "/segments/" + blk.groups[0].name
         segment = self.io.load_lazy_cascade(segpath, lazy=True)
         self.assertIsInstance(segment, Segment)
-        self.assertEqual(segment.name, blk.groups[0].name)
+        self.assertEqual(segment.annotations["nix_name"], blk.groups[0].name)
         self.assertIs(segment.block, None)
         self.assertEqual(len(segment.analogsignals[0]), 0)
         segment = self.io.load_lazy_cascade(segpath, lazy=False)
@@ -1184,8 +1184,8 @@ class NixIOContextTests(NixIOTest):
         with NixIO(self.filename, "ro") as iofile:
             blocks = iofile.read_all_blocks()
 
-        self.assertEqual(blocks[0].name, name_one)
-        self.assertEqual(blocks[1].name, name_two)
+        self.assertEqual(blocks[0].annotations["nix_name"], name_one)
+        self.assertEqual(blocks[1].annotations["nix_name"], name_two)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
