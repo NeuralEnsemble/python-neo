@@ -520,8 +520,11 @@ class NixIO(BaseIO):
                 containerstr = "/channel_indexes/"
             else:
                 containerstr = "/" + type(obj).__name__.lower() + "s/"
-        nix_name = "neo.{}.{}".format(objtype, self._generate_nix_name())
-        obj.annotate(nix_name=nix_name)
+        if "nix_name" in obj.annotations:
+            nix_name = obj.annotations["nix_name"]
+        else:
+            nix_name = "neo.{}.{}".format(objtype, self._generate_nix_name())
+            obj.annotate(nix_name=nix_name)
         objpath = loc + containerstr + nix_name
         oldhash = self._object_hashes.get(objpath)
         if oldhash is None:
