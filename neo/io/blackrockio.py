@@ -1943,60 +1943,81 @@ class BlackrockIO(BaseIO):
 
         return un
 
-    def __read_recordingchannelgroup(
-            self, channel_idx, index=None, channel_units=None, cascade=True):
+    def __read_channelindex(
+            self, channel_id, index=None, channel_units=None, cascade=True):
         """
-        Returns a ChannelIndex with the
-        given index for the given channels containing a neo.core.unit.Unit
-        object list of the given units.
+        Returns a ChannelIndex with the given index for the given channels
+        containing a neo.core.unit.Unit object list of the given units.
         """
 
-        rcg = ChannelIndex(
-            np.array([channel_idx]),
+        chidx = ChannelIndex(
+            np.array([channel_id]),
             file_origin=self.filename)
 
         if index is not None:
-            rcg.index = index
-            rcg.name = "ChannelIndex {0}".format(rcg.index)
+            chidx.index = index
+            chidx.name = "ChannelIndex {0}".format(chidx.index)
         else:
-            rcg.name = "ChannelIndex"
+            chidx.name = "ChannelIndex"
 
 
         if self._avail_files['nev']:
             channel_labels = self.__nev_params('channel_labels')
             if channel_labels is not None:
-                rcg.channel_names = channel_labels[channel_idx]
+                chidx.channel_names = np.array([channel_labels[channel_idx]])
+            chidx.channel_ids = np.array([channel_id])
 
             # additional annotations from nev
-            if channel_idx in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
+            if channel_id in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
                 get_idx = list(
                     self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
-                        channel_idx)
-                rcg.annotate(
+                        channel_id)
+                chidx.annotate(
                     connector_ID=self.__nev_ext_header[
                         b'NEUEVWAV']['physical_connector'][get_idx],
                     connector_pinID=self.__nev_ext_header[
                         b'NEUEVWAV']['connector_pin'][get_idx],
-                    dig_factor=self.__nev_ext_header[
+                    nev_dig_factor=self.__nev_ext_header[
                         b'NEUEVWAV']['digitization_factor'][get_idx],
-                    connector_pin=self.__nev_ext_header[
-                        b'NEUEVWAV']['connector_pin'][get_idx],
-                    energy_threshold=self.__nev_ext_header[
+                    nev_energy_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
-                    hi_threshold=self.__nev_ext_header[
+                    nev_hi_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
-                    lo_threshold=self.__nev_ext_header[
+                    nev_lo_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
                     nb_sorted_units=self.__nev_ext_header[
                         b'NEUEVWAV']['nb_sorted_units'][get_idx],
                     waveform_size=self.__waveform_size[self.__nev_spec](
-                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
+                    )[channel_id] * self.__nev_params('waveform_time_unit'))
 
-        rcg.description = \
-            "Container for units and groups analogsignals across segments."
+                # additional annotations from nev (only for file_spec > 2.1)
+                if self.__nev_spec in ['2.2', '2.3']:
+                    get_idx = list(
+                        self.__nev_ext_header[b'NEUEVFLT']['electrode_id']).index(
+                            channel_id)
+                    # filter type codes (extracted from blackrock manual)
+                    flt_type = {0: 'None', 1: 'Butterworth'}
+                    chidx.annotate(
+                        nev_hi_freq_corner=self.__nev_ext_header[
+                            b'NEUEVFLT']['hi_freq_corner'][get_idx] * pq.uV,
+                        nev_hi_freq_order=self.__nev_ext_header[
+                            b'NEUEVFLT']['hi_freq_order'][get_idx],
+                        nev_hi_freq_type=flt_type[self.__nev_ext_header[
+                            b'NEUEVFLT']['hi_freq_type'][get_idx]],
+                        nev_lo_freq_corner=self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx] * pq.uV,
+                        nev_lo_freq_order=self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_order'][get_idx],
+                        nev_lo_freq_type=flt_type[self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_type'][get_idx]])
+
+        chidx.description = \
+            "Container for units and groups analogsignals of one recording " \
+            "channel across segments."
+>>>>>>> Added additional metadata to ChannelIndex objects (+beautifications)
 
         if not cascade:
-            return rcg
+            return chidx
 
         if self._avail_files['nev']:
             # read nev data
@@ -2004,20 +2025,20 @@ class BlackrockIO(BaseIO):
 
             if channel_units is not None:
                 # extract first data for channel
-                ch_mask = (nev_data['Spikes']['packet_id'] == channel_idx)
+                ch_mask = (nev_data['Spikes']['packet_id'] == channel_id)
                 data_ch = nev_data['Spikes'][ch_mask]
 
                 for un_id in channel_units:
                     if un_id in np.unique(data_ch['unit_class_nb']):
 
                         un = self.__read_unit(
-                            unit_id=un_id, channel_id=channel_idx)
+                            unit_id=un_id, channel_id=channel_id)
 
-                        rcg.units.append(un)
+                        chidx.units.append(un)
 
-        rcg.create_many_to_one_relationship()
+        chidx.create_many_to_one_relationship()
 
-        return rcg
+        return chidx
 
     def read_segment(
             self, n_start, n_stop, name=None, description=None, index=None,
@@ -2341,8 +2362,8 @@ class BlackrockIO(BaseIO):
                 else:
                     ch_units = None
 
-                rcg = self.__read_recordingchannelgroup(
-                    channel_idx=ch_idx,
+                rcg = self.__read_channelindex(
+                    channel_id=ch_idx,
                     index=i,
                     channel_units=ch_units,
                     cascade=cascade)
