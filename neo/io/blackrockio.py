@@ -2244,7 +2244,7 @@ class BlackrockIO(BaseIO):
     def read_block(
             self, index=None, name=None, description=None, nsx_to_load='none',
             n_starts=None, n_stops=None, channels='none', units='none',
-            load_waveforms=False, load_events=False, scaling='raw', 
+            load_waveforms=False, load_events=False, scaling='raw',
             lazy=False, cascade=True):
         """
         Args:
