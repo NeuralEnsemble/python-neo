@@ -345,7 +345,7 @@ class BlackrockIO(BaseIO):
         """
         Print a verbose diagnostic message (string).
         """
-        if __verbose_messages:
+        if self.__verbose_messages:
             if text not in self.__verbose_messages:
                 self.__verbose_messages.append(text)
                 print(str(self.__class__.__name__) + ': ' + text)
