@@ -1517,10 +1517,14 @@ class BlackrockIO(BaseIO):
 
         if channels:
             if len(set(all_channels) & set(channels)) < len(channels):
-                raise ValueError("Unknown channel id in channels.")
+                self._print_verbose(
+                    "Ignoring unknown channel ID(s) specified in in channels.")
+
+            # Make sure, all channels are valid and contain no duplicates
+            channels = list(set(all_channels).intersection(set(channels)))
         else:
             self._print_verbose("No channel is specified, therefore no "
-                                "recordingchannelgroup and unit is loaded.")
+                                "time series and unit data is loaded.")
 
         return channels
 
@@ -1598,8 +1602,8 @@ class BlackrockIO(BaseIO):
             self, user_n_starts, user_n_stops, nsx_to_load):
         """
         Merges after a validation the user specified n_starts and n_stops with
-        the intrinsicly given n_starts and n_stops (from e.g, recording pauses)
-        of the file set.
+        the intrinsically given n_starts and n_stops (from e.g, recording
+        pauses) of the file set.
 
         Final n_starts and n_stops are chosen, so that the time range of each
         resulting segment is set to the best meaningful maximum. This means
