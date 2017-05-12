@@ -345,7 +345,7 @@ class BlackrockIO(BaseIO):
         """
         Print a verbose diagnostic message (string).
         """
-        if self._verbose:
+        if __verbose_messages:
             if text not in self.__verbose_messages:
                 self.__verbose_messages.append(text)
                 print(str(self.__class__.__name__) + ': ' + text)
@@ -2282,24 +2282,172 @@ class BlackrockIO(BaseIO):
             cascade (bool or "lazy"):
                 If True, only the block without children is returned.
 
-        Returns (neo.Block):
+        Returns:
+            Block (neo.segment.Block):
+                Block linking all loaded Neo objects.
+
+                Block annotations:
+                    avail_file_set (list):
+                        List of extensions of all available files for the given
+                        recording.
+                    avail_nsx (list of int):
+                        List of integers specifying the .nsX files available,
+                        e.g., [2, 5] indicates that an ns2 and and ns5 file are
+                        available.
+                    avail_nev (bool):
+                        True if a .nev file is available.
+                    avail_ccf (bool):
+                        True if a .ccf file is available.
+                    avail_sif (bool):
+                        True if a .sif file is available.
+                    rec_pauses (bool):
+                        True if the session contains a recording pause (i.e.,
+                        multiple segments).
+                    nb_segments (int):
+                        Number of segments created after merging recording
+                        times specified by user with the intrinsic ones of the
+                        file set.
+
+                Segment annotations:
+                    None.
+
+                ChannelIndex annotations:
+                    TODO: This is an array of bool for HFC, for some reason.
+                    electrode_reject_XXX (bool):
+                        For different filter ranges XXX (as defined in the odML
+                        file), if this variable is True it indicates whether
+                        the spikes were recorded on an electrode that should be
+                        rejected based on preprocessing analysis for removing
+                        electrodes due to noise/artefacts in the respective
+                        frequency range.
+                    waveform_size (quantitiy):
+                        Length of time used to save spike waveforms (in units
+                        of 1/30000 s).
+                    nev_hi_freq_corner (quantitiy), 
+                    nev_lo_freq_corner (quantitiy),
+                    nev_hi_freq_order (int), nev_lo_freq_order (int),
+                    nev_hi_freq_type (str), nev_lo_freq_type (str),
+                    nev_hi_threshold, nev_lo_threshold,
+                    nev_energy_threshold (quantity):
+                        Indicates parameters of spike detection.
+                    nev_dig_factor (int):
+                        Digitization factor in microvolts of the nev file, used
+                        to convert raw samples to volt.
+                    connector_ID, connector_pinID (int):
+                        ID of connector and pin on the connector where the
+                        channel was recorded from.
+                    nb_sorted_units (int):
+                        Number of sorted units on this channel (noise, mua and
+                        sua).
+
+                Unit annotations:
+                    unit_id (int):
+                        ID of the unit.
+                    TODO: Also has channel_ids --> inherit from ChannelIndex?
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the unit was
+                        loaded (equiv. to the single list entry in the
+                        attribute channel_ids of ChannelIndex parent).
+                    noise, mua, sua (bool):
+                        True, if the unit is classified as a noise unit, i.e.,
+                        not considered neural activity (noise), a multi-unit
+                        (mua), or a single unit (sua).
+                        
+                    TODO: electrode_reject_XXX is present in Unit, but not listed here (with bug for HFC).
+                        
+                    TODO: Not present!
+                    SNR (float):
+                        Signal to noise ratio of SUA/MUA waveforms. A higher
+                        value indicates that the unit could be better
+                        distinguished in the spike detection and spike sorting
+                        procedure.
+                    TODO: Not present!
+                    spike_duration (float):
+                        Approximate duration of the spikes of SUAs/MUAsSUA in
+                        microseconds.
+
+                AnalogSignal annotations:
+                    nsx (int):
+                        nsX file the signal was loaded from, e.g., 5 indicates
+                        the .ns5 file.
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the signal was
+                        loaded.
+                        
+                    TODO: These are not present
+                    electrode_reject_XXX (bool):
+                        For different filter ranges XXX (as defined in the odML
+                        file), if this variable is True it indicates whether
+                        the spikes were recorded on an electrode that should be
+                        rejected based on preprocessing analysis for removing
+                        electrodes due to noise/artefacts in the respective
+                        frequency range.
+
+                Spiketrain annotations:
+                    TODO: See Unit above
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the spikes were
+                        loaded.
+                    unit_id (int):
+                        ID of the unit from which the spikes were recorded.
+                    electrode_reject_XXX (bool):
+                        For different filter ranges XXX (as defined in the odML
+                        file), if this variable is True it indicates whether
+                        the spikes were recorded on an electrode that should be
+                        rejected based on preprocessing analysis for removing
+                        electrodes due to noise/artefacts in the respective
+                        frequency range.
+                    noise, mua, sua (bool):
+                        True, if the unit is classified as a noise unit, i.e.,
+                        not considered neural activity (noise), a multi-unit
+                        (mua), or a single unit (sua).
+                    # TODO: Missing
+                    SNR (float):
+                        Signal to noise ratio of SUA/MUA waveforms. A higher
+                        value indicates that the unit could be better
+                        distinguished in the spike detection and spike sorting
+                        procedure.
+                    spike_duration (float):
+                        Approximate duration of the spikes of SUAs/MUAsSUA in
+                        microseconds.
+
+                Event annotations:
+                    The resulting Block contains three Event objects with the
+                    following names:
+                    "DigitalTrialEvents' contains all digitally recorded events
+                        returned by BlackrockIO, annotated with semantic labels in
+                        accordance with the reach-to-grasp experiment (e.g.,
+                        'TS-ON').
+                    'AnalogTrialEvents' contains events extracted from the
+                        analog behavioral signals during preprocessing and stored
+                        in the odML (e.g., 'OT').
+                    'TrialEvents' contains all events of DigitalTrialEvents and
+                        AnalogTrialEvents merged into a single Neo object.
+
+                    Each annotation is a list containing one entry per time
+                    point stored in the event.
+
+                    # TODO: Double check this is correct
+                    trial_event_labels (list of str):
+                        Name identifying the name of the event, e.g., 'TS-ON'.
+                    trial_id (list of int):
+                        Trial ID the event belongs to.
+                    trial_timestamp_id (list of int):
+                        Timestamp-based trial ID (equivalent to the time of TS-
+                        ON of a trial) the event belongs to.
+                    TODO: Relate to performance codes above
+                    belongs_to_trialtype (str):
+                        String identifying the trial type (e.g., SGHF) the
+                        trial belongs to.
+                    performance_in_trial (list of int):
+                        Performance code of the trial that the event belongs
+                        to.
+                    trial_reject_XXX:
+                        For different filter ranges XXX (defined in the odML
+                        file), if True this variable indicates whether the
+                        trial was rejected based on preprocessing analysis.
+
             Annotations:
-                avail_file_set (list):
-                    List of extensions of all available files for the given
-                    recording.
-                avail_nsx (boolean):
-                    List of available nsx ids (int).
-                avail_nev (boolean):
-                    True if nev is available.
-                avail_sif (boolean):
-                    True if sif is available.
-                avail_ccf (boolean):
-                    True if ccf is available.
-                rec_pauses (boolean):
-                    True if at least one recording pause occurred.
-                nb_segments (int):
-                    Number of created segments after merging recording times
-                    specified by user with the intrinsic ones of the file set.
         """
         # Make sure that input args are transformed into correct instances
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
