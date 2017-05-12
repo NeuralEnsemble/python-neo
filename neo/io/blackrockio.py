@@ -312,7 +312,7 @@ class BlackrockIO(BaseIO):
             '2.1': self.__get_nonneural_evtypes_variant_a,
             '2.2': self.__get_nonneural_evtypes_variant_a,
             '2.3': self.__get_nonneural_evtypes_variant_b}
-        
+
         # Load file spec and headers of available nev file
         if self._avail_files['nev']:
             # read nev file specification
@@ -646,12 +646,10 @@ class BlackrockIO(BaseIO):
         for packet_id in ext_header_variants.keys():
             mask = (raw_ext_header['packet_id'] == packet_id)
             assert isinstance(mask, np.ndarray)
-
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
             nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
-
         return nev_basic_header, nev_ext_header
 
     def __read_nev_header_variant_a(self):
