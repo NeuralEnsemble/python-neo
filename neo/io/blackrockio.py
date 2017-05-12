@@ -1757,8 +1757,8 @@ class BlackrockIO(BaseIO):
         return ev
 
     def __read_spiketrain(
-            self, n_start, n_stop, spikes, channel_idx, unit_id,
-            load_waveforms=False, lazy=False):
+            self, n_start, n_stop, spikes, channel_id, unit_id,
+            load_waveforms=False, scaling='raw', lazy=False):
         """
         Creates spiketrains for Spikes in nev data.
         """
@@ -1766,15 +1766,18 @@ class BlackrockIO(BaseIO):
 
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_idx + unit_id)
+        name = "Unit {0}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
         desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
-            channel_idx, self.__get_unit_classification(unit_id))
+            channel_id, self.__get_unit_classification(unit_id))
 
         # get spike times for given time interval
-        times = spikes['timestamp'] * event_unit
-        mask = (times >= n_start) & (times < n_stop)
-        times = times[mask].astype(float)
+        if not lazy:
+            times = spikes['timestamp'] * event_unit
+            mask = (times >= n_start) & (times < n_stop)
+            times = times[mask].astype(float)
+        else:
+            times = np.array([]) * event_unit
 
         st = SpikeTrain(
             times=times,
@@ -1786,32 +1789,47 @@ class BlackrockIO(BaseIO):
 
         if lazy:
             st.lazy_shape = np.shape(times)
-            st.times = []
 
-        # load waveforms if wanted
+        # load waveforms if requested
         if load_waveforms and not lazy:
-            wf_dtype = self.__nev_params('waveform_dtypes')[channel_idx]
-            wf_size = self.__nev_params('waveform_size')[channel_idx]
+            wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
+            wf_size = self.__nev_params('waveform_size')[channel_id]
 
             waveforms = spikes['waveform'].flatten().view(wf_dtype)
             waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
 
-            st.waveforms = waveforms[mask] * self.__nev_params('waveform_unit')
+            if scaling == 'voltage':
+                st.waveforms = (
+                    waveforms[mask] * self.__nev_params('waveform_unit') *
+                    self.__nev_params('digitization_factor')[channel_id] /
+                    1000.)
+            elif scaling == 'raw':
+                st.waveforms = waveforms[mask]*pq.dimensionless
+            else:
+                raise ValueError(
+                    'Unkown option {1} for parameter scaling.'.format(scaling))
             st.sampling_rate = self.__nev_params('waveform_sampling_rate')
-            st.left_sweep = self.__get_left_sweep_waveforms()[channel_idx]
+            st.left_sweep = self.__get_left_sweep_waveforms()[channel_id]
 
         # add additional annotations
         st.annotate(
-            ch_idx=int(channel_idx),
+            ch_idx=int(channel_id),
             unit_id=int(unit_id))
 
         return st
 
     def __read_analogsignal(
-            self, n_start, n_stop, signal, channel_idx, nsx_nb, lazy=False):
+            self, n_start, n_stop, signal, channel_id, nsx_nb,
+            scaling='raw', lazy=False):
         """
         Creates analogsignal for signal of channel in nsx data.
         """
+
+        # TODO: The following part is extremely slow, since the memmaps for the
+        # headers are created again and again. In particular, this makes lazy
+        # loading slow as well. Solution would be to create header memmaps up
+        # front.
+
         # get parameters
         sampling_rate = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'sampling_rate', nsx_nb)
@@ -1838,61 +1856,67 @@ class BlackrockIO(BaseIO):
             'databl_t_stop', nsx_nb, n_start, n_stop)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
-        if channel_idx in elids_nsx:
-            idx_ch = elids_nsx.index(channel_idx)
+        if channel_id in elids_nsx:
+            idx_ch = elids_nsx.index(channel_id)
         else:
             return None
 
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_idx, labels[idx_ch], nsx_nb)
+                channel_id, labels[idx_ch], nsx_nb)
 
         data_times = np.arange(
             t_start.item(), t_stop.item(),
             self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
         mask = (data_times >= n_start) & (data_times < n_stop)
-        
+
         if lazy:
             lazy_shape = (np.sum(mask), )
-            sig_ch =  np.array([], dtype='float32')
+            sig_ch = np.array([], dtype='float32')
             t_start = n_start.rescale('s')
         else:
-        
             data_times = data_times[mask].astype(float)
-            sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
-            
-            # transform dig value to pysical value
-            sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
-            sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
-            if sym_ana and sym_dig:
-                sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+            if scaling == 'voltage':
+                if not self._avail_files['nev']:
+                    raise ValueError(
+                        'Cannot convert signals in filespec 2.1 nsX '
+                        'files to voltage without nev file.')
+                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
+
+                # transform dig value to physical value
+                sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
+                sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
+                if sym_ana and sym_dig:
+                    sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+                else:
+                    # general case (same result as above for symmetric input)
+                    sig_ch -= min_dig[idx_ch]
+                    sig_ch *= float(max_ana[idx_ch] - min_ana[idx_ch]) / \
+                        float(max_dig[idx_ch] - min_dig[idx_ch])
+                    sig_ch += float(min_ana[idx_ch])
+                sig_unit = units[idx_ch].decode()
+            elif scaling == 'raw':
+                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(int)
+                sig_unit = pq.dimensionless
             else:
-                # general case
-                sig_ch -= min_dig[idx_ch]
-                sig_ch *= float(max_ana[idx_ch] - min_ana) / \
-                    float(max_dig[idx_ch] - min_dig)
-                sig_ch += float(min_ana[idx_ch])
-            
-            t_start=data_times[0].rescale(nsx_time_unit)
-            
+                raise ValueError(
+                    'Unkown option {1} for parameter '
+                    'scaling.'.format(scaling))
+
+            t_start = data_times[0].rescale(nsx_time_unit)
+
         anasig = AnalogSignal(
-            signal=pq.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
+            signal=pq.Quantity(sig_ch, sig_unit, copy=False),
             sampling_rate=sampling_rate,
             t_start=t_start,
             name=labels[idx_ch],
             description=description,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
-
         if lazy:
             anasig.lazy_shape = lazy_shape
-        
-        
         anasig.annotate(
             nsx=nsx_nb,
-            ch_idx=channel_idx,
-            ch_label=labels[idx_ch])
-
-
+            ch_idx=channel_id)
         return anasig
 
     def __read_unit(self, unit_id, channel_idx):
@@ -2163,7 +2187,7 @@ class BlackrockIO(BaseIO):
                         n_start=n_start,
                         n_stop=n_stop,
                         signal=nsx_data,
-                        channel_idx=ch_idx,
+                        channel_id=ch_idx,
                         nsx_nb=nsx_nb,
                         lazy=lazy)
 
