@@ -2043,7 +2043,8 @@ class BlackrockIO(BaseIO):
     def read_segment(
             self, n_start, n_stop, name=None, description=None, index=None,
             nsx_to_load='none', channels='none', units='none',
-            load_waveforms=False, load_events=False, lazy=False, cascade=True):
+            load_waveforms=False, load_events=False,  scaling='raw',
+            lazy=False, cascade=True):
         """
         Returns an annotated neo.core.segment.Segment.
 
@@ -2081,6 +2082,13 @@ class BlackrockIO(BaseIO):
                 If True, waveforms are attached to all loaded spiketrains.
             load_events (boolean):
                 If True, all recorded events are loaded.
+            scaling (str):
+                Determines whether time series of individual
+                electrodes/channels are returned as AnalogSignals containing
+                raw integer samples ('raw'), or scaled to arrays of floats
+                representing voltage ('voltage'). Note that for file
+                specification 2.1 and lower, the option 'voltage' requires a
+                nev file to be present.
             lazy (boolean):
                 If True, only the shape of the data is loaded.
             cascade (boolean):
@@ -2168,12 +2176,13 @@ class BlackrockIO(BaseIO):
 
             # get spiketrain
             if units is not None:
-                for ch_idx in units.keys():
+                not_existing_units = []
+                for ch_id in units.keys():
                     # extract first data for channel
-                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_idx)
+                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
                     data_ch = nev_data['Spikes'][ch_mask]
-                    if units[ch_idx] is not None:
-                        for un_id in units[ch_idx]:
+                    if units[ch_id] is not None:
+                        for un_id in units[ch_id]:
                             if un_id in np.unique(data_ch['unit_class_nb']):
                                 # extract then data for unit if unit exists
                                 un_mask = (data_ch['unit_class_nb'] == un_id)
@@ -2183,19 +2192,24 @@ class BlackrockIO(BaseIO):
                                     n_start=n_start,
                                     n_stop=n_stop,
                                     spikes=data_un,
-                                    channel_idx=ch_idx,
+                                    channel_id=ch_id,
                                     unit_id=un_id,
                                     load_waveforms=load_waveforms,
+                                    scaling=scaling,
                                     lazy=lazy)
 
                                 seg.spiketrains.append(st)
                             else:
-                                self._print_verbose(
-                                    "Unit {0} on channel {1} does not "
-                                    "exist".format(un_id, ch_idx))
+                                not_existing_units.append(un_id)
+
+                        if not_existing_units:
+                            self._print_verbose(
+                                "Units {0} on channel {1} do not "
+                                "exist".format(not_existing_units, ch_id))
                     else:
                         self._print_verbose(
-                            "Channel {0} has no units".format(ch_idx))
+                            "There are no units specified for channel "
+                            "{0}".format(ch_id))
 
         if nsx_to_load is not None:
             for nsx_nb in nsx_to_load:
@@ -2203,15 +2217,16 @@ class BlackrockIO(BaseIO):
                 nsx_data = \
                     self.__nsx_data_reader[self.__nsx_spec[nsx_nb]](nsx_nb)
 
-                # read analogsignals
-                for ch_idx in channels:
+                # read Analogsignals
+                for ch_id in channels:
 
                     anasig = self.__read_analogsignal(
                         n_start=n_start,
                         n_stop=n_stop,
                         signal=nsx_data,
-                        channel_id=ch_idx,
+                        channel_id=ch_id,
                         nsx_nb=nsx_nb,
+                        scaling=scaling,
                         lazy=lazy)
 
                     if anasig is not None:
