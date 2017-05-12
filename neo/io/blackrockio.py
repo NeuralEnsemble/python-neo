@@ -1220,9 +1220,28 @@ class BlackrockIO(BaseIO):
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.1.
         """
-        # (several are assumed from Blackrock manual)
+        # Here, min/max_analog_val and min/max_digital_val are not available in
+        # the nsx, so that we must estimate these parameters from the
+        # digitization factor of the nev (information by Kian Torab, Blackrock
+        # Microsystems). Here dig_factor=max_analog_val/max_digital_val. We set
+        # max_digital_val to 1000, and max_analog_val=dig_factor. dig_factor is
+        # given in nV by definition, so the units turn out to be uV.
         labels = []
+        dig_factor = []
         for elid in self.__nsx_ext_header[nsx_nb]['electrode_id']:
+            if self._avail_files['nev']:
+                # This is a workaround for the DigitalFactor overflow in NEV
+                # files recorded with buggy Cerebus system.
+                # Fix taken from: NMPK toolbox by Blackrock,
+                # file openNEV, line 464,
+                # git rev. d0a25eac902704a3a29fa5dfd3aed0744f4733ed
+                df = self.__nev_params('digitization_factor')[elid]
+                if df == 21516:
+                    df = 152592.547
+                dig_factor.append(df)
+            else:
+                dig_factor.append(None)
+
             if elid < 129:
                 labels.append('chan%i' % elid)
             else:
@@ -1231,15 +1250,14 @@ class BlackrockIO(BaseIO):
         nsx_parameters = {
             'labels': labels,
             'units': np.array(
-                ['mV'] * self.__nsx_basic_header[nsx_nb]['channel_count']),
-            'min_analog_val': np.array(
-                [-5000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
-            'max_analog_val': np.array(
-                [5000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                ['uV'] *
+                self.__nsx_basic_header[nsx_nb]['channel_count']),
+            'min_analog_val': -1 * np.array(dig_factor),
+            'max_analog_val': np.array(dig_factor),
             'min_digital_val': np.array(
-                [-8192] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [-1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'max_digital_val': np.array(
-                [8192] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb].dtype.itemsize +
