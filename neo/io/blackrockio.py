@@ -1009,6 +1009,9 @@ class BlackrockIO(BaseIO):
             'nb_units': dict(zip(
                 self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
                 self.__nev_ext_header[b'NEUEVWAV']['nb_sorted_units'])),
+            'digitization_factor': dict(zip(
+                self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
+                self.__nev_ext_header[b'NEUEVWAV']['digitization_factor'])),
             'data_size': self.__nev_basic_header['bytes_in_data_packets'],
             'waveform_size': self.__waveform_size[self.__nev_spec](),
             'waveform_dtypes': self.__get_waveforms_dtype(),
