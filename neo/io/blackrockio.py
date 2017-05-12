@@ -48,7 +48,6 @@ from __future__ import division
 import datetime
 import os
 import re
-import types
 
 import numpy as np
 import quantities as pq
