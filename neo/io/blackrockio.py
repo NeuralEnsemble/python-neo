@@ -2315,11 +2315,8 @@ class BlackrockIO(BaseIO):
                     specified by user with the intrinsic ones of the file set.
         """
         # Make sure that input args are transformed into correct instances
-        # Arg: nsx_to_load
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        # Arg: channels
         channels = self.__transform_channels(channels, nsx_to_load)
-        # Arg: units
         units = self.__transform_units(units, channels)
 
         # Create block
@@ -2377,15 +2374,15 @@ class BlackrockIO(BaseIO):
 
         # read channelindexes
         if channels:
-            for i, ch_id in enumerate(channels):
-                if units and ch_id in units.keys() and units[ch_id] is not None:
+            for ch_id in channels:
+                if units and ch_id in units.keys():
                     ch_units = units[ch_id]
                 else:
                     ch_units = None
 
                 chidx = self.__read_channelindex(
                     channel_id=ch_id,
-                    index=i,
+                    index=0,
                     channel_units=ch_units,
                     cascade=cascade)
 
