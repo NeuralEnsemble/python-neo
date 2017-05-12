@@ -2092,8 +2092,11 @@ class BlackrockIO(BaseIO):
             cascade (boolean):
                 If True, only the segment without children is returned.
 
-        Returns (neo.Segment):
-            The Segment contains no annotations.
+        Returns:
+            Segment (neo.Segment):
+                Returns the specified segment. See documentation of
+                `read_block()` for a full list of annotations of all child
+                objects.
         """
 
         # Make sure that input args are transformed into correct instances
@@ -2312,19 +2315,11 @@ class BlackrockIO(BaseIO):
                     None.
 
                 ChannelIndex annotations:
-                    TODO: This is an array of bool for HFC, for some reason.
-                    electrode_reject_XXX (bool):
-                        For different filter ranges XXX (as defined in the odML
-                        file), if this variable is True it indicates whether
-                        the spikes were recorded on an electrode that should be
-                        rejected based on preprocessing analysis for removing
-                        electrodes due to noise/artefacts in the respective
-                        frequency range.
-                    waveform_size (quantitiy):
+                    waveform_size (Quantitiy):
                         Length of time used to save spike waveforms (in units
                         of 1/30000 s).
-                    nev_hi_freq_corner (quantitiy), 
-                    nev_lo_freq_corner (quantitiy),
+                    nev_hi_freq_corner (Quantitiy),
+                    nev_lo_freq_corner (Quantitiy),
                     nev_hi_freq_order (int), nev_lo_freq_order (int),
                     nev_hi_freq_type (str), nev_lo_freq_type (str),
                     nev_hi_threshold, nev_lo_threshold,
@@ -2343,28 +2338,10 @@ class BlackrockIO(BaseIO):
                 Unit annotations:
                     unit_id (int):
                         ID of the unit.
-                    TODO: Also has channel_ids --> inherit from ChannelIndex?
                     channel_id (int):
                         Channel ID (Blackrock ID) from which the unit was
                         loaded (equiv. to the single list entry in the
                         attribute channel_ids of ChannelIndex parent).
-                    noise, mua, sua (bool):
-                        True, if the unit is classified as a noise unit, i.e.,
-                        not considered neural activity (noise), a multi-unit
-                        (mua), or a single unit (sua).
-                        
-                    TODO: electrode_reject_XXX is present in Unit, but not listed here (with bug for HFC).
-                        
-                    TODO: Not present!
-                    SNR (float):
-                        Signal to noise ratio of SUA/MUA waveforms. A higher
-                        value indicates that the unit could be better
-                        distinguished in the spike detection and spike sorting
-                        procedure.
-                    TODO: Not present!
-                    spike_duration (float):
-                        Approximate duration of the spikes of SUAs/MUAsSUA in
-                        microseconds.
 
                 AnalogSignal annotations:
                     nsx (int):
@@ -2373,81 +2350,19 @@ class BlackrockIO(BaseIO):
                     channel_id (int):
                         Channel ID (Blackrock ID) from which the signal was
                         loaded.
-                        
-                    TODO: These are not present
-                    electrode_reject_XXX (bool):
-                        For different filter ranges XXX (as defined in the odML
-                        file), if this variable is True it indicates whether
-                        the spikes were recorded on an electrode that should be
-                        rejected based on preprocessing analysis for removing
-                        electrodes due to noise/artefacts in the respective
-                        frequency range.
 
                 Spiketrain annotations:
-                    TODO: See Unit above
+                    unit_id (int):
+                        ID of the unit from which the spikes were recorded.
                     channel_id (int):
                         Channel ID (Blackrock ID) from which the spikes were
                         loaded.
-                    unit_id (int):
-                        ID of the unit from which the spikes were recorded.
-                    electrode_reject_XXX (bool):
-                        For different filter ranges XXX (as defined in the odML
-                        file), if this variable is True it indicates whether
-                        the spikes were recorded on an electrode that should be
-                        rejected based on preprocessing analysis for removing
-                        electrodes due to noise/artefacts in the respective
-                        frequency range.
-                    noise, mua, sua (bool):
-                        True, if the unit is classified as a noise unit, i.e.,
-                        not considered neural activity (noise), a multi-unit
-                        (mua), or a single unit (sua).
-                    # TODO: Missing
-                    SNR (float):
-                        Signal to noise ratio of SUA/MUA waveforms. A higher
-                        value indicates that the unit could be better
-                        distinguished in the spike detection and spike sorting
-                        procedure.
-                    spike_duration (float):
-                        Approximate duration of the spikes of SUAs/MUAsSUA in
-                        microseconds.
 
                 Event annotations:
-                    The resulting Block contains three Event objects with the
-                    following names:
-                    "DigitalTrialEvents' contains all digitally recorded events
-                        returned by BlackrockIO, annotated with semantic labels in
-                        accordance with the reach-to-grasp experiment (e.g.,
-                        'TS-ON').
-                    'AnalogTrialEvents' contains events extracted from the
-                        analog behavioral signals during preprocessing and stored
-                        in the odML (e.g., 'OT').
-                    'TrialEvents' contains all events of DigitalTrialEvents and
-                        AnalogTrialEvents merged into a single Neo object.
-
-                    Each annotation is a list containing one entry per time
-                    point stored in the event.
-
-                    # TODO: Double check this is correct
-                    trial_event_labels (list of str):
-                        Name identifying the name of the event, e.g., 'TS-ON'.
-                    trial_id (list of int):
-                        Trial ID the event belongs to.
-                    trial_timestamp_id (list of int):
-                        Timestamp-based trial ID (equivalent to the time of TS-
-                        ON of a trial) the event belongs to.
-                    TODO: Relate to performance codes above
-                    belongs_to_trialtype (str):
-                        String identifying the trial type (e.g., SGHF) the
-                        trial belongs to.
-                    performance_in_trial (list of int):
-                        Performance code of the trial that the event belongs
-                        to.
-                    trial_reject_XXX:
-                        For different filter ranges XXX (defined in the odML
-                        file), if True this variable indicates whether the
-                        trial was rejected based on preprocessing analysis.
-
-            Annotations:
+                    The resulting Block contains one Event object with the name
+                    `digital_input_port`. It contains all digitally recorded
+                    events, with the event code coded in the labels of the
+                    Event. The Event object contains no further annotation.
         """
         # Make sure that input args are transformed into correct instances
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
