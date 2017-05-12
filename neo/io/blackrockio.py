@@ -1804,7 +1804,7 @@ class BlackrockIO(BaseIO):
                     self.__nev_params('digitization_factor')[channel_id] /
                     1000.)
             elif scaling == 'raw':
-                st.waveforms = waveforms[mask]*pq.dimensionless
+                st.waveforms = waveforms[mask] * pq.dimensionless
             else:
                 raise ValueError(
                     'Unkown option {1} for parameter scaling.'.format(scaling))
@@ -2043,7 +2043,7 @@ class BlackrockIO(BaseIO):
     def read_segment(
             self, n_start, n_stop, name=None, description=None, index=None,
             nsx_to_load='none', channels='none', units='none',
-            load_waveforms=False, load_events=False,  scaling='raw',
+            load_waveforms=False, load_events=False, scaling='raw',
             lazy=False, cascade=True):
         """
         Returns an annotated neo.core.segment.Segment.
@@ -2094,14 +2094,8 @@ class BlackrockIO(BaseIO):
             cascade (boolean):
                 If True, only the segment without children is returned.
 
-        Returns (neo.segment.Segment):
-            Annotations:
-                t_min (Quantity):
-                    Minimum time point possible for signals in segment
-                    (corresponds to n_start).
-                t_max (Quantity):
-                    Maximum time point possible for signals in segment
-                    (corresponds to n_stop).
+        Returns (neo.Segment):
+            The Segment contains no annotations.
         """
         self._print_verbose("######## INFO SEGMENT {0} ########".format(index))
         self._print_verbose("n_start: {0}".format(n_start.rescale('s')))
@@ -2112,9 +2106,8 @@ class BlackrockIO(BaseIO):
         units = self.__transform_units(units, channels)
 
         seg = Segment(file_origin=self.filename)
-        seg.annotate(
-            t_min=n_start,
-            t_max=n_stop)
+        seg.t_start = n_start
+        seg.t_stop = n_stop
 
         # set user defined annotations if they were provided
         if index is None:
