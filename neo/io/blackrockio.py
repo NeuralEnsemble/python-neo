@@ -1200,15 +1200,16 @@ class BlackrockIO(BaseIO):
         as the time from the beginning of the waveform to the trigger time of
         the corresponding spike.
         """
-        # TODO: not sure if this is the actual setting for Blackrock
+        # TODO: Double check if this is the actual setting for Blackrock
         wf_t_unit = self.__nev_params('waveform_time_unit')
         all_ch = self.__nev_params('channel_ids')
-        wf_size = self.__nev_params('waveform_size')
 
+        # TODO: Double check if this is the correct assumption (10 samples)
         # default value: threshold crossing after 10 samples of waveform
         wf_left_sweep = dict([(ch, 10 * wf_t_unit) for ch in all_ch])
 
         # non-default: threshold crossing at center of waveform
+        # wf_size = self.__nev_params('waveform_size')
         # wf_left_sweep = dict(
         #     [(ch, (wf_size[ch] / 2) * wf_t_unit) for ch in all_ch])
 
