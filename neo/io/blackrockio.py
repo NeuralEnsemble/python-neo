@@ -1547,7 +1547,7 @@ class BlackrockIO(BaseIO):
                     if u.lower() == 'none':
                         units[ch] = None
                     elif u.lower() == 'all':
-                        units[ch] = range(17)
+                        units[ch] = list(range(17))
                         units[ch].append(255)
                     else:
                         raise ValueError("Invalid unit specification.")
