@@ -92,19 +92,19 @@ class BlackrockIO(BaseIO):
             ignored when parsing this parameter.
         nsx_override (string):
             File name of the .nsX files (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         nev_override (string):
             File name of the .nev file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         sif_override (string):
             File name of the .sif file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         ccf_override (string):
             File name of the .ccf file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         verbose (boolean):
             If True, the class will output additional diagnostic
