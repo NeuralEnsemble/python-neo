@@ -1865,6 +1865,7 @@ class BlackrockIO(BaseIO):
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
                 channel_id, labels[idx_ch], nsx_nb)
 
+        # TODO: Find a more time/memory efficient way to handle lazy loading
         data_times = np.arange(
             t_start.item(), t_stop.item(),
             self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
