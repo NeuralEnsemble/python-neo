@@ -2102,8 +2102,6 @@ class BlackrockIO(BaseIO):
         units = self.__transform_units(units, channels)
 
         seg = Segment(file_origin=self.filename)
-        seg.t_start = n_start
-        seg.t_stop = n_stop
 
         # set user defined annotations if they were provided
         if index is None:
