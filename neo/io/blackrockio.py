@@ -131,9 +131,9 @@ class BlackrockIO(BaseIO):
     is_writable = False
 
     # This IO can only manipulate continuous data, spikes, and events
-    supported_objects  = [Block, Segment, Event, AnalogSignal, SpikeTrain,
-                          Unit, ChannelIndex]
-    readable_objects    = [Block, Segment]
+    supported_objects = [
+        Block, Segment, Event, AnalogSignal, SpikeTrain, Unit, ChannelIndex]
+    readable_objects = [Block, Segment]
     writeable_objects = []
 
     # TODO: Not sure what header and streamable does
