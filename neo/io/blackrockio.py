@@ -1349,21 +1349,24 @@ class BlackrockIO(BaseIO):
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < n_stop <= t_stops[d_bl - 1]:
                 self._print_verbose(
-                    "User n_start (%s) is smaller than the corresponding "
-                    "t_start of the available ns%i datablock" % (
-                        str(n_start), nsx_nb))
+                    "User n_start ({0}) is smaller than the corresponding "
+                    "t_start of the available ns{1} datablock "
+                    "({2}).".format(n_start, nsx_nb, t_starts[d_bl - 1]))
                 return data_parameters[param_name]
             elif t_starts[d_bl - 1] <= n_start < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_stop (%s) is larger than the corresponding t_stop "
-                    "of the available ns%i datablock" % (str(n_stop), nsx_nb))
+                    "User n_stop ({0}) is larger than the corresponding "
+                    "t_stop of the available ns{1} datablock "
+                    "({2}).".format(n_stop, nsx_nb, t_stops[d_bl - 1]))
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_start (%s) and is smaller than the corresponding "
-                    "t_start and user n_stop (%s) is larger than the "
-                    "corresponding t_stop of the available ns%i datablock" % (
-                        str(n_start), str(n_stop), nsx_nb))
+                    "User n_start ({0}) is smaller than the corresponding "
+                    "t_start and user n_stop ({1}) is larger than the "
+                    "corresponding t_stop of the available ns{2} datablock "
+                    "({3}).".format(
+                        n_start, n_stop, nsx_nb,
+                        (t_starts[d_bl - 1], t_stops[d_bl - 1])))
                 return data_parameters[param_name]
             else:
                 continue
