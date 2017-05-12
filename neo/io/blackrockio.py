@@ -645,7 +645,6 @@ class BlackrockIO(BaseIO):
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
             mask = (raw_ext_header['packet_id'] == packet_id)
-            assert isinstance(mask, np.ndarray)
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
@@ -1610,7 +1609,6 @@ class BlackrockIO(BaseIO):
         that the duration of the signals stored in the segments might be
         smaller than the actually set duration of the segment.
         """
-        self._print_verbose("######## INFO TIME SETTINGS ########")
 
         # define the higest time resolution
         # (for accurate manipulations of the time settings)
@@ -2097,9 +2095,7 @@ class BlackrockIO(BaseIO):
         Returns (neo.Segment):
             The Segment contains no annotations.
         """
-        self._print_verbose("######## INFO SEGMENT {0} ########".format(index))
-        self._print_verbose("n_start: {0}".format(n_start.rescale('s')))
-        self._print_verbose("n_stop: {0}".format(n_stop.rescale('s')))
+
         # Make sure that input args are transformed into correct instances
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
         channels = self.__transform_channels(channels, nsx_to_load)
