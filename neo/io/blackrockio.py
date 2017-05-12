@@ -1917,19 +1917,19 @@ class BlackrockIO(BaseIO):
             anasig.lazy_shape = lazy_shape
         anasig.annotate(
             nsx=nsx_nb,
-            ch_idx=channel_id)
+            ch_idx=int(channel_id))
         return anasig
 
-    def __read_unit(self, unit_id, channel_idx):
+    def __read_unit(self, unit_id, channel_id):
         """
         Creates unit with unit id for given channel id.
         """
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_idx + unit_id)
+        name = "Unit {0}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
         desc = 'Unit from channel: {0}, id: {1}'.format(
-            channel_idx, self.__get_unit_classification(unit_id))
+            channel_id, self.__get_unit_classification(unit_id))
 
         un = Unit(
             name=name,
@@ -1937,8 +1937,9 @@ class BlackrockIO(BaseIO):
             file_origin='.'.join([self._filenames['nev'], 'nev']))
 
         # add additional annotations
-        un.annotate(ch_idx=int(channel_idx))
-        un.annotate(unit_id=int(unit_id))
+        un.annotate(
+            ch_idx=int(channel_id),
+            unit_id=int(unit_id))
 
         return un
 
@@ -2010,7 +2011,7 @@ class BlackrockIO(BaseIO):
                     if un_id in np.unique(data_ch['unit_class_nb']):
 
                         un = self.__read_unit(
-                            unit_id=un_id, channel_idx=channel_idx)
+                            unit_id=un_id, channel_id=channel_idx)
 
                         rcg.units.append(un)
 
