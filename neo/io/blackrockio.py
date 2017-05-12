@@ -1811,8 +1811,8 @@ class BlackrockIO(BaseIO):
 
         # add additional annotations
         st.annotate(
-            ch_idx=int(channel_id),
-            unit_id=int(unit_id))
+            unit_id=int(unit_id),
+            channel_id=int(channel_id))
 
         return st
 
@@ -1915,7 +1915,7 @@ class BlackrockIO(BaseIO):
             anasig.lazy_shape = lazy_shape
         anasig.annotate(
             nsx=nsx_nb,
-            ch_idx=int(channel_id))
+            channel_id=int(channel_id))
         return anasig
 
     def __read_unit(self, unit_id, channel_id):
@@ -1936,8 +1936,8 @@ class BlackrockIO(BaseIO):
 
         # add additional annotations
         un.annotate(
-            ch_idx=int(channel_id),
-            unit_id=int(unit_id))
+            unit_id=int(unit_id),
+            channel_id=int(channel_id))
 
         return un
 
