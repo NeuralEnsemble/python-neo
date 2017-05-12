@@ -2446,7 +2446,7 @@ class BlackrockIO(BaseIO):
                                 un.spiketrains.append(st)
 
                     anasigs = seg.filter(
-                        targdict={'ch_id': ch_id},
+                        targdict={'channel_id': ch_id},
                         objects='AnalogSignal')
                     for anasig in anasigs:
                         chidx.analogsignals.append(anasig)
