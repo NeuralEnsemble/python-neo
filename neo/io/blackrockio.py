@@ -218,8 +218,8 @@ class BlackrockIO(BaseIO):
         """
         BaseIO.__init__(self)
 
-        # Remember choice whether to print diagnostic messages or not
-        self._verbose = verbose
+        # Used to avoid unnecessary repetition of verbose messages
+        self.__verbose_messages = []
 
         # remove extension from base _filenames
         for ext in self.extensions:
@@ -346,7 +346,9 @@ class BlackrockIO(BaseIO):
         Print a verbose diagnostic message (string).
         """
         if self._verbose:
-            print('BlackrockIO: ' + text)
+            if text not in self.__verbose_messages:
+                self.__verbose_messages.append(text)
+                print(str(self.__class__.__name__) + ': ' + text)
 
     def __extract_nsx_file_spec(self, nsx_nb):
         """
