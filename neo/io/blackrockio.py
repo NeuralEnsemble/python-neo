@@ -2107,11 +2107,8 @@ class BlackrockIO(BaseIO):
         self._print_verbose("n_start: {0}".format(n_start.rescale('s')))
         self._print_verbose("n_stop: {0}".format(n_stop.rescale('s')))
         # Make sure that input args are transformed into correct instances
-        # Arg: nsx_to_load
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        # Arg: channels
         channels = self.__transform_channels(channels, nsx_to_load)
-        # Arg: units
         units = self.__transform_units(units, channels)
 
         seg = Segment(file_origin=self.filename)
@@ -2247,7 +2244,8 @@ class BlackrockIO(BaseIO):
     def read_block(
             self, index=None, name=None, description=None, nsx_to_load='none',
             n_starts=None, n_stops=None, channels='none', units='none',
-            load_waveforms=False, load_events=False, lazy=False, cascade=True):
+            load_waveforms=False, load_events=False, scaling='raw', 
+            lazy=False, cascade=True):
         """
         Args:
             index (None, int):
@@ -2285,12 +2283,19 @@ class BlackrockIO(BaseIO):
                 If True, waveforms are attached to all loaded spiketrains.
             load_events (boolean):
                 If True, all recorded events are loaded.
+            scaling (str):
+                Determines whether time series of individual
+                electrodes/channels are returned as AnalogSignals containing
+                raw integer samples ('raw'), or scaled to arrays of floats
+                representing voltage ('voltage'). Note that for file
+                specification 2.1 and lower, the option 'voltage' requires a
+                nev file to be present.
             lazy (bool):
                 If True, only the shape of the data is loaded.
             cascade (bool or "lazy"):
                 If True, only the block without children is returned.
 
-        Returns (neo.segment.Segment):
+        Returns (neo.Block):
             Annotations:
                 avail_file_set (list):
                     List of extensions of all available files for the given
@@ -2364,28 +2369,29 @@ class BlackrockIO(BaseIO):
                 units=units,
                 load_waveforms=load_waveforms,
                 load_events=load_events,
+                scaling=scaling,
                 lazy=lazy,
                 cascade=cascade)
 
             bl.segments.append(seg)
 
-        # read recordingchannelgroup
+        # read channelindexes
         if channels:
-            for i, ch_idx in enumerate(channels):
-                if units and ch_idx in units.keys() and units[ch_idx] is not None:
-                    ch_units = units[ch_idx]
+            for i, ch_id in enumerate(channels):
+                if units and ch_id in units.keys() and units[ch_id] is not None:
+                    ch_units = units[ch_id]
                 else:
                     ch_units = None
 
-                rcg = self.__read_channelindex(
-                    channel_id=ch_idx,
+                chidx = self.__read_channelindex(
+                    channel_id=ch_id,
                     index=i,
                     channel_units=ch_units,
                     cascade=cascade)
 
                 for seg in bl.segments:
                     if ch_units:
-                        for un in rcg.units:
+                        for un in chidx.units:
                             sts = seg.filter(
                                 targdict={'name': un.name},
                                 objects='SpikeTrain')
@@ -2393,12 +2399,12 @@ class BlackrockIO(BaseIO):
                                 un.spiketrains.append(st)
 
                     anasigs = seg.filter(
-                        targdict={'ch_idx': ch_idx},
+                        targdict={'ch_id': ch_id},
                         objects='AnalogSignal')
                     for anasig in anasigs:
-                        rcg.analogsignals.append(anasig)
+                        chidx.analogsignals.append(anasig)
 
-                bl.channel_indexes.append(rcg)
+                bl.channel_indexes.append(chidx)
 
         bl.create_many_to_one_relationship()
 
