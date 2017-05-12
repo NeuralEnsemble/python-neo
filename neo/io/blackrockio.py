@@ -541,7 +541,7 @@ class BlackrockIO(BaseIO):
                 'offset_to_data_block': offset + dh.dtype.itemsize}
 
             # data size = number of data points * (2bytes * number of channels)
-            #int for avoid overflow problem
+            # use of `int` avoids overflow problem
             data_size = int(dh['nb_data_points']) * \
                 int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
             # define new offset (to possible next data block)
