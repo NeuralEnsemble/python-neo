@@ -136,11 +136,9 @@ class BlackrockIO(BaseIO):
     readable_objects = [Block, Segment]
     writeable_objects = []
 
-    # TODO: Not sure what header and streamable does
     has_header = False
     is_streameable = False
 
-    # TODO: Not sure if this is needed
     read_params = {
         neo.Block: [
             ('nsx_to_load', {
