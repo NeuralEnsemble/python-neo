@@ -1177,7 +1177,7 @@ class BlackrockIO(BaseIO):
         nb_bytes_wf = self.__nev_basic_header['bytes_in_data_packets'] - 8
 
         wf_sizes = dict([
-            (ch, nb_bytes_wf / np.dtype(dt).itemsize) for ch, dt in
+            (ch, int(nb_bytes_wf / np.dtype(dt).itemsize)) for ch, dt in
             wf_dtypes.items()])
 
         return wf_sizes
