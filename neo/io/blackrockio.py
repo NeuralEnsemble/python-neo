@@ -1495,9 +1495,8 @@ class BlackrockIO(BaseIO):
             for nsx_nb in nsx_to_load:
                 all_channels.extend(
                     self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
-        else:
-            elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
-            all_channels.extend(elec_id.astype(int))
+        elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
+        all_channels.extend(elec_id.astype(int))
         all_channels = np.unique(all_channels).tolist()
 
         if hasattr(channels, "__len__") and len(channels) == 0:
