@@ -1464,42 +1464,55 @@ class BlackrockIO(BaseIO):
 
         return nsx_to_load
 
+    def __channels_from_nsx(self, nsx_to_load):
+        channels = []
+
+        nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
+
+        if nsx_to_load is not None:
+            for nsx_nb in nsx_to_load:
+                channels.extend(
+                    self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
+
+        return channels
+
     def __transform_channels(self, channels, nsx_to_load):
         """
         Transforms the input argument channels to a list of integers.
         """
-        all_channels = []
-        nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        if nsx_to_load is not None:
-            for nsx_nb in nsx_to_load:
-                all_channels.extend(
-                    self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
-        else:
-            hdr = self.__nev_ext_header
-            elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
-            all_channels.extend(elec_id.astype(int))
-        all_channels = np.unique(all_channels).tolist()
 
-        if hasattr(channels, "__len__") and len(channels) == 0:
-            channels = None
-        if isinstance(channels, int):
-            channels = [channels]
-        if isinstance(channels, str):
-            if channels.lower() == 'none':
-                channels = None
-            elif channels.lower() == 'all':
-                channels = all_channels
-            else:
-                raise ValueError("Invalid channel specification.")
+        # channels is None, an empty list, empty string, or the string 'none'
+        if ((channels is None) or
+            (hasattr(channels, "__len__") and len(channels) == 0) or
+            (isinstance(channels, str) and channels.lower() == 'none')):
 
-        if channels:
-            if len(set(all_channels) & set(channels)) < len(channels):
-                raise ValueError("Unknown channel id in channels.")
-        else:
             self._print_verbose("No channel is specified, therefore no "
                                 "recordingchannelgroup and unit is loaded.")
 
-        return channels
+            return None
+
+        all_channels = self.__nev_ext_header[b'NEUEVWAV']['electrode_id'].astype(int).tolist()
+        all_channels.extend(self.__channels_from_nsx(nsx_to_load))
+        all_channels = np.unique(all_channels).tolist()
+
+        if (isinstance(channels, str) and channels.lower() == 'all'):
+            return all_channels
+
+        # If the channel to read is specified by an int return that channel if it exists in the list
+        if isinstance(channels, int):
+            if channels in all_channels:
+                return [channels]
+            else:
+                raise ValueError("Channel {} does not exist in channels.".format(channels))
+
+        channels_intersection = set(all_channels) & set(channels)
+
+        if len(channels_intersection) < len(channels):
+            raise ValueError("Unknown channel id in channels.")
+        else:
+            return channels
+
+        raise ValueError("Invalid channel specification.")
 
     def __transform_units(self, units, channels):
         """
@@ -2122,7 +2135,7 @@ class BlackrockIO(BaseIO):
                         self._print_verbose(
                             "Channel {0} has no units".format(ch_idx))
 
-        if nsx_to_load is not None:
+        if nsx_to_load is not None and channels is not None:
             for nsx_nb in nsx_to_load:
                 # read nsx data
                 nsx_data = \
