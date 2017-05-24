@@ -1923,7 +1923,7 @@ class BlackrockIO(BaseIO):
 
         if self._avail_files['nev']:
             channel_labels = self.__nev_params('channel_labels')
-            if channel_labels is not None:
+            if channel_labels is not None and channel_idx in channel_labels:
                 rcg.channel_names = channel_labels[channel_idx]
 
             # additional annotations from nev
