@@ -1959,7 +1959,7 @@ class BlackrockIO(BaseIO):
         if self._avail_files['nev']:
             channel_labels = self.__nev_params('channel_labels')
             if channel_labels is not None:
-                chidx.channel_names = np.array([channel_labels[channel_idx]])
+                chidx.channel_names = np.array([channel_labels[channel_id]])
             chidx.channel_ids = np.array([channel_id])
 
             # additional annotations from nev
@@ -2009,7 +2009,6 @@ class BlackrockIO(BaseIO):
         chidx.description = \
             "Container for units and groups analogsignals of one recording " \
             "channel across segments."
->>>>>>> Added additional metadata to ChannelIndex objects (+beautifications)
 
         if not cascade:
             return chidx
