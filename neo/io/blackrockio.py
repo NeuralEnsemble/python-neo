@@ -1869,6 +1869,7 @@ class BlackrockIO(BaseIO):
         if lazy:
             lazy_shape = (np.sum(mask), )
             sig_ch = np.array([], dtype='float32')
+            sig_unit = pq.dimensionless
             t_start = n_start.rescale('s')
         else:
             data_times = data_times[mask].astype(float)
