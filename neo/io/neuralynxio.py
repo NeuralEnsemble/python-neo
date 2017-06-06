@@ -427,6 +427,7 @@ class NeuralynxIO(BaseIO):
 
             analogsignal = merge_analogsignals(empty_seg.analogsignals)
             seg.analogsignals.append(analogsignal)
+            analogsignal.segment = seg
 
         # Reading NEV Files (Events)#
         # reading all files available
