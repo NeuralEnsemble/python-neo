@@ -298,7 +298,7 @@ class NixIO(BaseIO):
             lazy_shape = None
         timedim = self._get_time_dimension(nix_da_group[0])
         if (neo_type == "neo.analogsignal" or
-                isinstance(timedim, nix.pycore.SampledDimension)):
+                timedim.dimension_type == nix.DimensionType.Sample):
             if lazy:
                 sampling_period = pq.Quantity(1, timedim.unit)
                 t_start = pq.Quantity(0, timedim.unit)
@@ -318,8 +318,8 @@ class NixIO(BaseIO):
                 signal=signaldata, sampling_period=sampling_period,
                 t_start=t_start, **neo_attrs
             )
-        elif neo_type == "neo.irregularlysampledsignal"\
-                or isinstance(timedim, nix.pycore.RangeDimension):
+        elif (neo_type == "neo.irregularlysampledsignal"
+              or timedim.dimension_type == nix.DimensionType.Range):
             if lazy:
                 times = pq.Quantity(np.empty(0), timedim.unit)
             else:
