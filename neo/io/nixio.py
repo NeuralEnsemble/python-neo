@@ -240,12 +240,18 @@ class NixIO(BaseIO):
     def _block_to_neo(self, nix_block):
         neo_attrs = self._nix_attr_to_neo(nix_block)
         neo_block = Block(**neo_attrs)
+        neo_block.rec_datetime = datetime.fromtimestamp(
+            nix_block.created_at
+        )
         self._object_map[nix_block.id] = neo_block
         return neo_block
 
     def _group_to_neo(self, nix_group):
         neo_attrs = self._nix_attr_to_neo(nix_group)
         neo_segment = Segment(**neo_attrs)
+        neo_segment.rec_datetime = datetime.fromtimestamp(
+            nix_group.created_at
+        )
         self._object_map[nix_group.id] = neo_segment
         return neo_segment
 
@@ -879,7 +885,7 @@ class NixIO(BaseIO):
         if "file_datetime" in attr:
             self._write_property(metadata,
                                  "file_datetime", attr["file_datetime"])
-        if "rec_datetime" in attr and attr["rec_datetime"]:
+        if attr.get("rec_datetime"):
             self._write_property(metadata,
                                  "rec_datetime", attr["rec_datetime"])
 
@@ -1131,12 +1137,6 @@ class NixIO(BaseIO):
                     neo_attrs[prop.name] = values
         neo_attrs["name"] = neo_attrs.get("neo_name")
 
-        if isinstance(nix_obj, (nix.pycore.Block, nix.pycore.Group)):
-            if "rec_datetime" not in neo_attrs:
-                neo_attrs["rec_datetime"] = None
-            neo_attrs["rec_datetime"] = datetime.fromtimestamp(
-                nix_obj.created_at
-            )
         if "file_datetime" in neo_attrs:
             neo_attrs["file_datetime"] = datetime.fromtimestamp(
                 neo_attrs["file_datetime"]
