@@ -54,6 +54,8 @@ Classes:
 
 .. autoclass:: neo.io.NixIO
 
+.. autoclass:: neo.io.NSDFIO
+
 .. autoclass:: neo.io.PickleIO
 
 .. autoclass:: neo.io.PlexonIO
@@ -117,6 +119,7 @@ from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
+from neo.io.nsdfio import NSDFIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.pynnio import PyNNNumpyIO
@@ -147,6 +150,7 @@ iolist = [
           KwikIO,
           MicromedIO,
           NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
+          NSDFIO,
           NeoHdf5IO,
           NeoMatlabIO,
           NestIO,
