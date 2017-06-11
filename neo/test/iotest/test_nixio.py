@@ -822,6 +822,20 @@ class NixIOWriteTest(NixIOTest):
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
 
+    def test_multiref_write(self):
+        blk = Block("blk1")
+        signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
+                              sampling_period=pq.Quantity(1, "ms"))
+
+        for idx in range(3):
+            segname = "seg" + str(idx)
+            seg = Segment(segname)
+            blk.segments.append(seg)
+            seg.analogsignals.append(signal)
+
+        self.writer.write_block(blk)
+        self.compare_blocks([blk], self.reader.blocks)
+
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test",
                                                   "Test")
