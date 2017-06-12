@@ -915,6 +915,7 @@ class NixIOReadTest(NixIOTest):
     def tearDownClass(cls):
         if HAVE_NIX:
             cls.nixfile.close()
+            os.remove(cls.filename)
 
     def tearDown(self):
         self.io.close()
@@ -1123,6 +1124,7 @@ class NixIOPartialWriteTest(NixIOTest):
     def tearDownClass(cls):
         if HAVE_NIX:
             cls.nixfile.close()
+            os.remove(cls.filename)
 
     def tearDown(self):
         self.restore_methods()
@@ -1214,6 +1216,7 @@ class NixIOContextTests(NixIOTest):
                                 backend="h5py")
         self.compare_blocks([neoblock], nixfile.blocks)
         nixfile.close()
+        os.remove(self.filename)
 
     def test_context_read(self):
         nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite,
@@ -1229,6 +1232,7 @@ class NixIOContextTests(NixIOTest):
 
         self.assertEqual(blocks[0].annotations["nix_name"], name_one)
         self.assertEqual(blocks[1].annotations["nix_name"], name_two)
+        os.remove(self.filename)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
