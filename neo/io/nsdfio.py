@@ -89,6 +89,8 @@ class NSDFIO(BaseIO):
 
         self._write_basic_attributes(block_model, block)
         self._write_datetime_attributes(block_model, block)
+        self._write_index_attribute(block_model, block)
+
         self._write_annotations(block_model, block)
 
         writer.add_modeltree(neo_model)
@@ -165,20 +167,21 @@ class NSDFIO(BaseIO):
 
         r_signal = np.swapaxes(signal, 0, 1)
         channels, source_ds = self._create_signal_data_sources(model, r_signal, uid, writer)
-        self._write_signal_data(channels, r_signal, signal, source_ds, writer)
+        self._write_signal_data(model, channels, r_signal, signal, source_ds, writer)
 
         self._write_basic_attributes(model, signal)
         self._write_annotations(model, signal)
 
-    def _write_signal_data(self, channels, r_signal, signal, source_ds, writer):
+    def _write_signal_data(self, model, channels, r_signal, signal, source_ds, writer):
         dataobj = nsdf.UniformData('signal', unit = str(signal.units.dimensionality))
         for i in range(len(channels)):
             dataobj.put_data(channels[i].uid, r_signal[i])
-        dataobj.set_dt(float(signal.sampling_period.simplified.magnitude),
-                       str(signal.sampling_period.simplified.dimensionality))
+        dataobj.set_dt(float(signal.sampling_period.magnitude),
+                       str(signal.sampling_period.dimensionality))
         writer.add_uniform_data(source_ds, dataobj,
                                 tstart = float(signal.t_start.rescale(
-                                    signal.sampling_period.simplified.dimensionality).magnitude))
+                                    signal.sampling_period.dimensionality).magnitude))
+        model.attrs['t_start_unit'] = str(signal.t_start.dimensionality)
 
     def _create_signal_data_sources(self, model, r_signal, uid, writer):
         channels = []
@@ -238,6 +241,8 @@ class NSDFIO(BaseIO):
 
         self._read_basic_attributes(attrs, block)
         self._read_datetime_attributes(attrs, block)
+        self._read_index_attribute(attrs, block)
+
         self._read_annotations(attrs, block)
 
         return block
@@ -330,15 +335,11 @@ class NSDFIO(BaseIO):
         """
         attrs = reader.model[path].attrs
         uid = attrs['uid']
-
+        data_group = reader.data['uniform/{}/signal'.format(uid)]
         dataobj = reader.get_uniform_data(uid, 'signal')
 
-        if lazy:
-            data_shape = reader.data['uniform/{}/signal'.format(uid)].shape
-            signal = self._create_lazy_analogsignal(data_shape, dataobj, reader, uid)
-        else:
-            data = self._read_signal_data(dataobj, path, reader)
-            signal = self._create_normal_analogsignal(data, dataobj, reader, uid)
+        t_start = self._read_analogsignal_t_start(attrs, data_group, dataobj)
+        signal = self._create_analogsignal(data_group, dataobj, lazy, path, reader, t_start, uid)
 
         signal.segment = parent
 
@@ -347,6 +348,20 @@ class NSDFIO(BaseIO):
 
         return signal
 
+    def _create_analogsignal(self, data_group, dataobj, lazy, path, reader, t_start, uid):
+        if lazy:
+            data_shape = data_group.shape
+            signal = self._create_lazy_analogsignal(data_shape, dataobj, reader, uid, t_start)
+        else:
+            data = self._read_signal_data(dataobj, path, reader)
+            signal = self._create_normal_analogsignal(data, dataobj, reader, uid, t_start)
+        return signal
+
+    def _read_analogsignal_t_start(self, attrs, data_group, dataobj):
+        t_start = float(data_group.attrs['tstart']) * pq.Quantity(1, dataobj.tunit)
+        t_start = t_start.rescale(attrs['t_start_unit'])
+        return t_start
+
     def _read_signal_data(self, dataobj, path, reader):
         data = []
         for name in reader.model[path].keys():
@@ -354,20 +369,16 @@ class NSDFIO(BaseIO):
             data += [dataobj.get_data(channel_uid)]
         return data
 
-    def _create_normal_analogsignal(self, data, dataobj, reader, uid):
+    def _create_normal_analogsignal(self, data, dataobj, reader, uid, t_start):
         return AnalogSignal(np.swapaxes(data, 0, 1),
                             units = dataobj.unit,
-                            t_start = float(
-                            reader.data['uniform/{}/signal'.format(uid)].attrs['tstart']) * pq.Quantity(dataobj.dt,
-                                                                                                        dataobj.tunit),
+                            t_start = t_start,
                             sampling_period = pq.Quantity(dataobj.dt, dataobj.tunit))
 
-    def _create_lazy_analogsignal(self, shape, dataobj, reader, uid):
+    def _create_lazy_analogsignal(self, shape, dataobj, reader, uid, t_start):
         signal =  AnalogSignal([],
                                units = dataobj.unit,
-                               t_start = float(
-                               reader.data['uniform/{}/signal'.format(uid)].attrs['tstart']) * pq.Quantity(dataobj.dt,
-                                                                                                           dataobj.tunit),
+                               t_start = t_start,
                                sampling_period = pq.Quantity(dataobj.dt, dataobj.tunit))
         signal.lazy_shape = shape
         return signal
