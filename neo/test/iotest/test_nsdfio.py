@@ -9,6 +9,7 @@ from __future__ import absolute_import, division
 import numpy as np
 import quantities as pq
 from datetime import datetime
+from os import remove
 
 try:
     import unittest2 as unittest
@@ -32,6 +33,9 @@ class NSDFIOTest(unittest.TestCase):
     def setUp(self):
         self.filename = 'nsdfio_testfile.h5'
         self.io = NSDFIO(self.filename)
+
+    def tearDown(self):
+        remove(self.filename)
 
     def compare_list_of_blocks(self, blocks1, blocks2):
         for block1, block2 in zip(blocks1, blocks2):
@@ -104,8 +108,10 @@ class NSDFIOTest(unittest.TestCase):
         return segment
 
     def _create_segment_children(self, segment):
-        for i in range(10):
+        for i in range(5):
             segment.analogsignals.append(self.create_analogsignal(segment))
+            segment.analogsignals.append(self.create_analogsignal2(segment))
+            segment.analogsignals.append(self.create_analogsignal3(segment))
 
     def _assign_index_attribute(self, segment):
         segment.index = 12
@@ -116,13 +122,33 @@ class NSDFIOTest(unittest.TestCase):
 
     def create_analogsignal(self, parent = None):
         signal = AnalogSignal([[1, 2], [2, 3], [3, 4]], units='mV',
-                              sampling_rate = 2 * pq.Hz, t_start = 2 * pq.min)
+                              sampling_rate = 100 * pq.Hz, t_start = 2 * pq.min)
 
         signal.segment = parent
 
         self._assign_basic_attributes(signal)
 
         self._assign_annotations(signal)
+
+        return signal
+
+    def create_analogsignal2(self, parent = None):
+        signal = AnalogSignal([[1], [2], [3], [4], [5]], units='mA',
+                              sampling_period = 0.5 * pq.ms)
+
+        signal.segment = parent
+
+        self._assign_annotations(signal)
+
+        return signal
+
+    def create_analogsignal3(self, parent = None):
+        signal = AnalogSignal([[1, 2, 3], [4, 5, 6]], units='mV',
+                              sampling_rate = 2 * pq.kHz, t_start = 100 * pq.s)
+
+        signal.segment = parent
+
+        self._assign_basic_attributes(signal)
 
         return signal
 
