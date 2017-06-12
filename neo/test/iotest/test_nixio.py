@@ -833,6 +833,17 @@ class NixIOWriteTest(NixIOTest):
             blk.segments.append(seg)
             seg.analogsignals.append(signal)
 
+        chidx = ChannelIndex([10, 20, 29])
+        seg = blk.segments[0]
+        st = SpikeTrain(name="choochoo", times=[10, 11, 80], t_stop=1000,
+                        units="s")
+        seg.spiketrains.append(st)
+        blk.channel_indexes.append(chidx)
+        for idx in range(6):
+            unit = Unit("unit" + str(idx))
+            chidx.units.append(unit)
+            unit.spiketrains.append(st)
+
         self.writer.write_block(blk)
         self.compare_blocks([blk], self.reader.blocks)
 
