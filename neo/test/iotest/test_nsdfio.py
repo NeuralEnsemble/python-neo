@@ -38,6 +38,7 @@ class NSDFIOTest(unittest.TestCase):
         remove(self.filename)
 
     def compare_list_of_blocks(self, blocks1, blocks2):
+        assert len(blocks1) == len(blocks2)
         for block1, block2 in zip(blocks1, blocks2):
             self.compare_blocks(block1, block2)
 
@@ -70,7 +71,7 @@ class NSDFIOTest(unittest.TestCase):
     def create_list_of_blocks(self):
         blocks = []
 
-        for i in range(3):
+        for i in range(2):
             blocks.append(self.create_block())
 
         return blocks
@@ -170,6 +171,12 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         self.io.write_block(block)
         block2 = self.io.read_block()
         self.compare_blocks(block, block2)
+
+    def test_write_then_read_list_of_blocks(self):
+        blocks = self.create_list_of_blocks()
+        self.io.write(blocks)
+        blocks2 = self.io.read()
+        self.compare_list_of_blocks(blocks, blocks2)
 
 
 if __name__ == "__main__":
