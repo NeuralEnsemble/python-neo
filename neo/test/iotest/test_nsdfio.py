@@ -37,41 +37,51 @@ class NSDFIOTest(unittest.TestCase):
     def tearDown(self):
         remove(self.filename)
 
-    def compare_list_of_blocks(self, blocks1, blocks2):
+    def compare_list_of_blocks(self, blocks1, blocks2, lazy = False, cascade = True):
         assert len(blocks1) == len(blocks2)
         for block1, block2 in zip(blocks1, blocks2):
-            self.compare_blocks(block1, block2)
+            self.compare_blocks(block1, block2, lazy, cascade)
 
-    def compare_blocks(self, block1, block2):
+    def compare_blocks(self, block1, block2, lazy = False, cascade = True):
         self.compare_objects(block1, block2)
-        self._compare_blocks_children(block1, block2)
+        if cascade:
+            self._compare_blocks_children(block1, block2, lazy = lazy)
+        else:
+            assert len(block2.segments) == 0
 
-    def _compare_blocks_children(self, block1, block2):
+    def _compare_blocks_children(self, block1, block2, lazy):
         assert len(block1.segments) == len(block2.segments)
         for segment1, segment2 in zip(block1.segments, block2.segments):
-            self.compare_segments(segment1, segment2)
+            self.compare_segments(segment1, segment2, lazy = lazy)
 
-    def compare_segments(self, segment1, segment2):
+    def compare_segments(self, segment1, segment2, lazy = False, cascade = True):
         self.compare_objects(segment1, segment2)
-        self._compare_segments_children(segment1, segment2)
+        if cascade:
+            self._compare_segments_children(segment1, segment2, lazy = lazy)
+        else:
+            assert len(segment2.analogsignals) == 0
 
-    def _compare_segments_children(self, segment1, segment2):
+    def _compare_segments_children(self, segment1, segment2, lazy):
         assert len(segment1.analogsignals) == len(segment2.analogsignals)
         for signal1, signal2 in zip(segment1.analogsignals, segment2.analogsignals):
-            self.compare_analogsignals(signal1, signal2)
+            self.compare_analogsignals(signal1, signal2, lazy = lazy)
 
-    def compare_analogsignals(self, signal1, signal2):
-        self.compare_objects(signal1, signal2)
+    def compare_analogsignals(self, signal1, signal2, lazy = False, cascade = True):
+        if not lazy:
+            self.compare_objects(signal1, signal2)
+        else:
+            self.compare_objects(signal1, signal2, exclude_attr = ('shape', 'signal'))
+            assert signal2.lazy_shape == signal1.shape
 
-    def compare_objects(self, object1, object2):
+    def compare_objects(self, object1, object2, exclude_attr = None):
         assert object1.__class__.__name__ == object2.__class__.__name__
-        assert_same_attributes(object1, object2)
+        assert_same_attributes(object1, object2, exclude = exclude_attr)
         assert_same_annotations(object1, object2)
 
     def create_list_of_blocks(self):
         blocks = []
 
-        for i in range(3):
+        for i in range(2):
             blocks.append(self.create_block(name = 'Block #{}'.format(i)))
 
         return blocks
@@ -90,7 +100,7 @@ class NSDFIOTest(unittest.TestCase):
         return block
 
     def _create_block_children(self, block):
-        for i in range(5):
+        for i in range(3):
             block.segments.append(self.create_segment(block, name = 'Segment #{}'.format(i)))
 
     def create_segment(self, parent = None, name = None):
@@ -109,7 +119,7 @@ class NSDFIOTest(unittest.TestCase):
         return segment
 
     def _create_segment_children(self, segment):
-        for i in range(5):
+        for i in range(2):
             segment.analogsignals.append(self.create_analogsignal(segment, name = 'Signal #{}'.format(i * 3)))
             segment.analogsignals.append(self.create_analogsignal2(segment, name = 'Signal #{}'.format(i * 3 + 1)))
             segment.analogsignals.append(self.create_analogsignal3(segment, name = 'Signal #{}'.format(i * 3 + 2)))
@@ -169,17 +179,26 @@ class NSDFIOTest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_NSDF, "Requires NSDF")
 class NSDFIOTestWriteThenRead(NSDFIOTest):
-    def test_write_then_read_block(self):
+    lazy_modes = [False, True]
+    cascade_modes = [False, True]
+
+    def runTest(self):
+        for lazy in self.lazy_modes:
+            for cascade in self.cascade_modes:
+                self._test_block(lazy, cascade)
+                self._test_list_of_blocks(lazy, cascade)
+
+    def _test_block(self, lazy = False, cascade = True):
         block = self.create_block()
         self.io.write_block(block)
-        block2 = self.io.read_block()
-        self.compare_blocks(block, block2)
+        block2 = self.io.read_block(lazy = lazy, cascade = cascade)
+        self.compare_blocks(block, block2, lazy, cascade)
 
-    def test_write_then_read_list_of_blocks(self):
+    def _test_list_of_blocks(self, lazy = False, cascade = True):
         blocks = self.create_list_of_blocks()
         self.io.write(blocks)
-        blocks2 = self.io.read()
-        self.compare_list_of_blocks(blocks, blocks2)
+        blocks2 = self.io.read(lazy = lazy, cascade = cascade)
+        self.compare_list_of_blocks(blocks, blocks2, lazy, cascade)
 
 
 if __name__ == "__main__":

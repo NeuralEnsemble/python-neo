@@ -363,6 +363,7 @@ class NSDFIO(BaseIO):
     def _create_analogsignal(self, data_group, dataobj, lazy, path, reader, t_start, uid):
         if lazy:
             data_shape = data_group.shape
+            data_shape = (data_shape[1], data_shape[0])
             signal = self._create_lazy_analogsignal(data_shape, dataobj, reader, uid, t_start)
         else:
             data = self._read_signal_data(dataobj, path, reader)
