@@ -71,15 +71,15 @@ class NSDFIOTest(unittest.TestCase):
     def create_list_of_blocks(self):
         blocks = []
 
-        for i in range(2):
-            blocks.append(self.create_block())
+        for i in range(3):
+            blocks.append(self.create_block(name = 'Block #{}'.format(i)))
 
         return blocks
 
-    def create_block(self):
+    def create_block(self, name = None):
         block = Block()
 
-        self._assign_basic_attributes(block)
+        self._assign_basic_attributes(block, name = name)
         self._assign_datetime_attributes(block)
         self._assign_index_attribute(block)
 
@@ -91,14 +91,14 @@ class NSDFIOTest(unittest.TestCase):
 
     def _create_block_children(self, block):
         for i in range(5):
-            block.segments.append(self.create_segment(block))
+            block.segments.append(self.create_segment(block, name = 'Segment #{}'.format(i)))
 
-    def create_segment(self, parent = None):
+    def create_segment(self, parent = None, name = None):
         segment = Segment()
 
         segment.block = parent
 
-        self._assign_basic_attributes(segment)
+        self._assign_basic_attributes(segment, name = name)
         self._assign_datetime_attributes(segment)
         self._assign_index_attribute(segment)
 
@@ -110,9 +110,9 @@ class NSDFIOTest(unittest.TestCase):
 
     def _create_segment_children(self, segment):
         for i in range(5):
-            segment.analogsignals.append(self.create_analogsignal(segment))
-            segment.analogsignals.append(self.create_analogsignal2(segment))
-            segment.analogsignals.append(self.create_analogsignal3(segment))
+            segment.analogsignals.append(self.create_analogsignal(segment, name = 'Signal #{}'.format(i * 3)))
+            segment.analogsignals.append(self.create_analogsignal2(segment, name = 'Signal #{}'.format(i * 3 + 1)))
+            segment.analogsignals.append(self.create_analogsignal3(segment, name = 'Signal #{}'.format(i * 3 + 2)))
 
     def _assign_index_attribute(self, segment):
         segment.index = 12
@@ -121,19 +121,19 @@ class NSDFIOTest(unittest.TestCase):
         segment.file_datetime = datetime(2017, 6, 11, 14, 53, 23)
         segment.rec_datetime = datetime(2017, 5, 29, 13, 12, 47)
 
-    def create_analogsignal(self, parent = None):
+    def create_analogsignal(self, parent = None, name = None):
         signal = AnalogSignal([[1, 2], [2, 3], [3, 4]], units='mV',
                               sampling_rate = 100 * pq.Hz, t_start = 2 * pq.min)
 
         signal.segment = parent
 
-        self._assign_basic_attributes(signal)
+        self._assign_basic_attributes(signal, name = name)
 
         self._assign_annotations(signal)
 
         return signal
 
-    def create_analogsignal2(self, parent = None):
+    def create_analogsignal2(self, parent = None, name = None):
         signal = AnalogSignal([[1], [2], [3], [4], [5]], units='mA',
                               sampling_period = 0.5 * pq.ms)
 
@@ -143,18 +143,21 @@ class NSDFIOTest(unittest.TestCase):
 
         return signal
 
-    def create_analogsignal3(self, parent = None):
+    def create_analogsignal3(self, parent = None, name = None):
         signal = AnalogSignal([[1, 2, 3], [4, 5, 6]], units='mV',
                               sampling_rate = 2 * pq.kHz, t_start = 100 * pq.s)
 
         signal.segment = parent
 
-        self._assign_basic_attributes(signal)
+        self._assign_basic_attributes(signal, name = name)
 
         return signal
 
-    def _assign_basic_attributes(self, signal):
-        signal.name = 'neo object'
+    def _assign_basic_attributes(self, signal, name = None):
+        if name is None:
+            signal.name = 'neo object'
+        else:
+            signal.name = name
         signal.description = 'Example of neo object'
         signal.file_origin = 'datafile.pp'
 
