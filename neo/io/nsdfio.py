@@ -250,6 +250,7 @@ class NSDFIO(BaseIO):
 
         if cascade:
             self._read_block_children(lazy, block, path, reader)
+        block.create_many_to_one_relationship()
 
         self._read_basic_attributes(attrs, block)
         self._read_datetime_attributes(attrs, block)
@@ -287,10 +288,9 @@ class NSDFIO(BaseIO):
             if type == 'segment':
                 block.segments.append(self.read_segment(lazy = lazy,
                                                         path = path + '/' + nm,
-                                                        reader = reader,
-                                                        parent = block))
+                                                        reader = reader))
 
-    def read_segment(self, lazy = False, cascade = True, path = None, reader = None, parent = None):
+    def read_segment(self, lazy = False, cascade = True, path = None, reader = None):
         """
         Read a Segment from the file (must be child of a block)
 
@@ -307,8 +307,6 @@ class NSDFIO(BaseIO):
         if cascade:
             self._read_segment_children(lazy, path, reader, segment)
 
-        segment.block = parent
-
         self._read_basic_attributes(attrs, segment)
         self._read_datetime_attributes(attrs, segment)
         self._read_index_attribute(attrs, segment)
@@ -324,8 +322,7 @@ class NSDFIO(BaseIO):
             if type == 'analogsignal':
                 segment.analogsignals.append(self.read_analogsignal(lazy = lazy,
                                                                     path = path + '/' + name,
-                                                                    reader = reader,
-                                                                    parent = segment))
+                                                                    reader = reader))
 
     def _read_annotations(self, attrs, object):
         if attrs.get('annotations') is not None:
@@ -335,7 +332,7 @@ class NSDFIO(BaseIO):
         if attrs.get('index') is not None:
             object.index = int(attrs['index'])
 
-    def read_analogsignal(self, lazy = False, cascade = True, path = None, reader = None, parent = None):
+    def read_analogsignal(self, lazy = False, cascade = True, path = None, reader = None):
         """
         Read an AnalogSignal from the file (must be child of a Segment)
 
@@ -352,8 +349,6 @@ class NSDFIO(BaseIO):
 
         t_start = self._read_analogsignal_t_start(attrs, data_group, dataobj)
         signal = self._create_analogsignal(data_group, dataobj, lazy, path, reader, t_start, uid)
-
-        signal.segment = parent
 
         self._read_basic_attributes(attrs, signal)
         self._read_annotations(attrs, signal)
