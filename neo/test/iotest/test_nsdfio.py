@@ -114,12 +114,12 @@ class NSDFIOTest(unittest.TestCase):
             segment.analogsignals.append(self.create_analogsignal2(segment, name = 'Signal #{}'.format(i * 3 + 1)))
             segment.analogsignals.append(self.create_analogsignal3(segment, name = 'Signal #{}'.format(i * 3 + 2)))
 
-    def _assign_index_attribute(self, segment):
-        segment.index = 12
+    def _assign_index_attribute(self, object):
+        object.index = 12
 
-    def _assign_datetime_attributes(self, segment):
-        segment.file_datetime = datetime(2017, 6, 11, 14, 53, 23)
-        segment.rec_datetime = datetime(2017, 5, 29, 13, 12, 47)
+    def _assign_datetime_attributes(self, object):
+        object.file_datetime = datetime(2017, 6, 11, 14, 53, 23)
+        object.rec_datetime = datetime(2017, 5, 29, 13, 12, 47)
 
     def create_analogsignal(self, parent = None, name = None):
         signal = AnalogSignal([[1, 2], [2, 3], [3, 4]], units='mV',
@@ -153,13 +153,13 @@ class NSDFIOTest(unittest.TestCase):
 
         return signal
 
-    def _assign_basic_attributes(self, signal, name = None):
+    def _assign_basic_attributes(self, object, name = None):
         if name is None:
-            signal.name = 'neo object'
+            object.name = 'neo object'
         else:
-            signal.name = name
-        signal.description = 'Example of neo object'
-        signal.file_origin = 'datafile.pp'
+            object.name = name
+        object.description = 'Example of neo object'
+        object.file_origin = 'datafile.pp'
 
     def _assign_annotations(self, object):
         object.annotations = {'str' : 'value',

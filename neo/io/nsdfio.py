@@ -72,12 +72,13 @@ class NSDFIO(BaseIO):
         writer = nsdf.NSDFWriter(self.filename, mode='w')
         blocks_model, neo_model = self._prepare_model_tree()
 
-        for block in blocks:
-            self.write_block(block, writer, blocks_model, neo_model)
+        name_pattern = 'block_{{:0{}d}}'.format(self._number_of_digits(max(len(blocks) - 1, 0)))
+        for i, block in enumerate(blocks):
+            self.write_block(block, name_pattern.format(i), writer, blocks_model, neo_model)
 
         writer.add_modeltree(neo_model)
 
-    def write_block(self, block, writer = None, blocks_model = None, neo_model = None):
+    def write_block(self, block, name = 'block_0', writer = None, blocks_model = None, neo_model = None):
         """
         Write single block to the file
 
@@ -95,7 +96,7 @@ class NSDFIO(BaseIO):
             single_block = True
 
         uid = uuid1().hex
-        block_model = nsdf.ModelComponent('block_{}'.format(uid), uid = uid, parent = blocks_model)
+        block_model = nsdf.ModelComponent(name, uid = uid, parent = blocks_model)
 
         self._write_block_children(block, block_model, writer)
 
