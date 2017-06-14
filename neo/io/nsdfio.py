@@ -34,7 +34,14 @@ from neo.core import Block, Segment, AnalogSignal
 
 class NSDFIO(BaseIO):
     """
-    Class for reading and writing NSDF files
+    Class for reading and writing files in NSDF Format.
+
+    It supports reading and writing:
+    - :class:'Block'
+    - :class:'Segment'
+    - :class:'AnalogSignal'
+
+    with all relations and metadata.
     """
     is_readable = True
     is_writable = True
