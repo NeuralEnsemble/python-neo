@@ -41,7 +41,7 @@ class NSDFIO(BaseIO):
     - :class:'Segment'
     - :class:'AnalogSignal'
 
-    with all relations and metadata.
+    with all relationships and metadata.
     """
     is_readable = True
     is_writable = True
