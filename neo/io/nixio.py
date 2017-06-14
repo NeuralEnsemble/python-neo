@@ -243,7 +243,7 @@ class NixIO(BaseIO):
         neo_block.rec_datetime = datetime.fromtimestamp(
             nix_block.created_at
         )
-        self._object_map[nix_block.id] = neo_block
+        self._object_map[nix_block.name] = neo_block
         return neo_block
 
     def _group_to_neo(self, nix_group):
@@ -252,7 +252,7 @@ class NixIO(BaseIO):
         neo_segment.rec_datetime = datetime.fromtimestamp(
             nix_group.created_at
         )
-        self._object_map[nix_group.id] = neo_segment
+        self._object_map[nix_group.name] = neo_segment
         return neo_segment
 
     def _source_chx_to_neo(self, nix_source):
@@ -269,13 +269,13 @@ class NixIO(BaseIO):
             coord_values = list(c["coordinates"] for c in chx)
             neo_attrs["coordinates"] = pq.Quantity(coord_values, coord_units)
         rcg = ChannelIndex(**neo_attrs)
-        self._object_map[nix_source.id] = rcg
+        self._object_map[nix_source.name] = rcg
         return rcg
 
     def _source_unit_to_neo(self, nix_unit):
         neo_attrs = self._nix_attr_to_neo(nix_unit)
         neo_unit = Unit(**neo_attrs)
-        self._object_map[nix_unit.id] = neo_unit
+        self._object_map[nix_unit.name] = neo_unit
         return neo_unit
 
     def _signal_da_to_neo(self, nix_da_group, lazy):
@@ -336,7 +336,7 @@ class NixIO(BaseIO):
         else:
             return None
         for da in nix_da_group:
-            self._object_map[da.id] = neo_signal
+            self._object_map[da.name] = neo_signal
         if lazy_shape:
             neo_signal.lazy_shape = lazy_shape
         return neo_signal
@@ -426,13 +426,13 @@ class NixIO(BaseIO):
                         )
         else:
             return None
-        self._object_map[nix_mtag.id] = eest
+        self._object_map[nix_mtag.name] = eest
         if lazy_shape:
             eest.lazy_shape = lazy_shape
         return eest
 
     def _read_cascade(self, nix_obj, path, cascade, lazy):
-        neo_obj = self._object_map[nix_obj.id]
+        neo_obj = self._object_map[nix_obj.name]
         for neocontainer in getattr(neo_obj, "_child_containers", []):
             nixcontainer = self._container_map[neocontainer]
             if not hasattr(nix_obj, nixcontainer):
@@ -533,7 +533,7 @@ class NixIO(BaseIO):
             nix_name = "neo.{}.{}".format(objtype, self._generate_nix_name())
             obj.annotate(nix_name=nix_name)
         objpath = loc + containerstr + nix_name
-        oldhash = self._object_hashes.get(objpath)
+        oldhash = self._object_hashes.get(nix_name)
         if oldhash is None:
             try:
                 oldobj = self.get(objpath, cascade=False, lazy=False)
@@ -555,8 +555,8 @@ class NixIO(BaseIO):
                 self._write_data(nixobj, attr, objpath)
         else:
             nixobj = self._get_object_at(objpath)
-        self._object_map[id(obj)] = nixobj
-        self._object_hashes[objpath] = newhash
+        self._object_map[nix_name] = nixobj
+        self._object_hashes[nix_name] = newhash
         self._write_cascade(obj, objpath)
 
     def _create_nix_obj(self, loc, attr):
@@ -857,12 +857,12 @@ class NixIO(BaseIO):
         return list(map(self._get_mapped_object, object_list))
 
     def _get_mapped_object(self, obj):
-        # We could use paths here instead
         try:
-            if hasattr(obj, "id"):
-                return self._object_map[obj.id]
+            if hasattr(obj, "annotations"):
+                nix_name = obj.annotations["nix_name"]
+                return self._object_map[nix_name]
             else:
-                return self._object_map[id(obj)]
+                return self._object_map[obj.name]
         except KeyError:
             # raise KeyError("Failed to find mapped object for {}. "
             #                "Object not yet converted.".format(obj))
@@ -970,7 +970,8 @@ class NixIO(BaseIO):
         elif not lazy and objidx is not None:
             self._lazy_loaded.pop(objidx)
         if not lazy:
-            self._object_hashes[obj.path] = self._hash_object(obj)
+            nix_name = obj.annotations["nix_name"]
+            self._object_hashes[nix_name] = self._hash_object(obj)
 
     def _find_lazy_loaded(self, obj):
         """
