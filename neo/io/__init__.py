@@ -150,7 +150,6 @@ iolist = [
           KwikIO,
           MicromedIO,
           NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
-          NSDFIO,
           NeoHdf5IO,
           NeoMatlabIO,
           NestIO,
@@ -158,6 +157,7 @@ iolist = [
           NeuroExplorerIO,
           NeuroScopeIO,
           NeuroshareIO,
+          NSDFIO,
           PickleIO,
           PlexonIO,
           PyNNNumpyIO,
