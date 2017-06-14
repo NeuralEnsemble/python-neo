@@ -17,6 +17,7 @@ import quantities as pq
 from uuid import uuid1
 import pickle
 from datetime import datetime
+import os
 
 try:
     import nsdf
@@ -31,37 +32,42 @@ from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
 
 
-dt_format = '%d/%m/%Y %H:%M:%S'
-
-
 class NSDFIO(BaseIO):
     """
     Class for reading and writing NSDF files
     """
-
     is_readable = True
     is_writable = True
 
     supported_objects = [Block, Segment, AnalogSignal]
 
-    readable_objects = [Block]
-    writeable_objects = [Block]
+    readable_objects = [Block, Segment]
+    writeable_objects = [Block, Segment]
 
     has_header = False
     is_streameable = False
 
-    name = 'nsdf'
+    name = 'NSDF'
     extensions = ['h5']
     mode = 'file'
 
-    def __init__(self, filename = None):
+    def __init__(self, filename=None):
         """
         Initialise NSDFIO instance
 
         :param filename: Path to the file
         """
+        if not HAVE_NSDF:
+            raise Exception("Failed to import NSDF.")
+
+        if filename is None:
+            raise ValueError("Must provide an input file.")
+
         BaseIO.__init__(self)
+
         self.filename = filename
+        self.dt_format = '%d/%m/%Y %H:%M:%S'
+        self.modeltree_path = '/model/modeltree/neo/'
 
     def write_all_blocks(self, blocks):
         """
@@ -69,260 +75,310 @@ class NSDFIO(BaseIO):
 
         :param blocks: List of blocks to be written
         """
-        writer = nsdf.NSDFWriter(self.filename, mode='w')
-        blocks_model, neo_model = self._prepare_model_tree()
+        writer = self._init_writing()
+        neo_model, blocks_model, segments_model = self._prepare_model_tree()
 
-        name_pattern = 'block_{{:0{}d}}'.format(self._number_of_digits(max(len(blocks) - 1, 0)))
+        name_pattern = self._name_pattern(len(blocks))
         for i, block in enumerate(blocks):
-            self.write_block(block, name_pattern.format(i), writer, blocks_model, neo_model)
+            self.write_block(block, name_pattern.format(i), writer, blocks_model)
 
         writer.add_modeltree(neo_model)
 
-    def write_block(self, block, name = 'block_0', writer = None, blocks_model = None, neo_model = None):
+    def write_block(self, block = None, name='0', writer=None, parent=None):
         """
-        Write single block to the file
+        Write a Block to the file
 
         :param block: Block to be written
+        :param name: Name for block representation in NSDF model tree (optional)
         :param writer: NSDFWriter instance (optional)
-        :param blocks_model: NSDF model representing all blocks (optional)
-        :param neo_model: NSDF model representing all data (optional)
+        :param parent: NSDF ModelComponent which will be the parent of block NSDF representation (optional)
         """
+        if not isinstance(block, Block):
+            raise ValueError("Must provide a Block to write.")
+
         if writer is None:
-            writer = nsdf.NSDFWriter(self.filename, mode='w')
+            writer = self._init_writing()
 
         single_block = False
-        if blocks_model is None or neo_model is None:
-            blocks_model, neo_model = self._prepare_model_tree()
+        if parent is None:
+            neo_model, parent, segments_model = self._prepare_model_tree()
             single_block = True
 
-        uid = uuid1().hex
-        block_model = nsdf.ModelComponent(name, uid = uid, parent = blocks_model)
+        block_model = nsdf.ModelComponent(name, uid=uuid1().hex, parent=parent)
 
         self._write_block_children(block, block_model, writer)
-
-        self._write_basic_attributes(block_model, block)
-        self._write_datetime_attributes(block_model, block)
-        self._write_index_attribute(block_model, block)
-
-        self._write_annotations(block_model, block)
+        self._write_container_metadata(block, block_model)
 
         if single_block:
             writer.add_modeltree(neo_model)
 
     def _write_block_children(self, block, block_model, writer):
-        name_pattern = 'segment_{{:0{}d}}'.format(self._number_of_digits(max(len(block.segments) - 1, 0)))
+        segments_model = nsdf.ModelComponent(name='segments', uid=uuid1().hex, parent=block_model)
+        name_pattern = '{{:0{}d}}'.format(self._number_of_digits(max(len(block.segments) - 1, 0)))
         for i, segment in enumerate(block.segments):
-            self.write_segment(segment = segment,
-                               name = name_pattern.format(i),
-                               parent = block_model, writer = writer)
+            self.write_segment(segment=segment, name=name_pattern.format(i),
+                               writer=writer, parent=segments_model)
 
-    def _number_of_digits(self, n):
-        return len(str(n))
-
-    def _prepare_model_tree(self):
-        neo_model = nsdf.ModelComponent('neo', uid = uuid1().hex)
-        blocks_model = nsdf.ModelComponent('blocks', uid = uuid1().hex, parent = neo_model)
-        return blocks_model, neo_model
-
-    def write_segment(self, segment, name, parent, writer):
+    def write_segment(self, segment = None, name='0', writer=None, parent=None):
         """
-        Write a segment to the file (must be child of a block)
+        Write a Segment to the file
 
         :param segment: Segment to be written
-        :param name: Name of the Segment in NSDF modeltree
-        :param parent: Parent of the Segment in NSDF modeltree
-        :param writer: NSDFWriter instance
+        :param name: Name for segment representation in NSDF model tree (optional)
+        :param writer: NSDFWriter instance (optional)
+        :param parent: NSDF ModelComponent which will be the parent of segment NSDF representation (optional)
         """
-        uid = uuid1().hex
-        model = nsdf.ModelComponent(name, uid = uid, parent = parent)
+        if not isinstance(segment, Segment):
+            raise ValueError("Must provide a Segment to write.")
+
+        if writer is None:
+            writer = self._init_writing()
+
+        single_segment = False
+        if parent is None:
+            neo_model, blocks_model, parent = self._prepare_model_tree()
+            single_segment = True
+
+        model = nsdf.ModelComponent(name, uid=uuid1().hex, parent=parent)
 
         self._write_segment_children(model, segment, writer)
+        self._write_container_metadata(segment, model)
 
-        self._write_basic_attributes(model, segment)
-        self._write_datetime_attributes(model, segment)
-        self._write_index_attribute(model, segment)
-
-        self._write_annotations(model, segment)
+        if single_segment:
+            writer.add_modeltree(neo_model)
 
     def _write_segment_children(self, model, segment, writer):
-        name_pattern = 'analogsignal_{{:0{}d}}'.format(self._number_of_digits(max(len(segment.analogsignals) - 1, 0)))
+        analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
+        name_pattern = '{{:0{}d}}'.format(self._number_of_digits(max(len(segment.analogsignals) - 1, 0)))
         for i, signal in enumerate(segment.analogsignals):
-            self.write_analogsignal(signal = signal,
-                                    name = name_pattern.format(i),
-                                    parent = model, writer = writer)
+            self.write_analogsignal(signal=signal,
+                                    name=name_pattern.format(i),
+                                    parent=analogsignals_model, writer=writer)
 
-    def _write_annotations(self, model, object):
-        if object.annotations is not None:
-            model.attrs['annotations'] = pickle.dumps(object.annotations)
-
-    def _write_index_attribute(self, model, object):
-        if object.index is not None:
-            model.attrs['index'] = str(object.index)
-
-    def _write_datetime_attributes(self, model, object):
-        if object.file_datetime is not None:
-            model.attrs['file_datetime'] = object.file_datetime.strftime(dt_format)
-        if object.rec_datetime is not None:
-            model.attrs['rec_datetime'] = object.rec_datetime.strftime(dt_format)
-
-    def write_analogsignal(self, signal, name, parent, writer):
+    def write_analogsignal(self, signal, name='0', writer=None, parent=None):
         """
-        Write an AnalogSignal to the file (must be child of a segment)
+        Write an AnalogSignal to the file
 
         :param signal: AnalogSignal to be written
-        :param name: Name of the AnalogSignal in NSDF modeltree
-        :param parent: Parent of the AnalogSignal in NSDF modeltree
+        :param name: Name for signal representation in NSDF model tree
         :param writer: NSDFWriter instance
+        :param parent: NSDF ModelComponent which will be the parent of signal NSDF representation
         """
         uid = uuid1().hex
-        model = nsdf.ModelComponent(name, uid = uid, parent = parent)
+        model = nsdf.ModelComponent(name, uid=uid, parent=parent)
 
         r_signal = np.swapaxes(signal, 0, 1)
         channels, source_ds = self._create_signal_data_sources(model, r_signal, uid, writer)
         self._write_signal_data(model, channels, r_signal, signal, source_ds, writer)
 
-        self._write_basic_attributes(model, signal)
-        self._write_annotations(model, signal)
+        self._write_basic_metadata(model, signal)
 
-    def _write_signal_data(self, model, channels, r_signal, signal, source_ds, writer):
-        dataobj = nsdf.UniformData('signal', unit = str(signal.units.dimensionality))
-        for i in range(len(channels)):
-            dataobj.put_data(channels[i].uid, r_signal[i])
-        dataobj.set_dt(float(signal.sampling_period.magnitude),
-                       str(signal.sampling_period.dimensionality))
-        writer.add_uniform_data(source_ds, dataobj,
-                                tstart = float(signal.t_start.rescale(
-                                    signal.sampling_period.dimensionality).magnitude))
-        model.attrs['t_start_unit'] = str(signal.t_start.dimensionality)
+    def _init_writing(self):
+        return nsdf.NSDFWriter(self.filename, mode='w')
 
-    def _create_signal_data_sources(self, model, r_signal, uid, writer):
-        channels = []
-        name_pattern = 'channel_{{:0{}d}}'.format(self._number_of_digits(max(len(r_signal) - 1, 0)))
-        for i, channel in enumerate(r_signal):
-            channels.append(nsdf.ModelComponent(name_pattern.format(i),
-                                                uid = uuid1().hex,
-                                                parent = model))
-        source_ds = writer.add_uniform_ds(uid, [channel.uid for channel in channels])
-        return channels, source_ds
+    def _prepare_model_tree(self):
+        neo_model = nsdf.ModelComponent('neo', uid=uuid1().hex)
+        blocks_model = nsdf.ModelComponent('blocks', uid=uuid1().hex, parent=neo_model)
+        segments_model = nsdf.ModelComponent('segments', uid=uuid1().hex, parent=neo_model)
+        return neo_model, blocks_model, segments_model
+
+    def _number_of_digits(self, n):
+        return len(str(n))
+
+    def _name_pattern(self, how_many_items):
+        return '{{:0{}d}}'.format(self._number_of_digits(max(how_many_items - 1, 0)))
+
+    def _write_container_metadata(self, container, container_model):
+        self._write_basic_metadata(container_model, container)
+
+        self._write_datetime_attributes(container_model, container)
+        self._write_index_attribute(container_model, container)
+
+    def _write_basic_metadata(self, model, object):
+        self._write_basic_attributes(model, object)
+        self._write_annotations(model, object)
 
     def _write_basic_attributes(self, model, object):
         if object.name is not None:
             model.attrs['name'] = object.name
         if object.description is not None:
             model.attrs['description'] = object.description
-        if object.file_origin is not None:
-            model.attrs['file_origin'] = object.file_origin
 
-    def read_all_blocks(self, lazy = False, cascade = True):
+    def _write_datetime_attributes(self, model, object):
+        if object.rec_datetime is not None:
+            model.attrs['rec_datetime'] = object.rec_datetime.strftime(self.dt_format)
+
+    def _write_index_attribute(self, model, object):
+        if object.index is not None:
+            model.attrs['index'] = object.index
+
+    def _write_annotations(self, model, object):
+        if object.annotations is not None:
+            model.attrs['annotations'] = pickle.dumps(object.annotations)
+
+    def _write_signal_data(self, model, channels, r_signal, signal, source_ds, writer):
+        dataobj = nsdf.UniformData('signal', unit=str(signal.units.dimensionality))
+        for i in range(len(channels)):
+            dataobj.put_data(channels[i].uid, r_signal[i])
+
+        dataobj.set_dt(float(signal.sampling_period.magnitude),
+                       str(signal.sampling_period.dimensionality))
+
+        self._write_analogsignal_t_start(dataobj, model, signal, source_ds, writer)
+
+    def _write_analogsignal_t_start(self, dataobj, model, signal, source_ds, writer):
+        rescaled_tstart = signal.t_start.rescale(signal.sampling_period.dimensionality)
+        writer.add_uniform_data(source_ds, dataobj,
+                                tstart=float(rescaled_tstart.magnitude))
+        model.attrs['t_start_unit'] = str(signal.t_start.dimensionality)
+
+    def _create_signal_data_sources(self, model, r_signal, uid, writer):
+        channels = []
+        channels_model = nsdf.ModelComponent(name='channels', uid=uuid1().hex, parent=model)
+        name_pattern = '{{:0{}d}}'.format(self._number_of_digits(max(len(r_signal) - 1, 0)))
+        for i, channel in enumerate(r_signal):
+            channels.append(nsdf.ModelComponent(name_pattern.format(i),
+                                                uid=uuid1().hex,
+                                                parent=channels_model))
+
+        source_ds = writer.add_uniform_ds(uid, [channel.uid for channel in channels])
+        return channels, source_ds
+
+    def read_all_blocks(self, lazy=False, cascade=True):
         """
         Read all blocks from the file
 
-        :param lazy: Imposed by neo API (but not supported yet)
+        :param lazy: Enables lazy reading
         :param cascade: Read nested objects or not?
-        :return: list of read blocks
+        :return: List of read blocks
         """
-        reader = nsdf.NSDFReader(self.filename)
+        reader = self._init_reading()
         blocks = []
 
-        for name in reader.model['/model/modeltree/neo/blocks'].keys():
-            blocks.append(self.read_block(lazy, cascade, name = name, reader = reader))
+        blocks_path = self.modeltree_path + 'blocks/'
+        for block in reader.model[blocks_path].values():
+            blocks.append(self.read_block(lazy, cascade, group=block, reader=reader))
 
         return blocks
 
-    def read_block(self, lazy = False, cascade = True, name = None, reader = None):
+    def read_block(self, lazy=False, cascade=True, group=None, reader=None):
         """
-        Read a single block from the file
+        Read a Block from the file
 
         :param lazy: Enables lazy reading
         :param cascade: Read nested objects or not?
-        :param name: Name of block to be read (if not specified, first of all blocks is chosen)
+        :param group: HDF5 Group representing the block in NSDF model tree (optional)
         :param reader: NSDFReader instance (optional)
         :return: Read block
         """
         block = Block()
-        name, reader = self._select_first_block(name, reader)
+        group, reader = self._select_first_container(group, reader, 'block')
 
-        if name is None:
+        if group is None:
             return None
 
-        path = '/model/modeltree/neo/blocks/' + name
-        attrs = reader.model[path].attrs
+        attrs = group.attrs
 
         if cascade:
-            self._read_block_children(lazy, block, path, reader)
+            self._read_block_children(lazy, block, group, reader)
         block.create_many_to_one_relationship()
 
-        self._read_basic_attributes(attrs, block)
-        self._read_datetime_attributes(attrs, block)
-        self._read_index_attribute(attrs, block)
-
-        self._read_annotations(attrs, block)
+        self._read_container_metadata(attrs, block)
 
         return block
 
-    def _select_first_block(self, name, reader):
-        if reader is None:
-            reader = nsdf.NSDFReader(self.filename)
-        if name is None and len(reader.model['/model/modeltree/neo/blocks'].keys()) != 0:
-            name = reader.model['/model/modeltree/neo/blocks'].keys()[0]
-        return name, reader
+    def _read_block_children(self, lazy, block, group, reader):
+        for child in group['segments/'].values():
+            block.segments.append(self.read_segment(lazy=lazy, group=child, reader=reader))
 
-    def _read_datetime_attributes(self, attrs, object):
-        if attrs.get('file_datetime') is not None:
-            object.file_datetime = datetime.strptime(attrs['file_datetime'], dt_format)
-        if attrs.get('rec_datetime') is not None:
-            object.rec_datetime = datetime.strptime(attrs['rec_datetime'], dt_format)
+    def read_segment(self, lazy=False, cascade=True, group=None, reader=None):
+        """
+        Read a Segment from the file
+
+        :param lazy: Enables lazy reading
+        :param cascade: Read nested objects or not?
+        :param group: HDF5 Group representing the block in NSDF model tree (optional)
+        :param reader: NSDFReader instance (optional)
+        :return: Read segment
+        """
+        segment = Segment()
+        group, reader = self._select_first_container(group, reader, 'segment')
+
+        if group is None:
+            return None
+
+        attrs = group.attrs
+
+        if cascade:
+            self._read_segment_children(lazy, group, reader, segment)
+
+        self._read_container_metadata(attrs, segment)
+
+        return segment
+
+    def _read_segment_children(self, lazy, group, reader, segment):
+        for child in group['analogsignals/'].values():
+            segment.analogsignals.append(self.read_analogsignal(lazy=lazy, group=child, reader=reader))
+
+    def read_analogsignal(self, lazy=False, cascade=True, group=None, reader=None):
+        """
+        Read an AnalogSignal from the file (must be child of a Segment)
+
+        :param lazy: Enables lazy reading
+        :param cascade: Read nested objects or not?
+        :param group: HDF5 Group representing the block in NSDF model tree
+        :param reader: NSDFReader instance
+        :return: Read AnalogSignal
+        """
+        attrs = group.attrs
+        uid = attrs['uid']
+        data_group = reader.data['uniform/{}/signal'.format(uid)]
+        dataobj = reader.get_uniform_data(uid, 'signal')
+
+        t_start = self._read_analogsignal_t_start(attrs, data_group, dataobj)
+        signal = self._create_analogsignal(data_group, dataobj, lazy, group, t_start, uid)
+
+        self._read_basic_metadata(attrs, signal)
+
+        return signal
+
+    def _init_reading(self):
+        reader = nsdf.NSDFReader(self.filename)
+        self.file_datetime = datetime.fromtimestamp(os.stat(self.filename).st_mtime)
+        return reader
+
+    def _select_first_container(self, group, reader, name):
+        if reader is None:
+            reader = self._init_reading()
+
+        if group is None:
+            path = self.modeltree_path + name + 's/'
+            if len(reader.model[path].values()) > 0:
+                group = reader.model[path].values()[0]
+
+        return group, reader
+
+    def _read_container_metadata(self, attrs, container):
+        self._read_basic_metadata(attrs, container)
+
+        self._read_datetime_attributes(attrs, container)
+        self._read_index_attribute(attrs, container)
+
+    def _read_basic_metadata(self, attrs, signal):
+        self._read_basic_attributes(attrs, signal)
+        self._read_annotations(attrs, signal)
 
     def _read_basic_attributes(self, attrs, object):
         if attrs.get('name') is not None:
             object.name = attrs['name']
         if attrs.get('description') is not None:
             object.description = attrs['description']
-        if attrs.get('file_origin') is not None:
-            object.file_origin = attrs['file_origin']
+        object.file_origin = self.filename
 
-    def _read_block_children(self, lazy, block, path, reader):
-        for nm in reader.model[path].keys():
-            type = nm[:nm.find('_')]
-
-            if type == 'segment':
-                block.segments.append(self.read_segment(lazy = lazy,
-                                                        path = path + '/' + nm,
-                                                        reader = reader))
-
-    def read_segment(self, lazy = False, cascade = True, path = None, reader = None):
-        """
-        Read a Segment from the file (must be child of a block)
-
-        :param lazy: Enables lazy reading
-        :param cascade: Read nested objects or not?
-        :param path: Absolute path to Segment model in NSDF modeltree
-        :param reader: NSDFReader instance
-        :return: Read segment
-        """
-        attrs = reader.model[path].attrs
-        uid = attrs['uid']
-        segment = Segment()
-
-        if cascade:
-            self._read_segment_children(lazy, path, reader, segment)
-
-        self._read_basic_attributes(attrs, segment)
-        self._read_datetime_attributes(attrs, segment)
-        self._read_index_attribute(attrs, segment)
-
-        self._read_annotations(attrs, segment)
-
-        return segment
-
-    def _read_segment_children(self, lazy, path, reader, segment):
-        for name in reader.model[path].keys():
-            type = name[:name.find('_')]
-
-            if type == 'analogsignal':
-                segment.analogsignals.append(self.read_analogsignal(lazy = lazy,
-                                                                    path = path + '/' + name,
-                                                                    reader = reader))
+    def _read_datetime_attributes(self, attrs, object):
+        object.file_datetime = self.file_datetime
+        if attrs.get('rec_datetime') is not None:
+            object.rec_datetime = datetime.strptime(attrs['rec_datetime'], self.dt_format)
 
     def _read_annotations(self, attrs, object):
         if attrs.get('annotations') is not None:
@@ -330,39 +386,16 @@ class NSDFIO(BaseIO):
 
     def _read_index_attribute(self, attrs, object):
         if attrs.get('index') is not None:
-            object.index = int(attrs['index'])
+            object.index = attrs['index']
 
-    def read_analogsignal(self, lazy = False, cascade = True, path = None, reader = None):
-        """
-        Read an AnalogSignal from the file (must be child of a Segment)
-
-        :param lazy: Enables lazy reading
-        :param cascade: Read nested objects or not?
-        :param path: Absolute path to an AnalogSignal model in NSDF modeltree
-        :param reader: NSDFReader instance
-        :return: Read AnalogSignal
-        """
-        attrs = reader.model[path].attrs
-        uid = attrs['uid']
-        data_group = reader.data['uniform/{}/signal'.format(uid)]
-        dataobj = reader.get_uniform_data(uid, 'signal')
-
-        t_start = self._read_analogsignal_t_start(attrs, data_group, dataobj)
-        signal = self._create_analogsignal(data_group, dataobj, lazy, path, reader, t_start, uid)
-
-        self._read_basic_attributes(attrs, signal)
-        self._read_annotations(attrs, signal)
-
-        return signal
-
-    def _create_analogsignal(self, data_group, dataobj, lazy, path, reader, t_start, uid):
+    def _create_analogsignal(self, data_group, dataobj, lazy, group, t_start, uid):
         if lazy:
             data_shape = data_group.shape
             data_shape = (data_shape[1], data_shape[0])
-            signal = self._create_lazy_analogsignal(data_shape, dataobj, reader, uid, t_start)
+            signal = self._create_lazy_analogsignal(data_shape, dataobj, uid, t_start)
         else:
-            data = self._read_signal_data(dataobj, path, reader)
-            signal = self._create_normal_analogsignal(data, dataobj, reader, uid, t_start)
+            data = self._read_signal_data(dataobj, group)
+            signal = self._create_normal_analogsignal(data, dataobj, uid, t_start)
         return signal
 
     def _read_analogsignal_t_start(self, attrs, data_group, dataobj):
@@ -370,23 +403,19 @@ class NSDFIO(BaseIO):
         t_start = t_start.rescale(attrs['t_start_unit'])
         return t_start
 
-    def _read_signal_data(self, dataobj, path, reader):
+    def _read_signal_data(self, dataobj, group):
         data = []
-        for name in reader.model[path].keys():
-            channel_uid = reader.model[path + '/' + name].attrs['uid']
+        for channel in group['channels/'].values():
+            channel_uid = channel.attrs['uid']
             data += [dataobj.get_data(channel_uid)]
         return data
 
-    def _create_normal_analogsignal(self, data, dataobj, reader, uid, t_start):
-        return AnalogSignal(np.swapaxes(data, 0, 1),
-                            units = dataobj.unit,
-                            t_start = t_start,
-                            sampling_period = pq.Quantity(dataobj.dt, dataobj.tunit))
+    def _create_normal_analogsignal(self, data, dataobj, uid, t_start):
+        return AnalogSignal(np.swapaxes(data, 0, 1), units=dataobj.unit,
+                            t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
 
-    def _create_lazy_analogsignal(self, shape, dataobj, reader, uid, t_start):
-        signal =  AnalogSignal([],
-                               units = dataobj.unit,
-                               t_start = t_start,
-                               sampling_period = pq.Quantity(dataobj.dt, dataobj.tunit))
+    def _create_lazy_analogsignal(self, shape, dataobj, uid, t_start):
+        signal = AnalogSignal([], units=dataobj.unit,
+                              t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
         signal.lazy_shape = shape
         return signal
