@@ -789,20 +789,20 @@ class NixIO(BaseIO):
                     mtag.references.extend([sig for sig in group_signals
                                             if sig not in mtag.references])
         for rcg in block.channel_indexes:
-            rcgsource = self._get_mapped_object(rcg)
+            chidxsrc = self._get_mapped_object(rcg)
             das = self._get_mapped_objects(rcg.analogsignals +
                                            rcg.irregularlysampledsignals)
             # flatten nested lists
             das = [da for dalist in das for da in dalist]
             for da in das:
-                if rcgsource not in da.sources:
-                    da.sources.append(rcgsource)
+                if chidxsrc not in da.sources:
+                    da.sources.append(chidxsrc)
             for unit in rcg.units:
                 unitsource = self._get_mapped_object(unit)
                 for st in unit.spiketrains:
                     stmtag = self._get_mapped_object(st)
-                    if rcgsource not in stmtag.sources:
-                        stmtag.sources.append(rcgsource)
+                    if chidxsrc not in stmtag.sources:
+                        stmtag.sources.append(chidxsrc)
                     if unitsource not in stmtag.sources:
                         stmtag.sources.append(unitsource)
 
