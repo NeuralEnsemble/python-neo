@@ -340,10 +340,9 @@ class NSDFIO(BaseIO):
         attrs = group.attrs
         uid = attrs['uid']
         data_group = reader.data['uniform/{}/signal'.format(uid)]
-        dataobj = reader.get_uniform_data(uid, 'signal')
 
-        t_start = self._read_analogsignal_t_start(attrs, data_group, dataobj)
-        signal = self._create_analogsignal(data_group, dataobj, lazy, group, t_start, uid)
+        t_start = self._read_analogsignal_t_start(attrs, data_group)
+        signal = self._create_analogsignal(data_group, lazy, group, t_start, uid, reader)
 
         self._read_basic_metadata(attrs, signal)
 
@@ -395,18 +394,19 @@ class NSDFIO(BaseIO):
         if attrs.get('index') is not None:
             object.index = attrs['index']
 
-    def _create_analogsignal(self, data_group, dataobj, lazy, group, t_start, uid):
+    def _create_analogsignal(self, data_group, lazy, group, t_start, uid, reader):
         if lazy:
             data_shape = data_group.shape
             data_shape = (data_shape[1], data_shape[0])
-            signal = self._create_lazy_analogsignal(data_shape, dataobj, uid, t_start)
+            signal = self._create_lazy_analogsignal(data_shape, data_group.attrs, uid, t_start)
         else:
+            dataobj = reader.get_uniform_data(uid, 'signal')
             data = self._read_signal_data(dataobj, group)
             signal = self._create_normal_analogsignal(data, dataobj, uid, t_start)
         return signal
 
-    def _read_analogsignal_t_start(self, attrs, data_group, dataobj):
-        t_start = float(data_group.attrs['tstart']) * pq.Quantity(1, dataobj.tunit)
+    def _read_analogsignal_t_start(self, attrs, data_group):
+        t_start = float(data_group.attrs['tstart']) * pq.Quantity(1, data_group.attrs['tunit'])
         t_start = t_start.rescale(attrs['t_start_unit'])
         return t_start
 
@@ -421,8 +421,8 @@ class NSDFIO(BaseIO):
         return AnalogSignal(np.swapaxes(data, 0, 1), units=dataobj.unit,
                             t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
 
-    def _create_lazy_analogsignal(self, shape, dataobj, uid, t_start):
-        signal = AnalogSignal([], units=dataobj.unit,
-                              t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
+    def _create_lazy_analogsignal(self, shape, attrs, uid, t_start):
+        signal = AnalogSignal([], units=attrs['unit'],
+                              t_start=t_start, sampling_period=pq.Quantity(attrs['dt'], attrs['tunit']))
         signal.lazy_shape = shape
         return signal
