@@ -225,6 +225,7 @@ class NSDFIO(BaseIO):
 
     def _write_signal_data(self, model, channels, r_signal, signal, source_ds, writer):
         dataobj = nsdf.UniformData('signal', unit=str(signal.units.dimensionality))
+        dataobj.dtype = signal.dtype
         for i in range(len(channels)):
             dataobj.put_data(channels[i].uid, r_signal[i])
 
@@ -398,7 +399,7 @@ class NSDFIO(BaseIO):
         if lazy:
             data_shape = data_group.shape
             data_shape = (data_shape[1], data_shape[0])
-            signal = self._create_lazy_analogsignal(data_shape, data_group.attrs, uid, t_start)
+            signal = self._create_lazy_analogsignal(data_shape, data_group, uid, t_start)
         else:
             dataobj = reader.get_uniform_data(uid, 'signal')
             data = self._read_signal_data(dataobj, group)
@@ -418,11 +419,12 @@ class NSDFIO(BaseIO):
         return data
 
     def _create_normal_analogsignal(self, data, dataobj, uid, t_start):
-        return AnalogSignal(np.swapaxes(data, 0, 1), units=dataobj.unit,
+        return AnalogSignal(np.swapaxes(data, 0, 1), dtype=dataobj.dtype, units=dataobj.unit,
                             t_start=t_start, sampling_period=pq.Quantity(dataobj.dt, dataobj.tunit))
 
-    def _create_lazy_analogsignal(self, shape, attrs, uid, t_start):
-        signal = AnalogSignal([], units=attrs['unit'],
+    def _create_lazy_analogsignal(self, shape, data, uid, t_start):
+        attrs = data.attrs
+        signal = AnalogSignal([], dtype=data.dtype, units=attrs['unit'],
                               t_start=t_start, sampling_period=pq.Quantity(attrs['dt'], attrs['tunit']))
         signal.lazy_shape = shape
         return signal

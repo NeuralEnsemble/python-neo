@@ -91,7 +91,7 @@ class NSDFIOTest(unittest.TestCase):
             segment.analogsignals.append(self.create_analogsignal3(segment, name='Signal #{}'.format(i * 3 + 2)))
 
     def create_analogsignal(self, parent=None, name='AnalogSignal1'):
-        signal = AnalogSignal([[1, 2], [2, 3], [3, 4]], units='mV',
+        signal = AnalogSignal([[1.0, 2.5], [2.2, 3.1], [3.2, 4.4]], units='mV',
                               sampling_rate=100 * pq.Hz, t_start=2 * pq.min)
 
         signal.segment = parent
@@ -219,6 +219,7 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         else:
             self._compare_objects(signal1, signal2, exclude_attr=['shape', 'signal'])
             assert signal2.lazy_shape == signal1.shape
+            assert signal2.dtype == signal1.dtype
 
     def _compare_objects(self, object1, object2, exclude_attr=[]):
         assert object1.__class__.__name__ == object2.__class__.__name__
