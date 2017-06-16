@@ -554,7 +554,14 @@ class NixIO(BaseIO):
             if isinstance(obj, pq.Quantity):
                 self._write_data(nixobj, attr, objpath)
         else:
-            nixobj = self._get_object_at(objpath)
+            nixobj = self._object_map.get(nix_name)
+            if nixobj is None:
+                nixobj = self._get_object_at(objpath)
+            else:
+                # object is already in file but may not be linked at objpath
+                objat = self._get_object_at(objpath)
+                if not objat:
+                    self._link_nix_obj(nixobj, loc, containerstr)
         self._object_map[nix_name] = nixobj
         self._object_hashes[nix_name] = newhash
         self._write_cascade(obj, objpath)
@@ -614,6 +621,15 @@ class NixIO(BaseIO):
         else:
             raise ValueError("Unable to create NIX object. Invalid type.")
         return nixobj
+
+    def _link_nix_obj(self, obj, loc, neocontainer):
+        parentobj = self._get_object_at(loc)
+        container = getattr(parentobj,
+                            self._container_map[neocontainer.strip("/")])
+        if isinstance(obj, list):
+            container.extend(obj)
+        else:
+            container.append(obj)
 
     def write_block(self, bl, loc=""):
         """
