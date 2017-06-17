@@ -95,9 +95,7 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_rate=100 * pq.Hz, t_start=2 * pq.min)
 
         signal.segment = parent
-
         self._assign_basic_attributes(signal, name=name)
-
         self._assign_annotations(signal)
 
         return signal
@@ -107,7 +105,6 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_period=0.5 * pq.ms)
 
         signal.segment = parent
-
         self._assign_annotations(signal)
 
         return signal
@@ -117,7 +114,6 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_rate=2 * pq.kHz, t_start=100 * pq.s)
 
         signal.segment = parent
-
         self._assign_basic_attributes(signal, name=name)
 
         return signal
@@ -219,7 +215,7 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         else:
             self._compare_objects(signal1, signal2, exclude_attr=['shape', 'signal'])
             assert signal2.lazy_shape == signal1.shape
-            assert signal2.dtype == signal1.dtype
+        assert signal2.dtype == signal1.dtype
 
     def _compare_objects(self, object1, object2, exclude_attr=[]):
         assert object1.__class__.__name__ == object2.__class__.__name__
