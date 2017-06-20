@@ -113,6 +113,8 @@ class NSDFIO(BaseIO):
 
         self._write_block_children(block, block_model, writer)
 
+        self._clean_nsdfio_annotations(block)
+
 
     def _write_block_children(self, block, block_model, writer):
         segments_model = nsdf.ModelComponent(name='segments', uid=uuid1().hex, parent=block_model)
@@ -130,7 +132,7 @@ class NSDFIO(BaseIO):
                                     writer=writer, parent=channel_indexes_model)
 
 
-    def write_segment(self, segment = None, name='0', address=0, writer=None, parent=None):
+    def write_segment(self, segment = None, name='0', address=[0], writer=None, parent=None):
         """
         Write a Segment to the file
 
@@ -145,14 +147,19 @@ class NSDFIO(BaseIO):
         if writer is None:
             writer = self._init_writing()
 
+        single_segment = False
         if parent is None:
             neo_model, blocks_model, parent = self._prepare_model_tree(writer)
+            single_segment = True
 
         model = nsdf.ModelComponent(name, uid=uuid1().hex, parent=parent)
         self._write_container_metadata(segment, model)
         self._write_model_component(model, writer)
 
         self._write_segment_children(model, segment, address, writer)
+
+        if single_segment:
+            self._clean_nsdfio_annotations(segment)
 
     def _write_segment_children(self, model, segment, address, writer):
         analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
@@ -223,6 +230,16 @@ class NSDFIO(BaseIO):
 
     def _name_pattern(self, how_many_items):
         return '{{:0{}d}}'.format(self._number_of_digits(max(how_many_items - 1, 0)))
+
+    def _clean_nsdfio_annotations(self, object):
+        nsdfio_annotations = ('nsdfio_address', )
+
+        for key in nsdfio_annotations:
+            object.annotations.pop(key, None)
+
+        if hasattr(object, 'children'):
+            for child in object.children:
+                self._clean_nsdfio_annotations(child)
 
     def _write_model_component(self, model, writer):
         if model.parent is None:
