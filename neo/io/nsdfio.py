@@ -203,7 +203,7 @@ class NSDFIO(BaseIO):
         Write a ChannelIndex to the file
 
         :param channelindex: ChannelIndex to be written
-        :param name: Name for signal representation in NSDF model tree
+        :param name: Name for channelindex representation in NSDF model tree
         :param writer: NSDFWriter instance
         :param parent: NSDF ModelComponent which will be the parent of channelindex NSDF representation
         """
@@ -215,13 +215,15 @@ class NSDFIO(BaseIO):
 
         self._write_channelindex_arrays(model, channelindex, writer)
 
+        self._write_channelindex_children(channelindex, model, writer)
+
+    def _write_channelindex_children(self, channelindex, model, writer):
         analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(channelindex.analogsignals))
         for i, signal in enumerate(channelindex.analogsignals):
             self.write_analogsignal(signal=signal, name=name_pattern.format(i),
                                     parent=analogsignals_model, writer=writer)
-
 
     def _init_writing(self):
         return nsdf.NSDFWriter(self.filename, mode='w')
