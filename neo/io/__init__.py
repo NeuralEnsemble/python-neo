@@ -46,6 +46,8 @@ Classes:
 
 .. autoclass:: neo.io.NestIO
 
+.. autoclass:: neo.io.NeuralynxIO
+
 .. autoclass:: neo.io.NeuroExplorerIO
 
 .. autoclass:: neo.io.NeuroScopeIO
