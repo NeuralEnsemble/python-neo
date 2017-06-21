@@ -33,6 +33,7 @@ and may not be the current affiliation of a contributor.
 * Carlos Canova [13]
 * Hélissande Fragnaud [2]
 * Mark Hollenbeck [14]
+* Mieszko Grodzicki
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
