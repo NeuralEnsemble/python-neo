@@ -6,11 +6,6 @@ Tests of neo.io.blackrockio
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-import os
-import struct
-import sys
-import tempfile
-
 try:
     import unittest2 as unittest
 except ImportError:
@@ -44,16 +39,9 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
+
 class CommonTests(BaseTestIO, unittest.TestCase):
-    ioclass =BlackrockIO
-
-    files_to_test = [
-        #'test2/test.ns5'
-        ]
-
-    files_to_download = [
-        #'test2/test.ns5'
-        ]
+    ioclass = BlackrockIO
 
     files_to_test = ['FileSpec2.3001']
 
@@ -78,7 +66,6 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                     filename='FileSpec2.3001',
                     directory=self.local_test_dir, clean=False),
                 verbose=False)
-
         except:
             self.fail()
 
@@ -182,29 +169,35 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         mts_ml = ml['mts']  # marker time stamps
         mid_ml = ml['mid']  # marker IDs
 
-        # Load data in channels 1-3 from original data files using the neo
-        # framework
+        # Load data in channels 1-3 from original data files using the Neo
+        # BlackrockIO
         session = BlackrockIO(
             get_test_file_full_path(
                 ioclass=BlackrockIO,
                 filename='FileSpec2.3001',
                 directory=self.local_test_dir, clean=False),
             verbose=False)
-        block = session.read_block(load_waveforms=True)
+        block = session.read_block(
+            channels=range(1, 9), units='all', nsx_to_load='all',
+            scaling='raw', load_waveforms=True, load_events=True)
 
         # Check if analog data on channels 1-8 are equal
-        for rcg_i in block.channel_indexes:
-            # Should only have one recording channel per group
-            self.assertEqual(rcg_i.size, 1)
+        self.assertGreater(len(block.channel_indexes), 0)
+        for chidx in block.channel_indexes:
+            # Should only have one AnalogSignal per ChannelIndex
+            self.assertEqual(len(chidx.analogsignals), 1)
 
-            idx = rcg_i[0]
+            idx = chidx.analogsignals[0].annotations['channel_id']
             if idx in range(1, 9):
-                assert_equal(rcg_i.analogsignal.base, lfp_ml[idx - 1, :])
-
-        # Should only have one segment
-        self.assertEqual(len(block.segments), 1)
+                # We ignore the last sample of the Analogsignal returned by the
+                # Python implementation, since due to an error in the
+                # corresponding matlab loader the last sample was ignored and
+                # not saved to the test file
+                assert_equal(np.squeeze(
+                    chidx.analogsignals[0].base[:-1]), lfp_ml[idx - 1, :])
 
         # Check if spikes in channels 1,3,5,7 are equal
+        self.assertEqual(len(block.segments), 1)
         for st_i in block.segments[0].spiketrains:
             channelid = st_i.annotations['channel_id']
             if channelid in range(1, 7, 2):
@@ -215,24 +208,22 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
                 # Check waveforms of channel 1, unit 0
                 if channelid == 1 and unitid == 0:
-                    assert_equal(st_i.waveforms, wf_ml)
+                    assert_equal(np.squeeze(st_i.waveforms), wf_ml)
 
-        # Check if digital marker events are equal
+        # Check if digital input port events are equal
+        self.assertGreater(len(block.segments[0].events), 0)
         for ea_i in block.segments[0].events:
-            if ('digital_marker' in ea_i.annotations.keys()) and (
-                    ea_i.annotations['digital_marker'] is True):
-                markerid = ea_i.annotations['marker_id']
-                matlab_digievents = mts_ml[np.nonzero(mid_ml == markerid)]
-                assert_equal(ea_i.times.base, matlab_digievents)
+            if ea_i.name == 'digital_input_port':
+                # Get all digital event IDs in this recording
+                marker_ids = set(ea_i.labels)
+                for marker_id in marker_ids:
+                    python_digievents = ea_i.times.base[
+                        ea_i.labels == marker_id]
+                    matlab_digievents = mts_ml[
+                        np.nonzero(mid_ml == int(marker_id))]
+                    assert_equal(python_digievents, matlab_digievents)
 
-        # Check if analog marker events are equal
-        # Currently not implemented by the Matlab loader
-        for ea_i in block.segments[0].events:
-            if ('analog_marker' in ea_i.annotations.keys()) and (
-                    ea_i.annotations['analog_marker'] is True):
-                markerid = ea_i.annotations['marker_id']
-                matlab_anaevents = mts_ml[np.nonzero(mid_ml == markerid)]
-                assert_equal(ea_i.times.base, matlab_anaevents)
+        # Note: analog input events are not yet supported
 
 
 if __name__ == '__main__':

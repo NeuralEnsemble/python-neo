@@ -24,7 +24,6 @@ try:
 except ImportError:
     import mock
 import string
-import itertools
 
 import numpy as np
 import quantities as pq
@@ -54,13 +53,10 @@ class NixIOTest(unittest.TestCase):
             self.compare_attr(neoblock, nixblock)
             self.assertEqual(len(neoblock.segments), len(nixblock.groups))
             for idx, neoseg in enumerate(neoblock.segments):
-                nixgrp = nixblock.groups[neoseg.name]
+                nixgrp = nixblock.groups[neoseg.annotations["nix_name"]]
                 self.compare_segment_group(neoseg, nixgrp)
             for idx, neochx in enumerate(neoblock.channel_indexes):
-                if neochx.name:
-                    nixsrc = nixblock.sources[neochx.name]
-                else:
-                    nixsrc = nixblock.sources[idx]
+                nixsrc = nixblock.sources[neochx.annotations["nix_name"]]
                 self.compare_chx_source(neochx, nixsrc)
             self.check_refs(neoblock, nixblock)
 
@@ -80,13 +76,13 @@ class NixIOTest(unittest.TestCase):
                 if ((not isinstance(neochanname, str)) and
                         isinstance(neochanname, bytes)):
                     neochanname = neochanname.decode()
-                nixchanname = nixchan.name
+                nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
         for neounit in neochx.units:
-            nixunit = nixsrc.sources[neounit.name]
+            nixunit = nixsrc.sources[neounit.annotations["nix_name"]]
             self.compare_attr(neounit, nixunit)
 
     def check_refs(self, neoblock, nixblock):
@@ -98,20 +94,19 @@ class NixIOTest(unittest.TestCase):
         :param nixblock: The corresponding NIX block
         """
         for idx, neochx in enumerate(neoblock.channel_indexes):
-            if neochx.name:
-                nixchx = nixblock.sources[neochx.name]
-            else:
-                nixchx = nixblock.sources[idx]
+            nixchx = nixblock.sources[neochx.annotations["nix_name"]]
             # AnalogSignals referencing CHX
-            neoasigs = list(sig.name for sig in neochx.analogsignals)
+            neoasigs = list(sig.annotations["nix_name"]
+                            for sig in neochx.analogsignals)
             nixasigs = list(set(da.metadata.name for da in nixblock.data_arrays
                                 if da.type == "neo.analogsignal" and
                                 nixchx in da.sources))
 
-            self.assertEqual(len(neoasigs), len(nixasigs))
+            self.assertEqual(len(neoasigs), len(nixasigs),
+                             neochx.analogsignals)
 
             # IrregularlySampledSignals referencing CHX
-            neoisigs = list(sig.name for sig in
+            neoisigs = list(sig.annotations["nix_name"] for sig in
                             neochx.irregularlysampledsignals)
             nixisigs = list(
                 set(da.metadata.name for da in nixblock.data_arrays
@@ -121,11 +116,9 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
             for sidx, neounit in enumerate(neochx.units):
-                if neounit.name:
-                    nixunit = nixchx.sources[neounit.name]
-                else:
-                    nixunit = nixchx.sources[sidx]
-                neosts = list(st.name for st in neounit.spiketrains)
+                nixunit = nixchx.sources[neounit.annotations["nix_name"]]
+                neosts = list(st.annotations["nix_name"]
+                              for st in neounit.spiketrains)
                 nixsts = list(mt for mt in nixblock.multi_tags
                               if mt.type == "neo.spiketrain" and
                               nixunit.name in mt.sources)
@@ -161,12 +154,10 @@ class NixIOTest(unittest.TestCase):
             if self.io._find_lazy_loaded(sig) is not None:
                 sig = self.io.load_lazy_object(sig)
             dalist = list()
-            for idx in itertools.count():
-                nixname = "{}.{}".format(sig.name, idx)
-                if nixname in data_arrays:
-                    dalist.append(data_arrays[nixname])
-                else:
-                    break
+            nixname = sig.annotations["nix_name"]
+            for da in data_arrays:
+                if da.metadata.name == nixname:
+                    dalist.append(da)
             _, nsig = np.shape(sig)
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
@@ -189,7 +180,8 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(neounit, da.unit)
             timedim = da.dimensions[0]
             if isinstance(neosig, AnalogSignal):
-                self.assertIsInstance(timedim, nix.pycore.SampledDimension)
+                self.assertEqual(timedim.dimension_type,
+                                 nix.DimensionType.Sample)
                 self.assertEqual(
                     pq.Quantity(timedim.sampling_interval, timedim.unit),
                     neosig.sampling_period
@@ -199,7 +191,8 @@ class NixIOTest(unittest.TestCase):
                     self.assertEqual(da.metadata["t_start.units"],
                                      str(neosig.t_start.dimensionality))
             elif isinstance(neosig, IrregularlySampledSignal):
-                self.assertIsInstance(timedim, nix.pycore.RangeDimension)
+                self.assertEqual(timedim.dimension_type,
+                                 nix.DimensionType.Range)
                 np.testing.assert_almost_equal(neosig.times.magnitude,
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
@@ -210,7 +203,7 @@ class NixIOTest(unittest.TestCase):
         for eest in eestlist:
             if self.io._find_lazy_loaded(eest) is not None:
                 eest = self.io.load_lazy_object(eest)
-            mtag = mtaglist[eest.name]
+            mtag = mtaglist[eest.annotations["nix_name"]]
             if isinstance(eest, Epoch):
                 self.compare_epoch_mtag(eest, mtag)
             elif isinstance(eest, Event):
@@ -263,18 +256,19 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(np.shape(neowf), np.shape(nixwf))
             self.assertEqual(nixwf.unit, str(neowf.units.dimensionality))
             np.testing.assert_almost_equal(neowf.magnitude, nixwf)
-            self.assertIsInstance(nixwf.dimensions[0], nix.pycore.SetDimension)
-            self.assertIsInstance(nixwf.dimensions[1], nix.pycore.SetDimension)
-            self.assertIsInstance(nixwf.dimensions[2],
-                                  nix.pycore.SampledDimension)
+            self.assertEqual(nixwf.dimensions[0].dimension_type,
+                             nix.DimensionType.Set)
+            self.assertEqual(nixwf.dimensions[1].dimension_type,
+                             nix.DimensionType.Set)
+            self.assertEqual(nixwf.dimensions[2].dimension_type,
+                             nix.DimensionType.Sample)
 
     def compare_attr(self, neoobj, nixobj):
-        if neoobj.name:
-            if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
-                nix_name = ".".join(nixobj.name.split(".")[:-1])
-            else:
-                nix_name = nixobj.name
-            self.assertEqual(neoobj.name, nix_name)
+        if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
+            nix_name = ".".join(nixobj.name.split(".")[:-1])
+        else:
+            nix_name = nixobj.name
+        self.assertEqual(neoobj.annotations["nix_name"], nix_name)
         self.assertEqual(neoobj.description, nixobj.definition)
         if hasattr(neoobj, "rec_datetime") and neoobj.rec_datetime:
             self.assertEqual(neoobj.rec_datetime,
@@ -286,6 +280,8 @@ class NixIOTest(unittest.TestCase):
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
+                if k == "nix_name":
+                    continue
                 if isinstance(v, pq.Quantity):
                     self.assertEqual(nixmd.props[str(k)].unit,
                                      str(v.dimensionality))
@@ -402,7 +398,7 @@ class NixIOTest(unittest.TestCase):
             )
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property(
-                "t_stop", nix.Value(max(times_da).item()+1)
+                "t_stop", nix.Value(times[-1]+1.0)
             )
 
             waveforms = cls.rquant((10, 8, 5), 1)
@@ -445,6 +441,9 @@ class NixIOTest(unittest.TestCase):
             mtag_ep = blk.create_multi_tag(
                 epname, "neo.epoch", times_da
             )
+            mtag_ep.metadata = group.metadata.create_section(
+                epname, epname+".metadata"
+            )
             group.multi_tags.append(mtag_ep)
             mtag_ep.definition = cls.rsentence(2)
             mtag_ep.extents = extents_da
@@ -468,6 +467,9 @@ class NixIOTest(unittest.TestCase):
             mtag_ev = blk.create_multi_tag(
                 evname, "neo.event", times_da
             )
+            mtag_ev.metadata = group.metadata.create_section(
+                evname, evname+".metadata"
+            )
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
             label_dim = mtag_ev.positions.append_set_dimension()
@@ -484,14 +486,14 @@ class NixIOTest(unittest.TestCase):
         )
         chantype = "neo.channelindex"
         # 3 channels
-        for idx in [2, 5, 9]:
-            channame = cls.rword(20)
+        for idx, chan in enumerate([2, 5, 9]):
+            channame = "{}.ChannelIndex{}".format(nixchx.name, idx)
             nixrc = nixchx.create_source(channame, chantype)
             nixrc.definition = cls.rsentence(13)
             nixrc.metadata = nixchx.metadata.create_section(
                 nixrc.name, "neo.channelindex.metadata"
             )
-            nixrc.metadata.create_property("index", nix.Value(idx))
+            nixrc.metadata.create_property("index", nix.Value(chan))
             dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
@@ -502,6 +504,9 @@ class NixIOTest(unittest.TestCase):
         for idx in range(nunits):
             unitname = "{}-unit{}".format(cls.rword(5), idx)
             nixunit = nixchx.create_source(unitname, "neo.unit")
+            nixunit.metadata = nixchx.metadata.create_section(
+                unitname, unitname+".metadata"
+            )
             nixunit.definition = cls.rsentence(4, 10)
             for st in stsperunit[idx]:
                 st.sources.append(nixchx)
@@ -653,6 +658,10 @@ class NixIOWriteTest(NixIOTest):
         chx.annotate(**self.rdict(3))
         self.write_and_compare([block])
 
+        chx.channel_names = ["one", "two", "three", "five",
+                             "eight", "xiii"]
+        self.write_and_compare([block])
+
     def test_signals_write(self):
         block = Block()
         seg = Segment()
@@ -799,7 +808,8 @@ class NixIOWriteTest(NixIOTest):
                 for evidx in range(nevents):
                     seg.events.append(Event(times=times))
                 for stidx in range(nspiketrains):
-                    seg.spiketrains.append(SpikeTrain(times=times, t_stop=pq.s,
+                    seg.spiketrains.append(SpikeTrain(times=times,
+                                                      t_stop=times[-1]+pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
@@ -932,7 +942,7 @@ class NixIOReadTest(NixIOTest):
         for block in neo_blocks:
             self.assertIsInstance(block.segments, LazyList)
             self.assertIsInstance(block.channel_indexes, LazyList)
-            name = block.name
+            name = block.annotations["nix_name"]
             block = self.io.load_lazy_cascade("/" + name, lazy=False)
             self.assertIsInstance(block.segments, list)
             self.assertIsInstance(block.channel_indexes, list)
@@ -949,7 +959,7 @@ class NixIOReadTest(NixIOTest):
         self.io._read_cascade.assert_not_called()
         for block in neo_blocks:
             self.assertEqual(len(block.segments), 0)
-            nix_block = self.io.nix_file.blocks[block.name]
+            nix_block = self.io.nix_file.blocks[block.annotations["nix_name"]]
             self.compare_attr(block, nix_block)
 
     def test_lazy_load_subschema(self):
@@ -957,7 +967,7 @@ class NixIOReadTest(NixIOTest):
         segpath = "/" + blk.name + "/segments/" + blk.groups[0].name
         segment = self.io.load_lazy_cascade(segpath, lazy=True)
         self.assertIsInstance(segment, Segment)
-        self.assertEqual(segment.name, blk.groups[0].name)
+        self.assertEqual(segment.annotations["nix_name"], blk.groups[0].name)
         self.assertIs(segment.block, None)
         self.assertEqual(len(segment.analogsignals[0]), 0)
         segment = self.io.load_lazy_cascade(segpath, lazy=False)
@@ -1187,8 +1197,8 @@ class NixIOContextTests(NixIOTest):
         with NixIO(self.filename, "ro") as iofile:
             blocks = iofile.read_all_blocks()
 
-        self.assertEqual(blocks[0].name, name_one)
-        self.assertEqual(blocks[1].name, name_two)
+        self.assertEqual(blocks[0].annotations["nix_name"], name_one)
+        self.assertEqual(blocks[1].annotations["nix_name"], name_two)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
