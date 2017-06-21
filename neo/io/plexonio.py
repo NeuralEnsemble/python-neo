@@ -209,8 +209,8 @@ class PlexonIO(BaseIO):
                     'times': np.zeros(nb, dtype='f'),
                     'labels': np.zeros(nb, dtype='S4')
                 }
-                eventpositions[chan]=0 
-                
+                eventpositions[chan]=0
+
             fid.seek(start)
             while fid.tell() != -1:
                 dataBlockHeader = HeaderReader(fid, DataBlockHeader).read_f(
@@ -329,9 +329,11 @@ class PlexonIO(BaseIO):
                     waveforms = None
             sptr = SpikeTrain(
                 times,
-                units='s', 
+                units='s',
                 t_stop=t_stop*pq.s,
-                waveforms=waveforms
+                waveforms=waveforms,
+                sampling_rate=float(
+                    global_header['WaveformFreq']) * pq.Hz,
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
