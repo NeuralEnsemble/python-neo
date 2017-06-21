@@ -121,7 +121,7 @@ class NSDFIO(BaseIO):
         self._write_model_component(segments_model, writer)
         name_pattern = self._name_pattern(len(block.segments))
         for i, segment in enumerate(block.segments):
-            self.write_segment(segment=segment, name=name_pattern.format(i), address=[i],
+            self.write_segment(segment=segment, name=name_pattern.format(i),
                                writer=writer, parent=segments_model)
 
         channel_indexes_model = nsdf.ModelComponent(name='channel_indexes', uid=uuid1().hex, parent=block_model)
@@ -132,7 +132,7 @@ class NSDFIO(BaseIO):
                                     writer=writer, parent=channel_indexes_model)
 
 
-    def write_segment(self, segment = None, name='0', address=[0], writer=None, parent=None):
+    def write_segment(self, segment = None, name='0', writer=None, parent=None):
         """
         Write a Segment to the file
 
@@ -156,20 +156,20 @@ class NSDFIO(BaseIO):
         self._write_container_metadata(segment, model)
         self._write_model_component(model, writer)
 
-        self._write_segment_children(model, segment, address, writer)
+        self._write_segment_children(model, segment, writer)
 
         if single_segment:
             self._clean_nsdfio_annotations(segment)
 
-    def _write_segment_children(self, model, segment, address, writer):
+    def _write_segment_children(self, model, segment, writer):
         analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(segment.analogsignals))
         for i, signal in enumerate(segment.analogsignals):
-            self.write_analogsignal(signal=signal, name=name_pattern.format(i), address=address + [i],
+            self.write_analogsignal(signal=signal, name=name_pattern.format(i),
                                     parent=analogsignals_model, writer=writer)
 
-    def write_analogsignal(self, signal, name, address, writer, parent):
+    def write_analogsignal(self, signal, name, writer, parent):
         """
         Write an AnalogSignal to the file
 
@@ -181,8 +181,13 @@ class NSDFIO(BaseIO):
         uid = uuid1().hex
         model = nsdf.ModelComponent(name, uid=uid, parent=parent)
 
+        if signal.annotations.get('nsdfio_uid') is not None:
+            model.attrs['reference_to'] = signal.annotations['nsdfio_uid']
+            self._write_model_component(model, writer)
+            return
+
         self._write_basic_metadata(model, signal)
-        signal.annotations['nsdfio_address'] = address
+        signal.annotations['nsdfio_uid'] = uid
 
         r_signal = np.swapaxes(signal, 0, 1)
         channels_model, channels, source_ds = self._create_signal_data_sources(model, r_signal, uid, writer)
@@ -210,6 +215,14 @@ class NSDFIO(BaseIO):
 
         self._write_channelindex_arrays(model, channelindex, writer)
 
+        analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
+        self._write_model_component(analogsignals_model, writer)
+        name_pattern = self._name_pattern(len(channelindex.analogsignals))
+        for i, signal in enumerate(channelindex.analogsignals):
+            self.write_analogsignal(signal=signal, name=name_pattern.format(i),
+                                    parent=analogsignals_model, writer=writer)
+
+
     def _init_writing(self):
         return nsdf.NSDFWriter(self.filename, mode='w')
 
@@ -232,7 +245,7 @@ class NSDFIO(BaseIO):
         return '{{:0{}d}}'.format(self._number_of_digits(max(how_many_items - 1, 0)))
 
     def _clean_nsdfio_annotations(self, object):
-        nsdfio_annotations = ('nsdfio_address', )
+        nsdfio_annotations = ('nsdfio_uid', )
 
         for key in nsdfio_annotations:
             object.annotations.pop(key, None)
@@ -303,9 +316,6 @@ class NSDFIO(BaseIO):
 
     def _write_channelindex_arrays(self, model, channelindex, writer):
         group = model.hdfgroup
-
-        analogsignals_addresses = [signal.annotations['nsdfio_address'] for signal in channelindex.analogsignals]
-        group.create_dataset('analogsignals', data=analogsignals_addresses)
 
         group.create_dataset('index', data=channelindex.index)
         if channelindex.channel_names is not None:
