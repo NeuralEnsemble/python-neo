@@ -29,7 +29,7 @@ else:
     NSDF_ERR = None
 
 from neo.io.baseio import BaseIO
-from neo.core import Block, Segment, AnalogSignal
+from neo.core import Block, Segment, AnalogSignal, ChannelIndex
 
 
 class NSDFIO(BaseIO):
@@ -373,6 +373,8 @@ class NSDFIO(BaseIO):
     def _read_block_children(self, lazy, block, group, reader):
         for child in group['segments/'].values():
             block.segments.append(self.read_segment(lazy=lazy, group=child, reader=reader))
+        for child in group['channel_indexes/'].values():
+            block.channel_indexes.append(self.read_channelindex(lazy=lazy, group=child, reader=reader))
 
     def read_segment(self, lazy=False, cascade=True, group=None, reader=None):
         """
@@ -380,7 +382,7 @@ class NSDFIO(BaseIO):
 
         :param lazy: Enables lazy reading
         :param cascade: Read nested objects or not?
-        :param group: HDF5 Group representing the block in NSDF model tree (optional)
+        :param group: HDF5 Group representing the segment in NSDF model tree (optional)
         :param reader: NSDFReader instance (optional)
         :return: Read segment
         """
@@ -409,11 +411,15 @@ class NSDFIO(BaseIO):
 
         :param lazy: Enables lazy reading
         :param cascade: Read nested objects or not?
-        :param group: HDF5 Group representing the block in NSDF model tree
+        :param group: HDF5 Group representing the analogsignal in NSDF model tree
         :param reader: NSDFReader instance
         :return: Read AnalogSignal
         """
         attrs = group.attrs
+
+        if attrs.get('reference_to') is not None:
+            return self.objects_dict[attrs['reference_to']]
+
         uid = attrs['uid']
         data_group = reader.data['uniform/{}/signal'.format(uid)]
 
@@ -422,11 +428,37 @@ class NSDFIO(BaseIO):
 
         self._read_basic_metadata(attrs, signal)
 
+        self.objects_dict[uid] = signal
         return signal
+
+    def read_channelindex(self, lazy=False, cascade=True, group=None, reader=None):
+        """
+        Read a ChannelIndex from the file (must be child of a Block)
+
+        :param lazy: Enables lazy reading
+        :param cascade: Read nested objects or not?
+        :param group: HDF5 Group representing the channelindex in NSDF model tree
+        :param reader: NSDFReader instance
+        :return: Read ChannelIndex
+        """
+        attrs = group.attrs
+
+        channelindex = self._create_channelindex(group)
+        if cascade:
+            self._read_channelindex_children(lazy, group, reader, channelindex)
+
+        self._read_basic_metadata(attrs, channelindex)
+
+        return channelindex
+
+    def _read_channelindex_children(self, lazy, group, reader, channelindex):
+        for child in group['analogsignals/'].values():
+            channelindex.analogsignals.append(self.read_analogsignal(lazy=lazy, group=child, reader=reader))
 
     def _init_reading(self):
         reader = nsdf.NSDFReader(self.filename)
         self.file_datetime = datetime.fromtimestamp(os.stat(self.filename).st_mtime)
+        self.objects_dict = {}
         return reader
 
     def _select_first_container(self, group, reader, name):
@@ -503,3 +535,14 @@ class NSDFIO(BaseIO):
                               t_start=t_start, sampling_period=pq.Quantity(attrs['dt'], attrs['tunit']))
         signal.lazy_shape = shape
         return signal
+
+    def _create_channelindex(self, group):
+        return ChannelIndex(index=self._read_dataset(group, 'index'),
+                            channel_names=self._read_dataset(group, 'channel_names'),
+                            channel_ids=self._read_dataset(group, 'channel_ids'),
+                            coordinates=self._read_dataset(group, 'coordinates'))
+
+    def _read_dataset(self, group, name):
+        if group.__contains__(name) == False:
+            return None
+        return group[name][:]
