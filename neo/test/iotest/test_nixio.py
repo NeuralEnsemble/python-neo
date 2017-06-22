@@ -903,8 +903,7 @@ class NixIOReadTest(NixIOTest):
 
     @classmethod
     def setUpClass(cls):
-        if HAVE_NIX:
-            cls.nixfile = cls.create_full_nix_file(cls.filename)
+        cls.nixfile = cls.create_full_nix_file(cls.filename)
 
     def setUp(self):
         self.io = NixIO(self.filename, "ro")
@@ -913,9 +912,8 @@ class NixIOReadTest(NixIOTest):
 
     @classmethod
     def tearDownClass(cls):
-        if HAVE_NIX:
-            cls.nixfile.close()
-            os.remove(cls.filename)
+        cls.nixfile.close()
+        os.remove(cls.filename)
 
     def tearDown(self):
         self.io.close()
@@ -1111,8 +1109,7 @@ class NixIOPartialWriteTest(NixIOTest):
 
     @classmethod
     def setUpClass(cls):
-        if HAVE_NIX:
-            cls.nixfile = cls.create_full_nix_file(cls.filename)
+        cls.nixfile = cls.create_full_nix_file(cls.filename)
 
     def setUp(self):
         self.io = NixIO(self.filename, "rw")
@@ -1122,9 +1119,8 @@ class NixIOPartialWriteTest(NixIOTest):
 
     @classmethod
     def tearDownClass(cls):
-        if HAVE_NIX:
-            cls.nixfile.close()
-            os.remove(cls.filename)
+        cls.nixfile.close()
+        os.remove(cls.filename)
 
     def tearDown(self):
         self.restore_methods()
