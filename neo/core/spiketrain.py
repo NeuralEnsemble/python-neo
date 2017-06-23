@@ -92,16 +92,19 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
                     copy=True, sampling_rate=1.0 * pq.Hz,
                     t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
                     name=None, file_origin=None, description=None,
-                    annotations=None):
+                    annotations=None, unit=None, segment=None):
     '''
     A function to map :meth:`BaseAnalogSignal.__new__` to function that
     does not do the unit checking. This is needed for :module:`pickle` to work.
     '''
     if annotations is None:
         annotations = {}
-    return SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
+    obj = SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
                       t_start, waveforms, left_sweep, name, file_origin,
-                      description, **annotations)
+                      description, **annotations)   
+    obj.unit= unit 
+    obj.segment = segment 
+    return st
 
 
 class SpikeTrain(BaseNeo, pq.Quantity):
@@ -343,7 +346,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                                  self.sampling_rate, self.t_start,
                                  self.waveforms, self.left_sweep,
                                  self.name, self.file_origin, self.description,
-                                 self.annotations)
+                                 self.annotations, self.unit, self.segment)
 
     def __array_finalize__(self, obj):
         '''
