@@ -21,7 +21,7 @@ PY_VER = sys.version_info[0]
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
                 name=None, description=None, file_origin=None, annotations = None):
     '''
-    A function to map Event.__new__ to function that
+    A function to map epoch.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
     return Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
