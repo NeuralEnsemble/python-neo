@@ -52,8 +52,9 @@ import os
 import re
 
 import numpy as np
+import quantities as pq
 
-from .baserawio import BaseRawIO
+from .baserawio import BaseRawIO, channel_dtype
 
 
 class BlackrockRawIO(BaseRawIO):
@@ -194,7 +195,8 @@ class BlackrockRawIO(BaseRawIO):
                 self._avail_files[ext] = True
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
-
+        
+        
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
         self.__nsx_header_reader = {
@@ -261,50 +263,93 @@ class BlackrockRawIO(BaseRawIO):
         self.__nsx_basic_header = {}
         self.__nsx_ext_header = {}
         self.__nsx_data_header = {}
-        self.__nsx_data = {}
-        nb_segment = None
-        segment_idx = None
         for nsx_nb in self._avail_nsx:
-            #~ print('nsx_nb', nsx_nb)
-            # read nsx file specification
             spec = self.__nsx_spec[nsx_nb] = self.__extract_nsx_file_spec(nsx_nb)
-            #~ print('spec', spec)
-
             # read nsx headers
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
 
             # Read nsx data header(s) for nsx
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
+        
+        
+        #TODO make a method for this selection
+        nsx_nb = self.choosen_nsx = max(self._avail_nsx)
+        spec = self.__nsx_spec[nsx_nb]
+        self.nsx_data = self.__nsx_data_reader[spec](nsx_nb)
+        
+        
+        
+        channels = []
+        print(self.__nsx_ext_header[nsx_nb].dtype)
+        for i, chan in enumerate(self.__nsx_ext_header[nsx_nb]):
+            #~ print(chan)
+            gain = float(chan['max_analog_val'])/float(chan['max_digital_val'])
+            offset = 0.
+            channels.append((chan['electrode_label'].decode(), 
+                                        str(chan['electrode_id']), 
+                                        chan['units'].decode(), 
+                                        gain,
+                                        offset,
+                                        ))
+        
+        nb_seg = len(self.nsx_data)
+        
+        #~ nb_chanq = len(h)
+        #~ channels = np.empty(nb_chan, dtype=channel_dtype)
+        #~ channels['name'] = h['electrode_label']
+        #~ print(channels)
+        channel_dtype = [
+                    ('name','U64'),
+                    ('id','U64'),
+                    ('unit','U16'),
+                    ('gain','float64'),
+                    ('offset','float64'),
+                ]
+
+        channels = np.array(channels, dtype=channel_dtype)
+        print(channels)
+        
+        #~ sampling_rate = self.__nsx_params[spec]('sampling_rate', nsx_nb)
+        sampling_rate = 30000. / self.__nsx_basic_header[nsx_nb]['period']
+        print(sampling_rate)
+        t_starts = []
+        #~ print(
+        for data_bl in range(nb_seg):
+            t_starts = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']/sampling_rate
+        print(t_starts)
             
-            
-            nsx_data = self.__nsx_data[nsx_nb] = self.__nsx_data_reader[spec](nsx_nb)
-            if nb_segment is None:
-                nb_segment = len(nsx_data)
-                segment_idx = np.unique(list(nsx_data.keys()))
+            #~ ts0 = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']
+            #~ nbdp = self.__nsx_data_header[nsx_nb][data_bl]['nb_data_points']
+            #~ print(ts0, nbdp)
+        
+        
+        
         
         self.header = {}
-        self.header['nb_segment'] = nb_segment
-        self.header['segment_idx'] = segment_idx
+        self.header['nb_segment'] = [nb_seg]
+        self.header['signal_channels'] = channels
+        
+        #~ self.header['signal_sampling_rate'] = sampling_rate
+        t_start, t_stop = self.__nsx_rec_times[spec](nsx_nb)
+        print(t_start, t_stop)
+        #~ self.header['signal_t_start'] = [0.]*self.header['nb_segment']
+        
+        print(self.__nsx_data_header[nsx_nb])
+        
         
 
-    def get_nb_block(self):
+
+    def block_count(self):
         return 1
     
-    def get_nb_segment(self, block_index):
+    def segment_count(self, block_index):
         assert block_index==0
-        return self.header['nb_segment']
+        return self.header['nb_segment'][block_index]
     
-    def get_nb_analogsignal(self, block_index, seg_index):
-        # for version 2.1 it is always 1
-        # for version 2.2 and 2.3 user can make a pause this lead a new segment
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
-        return len(self.__nsx_data)
-    
-    def _get_analogsignal_chunk(self, block_index, seg_index, anasig_index, i_start, i_stop, channel_indexes):
-        assert block_index==0
-        nsx_nb = self._avail_nsx[anasig_index]
-        memmap_data = self.__nsx_data[nsx_nb][seg_index]
+        memmap_data = self.nsx_data[seg_index]
         if channel_indexes is None:
             channel_indexes = slice(None)
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]

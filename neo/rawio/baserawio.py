@@ -6,25 +6,45 @@ baserawio
 Classes
 -------
 
-BaseRawIO        - abstract class which should be overridden, managing how a
-                file will load its data
+BaseRawIO
+abstract class which should be overridden.
 
-If you want a model for developing a new IO start from ExampleRawIO.
+This manage low level acces to raw data in an efficient way.
+
+This handle **only** one simplified but very frequent case of dataset:
+    * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
+    * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
+    * AnalogSignal have all the same sampling_rate, t_start, duration inside a segment
+
+    
 """
 
 from __future__ import absolute_import, division, print_function
 
 import logging
+import numpy as np
+
 from neo import logging_handler
+
 
 
 possible_modes = ['one-file', 'multi-file', 'one-dir', 'multi-dir', 'url', 'other']
 
 error_header = 'Header is not read yet, do parse_header() first'
 
+
+channel_dtype = [
+    ('name','U'),
+    ('id','U'),
+    ('unit','U'),
+    ('gain','float64'),
+    ('offset','float64'),
+]
+
+
 class BaseRawIO(object):
     """
-    Generic class to handle all the file read methods.
+    Generic class to handle.
 
     """
     
@@ -57,48 +77,91 @@ class BaseRawIO(object):
     
     
     def _parse_header(self):
-        #This must parse the file header to get all stuff
-        #for fast reading after
+        """
+        This must parse the file header to get all stuff for fast later one.
+        
+        This must contain
+        self.header['signal_channels']
+        
+        """
+        #
+        #
         raise(NotImplementedError)
         #self.header = ...
+        
     
     def channel_name_to_index(self, channel_names):
-        raise(NotImplementedError)
-        #~ return channel_indexes
-
+        """
+        Transform channel_names to channel_indexes.
+        """
+        ch = self.header['signal_channels']
+        channel_indexes,  = np.nonzero(np.in1d(ch['name'], channel_names))
+        assert len(channel_indexes) == len(channel_names), 'not match'
+        return channel_indexes
+    
     def channel_name_to_id(self, channel_ids):
-        raise(NotImplementedError)
-        #~ return channel_indexes
+        """
+        Transform channel_ids to channel_indexes.
+        """
+        ch = self.header['signal_channels']
+        channel_indexes,  = np.nonzero(channel_index(np.in1d(ch['id'], channel_ids)))
+        assert len(channel_indexes) == len(channel_ids), 'not match'
+        return channel_indexes
     
-    def get_nb_block(self):
-        raise(NotImplementedError)
-    
-    def get_nb_segment(self, block_index):
-        raise(NotImplementedError)
+    def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
+        """
+        select channel_indexes from channel_indexes/channel_names/channel_ids
+        depending which is not None
+        """
+        if channel_indexes is None and channel_names is not None:
+            channel_indexes = self.channel_name_to_index(channel_names)
 
-    def get_nb_analogsignal(self, block_index, seg_index):
+        if channel_indexes is None and channel_ids is not None:
+            channel_indexes = self.channel_name_to_id(channel_ids)
+        
+        return channel_indexes
+    
+    def block_count(self):
         raise(NotImplementedError)
     
-    def get_nb_analogsignal(self, block_index, seg_index):
+    def segment_count(self, block_index):
         raise(NotImplementedError)
     
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, anasig_index=0,
                         i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
         
-        if channel_indexes is None and channel_names is not None:
-            channel_indexes = self.channel_name_to_index(channel_names)
-
-        if channel_indexes is None and channel_ids is not None:
-            channel_indexes = self.channel_name_to_id(channel_ids)
-            
-        return self._get_analogsignal_chunk(block_index, seg_index, anasig_index, i_start, i_stop, channel_indexes)
+        channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
+        
+        raw_chunk = self._get_analogsignal_chunk(block_index, seg_index,  i_start, i_stop, channel_indexes)
+        
+        return raw_chunk
     
-    def _get_analogsignal_chunk(self, block_index, seg_index, anasig_index, i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         raise(NotImplementedError)
     
+    def analogsignal_meta(self):
+        #sampling_rate in Hz and t_start in s
+        raise(NotImplementedError)
     
-    
+    def rescale_raw_to_float(self, raw_signal,  dtype='float32',
+                channel_indexes=None, channel_names=None, channel_ids=None):
+        
+        channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
+        if channel_indexes is None:
+            channel_indexes = sl(None)
+        
+        channels = self.header['signal_channels'][channel_indexes]
+        
+        float_signal = raw_signal.astype(dtype)
+        
+        if channels['gain'] !=1.:
+            float_signal *= channels['gain']
+        
+        if channels['offset'] !=0.:
+            float_signal += channels['offset']
+        
+        return float_signal
     
     
     
