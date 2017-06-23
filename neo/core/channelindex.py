@@ -58,6 +58,7 @@ class ChannelIndex(Container):
 
         >>> from neo.core import Block, ChannelIndex
         >>> import numpy as np
+        >>> from quantities import mV, kHz
         >>>
         >>> # Create a Block
         ... blk = Block()
@@ -69,7 +70,7 @@ class ChannelIndex(Container):
         ...
         >>> # Create a new ChannelIndex which groups three channels from the signal
         ... chx = ChannelIndex(channel_names=np.array(['ch1', 'ch4', 'ch6']),
-        ...                    channel_indexes = np.array([0, 3, 5])
+        ...                    index=np.array([0, 3, 5])
         >>> chx.analogsignals.append(sig)
         >>> blk.channel_indexes.append(chx)
 
@@ -144,7 +145,30 @@ class ChannelIndex(Container):
             channel_ids = np.array([], dtype='i')
 
         # Store recommended attributes
-        self.channel_names = channel_names
-        self.channel_ids = channel_ids
-        self.index = index
+        self.channel_names = np.array(channel_names)
+        self.channel_ids = np.array(channel_ids)
+        self.index = np.array(index)
         self.coordinates = coordinates
+
+    def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
+        index = self.index.__getitem__(i)
+        if self.channel_names.size > 0:
+            channel_names = self.channel_names[index]
+            if not channel_names.shape:
+                channel_names = [channel_names]
+        else:
+            channel_names = None
+        if self.channel_ids.size > 0:
+            channel_ids = self.channel_ids[index]
+            if not channel_ids.shape:
+                channel_ids = [channel_ids]
+        else:
+            channel_ids = None
+        obj = ChannelIndex(index=np.arange(index.size),
+                           channel_names=channel_names,
+                           channel_ids=channel_ids)
+        obj.block = self.block
+        return obj

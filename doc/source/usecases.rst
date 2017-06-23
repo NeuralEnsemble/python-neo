@@ -56,13 +56,11 @@ Perhaps you want to see which physical location produces the strongest response,
     
     # We assume that our block has only 1 ChannelIndex
     chx = block.channelindexes[0]:
-
-    index = chx.channel_indexes
-    siglist = [sig[:, index] for sig in chx.analogsignals]
+    siglist = [sig[:, chx.index] for sig in chx.analogsignals]
     avg = np.mean(siglist, axis=0)
         
     plt.figure()
-    for index, name in zip(chx.channel_indexes, chx.channel_names):
+    for index, name in zip(chx.index, chx.channel_names):
         plt.plot(avg[:, index])
         plt.title("Average response on channels %s: %s' % (index, name)
 
@@ -72,12 +70,12 @@ Perhaps you want to see which physical location produces the strongest response,
 
 Combining simultaneously the two approaches of descending the hierarchy
 temporally and spatially can be tricky. Here's an example.
-Let's say you saw something interesting on channel 5 on even numbered trials
+Let's say you saw something interesting on the 6th channel (index 5) on even numbered trials
 during the experiment and you want to follow up. What was the average response?
 
 .. doctest::
 
-    index = chx.channel_indexes[5]
+    index = chx.index[5]
     avg = np.mean([seg.analogsignals[0][:, index] for seg in block.segments[::2]], axis=1)
     plt.plot(avg)
 

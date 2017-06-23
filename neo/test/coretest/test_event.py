@@ -388,6 +388,21 @@ class TestEvent(unittest.TestCase):
         evt3 = evt.time_slice(2.2 * pq.ms, None)
         assert_arrays_equal(evt3.times, [3, 4, 5] * pq.ms)
 
+    def test_as_array(self):
+        data = [2, 3, 4, 5]
+        evt = Event(data * pq.ms)
+        evt_as_arr = evt.as_array()
+        self.assertIsInstance(evt_as_arr, np.ndarray)
+        assert_array_equal(data, evt_as_arr)
+
+    def test_as_quantity(self):
+        data = [2, 3, 4, 5]
+        evt = Event(data * pq.ms)
+        evt_as_q = evt.as_quantity()
+        self.assertIsInstance(evt_as_q, pq.Quantity)
+        assert_array_equal(data * pq.ms, evt_as_q)
+
+
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
@@ -396,10 +411,12 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_duplicate_with_new_data(self):
         signal1 = self.event
-        new_data = np.sort(np.random.uniform(0, 100, (self.event))) * pq.ms
+        new_data = np.sort(np.random.uniform(0, 100, (self.event.size))) * pq.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
+
+
 class TestEventFunctions(unittest.TestCase):
 
     def test__pickle(self):

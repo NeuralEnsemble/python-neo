@@ -317,7 +317,7 @@ class AxonIO(BaseIO):
                 comments = []
                 for i, tag in enumerate(header['listTag']):
                     times.append(tag['lTagTime']/sampling_rate)
-                    labels.append(tag['nTagType'].decode("utf-8"))
+                    labels.append(str(tag['nTagType']))
                     comments.append(clean_string(tag['sComment']))
                 times = np.array(times)
                 labels = np.array(labels, dtype='S')
@@ -420,11 +420,11 @@ class AxonIO(BaseIO):
             fid.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = fid.read(sections['StringsSection']['uBytes'])
             goodstart=-1
-            for key in [b'AXENGN', b'clampex', b'Clampex', b'axoscope']:
+            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX', b'axoscope']:
                 #goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart!=-1: break
-            assert goodstart!=-1, 'This file do not contain clampex, axoscope or clampfit in the header'
+            assert goodstart!=-1, 'This file does not contain clampex, axoscope or clampfit in the header'
             big_string = big_string[goodstart:]
             strings = big_string.split(b'\x00')
 
@@ -455,6 +455,7 @@ class AxonIO(BaseIO):
                 else:
                     protocol[key] = np.array(val)
             header['protocol'] = protocol
+            header['sProtocolPath'] = strings[header['uProtocolPathIndex']-1]
 
             # tags
             listTag = []

@@ -485,7 +485,21 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
     
+    def test_as_array(self):
+        times = [2, 3, 4, 5]
+        durations = [0.1, 0.2, 0.3, 0.4]
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms)
+        epc_as_arr = epc.as_array(units='ms')
+        self.assertIsInstance(epc_as_arr, np.ndarray)
+        assert_array_equal(times, epc_as_arr)
 
+    def test_as_quantity(self):
+        times = [2, 3, 4, 5]
+        durations = [0.1, 0.2, 0.3, 0.4]
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms)
+        epc_as_q = epc.as_quantity()
+        self.assertIsInstance(epc_as_q, pq.Quantity)
+        assert_array_equal(times * pq.ms, epc_as_q)
 
 
 class TestDuplicateWithNewData(unittest.TestCase):
@@ -498,7 +512,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_duplicate_with_new_data(self):
         signal1 = self.epoch
-        new_data = np.sort(np.random.uniform(0, 100, (self.epoch))) * pq.ms
+        new_data = np.sort(np.random.uniform(0, 100, self.epoch.size)) * pq.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)

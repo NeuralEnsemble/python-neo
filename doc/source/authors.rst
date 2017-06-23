@@ -30,6 +30,10 @@ and may not be the current affiliation of a contributor.
 * Julia Sprenger [13]
 * Maximilian Schmidt [13]
 * Johanna Senk [13]
+* Carlos Canova [13]
+* Hélissande Fragnaud [2]
+* Mark Hollenbeck [14]
+* Mieszko Grodzicki
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
@@ -45,6 +49,6 @@ and may not be the current affiliation of a contributor.
 11. Centre for Integrative Neuroplasticity (CINPLA), University of Oslo, Norway
 12. University of Virginia
 13. INM-6, Forschungszentrum Jülich, Germany
-
+14. University of Texas at Austin
 
 If we've somehow missed you off the list we're very sorry - please let us know.

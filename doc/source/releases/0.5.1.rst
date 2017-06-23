@@ -1,0 +1,18 @@
+=======================
+Neo 0.5.1 release notes
+=======================
+
+4th May 2017
+
+* Fixes to :class:`AxonIO` (thanks to @erikli and @cjfraz) and :class:`NeuroExplorerIO` (thanks to Mark Hollenbeck)
+* Fixes to pickling of :class:`Epoch` and :class:`Event` objects (thanks to Hélissande Fragnaud)
+* Added methods :meth:`as_array()` and :meth:`as_quantity()` to Neo data objects to simplify the common tasks of turning a Neo data object back into a plain Numpy array
+* Added :class:`NeuralynxIO`, which reads standard Neuralynx output files in ncs, nev, nse and ntt format (thanks to Julia Sprenger and Carlos Canova).
+* Added the :attr:`extras_require` field to setup.py, to clearly document the requirements for different io modules. For example, this allows you to run :command:`pip install neo[neomatlabio]` and have the extra dependency needed for the :mod:`neomatlabio` module (scipy in this case) be automatically installed.
+* Fixed a bug where slicing an :class:`AnalogSignal` did not modify the linked :class:`ChannelIndex`.
+
+(Full `list of closed issues`_)
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.5.1+is%3Aclosed
+
+

@@ -26,6 +26,7 @@ else:
 
 from numpy.testing import assert_array_equal
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
+from neo.core.channelindex import ChannelIndex
 from neo.core import Segment
 from neo.test.tools import (assert_arrays_almost_equal,
                             assert_neo_object_is_compliant,
@@ -305,7 +306,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                                          name='spam', description='eggs',
                                          file_origin='testfile.txt', arg1='test')
         self.signal1.segment = 1
-        self.signal1.channel_index = 5
+        self.signal1.channel_index = ChannelIndex(index=[0])
 
     def test__compliant(self):
         assert_neo_object_is_compliant(self.signal1)
@@ -375,6 +376,20 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result1.magnitude, self.data1[:2].reshape(-1, 1))
         assert_array_equal(result2.magnitude, self.data1[::2].reshape(-1, 1))
         assert_array_equal(result3.magnitude, self.data1[1:7:2].reshape(-1, 1))
+
+    def test__slice_should_modify_linked_channelindex(self):
+        n = 8  # number of channels
+        signal = AnalogSignal(np.arange(n * 100.0).reshape(100, n),
+                              sampling_rate=1*pq.kHz,
+                              units="mV")
+        self.assertEqual(signal.shape, (100, n))
+        signal.channel_index = ChannelIndex(index=np.arange(n, dtype=int),
+                                            channel_names=["channel{0}".format(i) for i in range(n)])
+        odd_channels = signal[:, 1::2]
+        self.assertEqual(odd_channels.shape, (100, n//2))
+        assert_array_equal(odd_channels.channel_index.index, np.arange(n//2, dtype=int))
+        assert_array_equal(odd_channels.channel_index.channel_names, ["channel{0}".format(i) for i in range(1, n, 2)])
+        assert_array_equal(signal.channel_index.channel_names, ["channel{0}".format(i) for i in range(n)])
 
     def test__copy_should_let_access_to_parents_objects(self):
         ##copy
@@ -455,6 +470,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.mV)
+
+    def test_as_array(self):
+        sig_as_arr = self.signal1.as_array()
+        self.assertIsInstance(sig_as_arr, np.ndarray)
+        assert_array_equal(self.data1, sig_as_arr.flat)
+
+    def test_as_quantity(self):
+        sig_as_q = self.signal1.as_quantity()
+        self.assertIsInstance(sig_as_q, pq.Quantity)
+        assert_array_equal(self.data1, sig_as_q.magnitude.flat)
 
 
 class TestAnalogSignalEquality(unittest.TestCase):
@@ -616,6 +641,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         signal1 = AnalogSignal([1, 2, 3, 4], sampling_period=1*pq.ms,
                                     units=pq.S)
         signal1.annotations['index'] = 2
+        signal1.channel_index = ChannelIndex(index=[0])
 
         fobj = open('./pickle', 'wb')
         pickle.dump(signal1, fobj)
@@ -628,6 +654,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
             signal2 = None
 
         assert_array_equal(signal1, signal2)
+        assert_array_equal(signal2.channel_index.index, np.array([0]))
         fobj.close()
         os.remove('./pickle')
 

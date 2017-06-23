@@ -51,17 +51,20 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
                           t_start=0*pq.s, sampling_rate=None,
                           sampling_period=None, name=None, file_origin=None,
-                          description=None,
-                          annotations=None):
+                          description=None, annotations=None,
+                          channel_index=None, segment=None):
     '''
     A function to map AnalogSignal.__new__ to function that
         does not do the unit checking. This is needed for pickle to work.
     '''
-    return cls(signal=signal, units=units, dtype=dtype, copy=copy,
-               t_start=t_start, sampling_rate=sampling_rate,
-               sampling_period=sampling_period, name=name,
-               file_origin=file_origin, description=description,
-               **annotations)
+    obj = cls(signal=signal, units=units, dtype=dtype, copy=copy,
+              t_start=t_start, sampling_rate=sampling_rate,
+              sampling_period=sampling_period, name=name,
+              file_origin=file_origin, description=description,
+              **annotations)
+    obj.channel_index = channel_index
+    obj.segment = segment
+    return obj
 
 
 class AnalogSignal(BaseNeo, pq.Quantity):
@@ -221,7 +224,9 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                                         self.name,
                                         self.file_origin,
                                         self.description,
-                                        self.annotations)
+                                        self.annotations,
+                                        self.channel_index,
+                                        self.segment)
 
     def __array_finalize__(self, obj):
         '''
@@ -300,6 +305,8 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, int):
                     obj = obj.reshape(-1, 1)
+                if self.channel_index:
+                    obj.channel_index = self.channel_index.__getitem__(k)
         elif isinstance(i, slice):
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
@@ -646,3 +653,20 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
         return signal
+
+    def as_array(self, units=None):
+        """
+        Return the signal as a plain NumPy array.
+
+        If `units` is specified, first rescale to those units.
+        """
+        if units:
+            return self.rescale(units).magnitude
+        else:
+            return self.magnitude
+
+    def as_quantity(self):
+        """
+        Return the signal as a quantities array.
+        """
+        return self.view(pq.Quantity)
