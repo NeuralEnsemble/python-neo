@@ -319,13 +319,20 @@ class NSDFIO(BaseIO):
     def _write_channelindex_arrays(self, model, channelindex, writer):
         group = model.hdfgroup
 
-        group.create_dataset('index', data=channelindex.index)
+        self._write_array(group, 'index', channelindex.index)
         if channelindex.channel_names is not None:
-            group.create_dataset('channel_names', data=channelindex.channel_names)
+            self._write_array(group, 'channel_names', channelindex.channel_names)
         if channelindex.channel_ids is not None:
-            group.create_dataset('channel_ids', data=channelindex.channel_ids)
+            self._write_array(group, 'channel_ids', channelindex.channel_ids)
         if channelindex.coordinates is not None:
-            group.create_dataset('coordinates', data=channelindex.coordinates)
+            self._write_array(group, 'coordinates', channelindex.coordinates)
+
+    def _write_array(self, group, name, array):
+        if isinstance(array, pq.Quantity):
+            group.create_dataset(name, data=array.magnitude)
+            group[name].attrs['dimensionality'] = str(array.dimensionality)
+        else:
+            group.create_dataset(name, data=array)
 
     def read_all_blocks(self, lazy=False, cascade=True):
         """
@@ -537,12 +544,16 @@ class NSDFIO(BaseIO):
         return signal
 
     def _create_channelindex(self, group):
-        return ChannelIndex(index=self._read_dataset(group, 'index'),
-                            channel_names=self._read_dataset(group, 'channel_names'),
-                            channel_ids=self._read_dataset(group, 'channel_ids'),
-                            coordinates=self._read_dataset(group, 'coordinates'))
+        return ChannelIndex(index=self._read_array(group, 'index'),
+                            channel_names=self._read_array(group, 'channel_names'),
+                            channel_ids=self._read_array(group, 'channel_ids'),
+                            coordinates=self._read_array(group, 'coordinates'))
 
-    def _read_dataset(self, group, name):
+    def _read_array(self, group, name):
         if group.__contains__(name) == False:
             return None
-        return group[name][:]
+        array = group[name][:]
+
+        if group[name].attrs.get('dimensionality') is not None:
+            return pq.Quantity(array, group[name].attrs['dimensionality'])
+        return array
