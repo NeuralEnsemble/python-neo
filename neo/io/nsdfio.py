@@ -36,17 +36,12 @@ class NSDFIO(BaseIO):
     """
     Class for reading and writing files in NSDF Format.
 
-    It supports reading and writing:
-    - :class:'Block'
-    - :class:'Segment'
-    - :class:'AnalogSignal'
-
-    with all relationships and metadata.
+    It supports reading and writing: Block, Segment, AnalogSignal, ChannelIndex, with all relationships and metadata.
     """
     is_readable = True
     is_writable = True
 
-    supported_objects = [Block, Segment, AnalogSignal]
+    supported_objects = [Block, Segment, AnalogSignal, ChannelIndex]
 
     readable_objects = [Block, Segment]
     writeable_objects = [Block, Segment]
