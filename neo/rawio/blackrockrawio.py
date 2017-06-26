@@ -102,6 +102,13 @@ class BlackrockRawIO(BaseRawIO):
             File name of the .ccf file (without extension). If None,
             filename is used.
             Default: None.
+        nsx_to_load (int):
+            ID(s) of nsx file(s) from which to load data, e.g., if set to
+            5 only data from the ns5 file are loaded. If 'None', the Io
+            will take the maximum if file is present.
+            Contrary to previsous version of the IO:
+              * nsx_to_load is not a list
+              * must be set at the init before parse_header()
         verbose (boolean):
             If True, the class will output additional diagnostic
             information on stdout.
@@ -142,7 +149,7 @@ class BlackrockRawIO(BaseRawIO):
     mode = 'one-file'
 
     def __init__(self, filename, nsx_override=None, nev_override=None,
-                 sif_override=None, ccf_override=None, verbose=False):
+                 sif_override=None, ccf_override=None, nsx_to_load=None, verbose=False):
         """
         Initialize the BlackrockIO class.
         """
@@ -150,11 +157,14 @@ class BlackrockRawIO(BaseRawIO):
 
         # Used to avoid unnecessary repetition of verbose messages
         self.__verbose_messages = []
-
+        
+        self.filename = filename
         # remove extension from base _filenames
         for ext in self.extensions:
-            self.filename = re.sub(
-                os.path.extsep + ext + '$', '', filename)
+            if self.filename.endswith(os.path.extsep + ext):
+                self.filename = self.filename.replace(os.path.extsep + ext, '')
+        
+        self.nsx_to_load = nsx_to_load
 
         # remove extensions from overrides
         self._filenames = {}
@@ -189,7 +199,7 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 file2check = ''.join(
                     [self._filenames[ext], os.path.extsep, ext])
-
+            print(file2check)
             if os.path.exists(file2check):
                 self._print_verbose("Found " + file2check + ".")
                 self._avail_files[ext] = True
@@ -263,6 +273,7 @@ class BlackrockRawIO(BaseRawIO):
         self.__nsx_basic_header = {}
         self.__nsx_ext_header = {}
         self.__nsx_data_header = {}
+        
         for nsx_nb in self._avail_nsx:
             spec = self.__nsx_spec[nsx_nb] = self.__extract_nsx_file_spec(nsx_nb)
             # read nsx headers
@@ -272,16 +283,14 @@ class BlackrockRawIO(BaseRawIO):
             # Read nsx data header(s) for nsx
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
         
-        
-        #TODO make a method for this selection
-        nsx_nb = self.choosen_nsx = max(self._avail_nsx)
+        if self.nsx_to_load is None:
+            self.nsx_to_load = max(self._avail_nsx)
+        nsx_nb = self.nsx_to_load
         spec = self.__nsx_spec[nsx_nb]
         self.nsx_data = self.__nsx_data_reader[spec](nsx_nb)
         
-        
-        
         channels = []
-        print(self.__nsx_ext_header[nsx_nb].dtype)
+        #~ print(self.__nsx_ext_header[nsx_nb].dtype)
         for i, chan in enumerate(self.__nsx_ext_header[nsx_nb]):
             #~ print(chan)
             gain = float(chan['max_analog_val'])/float(chan['max_digital_val'])
