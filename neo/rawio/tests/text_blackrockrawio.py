@@ -2,6 +2,7 @@
 import neo
 #~ import neo.rawio.blackrockrawio
 from  neo.rawio.blackrockrawio import BlackrockRawIO
+from neo.io import BlackrockIO
 import numpy as np
 
 import time
@@ -10,11 +11,13 @@ def test_BlackrockRawIO():
     #~ filename = '/media/sgarcia/SamCNRS/DataSpikeSorting/elodie/Dataset 3/20161124-112218-001'
     #~ filename = '/media/sgarcia/SamCNRS/DataSpikeSorting/elodie/Nouveaux_datasets/micro_VS10_SAB 1 600ms/20160627-155334-001'
     #~ filename = '/media/sgarcia/SamCNRS/DataSpikeSorting/elodie/Nouveaux_datasets/micro_VS10_SAB 1 600ms/20160627-155334-001'
-    filename = '/home/samuel/Documents/projet/DataSpikeSorting/elodie/Dataset 3/20161124-112218-001.ns5'
+    #~ filename = '/home/samuel/Documents/projet/DataSpikeSorting/elodie/Dataset 3/20161124-112218-001.ns5'
+    filename = '/home/sgarcia/Documents/projet/tridesclous_examples/20160627-161211-001'
     
     
     reader = BlackrockRawIO(filename=filename, nsx_to_load=5)
     reader.parse_header()
+    print(reader)
     
     assert reader.block_count()==1
     
@@ -37,7 +40,7 @@ def test_BlackrockRawIO():
     
     
     
-    channel_names =['ap10']
+    channel_names =['b1']
     raw_chunk = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
                             i_start=0, i_stop=1024,  channel_names=channel_names)
     
@@ -50,9 +53,15 @@ def test_BlackrockRawIO():
     axs[1].plot(float_chunk)
     plt.show()
     
+
+
+def test_BlackrockIO():
+    filename = '/home/sgarcia/Documents/projet/tridesclous_examples/20160627-161211-001'
     
-    
+    reader = BlackrockIO(filename=filename, nsx_to_load=5)
+    blocks = reader.read()
     
     
 if __name__ == '__main__':
-    test_BlackrockRawIO()
+    #~ test_BlackrockRawIO()
+    test_BlackrockIO()

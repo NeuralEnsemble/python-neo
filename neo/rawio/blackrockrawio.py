@@ -199,7 +199,7 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 file2check = ''.join(
                     [self._filenames[ext], os.path.extsep, ext])
-            print(file2check)
+            #~ print(file2check)
             if os.path.exists(file2check):
                 self._print_verbose("Found " + file2check + ".")
                 self._avail_files[ext] = True
@@ -293,6 +293,10 @@ class BlackrockRawIO(BaseRawIO):
         #~ print(self.__nsx_ext_header[nsx_nb].dtype)
         for i, chan in enumerate(self.__nsx_ext_header[nsx_nb]):
             #~ print(chan)
+            #~ print(chan['max_analog_val'], chan['min_analog_val'])
+            assert chan['max_analog_val']==-chan['min_analog_val']
+            assert chan['max_digital_val']==-chan['min_digital_val']
+            
             gain = float(chan['max_analog_val'])/float(chan['max_digital_val'])
             offset = 0.
             channels.append((chan['electrode_label'].decode(), 
@@ -311,22 +315,22 @@ class BlackrockRawIO(BaseRawIO):
         channel_dtype = [
                     ('name','U64'),
                     ('id','U64'),
-                    ('unit','U16'),
+                    ('units','U16'),
                     ('gain','float64'),
                     ('offset','float64'),
                 ]
 
         channels = np.array(channels, dtype=channel_dtype)
-        print(channels)
+        #~ print(channels)
         
         #~ sampling_rate = self.__nsx_params[spec]('sampling_rate', nsx_nb)
         sampling_rate = 30000. / self.__nsx_basic_header[nsx_nb]['period']
-        print(sampling_rate)
+        #~ print(sampling_rate)
         t_starts = []
         #~ print(
         for data_bl in range(nb_seg):
             t_starts = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']/sampling_rate
-        print(t_starts)
+        #~ print(t_starts)
             
             #~ ts0 = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']
             #~ nbdp = self.__nsx_data_header[nsx_nb][data_bl]['nb_data_points']
@@ -341,12 +345,13 @@ class BlackrockRawIO(BaseRawIO):
         
         #~ self.header['signal_sampling_rate'] = sampling_rate
         t_start, t_stop = self.__nsx_rec_times[spec](nsx_nb)
-        print(t_start, t_stop)
+        #~ print(t_start, t_stop)
         #~ self.header['signal_t_start'] = [0.]*self.header['nb_segment']
         
-        print(self.__nsx_data_header[nsx_nb])
-        
-        
+        #~ print(self.__nsx_data_header[nsx_nb])
+    
+    def source_name(self):
+        return self.filename
 
 
     def block_count(self):
@@ -1966,569 +1971,569 @@ class BlackrockRawIO(BaseRawIO):
 
         return un
 
-    def __read_channelindex(
-            self, channel_id, index=None, channel_units=None, cascade=True):
-        """
-        Returns a ChannelIndex with the given index for the given channels
-        containing a neo.core.unit.Unit object list of the given units.
-        """
-
-        chidx = ChannelIndex(
-            np.array([channel_id]),
-            file_origin=self.filename)
-
-        if index is not None:
-            chidx.index = index
-            chidx.name = "ChannelIndex {0}".format(chidx.index)
-        else:
-            chidx.name = "ChannelIndex"
-
-
-        if self._avail_files['nev']:
-            channel_labels = self.__nev_params('channel_labels')
-            if channel_labels is not None:
-                chidx.channel_names = np.array([channel_labels[channel_id]])
-            chidx.channel_ids = np.array([channel_id])
-
-            # additional annotations from nev
-            if channel_id in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
-                get_idx = list(
-                    self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
-                        channel_id)
-                chidx.annotate(
-                    connector_ID=self.__nev_ext_header[
-                        b'NEUEVWAV']['physical_connector'][get_idx],
-                    connector_pinID=self.__nev_ext_header[
-                        b'NEUEVWAV']['connector_pin'][get_idx],
-                    nev_dig_factor=self.__nev_ext_header[
-                        b'NEUEVWAV']['digitization_factor'][get_idx],
-                    nev_energy_threshold=self.__nev_ext_header[
-                        b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
-                    nev_hi_threshold=self.__nev_ext_header[
-                        b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
-                    nev_lo_threshold=self.__nev_ext_header[
-                        b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
-                    nb_sorted_units=self.__nev_ext_header[
-                        b'NEUEVWAV']['nb_sorted_units'][get_idx],
-                    waveform_size=self.__waveform_size[self.__nev_spec](
-                    )[channel_id] * self.__nev_params('waveform_time_unit'))
-
-                # additional annotations from nev (only for file_spec > 2.1)
-                if self.__nev_spec in ['2.2', '2.3']:
-                    get_idx = list(
-                        self.__nev_ext_header[b'NEUEVFLT']['electrode_id']).index(
-                            channel_id)
-                    # filter type codes (extracted from blackrock manual)
-                    flt_type = {0: 'None', 1: 'Butterworth'}
-                    chidx.annotate(
-                        nev_hi_freq_corner=self.__nev_ext_header[
-                            b'NEUEVFLT']['hi_freq_corner'][get_idx] * pq.uV,
-                        nev_hi_freq_order=self.__nev_ext_header[
-                            b'NEUEVFLT']['hi_freq_order'][get_idx],
-                        nev_hi_freq_type=flt_type[self.__nev_ext_header[
-                            b'NEUEVFLT']['hi_freq_type'][get_idx]],
-                        nev_lo_freq_corner=self.__nev_ext_header[
-                            b'NEUEVFLT']['lo_freq_corner'][get_idx] * pq.uV,
-                        nev_lo_freq_order=self.__nev_ext_header[
-                            b'NEUEVFLT']['lo_freq_order'][get_idx],
-                        nev_lo_freq_type=flt_type[self.__nev_ext_header[
-                            b'NEUEVFLT']['lo_freq_type'][get_idx]])
-
-        chidx.description = \
-            "Container for units and groups analogsignals of one recording " \
-            "channel across segments."
-
-        if not cascade:
-            return chidx
-
-        if self._avail_files['nev']:
-            # read nev data
-            nev_data = self.__nev_data_reader[self.__nev_spec]()
-
-            if channel_units is not None:
-                # extract first data for channel
-                ch_mask = (nev_data['Spikes']['packet_id'] == channel_id)
-                data_ch = nev_data['Spikes'][ch_mask]
-
-                for un_id in channel_units:
-                    if un_id in np.unique(data_ch['unit_class_nb']):
-
-                        un = self.__read_unit(
-                            unit_id=un_id, channel_id=channel_id)
-
-                        chidx.units.append(un)
-
-        chidx.create_many_to_one_relationship()
-
-        return chidx
-
-    def read_segment(
-            self, n_start, n_stop, name=None, description=None, index=None,
-            nsx_to_load='none', channels='none', units='none',
-            load_waveforms=False, load_events=False, scaling='raw',
-            lazy=False, cascade=True):
-        """
-        Returns an annotated neo.core.segment.Segment.
-
-        Args:
-            n_start (Quantity):
-                Start time of maximum time range of signals contained in this
-                segment.
-            n_stop (Quantity):
-                Stop time of maximum time range of signals contained in this
-                segment.
-            name (None, string):
-                If None, name is set to default, otherwise it is set to user
-                input.
-            description (None, string):
-                If None, description is set to default, otherwise it is set to
-                user input.
-            index (None, int):
-                If not None, index of segment is set to user index.
-            nsx_to_load (int, list, str):
-                ID(s) of nsx file(s) from which to load data, e.g., if set to
-                5 only data from the ns5 file are loaded. If 'none' or empty
-                list, no nsx files and therefore no analog signals are loaded.
-                If 'all', data from all available nsx are loaded.
-            channels (int, list, str):
-                Channel id(s) from which to load data. If 'none' or empty list,
-                no channels and therefore no analog signal or spiketrains are
-                loaded. If 'all', all available channels are loaded.
-            units (int, list, str, dict):
-                ID(s) of unit(s) to load. If 'none' or empty list, no units and
-                therefore no spiketrains are loaded. If 'all', all available
-                units are loaded. If dict, the above can be specified
-                individually for each channel (keys), e.g. {1: 5, 2: 'all'}
-                loads unit 5 from channel 1 and all units from channel 2.
-            load_waveforms (boolean):
-                If True, waveforms are attached to all loaded spiketrains.
-            load_events (boolean):
-                If True, all recorded events are loaded.
-            scaling (str):
-                Determines whether time series of individual
-                electrodes/channels are returned as AnalogSignals containing
-                raw integer samples ('raw'), or scaled to arrays of floats
-                representing voltage ('voltage'). Note that for file
-                specification 2.1 and lower, the option 'voltage' requires a
-                nev file to be present.
-            lazy (boolean):
-                If True, only the shape of the data is loaded.
-            cascade (boolean):
-                If True, only the segment without children is returned.
-
-        Returns:
-            Segment (neo.Segment):
-                Returns the specified segment. See documentation of
-                `read_block()` for a full list of annotations of all child
-                objects.
-        """
-
-        # Make sure that input args are transformed into correct instances
-        nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        channels = self.__transform_channels(channels, nsx_to_load)
-        units = self.__transform_units(units, channels)
-
-        seg = Segment(file_origin=self.filename)
-
-        # set user defined annotations if they were provided
-        if index is None:
-            seg.index = 0
-        else:
-            seg.index = index
-        if name is None:
-            seg.name = "Segment {0}".format(seg.index)
-        else:
-            seg.name = name
-        if description is None:
-            seg.description = "Segment containing data from t_min to t_max."
-        else:
-            seg.description = description
-
-        if not cascade:
-            return seg
-
-        if self._avail_files['nev']:
-            #            filename = self._filenames['nev'] + '.nev'
-            # annotate segment according to file headers
-            seg.rec_datetime = datetime.datetime(
-                year=self.__nev_basic_header['year'],
-                month=self.__nev_basic_header['month'],
-                day=self.__nev_basic_header['day'],
-                hour=self.__nev_basic_header['hour'],
-                minute=self.__nev_basic_header['minute'],
-                second=self.__nev_basic_header['second'],
-                microsecond=self.__nev_basic_header['millisecond'])
-
-            # read nev data
-            nev_data = self.__nev_data_reader[self.__nev_spec]()
-
-            # read non-neural experimental events
-            if load_events:
-                ev_dict = self.__nonneural_evtypes[self.__nev_spec](
-                    nev_data['NonNeural'])
-
-                for ev_type in ev_dict.keys():
-
-                    ev = self.__read_event(
-                        n_start=n_start,
-                        n_stop=n_stop,
-                        data=nev_data['NonNeural'],
-                        ev_dict=ev_dict[ev_type],
-                        lazy=lazy)
-
-                    if ev is not None:
-                        seg.events.append(ev)
-
-                # TODO: not yet implemented (only avail in nev_spec 2.3)
-                # videosync events
-                # trackingevents events
-                # buttontrigger events
-                # configevent events
-
-            # get spiketrain
-            if units is not None:
-                not_existing_units = []
-                for ch_id in units.keys():
-                    # extract first data for channel
-                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
-                    data_ch = nev_data['Spikes'][ch_mask]
-                    if units[ch_id] is not None:
-                        for un_id in units[ch_id]:
-                            if un_id in np.unique(data_ch['unit_class_nb']):
-                                # extract then data for unit if unit exists
-                                un_mask = (data_ch['unit_class_nb'] == un_id)
-                                data_un = data_ch[un_mask]
-
-                                st = self.__read_spiketrain(
-                                    n_start=n_start,
-                                    n_stop=n_stop,
-                                    spikes=data_un,
-                                    channel_id=ch_id,
-                                    unit_id=un_id,
-                                    load_waveforms=load_waveforms,
-                                    scaling=scaling,
-                                    lazy=lazy)
-
-                                seg.spiketrains.append(st)
-                            else:
-                                not_existing_units.append(un_id)
-
-                        if not_existing_units:
-                            self._print_verbose(
-                                "Units {0} on channel {1} do not "
-                                "exist".format(not_existing_units, ch_id))
-                    else:
-                        self._print_verbose(
-                            "There are no units specified for channel "
-                            "{0}".format(ch_id))
-
-        if nsx_to_load is not None:
-            for nsx_nb in nsx_to_load:
-                # read nsx data
-                #SG
-                #~ nsx_data = \
-                    #~ self.__nsx_data_reader[self.__nsx_spec[nsx_nb]](nsx_nb)
-
-                # read Analogsignals
-                for ch_id in channels:
-
-                    anasig = self.__read_analogsignal(
-                        n_start=n_start,
-                        n_stop=n_stop,
-                        signal=nsx_data,
-                        channel_id=ch_id,
-                        nsx_nb=nsx_nb,
-                        scaling=scaling,
-                        lazy=lazy)
-
-                    if anasig is not None:
-                        seg.analogsignals.append(anasig)
-
-        # TODO: not yet implemented
-#        if self._avail_files['sif']:
-#            sif_header = self._read_sif(self._filenames['sif'] + '.sif')
-
-        # TODO: not yet implemented
-#        if self._avail_files['ccf']:
-#            ccf_header = self._read_sif(self._filenames['ccf'] + '.ccf')
-
-        seg.create_many_to_one_relationship()
-
-        return seg
-
-    def read_block(
-            self, index=None, name=None, description=None, nsx_to_load='none',
-            n_starts=None, n_stops=None, channels='none', units='none',
-            load_waveforms=False, load_events=False, scaling='raw',
-            lazy=False, cascade=True):
-        """
-        Args:
-            index (None, int):
-                If not None, index of block is set to user input.
-            name (None, str):
-                If None, name is set to default, otherwise it is set to user
-                input.
-            description (None, str):
-                If None, description is set to default, otherwise it is set to
-                user input.
-            nsx_to_load (int, list, str):
-                ID(s) of nsx file(s) from which to load data, e.g., if set to
-                5 only data from the ns5 file are loaded. If 'none' or empty
-                list, no nsx files and therefore no analog signals are loaded.
-                If 'all', data from all available nsx are loaded.
-            n_starts (None, Quantity, list):
-                Start times for data in each segment. Number of entries must be
-                equal to length of n_stops. If None, intrinsic recording start
-                times of files set are used.
-            n_stops (None, Quantity, list):
-                Stop times for data in each segment. Number of entries must be
-                equal to length of n_starts. If None, intrinsic recording stop
-                times of files set are used.
-            channels (int, list, str):
-                Channel id(s) from which to load data. If 'none' or empty list,
-                no channels and therefore no analog signal or spiketrains are
-                loaded. If 'all', all available channels are loaded.
-            units (int, list, str, dict):
-                ID(s) of unit(s) to load. If 'none' or empty list, no units and
-                therefore no spiketrains are loaded. If 'all', all available
-                units are loaded. If dict, the above can be specified
-                individually for each channel (keys), e.g. {1: 5, 2: 'all'}
-                loads unit 5 from channel 1 and all units from channel 2.
-            load_waveforms (boolean):
-                If True, waveforms are attached to all loaded spiketrains.
-            load_events (boolean):
-                If True, all recorded events are loaded.
-            scaling (str):
-                Determines whether time series of individual
-                electrodes/channels are returned as AnalogSignals containing
-                raw integer samples ('raw'), or scaled to arrays of floats
-                representing voltage ('voltage'). Note that for file
-                specification 2.1 and lower, the option 'voltage' requires a
-                nev file to be present.
-            lazy (bool):
-                If True, only the shape of the data is loaded.
-            cascade (bool or "lazy"):
-                If True, only the block without children is returned.
-
-        Returns:
-            Block (neo.segment.Block):
-                Block linking all loaded Neo objects.
-
-                Block annotations:
-                    avail_file_set (list):
-                        List of extensions of all available files for the given
-                        recording.
-                    avail_nsx (list of int):
-                        List of integers specifying the .nsX files available,
-                        e.g., [2, 5] indicates that an ns2 and and ns5 file are
-                        available.
-                    avail_nev (bool):
-                        True if a .nev file is available.
-                    avail_ccf (bool):
-                        True if a .ccf file is available.
-                    avail_sif (bool):
-                        True if a .sif file is available.
-                    rec_pauses (bool):
-                        True if the session contains a recording pause (i.e.,
-                        multiple segments).
-                    nb_segments (int):
-                        Number of segments created after merging recording
-                        times specified by user with the intrinsic ones of the
-                        file set.
-
-                Segment annotations:
-                    None.
-
-                ChannelIndex annotations:
-                    waveform_size (Quantitiy):
-                        Length of time used to save spike waveforms (in units
-                        of 1/30000 s).
-                    nev_hi_freq_corner (Quantitiy),
-                    nev_lo_freq_corner (Quantitiy),
-                    nev_hi_freq_order (int), nev_lo_freq_order (int),
-                    nev_hi_freq_type (str), nev_lo_freq_type (str),
-                    nev_hi_threshold, nev_lo_threshold,
-                    nev_energy_threshold (quantity):
-                        Indicates parameters of spike detection.
-                    nev_dig_factor (int):
-                        Digitization factor in microvolts of the nev file, used
-                        to convert raw samples to volt.
-                    connector_ID, connector_pinID (int):
-                        ID of connector and pin on the connector where the
-                        channel was recorded from.
-                    nb_sorted_units (int):
-                        Number of sorted units on this channel (noise, mua and
-                        sua).
-
-                Unit annotations:
-                    unit_id (int):
-                        ID of the unit.
-                    channel_id (int):
-                        Channel ID (Blackrock ID) from which the unit was
-                        loaded (equiv. to the single list entry in the
-                        attribute channel_ids of ChannelIndex parent).
-
-                AnalogSignal annotations:
-                    nsx (int):
-                        nsX file the signal was loaded from, e.g., 5 indicates
-                        the .ns5 file.
-                    channel_id (int):
-                        Channel ID (Blackrock ID) from which the signal was
-                        loaded.
-
-                Spiketrain annotations:
-                    unit_id (int):
-                        ID of the unit from which the spikes were recorded.
-                    channel_id (int):
-                        Channel ID (Blackrock ID) from which the spikes were
-                        loaded.
-
-                Event annotations:
-                    The resulting Block contains one Event object with the name
-                    `digital_input_port`. It contains all digitally recorded
-                    events, with the event code coded in the labels of the
-                    Event. The Event object contains no further annotation.
-        """
-        # Make sure that input args are transformed into correct instances
-        nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        channels = self.__transform_channels(channels, nsx_to_load)
-        units = self.__transform_units(units, channels)
-
-        # Create block
-        bl = Block(file_origin=self.filename)
-
-        # set user defined annotations if they were provided
-        if index is not None:
-            bl.index = index
-        if name is None:
-            bl.name = "Blackrock Data Block"
-        else:
-            bl.name = name
-        if description is None:
-            bl.description = "Block of data from Blackrock file set."
-        else:
-            bl.description = description
-
-        if self._avail_files['nev']:
-            bl.rec_datetime = self.__nev_params('rec_datetime')
-
-        bl.annotate(
-            avail_file_set=[k for k, v in self._avail_files.items() if v])
-        bl.annotate(avail_nsx=self._avail_nsx)
-        bl.annotate(avail_nev=self._avail_files['nev'])
-        bl.annotate(avail_sif=self._avail_files['sif'])
-        bl.annotate(avail_ccf=self._avail_files['ccf'])
-        bl.annotate(rec_pauses=False)
-
-        # Test n_starts and n_stops user requirements and combine them if
-        # possible with file internal n_starts and n_stops from rec pauses.
-        n_starts, n_stops = \
-            self.__merge_time_ranges(n_starts, n_stops, nsx_to_load)
-
-        bl.annotate(nb_segments=len(n_starts))
-
-        if not cascade:
-            return bl
-
-        # read segment
-        for seg_idx, (n_start, n_stop) in enumerate(zip(n_starts, n_stops)):
-            seg = self.read_segment(
-                n_start=n_start,
-                n_stop=n_stop,
-                index=seg_idx,
-                nsx_to_load=nsx_to_load,
-                channels=channels,
-                units=units,
-                load_waveforms=load_waveforms,
-                load_events=load_events,
-                scaling=scaling,
-                lazy=lazy,
-                cascade=cascade)
-
-            bl.segments.append(seg)
-
-        # read channelindexes
-        if channels:
-            for ch_id in channels:
-                if units and ch_id in units.keys():
-                    ch_units = units[ch_id]
-                else:
-                    ch_units = None
-
-                chidx = self.__read_channelindex(
-                    channel_id=ch_id,
-                    index=0,
-                    channel_units=ch_units,
-                    cascade=cascade)
-
-                for seg in bl.segments:
-                    if ch_units:
-                        for un in chidx.units:
-                            sts = seg.filter(
-                                targdict={'name': un.name},
-                                objects='SpikeTrain')
-                            for st in sts:
-                                un.spiketrains.append(st)
-
-                    anasigs = seg.filter(
-                        targdict={'channel_id': ch_id},
-                        objects='AnalogSignal')
-                    for anasig in anasigs:
-                        chidx.analogsignals.append(anasig)
-
-                bl.channel_indexes.append(chidx)
-
-        bl.create_many_to_one_relationship()
-
-        return bl
-
-    def __str__(self):
-        """
-        Prints summary of the Blackrock data file set.
-        """
-        output = "\nFile Origins for Blackrock File Set\n"\
-            "====================================\n"
-        for ftype in self._filenames.keys():
-            output += ftype + ':' + self._filenames[ftype] + '\n'
-
-        if self._avail_files['nev']:
-            output += "\nEvent Parameters (NEV)\n"\
-                "====================================\n"\
-                "Timestamp resolution (Hz): " +\
-                str(self.__nev_basic_header['timestamp_resolution']) +\
-                "\nWaveform resolution (Hz): " +\
-                str(self.__nev_basic_header['sample_resolution'])
-
-            if b'NEUEVWAV' in self.__nev_ext_header.keys():
-                avail_el = \
-                    self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
-                con = \
-                    self.__nev_ext_header[b'NEUEVWAV']['physical_connector']
-                pin = \
-                    self.__nev_ext_header[b'NEUEVWAV']['connector_pin']
-                nb_units = \
-                    self.__nev_ext_header[b'NEUEVWAV']['nb_sorted_units']
-                output += "\n\nAvailable electrode IDs:\n"\
-                    "====================================\n"
-                for i, el in enumerate(avail_el):
-                    output += "Electrode ID %i: " % el
-
-                    channel_labels = self.__nev_params('channel_labels')
-                    if channel_labels is not None:
-                        output += "label %s: " % channel_labels[el]
-
-                    output += "connector: %i, " % con[i]
-                    output += "pin: %i, " % pin[i]
-                    output += 'nb_units: %i\n' % nb_units[i]
-        for nsx_nb in self._avail_nsx:
-            analog_res = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-                'sampling_rate', nsx_nb)
-            avail_el = [
-                el for el in self.__nsx_ext_header[nsx_nb]['electrode_id']]
-            output += "\nAnalog Parameters (NS" + str(nsx_nb) + ")"\
-                "\n===================================="
-            output += "\nResolution (Hz): %i" % analog_res
-            output += "\nAvailable channel IDs: " +\
-                ", " .join(["%i" % a for a in avail_el]) + "\n"
-
-        return output
+    #~ def __read_channelindex(
+            #~ self, channel_id, index=None, channel_units=None, cascade=True):
+        #~ """
+        #~ Returns a ChannelIndex with the given index for the given channels
+        #~ containing a neo.core.unit.Unit object list of the given units.
+        #~ """
+
+        #~ chidx = ChannelIndex(
+            #~ np.array([channel_id]),
+            #~ file_origin=self.filename)
+
+        #~ if index is not None:
+            #~ chidx.index = index
+            #~ chidx.name = "ChannelIndex {0}".format(chidx.index)
+        #~ else:
+            #~ chidx.name = "ChannelIndex"
+
+
+        #~ if self._avail_files['nev']:
+            #~ channel_labels = self.__nev_params('channel_labels')
+            #~ if channel_labels is not None:
+                #~ chidx.channel_names = np.array([channel_labels[channel_id]])
+            #~ chidx.channel_ids = np.array([channel_id])
+
+            #~ # additional annotations from nev
+            #~ if channel_id in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
+                #~ get_idx = list(
+                    #~ self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
+                        #~ channel_id)
+                #~ chidx.annotate(
+                    #~ connector_ID=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['physical_connector'][get_idx],
+                    #~ connector_pinID=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['connector_pin'][get_idx],
+                    #~ nev_dig_factor=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['digitization_factor'][get_idx],
+                    #~ nev_energy_threshold=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                    #~ nev_hi_threshold=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                    #~ nev_lo_threshold=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                    #~ nb_sorted_units=self.__nev_ext_header[
+                        #~ b'NEUEVWAV']['nb_sorted_units'][get_idx],
+                    #~ waveform_size=self.__waveform_size[self.__nev_spec](
+                    #~ )[channel_id] * self.__nev_params('waveform_time_unit'))
+
+                #~ # additional annotations from nev (only for file_spec > 2.1)
+                #~ if self.__nev_spec in ['2.2', '2.3']:
+                    #~ get_idx = list(
+                        #~ self.__nev_ext_header[b'NEUEVFLT']['electrode_id']).index(
+                            #~ channel_id)
+                    #~ # filter type codes (extracted from blackrock manual)
+                    #~ flt_type = {0: 'None', 1: 'Butterworth'}
+                    #~ chidx.annotate(
+                        #~ nev_hi_freq_corner=self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['hi_freq_corner'][get_idx] * pq.uV,
+                        #~ nev_hi_freq_order=self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['hi_freq_order'][get_idx],
+                        #~ nev_hi_freq_type=flt_type[self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['hi_freq_type'][get_idx]],
+                        #~ nev_lo_freq_corner=self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['lo_freq_corner'][get_idx] * pq.uV,
+                        #~ nev_lo_freq_order=self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['lo_freq_order'][get_idx],
+                        #~ nev_lo_freq_type=flt_type[self.__nev_ext_header[
+                            #~ b'NEUEVFLT']['lo_freq_type'][get_idx]])
+
+        #~ chidx.description = \
+            #~ "Container for units and groups analogsignals of one recording " \
+            #~ "channel across segments."
+
+        #~ if not cascade:
+            #~ return chidx
+
+        #~ if self._avail_files['nev']:
+            #~ # read nev data
+            #~ nev_data = self.__nev_data_reader[self.__nev_spec]()
+
+            #~ if channel_units is not None:
+                #~ # extract first data for channel
+                #~ ch_mask = (nev_data['Spikes']['packet_id'] == channel_id)
+                #~ data_ch = nev_data['Spikes'][ch_mask]
+
+                #~ for un_id in channel_units:
+                    #~ if un_id in np.unique(data_ch['unit_class_nb']):
+
+                        #~ un = self.__read_unit(
+                            #~ unit_id=un_id, channel_id=channel_id)
+
+                        #~ chidx.units.append(un)
+
+        #~ chidx.create_many_to_one_relationship()
+
+        #~ return chidx
+
+    #~ def read_segment(
+            #~ self, n_start, n_stop, name=None, description=None, index=None,
+            #~ nsx_to_load='none', channels='none', units='none',
+            #~ load_waveforms=False, load_events=False, scaling='raw',
+            #~ lazy=False, cascade=True):
+        #~ """
+        #~ Returns an annotated neo.core.segment.Segment.
+
+        #~ Args:
+            #~ n_start (Quantity):
+                #~ Start time of maximum time range of signals contained in this
+                #~ segment.
+            #~ n_stop (Quantity):
+                #~ Stop time of maximum time range of signals contained in this
+                #~ segment.
+            #~ name (None, string):
+                #~ If None, name is set to default, otherwise it is set to user
+                #~ input.
+            #~ description (None, string):
+                #~ If None, description is set to default, otherwise it is set to
+                #~ user input.
+            #~ index (None, int):
+                #~ If not None, index of segment is set to user index.
+            #~ nsx_to_load (int, list, str):
+                #~ ID(s) of nsx file(s) from which to load data, e.g., if set to
+                #~ 5 only data from the ns5 file are loaded. If 'none' or empty
+                #~ list, no nsx files and therefore no analog signals are loaded.
+                #~ If 'all', data from all available nsx are loaded.
+            #~ channels (int, list, str):
+                #~ Channel id(s) from which to load data. If 'none' or empty list,
+                #~ no channels and therefore no analog signal or spiketrains are
+                #~ loaded. If 'all', all available channels are loaded.
+            #~ units (int, list, str, dict):
+                #~ ID(s) of unit(s) to load. If 'none' or empty list, no units and
+                #~ therefore no spiketrains are loaded. If 'all', all available
+                #~ units are loaded. If dict, the above can be specified
+                #~ individually for each channel (keys), e.g. {1: 5, 2: 'all'}
+                #~ loads unit 5 from channel 1 and all units from channel 2.
+            #~ load_waveforms (boolean):
+                #~ If True, waveforms are attached to all loaded spiketrains.
+            #~ load_events (boolean):
+                #~ If True, all recorded events are loaded.
+            #~ scaling (str):
+                #~ Determines whether time series of individual
+                #~ electrodes/channels are returned as AnalogSignals containing
+                #~ raw integer samples ('raw'), or scaled to arrays of floats
+                #~ representing voltage ('voltage'). Note that for file
+                #~ specification 2.1 and lower, the option 'voltage' requires a
+                #~ nev file to be present.
+            #~ lazy (boolean):
+                #~ If True, only the shape of the data is loaded.
+            #~ cascade (boolean):
+                #~ If True, only the segment without children is returned.
+
+        #~ Returns:
+            #~ Segment (neo.Segment):
+                #~ Returns the specified segment. See documentation of
+                #~ `read_block()` for a full list of annotations of all child
+                #~ objects.
+        #~ """
+
+        #~ # Make sure that input args are transformed into correct instances
+        #~ nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
+        #~ channels = self.__transform_channels(channels, nsx_to_load)
+        #~ units = self.__transform_units(units, channels)
+
+        #~ seg = Segment(file_origin=self.filename)
+
+        #~ # set user defined annotations if they were provided
+        #~ if index is None:
+            #~ seg.index = 0
+        #~ else:
+            #~ seg.index = index
+        #~ if name is None:
+            #~ seg.name = "Segment {0}".format(seg.index)
+        #~ else:
+            #~ seg.name = name
+        #~ if description is None:
+            #~ seg.description = "Segment containing data from t_min to t_max."
+        #~ else:
+            #~ seg.description = description
+
+        #~ if not cascade:
+            #~ return seg
+
+        #~ if self._avail_files['nev']:
+            #~ #            filename = self._filenames['nev'] + '.nev'
+            #~ # annotate segment according to file headers
+            #~ seg.rec_datetime = datetime.datetime(
+                #~ year=self.__nev_basic_header['year'],
+                #~ month=self.__nev_basic_header['month'],
+                #~ day=self.__nev_basic_header['day'],
+                #~ hour=self.__nev_basic_header['hour'],
+                #~ minute=self.__nev_basic_header['minute'],
+                #~ second=self.__nev_basic_header['second'],
+                #~ microsecond=self.__nev_basic_header['millisecond'])
+
+            #~ # read nev data
+            #~ nev_data = self.__nev_data_reader[self.__nev_spec]()
+
+            #~ # read non-neural experimental events
+            #~ if load_events:
+                #~ ev_dict = self.__nonneural_evtypes[self.__nev_spec](
+                    #~ nev_data['NonNeural'])
+
+                #~ for ev_type in ev_dict.keys():
+
+                    #~ ev = self.__read_event(
+                        #~ n_start=n_start,
+                        #~ n_stop=n_stop,
+                        #~ data=nev_data['NonNeural'],
+                        #~ ev_dict=ev_dict[ev_type],
+                        #~ lazy=lazy)
+
+                    #~ if ev is not None:
+                        #~ seg.events.append(ev)
+
+                #~ # TODO: not yet implemented (only avail in nev_spec 2.3)
+                #~ # videosync events
+                #~ # trackingevents events
+                #~ # buttontrigger events
+                #~ # configevent events
+
+            #~ # get spiketrain
+            #~ if units is not None:
+                #~ not_existing_units = []
+                #~ for ch_id in units.keys():
+                    #~ # extract first data for channel
+                    #~ ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
+                    #~ data_ch = nev_data['Spikes'][ch_mask]
+                    #~ if units[ch_id] is not None:
+                        #~ for un_id in units[ch_id]:
+                            #~ if un_id in np.unique(data_ch['unit_class_nb']):
+                                #~ # extract then data for unit if unit exists
+                                #~ un_mask = (data_ch['unit_class_nb'] == un_id)
+                                #~ data_un = data_ch[un_mask]
+
+                                #~ st = self.__read_spiketrain(
+                                    #~ n_start=n_start,
+                                    #~ n_stop=n_stop,
+                                    #~ spikes=data_un,
+                                    #~ channel_id=ch_id,
+                                    #~ unit_id=un_id,
+                                    #~ load_waveforms=load_waveforms,
+                                    #~ scaling=scaling,
+                                    #~ lazy=lazy)
+
+                                #~ seg.spiketrains.append(st)
+                            #~ else:
+                                #~ not_existing_units.append(un_id)
+
+                        #~ if not_existing_units:
+                            #~ self._print_verbose(
+                                #~ "Units {0} on channel {1} do not "
+                                #~ "exist".format(not_existing_units, ch_id))
+                    #~ else:
+                        #~ self._print_verbose(
+                            #~ "There are no units specified for channel "
+                            #~ "{0}".format(ch_id))
+
+        #~ if nsx_to_load is not None:
+            #~ for nsx_nb in nsx_to_load:
+                #~ # read nsx data
+                #~ #SG
+                #~ #nsx_data = \
+                    #~ #self.__nsx_data_reader[self.__nsx_spec[nsx_nb]](nsx_nb)
+
+                #~ # read Analogsignals
+                #~ for ch_id in channels:
+
+                    #~ anasig = self.__read_analogsignal(
+                        #~ n_start=n_start,
+                        #~ n_stop=n_stop,
+                        #~ signal=nsx_data,
+                        #~ channel_id=ch_id,
+                        #~ nsx_nb=nsx_nb,
+                        #~ scaling=scaling,
+                        #~ lazy=lazy)
+
+                    #~ if anasig is not None:
+                        #~ seg.analogsignals.append(anasig)
+
+        #~ # TODO: not yet implemented
+#~ #        if self._avail_files['sif']:
+#~ #            sif_header = self._read_sif(self._filenames['sif'] + '.sif')
+
+        #~ # TODO: not yet implemented
+#~ #        if self._avail_files['ccf']:
+#~ #            ccf_header = self._read_sif(self._filenames['ccf'] + '.ccf')
+
+        #~ seg.create_many_to_one_relationship()
+
+        #~ return seg
+
+    #~ def read_block(
+            #~ self, index=None, name=None, description=None, nsx_to_load='none',
+            #~ n_starts=None, n_stops=None, channels='none', units='none',
+            #~ load_waveforms=False, load_events=False, scaling='raw',
+            #~ lazy=False, cascade=True):
+        #~ """
+        #~ Args:
+            #~ index (None, int):
+                #~ If not None, index of block is set to user input.
+            #~ name (None, str):
+                #~ If None, name is set to default, otherwise it is set to user
+                #~ input.
+            #~ description (None, str):
+                #~ If None, description is set to default, otherwise it is set to
+                #~ user input.
+            #~ nsx_to_load (int, list, str):
+                #~ ID(s) of nsx file(s) from which to load data, e.g., if set to
+                #~ 5 only data from the ns5 file are loaded. If 'none' or empty
+                #~ list, no nsx files and therefore no analog signals are loaded.
+                #~ If 'all', data from all available nsx are loaded.
+            #~ n_starts (None, Quantity, list):
+                #~ Start times for data in each segment. Number of entries must be
+                #~ equal to length of n_stops. If None, intrinsic recording start
+                #~ times of files set are used.
+            #~ n_stops (None, Quantity, list):
+                #~ Stop times for data in each segment. Number of entries must be
+                #~ equal to length of n_starts. If None, intrinsic recording stop
+                #~ times of files set are used.
+            #~ channels (int, list, str):
+                #~ Channel id(s) from which to load data. If 'none' or empty list,
+                #~ no channels and therefore no analog signal or spiketrains are
+                #~ loaded. If 'all', all available channels are loaded.
+            #~ units (int, list, str, dict):
+                #~ ID(s) of unit(s) to load. If 'none' or empty list, no units and
+                #~ therefore no spiketrains are loaded. If 'all', all available
+                #~ units are loaded. If dict, the above can be specified
+                #~ individually for each channel (keys), e.g. {1: 5, 2: 'all'}
+                #~ loads unit 5 from channel 1 and all units from channel 2.
+            #~ load_waveforms (boolean):
+                #~ If True, waveforms are attached to all loaded spiketrains.
+            #~ load_events (boolean):
+                #~ If True, all recorded events are loaded.
+            #~ scaling (str):
+                #~ Determines whether time series of individual
+                #~ electrodes/channels are returned as AnalogSignals containing
+                #~ raw integer samples ('raw'), or scaled to arrays of floats
+                #~ representing voltage ('voltage'). Note that for file
+                #~ specification 2.1 and lower, the option 'voltage' requires a
+                #~ nev file to be present.
+            #~ lazy (bool):
+                #~ If True, only the shape of the data is loaded.
+            #~ cascade (bool or "lazy"):
+                #~ If True, only the block without children is returned.
+
+        #~ Returns:
+            #~ Block (neo.segment.Block):
+                #~ Block linking all loaded Neo objects.
+
+                #~ Block annotations:
+                    #~ avail_file_set (list):
+                        #~ List of extensions of all available files for the given
+                        #~ recording.
+                    #~ avail_nsx (list of int):
+                        #~ List of integers specifying the .nsX files available,
+                        #~ e.g., [2, 5] indicates that an ns2 and and ns5 file are
+                        #~ available.
+                    #~ avail_nev (bool):
+                        #~ True if a .nev file is available.
+                    #~ avail_ccf (bool):
+                        #~ True if a .ccf file is available.
+                    #~ avail_sif (bool):
+                        #~ True if a .sif file is available.
+                    #~ rec_pauses (bool):
+                        #~ True if the session contains a recording pause (i.e.,
+                        #~ multiple segments).
+                    #~ nb_segments (int):
+                        #~ Number of segments created after merging recording
+                        #~ times specified by user with the intrinsic ones of the
+                        #~ file set.
+
+                #~ Segment annotations:
+                    #~ None.
+
+                #~ ChannelIndex annotations:
+                    #~ waveform_size (Quantitiy):
+                        #~ Length of time used to save spike waveforms (in units
+                        #~ of 1/30000 s).
+                    #~ nev_hi_freq_corner (Quantitiy),
+                    #~ nev_lo_freq_corner (Quantitiy),
+                    #~ nev_hi_freq_order (int), nev_lo_freq_order (int),
+                    #~ nev_hi_freq_type (str), nev_lo_freq_type (str),
+                    #~ nev_hi_threshold, nev_lo_threshold,
+                    #~ nev_energy_threshold (quantity):
+                        #~ Indicates parameters of spike detection.
+                    #~ nev_dig_factor (int):
+                        #~ Digitization factor in microvolts of the nev file, used
+                        #~ to convert raw samples to volt.
+                    #~ connector_ID, connector_pinID (int):
+                        #~ ID of connector and pin on the connector where the
+                        #~ channel was recorded from.
+                    #~ nb_sorted_units (int):
+                        #~ Number of sorted units on this channel (noise, mua and
+                        #~ sua).
+
+                #~ Unit annotations:
+                    #~ unit_id (int):
+                        #~ ID of the unit.
+                    #~ channel_id (int):
+                        #~ Channel ID (Blackrock ID) from which the unit was
+                        #~ loaded (equiv. to the single list entry in the
+                        #~ attribute channel_ids of ChannelIndex parent).
+
+                #~ AnalogSignal annotations:
+                    #~ nsx (int):
+                        #~ nsX file the signal was loaded from, e.g., 5 indicates
+                        #~ the .ns5 file.
+                    #~ channel_id (int):
+                        #~ Channel ID (Blackrock ID) from which the signal was
+                        #~ loaded.
+
+                #~ Spiketrain annotations:
+                    #~ unit_id (int):
+                        #~ ID of the unit from which the spikes were recorded.
+                    #~ channel_id (int):
+                        #~ Channel ID (Blackrock ID) from which the spikes were
+                        #~ loaded.
+
+                #~ Event annotations:
+                    #~ The resulting Block contains one Event object with the name
+                    #~ `digital_input_port`. It contains all digitally recorded
+                    #~ events, with the event code coded in the labels of the
+                    #~ Event. The Event object contains no further annotation.
+        #~ """
+        #~ # Make sure that input args are transformed into correct instances
+        #~ nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
+        #~ channels = self.__transform_channels(channels, nsx_to_load)
+        #~ units = self.__transform_units(units, channels)
+
+        #~ # Create block
+        #~ bl = Block(file_origin=self.filename)
+
+        #~ # set user defined annotations if they were provided
+        #~ if index is not None:
+            #~ bl.index = index
+        #~ if name is None:
+            #~ bl.name = "Blackrock Data Block"
+        #~ else:
+            #~ bl.name = name
+        #~ if description is None:
+            #~ bl.description = "Block of data from Blackrock file set."
+        #~ else:
+            #~ bl.description = description
+
+        #~ if self._avail_files['nev']:
+            #~ bl.rec_datetime = self.__nev_params('rec_datetime')
+
+        #~ bl.annotate(
+            #~ avail_file_set=[k for k, v in self._avail_files.items() if v])
+        #~ bl.annotate(avail_nsx=self._avail_nsx)
+        #~ bl.annotate(avail_nev=self._avail_files['nev'])
+        #~ bl.annotate(avail_sif=self._avail_files['sif'])
+        #~ bl.annotate(avail_ccf=self._avail_files['ccf'])
+        #~ bl.annotate(rec_pauses=False)
+
+        #~ # Test n_starts and n_stops user requirements and combine them if
+        #~ # possible with file internal n_starts and n_stops from rec pauses.
+        #~ n_starts, n_stops = \
+            #~ self.__merge_time_ranges(n_starts, n_stops, nsx_to_load)
+
+        #~ bl.annotate(nb_segments=len(n_starts))
+
+        #~ if not cascade:
+            #~ return bl
+
+        #~ # read segment
+        #~ for seg_idx, (n_start, n_stop) in enumerate(zip(n_starts, n_stops)):
+            #~ seg = self.read_segment(
+                #~ n_start=n_start,
+                #~ n_stop=n_stop,
+                #~ index=seg_idx,
+                #~ nsx_to_load=nsx_to_load,
+                #~ channels=channels,
+                #~ units=units,
+                #~ load_waveforms=load_waveforms,
+                #~ load_events=load_events,
+                #~ scaling=scaling,
+                #~ lazy=lazy,
+                #~ cascade=cascade)
+
+            #~ bl.segments.append(seg)
+
+        #~ # read channelindexes
+        #~ if channels:
+            #~ for ch_id in channels:
+                #~ if units and ch_id in units.keys():
+                    #~ ch_units = units[ch_id]
+                #~ else:
+                    #~ ch_units = None
+
+                #~ chidx = self.__read_channelindex(
+                    #~ channel_id=ch_id,
+                    #~ index=0,
+                    #~ channel_units=ch_units,
+                    #~ cascade=cascade)
+
+                #~ for seg in bl.segments:
+                    #~ if ch_units:
+                        #~ for un in chidx.units:
+                            #~ sts = seg.filter(
+                                #~ targdict={'name': un.name},
+                                #~ objects='SpikeTrain')
+                            #~ for st in sts:
+                                #~ un.spiketrains.append(st)
+
+                    #~ anasigs = seg.filter(
+                        #~ targdict={'channel_id': ch_id},
+                        #~ objects='AnalogSignal')
+                    #~ for anasig in anasigs:
+                        #~ chidx.analogsignals.append(anasig)
+
+                #~ bl.channel_indexes.append(chidx)
+
+        #~ bl.create_many_to_one_relationship()
+
+        #~ return bl
+
+    #~ def __str__(self):
+        #~ """
+        #~ Prints summary of the Blackrock data file set.
+        #~ """
+        #~ output = "\nFile Origins for Blackrock File Set\n"\
+            #~ "====================================\n"
+        #~ for ftype in self._filenames.keys():
+            #~ output += ftype + ':' + self._filenames[ftype] + '\n'
+
+        #~ if self._avail_files['nev']:
+            #~ output += "\nEvent Parameters (NEV)\n"\
+                #~ "====================================\n"\
+                #~ "Timestamp resolution (Hz): " +\
+                #~ str(self.__nev_basic_header['timestamp_resolution']) +\
+                #~ "\nWaveform resolution (Hz): " +\
+                #~ str(self.__nev_basic_header['sample_resolution'])
+
+            #~ if b'NEUEVWAV' in self.__nev_ext_header.keys():
+                #~ avail_el = \
+                    #~ self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
+                #~ con = \
+                    #~ self.__nev_ext_header[b'NEUEVWAV']['physical_connector']
+                #~ pin = \
+                    #~ self.__nev_ext_header[b'NEUEVWAV']['connector_pin']
+                #~ nb_units = \
+                    #~ self.__nev_ext_header[b'NEUEVWAV']['nb_sorted_units']
+                #~ output += "\n\nAvailable electrode IDs:\n"\
+                    #~ "====================================\n"
+                #~ for i, el in enumerate(avail_el):
+                    #~ output += "Electrode ID %i: " % el
+
+                    #~ channel_labels = self.__nev_params('channel_labels')
+                    #~ if channel_labels is not None:
+                        #~ output += "label %s: " % channel_labels[el]
+
+                    #~ output += "connector: %i, " % con[i]
+                    #~ output += "pin: %i, " % pin[i]
+                    #~ output += 'nb_units: %i\n' % nb_units[i]
+        #~ for nsx_nb in self._avail_nsx:
+            #~ analog_res = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+                #~ 'sampling_rate', nsx_nb)
+            #~ avail_el = [
+                #~ el for el in self.__nsx_ext_header[nsx_nb]['electrode_id']]
+            #~ output += "\nAnalog Parameters (NS" + str(nsx_nb) + ")"\
+                #~ "\n===================================="
+            #~ output += "\nResolution (Hz): %i" % analog_res
+            #~ output += "\nAvailable channel IDs: " +\
+                #~ ", " .join(["%i" % a for a in avail_el]) + "\n"
+
+        #~ return output

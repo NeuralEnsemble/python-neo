@@ -36,7 +36,7 @@ error_header = 'Header is not read yet, do parse_header() first'
 channel_dtype = [
     ('name','U'),
     ('id','U'),
-    ('unit','U'),
+    ('units','U'),
     ('gain','float64'),
     ('offset','float64'),
 ]
@@ -88,7 +88,27 @@ class BaseRawIO(object):
         #
         raise(NotImplementedError)
         #self.header = ...
-        
+    
+    def source_name(self):
+        #this is used for __repr__
+        raise(NotImplementedError)
+    
+    def __repr__(self):
+        txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
+        if self.header is not None:
+            nb_block = self.block_count()
+            txt += 'nb_block: {}\n'.format(nb_block)
+            nb_seg = [self.segment_count(i) for i in range(nb_block)]
+            txt += 'nb_segment:  {}\n'.format(nb_seg)
+            ch = self.header['signal_channels']
+            if len(ch)>8:
+                chantxt = "[{} ... {}]".format(' '.join(e for e in ch['name'][:4]),\
+                                                                            ' '.join(e for e in ch['name'][-4:]))
+            else:
+                chantxt = "[{}]".format(' '.join(e for e in ch['name']))
+            txt += 'channel: {}\n'.format(chantxt)
+            
+        return txt
     
     def channel_name_to_index(self, channel_names):
         """
@@ -127,8 +147,7 @@ class BaseRawIO(object):
     def segment_count(self, block_index):
         raise(NotImplementedError)
     
-    def get_analogsignal_chunk(self, block_index=0, seg_index=0, anasig_index=0,
-                        i_start=None, i_stop=None, 
+    def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
         
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
@@ -155,10 +174,10 @@ class BaseRawIO(object):
         
         float_signal = raw_signal.astype(dtype)
         
-        if channels['gain'] !=1.:
+        if np.any(channels['gain'] !=1.):
             float_signal *= channels['gain']
         
-        if channels['offset'] !=0.:
+        if np.any(channels['offset'] !=0.):
             float_signal += channels['offset']
         
         return float_signal
