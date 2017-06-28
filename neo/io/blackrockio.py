@@ -264,6 +264,15 @@ class BlackrockIO(BaseIO):
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
 
+        # check if manually specified files were found
+        exts = ['nsx', 'nev', 'sif', 'ccf']
+        ext_overrides = [nsx_override, nev_override, sif_override, ccf_override]
+        for ext, ext_override in zip(exts, ext_overrides):
+            if ext_override is not None and self._avail_files[ext] == False:
+                raise ValueError('Specified {} file {} could not be '
+                                 'found.'.format(ext, ext_override))
+
+
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
         self.__nsx_header_reader = {
