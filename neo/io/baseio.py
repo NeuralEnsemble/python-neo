@@ -88,7 +88,7 @@ class BaseIO(object):
 
     name = 'BaseIO'
     description = ''
-    extentions = []
+    extensions = []
 
     mode = 'file'  # or 'fake' or 'dir' or 'database'
 
