@@ -262,8 +262,11 @@ class NixIO(BaseIO):
                    for c in nix_source.sources
                    if c.type == "neo.channelindex")
         chan_names = list(c["neo_name"] for c in chx if "neo_name" in c)
+        chan_ids = list(c["channel_id"] for c in chx if "channel_id" in c)
         if chan_names:
             neo_attrs["channel_names"] = chan_names
+        if chan_ids:
+            neo_attrs["channel_ids"] = chan_ids
         neo_attrs["index"] = np.array([c["index"] for c in chx])
         if "coordinates" in chx[0]:
             coord_units = chx[0]["coordinates.units"]
@@ -685,10 +688,13 @@ class NixIO(BaseIO):
                 )
             nixchan.definition = nixsource.definition
             chanmd = nixchan.metadata
+            chanmd["index"] = nix.Value(int(channel))
             if len(chx.channel_names):
                 neochanname = stringify(chx.channel_names[idx])
                 chanmd["neo_name"] = nix.Value(neochanname)
-            chanmd["index"] = nix.Value(int(channel))
+            if len(chx.channel_ids):
+                chanid = chx.channel_ids[idx]
+                chanmd["channel_id"] = nix.Value(chanid)
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
