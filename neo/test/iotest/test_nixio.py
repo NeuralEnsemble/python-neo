@@ -640,7 +640,7 @@ class NixIOWriteTest(NixIOTest):
 
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
-        self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
+        self.compare_blocks(blocks, self.reader.blocks)
 
     def test_block_write(self):
         block = Block(name=self.rword(),
@@ -693,7 +693,7 @@ class NixIOWriteTest(NixIOTest):
             units=pq.A
         )
         seg.irregularlysampledsignals.append(irsig)
-        self.write_and_compare([anotherblock])
+        self.write_and_compare([block, anotherblock])
 
         block.segments[0].analogsignals.append(
             AnalogSignal(signal=[10.0, 1.0, 3.0], units=pq.S,
