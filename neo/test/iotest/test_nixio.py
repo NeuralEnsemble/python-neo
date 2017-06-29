@@ -65,6 +65,13 @@ class NixIOTest(unittest.TestCase):
         nix_channels = list(src for src in nixsrc.sources
                             if src.type == "neo.channelindex")
         self.assertEqual(len(neochx.index), len(nix_channels))
+
+        if neochx.channel_ids:
+            nix_chanids = list(src.metadata["channel_id"] for src
+                               in nixsrc.sources
+                               if src.type == "neo.channelindex")
+            self.assertEqual(len(neochx.channel_ids), len(nix_chanids))
+
         for nixchan in nix_channels:
             nixchanidx = nixchan.metadata["index"]
             try:
@@ -78,6 +85,10 @@ class NixIOTest(unittest.TestCase):
                     neochanname = neochanname.decode()
                 nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
+            if neochx.channel_ids:
+                neochanid = neochx.channel_ids[neochanpos]
+                nixchanid = nixchan.metadata["channel_id"]
+                self.assertEqual(neochanid, nixchanid)
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
