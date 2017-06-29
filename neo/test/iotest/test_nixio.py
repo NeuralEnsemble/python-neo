@@ -66,7 +66,7 @@ class NixIOTest(unittest.TestCase):
                             if src.type == "neo.channelindex")
         self.assertEqual(len(neochx.index), len(nix_channels))
 
-        if neochx.channel_ids:
+        if len(neochx.channel_ids):
             nix_chanids = list(src.metadata["channel_id"] for src
                                in nixsrc.sources
                                if src.type == "neo.channelindex")
@@ -85,10 +85,12 @@ class NixIOTest(unittest.TestCase):
                     neochanname = neochanname.decode()
                 nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
-            if neochx.channel_ids:
+            if len(neochx.channel_ids):
                 neochanid = neochx.channel_ids[neochanpos]
                 nixchanid = nixchan.metadata["channel_id"]
                 self.assertEqual(neochanid, nixchanid)
+            elif "channel_id" in nixchan.metadata:
+                self.fail("Channel ID not loaded")
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
@@ -505,6 +507,7 @@ class NixIOTest(unittest.TestCase):
                 nixrc.name, "neo.channelindex.metadata"
             )
             nixrc.metadata.create_property("index", nix.Value(chan))
+            nixrc.metadata.create_property("channel_id", nix.Value(chan+1))
             dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
@@ -611,7 +614,7 @@ class NixIOTest(unittest.TestCase):
         spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
-        chx = ChannelIndex(name="achx", index=[1, 2])
+        chx = ChannelIndex(name="achx", index=[1, 2], channel_ids=[0, 10])
         chx.annotate(**cls.rdict(5))
         blk.channel_indexes.append(chx)
 
@@ -640,6 +643,7 @@ class NixIOWriteTest(NixIOTest):
 
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
+        self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
         self.compare_blocks(blocks, self.reader.blocks)
 
     def test_block_write(self):
@@ -663,6 +667,7 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name=self.rword())
         chx = ChannelIndex(name=self.rword(),
                            description=self.rsentence(),
+                           channel_ids=[10, 20, 30, 50, 80, 130],
                            index=[1, 2, 3, 5, 8, 13])
         block.channel_indexes.append(chx)
         self.write_and_compare([block])
@@ -825,7 +830,8 @@ class NixIOWriteTest(NixIOTest):
                                                       units=pq.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
-                                   index=[1, 2])
+                                   index=[1, 2],
+                                   channel_ids=[11, 22])
                 blk.channel_indexes.append(chx)
                 for unidx in range(nunits):
                     unit = Unit()
