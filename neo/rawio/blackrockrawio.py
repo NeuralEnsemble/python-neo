@@ -54,7 +54,7 @@ import re
 import numpy as np
 import quantities as pq
 
-from .baserawio import BaseRawIO, channel_dtype
+from .baserawio import BaseRawIO
 
 
 class BlackrockRawIO(BaseRawIO):
@@ -146,7 +146,7 @@ class BlackrockRawIO(BaseRawIO):
     extensions = ['ns' + str(_) for _ in range(1, 7)]
     extensions.extend(['nev', 'sif', 'ccf'])
 
-    mode = 'one-file'
+    rawmode = 'multi-file'
 
     def __init__(self, filename, nsx_override=None, nev_override=None,
                  sif_override=None, ccf_override=None, nsx_to_load=None, verbose=False):
@@ -257,8 +257,11 @@ class BlackrockRawIO(BaseRawIO):
     
     def _parse_header(self):
         
-        # Load file spec and headers of available nev file
+        
+
         if self._avail_files['nev']:
+            # Load file spec and headers of available nev file
+            
             # read nev file specification
             self.__nev_spec = self.__extract_nev_file_spec()
 
@@ -267,6 +270,57 @@ class BlackrockRawIO(BaseRawIO):
             # read nev headers
             self.__nev_basic_header, self.__nev_ext_header = \
                 self.__nev_header_reader[self.__nev_spec]()
+            #~ print(self.__nev_basic_header, self.__nev_ext_header)
+            #~ print(self.__nev_basic_header)
+            #~ for k, v in self.__nev_basic_header.items():
+                #~ print(k, v)
+            #~ for k, v in self.__nev_ext_header.items():
+                #~ print(k, v.dtype, v.shape)
+                #~ print(v)
+            
+            #~ print(self.__nev_ext_header[b'NEUEVFLT'])
+            #~ exit()
+            #~ print(self.__nev_ext_header[b'NEUEVWAV'])
+            
+            self.nev_data = self.__nev_data_reader[self.__nev_spec]()
+            spikes = self.nev_data['Spikes']
+            
+            #scan all channel to get number of Unit
+            unit_channels = []
+            self.internal_unit_ids = [] #pair of chan['packet_id'], spikes['unit_class_nb']
+            for i in range(len(self.__nev_ext_header[b'NEUEVFLT'])):
+                
+                #~ print(self.__nev_ext_header[b'NEUEVFLT'].dtype)
+                channel_id = self.__nev_ext_header[b'NEUEVFLT']['electrode_id'][i]
+
+                #~ print(channel_id)
+                #~ print(spikes['packet_id'])
+                chan_mask = (spikes['packet_id'] == channel_id)
+                #~ print(chan_mask)
+                chan_spikes = spikes[chan_mask]
+                all_unit_id = np.unique(chan_spikes['unit_class_nb'])
+                #~ print('all_unit_id', all_unit_id)
+                for u, unit_id in enumerate(all_unit_id):
+                    #~ print(channel_id, 'unit_id', unit_id)
+                    self.internal_unit_ids.append((channel_id, unit_id))
+                
+                    #~ name = "Unit {}".format(1000 * channel_id + unit_id)
+                    #~ _id = "ch{}#{}".format(channel_id, unit_id)
+                    name = "ch{}#{}".format(channel_id, unit_id)
+                    _id = "Unit {}".format(1000 * channel_id + unit_id)
+                    
+                    wf_gain = 1.#TODO
+                    wf_offset = 0. #TODO
+                    wf_units = '' #TODO
+                    unit_channels.append((name, _id, wf_units, wf_gain,wf_offset))
+
+            unit_channel_dtype = [('name','U64'), ('id','U64'),('wf_units','U'),
+                                        ('wf_gain','float64'),('wf_offset','float64'),]
+            unit_channels = np.array(unit_channels, dtype=unit_channel_dtype)
+            #~ print(unit_channels)
+            
+            
+            
 
         # Load file spec and headers of available nsx files
         self.__nsx_spec = {}
@@ -280,7 +334,7 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
 
-            # Read nsx data header(s) for nsx
+            # Read nsx data header(s) for nsxdef get_analogsignal_shape(self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
         
         if self.nsx_to_load is None:
@@ -289,7 +343,7 @@ class BlackrockRawIO(BaseRawIO):
         spec = self.__nsx_spec[nsx_nb]
         self.nsx_data = self.__nsx_data_reader[spec](nsx_nb)
         
-        channels = []
+        sig_channels = []
         #~ print(self.__nsx_ext_header[nsx_nb].dtype)
         for i, chan in enumerate(self.__nsx_ext_header[nsx_nb]):
             #~ print(chan)
@@ -299,20 +353,20 @@ class BlackrockRawIO(BaseRawIO):
             
             gain = float(chan['max_analog_val'])/float(chan['max_digital_val'])
             offset = 0.
-            channels.append((chan['electrode_label'].decode(), 
+            sig_channels.append((chan['electrode_label'].decode(), 
                                         str(chan['electrode_id']), 
                                         chan['units'].decode(), 
                                         gain,
                                         offset,
                                         ))
         
-        nb_seg = len(self.nsx_data)
+        
         
         #~ nb_chanq = len(h)
-        #~ channels = np.empty(nb_chan, dtype=channel_dtype)
-        #~ channels['name'] = h['electrode_label']
-        #~ print(channels)
-        channel_dtype = [
+        #~ sig_channels = np.empty(nb_chan, dtype=channel_dtype)
+        #~ sig_channels['name'] = h['electrode_label']
+        #~ print(sig_channels)
+        sig_channel_dtype = [
                     ('name','U64'),
                     ('id','U64'),
                     ('units','U16'),
@@ -320,8 +374,10 @@ class BlackrockRawIO(BaseRawIO):
                     ('offset','float64'),
                 ]
 
-        channels = np.array(channels, dtype=channel_dtype)
-        #~ print(channels)
+        sig_channels = np.array(sig_channels, dtype=sig_channel_dtype)
+        #~ print(sig_channels)
+        
+        nb_seg = len(self.nsx_data)
         
         #~ sampling_rate = self.__nsx_params[spec]('sampling_rate', nsx_nb)
         sampling_rate = 30000. / self.__nsx_basic_header[nsx_nb]['period']
@@ -341,7 +397,8 @@ class BlackrockRawIO(BaseRawIO):
         
         self.header = {}
         self.header['nb_segment'] = [nb_seg]
-        self.header['signal_channels'] = channels
+        self.header['signal_channels'] = sig_channels
+        self.header['unit_channels'] = unit_channels
         
         #~ self.header['signal_sampling_rate'] = sampling_rate
         t_start, t_stop = self.__nsx_rec_times[spec](nsx_nb)
@@ -350,26 +407,80 @@ class BlackrockRawIO(BaseRawIO):
         
         #~ print(self.__nsx_data_header[nsx_nb])
     
-    def source_name(self):
+    def _source_name(self):
         return self.filename
 
 
-    def block_count(self):
+    def _block_count(self):
         return 1
     
-    def segment_count(self, block_index):
+    def _segment_count(self, block_index):
+        #In version 2.1 it is always 1
+        #In version 2.2 and 2.3 if there are pause then
+        #a new segment is created for each pause
         assert block_index==0
         return self.header['nb_segment'][block_index]
+    
+    def _analogsignal_shape(self, block_index, seg_index):
+        assert block_index==0
+        memmap_data = self.nsx_data[seg_index]
+        return self.nsx_data[seg_index].shape
     
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
         memmap_data = self.nsx_data[seg_index]
+        
         if channel_indexes is None:
             channel_indexes = slice(None)
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
         return sig_chunk
     
+    
+    def _spike_count(self,  block_index, seg_index, unit_index):
+        channel_id, unit_id = self.internal_unit_ids[unit_index]
+        
+        all_spikes = self.nev_data['Spikes']
+        
+        #select by channel_id and unit_id
+        mask = (all_spikes['packet_id']==channel_id) & (all_spikes['unit_class_nb']==unit_id)
+        nb = int(np.sum(mask))
+        return nb
+        
+        
+    def _spike_timestamps(self,  block_index, seg_index, unit_index, ind_start, ind_stop):
+        
+        channel_id, unit_id = self.internal_unit_ids[unit_index]
+        
+        all_spikes = self.nev_data['Spikes']
+        
+        #select by channel_id and unit_id
+        mask = (all_spikes['packet_id']==channel_id) & (all_spikes['unit_class_nb']==unit_id)
+        unit_spikes = all_spikes[mask]
+        
+        timestamp = unit_spikes['timestamp']
+        
+        if ind_start is not None or ind_stop is not None:
+            sl = slice(ind_start, ind_stop)
+            timestamp = timestamp[sl]
+        
+        return timestamp
 
+    
+    
+    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
+        spike_times = spike_timestamps.astype(dtype)
+        spike_times /= self.__nev_basic_header['timestamp_resolution']
+        return spike_times
+
+    def _spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop):
+        raise(NotImplementedError)
+
+    
+    
+    
+    ###################################################
+    ###################################################
+    
     #OLD CODE from Lyuba Zehl, Michael Denker
     def _print_verbose(self, text):
         """
@@ -517,7 +628,7 @@ class BlackrockRawIO(BaseRawIO):
             ('lo_freq_type', 'uint16')]  # 0=None, 1=Butterworth
 
         nsx_ext_header = np.memmap(
-            filename, shape=shape, offset=offset_dt0, dtype=dt1)
+            filename, shape=shape, offset=offset_dt0, dtype=dt1, mode='r')
 
         return nsx_basic_header, nsx_ext_header
 
@@ -533,7 +644,7 @@ class BlackrockRawIO(BaseRawIO):
             ('timestamp', 'uint32'),
             ('nb_data_points', 'uint32')]
 
-        return np.memmap(filename, dtype=dt2, shape=1, offset=offset)[0]
+        return np.memmap(filename, dtype=dt2, shape=1, offset=offset, mode='r')[0]
 
     def __read_nsx_dataheader_variant_a(
             self, nsx_nb, filesize=None, offset=None):
@@ -594,7 +705,7 @@ class BlackrockRawIO(BaseRawIO):
         # read nsx data
         # store as dict for compatibility with higher file specs
         data = {0: np.memmap(
-            filename, dtype='int16', shape=shape, offset=offset)}
+            filename, dtype='int16', shape=shape, offset=offset, mode='r')}
 
         return data
 
@@ -616,7 +727,7 @@ class BlackrockRawIO(BaseRawIO):
 
             # read data
             data[data_bl] = np.memmap(
-                filename, dtype='int16', shape=shape, offset=offset)
+                filename, dtype='int16', shape=shape, offset=offset, mode='r')
 
         return data
 
@@ -670,7 +781,7 @@ class BlackrockRawIO(BaseRawIO):
             ('info_field', 'S24')]
 
         raw_ext_header = np.memmap(
-            filename, offset=offset_dt0, dtype=dt1, shape=shape)
+            filename, offset=offset_dt0, dtype=dt1, shape=shape, mode='r')
 
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
@@ -747,7 +858,7 @@ class BlackrockRawIO(BaseRawIO):
             ('packet_id', 'uint16'),
             ('value', 'S{0}'.format(data_size - 6))]
 
-        raw_data = np.memmap(filename, offset=header_size, dtype=dt0)
+        raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode='r')
 
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
@@ -1099,7 +1210,7 @@ class BlackrockRawIO(BaseRawIO):
         offset = \
             self.__get_file_size(filename) - \
             self.__nev_params('bytes_in_data_packets')
-        last_data_packet = np.memmap(filename, offset=offset, dtype=dt)[0]
+        last_data_packet = np.memmap(filename, offset=offset, dtype=dt, mode='r')[0]
 
         n_starts = [0 * self.__nev_params('event_unit')]
         n_stops = [
@@ -1845,131 +1956,131 @@ class BlackrockRawIO(BaseRawIO):
 
         return st
 
-    def __read_analogsignal(
-            self, n_start, n_stop, signal, channel_id, nsx_nb,
-            scaling='raw', lazy=False):
-        """
-        Creates analogsignal for signal of channel in nsx data.
-        """
+    #~ def __read_analogsignal(
+            #~ self, n_start, n_stop, signal, channel_id, nsx_nb,
+            #~ scaling='raw', lazy=False):
+        #~ """
+        #~ Creates analogsignal for signal of channel in nsx data.
+        #~ """
 
-        # TODO: The following part is extremely slow, since the memmaps for the
-        # headers are created again and again. In particular, this makes lazy
-        # loading slow as well. Solution would be to create header memmaps up
-        # front.
+        #~ # TODO: The following part is extremely slow, since the memmaps for the
+        #~ # headers are created again and again. In particular, this makes lazy
+        #~ # loading slow as well. Solution would be to create header memmaps up
+        #~ # front.
 
-        # get parameters
-        sampling_rate = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'sampling_rate', nsx_nb)
-        nsx_time_unit = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'time_unit', nsx_nb)
-        max_ana = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'max_analog_val', nsx_nb)
-        min_ana = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'min_analog_val', nsx_nb)
-        max_dig = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'max_digital_val', nsx_nb)
-        min_dig = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'min_digital_val', nsx_nb)
-        units = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'units', nsx_nb)
-        labels = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'labels', nsx_nb)
+        #~ # get parameters
+        #~ sampling_rate = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'sampling_rate', nsx_nb)
+        #~ nsx_time_unit = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'time_unit', nsx_nb)
+        #~ max_ana = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'max_analog_val', nsx_nb)
+        #~ min_ana = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'min_analog_val', nsx_nb)
+        #~ max_dig = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'max_digital_val', nsx_nb)
+        #~ min_dig = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'min_digital_val', nsx_nb)
+        #~ units = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'units', nsx_nb)
+        #~ labels = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            #~ 'labels', nsx_nb)
 
-        dbl_idx = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_idx', nsx_nb, n_start, n_stop)
-        t_start = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_t_start', nsx_nb, n_start, n_stop)
-        t_stop = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
-            'databl_t_stop', nsx_nb, n_start, n_stop)
+        #~ dbl_idx = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
+            #~ 'databl_idx', nsx_nb, n_start, n_stop)
+        #~ t_start = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
+            #~ 'databl_t_start', nsx_nb, n_start, n_stop)
+        #~ t_stop = self.__nsx_databl_param[self.__nsx_spec[nsx_nb]](
+            #~ 'databl_t_stop', nsx_nb, n_start, n_stop)
 
-        elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
-        if channel_id in elids_nsx:
-            idx_ch = elids_nsx.index(channel_id)
-        else:
-            return None
+        #~ elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
+        #~ if channel_id in elids_nsx:
+            #~ idx_ch = elids_nsx.index(channel_id)
+        #~ else:
+            #~ return None
 
-        description = \
-            "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_id, labels[idx_ch], nsx_nb)
+        #~ description = \
+            #~ "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
+                #~ channel_id, labels[idx_ch], nsx_nb)
 
-        # TODO: Find a more time/memory efficient way to handle lazy loading
-        data_times = np.arange(
-            t_start.item(), t_stop.item(),
-            self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
-        mask = (data_times >= n_start) & (data_times < n_stop)
+        #~ # TODO: Find a more time/memory efficient way to handle lazy loading
+        #~ data_times = np.arange(
+            #~ t_start.item(), t_stop.item(),
+            #~ self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
+        #~ mask = (data_times >= n_start) & (data_times < n_stop)
 
-        if lazy:
-            lazy_shape = (np.sum(mask), )
-            sig_ch = np.array([], dtype='float32')
-            sig_unit = pq.dimensionless
-            t_start = n_start.rescale('s')
-        else:
-            data_times = data_times[mask].astype(float)
-            if scaling == 'voltage':
-                if not self._avail_files['nev']:
-                    raise ValueError(
-                        'Cannot convert signals in filespec 2.1 nsX '
-                        'files to voltage without nev file.')
-                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
+        #~ if lazy:
+            #~ lazy_shape = (np.sum(mask), )
+            #~ sig_ch = np.array([], dtype='float32')
+            #~ sig_unit = pq.dimensionless
+            #~ t_start = n_start.rescale('s')
+        #~ else:
+            #~ data_times = data_times[mask].astype(float)
+            #~ if scaling == 'voltage':
+                #~ if not self._avail_files['nev']:
+                    #~ raise ValueError(
+                        #~ 'Cannot convert signals in filespec 2.1 nsX '
+                        #~ 'files to voltage without nev file.')
+                #~ sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
 
-                # transform dig value to physical value
-                sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
-                sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
-                if sym_ana and sym_dig:
-                    sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
-                else:
-                    # general case (same result as above for symmetric input)
-                    sig_ch -= min_dig[idx_ch]
-                    sig_ch *= float(max_ana[idx_ch] - min_ana[idx_ch]) / \
-                        float(max_dig[idx_ch] - min_dig[idx_ch])
-                    sig_ch += float(min_ana[idx_ch])
-                sig_unit = units[idx_ch].decode()
-            elif scaling == 'raw':
-                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(int)
-                sig_unit = pq.dimensionless
-            else:
-                raise ValueError(
-                    'Unkown option {1} for parameter '
-                    'scaling.'.format(scaling))
+                #~ # transform dig value to physical value
+                #~ sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
+                #~ sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
+                #~ if sym_ana and sym_dig:
+                    #~ sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+                #~ else:
+                    #~ # general case (same result as above for symmetric input)
+                    #~ sig_ch -= min_dig[idx_ch]
+                    #~ sig_ch *= float(max_ana[idx_ch] - min_ana[idx_ch]) / \
+                        #~ float(max_dig[idx_ch] - min_dig[idx_ch])
+                    #~ sig_ch += float(min_ana[idx_ch])
+                #~ sig_unit = units[idx_ch].decode()
+            #~ elif scaling == 'raw':
+                #~ sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(int)
+                #~ sig_unit = pq.dimensionless
+            #~ else:
+                #~ raise ValueError(
+                    #~ 'Unkown option {1} for parameter '
+                    #~ 'scaling.'.format(scaling))
 
-            t_start = data_times[0].rescale(nsx_time_unit)
+            #~ t_start = data_times[0].rescale(nsx_time_unit)
 
-        anasig = AnalogSignal(
-            signal=pq.Quantity(sig_ch, sig_unit, copy=False),
-            sampling_rate=sampling_rate,
-            t_start=t_start,
-            name=labels[idx_ch],
-            description=description,
-            file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
-        if lazy:
-            anasig.lazy_shape = lazy_shape
-        anasig.annotate(
-            nsx=nsx_nb,
-            channel_id=int(channel_id))
-        return anasig
+        #~ anasig = AnalogSignal(
+            #~ signal=pq.Quantity(sig_ch, sig_unit, copy=False),
+            #~ sampling_rate=sampling_rate,
+            #~ t_start=t_start,
+            #~ name=labels[idx_ch],
+            #~ description=description,
+            #~ file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
+        #~ if lazy:
+            #~ anasig.lazy_shape = lazy_shape
+        #~ anasig.annotate(
+            #~ nsx=nsx_nb,
+            #~ channel_id=int(channel_id))
+        #~ return anasig
 
-    def __read_unit(self, unit_id, channel_id):
-        """
-        Creates unit with unit id for given channel id.
-        """
-        # define a name for spiketrain
-        # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
-        # define description for spiketrain
-        desc = 'Unit from channel: {0}, id: {1}'.format(
-            channel_id, self.__get_unit_classification(unit_id))
+    #~ def __read_unit(self, unit_id, channel_id):
+        #~ """
+        #~ Creates unit with unit id for given channel id.
+        #~ """
+        #~ # define a name for spiketrain
+        #~ # (unique identifier: 1000 * elid + unit_nb)
+        #~ name = "Unit {0}".format(1000 * channel_id + unit_id)
+        #~ # define description for spiketrain
+        #~ desc = 'Unit from channel: {0}, id: {1}'.format(
+            #~ channel_id, self.__get_unit_classification(unit_id))
 
-        un = Unit(
-            name=name,
-            description=desc,
-            file_origin='.'.join([self._filenames['nev'], 'nev']))
+        #~ un = Unit(
+            #~ name=name,
+            #~ description=desc,
+            #~ file_origin='.'.join([self._filenames['nev'], 'nev']))
 
-        # add additional annotations
-        un.annotate(
-            unit_id=int(unit_id),
-            channel_id=int(channel_id))
+        #~ # add additional annotations
+        #~ un.annotate(
+            #~ unit_id=int(unit_id),
+            #~ channel_id=int(channel_id))
 
-        return un
+        #~ return un
 
     #~ def __read_channelindex(
             #~ self, channel_id, index=None, channel_units=None, cascade=True):

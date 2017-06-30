@@ -7,14 +7,24 @@ Classes
 -------
 
 BaseRawIO
-abstract class which should be overridden.
+abstract class which should be overridden to write a RawIO.
 
-This manage low level acces to raw data in an efficient way.
+RawIO is a new API in neo that is supposed to acces as fast as possible
+raw data. All IO with theses carractéristics should/could be rewritten:
+  * internally use of memmap (or hdf5)
+  * reading header is quite cheap (not read all the file)
+  * neo tree object is symetric and logical: same channel/units/event
+    along all block and segments.
+    
 
-This handle **only** one simplified but very frequent case of dataset:
+
+So this handle **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
     * AnalogSignal have all the same sampling_rate, t_start, duration inside a segment
+
+An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
+neo legacy IO from free.
 
     
 """
@@ -33,12 +43,21 @@ possible_modes = ['one-file', 'multi-file', 'one-dir', 'multi-dir', 'url', 'othe
 error_header = 'Header is not read yet, do parse_header() first'
 
 
-channel_dtype = [
+_signal_channel_dtype = [
     ('name','U'),
     ('id','U'),
     ('units','U'),
     ('gain','float64'),
     ('offset','float64'),
+]
+
+_unit_channel_dtype = [
+    ('name','U'),
+    ('id','U'),
+    #for waveform
+    ('wf_units','U'),
+    ('wf_gain','float64'),
+    ('wf_offset','float64'),
 ]
 
 
@@ -52,7 +71,7 @@ class BaseRawIO(object):
     description = ''
     extentions = []
 
-    mode = None # one key in possible modes
+    rawmode = None # one key in possible modes
     
 
     def __init__(self, **kargs):
@@ -71,12 +90,6 @@ class BaseRawIO(object):
         self.header = None
     
     def parse_header(self):
-        #if we need to cache the header somewhere
-        # make some hack here
-        self._parse_header()
-    
-    
-    def _parse_header(self):
         """
         This must parse the file header to get all stuff for fast later one.
         
@@ -84,15 +97,8 @@ class BaseRawIO(object):
         self.header['signal_channels']
         
         """
-        #
-        #
-        raise(NotImplementedError)
-        #self.header = ...
-    
-    def source_name(self):
-        #this is used for __repr__
-        raise(NotImplementedError)
-    
+        self._parse_header()
+
     def __repr__(self):
         txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
         if self.header is not None:
@@ -100,19 +106,49 @@ class BaseRawIO(object):
             txt += 'nb_block: {}\n'.format(nb_block)
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             txt += 'nb_segment:  {}\n'.format(nb_seg)
-            ch = self.header['signal_channels']
-            if len(ch)>8:
-                chantxt = "[{} ... {}]".format(' '.join(e for e in ch['name'][:4]),\
-                                                                            ' '.join(e for e in ch['name'][-4:]))
-            else:
-                chantxt = "[{}]".format(' '.join(e for e in ch['name']))
-            txt += 'channel: {}\n'.format(chantxt)
+            
+            for k in ('signal_channels', 'unit_channels'):
+                ch = self.header[k]
+                if len(ch)>8:
+                    chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),\
+                                                                                ' '.join(e for e in ch['name'][-4:]))
+                else:
+                    chantxt = "[{}]".format(', '.join(e for e in ch['name']))
+                txt += '{}: {}\n'.format(k, chantxt)
+            
             
         return txt
     
+    def source_name(self):
+        """Return fancy name of file source"""
+        return self._source_name()
+
+    def block_count(self):
+        """return number of blocks"""
+        return self._block_count()
+    
+    def segment_count(self, block_index):
+        """return number of segment for a given block"""
+        return self._segment_count(block_index)
+        
+    def signal_channels_count(self):
+        """Return the number of signal channel.
+        Same allong all block and Segment.
+        """
+        return len(self.header['signal_channels'])
+
+    def unit_channels_count(self):
+        """Return the number of unit (aka spike) channel.
+        Same allong all block and Segment.
+        """
+        return len(self.header['unit_channels'])
+    
+    ###
+    # signal and channel zone
     def channel_name_to_index(self, channel_names):
         """
         Transform channel_names to channel_indexes.
+        Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
         channel_indexes,  = np.nonzero(np.in1d(ch['name'], channel_names))
@@ -122,12 +158,13 @@ class BaseRawIO(object):
     def channel_name_to_id(self, channel_ids):
         """
         Transform channel_ids to channel_indexes.
+        Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
         channel_indexes,  = np.nonzero(channel_index(np.in1d(ch['id'], channel_ids)))
         assert len(channel_indexes) == len(channel_ids), 'not match'
         return channel_indexes
-    
+
     def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
         """
         select channel_indexes from channel_indexes/channel_names/channel_ids
@@ -140,30 +177,28 @@ class BaseRawIO(object):
             channel_indexes = self.channel_name_to_id(channel_ids)
         
         return channel_indexes
-    
-    def block_count(self):
-        raise(NotImplementedError)
-    
-    def segment_count(self, block_index):
-        raise(NotImplementedError)
-    
+
+
+    def analogsignal_shape(self, block_index, seg_index):
+        """Return signals shape for a given block_index, seg_index"""
+        return self._analogsignal_shape(block_index, seg_index)
+
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
+        """
+        Return a chunk of raw signal.
         
+        
+        
+        
+        """
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
         
         raw_chunk = self._get_analogsignal_chunk(block_index, seg_index,  i_start, i_stop, channel_indexes)
         
         return raw_chunk
-    
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
-        raise(NotImplementedError)
-    
-    def analogsignal_meta(self):
-        #sampling_rate in Hz and t_start in s
-        raise(NotImplementedError)
-    
-    def rescale_raw_to_float(self, raw_signal,  dtype='float32',
+
+    def rescale_signal_raw_to_float(self, raw_signal,  dtype='float32',
                 channel_indexes=None, channel_names=None, channel_ids=None):
         
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
@@ -182,8 +217,93 @@ class BaseRawIO(object):
         
         return float_signal
     
+    # spiketrain and unit zone
+    def spike_count(self,  block_index=0, seg_index=0, unit_index=0):
+        return self._spike_count(  block_index, seg_index, unit_index)
+    
+    def spike_timestamps(self,  block_index=0, seg_index=0, unit_index=0,
+                        ind_start=None, ind_stop=None):
+        """
+        ind_start/ind_stop represent the spike index and not the time nor timestamps.
+        
+        The timestamp is as close to the format itself. Sometimes float/int32/int64.
+        Sometimes it is the index on the signal but not always.
+        The conversion to second or index_on_signal is done outside here.
+
+        """
+        timestamp = self._spike_timestamps(block_index, seg_index, unit_index, ind_start, ind_stop)
+        return timestamp
+    
+    def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
+        """
+        Rescale spike timestamps to s
+        """
+        return self._rescale_spike_timestamp(spike_timestamps, dtype)
+    
+    def spike_index_time_slice(self,  block_index=0, seg_index=0, unit_index=0, t_start=0, t_stop=0):
+        """
+        Given   block_index/seg_index/unit_index return 
+        ind_start/ind_stop the index of the first (included) and last spike (excluded) in a given 
+        t_start/t_start time range in second.
+        
+        returns:
+        ind_start/ind_stop can be directly used in spike_timestamps.
+        """
+        return self._spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop)
     
     
+    
+    # event and epoch zone
+    
+    
+
+    ##################
+    
+    # Functions to be implement in IO below here
+    
+    def _parse_header(self):
+        raise(NotImplementedError)
+    
+    def _source_name(self):
+        raise(NotImplementedError)
+    
+    def _block_count(self):
+        raise(NotImplementedError)
+    
+    def _segment_count(self, block_index):
+        raise(NotImplementedError)
+    
+    ###
+    # signal and channel zone
+    def _analogsignal_shape(self, block_index, seg_index):
+        raise(NotImplementedError)
+
+    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        raise(NotImplementedError)
+    
+    
+    def analogsignal_meta(self):
+        #sampling_rate in Hz and t_start in s
+        raise(NotImplementedError)
+    
+    
+    ###
+    # spiketrain and unit zone
+    def _spike_count(self,  block_index, seg_index, unit_index):
+        raise(NotImplementedError)
+    
+    def _spike_timestamps(self,  block_index, seg_index, unit_index, ind_start, ind_stop):
+        raise(NotImplementedError)
+    
+    def _rescale_spike_timestamp(self, spike_timestamps, dtype):
+        raise(NotImplementedError)
+        
+    def _spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop):
+        raise(NotImplementedError)
+
+    
+    ###
+    # event and epoch zone
     
     
     
