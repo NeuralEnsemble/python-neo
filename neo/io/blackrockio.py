@@ -1790,7 +1790,7 @@ class BlackrockIO(BaseIO):
         # get spike times for given time interval
         if not lazy:
             times = spikes['timestamp'] * event_unit
-            mask = (times >= n_start) & (times < n_stop)
+            mask = (times >= n_start) & (times <= n_stop)
             times = times[mask].astype(float)
         else:
             times = np.array([]) * event_unit
