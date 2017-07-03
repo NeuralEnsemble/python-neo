@@ -27,6 +27,7 @@ else:
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain,
                                  _check_time_in_range, _new_spiketrain)
 from neo.core import Segment, Unit
+from neo.core.baseneo import MergeError
 from neo.test.tools import  (assert_arrays_equal,
                              assert_arrays_almost_equal,
                              assert_neo_object_is_compliant)
@@ -1143,6 +1144,112 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.dtype, result.dtype)
         self.assertEqual(self.train1.t_start, result.t_start)
         self.assertEqual(self.train1.t_stop, result.t_stop)
+
+class TestMerge(unittest.TestCase):
+    def setUp(self):
+        self.waveforms1 = np.array([[[0., 1.],
+                                    [0.1, 1.1]],
+                                   [[2., 3.],
+                                    [2.1, 3.1]],
+                                   [[4., 5.],
+                                    [4.1, 5.1]],
+                                   [[6., 7.],
+                                    [6.1, 7.1]],
+                                   [[8., 9.],
+                                    [8.1, 9.1]],
+                                   [[10., 11.],
+                                    [10.1, 11.1]]]) * pq.mV
+        self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
+        self.data1quant = self.data1*pq.ms
+        self.train1 = SpikeTrain(self.data1quant, t_stop=10.0*pq.ms,
+                                 waveforms=self.waveforms1)
+
+        self.waveforms2 = np.array([[[0., 1.],
+                                     [0.1, 1.1]],
+                                    [[2., 3.],
+                                     [2.1, 3.1]],
+                                    [[4., 5.],
+                                     [4.1, 5.1]],
+                                    [[6., 7.],
+                                     [6.1, 7.1]],
+                                    [[8., 9.],
+                                     [8.1, 9.1]],
+                                    [[10., 11.],
+                                     [10.1, 11.1]]]) * pq.mV
+        self.data2 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
+        self.data2quant = self.data1 * pq.ms
+        self.train2 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
+                                 waveforms=self.waveforms1)
+
+        self.segment = Segment()
+        self.segment.spiketrains.extend([self.train1, self.train2])
+        self.train1.segment = self.segment
+        self.train2.segment = self.segment
+
+    def test_compliant(self):
+        assert_neo_object_is_compliant(self.train1)
+        assert_neo_object_is_compliant(self.train2)
+
+    def test_merge_typical(self):
+        self.train1.waveforms = None
+        self.train2.waveforms = None
+
+        result = self.train1.merge(self.train2)
+        assert_neo_object_is_compliant(result)
+
+    def test_merge_with_waveforms(self):
+        result = self.train1.merge(self.train2)
+        assert_neo_object_is_compliant(result)
+
+    def test_correct_shape(self):
+        result = self.train1.merge(self.train2)
+        self.assertEqual(len(result.shape), 1)
+        self.assertEqual(result.shape[0],
+                         self.train1.shape[0] + self.train2.shape[0])
+
+    def test_correct_times(self):
+        result = self.train1.merge(self.train2)
+        expected = sorted(np.concatenate((self.train1.times,
+                                          self.train2.times)))
+        np.testing.assert_array_equal(result, expected)
+
+    def test_rescaling_units(self):
+        train3 = self.train1.duplicate_with_new_data(
+            self.train1.times.magnitude * pq.microsecond)
+        train3.segment = self.train1.segment
+        result = train3.merge(self.train2)
+        time_unit = result.units
+        expected = sorted(np.concatenate((train3.rescale(time_unit).times,
+                                          self.train2.rescale(time_unit).times)))
+        expected = expected*time_unit
+        np.testing.assert_array_equal(result.rescale(time_unit), expected)
+
+    def test_sampling_rate(self):
+        result = self.train1.merge(self.train2)
+        self.assertEqual(result.sampling_rate, self.train1.sampling_rate)
+
+    def test_neo_relations(self):
+        result = self.train1.merge(self.train2)
+        self.assertEqual(self.train1.segment, result.segment)
+        self.assertTrue(result in result.segment.spiketrains)
+
+    def test_missing_waveforms_error(self):
+        self.train1.waveforms = None
+        with self.assertRaises(MergeError):
+            self.train1.merge(self.train2)
+        with self.assertRaises(MergeError):
+            self.train2.merge(self.train1)
+
+    def test_incompatible_t_start(self):
+        train3 = self.train1.duplicate_with_new_data(self.train1,
+                                                     t_start=-1*pq.s)
+        train3.segment = self.train1.segment
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3)
+
+
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):

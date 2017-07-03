@@ -23,8 +23,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 import quantities as pq
-
-from neo.core.baseneo import BaseNeo
+from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
 
 def check_has_dimensions_time(*values):
@@ -553,6 +552,68 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             new_st.waveforms = self.waveforms[indices]
 
         return new_st
+
+    def merge(self, other):
+        '''
+        Merge another :class:`SpikeTrain` into this one.
+
+        The times of the :class:`SpikeTrain` objects combined in one array
+        and sorted.
+
+        If the attributes of the two :class:`SpikeTrain` are not
+        compatible, an Exception is raised.
+        '''
+        if self.sampling_rate != other.sampling_rate:
+            raise MergeError("Cannot merge, different sampling rates")
+        if self.t_start != other.t_start:
+            raise MergeError("Cannot merge, different t_start")
+        if self.t_stop != other.t_stop:
+            raise MemoryError("Cannot merge, different t_stop")
+        if self.left_sweep != other.left_sweep:
+            raise MemoryError("Cannot merge, different left_sweep")
+        if self.segment != other.segment:
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+        wfs = [self.waveforms is not None, other.waveforms is not None]
+        if any(wfs) and not all(wfs):
+            raise MergeError("Cannot merge signal with waveform and signal "
+                             "without waveform.")
+        stack = np.concatenate(map(np.array, (self, other)))
+        sorting = np.argsort(stack)
+        stack = stack[sorting]
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        kwargs.update(merged_annotations)
+        train = SpikeTrain(stack, units=self.units, dtype=self.dtype,
+                            copy=False, t_start=self.t_start,
+                            t_stop=self.t_stop,
+                            sampling_rate=self.sampling_rate,
+                            left_sweep=self.left_sweep, **kwargs)
+        if all(wfs):
+            wfs_stack = np.vstack((self.waveforms, other.waveforms))
+            wfs_stack = wfs_stack[sorting]
+            train.waveforms = wfs_stack
+        train.segment = self.segment
+        if train.segment is not None:
+            self.segment.spiketrains.append(train)
+
+        if hasattr(self, "lazy_shape"):
+            train.lazy_shape = merged_lazy_shape
+        return train
 
     @property
     def times(self):
