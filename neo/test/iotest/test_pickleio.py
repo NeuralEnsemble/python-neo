@@ -67,7 +67,7 @@ class TestPickleIO(unittest.TestCase):
         self.assertIsInstance(r_seg.epochs[0], Epoch)
         os.remove('blk.pkl')
         ##Epoch
-        train = Epoch(times=np.arange(0, 30, 10)*s,durations=[10, 5, 7]*ms,labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        train = Epoch(times=np.arange(0, 30, 10)*pq.s,durations=[10, 5, 7]*pq.ms,labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
         train.segment = Segment()
         unit = Unit()
         unit.spiketrains.append(train)
@@ -85,7 +85,7 @@ class TestPickleIO(unittest.TestCase):
         self.assertIsInstance(r_seg.spiketrains[0].segment, Segment)
         os.remove('blk.pkl')
         ##Event
-        train = Event(np.arange(0, 30, 10)*s,labels=np.array(['trig0', 'trig1', 'trig2'],dtype='S'))
+        train = Event(np.arange(0, 30, 10)*pq.s,labels=np.array(['trig0', 'trig1', 'trig2'],dtype='S'))
         train.segment = Segment()
         unit = Unit()
         unit.spiketrains.append(train)
