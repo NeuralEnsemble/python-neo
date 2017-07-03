@@ -120,7 +120,7 @@ class TestPickleIO(unittest.TestCase):
         reader.write(blk)
 
         reader = PickleIO(filename="blk.pkl")
-        r_blk = reader.read_block()epoch, 
+        r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
         self.assertIsInstance(r_seg.spiketrains[0].segment, Segment)
         self.assertIsInstance(r_seg.spiketrains[0].channel_index, ChannelIndex)
