@@ -67,6 +67,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         raise ValueError("The last spike (%s) is after t_stop (%s)" %
                          (value, t_stop))
 
+
 def _check_waveform_dimensions(spiketrain):
     '''
     Verify that waveform is compliant with the waveform definition as
@@ -197,8 +198,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1),
-                       ('t_start', pq.Quantity, 0),
-                       ('t_stop', pq.Quantity, 0))
+                        ('t_start', pq.Quantity, 0),
+                        ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ((('waveforms', pq.Quantity, 3),
                            ('left_sweep', pq.Quantity, 0),
                            ('sampling_rate', pq.Quantity, 0)) +
@@ -214,9 +215,12 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         '''
-        if  len(times)!=0 and waveforms is not None and len(times) != waveforms.shape[0]: #len(times)!=0 has been used to workaround a bug occuring during neo import)
-            raise ValueError("the number of waveforms should be equal to the number of spikes")
-        
+        if len(times) != 0 and waveforms is not None and len(times) != \
+                waveforms.shape[
+                    0]:  # len(times)!=0 has been used to workaround a bug occuring during neo import)
+            raise ValueError(
+                "the number of waveforms should be equal to the number of spikes")
+
         # Make sure units are consistent
         # also get the dimensionality now since it is much faster to feed
         # that to Quantity rather than a unit
@@ -276,14 +280,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # using items() is orders of magnitude faster
         if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
                 hasattr(t_start, 'dimensionality') and
-                t_start.dimensionality.items() == dim.items()):
+                    t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
-                t_stop.dimensionality.items() == dim.items()):
+                    t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
             obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
@@ -302,7 +306,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
         return obj
 
-    def __init__(self, times, t_stop, units=None,  dtype=np.float,
+    def __init__(self, times, t_stop, units=None, dtype=np.float,
                  copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
                  waveforms=None, left_sweep=None, name=None, file_origin=None,
                  description=None, **annotations):
@@ -572,12 +576,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if self.left_sweep != other.left_sweep:
             raise MemoryError("Cannot merge, different left_sweep")
         if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+            raise MergeError("Cannot merge these two signals as they belong to"
+                             " different segments.")
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0])
             else:
-                raise MergeError("Cannot merge a lazy object with a real object.")
+                raise MergeError("Cannot merge a lazy object with a real"
+                                 " object.")
         if other.units != self.units:
             other = other.rescale(self.units)
         wfs = [self.waveforms is not None, other.waveforms is not None]
@@ -599,10 +605,10 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                                                other.annotations)
         kwargs.update(merged_annotations)
         train = SpikeTrain(stack, units=self.units, dtype=self.dtype,
-                            copy=False, t_start=self.t_start,
-                            t_stop=self.t_stop,
-                            sampling_rate=self.sampling_rate,
-                            left_sweep=self.left_sweep, **kwargs)
+                           copy=False, t_start=self.t_start,
+                           t_stop=self.t_stop,
+                           sampling_rate=self.sampling_rate,
+                           left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
             wfs_stack = np.vstack((self.waveforms, other.waveforms))
             wfs_stack = wfs_stack[sorting]
