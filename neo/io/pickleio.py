@@ -33,7 +33,7 @@ class PickleIO(BaseIO):
     is_writable = True
     has_header = False
     is_streameable = False # TODO - correct spelling to "is_streamable"
-    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain] # should extend to Epoch, etc.
+    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain] # should extend to other classes.
     readable_objects = supported_objects
     writeable_objects = supported_objects
     mode = 'file'

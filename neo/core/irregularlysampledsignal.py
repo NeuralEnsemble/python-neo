@@ -30,14 +30,17 @@ from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
-                                  annotations=None):
+                                  annotations=None, segment=None, channel_index=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to function that
     does not do the unit checking. This is needed for pickle to work.
     '''
-    return cls(times=times, signal=signal, units=units, time_units=time_units, 
+    iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
                dtype=dtype, copy=copy, name=name, file_origin=file_origin,
                description=description, **annotations)
+    iss.segment = segment
+    iss.channel_index = channel_index
+    return iss
 
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
@@ -177,7 +180,9 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                                self.name, 
                                                self.file_origin,
                                                self.description,
-                                               self.annotations)
+                                               self.annotations,
+                                               self.segment,
+                                               self.channel_index)
 
     def __array_finalize__(self, obj):
         '''
