@@ -590,7 +590,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if any(wfs) and not all(wfs):
             raise MergeError("Cannot merge signal with waveform and signal "
                              "without waveform.")
-        stack = np.concatenate(map(np.array, (self, other)))
+        stack = np.concatenate((np.asarray(self), np.asarray(other)))
         sorting = np.argsort(stack)
         stack = stack[sorting]
         kwargs = {}
