@@ -25,9 +25,9 @@ def _new_event(cls, signal, times = None, labels=None, units=None, name=None,
     A function to map Event.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
-    e=Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
+    e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
                  description=description, **annotations)
-    e.segment=segment
+    e.segment = segment
     return e
 
 class Event(BaseNeo, pq.Quantity):
