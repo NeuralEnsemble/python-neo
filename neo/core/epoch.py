@@ -24,7 +24,7 @@ def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
     A function to map epoch.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
-    e=Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
+    e = Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
                  description=description, **annotations)
     e.segment = segment
     return e
