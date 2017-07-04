@@ -13,7 +13,7 @@ def test_BlackrockRawIO():
     #~ filename = '/media/sgarcia/SamCNRS/DataSpikeSorting/elodie/Nouveaux_datasets/micro_VS10_SAB 1 600ms/20160627-155334-001'
     #~ filename = '/home/samuel/Documents/projet/DataSpikeSorting/elodie/Dataset 3/20161124-112218-001.ns5'
     #~ filename = '/home/sgarcia/Documents/projet/tridesclous_examples/20160627-161211-001'
-    filename = '/home/samuel/Téléchargements/files_for_testing_neo/blackrock/FileSpec2.3001.ns5'
+    filename = '/home/sgarcia/Documents/files_for_testing_neo/blackrock/FileSpec2.3001.ns5'
     
     
     reader = BlackrockRawIO(filename=filename, nsx_to_load=5)
@@ -65,11 +65,32 @@ def test_BlackrockRawIO():
         
         nb =  reader.spike_count(unit_index=unit_index)
         print('nb', nb)
-        spike_timestamp = reader.spike_timestamps(unit_index=unit_index, ind_start=None, ind_stop=None)
+        spike_timestamp = reader.spike_timestamps(unit_index=unit_index, t_start=None, t_stop=None)
         print(spike_timestamp.shape)
         print(spike_timestamp[:10])
         spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
         print(spike_times[:10])
+        
+        raw_waveforms = reader.spike_raw_waveforms(block_index=0, seg_index=0, unit_index=unit_index, t_start=None, t_stop=None)
+        print(raw_waveforms.shape, raw_waveforms.dtype)
+        
+        float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float32', unit_index=unit_index)
+        print(float_waveforms.shape, float_waveforms.dtype)
+        
+    
+    
+    print(reader.header['event_channels'])
+    nb = reader.event_channels_count()
+    for i in range(nb):
+        nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=i)
+        print('i', i, 'nb_event', nb_event)
+        ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=0, seg_index=0, event_channel_index=i)
+        print(ev_timestamps)
+        print(ev_durations)
+        print('ev_labels', ev_labels)
+        ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
+        print(ev_times)
+        
     
     
     
@@ -80,7 +101,8 @@ def test_BlackrockRawIO():
 def test_BlackrockIO():
     #~ filename = '/home/samuel/Documents/projet/DataSpikeSorting/elodie/Dataset 3/20161124-112218-001.ns5'
     #~ filename = '/home/sgarcia/Documents/projet/tridesclous_examples/20160627-161211-001'
-    filename = '/home/samuel/Téléchargements/files_for_testing_neo/blackrock/FileSpec2.3001.ns5'
+    #~ filename = '/home/samuel/Téléchargements/files_for_testing_neo/blackrock/FileSpec2.3001.ns5'
+    filename = '/home/sgarcia/Documents/files_for_testing_neo/blackrock/FileSpec2.3001.ns5'
     
     reader = BlackrockIO(filename=filename, nsx_to_load=5)
     
@@ -95,13 +117,23 @@ def test_BlackrockIO():
             print(seg)
             print(seg.analogsignals)
             for anasig in seg.analogsignals:
-                print(anasig)
+                print(anasig.name, anasig.shape)
             #~ print(len(seg.spiketrains))
             for sptr in seg.spiketrains:
-                print(sptr)
-                #~ pass
+                print(sptr.name, sptr.shape)
+            
+            for ev in seg.events:
+                print(ev.name)
+                #~ print(ev.labels)
+                print('yep')
+            
+            for ep in seg.epochs:
+                print(ep)
 
     
 if __name__ == '__main__':
-    #~ test_BlackrockRawIO()
-    test_BlackrockIO()
+    test_BlackrockRawIO()
+    #~ test_BlackrockIO()
+
+
+

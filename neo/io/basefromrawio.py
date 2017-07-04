@@ -30,7 +30,7 @@ class BaseFromRaw(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Block, Segment, AnalogSignal, ] #ChannelIndex, SpikeTrain, Unit, Event, 
+    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain, Unit, ChannelIndex, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
 
@@ -60,7 +60,7 @@ class BaseFromRaw(BaseIO):
             return bl
         
         channels = self.header['signal_channels']
-        for i, ind in self._make_channel_groups(signal_group_mode=signal_group_mode).items():
+        for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
             channel_index = ChannelIndex(index=ind, channel_names=channels[ind]['name'],
                             channel_ids=channels[ind]['id'], name='Channel group {}'.format(i))
             bl.channel_indexes.append(channel_index)
@@ -88,7 +88,7 @@ class BaseFromRaw(BaseIO):
         #AnalogSignal
         signal_channels = self.header['signal_channels']
         channel_indexes=np.arange(signal_channels.size)
-
+        
         if not lazy:
             raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
                         i_start=None, i_stop=None, channel_indexes=channel_indexes)
@@ -99,7 +99,7 @@ class BaseFromRaw(BaseIO):
         sample_rate = 0 #TODO
         t_start = 0 #TODO
         t_stop = 100000 #TODO
-        for i, ind in self._make_channel_groups(signal_group_mode=signal_group_mode).items():
+        for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
             units = np.unique(signal_channels[ind]['units'])
             assert len(units)==1
             units = units[0]
@@ -118,10 +118,9 @@ class BaseFromRaw(BaseIO):
         #SpikeTrain
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
-            print('yep', unit_index)
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
-                                        unit_index=unit_index, ind_start=None, ind_stop=None)
+                                        unit_index=unit_index, t_start=None, t_stop=None)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
                 sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start*pq.s, t_stop=t_stop*pq.s)
@@ -130,14 +129,46 @@ class BaseFromRaw(BaseIO):
                                         unit_index=unit_index)
                 
                 sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start*pq.s, t_stop=t_stop*pq.s)
-                sptr.lay_shape = (nb,)
+                sptr.lazy_shape = (nb,)
                 
             seg.spiketrains.append(sptr)
+        
+        # Events/Epoch
+        event_channels = self.header['event_channels']
+        #~ print('yep', event_channels)
+        #~ exit()
+        for chan_ind in range(len(event_channels)):
+            if not lazy:
+                ev_timestamp, ev_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
+                                        event_channel_index=chan_ind)
+                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64')
+                ev_labels = ev_labels.astype(str)
+            else:
+                nb = self.event_count(block_index=block_index, seg_index=seg_index, 
+                                        event_channel_index=chan_ind)
+                lazy_shape = (nb,)
+                ev_times = np.array([])
+                ev_labels = np.array([])
+                ev_durations = np.array([])
+                
+            name = event_channels['name'][chan_ind]
+            if event_channels['type'][chan_ind] == b'event':
+                e = Event(times=ev_times, labels=ev_labels, name=name, units='s', copy=False)
+                e.segment = seg
+                seg.events.append(e)
+            elif event_channels['type'][chan_ind] == b'epoch':
+                e = Epoch(times=ev_times, durations=ev_durations, labels=ev_labels, name=name, 
+                                        units='s', copy=False)
+                e.segment = seg
+                seg.epochs.append(e)
             
+            if lazy:
+                e.lazy_shape = lazy_shape
         
         return seg
-    
-    def _make_channel_groups(self, signal_group_mode='group-by-same-units'):
+
+
+    def _make_signal_channel_groups(self, signal_group_mode='group-by-same-units'):
         
         channels = self.header['signal_channels']
         groups = collections.OrderedDict()

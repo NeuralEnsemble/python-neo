@@ -52,6 +52,15 @@ class ExampleIO(BaseIO):
 
     For a developer, it is just an example showing guidelines for someone who wants
     to develop a new IO module.
+    
+    ..note :: 
+        ExampleIO is the old neo API than render directly neo objects.
+        Developpers should now base there IO on the new  *raw* API.
+        The high level API than give neo object is done automatically 
+        with RawIO API.
+        
+        See `neo.rawio.ExampleRawIO` and `neo.rawio.BaseRawIO`
+    
 
     Two rules for developers:
       * Respect the Neo IO API (:ref:`neo_io_API`)

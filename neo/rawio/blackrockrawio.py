@@ -54,7 +54,7 @@ import re
 import numpy as np
 import quantities as pq
 
-from .baserawio import BaseRawIO
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 
 class BlackrockRawIO(BaseRawIO):
@@ -270,17 +270,6 @@ class BlackrockRawIO(BaseRawIO):
             # read nev headers
             self.__nev_basic_header, self.__nev_ext_header = \
                 self.__nev_header_reader[self.__nev_spec]()
-            #~ print(self.__nev_basic_header, self.__nev_ext_header)
-            #~ print(self.__nev_basic_header)
-            #~ for k, v in self.__nev_basic_header.items():
-                #~ print(k, v)
-            #~ for k, v in self.__nev_ext_header.items():
-                #~ print(k, v.dtype, v.shape)
-                #~ print(v)
-            
-            #~ print(self.__nev_ext_header[b'NEUEVFLT'])
-            #~ exit()
-            #~ print(self.__nev_ext_header[b'NEUEVWAV'])
             
             self.nev_data = self.__nev_data_reader[self.__nev_spec]()
             spikes = self.nev_data['Spikes']
@@ -290,13 +279,9 @@ class BlackrockRawIO(BaseRawIO):
             self.internal_unit_ids = [] #pair of chan['packet_id'], spikes['unit_class_nb']
             for i in range(len(self.__nev_ext_header[b'NEUEVFLT'])):
                 
-                #~ print(self.__nev_ext_header[b'NEUEVFLT'].dtype)
                 channel_id = self.__nev_ext_header[b'NEUEVFLT']['electrode_id'][i]
 
-                #~ print(channel_id)
-                #~ print(spikes['packet_id'])
                 chan_mask = (spikes['packet_id'] == channel_id)
-                #~ print(chan_mask)
                 chan_spikes = spikes[chan_mask]
                 all_unit_id = np.unique(chan_spikes['unit_class_nb'])
                 #~ print('all_unit_id', all_unit_id)
@@ -318,6 +303,23 @@ class BlackrockRawIO(BaseRawIO):
                                         ('wf_gain','float64'),('wf_offset','float64'),]
             unit_channels = np.array(unit_channels, dtype=unit_channel_dtype)
             #~ print(unit_channels)
+            
+            
+            #scan events
+            event_channels = []
+            events_data = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+            #~ print(events)
+            #~ print(ev_dict)
+            for ev_name in ev_dict:
+                event_channels.append((ev_name, '', 'event'))
+            event_channel_dtype = [('name','U64'), ('id','U64'), ('type', 'S5')]
+            event_channels = np.array(event_channels, dtype=event_channel_dtype)
+            #~ print(event_channels)
+            #~ exit()
+
+            
+            
             
             
             
@@ -351,7 +353,8 @@ class BlackrockRawIO(BaseRawIO):
             assert chan['max_analog_val']==-chan['min_analog_val']
             assert chan['max_digital_val']==-chan['min_digital_val']
             
-            gain = float(chan['max_analog_val'])/float(chan['max_digital_val'])
+            gain = float(chan['max_analog_val'])/float(chan['max_digital_val']) #TODO
+            
             offset = 0.
             sig_channels.append((chan['electrode_label'].decode(), 
                                         str(chan['electrode_id']), 
@@ -399,6 +402,7 @@ class BlackrockRawIO(BaseRawIO):
         self.header['nb_segment'] = [nb_seg]
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
+        self.header['event_channels'] = event_channels
         
         #~ self.header['signal_sampling_rate'] = sampling_rate
         t_start, t_stop = self.__nsx_rec_times[spec](nsx_nb)
@@ -447,7 +451,8 @@ class BlackrockRawIO(BaseRawIO):
         return nb
         
         
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, ind_start, ind_stop):
+    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+        # TODO take in account seg_index an time limit
         
         channel_id, unit_id = self.internal_unit_ids[unit_index]
         
@@ -458,22 +463,85 @@ class BlackrockRawIO(BaseRawIO):
         unit_spikes = all_spikes[mask]
         
         timestamp = unit_spikes['timestamp']
-        
-        if ind_start is not None or ind_stop is not None:
-            sl = slice(ind_start, ind_stop)
-            timestamp = timestamp[sl]
+        sl =  self._get_spike_slice(timestamp, t_start, t_stop)
+        timestamp = timestamp[sl]
         
         return timestamp
-
     
+    def _get_spike_slice(self, timestamp, t_start, t_stop):
+        if t_start is None:
+            ind_start = None
+        else:
+            ts = int(t_start*self.__nev_basic_header['timestamp_resolution'])
+            ind_start = np.searchsorted(timestamp, ts)
+        
+        if t_stop is None:
+            ind_stop = None
+        else:
+            ts = int(t_stop*self.__nev_basic_header['timestamp_resolution'])
+            ind_stop = np.searchsorted(timestamp, ts)
+        
+        sl = slice(ind_start, ind_stop)
+        return sl
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= self.__nev_basic_header['timestamp_resolution']
         return spike_times
+    
+    def  _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+        channel_id, unit_id = self.internal_unit_ids[unit_index]
+        all_spikes = self.nev_data['Spikes']
 
-    def _spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop):
-        raise(NotImplementedError)
+        mask = (all_spikes['packet_id']==channel_id) & (all_spikes['unit_class_nb']==unit_id)
+        unit_spikes = all_spikes[mask]
+        
+        wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
+        wf_size = self.__nev_params('waveform_size')[channel_id]
+
+        waveforms = unit_spikes['waveform'].flatten().view(wf_dtype)
+        waveforms = waveforms.reshape(int(unit_spikes.size), 1, int(wf_size))
+        
+        timestamp = unit_spikes['timestamp']
+        sl =  self._get_spike_slice(timestamp, t_start, t_stop)
+        
+        waveforms = waveforms[sl]
+
+        #~ st.sampling_rate = self.__nev_params('waveform_sampling_rate')
+        #~ st.left_sweep = self.__get_left_sweep_waveforms()[channel_id]    
+        
+        return waveforms
+
+
+    def _event_count(self, block_index, seg_index, event_channel_index):
+        # TODO take in account seg_index an time limit
+        name = self.header['event_channels']['name'][event_channel_index]
+        events_data = self.nev_data['NonNeural']
+        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        nb = int(np.sum(ev_dict['mask']))
+        return nb
+
+    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+        # TODO take in account seg_index an time limit
+        #TODO t_start/t_stop
+        name = self.header['event_channels']['name'][event_channel_index]
+        events_data = self.nev_data['NonNeural']
+        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        
+        timestamp = events_data[ev_dict['mask']]['timestamp']
+        durations = None
+        labels = events_data[ev_dict['mask']][ev_dict['field']]
+        #~ print(events_data.dtype)
+        #~ print(ev_dict['field'])
+        
+        return timestamp, durations, labels
+    
+    
+    def _rescale_event_timestamp(self, event_timestamps, dtype):
+        ev_times = event_timestamps.astype(dtype)
+        ev_times /= self.__nev_basic_header['timestamp_resolution']
+        return ev_times
+
 
     
     

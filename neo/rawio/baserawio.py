@@ -26,7 +26,12 @@ So this handle **only** one simplified but very frequent case of dataset:
 An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
 neo legacy IO from free.
 
-    
+With this API the IO have an attributes `header` with necessary keys.
+See ExampleRawIO as example.
+
+
+
+
 """
 
 from __future__ import absolute_import, division, print_function
@@ -44,21 +49,28 @@ error_header = 'Header is not read yet, do parse_header() first'
 
 
 _signal_channel_dtype = [
-    ('name','U'),
-    ('id','U'),
-    ('units','U'),
+    ('name','U64'),
+    ('id','U64'),
+    ('units','U64'),
     ('gain','float64'),
     ('offset','float64'),
 ]
 
 _unit_channel_dtype = [
-    ('name','U'),
-    ('id','U'),
+    ('name','U64'),
+    ('id','U64'),
     #for waveform
-    ('wf_units','U'),
+    ('wf_units','U64'),
     ('wf_gain','float64'),
     ('wf_offset','float64'),
 ]
+
+
+_event_channel_dtype = [
+        ('name','U64'),
+        ('id','U64'),
+        ('type', 'S5') , #epoch ot event
+    ]
 
 
 class BaseRawIO(object):
@@ -142,6 +154,15 @@ class BaseRawIO(object):
         Same allong all block and Segment.
         """
         return len(self.header['unit_channels'])
+
+    def event_channels_count(self):
+        """Return the number of event/epoch channel.
+        Same allong all block and Segment.
+        """
+        return len(self.header['event_channels'])
+
+    def segment_t_start(self, block_index, seg_index):
+        return self._segment_t_start(block_index, seg_index)
     
     ###
     # signal and channel zone
@@ -219,41 +240,74 @@ class BaseRawIO(object):
     
     # spiketrain and unit zone
     def spike_count(self,  block_index=0, seg_index=0, unit_index=0):
-        return self._spike_count(  block_index, seg_index, unit_index)
+        return self._spike_count(block_index, seg_index, unit_index)
     
     def spike_timestamps(self,  block_index=0, seg_index=0, unit_index=0,
-                        ind_start=None, ind_stop=None):
+                        t_start=None, t_stop=None):
         """
-        ind_start/ind_stop represent the spike index and not the time nor timestamps.
-        
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
         Sometimes it is the index on the signal but not always.
         The conversion to second or index_on_signal is done outside here.
-
+        
+        t_start/t_sop are limits in seconds.
+        
         """
-        timestamp = self._spike_timestamps(block_index, seg_index, unit_index, ind_start, ind_stop)
+        timestamp = self._spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
         return timestamp
     
     def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
         """
-        Rescale spike timestamps to s
+        Rescale spike timestamps to second
         """
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
     
-    def spike_index_time_slice(self,  block_index=0, seg_index=0, unit_index=0, t_start=0, t_stop=0):
-        """
-        Given   block_index/seg_index/unit_index return 
-        ind_start/ind_stop the index of the first (included) and last spike (excluded) in a given 
-        t_start/t_start time range in second.
+    # spiketrain waveform zone
+    def spike_raw_waveforms(self,  block_index=0, seg_index=0, unit_index=0,
+                        t_start=None, t_stop=None):
+        wf = self._spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
+        return wf
+    
+    
+    def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32', unit_index=0):
+        wf_gain = self.header['unit_channels']['wf_gain'][unit_index]
+        wf_offset = self.header['unit_channels']['wf_offset'][unit_index]
         
-        returns:
-        ind_start/ind_stop can be directly used in spike_timestamps.
-        """
-        return self._spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop)
-    
-    
-    
+        float_waveforms = raw_waveforms.astype(dtype)
+        
+        float_waveforms *= wf_gain
+        float_waveforms += wf_offset
+        
+        return float_waveforms
+
+        
     # event and epoch zone
+    def event_count(self,  block_index=0, seg_index=0, event_channel_index=0):
+        return self._event_count(block_index, seg_index, event_channel_index)
+
+    def event_timestamps(self,  block_index=0, seg_index=0, event_channel_index=0,
+                        t_start=None, t_stop=None):
+        """
+        The timestamp is as close to the format itself. Sometimes float/int32/int64.
+        Sometimes it is the index on the signal but not always.
+        The conversion to second or index_on_signal is done outside here.
+        
+        t_start/t_sop are limits in seconds.
+        
+        returns
+            timestamp
+            labels
+            durations
+
+        """
+        timestamp, durations, labels = self._event_timestamps(block_index, seg_index, event_channel_index, t_start, t_stop)
+        return timestamp, durations, labels
+    
+    def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
+        """
+        Rescale spike timestamps to s
+        """
+        return self._rescale_event_timestamp(event_timestamps, dtype)
+
     
     
 
@@ -273,6 +327,9 @@ class BaseRawIO(object):
     def _segment_count(self, block_index):
         raise(NotImplementedError)
     
+    def _segment_t_start(self, block_index, seg_index):
+        raise(NotImplementedError)
+    
     ###
     # signal and channel zone
     def _analogsignal_shape(self, block_index, seg_index):
@@ -281,9 +338,8 @@ class BaseRawIO(object):
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         raise(NotImplementedError)
     
-    
-    def analogsignal_meta(self):
-        #sampling_rate in Hz and t_start in s
+    def analogsignal_sampling_rate(self):
+        #sampling_rate in Hz
         raise(NotImplementedError)
     
     
@@ -292,20 +348,25 @@ class BaseRawIO(object):
     def _spike_count(self,  block_index, seg_index, unit_index):
         raise(NotImplementedError)
     
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, ind_start, ind_stop):
+    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         raise(NotImplementedError)
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         raise(NotImplementedError)
-        
-    def _spike_index_time_slice(block_index, seg_index, unit_index, t_start, t_stop):
-        raise(NotImplementedError)
 
+    ###
+    # spike waveforms zone
+    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+        raise(NotImplementedError)
     
     ###
     # event and epoch zone
+    def _event_count(self, block_index, seg_index, event_channel_index):
+        raise(NotImplementedError)
     
+    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+        raise(NotImplementedError)
     
-    
-    
-    
+    def _rescale_event_timestamp(self, event_timestamps, dtype):
+        raise(NotImplementedError)
+
