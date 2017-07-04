@@ -21,6 +21,7 @@ the old object.
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import copy
 import numpy as np
 import quantities as pq
 
@@ -496,16 +497,19 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setslice__(i, j, value)
 
-    def _copy_data_complement(self, other):
+    def _copy_data_complement(self, other, deep_copy=False):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
         '''
         for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
                      "description", "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
+            attr_value = getattr(other, attr, None)
+            if deep_copy:
+                attr_value = copy.deepcopy(attr_value)
+            setattr(self, attr, attr_value)
 
     def duplicate_with_new_data(self, signal, t_start=None, t_stop=None,
-                                waveforms=None):
+                                waveforms=None, deep_copy=True):
         '''
         Create a new :class:`SpikeTrain` with the same metadata
         but different data (times, t_start, t_stop)
@@ -520,7 +524,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
         new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop,
                                 waveforms=waveforms, units=self.units)
-        new_st._copy_data_complement(self)
+        new_st._copy_data_complement(self, deep_copy=deep_copy)
 
         # overwriting t_start and t_stop with new values
         new_st.t_start = t_start

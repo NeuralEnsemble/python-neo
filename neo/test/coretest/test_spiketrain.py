@@ -1180,6 +1180,20 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.assertEqual(signal1b.t_stop, new_t_stop)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
 
+    def test_deep_copy_attributes(self):
+        signal1 = self.train
+        new_t_start = -10*pq.s
+        new_t_stop = 10*pq.s
+        new_data = np.sort(np.random.uniform(new_t_start.magnitude,
+                                             new_t_stop.magnitude,
+                                             len(self.train))) * pq.ms
+
+        signal1b = signal1.duplicate_with_new_data(new_data,
+                                                   t_start=new_t_start,
+                                                   t_stop=new_t_stop)
+        signal1.annotate(new_annotation='for signal 1')
+        self.assertTrue('new_annotation' not in signal1b.annotations)
+
 class TestAttributesAnnotations(unittest.TestCase):
     def test_set_universally_recommended_attributes(self):
         train = SpikeTrain([3, 4, 5], units='sec', name='Name',
