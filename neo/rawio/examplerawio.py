@@ -8,7 +8,7 @@
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
 
-
+import numpy as np
 
 class ExampleRawIO(BaseRawIO):
     """
@@ -106,8 +106,8 @@ class ExampleRawIO(BaseRawIO):
         if i_start is None: i_start=0
         if i_stop is None: i_stop=102400
         
-        assert i_start>0, "I don't like your jokes"
-        assert i_stop<102400, "I don't like your jokes"
+        assert i_start>=0, "I don't like your jokes"
+        assert i_stop<=102400, "I don't like your jokes"
         
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         return raw_signals
@@ -124,14 +124,22 @@ class ExampleRawIO(BaseRawIO):
     
     def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         # In our IO, timstamp are internally coded 'int64' and they
-        # represent the index of the signals
+        # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
         # incredible!! in is not always the case
         spike_timestamps = np.arange(0, 10000, 500)
+        
+        if t_start is not None or t_stop is not None:
+            #restricte spikes to given limits (in seconds)
+            lim0 = int(t_start*10000)
+            lim1 = int(t_stop*10000)
+            mask = (spike_timestamps>=lim0) & (spike_timestamps<=lim1)
+            spike_timestamps = spike_timestamps[mask]
+        
         return spike_timestamps
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        spike_times = spike_timestamps.astype(spike_timestamps)
+        spike_times = spike_timestamps.astype(dtype)
         spike_times /= 10000. # because 10kHz
         return spike_times
 
@@ -144,7 +152,7 @@ class ExampleRawIO(BaseRawIO):
         # we 20 spikes with a sweep of 50 (5ms)
         
         np.random.seed(2205) # a magic number (my birthday)
-        waveforms = np.random.random.randint(low=-2**4, high=2**4, size=20*50, dtype='int16')
+        waveforms = np.random.randint(low=-2**4, high=2**4, size=20*50, dtype='int16')
         waveforms = waveforms.reshape(20, 1, 50)
         return waveforms
     

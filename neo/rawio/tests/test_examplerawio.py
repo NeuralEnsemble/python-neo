@@ -16,9 +16,14 @@ from neo.rawio.examplerawio import ExampleRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 
-class TestExampleIO(BaseTestRawIO, unittest.TestCase, ):
-    ioclass = ExampleRawIO
+class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = ExampleRawIO
     files_to_test = ['fake1',
                      'fake2',
                      ]
     files_to_download = []
+
+
+if __name__ == "__main__":
+    unittest.main()
+

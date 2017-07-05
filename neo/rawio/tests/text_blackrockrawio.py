@@ -1,9 +1,43 @@
+# -*- coding: utf-8 -*-
+"""
+Tests of neo.rawio.examplerawio
+"""
+
+# needed for python 3 compatibility
+from __future__ import absolute_import, division
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
+from  neo.rawio.blackrockrawio import BlackrockRawIO
+from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+
+import numpy as np
+
+class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = BlackrockRawIO
+    files_to_test = ['FileSpec2.3001']
+
+    files_to_download = [
+        'FileSpec2.3001.nev',
+        'FileSpec2.3001.ns5',
+        'FileSpec2.3001.ccf',
+        'FileSpec2.3001.mat']
+
+
+
+
+
+
+
 
 import neo
 #~ import neo.rawio.blackrockrawio
 from  neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.io import BlackrockIO
-import numpy as np
+
 
 import time
 
@@ -132,8 +166,7 @@ def test_BlackrockIO():
 
     
 if __name__ == '__main__':
-    test_BlackrockRawIO()
+    #~ test_BlackrockRawIO()
     #~ test_BlackrockIO()
-
-
+    unittest.main()
 

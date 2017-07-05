@@ -176,13 +176,13 @@ class BaseRawIO(object):
         assert len(channel_indexes) == len(channel_names), 'not match'
         return channel_indexes
     
-    def channel_name_to_id(self, channel_ids):
+    def channel_id_to_index(self, channel_ids):
         """
         Transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
-        channel_indexes,  = np.nonzero(channel_index(np.in1d(ch['id'], channel_ids)))
+        channel_indexes,  = np.nonzero(np.in1d(ch['id'], channel_ids))
         assert len(channel_indexes) == len(channel_ids), 'not match'
         return channel_indexes
 
@@ -195,7 +195,7 @@ class BaseRawIO(object):
             channel_indexes = self.channel_name_to_index(channel_names)
 
         if channel_indexes is None and channel_ids is not None:
-            channel_indexes = self.channel_name_to_id(channel_ids)
+            channel_indexes = self.channel_id_to_index(channel_ids)
         
         return channel_indexes
 

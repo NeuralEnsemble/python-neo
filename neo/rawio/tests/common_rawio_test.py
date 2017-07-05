@@ -22,6 +22,7 @@ __test__ = False
 url_for_tests = "https://portal.g-node.org/neo/"
 
 import os
+import logging
 
 try:
     import unittest2 as unittest
@@ -30,6 +31,8 @@ except ImportError:
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
         download_test_file, create_local_temp_dir)
+
+from neo.rawio.tests import rawio_compliance as compliance
 
 class BaseTestRawIO(object):
     '''
@@ -99,13 +102,39 @@ class BaseTestRawIO(object):
         '''
         return os.path.join(self.local_test_dir, filename)
     
-    
-    
     def test_read_all(self):
         """
         Read all file.
         """
-        pass
-        
-        
-        
+        for filename in self.files_to_test:
+            filename = self.get_filename_path(filename)
+            
+            reader = self.rawioclass(filename=filename)
+            
+            txt = reader.__repr__()
+            assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
+            
+            reader.parse_header()
+            
+            txt = reader.__repr__()
+            assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
+            
+            #lanch a series of test compliance
+            compliance.header_is_total(reader)
+            compliance.count_element(reader)
+            compliance.read_analogsignals(reader)
+            compliance.read_spike_times(reader)
+            compliance.read_spike_waveforms(reader)
+            compliance.read_events(reader)
+            
+            
+            #basic benchmark
+            level = logging.getLogger().getEffectiveLevel()
+            logging.getLogger().setLevel(logging.INFO)
+            compliance.benchmark_speed_read_signals(reader)
+            logging.getLogger().setLevel(level)
+            
+            
+            
+            
+
