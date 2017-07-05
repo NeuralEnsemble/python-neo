@@ -21,7 +21,9 @@ raw data. All IO with theses carractéristics should/could be rewritten:
 So this handle **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
-    * AnalogSignal have all the same sampling_rate, t_start, duration inside a segment
+    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * t_start/t_stop are the same for all object (AnalogSignal/SpikeTrain) inside a Segment
+    
 
 An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
 neo legacy IO from free.
@@ -50,7 +52,8 @@ error_header = 'Header is not read yet, do parse_header() first'
 
 _signal_channel_dtype = [
     ('name','U64'),
-    ('id','U64'),
+    #~ ('id','U64'),
+    ('id','int64'),
     ('units','U64'),
     ('gain','float64'),
     ('offset','float64'),
@@ -163,6 +166,9 @@ class BaseRawIO(object):
 
     def segment_t_start(self, block_index, seg_index):
         return self._segment_t_start(block_index, seg_index)
+
+    def segment_t_stop(self, block_index, seg_index):
+        return self._segment_t_stop(block_index, seg_index)
     
     ###
     # signal and channel zone
@@ -203,7 +209,10 @@ class BaseRawIO(object):
     def analogsignal_shape(self, block_index, seg_index):
         """Return signals shape for a given block_index, seg_index"""
         return self._analogsignal_shape(block_index, seg_index)
-
+    
+    def analogsignal_sampling_rate(self):
+        return self._analogsignal_sampling_rate()
+    
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
         """
@@ -329,19 +338,20 @@ class BaseRawIO(object):
     
     def _segment_t_start(self, block_index, seg_index):
         raise(NotImplementedError)
+
+    def _segment_t_stop(self, block_index, seg_index):
+        raise(NotImplementedError)
     
     ###
     # signal and channel zone
     def _analogsignal_shape(self, block_index, seg_index):
         raise(NotImplementedError)
+        
+    def _analogsignal_sampling_rate(self):
+        raise(NotImplementedError)
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         raise(NotImplementedError)
-    
-    def analogsignal_sampling_rate(self):
-        #sampling_rate in Hz
-        raise(NotImplementedError)
-    
     
     ###
     # spiketrain and unit zone

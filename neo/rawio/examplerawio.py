@@ -56,7 +56,8 @@ class ExampleRawIO(BaseRawIO):
         #make channels
         sig_channels = []
         for c in range(16):
-            sig_channels.append(('ch{}'.format(c), 'id#{}'.format(c), 'uV', 1000./2**16, 0.))
+            #our id is c+1 just for fun
+            sig_channels.append(('ch{}'.format(c), c+1, 'uV', 1000./2**16, 0.))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
         unit_channels = []
@@ -91,11 +92,19 @@ class ExampleRawIO(BaseRawIO):
         # always in second
         all_starts = [[0., 15.], [0., 20., 60.]]
         return all_starts[block_index][seg_index]
-    
+
+    def _segment_t_stop(self, block_index, seg_index):
+        # always in second
+        all_stops = [[10., 25.], [10., 30., 70.]]
+        return all_stops[block_index][seg_index]
+
     def _analogsignal_shape(self, block_index, seg_index):
-        # we are lucky: signals in all segment have the same shape!! (10.24 seconds)
+        # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
         # it is not always the case
-        return (102400, 16)
+        return (100000, 16)
+    
+    def _analogsignal_sampling_rate(self):
+        return 10000.
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         #we are lucky:  our signals is always zeros!!
@@ -104,10 +113,10 @@ class ExampleRawIO(BaseRawIO):
         #convertion to real units is done with self.header['signal_channels']
         
         if i_start is None: i_start=0
-        if i_stop is None: i_stop=102400
+        if i_stop is None: i_stop=100000
         
         assert i_start>=0, "I don't like your jokes"
-        assert i_stop<=102400, "I don't like your jokes"
+        assert i_stop<=100000, "I don't like your jokes"
         
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         return raw_signals

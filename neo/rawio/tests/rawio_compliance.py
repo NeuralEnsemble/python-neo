@@ -70,6 +70,10 @@ def count_element(reader):
         nb_seg = reader.segment_count(block_index)
         
         for seg_index in range(nb_seg):
+            t_start = reader.segment_t_start(block_index=block_index, seg_index=seg_index)
+            t_stop = reader.segment_t_stop(block_index=block_index, seg_index=seg_index)
+            assert t_stop>t_start
+            
             if nb_sig>0:
                 sig_shape = reader.analogsignal_shape(block_index, seg_index)
                 
@@ -118,6 +122,8 @@ def read_analogsignals(reader):
     for raw_chunk in iter_over_sig_chunks(reader, chunksize = 1024):
         pass
     
+    sr = reader.analogsignal_sampling_rate()
+    assert type(sr) == float
     
     # make other test on the first chunk
     i_start = 0
