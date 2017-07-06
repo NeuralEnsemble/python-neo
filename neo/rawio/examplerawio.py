@@ -62,7 +62,14 @@ class ExampleRawIO(BaseRawIO):
         
         unit_channels = []
         for c in range(3):
-            unit_channels.append(('unit{}'.format(c), '#{}'.format(c), 'uV', 1000./2**16, 0.))
+            unit_name = 'unit{}'.format(c)
+            unit_id = '#{}'.format(c)
+            wf_units = 'uV'
+            wf_gain =  1000./2**16
+            wf_offset = 0.
+            wf_left_sweep = 20
+            wf_sampling_rate = 10000.
+            unit_channels.append((unit_name, unit_id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
         event_channels = []
@@ -136,7 +143,10 @@ class ExampleRawIO(BaseRawIO):
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
         # incredible!! in is not always the case
-        spike_timestamps = np.arange(0, 10000, 500)
+        
+        ts_start = (self._segment_t_start(block_index, seg_index)*10000)
+        
+        spike_timestamps = np.arange(0, 10000, 500) + ts_start
         
         if t_start is not None or t_stop is not None:
             #restricte spikes to given limits (in seconds)
@@ -176,12 +186,13 @@ class ExampleRawIO(BaseRawIO):
     
     def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         # in our IO event are directly coded in seconds
+        t_start = self._segment_t_start(block_index, seg_index)
         if event_channel_index==0:
-            timestamp = np.arange(0, 6, dtype='float64')
+            timestamp = np.arange(0, 6, dtype='float64') + t_start
             durations = None
             labels = np.array(['trigger_a', 'trigger_b']*3, dtype='U12')
         elif event_channel_index==1:
-            timestamp = np.arange(0, 10, dtype='float64') + .5
+            timestamp = np.arange(0, 10, dtype='float64') + .5  + t_start
             durations = np.ones((10),  dtype='float64') * .25
             labels = np.array(['zoneX']*5+['zoneZ']*5, dtype='U12')
         
@@ -192,4 +203,9 @@ class ExampleRawIO(BaseRawIO):
         # really easy here because in our case it is already seconds
         event_times = event_timestamps.astype(dtype)
         return event_times
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
+        # really easy here because in our case it is already seconds
+        durations = raw_duration.astype(dtype)
+        return durations
 

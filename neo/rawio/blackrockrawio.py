@@ -295,11 +295,14 @@ class BlackrockRawIO(BaseRawIO):
                     #~ _id = "ch{}#{}".format(channel_id, unit_id)
                     name = "ch{}#{}".format(channel_id, unit_id)
                     _id = "Unit {}".format(1000 * channel_id + unit_id)
-                    
                     wf_gain = 1.#TODO
                     wf_offset = 0. #TODO
                     wf_units = '' #TODO
-                    unit_channels.append((name, _id, wf_units, wf_gain,wf_offset))
+                    # TODO: Double check if this is the correct assumption (10 samples)
+                    # default value: threshold crossing after 10 samples of waveform                    
+                    wf_left_sweep = 10
+                    wf_sampling_rate = 30000. #TODO
+                    unit_channels.append((name, _id, wf_units, wf_gain,wf_offset, wf_left_sweep, wf_sampling_rate))
 
             unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
             #~ print(unit_channels)
@@ -556,7 +559,11 @@ class BlackrockRawIO(BaseRawIO):
         ev_times = event_timestamps.astype(dtype)
         ev_times /= self.__nev_basic_header['timestamp_resolution']
         return ev_times
-
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
+        #In blackrock not epoch are implemented
+        # so duration is always None
+        raise
 
     
     

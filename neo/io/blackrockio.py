@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.blackrockrawio import BlackrockRawIO
@@ -14,7 +14,3 @@ class BlackrockIO(BlackrockRawIO, BaseFromRaw):
         BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)
         BaseFromRaw.__init__(self, filename)
         
-
-
-
-

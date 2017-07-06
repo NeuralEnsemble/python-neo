@@ -119,8 +119,6 @@ class BaseTestRawIO(object):
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
             
-            print(txt)
-            
             #lanch a series of test compliance
             compliance.header_is_total(reader)
             compliance.count_element(reader)

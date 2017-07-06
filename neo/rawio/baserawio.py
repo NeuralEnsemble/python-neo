@@ -66,6 +66,8 @@ _unit_channel_dtype = [
     ('wf_units','U64'),
     ('wf_gain','float64'),
     ('wf_offset','float64'),
+    ('wf_left_sweep','int64'),
+    ('wf_sampling_rate','float64'),
 ]
 
 
@@ -313,11 +315,15 @@ class BaseRawIO(object):
     
     def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
         """
-        Rescale spike timestamps to s
+        Rescale event timestamps to s
         """
         return self._rescale_event_timestamp(event_timestamps, dtype)
-
     
+    def rescale_epoch_duration(self, raw_duration, dtype='float64'):
+        """
+        Rescale epoch raw duration to s
+        """
+        return self._rescale_epoch_duration(raw_duration, dtype)  
     
 
     ##################
@@ -378,5 +384,8 @@ class BaseRawIO(object):
         raise(NotImplementedError)
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
+        raise(NotImplementedError)
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
         raise(NotImplementedError)
 

@@ -20,7 +20,7 @@ from numpy.testing import assert_equal
 try:
     import scipy.io
     HAVE_SCIPY = True
-except ImportError as err:
+except ImportError:
     HAVE_SCIPY = False
 
 
@@ -44,6 +44,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         The function tests LFPs, spike times, and digital events on channels
         80-83 and spike waveforms on channel 82, unit 1.
         For details on the file contents, refer to FileSpec2.3.txt
+        
+        Ported to the rawio API by Samuel Garcia.
         """
 
         # Load data from Matlab generated files
@@ -69,40 +71,41 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
         
-        #~ # Check if spikes in channels 1,3,5,7 are equal
-        #~ self.assertEqual(len(block.segments), 1)
-        #~ for st_i in block.segments[0].spiketrains:
-            #~ channelid = st_i.annotations['channel_id']
-            #~ if channelid in range(1, 7, 2):
-                #~ unitid = st_i.annotations['unit_id']
-                #~ matlab_spikes = ts_ml[np.nonzero(
-                    #~ np.logical_and(elec_ml == channelid, unit_ml == unitid))]
-                #~ assert_equal(st_i.base, matlab_spikes)
+        # Check if spikes in channels are equal
+        nb_unit = reader.unit_channels_count()
+        for unit_index in range(nb_unit):
+            unit_name = reader.header['unit_channels'][unit_index]['name']
+            # name is chXX#YY where XX is channel_id and YY is unit_id
+            channel_id, unit_id = unit_name.split('#')
+            channel_id = int(channel_id.replace('ch', ''))
+            unit_id = int(unit_id)
+            
+            matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
+            
+            io_spikes = reader.spike_timestamps(unit_index=unit_index)
+            assert_equal(io_spikes, matlab_spikes)
 
-                #~ # Check waveforms of channel 1, unit 0
-                #~ if channelid == 1 and unitid == 0:
-                    #~ assert_equal(np.squeeze(st_i.waveforms), wf_ml)
-
-        #~ # Check if digital input port events are equal
-        #~ self.assertGreater(len(block.segments[0].events), 0)
-        #~ for ea_i in block.segments[0].events:
-            #~ if ea_i.name == 'digital_input_port':
-                #~ # Get all digital event IDs in this recording
-                #~ marker_ids = set(ea_i.labels)
-                #~ for marker_id in marker_ids:
-                    #~ python_digievents = ea_i.times.base[
-                        #~ ea_i.labels == marker_id]
-                    #~ matlab_digievents = mts_ml[
-                        #~ np.nonzero(mid_ml == int(marker_id))]
-                    #~ assert_equal(python_digievents, matlab_digievents)
-
-        #~ # Note: analog input events are not yet supported
-
-
-
-
-
-
+            # Check waveforms of channel 1, unit 0
+            if channel_id == 1 and unit_id == 0:
+                io_waveforms = reader.spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = io_waveforms[:, 0, :]#remove dim 1
+                assert_equal(io_waveforms, wf_ml)
+        
+        
+        # Check if digital input port events are equal
+        nb_ev_chan = reader.event_channels_count()
+        #~ print(reader.header['event_channels'])
+        for ev_chan in range(nb_ev_chan):
+            name = reader.header['event_channels']['name'][ev_chan]
+            #~ print(name)
+            if name == 'digital_input_port':
+                all_timestamps, _, labels = reader.event_timestamps(event_channel_index=ev_chan)
+                
+                for label in np.unique(labels):
+                    python_digievents = all_timestamps[labels==label]
+                    matlab_digievents = mts_ml[mid_ml==int(label)]
+                    assert_equal(python_digievents, matlab_digievents)
+        
 
 
 import neo

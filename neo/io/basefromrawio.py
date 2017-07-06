@@ -7,7 +7,8 @@ BaseFromRaw implement a bridge between the new neo.rawio API
 and the neo.io legacy that give neo.core object.
 The neo.rawio API is more restricted and limited and do not cover tricky
 cases with asymetrical tree of neo object.
-But if a fromat is done in neo.rawio the neo.io is done for free with this class.
+But if a format is done in neo.rawio the neo.io is done for free 
+by inheritance of this class.
 
 
 """
@@ -49,14 +50,8 @@ class BaseFromRaw(BaseIO):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
     
-    #~ def read_all_blocks(self, **kargs):
-        #~ blocks = []
-        #~ for bl_index in range(self.block_count()):
-            #~ bl = self.read_block(block_index=bl_index, **kargs)
-            #~ blocks.append(bl)
-        #~ return blocks
-    
-    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None,  **kargs):
+    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None,  
+                    load_waveforms=False):
         
         if signal_group_mode is None:
             signal_group_mode = self.__prefered_signal_group_mode
@@ -73,7 +68,8 @@ class BaseFromRaw(BaseIO):
         
         for seg_index in range(self.segment_count(block_index)):
             seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
-                                                                lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode, **kargs)
+                                                                lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                load_waveforms=load_waveforms)
             bl.segments.append(seg)
             
             for i, anasig in enumerate(seg.analogsignals):
@@ -84,7 +80,11 @@ class BaseFromRaw(BaseIO):
         return bl
 
     def read_segment(self, block_index=0, seg_index=0, lazy=False, cascade=True, 
-                        signal_group_mode='group-by-same-units', **kargs):
+                        signal_group_mode=None, load_waveforms=False):
+
+        if signal_group_mode is None:
+            signal_group_mode = self.__prefered_signal_group_mode
+
         seg = Segment(index=seg_index)#name, 
 
         if not cascade:
@@ -120,16 +120,32 @@ class BaseFromRaw(BaseIO):
             
             seg.analogsignals.append(anasig)
         
-        
         #SpikeTrain
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
+            if not lazy and load_waveforms:
+                raw_waveforms = self.spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
+                                                    unit_index=unit_index, t_start=None, t_stop=None)
+                float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
+                                unit_index=unit_index)
+                wf_units = unit_channels['wf_units'][unit_index]
+                waveforms = pq.Quantity(float_waveforms, units=wf_units, dtype='float32', copy=False)
+                wf_sampling_rate = unit_channels['wf_sampling_rate'][unit_index]
+                wf_left_sweep = unit_channels['wf_left_sweep'][unit_index]
+                wf_sampling_rate = wf_sampling_rate*pq.Hz
+                wf_left_sweep = float(wf_left_sweep)/wf_sampling_rate * pq.s
+            else:
+                waveforms = None
+                wf_left_sweep = None
+                wf_sampling_rate = None                 
+
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index, t_start=None, t_stop=None)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
-                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start, t_stop=t_stop)
+                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start, t_stop=t_stop,
+                                waveforms=waveforms, left_sweep=wf_left_sweep, sampling_rate=wf_sampling_rate)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
@@ -137,25 +153,28 @@ class BaseFromRaw(BaseIO):
                 sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start, t_stop=t_stop)
                 sptr.lazy_shape = (nb,)
             
+            
             seg.spiketrains.append(sptr)
         
         # Events/Epoch
         event_channels = self.header['event_channels']
-        #~ print('yep', event_channels)
-        #~ exit()
         for chan_ind in range(len(event_channels)):
             if not lazy:
-                ev_timestamp, ev_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
+                ev_timestamp, ev_raw_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind)
-                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64')
+                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
+                if ev_raw_durations is None:
+                    ev_durations = None
+                else:
+                    ev_durations = self.rescale_epoch_duration(ev_raw_durations, 'float64') * pq.s
                 ev_labels = ev_labels.astype('S')
             else:
                 nb = self.event_count(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind)
                 lazy_shape = (nb,)
-                ev_times = np.array([])
+                ev_times = np.array([]) * pq.s
                 ev_labels = np.array([], dtype='S')
-                ev_durations = np.array([])
+                ev_durations = np.array([]) * pq.s
                 
             name = event_channels['name'][chan_ind]
             if event_channels['type'][chan_ind] == b'event':
