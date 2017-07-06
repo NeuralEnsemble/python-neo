@@ -126,6 +126,10 @@ class BaseTestRawIO(object):
             compliance.read_spike_times(reader)
             compliance.read_spike_waveforms(reader)
             compliance.read_events(reader)
+            compliance.has_annotations(reader)
+            
+            print(reader.raw_annotations)
+            
             
             
             #basic benchmark

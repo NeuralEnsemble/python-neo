@@ -84,6 +84,8 @@ class ExampleRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
+        
+        self._generate_empty_annotations()
     
     def _source_name(self):
         return self.filename

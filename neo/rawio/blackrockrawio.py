@@ -405,8 +405,6 @@ class BlackrockRawIO(BaseRawIO):
                 max_nev_time = max(max_nev_time, t)
         #~ print('max_nev_time', max_nev_time)
         
-
-        
         
         self.header = {}
         self.header['nb_segment'] = [nb_seg]
@@ -416,7 +414,10 @@ class BlackrockRawIO(BaseRawIO):
         self.header['signal_sampling_rate'] = sampling_rate
         self.header['segment_t_starts'] = [t_starts]
         self.header['segment_t_stops'] = [t_stops]
-
+        
+        #TODO fill the raw_annotation dict
+        self._generate_empty_annotations()
+    
     
     def _source_name(self):
         return self.filename

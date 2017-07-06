@@ -115,7 +115,57 @@ class BaseRawIO(object):
         
         """
         self._parse_header()
+    
+    def _generate_empty_annotations(self):
+        """
+        Helper function that generate a nested dict
+        of all annotations.
+        must be called when theses are Ok:
+          * block_count()
+          * segment_count()
+          * signal_channels_count()
+          * unit_channels_count()
+          * event_channels_count()
+        
+        Usage:
+        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
+        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = {'nickname': 'super channel'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = {'nickname': 'super neuron'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
+        """
+        a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
+        for block_index in range(self.block_count()):
+            a['blocks'].append({'segments':[]})
+            for seg_index in range(self.segment_count(block_index)):
+                a['blocks'][block_index]['segments'].append({'signals':[], 'units' :[], 'events':[]})
+                
+                for c in range(self.signal_channels_count()):
+                    #use for AnalogSignal.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['signals'].append({})
 
+                for c in range(self.unit_channels_count()):
+                    #use for SpikeTrain.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['units'].append({})
+
+                for c in range(self.event_channels_count()):
+                    #use for Event.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['events'].append({})
+        
+        for c in range(self.signal_channels_count()):
+            #use for ChannelIndex.annotation
+            a['signal_channels'].append({})
+
+        for c in range(self.unit_channels_count()):
+            #use for Unit.annotation
+            a['unit_channels'].append({})
+
+        for c in range(self.event_channels_count()):
+            #not used in neo.io at the moment could usefull one day
+            a['event_channel'].append({})
+        
+        self.raw_annotations = a
+    
     def __repr__(self):
         txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
         if self.header is not None:
@@ -332,6 +382,8 @@ class BaseRawIO(object):
     
     def _parse_header(self):
         raise(NotImplementedError)
+        #must call 
+        #self._generate_empty_annotations()
     
     def _source_name(self):
         raise(NotImplementedError)

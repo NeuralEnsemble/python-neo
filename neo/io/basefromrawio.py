@@ -120,7 +120,7 @@ class BaseFromRaw(BaseIO):
             
             seg.analogsignals.append(anasig)
         
-        #SpikeTrain
+        #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
@@ -194,7 +194,9 @@ class BaseFromRaw(BaseIO):
 
 
     def _make_signal_channel_groups(self, signal_group_mode='group-by-same-units'):
-        
+        """
+        Aggregate signal channels with same units or split them all.
+        """
         channels = self.header['signal_channels']
         groups = collections.OrderedDict()
         if signal_group_mode=='group-by-same-units':

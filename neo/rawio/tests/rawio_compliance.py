@@ -263,5 +263,7 @@ def read_events(reader):
                 ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
                 assert ev_times.dtype=='float64'
                 
-                
+def has_annotations(reader):
+    assert hasattr(reader, 'raw_annotations'), 'raw_annotation are not set'
+    
 
