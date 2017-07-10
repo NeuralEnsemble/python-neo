@@ -21,7 +21,9 @@ raw data. All IO with theses carractéristics should/could be rewritten:
 So this handle **only** one simplified but very frequent case of dataset:
     * Only one channel set  for AnalogSignal (aka ChannelIndex) stable along Segment
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
-    * AnalogSignal have all the same sampling_rate, t_start, duration inside a segment
+    * AnalogSignal have all the same sampling_rate acroos all Segment
+    * t_start/t_stop are the same for all object (AnalogSignal/SpikeTrain) inside a Segment
+    
 
 An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to
 neo legacy IO from free.
@@ -50,7 +52,8 @@ error_header = 'Header is not read yet, do parse_header() first'
 
 _signal_channel_dtype = [
     ('name','U64'),
-    ('id','U64'),
+    #~ ('id','U64'),
+    ('id','int64'),
     ('units','U64'),
     ('gain','float64'),
     ('offset','float64'),
@@ -63,6 +66,8 @@ _unit_channel_dtype = [
     ('wf_units','U64'),
     ('wf_gain','float64'),
     ('wf_offset','float64'),
+    ('wf_left_sweep','int64'),
+    ('wf_sampling_rate','float64'),
 ]
 
 
@@ -110,7 +115,57 @@ class BaseRawIO(object):
         
         """
         self._parse_header()
+    
+    def _generate_empty_annotations(self):
+        """
+        Helper function that generate a nested dict
+        of all annotations.
+        must be called when theses are Ok:
+          * block_count()
+          * segment_count()
+          * signal_channels_count()
+          * unit_channels_count()
+          * event_channels_count()
+        
+        Usage:
+        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
+        raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = {'nickname': 'super channel'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = {'nickname': 'super neuron'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
+        """
+        a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
+        for block_index in range(self.block_count()):
+            a['blocks'].append({'segments':[]})
+            for seg_index in range(self.segment_count(block_index)):
+                a['blocks'][block_index]['segments'].append({'signals':[], 'units' :[], 'events':[]})
+                
+                for c in range(self.signal_channels_count()):
+                    #use for AnalogSignal.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['signals'].append({})
 
+                for c in range(self.unit_channels_count()):
+                    #use for SpikeTrain.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['units'].append({})
+
+                for c in range(self.event_channels_count()):
+                    #use for Event.annotation
+                    a['blocks'][block_index]['segments'][seg_index]['events'].append({})
+        
+        for c in range(self.signal_channels_count()):
+            #use for ChannelIndex.annotation
+            a['signal_channels'].append({})
+
+        for c in range(self.unit_channels_count()):
+            #use for Unit.annotation
+            a['unit_channels'].append({})
+
+        for c in range(self.event_channels_count()):
+            #not used in neo.io at the moment could usefull one day
+            a['event_channel'].append({})
+        
+        self.raw_annotations = a
+    
     def __repr__(self):
         txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
         if self.header is not None:
@@ -163,6 +218,9 @@ class BaseRawIO(object):
 
     def segment_t_start(self, block_index, seg_index):
         return self._segment_t_start(block_index, seg_index)
+
+    def segment_t_stop(self, block_index, seg_index):
+        return self._segment_t_stop(block_index, seg_index)
     
     ###
     # signal and channel zone
@@ -176,13 +234,13 @@ class BaseRawIO(object):
         assert len(channel_indexes) == len(channel_names), 'not match'
         return channel_indexes
     
-    def channel_name_to_id(self, channel_ids):
+    def channel_id_to_index(self, channel_ids):
         """
         Transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
-        channel_indexes,  = np.nonzero(channel_index(np.in1d(ch['id'], channel_ids)))
+        channel_indexes,  = np.nonzero(np.in1d(ch['id'], channel_ids))
         assert len(channel_indexes) == len(channel_ids), 'not match'
         return channel_indexes
 
@@ -195,7 +253,7 @@ class BaseRawIO(object):
             channel_indexes = self.channel_name_to_index(channel_names)
 
         if channel_indexes is None and channel_ids is not None:
-            channel_indexes = self.channel_name_to_id(channel_ids)
+            channel_indexes = self.channel_id_to_index(channel_ids)
         
         return channel_indexes
 
@@ -203,7 +261,10 @@ class BaseRawIO(object):
     def analogsignal_shape(self, block_index, seg_index):
         """Return signals shape for a given block_index, seg_index"""
         return self._analogsignal_shape(block_index, seg_index)
-
+    
+    def analogsignal_sampling_rate(self):
+        return self._analogsignal_sampling_rate()
+    
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
         """
@@ -304,11 +365,15 @@ class BaseRawIO(object):
     
     def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
         """
-        Rescale spike timestamps to s
+        Rescale event timestamps to s
         """
         return self._rescale_event_timestamp(event_timestamps, dtype)
-
     
+    def rescale_epoch_duration(self, raw_duration, dtype='float64'):
+        """
+        Rescale epoch raw duration to s
+        """
+        return self._rescale_epoch_duration(raw_duration, dtype)  
     
 
     ##################
@@ -317,6 +382,8 @@ class BaseRawIO(object):
     
     def _parse_header(self):
         raise(NotImplementedError)
+        #must call 
+        #self._generate_empty_annotations()
     
     def _source_name(self):
         raise(NotImplementedError)
@@ -329,19 +396,20 @@ class BaseRawIO(object):
     
     def _segment_t_start(self, block_index, seg_index):
         raise(NotImplementedError)
+
+    def _segment_t_stop(self, block_index, seg_index):
+        raise(NotImplementedError)
     
     ###
     # signal and channel zone
     def _analogsignal_shape(self, block_index, seg_index):
         raise(NotImplementedError)
+        
+    def _analogsignal_sampling_rate(self):
+        raise(NotImplementedError)
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         raise(NotImplementedError)
-    
-    def analogsignal_sampling_rate(self):
-        #sampling_rate in Hz
-        raise(NotImplementedError)
-    
     
     ###
     # spiketrain and unit zone
@@ -368,5 +436,8 @@ class BaseRawIO(object):
         raise(NotImplementedError)
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
+        raise(NotImplementedError)
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
         raise(NotImplementedError)
 

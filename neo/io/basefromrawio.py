@@ -7,7 +7,8 @@ BaseFromRaw implement a bridge between the new neo.rawio API
 and the neo.io legacy that give neo.core object.
 The neo.rawio API is more restricted and limited and do not cover tricky
 cases with asymetrical tree of neo object.
-But if a fromat is done in neo.rawio the neo.io is done for free with this class.
+But if a format is done in neo.rawio the neo.io is done for free 
+by inheritance of this class.
 
 
 """
@@ -41,19 +42,19 @@ class BaseFromRaw(BaseIO):
     extentions = []
 
     mode = 'file'
+    
+    __prefered_signal_group_mode = 'split-all' #'group-by-same-units'
+    
 
-    def __init__(self, **kargs):
-        BaseIO.__init__(self, **kargs)
+    def __init__(self, *args, **kargs):
+        BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
     
-    #~ def read_all_blocks(self, **kargs):
-        #~ blocks = []
-        #~ for bl_index in range(self.block_count()):
-            #~ bl = self.read_block(block_index=bl_index, **kargs)
-            #~ blocks.append(bl)
-        #~ return blocks
-    
-    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode='group-by-same-units',  **kargs):
+    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None,  
+                    load_waveforms=False):
+        
+        if signal_group_mode is None:
+            signal_group_mode = self.__prefered_signal_group_mode
         
         bl = Block(name='Block {}'.format(block_index))
         if not cascade:
@@ -61,13 +62,14 @@ class BaseFromRaw(BaseIO):
         
         channels = self.header['signal_channels']
         for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
-            channel_index = ChannelIndex(index=ind, channel_names=channels[ind]['name'],
+            channel_index = ChannelIndex(index=ind, channel_names=channels[ind]['name'].astype('S'),
                             channel_ids=channels[ind]['id'], name='Channel group {}'.format(i))
             bl.channel_indexes.append(channel_index)
         
         for seg_index in range(self.segment_count(block_index)):
             seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
-                                                                lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode, **kargs)
+                                                                lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                load_waveforms=load_waveforms)
             bl.segments.append(seg)
             
             for i, anasig in enumerate(seg.analogsignals):
@@ -78,7 +80,11 @@ class BaseFromRaw(BaseIO):
         return bl
 
     def read_segment(self, block_index=0, seg_index=0, lazy=False, cascade=True, 
-                        signal_group_mode='group-by-same-units', **kargs):
+                        signal_group_mode=None, load_waveforms=False):
+
+        if signal_group_mode is None:
+            signal_group_mode = self.__prefered_signal_group_mode
+
         seg = Segment(index=seg_index)#name, 
 
         if not cascade:
@@ -95,10 +101,10 @@ class BaseFromRaw(BaseIO):
             float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32', channel_indexes=channel_indexes)
         else:
             sig_shape = self.analogsignal_shape(block_index=block_index, seg_index=seg_index,)
-
-        sample_rate = 0 #TODO
-        t_start = 0 #TODO
-        t_stop = 100000 #TODO
+        
+        sr = self.analogsignal_sampling_rate() * pq.Hz
+        t_start = self.segment_t_start(block_index, seg_index) * pq.s
+        t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
         for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
             units = np.unique(signal_channels[ind]['units'])
             assert len(units)==1
@@ -106,50 +112,69 @@ class BaseFromRaw(BaseIO):
 
             if lazy:
                 anasig = AnalogSignal(np.array([]), units=units,  copy=False,
-                        sampling_rate=sample_rate*pq.Hz,t_start=t_start*pq.s)
-                anasig.lay_shape = (sig_shape[0], len(ind))
+                        sampling_rate=sr, t_start=t_start)
+                anasig.lazy_shape = (sig_shape[0], len(ind))
             else:
                 anasig = AnalogSignal(float_signal[:, ind], units=units,  copy=False,
-                        sampling_rate=sample_rate*pq.Hz, t_start=t_start*pq.s)
+                        sampling_rate=sr, t_start=t_start)
             
             seg.analogsignals.append(anasig)
         
-        
-        #SpikeTrain
+        #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
+            if not lazy and load_waveforms:
+                raw_waveforms = self.spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
+                                                    unit_index=unit_index, t_start=None, t_stop=None)
+                float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
+                                unit_index=unit_index)
+                wf_units = unit_channels['wf_units'][unit_index]
+                waveforms = pq.Quantity(float_waveforms, units=wf_units, dtype='float32', copy=False)
+                wf_sampling_rate = unit_channels['wf_sampling_rate'][unit_index]
+                wf_left_sweep = unit_channels['wf_left_sweep'][unit_index]
+                wf_sampling_rate = wf_sampling_rate*pq.Hz
+                wf_left_sweep = float(wf_left_sweep)/wf_sampling_rate * pq.s
+            else:
+                waveforms = None
+                wf_left_sweep = None
+                wf_sampling_rate = None                 
+
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index, t_start=None, t_stop=None)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
-                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start*pq.s, t_stop=t_stop*pq.s)
+                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start, t_stop=t_stop,
+                                waveforms=waveforms, left_sweep=wf_left_sweep, sampling_rate=wf_sampling_rate)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
                 
-                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start*pq.s, t_stop=t_stop*pq.s)
+                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start, t_stop=t_stop)
                 sptr.lazy_shape = (nb,)
-                
+            
+            
             seg.spiketrains.append(sptr)
         
         # Events/Epoch
         event_channels = self.header['event_channels']
-        #~ print('yep', event_channels)
-        #~ exit()
         for chan_ind in range(len(event_channels)):
             if not lazy:
-                ev_timestamp, ev_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
+                ev_timestamp, ev_raw_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind)
-                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64')
-                ev_labels = ev_labels.astype(str)
+                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
+                if ev_raw_durations is None:
+                    ev_durations = None
+                else:
+                    ev_durations = self.rescale_epoch_duration(ev_raw_durations, 'float64') * pq.s
+                ev_labels = ev_labels.astype('S')
             else:
                 nb = self.event_count(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind)
                 lazy_shape = (nb,)
-                ev_times = np.array([])
-                ev_labels = np.array([])
-                ev_durations = np.array([])
+                ev_times = np.array([]) * pq.s
+                ev_labels = np.array([], dtype='S')
+                ev_durations = np.array([]) * pq.s
                 
             name = event_channels['name'][chan_ind]
             if event_channels['type'][chan_ind] == b'event':
@@ -169,16 +194,18 @@ class BaseFromRaw(BaseIO):
 
 
     def _make_signal_channel_groups(self, signal_group_mode='group-by-same-units'):
-        
+        """
+        Aggregate signal channels with same units or split them all.
+        """
         channels = self.header['signal_channels']
         groups = collections.OrderedDict()
         if signal_group_mode=='group-by-same-units':
             all_units = np.unique(channels['units'])
-            print('all_units', all_units)
+
             for i, unit in enumerate(all_units):
                 ind, = np.nonzero(channels['units']==unit)
                 groups[i] = ind
-                print(i, unit, ind)
+
         elif signal_group_mode=='split-all':
             for i in range(channels.size):
                 groups[i] = np.array([i])

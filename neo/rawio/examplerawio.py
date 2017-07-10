@@ -8,7 +8,7 @@
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
 
-
+import numpy as np
 
 class ExampleRawIO(BaseRawIO):
     """
@@ -56,12 +56,20 @@ class ExampleRawIO(BaseRawIO):
         #make channels
         sig_channels = []
         for c in range(16):
-            sig_channels.append(('ch{}'.format(c), 'id#{}'.format(c), 'uV', 1000./2**16, 0.))
+            #our id is c+1 just for fun
+            sig_channels.append(('ch{}'.format(c), c+1, 'uV', 1000./2**16, 0.))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
         unit_channels = []
         for c in range(3):
-            unit_channels.append(('unit{}'.format(c), '#{}'.format(c), 'uV', 1000./2**16, 0.))
+            unit_name = 'unit{}'.format(c)
+            unit_id = '#{}'.format(c)
+            wf_units = 'uV'
+            wf_gain =  1000./2**16
+            wf_offset = 0.
+            wf_left_sweep = 20
+            wf_sampling_rate = 10000.
+            unit_channels.append((unit_name, unit_id, wf_units, wf_gain, wf_offset, wf_left_sweep, wf_sampling_rate))
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
         event_channels = []
@@ -76,6 +84,8 @@ class ExampleRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
+        
+        self._generate_empty_annotations()
     
     def _source_name(self):
         return self.filename
@@ -91,11 +101,19 @@ class ExampleRawIO(BaseRawIO):
         # always in second
         all_starts = [[0., 15.], [0., 20., 60.]]
         return all_starts[block_index][seg_index]
-    
+
+    def _segment_t_stop(self, block_index, seg_index):
+        # always in second
+        all_stops = [[10., 25.], [10., 30., 70.]]
+        return all_stops[block_index][seg_index]
+
     def _analogsignal_shape(self, block_index, seg_index):
-        # we are lucky: signals in all segment have the same shape!! (10.24 seconds)
+        # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
         # it is not always the case
-        return (102400, 16)
+        return (100000, 16)
+    
+    def _analogsignal_sampling_rate(self):
+        return 10000.
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         #we are lucky:  our signals is always zeros!!
@@ -104,10 +122,10 @@ class ExampleRawIO(BaseRawIO):
         #convertion to real units is done with self.header['signal_channels']
         
         if i_start is None: i_start=0
-        if i_stop is None: i_stop=102400
+        if i_stop is None: i_stop=100000
         
-        assert i_start>0, "I don't like your jokes"
-        assert i_stop<102400, "I don't like your jokes"
+        assert i_start>=0, "I don't like your jokes"
+        assert i_stop<=100000, "I don't like your jokes"
         
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         return raw_signals
@@ -124,14 +142,25 @@ class ExampleRawIO(BaseRawIO):
     
     def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         # In our IO, timstamp are internally coded 'int64' and they
-        # represent the index of the signals
+        # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
         # incredible!! in is not always the case
-        spike_timestamps = np.arange(0, 10000, 500)
+        
+        ts_start = (self._segment_t_start(block_index, seg_index)*10000)
+        
+        spike_timestamps = np.arange(0, 10000, 500) + ts_start
+        
+        if t_start is not None or t_stop is not None:
+            #restricte spikes to given limits (in seconds)
+            lim0 = int(t_start*10000)
+            lim1 = int(t_stop*10000)
+            mask = (spike_timestamps>=lim0) & (spike_timestamps<=lim1)
+            spike_timestamps = spike_timestamps[mask]
+        
         return spike_timestamps
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        spike_times = spike_timestamps.astype(spike_timestamps)
+        spike_times = spike_timestamps.astype(dtype)
         spike_times /= 10000. # because 10kHz
         return spike_times
 
@@ -144,7 +173,7 @@ class ExampleRawIO(BaseRawIO):
         # we 20 spikes with a sweep of 50 (5ms)
         
         np.random.seed(2205) # a magic number (my birthday)
-        waveforms = np.random.random.randint(low=-2**4, high=2**4, size=20*50, dtype='int16')
+        waveforms = np.random.randint(low=-2**4, high=2**4, size=20*50, dtype='int16')
         waveforms = waveforms.reshape(20, 1, 50)
         return waveforms
     
@@ -159,12 +188,13 @@ class ExampleRawIO(BaseRawIO):
     
     def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         # in our IO event are directly coded in seconds
+        t_start = self._segment_t_start(block_index, seg_index)
         if event_channel_index==0:
-            timestamp = np.arange(0, 6, dtype='float64')
+            timestamp = np.arange(0, 6, dtype='float64') + t_start
             durations = None
             labels = np.array(['trigger_a', 'trigger_b']*3, dtype='U12')
         elif event_channel_index==1:
-            timestamp = np.arange(0, 10, dtype='float64') + .5
+            timestamp = np.arange(0, 10, dtype='float64') + .5  + t_start
             durations = np.ones((10),  dtype='float64') * .25
             labels = np.array(['zoneX']*5+['zoneZ']*5, dtype='U12')
         
@@ -175,4 +205,9 @@ class ExampleRawIO(BaseRawIO):
         # really easy here because in our case it is already seconds
         event_times = event_timestamps.astype(dtype)
         return event_times
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
+        # really easy here because in our case it is already seconds
+        durations = raw_duration.astype(dtype)
+        return durations
 

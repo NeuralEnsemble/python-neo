@@ -54,7 +54,9 @@ import re
 import numpy as np
 import quantities as pq
 
-from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
+
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
+        _event_channel_dtype)
 
 
 class BlackrockRawIO(BaseRawIO):
@@ -148,7 +150,7 @@ class BlackrockRawIO(BaseRawIO):
 
     rawmode = 'multi-file'
 
-    def __init__(self, filename, nsx_override=None, nev_override=None,
+    def __init__(self, filename=None, nsx_override=None, nev_override=None,
                  sif_override=None, ccf_override=None, nsx_to_load=None, verbose=False):
         """
         Initialize the BlackrockIO class.
@@ -293,15 +295,16 @@ class BlackrockRawIO(BaseRawIO):
                     #~ _id = "ch{}#{}".format(channel_id, unit_id)
                     name = "ch{}#{}".format(channel_id, unit_id)
                     _id = "Unit {}".format(1000 * channel_id + unit_id)
-                    
                     wf_gain = 1.#TODO
                     wf_offset = 0. #TODO
                     wf_units = '' #TODO
-                    unit_channels.append((name, _id, wf_units, wf_gain,wf_offset))
+                    # TODO: Double check if this is the correct assumption (10 samples)
+                    # default value: threshold crossing after 10 samples of waveform                    
+                    wf_left_sweep = 10
+                    wf_sampling_rate = 30000. #TODO
+                    unit_channels.append((name, _id, wf_units, wf_gain,wf_offset, wf_left_sweep, wf_sampling_rate))
 
-            unit_channel_dtype = [('name','U64'), ('id','U64'),('wf_units','U'),
-                                        ('wf_gain','float64'),('wf_offset','float64'),]
-            unit_channels = np.array(unit_channels, dtype=unit_channel_dtype)
+            unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
             #~ print(unit_channels)
             
             
@@ -314,7 +317,7 @@ class BlackrockRawIO(BaseRawIO):
             for ev_name in ev_dict:
                 event_channels.append((ev_name, '', 'event'))
             event_channel_dtype = [('name','U64'), ('id','U64'), ('type', 'S5')]
-            event_channels = np.array(event_channels, dtype=event_channel_dtype)
+            event_channels = np.array(event_channels, dtype=_event_channel_dtype)
             #~ print(event_channels)
             #~ exit()
 
@@ -338,12 +341,16 @@ class BlackrockRawIO(BaseRawIO):
 
             # Read nsx data header(s) for nsxdef get_analogsignal_shape(self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
+            
+            
         
         if self.nsx_to_load is None:
             self.nsx_to_load = max(self._avail_nsx)
         nsx_nb = self.nsx_to_load
+        
         spec = self.__nsx_spec[nsx_nb]
         self.nsx_data = self.__nsx_data_reader[spec](nsx_nb)
+
         
         sig_channels = []
         #~ print(self.__nsx_ext_header[nsx_nb].dtype)
@@ -357,45 +364,46 @@ class BlackrockRawIO(BaseRawIO):
             
             offset = 0.
             sig_channels.append((chan['electrode_label'].decode(), 
-                                        str(chan['electrode_id']), 
+                                        chan['electrode_id'], 
                                         chan['units'].decode(), 
                                         gain,
                                         offset,
                                         ))
         
-        
-        
-        #~ nb_chanq = len(h)
-        #~ sig_channels = np.empty(nb_chan, dtype=channel_dtype)
-        #~ sig_channels['name'] = h['electrode_label']
-        #~ print(sig_channels)
-        sig_channel_dtype = [
-                    ('name','U64'),
-                    ('id','U64'),
-                    ('units','U16'),
-                    ('gain','float64'),
-                    ('offset','float64'),
-                ]
 
-        sig_channels = np.array(sig_channels, dtype=sig_channel_dtype)
+
+        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         #~ print(sig_channels)
         
         nb_seg = len(self.nsx_data)
         
         #~ sampling_rate = self.__nsx_params[spec]('sampling_rate', nsx_nb)
-        sampling_rate = 30000. / self.__nsx_basic_header[nsx_nb]['period']
+        sampling_rate = float(30000. / self.__nsx_basic_header[nsx_nb]['period'])
         #~ print(sampling_rate)
-        t_starts = []
-        #~ print(
+        
+        t_starts, t_stops = [], []
         for data_bl in range(nb_seg):
-            t_starts = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']/sampling_rate
-        #~ print(t_starts)
-            
-            #~ ts0 = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']
-            #~ nbdp = self.__nsx_data_header[nsx_nb][data_bl]['nb_data_points']
-            #~ print(ts0, nbdp)
+            length = self.nsx_data[data_bl].shape[0]
+            if self.__nsx_data_header[nsx_nb] is None:
+                t_start = 0.
+            else:
+                t_start = self.__nsx_data_header[nsx_nb][data_bl]['timestamp']/sampling_rate
+            t_starts.append(float(t_start))
+            t_stops.append(float(t_start + length/sampling_rate))
         
+        #~ old_t_starts, old_t_stops = self.__nsx_rec_times[self.__nsx_spec[nsx_nb]](nsx_nb)
+        #~ print('old_t_starts', old_t_starts, 'old_t_stops', old_t_stops)
+
+        #~ print(self.nsx_data)
         
+        #TODO if no nsx use nev min/max timestamp
+        max_nev_time = 0.
+        for k, data in self.nev_data.items():
+            #~ print(k)
+            if data.size>0:
+                t = data[-1]['timestamp']/self.__nev_basic_header['timestamp_resolution']
+                max_nev_time = max(max_nev_time, t)
+        #~ print('max_nev_time', max_nev_time)
         
         
         self.header = {}
@@ -403,13 +411,13 @@ class BlackrockRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
+        self.header['signal_sampling_rate'] = sampling_rate
+        self.header['segment_t_starts'] = [t_starts]
+        self.header['segment_t_stops'] = [t_stops]
         
-        #~ self.header['signal_sampling_rate'] = sampling_rate
-        t_start, t_stop = self.__nsx_rec_times[spec](nsx_nb)
-        #~ print(t_start, t_stop)
-        #~ self.header['signal_t_start'] = [0.]*self.header['nb_segment']
-        
-        #~ print(self.__nsx_data_header[nsx_nb])
+        #TODO fill the raw_annotation dict
+        self._generate_empty_annotations()
+    
     
     def _source_name(self):
         return self.filename
@@ -424,11 +432,22 @@ class BlackrockRawIO(BaseRawIO):
         #a new segment is created for each pause
         assert block_index==0
         return self.header['nb_segment'][block_index]
-    
+
+    def _segment_t_start(self, block_index, seg_index):
+        t_start = self.header['segment_t_starts'][block_index][seg_index]
+        return t_start
+
+    def _segment_t_stop(self, block_index, seg_index):
+        t_stop = self.header['segment_t_stops'][block_index][seg_index]
+        return t_stop
+
     def _analogsignal_shape(self, block_index, seg_index):
         assert block_index==0
         memmap_data = self.nsx_data[seg_index]
         return self.nsx_data[seg_index].shape
+
+    def _analogsignal_sampling_rate(self):
+        return self.header['signal_sampling_rate']
     
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
@@ -479,7 +498,7 @@ class BlackrockRawIO(BaseRawIO):
             ind_stop = None
         else:
             ts = int(t_stop*self.__nev_basic_header['timestamp_resolution'])
-            ind_stop = np.searchsorted(timestamp, ts)
+            ind_stop = np.searchsorted(timestamp, ts)+1
         
         sl = slice(ind_start, ind_stop)
         return sl
@@ -541,7 +560,11 @@ class BlackrockRawIO(BaseRawIO):
         ev_times = event_timestamps.astype(dtype)
         ev_times /= self.__nev_basic_header['timestamp_resolution']
         return ev_times
-
+    
+    def _rescale_epoch_duration(self, raw_duration, dtype):
+        #In blackrock not epoch are implemented
+        # so duration is always None
+        raise
 
     
     
