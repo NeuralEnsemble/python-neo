@@ -244,6 +244,7 @@ class BaseFromRaw(BaseIO):
             if lazy:
                 e.lazy_shape = lazy_shape
         
+        seg.create_many_to_one_relationship()
         return seg
 
 

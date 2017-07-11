@@ -136,6 +136,7 @@ class ExampleRawIO(BaseRawIO):
         return (100000, 16)
     
     def _analogsignal_sampling_rate(self):
+        # always float in Hz
         return 10000.
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
@@ -152,10 +153,6 @@ class ExampleRawIO(BaseRawIO):
         
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         return raw_signals
-    
-    def analogsignal_sampling_rate(self):
-        # always float in Hz
-        return 10000. #Hz
     
     def _spike_count(self,  block_index, seg_index, unit_index):
         #we are lucky:  our units have all the same nb of spikes!!

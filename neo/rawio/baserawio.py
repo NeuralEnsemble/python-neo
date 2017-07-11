@@ -165,9 +165,13 @@ class BaseRawIO(object):
         
         a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
         for block_index in range(self.block_count()):
-            a['blocks'].append({'segments':[]})
+            d = {'segments':[]}
+            d['file_origin'] = self.source_name()
+            a['blocks'].append(d)
             for seg_index in range(self.segment_count(block_index)):
-                a['blocks'][block_index]['segments'].append({'signals':[], 'units' :[], 'events':[]})
+                d = {'signals':[], 'units' :[], 'events':[]}
+                d['file_origin'] = self.source_name()
+                a['blocks'][block_index]['segments'].append(d)
                 
                 for c in range(signal_channels.size):
                     #use for AnalogSignal.annotations
