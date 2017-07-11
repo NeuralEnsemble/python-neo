@@ -149,7 +149,6 @@ class MicromedRawIO(BaseRawIO):
         unit_channels = []
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
-        
         #fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
@@ -167,6 +166,7 @@ class MicromedRawIO(BaseRawIO):
             d['rec_datetime'] = rec_datetime
             d['firstname'] = firstname
             d['surname'] = surname
+            d['header_version'] = header_version
     
     def _source_name(self):
         return self.filename
@@ -212,7 +212,6 @@ class MicromedRawIO(BaseRawIO):
         if t_stop is not None:
             keep = raw_event['start']<=int(t_stop*self._sampling_rate)
             raw_event = raw_event[keep]
-            
         
         timestamp = raw_event['start']
         if event_channel_index<2:
@@ -221,14 +220,8 @@ class MicromedRawIO(BaseRawIO):
             durations = raw_event['stop'] - raw_event['start']
         labels = raw_event['label'].astype('U')
         
-        
-            
-        
-        #TODO t_start/t_stop
-        
         return timestamp, durations, labels
 
-    
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = event_timestamps.astype(dtype)/self._sampling_rate
         return event_times
