@@ -415,9 +415,42 @@ class BlackrockRawIO(BaseRawIO):
         self.header['segment_t_starts'] = [t_starts]
         self.header['segment_t_stops'] = [t_stops]
         
-        #TODO fill the raw_annotation dict
+        #Annotations
         self._generate_empty_annotations()
-    
+        block_ann = self.raw_annotations['blocks'][0]
+        block_ann['file_origin'] = self.filename
+        block_ann['name'] = "Blackrock Data Block"
+        block_ann['rec_datetime'] = self.__nev_params('rec_datetime')
+        for seg_index in range(nb_seg):
+            seg_ann = block_ann['segments'][seg_index]
+            seg_ann['file_origin'] = self.filename
+            seg_ann['name'] = "Segment {}".format(seg_index)
+            if seg_index==0:
+                # if more than 1 segment means pause
+                # so datetime is valide only for seg_index=0
+                seg_ann['rec_datetime'] = self.__nev_params('rec_datetime')
+            
+            for c in range(sig_channels.size):
+                anasig_an = seg_ann['signals'][c]
+                desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
+                            c, sig_channels['id'][c], sig_channels['name'][c], nsx_nb)
+                anasig_an['description'] = desc
+            
+            for c in range(unit_channels.size):
+                channel_id, unit_id = self.internal_unit_ids[c]
+                st_ann = seg_ann['units'][c]
+                st_ann['channel_id'] = channel_id
+                st_ann['unit_id'] = unit_id
+                st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
+                        channel_id, unit_id)
+                
+            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+            for c in range(event_channels.size):
+                ev_ann = seg_ann['events'][c]
+                name = event_channels['name'][c]
+                ev_ann['description'] = ev_dict[name]['desc']
+        
+        
     
     def _source_name(self):
         return self.filename
@@ -1671,23 +1704,23 @@ class BlackrockRawIO(BaseRawIO):
 
         return event_types
 
-    def __get_unit_classification(self, un_id):
-        """
-        Returns the Blackrock unit classification of an online spike sorting
-        for the given unit id (un_id).
-        """
-        # Blackrock unit classification
-        if un_id == 0:
-            return 'unclassified'
-        elif 1 <= un_id <= 16:
-            return '{0}'.format(un_id)
-        elif 17 <= un_id <= 244:
-            raise ValueError(
-                "Unit id {0} is not used by daq system".format(un_id))
-        elif un_id == 255:
-            return 'noise'
-        else:
-            raise ValueError("Unit id {0} cannot be classified".format(un_id))
+    #~ def __get_unit_classification(self, un_id):
+        #~ """
+        #~ Returns the Blackrock unit classification of an online spike sorting
+        #~ for the given unit id (un_id).
+        #~ """
+        #~ # Blackrock unit classification
+        #~ if un_id == 0:
+            #~ return 'unclassified'
+        #~ elif 1 <= un_id <= 16:
+            #~ return '{0}'.format(un_id)
+        #~ elif 17 <= un_id <= 244:
+            #~ raise ValueError(
+                #~ "Unit id {0} is not used by daq system".format(un_id))
+        #~ elif un_id == 255:
+            #~ return 'noise'
+        #~ else:
+            #~ raise ValueError("Unit id {0} cannot be classified".format(un_id))
 
     def __is_set(self, flag, pos):
         """
@@ -1696,356 +1729,356 @@ class BlackrockRawIO(BaseRawIO):
         """
         return flag & (1 << pos) > 0
 
-    def __transform_nsx_to_load(self, nsx_to_load):
-        """
-        Transforms the input argument nsx_to_load to a list of integers.
-        """
-        if hasattr(nsx_to_load, "__len__") and len(nsx_to_load) == 0:
-            nsx_to_load = None
-        if isinstance(nsx_to_load, int):
-            nsx_to_load = [nsx_to_load]
-        if isinstance(nsx_to_load, str):
-            if nsx_to_load.lower() == 'none':
-                nsx_to_load = None
-            elif nsx_to_load.lower() == 'all':
-                nsx_to_load = self._avail_nsx
-            else:
-                raise ValueError("Invalid specification of nsx_to_load.")
+    #~ def __transform_nsx_to_load(self, nsx_to_load):
+        #~ """
+        #~ Transforms the input argument nsx_to_load to a list of integers.
+        #~ """
+        #~ if hasattr(nsx_to_load, "__len__") and len(nsx_to_load) == 0:
+            #~ nsx_to_load = None
+        #~ if isinstance(nsx_to_load, int):
+            #~ nsx_to_load = [nsx_to_load]
+        #~ if isinstance(nsx_to_load, str):
+            #~ if nsx_to_load.lower() == 'none':
+                #~ nsx_to_load = None
+            #~ elif nsx_to_load.lower() == 'all':
+                #~ nsx_to_load = self._avail_nsx
+            #~ else:
+                #~ raise ValueError("Invalid specification of nsx_to_load.")
 
-        if nsx_to_load:
-            for nsx_nb in nsx_to_load:
-                if not self._avail_files['ns' + str(nsx_nb)]:
-                    raise ValueError("ns%i is not available" % nsx_nb)
+        #~ if nsx_to_load:
+            #~ for nsx_nb in nsx_to_load:
+                #~ if not self._avail_files['ns' + str(nsx_nb)]:
+                    #~ raise ValueError("ns%i is not available" % nsx_nb)
 
-        return nsx_to_load
+        #~ return nsx_to_load
 
-    def __transform_channels(self, channels, nsx_to_load):
-        """
-        Transforms the input argument channels to a list of integers.
-        """
-        all_channels = []
-        nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        if nsx_to_load is not None:
-            for nsx_nb in nsx_to_load:
-                all_channels.extend(
-                    self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
-        elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
-        all_channels.extend(elec_id.astype(int))
-        all_channels = np.unique(all_channels).tolist()
+    #~ def __transform_channels(self, channels, nsx_to_load):
+        #~ """
+        #~ Transforms the input argument channels to a list of integers.
+        #~ """
+        #~ all_channels = []
+        #~ nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
+        #~ if nsx_to_load is not None:
+            #~ for nsx_nb in nsx_to_load:
+                #~ all_channels.extend(
+                    #~ self.__nsx_ext_header[nsx_nb]['electrode_id'].astype(int))
+        #~ elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
+        #~ all_channels.extend(elec_id.astype(int))
+        #~ all_channels = np.unique(all_channels).tolist()
 
-        if hasattr(channels, "__len__") and len(channels) == 0:
-            channels = None
-        if isinstance(channels, int):
-            channels = [channels]
-        if isinstance(channels, str):
-            if channels.lower() == 'none':
-                channels = None
-            elif channels.lower() == 'all':
-                channels = all_channels
-            else:
-                raise ValueError("Invalid channel specification.")
+        #~ if hasattr(channels, "__len__") and len(channels) == 0:
+            #~ channels = None
+        #~ if isinstance(channels, int):
+            #~ channels = [channels]
+        #~ if isinstance(channels, str):
+            #~ if channels.lower() == 'none':
+                #~ channels = None
+            #~ elif channels.lower() == 'all':
+                #~ channels = all_channels
+            #~ else:
+                #~ raise ValueError("Invalid channel specification.")
 
-        if channels:
-            if len(set(all_channels) & set(channels)) < len(channels):
-                self._print_verbose(
-                    "Ignoring unknown channel ID(s) specified in in channels.")
+        #~ if channels:
+            #~ if len(set(all_channels) & set(channels)) < len(channels):
+                #~ self._print_verbose(
+                    #~ "Ignoring unknown channel ID(s) specified in in channels.")
 
-            # Make sure, all channels are valid and contain no duplicates
-            channels = list(set(all_channels).intersection(set(channels)))
-        else:
-            self._print_verbose("No channel is specified, therefore no "
-                                "time series and unit data is loaded.")
+            #~ # Make sure, all channels are valid and contain no duplicates
+            #~ channels = list(set(all_channels).intersection(set(channels)))
+        #~ else:
+            #~ self._print_verbose("No channel is specified, therefore no "
+                                #~ "time series and unit data is loaded.")
 
-        return channels
+        #~ return channels
 
-    def __transform_units(self, units, channels):
-        """
-        Transforms the input argument nsx_to_load to a dictionary, where keys
-        (channels) are int, and values (units) are lists of integers.
-        """
-        if isinstance(units, dict):
-            for ch, u in units.items():
-                if ch not in channels:
-                    self._print_verbose(
-                        "Units contain a channel id which is not listed in "
-                        "channels")
-                if isinstance(u, int):
-                    units[ch] = [u]
-                if hasattr(u, '__len__') and len(u) == 0:
-                    units[ch] = None
-                if isinstance(u, str):
-                    if u.lower() == 'none':
-                        units[ch] = None
-                    elif u.lower() == 'all':
-                        units[ch] = list(range(17))
-                        units[ch].append(255)
-                    else:
-                        raise ValueError("Invalid unit specification.")
-        else:
-            if hasattr(units, "__len__") and len(units) == 0:
-                units = None
-            if isinstance(units, str):
-                if units.lower() == 'none':
-                    units = None
-                elif units.lower() == 'all':
-                    units = list(range(17))
-                    units.append(255)
-                else:
-                    raise ValueError("Invalid unit specification.")
-            if isinstance(units, int):
-                units = [units]
+    #~ def __transform_units(self, units, channels):
+        #~ """
+        #~ Transforms the input argument nsx_to_load to a dictionary, where keys
+        #~ (channels) are int, and values (units) are lists of integers.
+        #~ """
+        #~ if isinstance(units, dict):
+            #~ for ch, u in units.items():
+                #~ if ch not in channels:
+                    #~ self._print_verbose(
+                        #~ "Units contain a channel id which is not listed in "
+                        #~ "channels")
+                #~ if isinstance(u, int):
+                    #~ units[ch] = [u]
+                #~ if hasattr(u, '__len__') and len(u) == 0:
+                    #~ units[ch] = None
+                #~ if isinstance(u, str):
+                    #~ if u.lower() == 'none':
+                        #~ units[ch] = None
+                    #~ elif u.lower() == 'all':
+                        #~ units[ch] = list(range(17))
+                        #~ units[ch].append(255)
+                    #~ else:
+                        #~ raise ValueError("Invalid unit specification.")
+        #~ else:
+            #~ if hasattr(units, "__len__") and len(units) == 0:
+                #~ units = None
+            #~ if isinstance(units, str):
+                #~ if units.lower() == 'none':
+                    #~ units = None
+                #~ elif units.lower() == 'all':
+                    #~ units = list(range(17))
+                    #~ units.append(255)
+                #~ else:
+                    #~ raise ValueError("Invalid unit specification.")
+            #~ if isinstance(units, int):
+                #~ units = [units]
 
-            if (channels is None) and (units is not None):
-                raise ValueError(
-                    'At least one channel needs to be loaded to load units')
+            #~ if (channels is None) and (units is not None):
+                #~ raise ValueError(
+                    #~ 'At least one channel needs to be loaded to load units')
 
-            if units:
-                units = dict(zip(channels, [units] * len(channels)))
+            #~ if units:
+                #~ units = dict(zip(channels, [units] * len(channels)))
 
-        if units is None:
-            self._print_verbose("No units are specified, therefore no "
-                                "unit or spiketrain is loaded.")
+        #~ if units is None:
+            #~ self._print_verbose("No units are specified, therefore no "
+                                #~ "unit or spiketrain is loaded.")
 
-        return units
+        #~ return units
 
-    def __transform_times(self, n, default_n):
-        """
-        Transforms the input argument n_start or n_stop (n) to a list of
-        quantities. In case n is None, it is set to a default value provided by
-        the given function (default_n).
-        """
-        highest_res = self.__nev_params('event_unit')
+    #~ def __transform_times(self, n, default_n):
+        #~ """
+        #~ Transforms the input argument n_start or n_stop (n) to a list of
+        #~ quantities. In case n is None, it is set to a default value provided by
+        #~ the given function (default_n).
+        #~ """
+        #~ highest_res = self.__nev_params('event_unit')
 
-        if isinstance(n, pq.Quantity):
-            n = [n.rescale(highest_res)]
-        elif hasattr(n, "__len__"):
-            n = [tp.rescale(highest_res) if tp is not None
-                 else default_n for tp in n]
-        elif n is None:
-            n = [default_n]
-        else:
-            raise ValueError('Invalid specification of n_start/n_stop.')
+        #~ if isinstance(n, pq.Quantity):
+            #~ n = [n.rescale(highest_res)]
+        #~ elif hasattr(n, "__len__"):
+            #~ n = [tp.rescale(highest_res) if tp is not None
+                 #~ else default_n for tp in n]
+        #~ elif n is None:
+            #~ n = [default_n]
+        #~ else:
+            #~ raise ValueError('Invalid specification of n_start/n_stop.')
 
-        return n
+        #~ return n
 
-    def __merge_time_ranges(
-            self, user_n_starts, user_n_stops, nsx_to_load):
-        """
-        Merges after a validation the user specified n_starts and n_stops with
-        the intrinsically given n_starts and n_stops (from e.g, recording
-        pauses) of the file set.
+    #~ def __merge_time_ranges(
+            #~ self, user_n_starts, user_n_stops, nsx_to_load):
+        #~ """
+        #~ Merges after a validation the user specified n_starts and n_stops with
+        #~ the intrinsically given n_starts and n_stops (from e.g, recording
+        #~ pauses) of the file set.
 
-        Final n_starts and n_stops are chosen, so that the time range of each
-        resulting segment is set to the best meaningful maximum. This means
-        that the duration of the signals stored in the segments might be
-        smaller than the actually set duration of the segment.
-        """
+        #~ Final n_starts and n_stops are chosen, so that the time range of each
+        #~ resulting segment is set to the best meaningful maximum. This means
+        #~ that the duration of the signals stored in the segments might be
+        #~ smaller than the actually set duration of the segment.
+        #~ """
 
-        # define the higest time resolution
-        # (for accurate manipulations of the time settings)
-        highest_res = self.__nev_params('event_unit')
-        user_n_starts = self.__transform_times(
-            user_n_starts, self.__get_min_time())
-        user_n_stops = self.__transform_times(
-            user_n_stops, self.__get_max_time())
+        #~ # define the higest time resolution
+        #~ # (for accurate manipulations of the time settings)
+        #~ highest_res = self.__nev_params('event_unit')
+        #~ user_n_starts = self.__transform_times(
+            #~ user_n_starts, self.__get_min_time())
+        #~ user_n_stops = self.__transform_times(
+            #~ user_n_stops, self.__get_max_time())
 
-        # check if user provided as many n_starts as n_stops
-        if len(user_n_starts) != len(user_n_stops):
-            raise ValueError("n_starts and n_stops must be of equal length")
+        #~ # check if user provided as many n_starts as n_stops
+        #~ if len(user_n_starts) != len(user_n_stops):
+            #~ raise ValueError("n_starts and n_stops must be of equal length")
 
-        # if necessary reset max n_stop to max time of file set
-        if user_n_starts[0] < self.__get_min_time():
-            user_n_starts[0] = self.__get_min_time()
-            self._print_verbose(
-                "First entry of n_start is smaller than min time of the file "
-                "set: n_start[0] set to min time of file set")
-        if user_n_starts[-1] > self.__get_max_time():
-            user_n_starts = user_n_starts[:-1]
-            user_n_stops = user_n_stops[:-1]
-            self._print_verbose(
-                "Last entry of n_start is larger than max time of the file "
-                "set: last n_start and n_stop entry are excluded")
-        if user_n_stops[-1] > self.__get_max_time():
-            user_n_stops[-1] = self.__get_max_time()
-            self._print_verbose(
-                "Last entry of n_stop is larger than max time of the file "
-                "set: n_stop[-1] set to max time of file set")
+        #~ # if necessary reset max n_stop to max time of file set
+        #~ if user_n_starts[0] < self.__get_min_time():
+            #~ user_n_starts[0] = self.__get_min_time()
+            #~ self._print_verbose(
+                #~ "First entry of n_start is smaller than min time of the file "
+                #~ "set: n_start[0] set to min time of file set")
+        #~ if user_n_starts[-1] > self.__get_max_time():
+            #~ user_n_starts = user_n_starts[:-1]
+            #~ user_n_stops = user_n_stops[:-1]
+            #~ self._print_verbose(
+                #~ "Last entry of n_start is larger than max time of the file "
+                #~ "set: last n_start and n_stop entry are excluded")
+        #~ if user_n_stops[-1] > self.__get_max_time():
+            #~ user_n_stops[-1] = self.__get_max_time()
+            #~ self._print_verbose(
+                #~ "Last entry of n_stop is larger than max time of the file "
+                #~ "set: n_stop[-1] set to max time of file set")
 
-        # get intrinsic time settings of nsx files (incl. rec pauses)
-        n_starts_files = []
-        n_stops_files = []
-        if nsx_to_load is not None:
-            for nsx_nb in nsx_to_load:
-                start_stop = \
-                    self.__nsx_rec_times[self.__nsx_spec[nsx_nb]](nsx_nb)
-                n_starts_files.append(start_stop[0])
-                n_stops_files.append(start_stop[1])
+        #~ # get intrinsic time settings of nsx files (incl. rec pauses)
+        #~ n_starts_files = []
+        #~ n_stops_files = []
+        #~ if nsx_to_load is not None:
+            #~ for nsx_nb in nsx_to_load:
+                #~ start_stop = \
+                    #~ self.__nsx_rec_times[self.__nsx_spec[nsx_nb]](nsx_nb)
+                #~ n_starts_files.append(start_stop[0])
+                #~ n_stops_files.append(start_stop[1])
 
-        # reducing n_starts from wanted nsx files to minima
-        # (keep recording pause if it occurs)
-        if len(n_starts_files) > 0:
-            if np.shape(n_starts_files)[1] > 1:
-                n_starts_files = [
-                    tp * highest_res for tp in np.min(n_starts_files, axis=1)]
-            else:
-                n_starts_files = [
-                    tp * highest_res for tp in np.min(n_starts_files, axis=0)]
+        #~ # reducing n_starts from wanted nsx files to minima
+        #~ # (keep recording pause if it occurs)
+        #~ if len(n_starts_files) > 0:
+            #~ if np.shape(n_starts_files)[1] > 1:
+                #~ n_starts_files = [
+                    #~ tp * highest_res for tp in np.min(n_starts_files, axis=1)]
+            #~ else:
+                #~ n_starts_files = [
+                    #~ tp * highest_res for tp in np.min(n_starts_files, axis=0)]
 
-        # reducing n_starts from wanted nsx files to maxima
-        # (keep recording pause if it occurs)
-        if len(n_stops_files) > 0:
-            if np.shape(n_stops_files)[1] > 1:
-                n_stops_files = [
-                    tp * highest_res for tp in np.max(n_stops_files, axis=1)]
-            else:
-                n_stops_files = [
-                    tp * highest_res for tp in np.max(n_stops_files, axis=0)]
+        #~ # reducing n_starts from wanted nsx files to maxima
+        #~ # (keep recording pause if it occurs)
+        #~ if len(n_stops_files) > 0:
+            #~ if np.shape(n_stops_files)[1] > 1:
+                #~ n_stops_files = [
+                    #~ tp * highest_res for tp in np.max(n_stops_files, axis=1)]
+            #~ else:
+                #~ n_stops_files = [
+                    #~ tp * highest_res for tp in np.max(n_stops_files, axis=0)]
 
-        # merge user time settings with intrinsic nsx time settings
-        n_starts = []
-        n_stops = []
-        for start, stop in zip(user_n_starts, user_n_stops):
-            # check if start and stop of user create a positive time interval
-            if not start < stop:
-                raise ValueError(
-                    "t(i) in n_starts has to be smaller than t(i) in n_stops")
+        #~ # merge user time settings with intrinsic nsx time settings
+        #~ n_starts = []
+        #~ n_stops = []
+        #~ for start, stop in zip(user_n_starts, user_n_stops):
+            #~ # check if start and stop of user create a positive time interval
+            #~ if not start < stop:
+                #~ raise ValueError(
+                    #~ "t(i) in n_starts has to be smaller than t(i) in n_stops")
 
-            # Reduce n_starts_files to given intervals of user & add start
-            if len(n_starts_files) > 0:
-                mask = (n_starts_files > start) & (n_starts_files < stop)
-                red_n_starts_files = np.array(n_starts_files)[mask]
-                merged_n_starts = [start] + [
-                    tp * highest_res for tp in red_n_starts_files]
-            else:
-                merged_n_starts = [start]
+            #~ # Reduce n_starts_files to given intervals of user & add start
+            #~ if len(n_starts_files) > 0:
+                #~ mask = (n_starts_files > start) & (n_starts_files < stop)
+                #~ red_n_starts_files = np.array(n_starts_files)[mask]
+                #~ merged_n_starts = [start] + [
+                    #~ tp * highest_res for tp in red_n_starts_files]
+            #~ else:
+                #~ merged_n_starts = [start]
 
-            # Reduce n_stops_files to given intervals of user & add stop
-            if len(n_stops_files) > 0:
-                mask = (n_stops_files > start) & (n_stops_files < stop)
-                red_n_stops_files = np.array(n_stops_files)[mask]
-                merged_n_stops = [
-                    tp * highest_res for tp in red_n_stops_files] + [stop]
-            else:
-                merged_n_stops = [stop]
-            # Define combined user and file n_starts and n_stops
-            # case one:
-            if len(merged_n_starts) == len(merged_n_stops):
-                if len(merged_n_starts) + len(merged_n_stops) == 2:
-                    n_starts.extend(merged_n_starts)
-                    n_stops.extend(merged_n_stops)
-                if len(merged_n_starts) + len(merged_n_stops) > 2:
-                    merged_n_starts.remove(merged_n_starts[1])
-                    n_starts.extend([merged_n_starts])
-                    merged_n_stops.remove(merged_n_stops[-2])
-                    n_stops.extend(merged_n_stops)
-            # case two:
-            elif len(merged_n_starts) < len(merged_n_stops):
-                n_starts.extend(merged_n_starts)
-                merged_n_stops.remove(merged_n_stops[-2])
-                n_stops.extend(merged_n_stops)
-            # case three:
-            elif len(merged_n_starts) > len(merged_n_stops):
-                merged_n_starts.remove(merged_n_starts[1])
-                n_starts.extend(merged_n_starts)
-                n_stops.extend(merged_n_stops)
+            #~ # Reduce n_stops_files to given intervals of user & add stop
+            #~ if len(n_stops_files) > 0:
+                #~ mask = (n_stops_files > start) & (n_stops_files < stop)
+                #~ red_n_stops_files = np.array(n_stops_files)[mask]
+                #~ merged_n_stops = [
+                    #~ tp * highest_res for tp in red_n_stops_files] + [stop]
+            #~ else:
+                #~ merged_n_stops = [stop]
+            #~ # Define combined user and file n_starts and n_stops
+            #~ # case one:
+            #~ if len(merged_n_starts) == len(merged_n_stops):
+                #~ if len(merged_n_starts) + len(merged_n_stops) == 2:
+                    #~ n_starts.extend(merged_n_starts)
+                    #~ n_stops.extend(merged_n_stops)
+                #~ if len(merged_n_starts) + len(merged_n_stops) > 2:
+                    #~ merged_n_starts.remove(merged_n_starts[1])
+                    #~ n_starts.extend([merged_n_starts])
+                    #~ merged_n_stops.remove(merged_n_stops[-2])
+                    #~ n_stops.extend(merged_n_stops)
+            #~ # case two:
+            #~ elif len(merged_n_starts) < len(merged_n_stops):
+                #~ n_starts.extend(merged_n_starts)
+                #~ merged_n_stops.remove(merged_n_stops[-2])
+                #~ n_stops.extend(merged_n_stops)
+            #~ # case three:
+            #~ elif len(merged_n_starts) > len(merged_n_stops):
+                #~ merged_n_starts.remove(merged_n_starts[1])
+                #~ n_starts.extend(merged_n_starts)
+                #~ n_stops.extend(merged_n_stops)
 
-        if len(n_starts) > len(user_n_starts) and \
-                len(n_stops) > len(user_n_stops):
-            self._print_verbose(
-                "Additional recording pauses were detected. There will be "
-                "more segments than the user expects.")
+        #~ if len(n_starts) > len(user_n_starts) and \
+                #~ len(n_stops) > len(user_n_stops):
+            #~ self._print_verbose(
+                #~ "Additional recording pauses were detected. There will be "
+                #~ "more segments than the user expects.")
 
-        return n_starts, n_stops
+        #~ return n_starts, n_stops
 
-    def __read_event(self, n_start, n_stop, data, ev_dict, lazy=False):
-        """
-        Creates an event for non-neural experimental events in nev data.
-        """
-        event_unit = self.__nev_params('event_unit')
+    #~ def __read_event(self, n_start, n_stop, data, ev_dict, lazy=False):
+        #~ """
+        #~ Creates an event for non-neural experimental events in nev data.
+        #~ """
+        #~ event_unit = self.__nev_params('event_unit')
 
-        if lazy:
-            times = []
-            labels = np.array([], dtype='S')
-        else:
-            times = data['timestamp'][ev_dict['mask']] * event_unit
-            labels = data[ev_dict['field']][ev_dict['mask']].astype(str)
+        #~ if lazy:
+            #~ times = []
+            #~ labels = np.array([], dtype='S')
+        #~ else:
+            #~ times = data['timestamp'][ev_dict['mask']] * event_unit
+            #~ labels = data[ev_dict['field']][ev_dict['mask']].astype(str)
 
-        # mask for given time interval
-        mask = (times >= n_start) & (times < n_stop)
-        if np.sum(mask) > 0:
-            ev = Event(
-                times=times[mask].astype(float),
-                labels=labels[mask],
-                name=ev_dict['name'],
-                description=ev_dict['desc'])
-            if lazy:
-                ev.lazy_shape = np.sum(mask)
-        else:
-            ev = None
+        #~ # mask for given time interval
+        #~ mask = (times >= n_start) & (times < n_stop)
+        #~ if np.sum(mask) > 0:
+            #~ ev = Event(
+                #~ times=times[mask].astype(float),
+                #~ labels=labels[mask],
+                #~ name=ev_dict['name'],
+                #~ description=ev_dict['desc'])
+            #~ if lazy:
+                #~ ev.lazy_shape = np.sum(mask)
+        #~ else:
+            #~ ev = None
 
-        return ev
+        #~ return ev
 
-    def __read_spiketrain(
-            self, n_start, n_stop, spikes, channel_id, unit_id,
-            load_waveforms=False, scaling='raw', lazy=False):
-        """
-        Creates spiketrains for Spikes in nev data.
-        """
-        event_unit = self.__nev_params('event_unit')
+    #~ def __read_spiketrain(
+            #~ self, n_start, n_stop, spikes, channel_id, unit_id,
+            #~ load_waveforms=False, scaling='raw', lazy=False):
+        #~ """
+        #~ Creates spiketrains for Spikes in nev data.
+        #~ """
+        #~ event_unit = self.__nev_params('event_unit')
 
-        # define a name for spiketrain
-        # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
-        # define description for spiketrain
-        desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
-            channel_id, self.__get_unit_classification(unit_id))
+        #~ # define a name for spiketrain
+        #~ # (unique identifier: 1000 * elid + unit_nb)
+        #~ name = "Unit {0}".format(1000 * channel_id + unit_id)
+        #~ # define description for spiketrain
+        #~ desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
+            #~ channel_id, self.__get_unit_classification(unit_id))
 
-        # get spike times for given time interval
-        if not lazy:
-            times = spikes['timestamp'] * event_unit
-            mask = (times >= n_start) & (times < n_stop)
-            times = times[mask].astype(float)
-        else:
-            times = np.array([]) * event_unit
+        #~ # get spike times for given time interval
+        #~ if not lazy:
+            #~ times = spikes['timestamp'] * event_unit
+            #~ mask = (times >= n_start) & (times < n_stop)
+            #~ times = times[mask].astype(float)
+        #~ else:
+            #~ times = np.array([]) * event_unit
 
-        st = SpikeTrain(
-            times=times,
-            name=name,
-            description=desc,
-            file_origin='.'.join([self._filenames['nev'], 'nev']),
-            t_start=n_start,
-            t_stop=n_stop)
+        #~ st = SpikeTrain(
+            #~ times=times,
+            #~ name=name,
+            #~ description=desc,
+            #~ file_origin='.'.join([self._filenames['nev'], 'nev']),
+            #~ t_start=n_start,
+            #~ t_stop=n_stop)
 
-        if lazy:
-            st.lazy_shape = np.shape(times)
+        #~ if lazy:
+            #~ st.lazy_shape = np.shape(times)
 
-        # load waveforms if requested
-        if load_waveforms and not lazy:
-            wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
-            wf_size = self.__nev_params('waveform_size')[channel_id]
+        #~ # load waveforms if requested
+        #~ if load_waveforms and not lazy:
+            #~ wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
+            #~ wf_size = self.__nev_params('waveform_size')[channel_id]
 
-            waveforms = spikes['waveform'].flatten().view(wf_dtype)
-            waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
+            #~ waveforms = spikes['waveform'].flatten().view(wf_dtype)
+            #~ waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
 
-            if scaling == 'voltage':
-                st.waveforms = (
-                    waveforms[mask] * self.__nev_params('waveform_unit') *
-                    self.__nev_params('digitization_factor')[channel_id] /
-                    1000.)
-            elif scaling == 'raw':
-                st.waveforms = waveforms[mask] * pq.dimensionless
-            else:
-                raise ValueError(
-                    'Unkown option {1} for parameter scaling.'.format(scaling))
-            st.sampling_rate = self.__nev_params('waveform_sampling_rate')
-            st.left_sweep = self.__get_left_sweep_waveforms()[channel_id]
+            #~ if scaling == 'voltage':
+                #~ st.waveforms = (
+                    #~ waveforms[mask] * self.__nev_params('waveform_unit') *
+                    #~ self.__nev_params('digitization_factor')[channel_id] /
+                    #~ 1000.)
+            #~ elif scaling == 'raw':
+                #~ st.waveforms = waveforms[mask] * pq.dimensionless
+            #~ else:
+                #~ raise ValueError(
+                    #~ 'Unkown option {1} for parameter scaling.'.format(scaling))
+            #~ st.sampling_rate = self.__nev_params('waveform_sampling_rate')
+            #~ st.left_sweep = self.__get_left_sweep_waveforms()[channel_id]
 
-        # add additional annotations
-        st.annotate(
-            unit_id=int(unit_id),
-            channel_id=int(channel_id))
+        #~ # add additional annotations
+        #~ st.annotate(
+            #~ unit_id=int(unit_id),
+            #~ channel_id=int(channel_id))
 
-        return st
+        #~ return st
 
     #~ def __read_analogsignal(
             #~ self, n_start, n_stop, signal, channel_id, nsx_nb,

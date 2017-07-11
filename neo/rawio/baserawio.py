@@ -36,7 +36,7 @@ See ExampleRawIO as example.
 
 """
 
-from __future__ import absolute_import, division, print_function
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 import logging
 import numpy as np
@@ -116,6 +116,29 @@ class BaseRawIO(object):
         """
         self._parse_header()
     
+    def source_name(self):
+        """Return fancy name of file source"""
+        return self._source_name()
+    
+    def __repr__(self):
+        txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
+        if self.header is not None:
+            nb_block = self.block_count()
+            txt += 'nb_block: {}\n'.format(nb_block)
+            nb_seg = [self.segment_count(i) for i in range(nb_block)]
+            txt += 'nb_segment:  {}\n'.format(nb_seg)
+            
+            for k in ('signal_channels', 'unit_channels'):
+                ch = self.header[k]
+                if len(ch)>8:
+                    chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),\
+                                                                                ' '.join(e for e in ch['name'][-4:]))
+                else:
+                    chantxt = "[{}]".format(', '.join(e for e in ch['name']))
+                txt += '{}: {}\n'.format(k, chantxt)
+            
+        return txt
+        
     def _generate_empty_annotations(self):
         """
         Helper function that generate a nested dict
@@ -136,66 +159,91 @@ class BaseRawIO(object):
         
         Theses annotations will be used at the neo.io API directly in objects.
         """
+        signal_channels = self.header['signal_channels']
+        unit_channels = self.header['unit_channels']
+        event_channels = self.header['event_channels']
+        
         a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
         for block_index in range(self.block_count()):
             a['blocks'].append({'segments':[]})
             for seg_index in range(self.segment_count(block_index)):
                 a['blocks'][block_index]['segments'].append({'signals':[], 'units' :[], 'events':[]})
                 
-                for c in range(self.signal_channels_count()):
-                    #use for AnalogSignal.annotation
-                    a['blocks'][block_index]['segments'][seg_index]['signals'].append({})
+                for c in range(signal_channels.size):
+                    #use for AnalogSignal.annotations
+                    d = {}
+                    d['name'] = signal_channels['name'][c]
+                    d['channel_id'] = signal_channels['id'][c]
+                    a['blocks'][block_index]['segments'][seg_index]['signals'].append(d)
 
-                for c in range(self.unit_channels_count()):
-                    #use for SpikeTrain.annotation
-                    a['blocks'][block_index]['segments'][seg_index]['units'].append({})
+                for c in range(unit_channels.size):
+                    #use for SpikeTrain.annotations
+                    d = {}
+                    d['name'] = unit_channels['name'][c]
+                    d['id'] = unit_channels['id'][c]
+                    a['blocks'][block_index]['segments'][seg_index]['units'].append(d)
 
-                for c in range(self.event_channels_count()):
-                    #use for Event.annotation
-                    a['blocks'][block_index]['segments'][seg_index]['events'].append({})
+                for c in range(event_channels.size):
+                    #use for Event.annotations
+                    d = {}
+                    d['name'] = event_channels['name'][c]
+                    d['id'] = event_channels['id'][c]
+                    a['blocks'][block_index]['segments'][seg_index]['events'].append(d)
         
-        for c in range(self.signal_channels_count()):
-            #use for ChannelIndex.annotation
-            a['signal_channels'].append({})
+        for c in range(signal_channels.size):
+            #use for ChannelIndex.annotations
+            d = {}
+            d['name'] = signal_channels['name'][c]
+            d['channel_id'] = signal_channels['id'][c]
+            a['signal_channels'].append(d)
 
-        for c in range(self.unit_channels_count()):
-            #use for Unit.annotation
-            a['unit_channels'].append({})
+        for c in range(unit_channels.size):
+            #use for Unit.annotations
+            d = {}
+            d['name'] = unit_channels['name'][c]
+            d['id'] = unit_channels['id'][c]
+            a['unit_channels'].append(d)
 
-        for c in range(self.event_channels_count()):
+        for c in range(event_channels.size):
             #not used in neo.io at the moment could usefull one day
-            a['event_channel'].append({})
+            d = {}
+            d['name'] = event_channels['name'][c]
+            d['id'] = event_channels['id'][c]
+            a['event_channel'].append(d)
         
         self.raw_annotations = a
     
-    def __repr__(self):
-        txt = '{}: {}\n'.format(self.__class__.__name__, self.source_name())
-        if self.header is not None:
-            nb_block = self.block_count()
-            txt += 'nb_block: {}\n'.format(nb_block)
-            nb_seg = [self.segment_count(i) for i in range(nb_block)]
-            txt += 'nb_segment:  {}\n'.format(nb_seg)
-            
-            for k in ('signal_channels', 'unit_channels'):
-                ch = self.header[k]
-                if len(ch)>8:
-                    chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),\
-                                                                                ' '.join(e for e in ch['name'][-4:]))
-                else:
-                    chantxt = "[{}]".format(', '.join(e for e in ch['name']))
-                txt += '{}: {}\n'.format(k, chantxt)
-            
+    def _repr_annotations(self):
+        txt = 'Raw annotations\n'
+        for block_index in range(self.block_count()):
+            bl_a = self.raw_annotations['blocks'][block_index]
+            txt += '*Block {}\n'.format(block_index)
+            for k, v in bl_a.items():
+                if k in ('segments', ): continue
+                txt += '  -{}: {}\n'.format(k, v)
+            for seg_index in range(self.segment_count(block_index)):
+                seg_a = bl_a['segments'][seg_index]
+                txt += '  *Segment {}\n'.format(seg_index)
+                for k, v in seg_a.items():
+                    if k in ('signals', 'units', 'events',  ): continue
+                    txt += '    -{}: {}\n'.format(k, v)
+                
+                for child in ('signals', 'units', 'events'):
+                    n = self.header[child[:-1]+'_channels'].shape[0]
+                    for c in range(n):
+                        neo_name = {'signals':'AnalogSignal', 
+                                'units':'SpikeTrain', 'events':'Event/Epoch'}[child]
+                        txt += '    *{} {}\n'.format(neo_name, c)
+                        child_a = seg_a[child][c]
+                        for k, v in child_a.items():
+                            txt += '      -{}: {}\n'.format(k, v)
+        
         return txt
     
     def print_annotations(self):
-        txt = 'Annotations'
-        
-        
-        print(txt)
+        """Print formated raw_annotations"""
+        print(self._repr_annotations())
     
-    def source_name(self):
-        """Return fancy name of file source"""
-        return self._source_name()
 
     def block_count(self):
         """return number of blocks"""

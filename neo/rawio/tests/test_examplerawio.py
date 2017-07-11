@@ -4,7 +4,7 @@ Tests of neo.rawio.examplerawio
 """
 
 # needed for python 3 compatibility
-from __future__ import absolute_import, division
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 try:
     import unittest2 as unittest

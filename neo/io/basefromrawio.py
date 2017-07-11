@@ -12,6 +12,8 @@ by inheritance of this class.
 
 
 """
+# needed for python 3 compatibility
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 import collections
 import logging
@@ -65,12 +67,31 @@ class BaseFromRaw(BaseIO):
         if not cascade:
             return bl
         
+        #ChannelIndex are plit in 2 parts:
+        #  * some for AnalogSignals
+        #  * some for Units
+        
+        #ChannelIndex ofr AnalogSignals
         channels = self.header['signal_channels']
         for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
             channel_index = ChannelIndex(index=ind, channel_names=channels[ind]['name'].astype('S'),
                             channel_ids=channels[ind]['id'], name='Channel group {}'.format(i))
             bl.channel_indexes.append(channel_index)
         
+        #ChannelIndex and Unit
+        #TODO find something better than this
+        # For simplification Unit are not attached to real channelindex
+        # but a new ChannelIndex is created for that!!!!
+        unit_channels = self.header['unit_channels']
+        for c in range(len(unit_channels)):
+            unit = Unit(name=unit_channels['name'][c], 
+                            id=unit_channels['id'][c])
+            channel_index = ChannelIndex(index=np.array([-2], dtype='i'),
+                                    name='ChannelIndex for Unit')
+            channel_index.units.append(unit)
+            bl.channel_indexes.append(channel_index)
+        
+        #Segment
         for seg_index in range(self.segment_count(block_index)):
             seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
                                                                 lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
@@ -102,7 +123,6 @@ class BaseFromRaw(BaseIO):
         
         
         #AnalogSignal
-        #TODO annotations
         signal_channels = self.header['signal_channels']
         channel_indexes=np.arange(signal_channels.size)
         
@@ -120,14 +140,26 @@ class BaseFromRaw(BaseIO):
             units = np.unique(signal_channels[ind]['units'])
             assert len(units)==1
             units = units[0]
+            
+            if signal_group_mode=='split-all':
+                #in that case annotations by channel is OK
+                chan_index = ind[0]
+                d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
+                annotations = dict(d)
+                if 'name' not in annotations:
+                    annotations['name'] = signal_channels['name'][chan_index]
+            else:
+                # when channel are grouped by same unit
+                # annotations are empty...
+                annotations = {}
 
             if lazy:
                 anasig = AnalogSignal(np.array([]), units=units,  copy=False,
-                        sampling_rate=sr, t_start=t_start)
+                        sampling_rate=sr, t_start=t_start, **annotations)
                 anasig.lazy_shape = (sig_shape[0], len(ind))
             else:
                 anasig = AnalogSignal(float_signal[:, ind], units=units,  copy=False,
-                        sampling_rate=sr, t_start=t_start)
+                        sampling_rate=sr, t_start=t_start, **annotations)
             
             seg.analogsignals.append(anasig)
         
@@ -152,6 +184,8 @@ class BaseFromRaw(BaseIO):
             
             d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
             annotations = dict(d)
+            if 'name' not in annotations:
+                annotations['name'] = unit_channels['name'][c]
             
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
@@ -173,7 +207,6 @@ class BaseFromRaw(BaseIO):
             seg.spiketrains.append(sptr)
         
         # Events/Epoch
-        #TODO annotations
         event_channels = self.header['event_channels']
         for chan_ind in range(len(event_channels)):
             if not lazy:
@@ -192,15 +225,19 @@ class BaseFromRaw(BaseIO):
                 ev_times = np.array([]) * pq.s
                 ev_labels = np.array([], dtype='S')
                 ev_durations = np.array([]) * pq.s
-                
-            name = event_channels['name'][chan_ind]
+            
+            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][chan_ind]
+            annotations = dict(d)
+            if 'name' not in annotations:
+                annotations['name'] = event_channels['name'][chan_ind]
+            
             if event_channels['type'][chan_ind] == b'event':
-                e = Event(times=ev_times, labels=ev_labels, name=name, units='s', copy=False)
+                e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, **annotations)
                 e.segment = seg
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
-                e = Epoch(times=ev_times, durations=ev_durations, labels=ev_labels, name=name, 
-                                        units='s', copy=False)
+                e = Epoch(times=ev_times, durations=ev_durations, labels=ev_labels,
+                                        units='s', copy=False, **annotations)
                 e.segment = seg
                 seg.epochs.append(e)
             

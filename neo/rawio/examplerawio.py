@@ -97,6 +97,18 @@ class ExampleRawIO(BaseRawIO):
                                 seg_index, block_index)
                 seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
                                 seg_index, block_index)
+                for c in range(16):
+                    anasig_an = seg_ann['signals'][c]
+                    anasig_an['info'] = 'This is a good signals'
+                for c in range(3):
+                    spiketrain_an = seg_ann['units'][c]
+                    spiketrain_an['quality'] = 'Good!!'
+                for c in range(2):
+                    event_an = seg_ann['events'][c]
+                    if c==0:
+                        event_an['nickname'] = 'Miss Event 0'
+                    elif c==1:
+                        event_an['nickname'] = 'MrEpoch 1'
     
     def _source_name(self):
         return self.filename

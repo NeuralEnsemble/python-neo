@@ -15,7 +15,7 @@ ssh://gate.g-node.org/groups/neo/io_test_files/
 '''
 
 # needed for python 3 compatibility
-from __future__ import absolute_import
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 __test__ = False
 
@@ -119,6 +119,10 @@ class BaseTestRawIO(object):
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
             
+            #
+            txt = reader._repr_annotations()
+            #~ reader.print_annotations()
+            
             #lanch a series of test compliance
             compliance.header_is_total(reader)
             compliance.count_element(reader)
@@ -128,7 +132,7 @@ class BaseTestRawIO(object):
             compliance.read_events(reader)
             compliance.has_annotations(reader)
             
-            print(reader.raw_annotations)
+            
             
             
             

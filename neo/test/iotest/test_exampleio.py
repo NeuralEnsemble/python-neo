@@ -4,7 +4,7 @@ Tests of neo.io.exampleio
 """
 
 # needed for python 3 compatibility
-from __future__ import absolute_import, division
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 try:
     import unittest2 as unittest
@@ -36,15 +36,29 @@ class TestExample2IO(unittest.TestCase):
             assert hasattr(st, 'lazy_shape')
 
         seg = r.read_segment(cascade=True, lazy=False)
-        for ana in seg.analogsignals:
-            self.assertNotEqual(ana.size, 0)
+        for anasig in seg.analogsignals:
+            self.assertNotEqual(anasig.size, 0)
         for st in seg.spiketrains:
             self.assertNotEqual(st.size, 0)
         
+        #annotations
         assert 'seg_extra_info' in seg.annotations
         assert seg.name=='Seg #0 Block #0'
-        
-        r.print_annotations()
+        for anasig in seg.analogsignals:
+            assert anasig.name is not None
+        for st in seg.spiketrains:
+            assert st.name is not None
+        for ev in seg.events:
+            assert ev.name is not None
+        for ep in seg.epochs:
+            assert ep.name is not None
+    
+    def test_read_block(self):
+        r = ExampleIO(filename=None)
+        bl = r.read_block(cascade=True, lazy=True)
+        assert len(bl.list_units) == 3
+        assert len(bl.channel_indexes) == 16 + 3 #signals + units
+
 
 
 if __name__ == "__main__":
