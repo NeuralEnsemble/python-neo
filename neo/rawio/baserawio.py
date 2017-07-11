@@ -133,6 +133,8 @@ class BaseRawIO(object):
         raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = {'nickname': 'super channel'}
         raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = {'nickname': 'super neuron'}
         raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
+        
+        Theses annotations will be used at the neo.io API directly in objects.
         """
         a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
         for block_index in range(self.block_count()):
@@ -183,8 +185,13 @@ class BaseRawIO(object):
                     chantxt = "[{}]".format(', '.join(e for e in ch['name']))
                 txt += '{}: {}\n'.format(k, chantxt)
             
-            
         return txt
+    
+    def print_annotations(self):
+        txt = 'Annotations'
+        
+        
+        print(txt)
     
     def source_name(self):
         """Return fancy name of file source"""

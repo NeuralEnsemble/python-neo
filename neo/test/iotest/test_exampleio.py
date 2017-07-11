@@ -40,6 +40,11 @@ class TestExample2IO(unittest.TestCase):
             self.assertNotEqual(ana.size, 0)
         for st in seg.spiketrains:
             self.assertNotEqual(st.size, 0)
+        
+        assert 'seg_extra_info' in seg.annotations
+        assert seg.name=='Seg #0 Block #0'
+        
+        r.print_annotations()
 
 
 if __name__ == "__main__":

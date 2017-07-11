@@ -55,8 +55,13 @@ class BaseFromRaw(BaseIO):
         
         if signal_group_mode is None:
             signal_group_mode = self.__prefered_signal_group_mode
+
+        #annotations
+        bl_annotations = dict(self.raw_annotations['blocks'][block_index])
+        bl_annotations.pop('segments')
+
+        bl = Block(**bl_annotations)
         
-        bl = Block(name='Block {}'.format(block_index))
         if not cascade:
             return bl
         
@@ -85,13 +90,19 @@ class BaseFromRaw(BaseIO):
         if signal_group_mode is None:
             signal_group_mode = self.__prefered_signal_group_mode
 
-        seg = Segment(index=seg_index)#name, 
+        #annotations
+        seg_annotations = dict(self.raw_annotations['blocks'][block_index]['segments'][seg_index])
+        for k in ('signals', 'units', 'events'):
+            seg_annotations.pop(k)
+        
+        seg = Segment(index=seg_index, **seg_annotations)#name,
 
         if not cascade:
             return seg
         
         
         #AnalogSignal
+        #TODO annotations
         signal_channels = self.header['signal_channels']
         channel_indexes=np.arange(signal_channels.size)
         
@@ -138,25 +149,31 @@ class BaseFromRaw(BaseIO):
                 waveforms = None
                 wf_left_sweep = None
                 wf_sampling_rate = None                 
-
+            
+            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
+            annotations = dict(d)
+            
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index, t_start=None, t_stop=None)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
                 sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start, t_stop=t_stop,
-                                waveforms=waveforms, left_sweep=wf_left_sweep, sampling_rate=wf_sampling_rate)
+                                waveforms=waveforms, left_sweep=wf_left_sweep, 
+                                sampling_rate=wf_sampling_rate, **annotations)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
                 
-                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start, t_stop=t_stop)
+                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start,
+                                t_stop=t_stop, **annotations)
                 sptr.lazy_shape = (nb,)
             
             
             seg.spiketrains.append(sptr)
         
         # Events/Epoch
+        #TODO annotations
         event_channels = self.header['event_channels']
         for chan_ind in range(len(event_channels)):
             if not lazy:

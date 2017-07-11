@@ -85,7 +85,18 @@ class ExampleRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
         
+        # insert some annotation at some place
         self._generate_empty_annotations()
+        for block_index in range(2):
+            bl_ann = self.raw_annotations['blocks'][block_index]
+            bl_ann['name'] = 'Block #{}'.format(block_index)
+            bl_ann['block_extra_info'] = 'This is the block {}'.format(block_index)
+            for seg_index in range([2, 3][block_index]):
+                seg_ann = bl_ann['segments'][seg_index]
+                seg_ann['name'] = 'Seg #{} Block #{}'.format(
+                                seg_index, block_index)
+                seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
+                                seg_index, block_index)
     
     def _source_name(self):
         return self.filename
