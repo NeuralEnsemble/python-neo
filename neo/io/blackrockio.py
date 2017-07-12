@@ -2013,20 +2013,25 @@ class BlackrockIO(BaseIO):
 
         # additional information about the LFP signal
         if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+            # It does not matter which nsX file to ask for this info
             k = self.__nsx_ext_header.keys()[0]
-            chidx.annotate(
-                nsx_hi_freq_corner=self.__nsx_ext_header[k][
-                    'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
-                nsx_lo_freq_corner=self.__nsx_ext_header[k][
-                    'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
-                nsx_hi_freq_order=self.__nsx_ext_header[k][
-                    'hi_freq_order'][get_idx],
-                nsx_lo_freq_order=self.__nsx_ext_header[k][
-                    'lo_freq_order'][get_idx],
-                nsx_hi_freq_type=flt_type[
-                    self.__nsx_ext_header[k]['hi_freq_type'][get_idx]],
-                nsx_lo_freq_type=flt_type[
-                    self.__nsx_ext_header[k]['hi_freq_type'][get_idx]])
+            if channel_id in self.__nsx_ext_header[k]['electrode_id']:
+                get_idx = list(
+                    self.__nsx_ext_header[k]['electrode_id']).index(
+                        channel_id)
+                chidx.annotate(
+                    nsx_hi_freq_corner=self.__nsx_ext_header[k][
+                        'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_lo_freq_corner=self.__nsx_ext_header[k][
+                        'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_hi_freq_order=self.__nsx_ext_header[k][
+                        'hi_freq_order'][get_idx],
+                    nsx_lo_freq_order=self.__nsx_ext_header[k][
+                        'lo_freq_order'][get_idx],
+                    nsx_hi_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]],
+                    nsx_lo_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]])
 
         chidx.description = \
             "Container for units and groups analogsignals of one recording " \
