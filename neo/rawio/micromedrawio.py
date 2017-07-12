@@ -167,6 +167,8 @@ class MicromedRawIO(BaseRawIO):
             d['firstname'] = firstname
             d['surname'] = surname
             d['header_version'] = header_version
+        
+        f.close()
     
     def _source_name(self):
         return self.filename

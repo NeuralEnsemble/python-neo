@@ -344,7 +344,7 @@ class BaseRawIO(object):
         
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
         if channel_indexes is None:
-            channel_indexes = sl(None)
+            channel_indexes = slice(None)
         
         channels = self.header['signal_channels'][channel_indexes]
         

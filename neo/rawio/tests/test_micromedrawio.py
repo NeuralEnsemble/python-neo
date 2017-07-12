@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests of neo.rawio.examplerawio
+
 """
 
 # needed for python 3 compatibility
