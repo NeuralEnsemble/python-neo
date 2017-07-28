@@ -26,10 +26,6 @@ import os.path as op
 import copy
 import shutil
 
-python_version = sys.version_info.major
-if python_version == 2:
-    from future.builtins import str
-
 try:
     import exdir
     HAVE_EXDIR = True
