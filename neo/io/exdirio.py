@@ -23,8 +23,6 @@ import numpy as np
 import quantities as pq
 import os
 import os.path as op
-import glob
-import yaml
 import copy
 import shutil
 
