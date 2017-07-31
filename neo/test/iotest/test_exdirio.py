@@ -116,7 +116,7 @@ class TestExdirIO(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(self.fname):
             shutil.rmtree(self.fname)
-    
+
     def test_write_clusters(self):
         io = ExdirIO(self.fname)
         ex = io._processing.require_group('electrophysiology')
@@ -124,7 +124,7 @@ class TestExdirIO(unittest.TestCase):
         io.write_clusters([sptr for sptr in self.blk.segments[0].spiketrains],
                           ex.name, test_key=4)
         assert ex['Clustering'].attrs['test_key'] == 4
-    
+
     def test_write_event_waveform(self):
         io = ExdirIO(self.fname)
         ex = io._processing.require_group('electrophysiology')
@@ -137,7 +137,7 @@ class TestExdirIO(unittest.TestCase):
                                               self.n_channels,
                                               self.n_samples
                                               ), wfgroup['data'].data.shape
-    
+
     def test_write_spiketimes(self):
         io = ExdirIO(self.fname)
         ex = io._processing.require_group('electrophysiology')
@@ -150,13 +150,13 @@ class TestExdirIO(unittest.TestCase):
         assert ex['times'].attrs['description'] == sptr.description
         assert ex['times'].attrs['start_time'] == sptr.t_start
         assert ex['times'].attrs['stop_time'] == sptr.t_stop
-        
+
     def test_write_unit_times(self):
         io = ExdirIO(self.fname)
         ex = io._processing.require_group('electrophysiology')
         ex = ex.require_group('elgroup')
         units = [unit for chx in self.blk.channel_indexes for unit in chx.units]
-        unit_dict = {unit.name: unit.spiketrains[0] for unit in units}
+        unit_dict = dict((unit.name, unit.spiketrains[0]) for unit in units)
         io.write_unit_times(units, ex.name, test_key=4)
         unit_times_group = ex['UnitTimes']
         assert unit_times_group.attrs['test_key'] == 4
@@ -169,7 +169,7 @@ class TestExdirIO(unittest.TestCase):
             assert unit_group['times'].attrs['description'] == sptr.description
             assert unit_group['times'].attrs['start_time'] == sptr.t_start
             assert unit_group['times'].attrs['stop_time'] == sptr.t_stop
-                                              
+
     def test_write_epoch(self):
         io = ExdirIO(self.fname)
         epo = self.blk.segments[0].epochs[0]
@@ -181,7 +181,7 @@ class TestExdirIO(unittest.TestCase):
                                       epo.durations)
         np.testing.assert_array_equal(io._epochs['epo1']['data'].data,
                                       epo.labels)
-    
+
     def test_write_analogsignal(self):
         io = ExdirIO(self.fname)
         ex = io._processing.require_group('electrophysiology')
@@ -194,14 +194,14 @@ class TestExdirIO(unittest.TestCase):
         np.testing.assert_equal(ana_group.attrs['stop_time'], ana.t_stop)
         np.testing.assert_equal(ana_group.attrs['sample_rate'],
                                 ana.sampling_rate)
-    
+
     def test_write_channelindex(self):
         io = ExdirIO(self.fname)
         elphys = io._processing.require_group('electrophysiology')
-        chxs = {tuple(chx.channel_ids): chx for chx in self.blk.channel_indexes}
+        chxs = dict((tuple(chx.channel_ids), chx) for chx in self.blk.channel_indexes)
         [io.write_channelindex(chx, elphys.name) for chx in chxs.values()]
-        save_chxs = {tuple(chgrp.attrs['electrode_identities']): chgrp
-                     for chgrp in elphys.values()}
+        save_chxs = dict((tuple(chgrp.attrs['electrode_identities']), chgrp)
+                         for chgrp in elphys.values())
         np.testing.assert_equal(len(chxs), len(save_chxs))
         for key, chx in chxs.items():
             ex = save_chxs[key]
@@ -212,9 +212,9 @@ class TestExdirIO(unittest.TestCase):
                 np.testing.assert_equal(ana_group.attrs['stop_time'], ana.t_stop)
                 np.testing.assert_equal(ana_group.attrs['sample_rate'],
                                         ana.sampling_rate)
-            
+
             unit_times_group = ex['UnitTimes']
-            unit_dict = {unit.name: unit.spiketrains[0] for unit in chx.units}
+            unit_dict = dict((unit.name, unit.spiketrains[0]) for unit in chx.units)
             for unit in chx.units:
                 for unit_group in unit_times_group.values():
                     name = unit_group.attrs['name']
@@ -231,14 +231,15 @@ class TestExdirIO(unittest.TestCase):
                                                   self.n_channels,
                                                   self.n_samples
                                                   ), wfgroup['data'].data.shape
-    
+
     def test_write_block(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk, elphys_directory_name='elphys')
         elphys = io._processing['elphys']
-        chxs = {tuple(chx.channel_ids): chx for chx in self.blk.channel_indexes}
-        save_chxs = {tuple(chgrp.attrs['electrode_identities']): chgrp
-                     for chgrp in elphys.values()}
+        chxs = dict((tuple(chx.channel_ids), chx)
+                    for chx in self.blk.channel_indexes)
+        save_chxs = dict((tuple(chgrp.attrs['electrode_identities']), chgrp)
+                         for chgrp in elphys.values())
         np.testing.assert_equal(len(chxs), len(save_chxs))
         for key, chx in chxs.items():
             ex = save_chxs[key]
@@ -249,9 +250,9 @@ class TestExdirIO(unittest.TestCase):
                 np.testing.assert_equal(ana_group.attrs['stop_time'], ana.t_stop)
                 np.testing.assert_equal(ana_group.attrs['sample_rate'],
                                         ana.sampling_rate)
-            
+
             unit_times_group = ex['UnitTimes']
-            unit_dict = {unit.name: unit.spiketrains[0] for unit in chx.units}
+            unit_dict = dict((unit.name, unit.spiketrains[0]) for unit in chx.units)
             for unit in chx.units:
                 for unit_group in unit_times_group.values():
                     name = unit_group.attrs['name']
@@ -268,7 +269,7 @@ class TestExdirIO(unittest.TestCase):
                                                   self.n_channels,
                                                   self.n_samples
                                                   ), wfgroup['data'].data.shape
-    
+
     def test_write_read_block(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
@@ -276,16 +277,16 @@ class TestExdirIO(unittest.TestCase):
         blk = io.read_block()
         np.testing.assert_equal(len(blk.segments[0].spiketrains),
                                 len(self.blk.segments[0].spiketrains))
-    
+
     def test_write_read_block_sptr_equal(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
         io = ExdirIO(self.fname)
         blk = io.read_block()
-        sptrs = {sptr.annotations['id']: sptr
-                 for sptr in self.blk.segments[0].spiketrains}
-        sptrs_load = {sptr.annotations['id']: sptr
-                      for sptr in blk.segments[0].spiketrains}
+        sptrs = dict((sptr.annotations['id'], sptr)
+                     for sptr in self.blk.segments[0].spiketrains)
+        sptrs_load = dict((sptr.annotations['id'], sptr)
+                          for sptr in blk.segments[0].spiketrains)
         for key in sptrs.keys():
             np.testing.assert_array_equal(sptrs[key], sptrs_load[key])
             np.testing.assert_equal(sptrs[key].name, sptrs_load[key].name)
@@ -297,7 +298,7 @@ class TestExdirIO(unittest.TestCase):
                 np.testing.assert_equal(v, sptrs_load[key].annotations[k])
             np.testing.assert_array_equal(sptrs[key].channel_index.index,
                                     sptrs_load[key].channel_index.index)
-    
+
     def test_write_read_block_chxs_equal(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
@@ -305,16 +306,16 @@ class TestExdirIO(unittest.TestCase):
         blk = io.read_block()
         np.testing.assert_equal(len(self.blk.channel_indexes),
                                 len(blk.channel_indexes))
-    
+
     def test_write_read_block_units_equal(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
         io = ExdirIO(self.fname)
         blk = io.read_block()
-        units = {unit.name: unit
-                 for unit in self.blk.channel_indexes[0].units}
-        units_load = {unit.name: unit
-                      for unit in blk.channel_indexes[0].units}
+        units = dict((unit.name, unit)
+                     for unit in self.blk.channel_indexes[0].units)
+        units_load = dict((unit.name, unit)
+                      for unit in blk.channel_indexes[0].units)
         for key in units.keys():
             np.testing.assert_equal(len(units[key].spiketrains[0]),
                                     len(units_load[key].spiketrains[0]))
@@ -322,20 +323,20 @@ class TestExdirIO(unittest.TestCase):
             sptr_load = units_load[key].spiketrains[0]
             np.testing.assert_array_equal(sptr, sptr_load)
             np.testing.assert_equal(units[key].name, units_load[key].name)
-    
+
     def test_write_read_block_epo_equal(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
         io = ExdirIO(self.fname)
         blk = io.read_block()
-        epos = {epo.name: epo for epo in self.blk.segments[0].epochs}
-        epos_load = {epo.name: epo for epo in blk.segments[0].epochs}
+        epos = dict((epo.name, epo) for epo in self.blk.segments[0].epochs)
+        epos_load = dict((epo.name, epo) for epo in blk.segments[0].epochs)
         for key in epos.keys():
             np.testing.assert_array_equal(epos[key], epos_load[key])
             np.testing.assert_array_equal(epos[key].durations,
                                           epos_load[key].durations)
             np.testing.assert_equal(epos[key].name, epos_load[key].name)
-    
+
     def test_write_read_block_ana_equal(self):
         io = ExdirIO(self.fname)
         io.write_block(self.blk)
@@ -345,8 +346,8 @@ class TestExdirIO(unittest.TestCase):
         io.write_analogsignal(ana, lfp_group.name)
         io = ExdirIO(self.fname)
         blk = io.read_block()
-        anas = {ana.name: ana for ana in self.blk.segments[0].analogsignals}
-        anas_load = {ana.name: ana for ana in blk.segments[0].analogsignals}
+        anas = dict((ana.name, ana) for ana in self.blk.segments[0].analogsignals)
+        anas_load = dict((ana.name, ana) for ana in blk.segments[0].analogsignals)
         for key in anas.keys():
             np.testing.assert_array_equal(anas[key], anas_load[key])
             np.testing.assert_equal(anas[key].name, anas_load[key].name)
