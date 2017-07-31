@@ -5,9 +5,7 @@ Class for reading data from BrainVision product.
 This code was originally made by L. Pezard (2010), modified B. Burle and
 S. More.
 
-Supported : Read
-
-Author: sgarcia
+Author: Samuel Garcia
 """
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
@@ -77,35 +75,33 @@ class BrainVisionRawIO(BaseRawIO):
         unit_channels = []
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
-        #TODO marker
-        # read marker
-        #~ marker_file = os.path.splitext(self.filename)[0] + '.vmrk'
-        #~ all_info = read_brain_soup(marker_file)['Marker Infos']
-        #~ all_types = []
-        #~ times = []
-        #~ labels = []
-        #~ for i in range(len(all_info)):
-            #~ type_, label, pos, size, channel = all_info[
-                #~ 'Mk%d' % (i + 1,)].split(',')[:5]
-            #~ all_types.append(type_)
-            #~ times.append(float(pos) / self._sampling_rate)
-            #~ labels.append(label)
-        #~ all_types = np.array(all_types)
-        #~ times = np.array(times)
-        #~ labels = np.array(labels, dtype='S')
-        #~ for type_ in np.unique(all_types):
-            #~ ind = type_ == all_types
-            #~ if lazy:
-                #~ ea = Event(name=str(type_))
-                #~ ea.lazy_shape = -1
-            #~ else:
-                #~ ea = Event(
-                    #~ times=times[ind], labels=labels[ind], name=str(type_))
-            #~ seg.events.append(ea)
+        # read all markers
+        marker_file = os.path.splitext(self.filename)[0] + '.vmrk'
+        all_info = read_brain_soup(marker_file)['Marker Infos']
+        ev_types = []
+        ev_timestamps = []
+        ev_labels = []
+        for i in range(len(all_info)):
+            ev_type, ev_label, pos, size, channel = all_info[
+                'Mk%d' % (i + 1,)].split(',')[:5]
+            ev_types.append(ev_type)
+            ev_timestamps.append(pos)
+            ev_labels.append(ev_label)
+        ev_types = np.array(ev_types)
+        ev_timestamps = np.array(ev_timestamps)
+        ev_labels = np.array(ev_labels, dtype='U')
         
+        #group them by types
+        self._raw_events = []
         event_channels = []
+        for c, ev_type in enumerate(np.unique(ev_types)):
+            ind = (ev_type == ev_types)
+            
+            event_channels.append((ev_type, '', 'event'))
+            
+            self._raw_events.append((ev_timestamps[ind], ev_labels[ind]))
+        
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
-
         
         #fille into header dict
         self.header = {}
@@ -151,19 +147,32 @@ class BrainVisionRawIO(BaseRawIO):
     ###
     # event and epoch zone
     def _event_count(self, block_index, seg_index, event_channel_index):
-        raise(NotImplementedError)
+        all_timestamps, all_label = self._raw_events[event_channel_index]
+        return all_timestamps.size
     
     def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+        timestamps, labels = self._raw_events[event_channel_index]
+
+        if t_start is not None:
+            keep = timestamps>=int(t_start*self._sampling_rate)
+            timestamps = timestamps[keep]
+            labels = labels[keep]
+        
+        if t_stop is not None:
+            keep = timestamps<=int(t_stop*self._sampling_rate)
+            timestamps = timestamps[keep]
+            labels = labels[keep]
+        
+        durations = None
+        
+        return timestamps, durations, labels
+        
         raise(NotImplementedError)
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        raise(NotImplementedError)
+        event_times = event_timestamps.astype(dtype)/self._sampling_rate
+        return event_times
     
-    def _rescale_epoch_duration(self, raw_duration, dtype):
-        raise(NotImplementedError)
-
-
-
 
 def read_brain_soup(filename):
     with open(filename, 'r') as f:
