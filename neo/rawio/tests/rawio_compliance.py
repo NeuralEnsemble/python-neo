@@ -86,7 +86,7 @@ def count_element(reader):
                                                         event_channel_index=event_channel_index)
 
 
-def iter_over_sig_chunks(reader, chunksize = 1024):
+def iter_over_sig_chunks(reader, chunksize=1024):
     nb_sig = reader.signal_channels_count()
     if nb_sig==0: return
 
@@ -118,8 +118,8 @@ def read_analogsignals(reader):
     nb_sig = reader.signal_channels_count()
     if nb_sig==0: return
     
-    #read all chunk for all channel all block all segmen
-    for raw_chunk in iter_over_sig_chunks(reader, chunksize = 1024):
+    #read all chunk for all channel all block all segment
+    for raw_chunk in iter_over_sig_chunks(reader, chunksize=1024):
         pass
     
     sr = reader.analogsignal_sampling_rate()
@@ -173,7 +173,7 @@ def benchmark_speed_read_signals(reader):
     if nb_sig==0: return
     
     t0 = time.perf_counter()
-    for raw_chunk in iter_over_sig_chunks(reader, chunksize = 1024):
+    for raw_chunk in iter_over_sig_chunks(reader, chunksize=1024):
         pass
     t1 = time.perf_counter()
     logging.info('{} read signals of {} in {:0.3f}s'.format(print_class(reader), reader.source_name(), t1-t0))
@@ -204,8 +204,9 @@ def read_spike_times(reader):
                 assert spike_times.dtype=='float64'
                 
                 if spike_times.size>3:
-                    t_start = spike_times[1]
-                    t_stop = spike_times[1]
+                    #load only one spike by forcing limits
+                    t_start = spike_times[1] - 0.00001
+                    t_stop = spike_times[1] + 0.00001
                     
                     spike_timestamp2 = reader.spike_timestamps(block_index=block_index, 
                                                     unit_index=unit_index, t_start=t_start, t_stop=t_stop)

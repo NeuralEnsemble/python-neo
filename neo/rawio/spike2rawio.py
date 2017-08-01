@@ -29,7 +29,7 @@ class Spike2RawIO(BaseRawIO):
     """
 
     """
-    def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=False):
+    def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True):
         BaseRawIO.__init__(self)
         self.filename = filename
         
@@ -108,6 +108,7 @@ class Spike2RawIO(BaseRawIO):
         all_signal_sampling_rate = []
         all_signal_length = []#this is incredible but shape difer channel to channel!!!
         self.internal_unit_ids = {}
+        self._spike_sounts = {}
         for chan_id, chan_info in enumerate(self._channel_infos):
             
             if chan_info['kind'] in [1, 6, 7, 9]:
@@ -164,12 +165,27 @@ class Spike2RawIO(BaseRawIO):
                     wf_left_sweep = chan_info['n_extra']//8
                 wf_sampling_rate = sampling_rate
                 if self.ced_units:
-                    raise(NotImplementedError)
+                    #this is a hudge pain because need 
+                    # to jump over all blocks
+                    nb_spike_by_ids = {}
+                    data_blocks = self._data_blocks[chan_id]
+                    dt = get_channel_dtype(chan_info)
+                    for bl in range(data_blocks.size):
+                        ind0 = data_blocks[bl]['pos']
+                        ind1 = data_blocks[bl]['size']*dt.itemsize + ind0
+                        raw_data = self._memmap[ind0:ind1].view(dt)
+                        marker = raw_data['marker'] & 255
+                        for unit_id in np.unique(marker):
+                            nb_spike = nb_spike_by_ids.get(unit_id, 0)
+                            nb_spike += np.sum(marker==unit_id)
+                            nb_spike_by_ids[unit_id] = nb_spike
                 else:
                     #All spike from one channel are group in one SpikeTrain
-                    range_ = range(1)
-                for unit_id in range_:
-                    self.internal_unit_ids[len(unit_channels)] = (chan_id, unit_id)
+                    nb_spike_by_ids = {'all': data_blocks['size'].sum()}
+                for unit_id in sorted(nb_spike_by_ids.keys()):
+                    unit_index = len(unit_channels)
+                    self.internal_unit_ids[unit_index] = (chan_id, unit_id)
+                    self._spike_sounts[unit_index] = nb_spike_by_ids[unit_id]
                     _id = "ch{}#{}".format(chan_id, unit_id)
                     unit_channels.append((name, _id, wf_units, wf_gain, wf_offset, 
                                     wf_left_sweep, wf_sampling_rate))
@@ -224,13 +240,31 @@ class Spike2RawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
         
-        # insert some annotation at some place
+        # Annotations
         self._generate_empty_annotations()
-        #TODO add annotations
-        #~ print(self)
-        #~ self.print_annotations()
+        bl_ann = self.raw_annotations['blocks'][0]
+        bl_ann['system_id'] = info['system_id']
+        seg_ann = bl_ann['segments'][0]
+        seg_ann['system_id'] = info['system_id']
         
+        for c, sig_channel in enumerate(sig_channels):
+            chan_id = sig_channel['id']
+            anasig_an = seg_ann['signals'][c]
+            anasig_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
+            anasig_an['comment'] = self._channel_infos[chan_id]['comment']
 
+        for c, unit_channel in enumerate(unit_channels):
+            chan_id, unit_id = self.internal_unit_ids[c]
+            unit_an = seg_ann['units'][c]
+            unit_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
+            unit_an['comment'] = self._channel_infos[chan_id]['comment']
+
+        for c, event_channel in enumerate(event_channels):
+            chan_id = int(event_channel['id'])
+            ev_an = seg_ann['events'][c]
+            ev_an['physical_channel_index'] = self._channel_infos[chan_id]['phy_chan']
+            ev_an['comment'] = self._channel_infos[chan_id]['comment']
+        
     def _source_name(self):
         return self.filename
     
@@ -291,7 +325,7 @@ class Spike2RawIO(BaseRawIO):
             
         return raw_signals
     
-    def _get_internal_timestamp_(self,chan_id, t_start, t_stop, other_field=None): #, marker_filter=None
+    def _get_internal_timestamp_(self,chan_id, t_start, t_stop, other_field=None, marker_filter=None):
         chan_info = self._channel_infos[chan_id]
         data_blocks = self._data_blocks[chan_id]
         dt = get_channel_dtype(chan_info)
@@ -314,6 +348,10 @@ class Spike2RawIO(BaseRawIO):
             raw_data = self._memmap[ind0:ind1].view(dt)
             ts = raw_data['tick']
             keep = (ts>=lim0) & (ts<=lim1)
+            if marker_filter is not None:
+                keep2 = (raw_data['marker']&255)==marker_filter
+                keep = keep&keep2
+                
             timestamps.append(ts[keep])
             if other_field is not None:
                 othervalues.append(raw_data[other_field][keep])
@@ -324,7 +362,7 @@ class Spike2RawIO(BaseRawIO):
             timestamps = np.concatenate(timestamps)
         else:
             timestamps = np.zeros(0, dtype='int16')
-
+        
         if other_field is  None:
             return timestamps
         else:
@@ -335,24 +373,19 @@ class Spike2RawIO(BaseRawIO):
             return timestamps, othervalues
     
     def _spike_count(self,  block_index, seg_index, unit_index):
-        unit_header = self.header['unit_channels'][unit_index]
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data_blocks = self._data_blocks[chan_id]
-        if self.ced_units:
-            raise(NotImplementedError)
-        else:
-            nb_spike = data_blocks['size'].sum()
-        return nb_spike
-    
+        return self._spike_sounts[unit_index]
+        
     def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         unit_header = self.header['unit_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         
         if self.ced_units:
-            #TODO filter by 'marker' 
-            raise(NotImplementedError)
+            marker_filter = unit_id
+        else:
+            marker_filter = None
         
-        spike_timestamps = self._get_internal_timestamp_(chan_id, t_start, t_stop)
+        spike_timestamps = self._get_internal_timestamp_(chan_id, t_start, t_stop, marker_filter=marker_filter)
+        
         return spike_timestamps
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -365,10 +398,13 @@ class Spike2RawIO(BaseRawIO):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         
         if self.ced_units:
-            #TODO filter by 'marker' 
-            raise(NotImplementedError)
+            marker_filter = unit_id
+        else:
+            marker_filter = None
+            
+        timestamps, waveforms = self._get_internal_timestamp_(chan_id, t_start, t_stop, 
+                                                        other_field='waveform', marker_filter=marker_filter)
         
-        timestamps, waveforms = self._get_internal_timestamp_(chan_id, t_start, t_stop, other_field='waveform')
         waveforms = waveforms.reshape(timestamps.size, 1, -1)
         
         return waveforms
