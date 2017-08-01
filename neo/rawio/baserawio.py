@@ -52,7 +52,6 @@ error_header = 'Header is not read yet, do parse_header() first'
 
 _signal_channel_dtype = [
     ('name','U64'),
-    #~ ('id','U64'),
     ('id','int64'),
     ('units','U64'),
     ('gain','float64'),
@@ -128,7 +127,7 @@ class BaseRawIO(object):
             nb_seg = [self.segment_count(i) for i in range(nb_block)]
             txt += 'nb_segment:  {}\n'.format(nb_seg)
             
-            for k in ('signal_channels', 'unit_channels'):
+            for k in ('signal_channels', 'unit_channels', 'event_channels'):
                 ch = self.header[k]
                 if len(ch)>8:
                     chantxt = "[{} ... {}]".format(', '.join(e for e in ch['name'][:4]),\
@@ -351,10 +350,10 @@ class BaseRawIO(object):
         float_signal = raw_signal.astype(dtype)
         
         if np.any(channels['gain'] !=1.):
-            float_signal *= channels['gain']
+            float_signal *= channels['gain'][:, None]
         
         if np.any(channels['offset'] !=0.):
-            float_signal += channels['offset']
+            float_signal += channels['offset'][:, None]
         
         return float_signal
     

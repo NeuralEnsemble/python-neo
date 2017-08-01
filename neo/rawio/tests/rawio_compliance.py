@@ -130,6 +130,9 @@ def read_analogsignals(reader):
     sig_shape = reader.analogsignal_shape(0, 0)
     i_stop = min(1024, sig_shape[0])
     
+    signal_channels = reader.header['signal_channels']
+    unique_chan_name = (np.unique(signal_channels['name']).size == signal_channels.size)
+    
     # acces by channel inde/ids/names should give the same chunk
     channel_indexes = np.arange(nb_sig, dtype=int)[::2]
     channel_names = reader.header['signal_channels']['name'][::2]
@@ -137,11 +140,12 @@ def read_analogsignals(reader):
     
     raw_chunk0 = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
                             i_start=i_start, i_stop=i_stop,  channel_indexes=channel_indexes)
-    raw_chunk1 = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=i_start, i_stop=i_stop,  channel_names=channel_names)
+    if unique_chan_name:
+        raw_chunk1 = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
+                                i_start=i_start, i_stop=i_stop,  channel_names=channel_names)
+        np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
     raw_chunk2 = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=i_start, i_stop=i_stop,  channel_ids=channel_ids)
-    np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
+                            i_start=i_start, i_stop=i_stop,  channel_ids=channel_ids)    
     np.testing.assert_array_equal(raw_chunk0, raw_chunk2)
     
     
@@ -149,13 +153,15 @@ def read_analogsignals(reader):
     for dt in ('float32', 'float64'):
         float_chunk0 = reader.rescale_signal_raw_to_float(raw_chunk0, dtype=dt,
                         channel_indexes=channel_indexes)
-        float_chunk1 = reader.rescale_signal_raw_to_float(raw_chunk1, dtype=dt,
-                        channel_names=channel_names)
+        if unique_chan_name:
+            float_chunk1 = reader.rescale_signal_raw_to_float(raw_chunk1, dtype=dt,
+                            channel_names=channel_names)
         float_chunk2 = reader.rescale_signal_raw_to_float(raw_chunk2, dtype=dt,
                         channel_ids=channel_ids)
                         
         assert float_chunk0.dtype==dt
-        np.testing.assert_array_equal(float_chunk0, float_chunk1)
+        if unique_chan_name:
+            np.testing.assert_array_equal(float_chunk0, float_chunk1)
         np.testing.assert_array_equal(float_chunk0, float_chunk2)
 
 def benchmark_speed_read_signals(reader):
@@ -192,7 +198,7 @@ def read_spike_times(reader):
                 
                 spike_timestamp = reader.spike_timestamps(block_index=block_index, 
                                                     unit_index=unit_index, t_start=None, t_stop=None)
-                assert spike_timestamp.shape[0] == nb_spike
+                assert spike_timestamp.shape[0] == nb_spike, 'nb_spike {} != {}'.format(spike_timestamp.shape[0] , nb_spike)
                 
                 spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
                 assert spike_times.dtype=='float64'
@@ -228,6 +234,8 @@ def read_spike_waveforms(reader):
                 
                 raw_waveforms = reader.spike_raw_waveforms(block_index=block_index, 
                                                     unit_index=unit_index, t_start=None, t_stop=None)
+                if raw_waveforms is None:
+                    continue
                 assert raw_waveforms.shape[0] == nb_spike
                 assert raw_waveforms.ndim == 3
                 

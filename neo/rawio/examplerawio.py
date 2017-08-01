@@ -191,6 +191,7 @@ class ExampleRawIO(BaseRawIO):
         #here a realistic case all waveforms are only noise.
         #it is not always the case
         # we 20 spikes with a sweep of 50 (5ms)
+        # If there is no waveform supported in IO them return None
         
         np.random.seed(2205) # a magic number (my birthday)
         waveforms = np.random.randint(low=-2**4, high=2**4, size=20*50, dtype='int16')

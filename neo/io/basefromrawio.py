@@ -125,43 +125,45 @@ class BaseFromRaw(BaseIO):
         #AnalogSignal
         signal_channels = self.header['signal_channels']
         channel_indexes=np.arange(signal_channels.size)
-        
-        if not lazy:
-            raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                        i_start=None, i_stop=None, channel_indexes=channel_indexes)
-            float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32', channel_indexes=channel_indexes)
-        else:
-            sig_shape = self.analogsignal_shape(block_index=block_index, seg_index=seg_index,)
-        
-        sr = self.analogsignal_sampling_rate() * pq.Hz
+
         t_start = self.segment_t_start(block_index, seg_index) * pq.s
         t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
-        for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
-            units = np.unique(signal_channels[ind]['units'])
-            assert len(units)==1
-            units = units[0]
-            
-            if signal_group_mode=='split-all':
-                #in that case annotations by channel is OK
-                chan_index = ind[0]
-                d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
-                annotations = dict(d)
-                if 'name' not in annotations:
-                    annotations['name'] = signal_channels['name'][chan_index]
+        
+        if channel_indexes.size>0:
+            if not lazy:
+                raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+                            i_start=None, i_stop=None, channel_indexes=channel_indexes)
+                float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32', channel_indexes=channel_indexes)
             else:
-                # when channel are grouped by same unit
-                # annotations are empty...
-                annotations = {}
+                sig_shape = self.analogsignal_shape(block_index=block_index, seg_index=seg_index,)
+            
+            sr = self.analogsignal_sampling_rate() * pq.Hz
+            for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
+                units = np.unique(signal_channels[ind]['units'])
+                assert len(units)==1
+                units = units[0]
+                
+                if signal_group_mode=='split-all':
+                    #in that case annotations by channel is OK
+                    chan_index = ind[0]
+                    d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
+                    annotations = dict(d)
+                    if 'name' not in annotations:
+                        annotations['name'] = signal_channels['name'][chan_index]
+                else:
+                    # when channel are grouped by same unit
+                    # annotations are empty...
+                    annotations = {}
 
-            if lazy:
-                anasig = AnalogSignal(np.array([]), units=units,  copy=False,
-                        sampling_rate=sr, t_start=t_start, **annotations)
-                anasig.lazy_shape = (sig_shape[0], len(ind))
-            else:
-                anasig = AnalogSignal(float_signal[:, ind], units=units,  copy=False,
-                        sampling_rate=sr, t_start=t_start, **annotations)
-            
-            seg.analogsignals.append(anasig)
+                if lazy:
+                    anasig = AnalogSignal(np.array([]), units=units,  copy=False,
+                            sampling_rate=sr, t_start=t_start, **annotations)
+                    anasig.lazy_shape = (sig_shape[0], len(ind))
+                else:
+                    anasig = AnalogSignal(float_signal[:, ind], units=units,  copy=False,
+                            sampling_rate=sr, t_start=t_start, **annotations)
+                
+                seg.analogsignals.append(anasig)
         
         #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
