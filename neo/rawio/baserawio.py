@@ -216,6 +216,23 @@ class BaseRawIO(object):
         
         self.raw_annotations = a
     
+    def _raw_annotate(self, obj_name, chan_index=0,   block_index=0, seg_index=0, **kargs):
+        """
+        Annotate a object in the list/dict tree annotations.
+        """
+        bl_annotations = self.raw_annotations['blocks'][block_index]
+        seg_annotations = bl_annotations['segments'][seg_index]
+        if obj_name=='blocks':
+            bl_annotations.update(kargs)
+        elif obj_name=='segments':
+            seg_annotations.update(kargs)
+        elif obj_name in ['signals', 'events', 'units']:
+            obj_annotations = seg_annotations[obj_name][chan_index]
+            obj_annotations.update(kargs)
+        elif obj_name in ['signal_channels', 'unit_channels', 'event_channel']:
+            obj_annotations = self.raw_annotations[obj_name][chan_index]
+            obj_annotations.update(kargs)
+    
     def _repr_annotations(self):
         txt = 'Raw annotations\n'
         for block_index in range(self.block_count()):
@@ -350,10 +367,10 @@ class BaseRawIO(object):
         float_signal = raw_signal.astype(dtype)
         
         if np.any(channels['gain'] !=1.):
-            float_signal *= channels['gain'][:, None]
+            float_signal *= channels['gain']
         
         if np.any(channels['offset'] !=0.):
-            float_signal += channels['offset'][:, None]
+            float_signal += channels['offset']
         
         return float_signal
     

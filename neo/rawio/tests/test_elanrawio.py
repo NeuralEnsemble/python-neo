@@ -1,30 +1,27 @@
 # -*- coding: utf-8 -*-
-"""
-Tests of neo.io.elanio
-"""
 
 # needed for python 3 compatibility
-from __future__ import absolute_import, division
-
-import sys
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
 
-from neo.io import ElanIO
-from neo.test.iotest.common_io_test import BaseTestIO
+from neo.rawio.elanrawio import ElanRawIO
+
+from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 
-class TestElanIO(BaseTestIO, unittest.TestCase, ):
-    ioclass = ElanIO
+class TestElanRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = ElanRawIO
     files_to_test = ['File_elan_1.eeg']
-    files_to_download = ['File_elan_1.eeg',
+    files_to_download = [
+                        'File_elan_1.eeg',
                          'File_elan_1.eeg.ent',
                          'File_elan_1.eeg.pos',
                          ]
 
-
 if __name__ == "__main__":
     unittest.main()
+

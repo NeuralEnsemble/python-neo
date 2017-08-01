@@ -141,7 +141,7 @@ class BaseFromRaw(BaseIO):
             for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
                 units = np.unique(signal_channels[ind]['units'])
                 assert len(units)==1
-                units = units[0]
+                units = ensure_signal_units(units[0])
                 
                 if signal_group_mode=='split-all':
                     #in that case annotations by channel is OK
@@ -154,7 +154,8 @@ class BaseFromRaw(BaseIO):
                     # when channel are grouped by same unit
                     # annotations are empty...
                     annotations = {}
-
+                
+                
                 if lazy:
                     anasig = AnalogSignal(np.array([]), units=units,  copy=False,
                             sampling_rate=sr, t_start=t_start, **annotations)
@@ -173,7 +174,7 @@ class BaseFromRaw(BaseIO):
                                                     unit_index=unit_index, t_start=None, t_stop=None)
                 float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
                                 unit_index=unit_index)
-                wf_units = unit_channels['wf_units'][unit_index]
+                wf_units = ensure_signal_units(unit_channels['wf_units'][unit_index])
                 waveforms = pq.Quantity(float_waveforms, units=wf_units, dtype='float32', copy=False)
                 wf_sampling_rate = unit_channels['wf_sampling_rate'][unit_index]
                 wf_left_sweep = unit_channels['wf_left_sweep'][unit_index]
@@ -269,4 +270,17 @@ class BaseFromRaw(BaseIO):
         else:
             raise(NotImplementedError)
         return groups
-        
+
+
+unit_convert = {'Volts': 'V',  'volts': 'V','Volt': 'V', 'volt': 'V', ' Volt' : 'V','microV': 'V'}
+def ensure_signal_units(units):
+    #test units
+    units = units.replace(' ', '')
+    if units in unit_convert:
+        units = unit_convert[units]
+    try:
+        units = pq.Quantity(1, units)
+    except:
+        logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
+        units = ''
+    return units

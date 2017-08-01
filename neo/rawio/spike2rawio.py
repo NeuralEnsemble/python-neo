@@ -132,8 +132,6 @@ class Spike2RawIO(BaseRawIO):
                     continue
                 
                 units = chan_info['unit']
-                if units in unit_convert:
-                    units = unit_convert[units]
                 
                 if chan_info['kind'] ==1:#int16
                     gain = chan_info['scale']/6553.6
@@ -153,8 +151,6 @@ class Spike2RawIO(BaseRawIO):
                 
             elif chan_info['kind'] in [6, 7]: #SpikeTrain with waveforms
                 wf_units = chan_info['unit']
-                if wf_units in unit_convert:
-                    wf_units = unit_convert[wf_units]
                 if chan_info['kind'] == 6:
                     wf_gain = chan_info['scale']/6553.6
                     wf_offset = chan_info['offset']
@@ -293,7 +289,7 @@ class Spike2RawIO(BaseRawIO):
             i_stop = self._signal_length
         
         dt = self._sig_dtype
-        raw_signals = np.zeros((len(channel_indexes), i_stop-i_start), dtype=dt)
+        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
         for channel_index in channel_indexes:
             #NOTE: this actual way is slow because we run throught
             # the file for each channel. The loop should be reversed.
@@ -320,7 +316,7 @@ class Spike2RawIO(BaseRawIO):
                     #left border
                     border = i_start - data_blocks[bl]['cumsum']
                     data = data[border:]
-                raw_signals[channel_index, ind:data.size+ind] = data
+                raw_signals[ind:data.size+ind, channel_index] = data
                 ind += data.size
             
         return raw_signals
@@ -560,12 +556,3 @@ dict_kind = {
 }
 
 
-
-
-
-unit_convert = {
-    'Volts': 'V',
-    'volt': 'V',
-    ' Volt' : 'V',
-
-}
