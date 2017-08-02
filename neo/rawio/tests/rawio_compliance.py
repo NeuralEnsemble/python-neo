@@ -104,7 +104,7 @@ def iter_over_sig_chunks(reader, chunksize=1024):
             for i in range(nb):
                 i_start = i*chunksize
                 i_stop = min((i+1)*chunksize, sig_shape[0])
-                raw_chunk = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
+                raw_chunk = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
                             i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
                 yield raw_chunk
 
