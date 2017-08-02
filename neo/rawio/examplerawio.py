@@ -86,7 +86,7 @@ class ExampleRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
         
         # insert some annotation at some place
-        self._generate_empty_annotations()
+        self._generate_minimal_annotations()
         for block_index in range(2):
             bl_ann = self.raw_annotations['blocks'][block_index]
             bl_ann['name'] = 'Block #{}'.format(block_index)

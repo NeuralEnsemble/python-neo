@@ -60,7 +60,7 @@ def download_test_file(filename, localdir, url):
         for ifilename in filename:
             download_test_file(ifilename, localdir, url)
         return
-
+    
     localfile = os.path.join(localdir, filename)
     distantfile = url + '/' + filename
 

@@ -237,7 +237,7 @@ class Spike2RawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
         
         # Annotations
-        self._generate_empty_annotations()
+        self._generate_minimal_annotations()
         bl_ann = self.raw_annotations['blocks'][0]
         bl_ann['system_id'] = info['system_id']
         seg_ann = bl_ann['segments'][0]

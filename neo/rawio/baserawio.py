@@ -138,7 +138,7 @@ class BaseRawIO(object):
             
         return txt
         
-    def _generate_empty_annotations(self):
+    def _generate_minimal_annotations(self):
         """
         Helper function that generate a nested dict
         of all annotations.
@@ -157,6 +157,8 @@ class BaseRawIO(object):
         raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
         
         Theses annotations will be used at the neo.io API directly in objects.
+        
+        Standard annotation like name/id/file_origin are already generated here.
         """
         signal_channels = self.header['signal_channels']
         unit_channels = self.header['unit_channels']

@@ -22,7 +22,9 @@ from io import BufferedReader
 
 
 class StructFile(BufferedReader):
-    def read_f(self, fmt):
+    def read_f(self, fmt, offset=None):
+        if offset is not None:
+            self.seek(offset)
         return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
 
 
@@ -36,140 +38,136 @@ class MicromedRawIO(BaseRawIO):
         self.filename = filename 
     
     def _parse_header(self):
-        f = StructFile(open(self.filename, 'rb'))
+        with open(self.filename, 'rb') as fid:
+            f = StructFile(fid)
 
-        # Name
-        f.seek(64, 0)
-        surname = f.read(22).strip(b' ')
-        firstname = f.read(20).strip(b' ')
+            # Name
+            f.seek(64)
+            surname = f.read(22).strip(b' ')
+            firstname = f.read(20).strip(b' ')
 
-        #Date
-        f.seek(128, 0)
-        day, month, year, hour, minute, sec = f.read_f('bbbbbb')
-        rec_datetime = datetime.datetime(year + 1900, month, day, hour, minute,
-                                         sec)
+            #Date
+            day, month, year, hour, minute, sec = f.read_f('bbbbbb', offset=128)
+            rec_datetime = datetime.datetime(year + 1900, month, day, hour, minute,
+                                             sec)
 
-        f.seek(138, 0)
-        Data_Start_Offset, Num_Chan, Multiplexer, Rate_Min, Bytes = f.read_f(
-            'IHHHH')
+            Data_Start_Offset, Num_Chan, Multiplexer, Rate_Min, Bytes = f.read_f(
+                'IHHHH', offset=138)
 
-        #header version
-        f.seek(175, 0)
-        header_version, = f.read_f('b')
-        assert header_version == 4
+            #header version
+            header_version, = f.read_f('b', offset=175)
+            assert header_version == 4
 
-        # area
-        f.seek(176, 0)
-        zone_names = ['ORDER', 'LABCOD', 'NOTE', 'FLAGS', 'TRONCA', 
-                    'IMPED_B', 'IMPED_E', 'MONTAGE',
-                    'COMPRESS', 'AVERAGE', 'HISTORY', 'DVIDEO', 'EVENT A',
-                    'EVENT B', 'TRIGGER']
-        zones = {}
-        for zname in zone_names:
-            zname2, pos, length = f.read_f('8sII')
-            zones[zname] = zname2, pos, length
-            assert zname==zname2.decode('ascii').strip(' ')
-        
-        #raw signals memmap
-        self._raw_signals = np.memmap(self.filename, dtype='u' + str(Bytes), mode='r',
-                        offset=Data_Start_Offset ).reshape(-1, Num_Chan)
-
-        # Reading Code Info
-        zname2, pos, length = zones['ORDER']
-        f.seek(pos, 0)
-        code = np.fromfile(f, dtype='u2', count=Num_Chan)
-
-        #~ units = {-1: pq.nano * pq.V, 0: pq.uV, 1: pq.mV, 2: 1, 100: pq.percent,
-                 #~ 101: pq.dimensionless, 102: pq.dimensionless}
-        units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
-                 101: 'dimensionless', 102: 'dimensionless'}
-        all_sampling_rate = []
-        sig_channels = []
-        for c in range(Num_Chan):
-            zname2, pos, length = zones['LABCOD']
-            f.seek(pos + code[c] * 128 + 2, 0)
-
-            chan_name = f.read(6).strip(b"\x00").decode('ascii')
-            ground = f.read(6).strip(b"\x00").decode('ascii')#TODO put in annotations
-            logical_min, logical_max, logical_ground, physical_min, physical_max = f.read_f('iiiii')
-            #~ print(logical_min, logical_max, logical_ground, physical_min, physical_max)
-            k, = f.read_f('h')
-            units = units_code.get(k, 'uV')
+            # area
+            f.seek(176)
+            zone_names = ['ORDER', 'LABCOD', 'NOTE', 'FLAGS', 'TRONCA', 
+                        'IMPED_B', 'IMPED_E', 'MONTAGE',
+                        'COMPRESS', 'AVERAGE', 'HISTORY', 'DVIDEO', 'EVENT A',
+                        'EVENT B', 'TRIGGER']
+            zones = {}
+            for zname in zone_names:
+                zname2, pos, length = f.read_f('8sII')
+                zones[zname] = zname2, pos, length
+                assert zname==zname2.decode('ascii').strip(' ')
             
-            factor = float(physical_max - physical_min) / float(
-                    logical_max - logical_min + 1)
-            gain = factor
-            offset = -logical_ground*factor
+            #raw signals memmap
+            self._raw_signals = np.memmap(self.filename, dtype='u' + str(Bytes), mode='r',
+                            offset=Data_Start_Offset ).reshape(-1, Num_Chan)
 
-            f.seek(8, 1)
-            sampling_rate, = f.read_f('H')
-            sampling_rate *= Rate_Min
-            all_sampling_rate.append(sampling_rate)
+            # Reading Code Info
+            zname2, pos, length = zones['ORDER']
+            f.seek(pos)
+            code = np.fromfile(f, dtype='u2', count=Num_Chan)
 
-            chan_id = c
-            sig_channels.append((chan_name, chan_id, units, gain,offset))
+            #~ units = {-1: pq.nano * pq.V, 0: pq.uV, 1: pq.mV, 2: 1, 100: pq.percent,
+                     #~ 101: pq.dimensionless, 102: pq.dimensionless}
+            units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
+                     101: 'dimensionless', 102: 'dimensionless'}
+            all_sampling_rate = []
+            sig_channels = []
+            for c in range(Num_Chan):
+                zname2, pos, length = zones['LABCOD']
+                f.seek(pos + code[c] * 128 + 2, 0)
+
+                chan_name = f.read(6).strip(b"\x00").decode('ascii')
+                ground = f.read(6).strip(b"\x00").decode('ascii')#TODO put in annotations
+                logical_min, logical_max, logical_ground, physical_min, physical_max = f.read_f('iiiii')
+                #~ print(logical_min, logical_max, logical_ground, physical_min, physical_max)
+                k, = f.read_f('h')
+                units = units_code.get(k, 'uV')
+                
+                factor = float(physical_max - physical_min) / float(
+                        logical_max - logical_min + 1)
+                gain = factor
+                offset = -logical_ground*factor
+
+                f.seek(8, 1)
+                sampling_rate, = f.read_f('H')
+                sampling_rate *= Rate_Min
+                all_sampling_rate.append(sampling_rate)
+
+                chan_id = c
+                sig_channels.append((chan_name, chan_id, units, gain,offset))
+                
+            #~ print(all_sampling_rate)
+            assert np.unique(all_sampling_rate).size==1
+            self._sampling_rate = float(np.unique(all_sampling_rate)[0])
+            #~ print('self._sample_rate', self._sample_rate)
             
-        #~ print(all_sampling_rate)
-        assert np.unique(all_sampling_rate).size==1
-        self._sampling_rate = float(np.unique(all_sampling_rate)[0])
-        #~ print('self._sample_rate', self._sample_rate)
-        
-        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        #~ print(sig_channels)
-        #~ exit()
+            sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+            #~ print(sig_channels)
+            #~ exit()
 
-        #Event channels
-        event_channels = []
-        event_channels.append(('Trigger', '', 'event'))
-        event_channels.append(('Note', '', 'event'))
-        event_channels.append(('Event A', '', 'epoch'))
-        event_channels.append(('Event B', '', 'epoch'))
-        event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+            #Event channels
+            event_channels = []
+            event_channels.append(('Trigger', '', 'event'))
+            event_channels.append(('Note', '', 'event'))
+            event_channels.append(('Event A', '', 'epoch'))
+            event_channels.append(('Event B', '', 'epoch'))
+            event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        # Read trigger and notes
-        self._raw_events = []
-        ev_dtypes = [('TRIGGER', [('start', 'u4'), ('label', 'u2')]),
-                            ('NOTE', [('start', 'u4'), ('label', 'S40')]),
-                            ('EVENT A', [('label', 'u4'), ('start', 'u4'), ('stop', 'u4')]),
-                            ('EVENT B', [('label', 'u4'), ('start', 'u4'), ('stop', 'u4')]),
-                            ]
-        for zname, ev_dtype in ev_dtypes:
-            zname2, pos, length = zones[zname]
-            dtype = np.dtype(ev_dtype)
-            rawevent = np.memmap(self.filename, dtype=dtype, mode='r',
-                        offset=pos, shape=length//dtype.itemsize )
+            # Read trigger and notes
+            self._raw_events = []
+            ev_dtypes = [('TRIGGER', [('start', 'u4'), ('label', 'u2')]),
+                                ('NOTE', [('start', 'u4'), ('label', 'S40')]),
+                                ('EVENT A', [('label', 'u4'), ('start', 'u4'), ('stop', 'u4')]),
+                                ('EVENT B', [('label', 'u4'), ('start', 'u4'), ('stop', 'u4')]),
+                                ]
+            for zname, ev_dtype in ev_dtypes:
+                zname2, pos, length = zones[zname]
+                dtype = np.dtype(ev_dtype)
+                rawevent = np.memmap(self.filename, dtype=dtype, mode='r',
+                            offset=pos, shape=length//dtype.itemsize )
+                
+                keep = (rawevent['start'] >= rawevent['start'][0]) & (
+                        rawevent['start'] < self._raw_signals.shape[0]) & (
+                        rawevent['start'] != 0)
+                rawevent = rawevent[keep]
+                self._raw_events.append(rawevent)
+
+            #No spikes
+            unit_channels = []
+            unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
             
-            keep = (rawevent['start'] >= rawevent['start'][0]) & (
-                    rawevent['start'] < self._raw_signals.shape[0]) & (
-                    rawevent['start'] != 0)
-            rawevent = rawevent[keep]
-            self._raw_events.append(rawevent)
-
-        #No spikes
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+            #fille into header dict
+            self.header = {}
+            self.header['nb_block'] = 1
+            self.header['nb_segment'] = [1]
+            self.header['signal_channels'] = sig_channels
+            self.header['unit_channels'] = unit_channels
+            self.header['event_channels'] = event_channels
+            
+            # insert some annotation at some place
+            self._generate_minimal_annotations()
+            bl_annotations = self.raw_annotations['blocks'][0]
+            seg_annotations = bl_annotations['segments'][0]
+            
+            for d in (bl_annotations, seg_annotations):
+                d['rec_datetime'] = rec_datetime
+                d['firstname'] = firstname
+                d['surname'] = surname
+                d['header_version'] = header_version
         
-        #fille into header dict
-        self.header = {}
-        self.header['nb_block'] = 1
-        self.header['nb_segment'] = [1]
-        self.header['signal_channels'] = sig_channels
-        self.header['unit_channels'] = unit_channels
-        self.header['event_channels'] = event_channels
-        
-        # insert some annotation at some place
-        self._generate_empty_annotations()
-        bl_annotations = self.raw_annotations['blocks'][0]
-        seg_annotations = bl_annotations['segments'][0]
-        
-        for d in (bl_annotations, seg_annotations):
-            d['rec_datetime'] = rec_datetime
-            d['firstname'] = firstname
-            d['surname'] = surname
-            d['header_version'] = header_version
-        
-        f.close()
-    
     def _source_name(self):
         return self.filename
     

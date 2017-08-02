@@ -416,7 +416,7 @@ class BlackrockRawIO(BaseRawIO):
         self.header['segment_t_stops'] = [t_stops]
         
         #Annotations
-        self._generate_empty_annotations()
+        self._generate_minimal_annotations()
         block_ann = self.raw_annotations['blocks'][0]
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"

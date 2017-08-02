@@ -163,7 +163,7 @@ class ElanRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
         
         # insert some annotation at some place
-        self._generate_empty_annotations()
+        self._generate_minimal_annotations()
         extra_info = dict(rec_datetime=fulldatetime, elan_version=version,
                         info1=info1, info2=info2)
         for obj_name in ('blocks', 'segments'):

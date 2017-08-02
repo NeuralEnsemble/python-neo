@@ -59,7 +59,7 @@ class BaseTestRawIO(object):
         '''
         Set up the test fixture.  This is run for every test
         '''
-        self.shortname = self.rawioclass.__name__.lower().strip('rawio')
+        self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
         self.create_local_dir_if_not_exists()
         self.download_test_files_if_not_present()
     
@@ -78,6 +78,7 @@ class BaseTestRawIO(object):
         url_for_tests is global at beginning of this file.
 
         ''' % self.rawioclass.__name__
+        
         if not self.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
 
