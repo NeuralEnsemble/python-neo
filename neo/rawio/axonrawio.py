@@ -34,6 +34,7 @@ Note: j.s.nowacki@gmail.com has a C++ library with SWIG bindings which also
 reads abf files - would be good to cross-check
 
 """
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
@@ -55,7 +56,6 @@ class AxonRawIO(BaseRawIO):
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
-    # Functions to be implement in IO below here
     
     def _parse_header(self):
         info = self._axon_info = parse_axon_soup(self.filename)

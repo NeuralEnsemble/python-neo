@@ -5,10 +5,9 @@ Inspired by the Matlab code for EEGLAB from Rami K. Niazy.
 
 Completed with matlab Guillaume BECQ code.
 
-Supported : Read
-
-Author: sgarcia
+Author: Samuel Garcia
 """
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)

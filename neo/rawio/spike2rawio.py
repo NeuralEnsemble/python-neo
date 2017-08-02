@@ -18,6 +18,7 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
+from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
