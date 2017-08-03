@@ -15,7 +15,6 @@ raw data. All IO with theses carractéristics should/could be rewritten:
   * reading header is quite cheap (not read all the file)
   * neo tree object is symetric and logical: same channel/units/event
     along all block and segments.
-    
 
 
 So this handle **only** one simplified but very frequent case of dataset:
@@ -23,6 +22,8 @@ So this handle **only** one simplified but very frequent case of dataset:
     * Only one channel set  for SpikeTrain (aka Unit) stable along Segment
     * AnalogSignal have all the same sampling_rate acroos all Segment
     * t_start/t_stop are the same for all object (AnalogSignal/SpikeTrain) inside a Segment
+    * AnalogSignal should all have the same sampling_rate otherwise the won't be read
+      a the same time.(so signal_group_mode=='split-all' in BaseFromRaw
     
 
 An helper class `neo.io.basefromrawio.BaseFromRaw` should transform a RawIO to

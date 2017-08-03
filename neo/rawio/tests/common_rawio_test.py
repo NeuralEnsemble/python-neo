@@ -125,6 +125,20 @@ class BaseTestRawIO(object):
             txt = reader._repr_annotations()
             #~ reader.print_annotations()
             
+            #~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
+                            #~ i_start=None, i_stop=None, channel_indexes=[0])
+            #~ import matplotlib.pyplot as plt
+            #~ fig, ax = plt.subplots()
+            #~ ax.plot(sigs[:, 0])
+            #~ plt.show()
+            
+            #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
+                            #~ unit_index=0)
+            #~ import matplotlib.pyplot as plt
+            #~ fig, ax = plt.subplots()
+            #~ ax.plot(wfs[:, 0, :50].T)
+            #~ plt.show()
+            
             #lanch a series of test compliance
             compliance.header_is_total(reader)
             compliance.count_element(reader)
