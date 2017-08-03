@@ -199,7 +199,7 @@ def read_spike_times(reader):
                                         seg_index=seg_index, unit_index=unit_index)
                 if nb_spike==0: continue
                 
-                spike_timestamp = reader.spike_timestamps(block_index=block_index, 
+                spike_timestamp = reader.spike_timestamps(block_index=block_index, seg_index=seg_index,
                                                     unit_index=unit_index, t_start=None, t_stop=None)
                 assert spike_timestamp.shape[0] == nb_spike, 'nb_spike {} != {}'.format(spike_timestamp.shape[0] , nb_spike)
                 
@@ -211,7 +211,7 @@ def read_spike_times(reader):
                     t_start = spike_times[1] - 0.00001
                     t_stop = spike_times[1] + 0.00001
                     
-                    spike_timestamp2 = reader.spike_timestamps(block_index=block_index, 
+                    spike_timestamp2 = reader.spike_timestamps(block_index=block_index, seg_index=seg_index,
                                                     unit_index=unit_index, t_start=t_start, t_stop=t_stop)
                     assert spike_timestamp2.shape[0]==1
                     
