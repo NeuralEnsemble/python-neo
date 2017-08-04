@@ -123,7 +123,7 @@ def read_analogsignals(reader):
         pass
     
     sr = reader.analogsignal_sampling_rate()
-    assert type(sr) == float
+    assert type(sr) == float, 'Type of sampling is {} should float'.format(type(sr))
     
     # make other test on the first chunk
     i_start = 0
