@@ -1,4 +1,15 @@
 # -*- coding: utf-8 -*-
+
+# UNCOMMENT when NeuralynxRawIO is done
+#~ from neo.io.basefromrawio import BaseFromRaw
+#~ from neo.rawio.neuralynxrawio import NeuralynxRawIO
+#~ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
+    #~ __prefered_signal_group_mode = 'split-all'
+    #~ def __init__(self, filename):
+        #~ NeuralynxRawIO.__init__(self, filename=filename)
+        #~ BaseFromRaw.__init__(self, filename)
+
+
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.
