@@ -46,7 +46,7 @@ from neo import logging_handler
 
 
 
-possible_modes = ['one-file', 'multi-file', 'one-dir', 'multi-dir', 'url', 'other']
+possible_raw_modes = ['one-file', 'multi-file', 'one-dir','multi-dir', 'url', 'other']
 
 error_header = 'Header is not read yet, do parse_header() first'
 
@@ -88,7 +88,7 @@ class BaseRawIO(object):
     description = ''
     extentions = []
 
-    rawmode = None # one key in possible modes
+    rawmode = None # one key in possible_raw_modes
     
 
     def __init__(self, **kargs):

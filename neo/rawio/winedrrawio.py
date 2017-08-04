@@ -23,7 +23,7 @@ import sys
 
 class WinEdrRawIO(BaseRawIO):
     extensions = ['EDR', 'edr']
-    
+    rawmode = 'one-file'
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename

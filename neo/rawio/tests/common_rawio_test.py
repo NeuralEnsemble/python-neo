@@ -107,10 +107,13 @@ class BaseTestRawIO(object):
         """
         Read all file.
         """
-        for filename in self.files_to_test:
-            filename = self.get_filename_path(filename)
+        for entity_name in self.entities_to_test:
+            entity_name = self.get_filename_path(entity_name)
             
-            reader = self.rawioclass(filename=filename)
+            if self.rawioclass.rawmode.endswith('-file'):
+                reader = self.rawioclass(filename=entity_name)
+            elif self.rawioclass.rawmode.endswith('-dir'):
+                reader = self.rawioclass(dirname=entity_name)
             
             txt = reader.__repr__()
             assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
@@ -134,10 +137,11 @@ class BaseTestRawIO(object):
             
             #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
                             #~ unit_index=0)
+            #~ if wfs is not None:
             #~ import matplotlib.pyplot as plt
-            #~ fig, ax = plt.subplots()
-            #~ ax.plot(wfs[:, 0, :50].T)
-            #~ plt.show()
+                #~ fig, ax = plt.subplots()
+                #~ ax.plot(wfs[:, 0, :50].T)
+                #~ plt.show()
             
             #lanch a series of test compliance
             compliance.header_is_total(reader)

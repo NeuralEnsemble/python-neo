@@ -32,6 +32,7 @@ class MicromedRawIO(BaseRawIO):
     Class for reading  data from micromed (.trc).
     """
     extensions = ['trc', 'TRC']
+    rawmode = 'one-file'
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename 

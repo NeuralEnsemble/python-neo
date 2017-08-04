@@ -15,7 +15,7 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 class TestElanRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = ElanRawIO
-    files_to_test = ['File_elan_1.eeg']
+    entities_to_test = ['File_elan_1.eeg']
     files_to_download = [
                         'File_elan_1.eeg',
                          'File_elan_1.eeg.ent',

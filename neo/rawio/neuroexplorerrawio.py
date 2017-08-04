@@ -35,7 +35,7 @@ import datetime
 
 class NeuroExplorerRawIO(BaseRawIO):
     extensions = ['nex']
-    
+    rawmode = 'one-file'
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename

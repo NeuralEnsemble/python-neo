@@ -18,7 +18,7 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 class TestBrainVisionRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BrainVisionRawIO
-    files_to_test = ['File_brainvision_1.vhdr',
+    entities_to_test = ['File_brainvision_1.vhdr',
                      'File_brainvision_2.vhdr',
                      'File_brainvision_3_float32.vhdr',
                      'File_brainvision_3_int16.vhdr',

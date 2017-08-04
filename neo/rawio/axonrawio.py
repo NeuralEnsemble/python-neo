@@ -51,7 +51,9 @@ import numpy as np
 
 
 class AxonRawIO(BaseRawIO):
+    
     extensions = ['abf']
+    rawmode = 'one-file'
     
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)

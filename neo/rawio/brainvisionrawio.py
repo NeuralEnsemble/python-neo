@@ -25,6 +25,7 @@ class BrainVisionRawIO(BaseRawIO):
     
     """
     extensions = ['vhdr']
+    rawmode = 'one-file'
     
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)

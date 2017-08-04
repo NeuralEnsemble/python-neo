@@ -35,6 +35,7 @@ import datetime
 
 class PlexonRawIO(BaseRawIO):
     extensions = ['plx']
+    rawmode = 'one-file'
     
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)

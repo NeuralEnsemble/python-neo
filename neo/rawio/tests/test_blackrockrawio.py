@@ -26,7 +26,7 @@ except ImportError:
 
 class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = BlackrockRawIO
-    files_to_test = ['FileSpec2.3001']
+    entities_to_test = ['FileSpec2.3001']
 
     files_to_download = [
         'FileSpec2.3001.nev',

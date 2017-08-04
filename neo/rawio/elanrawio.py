@@ -34,6 +34,7 @@ import re
 class ElanRawIO(BaseRawIO):
     
     extensions = ['eeg']
+    rawmode = 'one-file'
     
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)

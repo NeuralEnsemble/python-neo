@@ -15,7 +15,7 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 class TestAxonRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = AxonRawIO
-    files_to_test = [
+    entities_to_test = [
                     'File_axon_1.abf', #V2.0
                     'File_axon_2.abf', #V1.8
                     'File_axon_3.abf', #V1.8
@@ -24,7 +24,7 @@ class TestAxonRawIO(BaseTestRawIO, unittest.TestCase, ):
                     'File_axon_6.abf', #V.20
                     'File_axon_7.abf', #V2.6
                      ]
-    files_to_download = files_to_test
+    files_to_download = entities_to_test
 
     def test_read_raw_protocol(self):
         reader = AxonRawIO(filename=self.get_filename_path('File_axon_7.abf'))

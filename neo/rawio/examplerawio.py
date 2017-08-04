@@ -48,6 +48,8 @@ class ExampleRawIO(BaseRawIO):
         >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
     
     """
+    extensions = ['fake']
+    rawmode = 'one-file'
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         #note that this filename is ued in self._source_name

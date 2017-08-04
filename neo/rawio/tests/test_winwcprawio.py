@@ -14,8 +14,8 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 class TestWinWcpRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = WinWcpRawIO
-    files_to_test = ['File_winwcp_1.wcp']
-    files_to_download = files_to_test
+    entities_to_test = ['File_winwcp_1.wcp']
+    files_to_download = entities_to_test
 
 if __name__ == "__main__":
     unittest.main()
