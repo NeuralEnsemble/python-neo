@@ -8,10 +8,11 @@
 # modification, are permitted under the terms of the BSD License. See
 # LICENSE file in the root of the Project.
 """
-Tests for neo.io.nixio
+Tests for NixIO
 """
 
 import os
+from collections import Iterable
 from datetime import datetime
 
 import unittest
@@ -28,15 +29,13 @@ import quantities as pq
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
+from neo.io.nixio import NixIO, string_types, create_quantity, units_to_string
 
 try:
     import nixio as nix
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
-
-from neo.io.nixio import NixIO
-from neo.io.nixio import string_types
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
@@ -182,31 +181,35 @@ class NixIOTest(unittest.TestCase):
         """
         nixmd = nixdalist[0].metadata
         self.assertTrue(all(nixmd == da.metadata for da in nixdalist))
-        neounit = str(neosig.dimensionality)
+        neounit = neosig.units
         for sig, da in zip(np.transpose(neosig),
                            sorted(nixdalist, key=lambda d: d.name)):
             self.compare_attr(neosig, da)
-            np.testing.assert_almost_equal(sig.magnitude, da)
-            self.assertEqual(neounit, da.unit)
+            daquant = create_quantity(da[:], pq.CompoundUnit(da.unit))
+            np.testing.assert_almost_equal(sig, daquant)
+            nixunit = create_quantity(1, da.unit)
+            self.assertEqual(neounit, nixunit)
             timedim = da.dimensions[0]
             if isinstance(neosig, AnalogSignal):
                 self.assertEqual(timedim.dimension_type,
                                  nix.DimensionType.Sample)
-                self.assertEqual(
-                    pq.Quantity(timedim.sampling_interval, timedim.unit),
-                    neosig.sampling_period
-                )
-                self.assertEqual(timedim.offset, neosig.t_start.magnitude)
+                neosp = neosig.sampling_period
+                nixsp = create_quantity(timedim.sampling_interval,
+                                        timedim.unit)
+                self.assertEqual(neosp, nixsp)
+                tsunit = timedim.unit
                 if "t_start.units" in da.metadata.props:
-                    self.assertEqual(da.metadata["t_start.units"],
-                                     str(neosig.t_start.dimensionality))
+                    tsunit = da.metadata["t_start.units"]
+                neots = neosig.t_start
+                nixts = create_quantity(timedim.offset, tsunit)
+                self.assertEqual(neots, nixts)
             elif isinstance(neosig, IrregularlySampledSignal):
                 self.assertEqual(timedim.dimension_type,
                                  nix.DimensionType.Range)
                 np.testing.assert_almost_equal(neosig.times.magnitude,
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
-                                 str(neosig.times.dimensionality))
+                                 units_to_string(neosig.times.units))
 
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
@@ -224,13 +227,12 @@ class NixIOTest(unittest.TestCase):
     def compare_epoch_mtag(self, epoch, mtag):
         self.assertEqual(mtag.type, "neo.epoch")
         self.compare_attr(epoch, mtag)
-        np.testing.assert_almost_equal(epoch.times.magnitude, mtag.positions)
-
-        np.testing.assert_almost_equal(epoch.durations.magnitude, mtag.extents)
-        self.assertEqual(mtag.positions.unit,
-                         str(epoch.times.units.dimensionality))
-        self.assertEqual(mtag.extents.unit,
-                         str(epoch.durations.units.dimensionality))
+        pos = mtag.positions
+        posquant = create_quantity(pos[:], pos.unit)
+        ext = mtag.extents
+        extquant = create_quantity(ext[:], ext.unit)
+        np.testing.assert_almost_equal(epoch.as_quantity(), posquant)
+        np.testing.assert_almost_equal(epoch.durations, extquant)
         for neol, nixl in zip(epoch.labels,
                               mtag.positions.dimensions[0].labels):
             # Dirty. Should find the root cause instead
@@ -243,8 +245,9 @@ class NixIOTest(unittest.TestCase):
     def compare_event_mtag(self, event, mtag):
         self.assertEqual(mtag.type, "neo.event")
         self.compare_attr(event, mtag)
-        np.testing.assert_almost_equal(event.times.magnitude, mtag.positions)
-        self.assertEqual(mtag.positions.unit, str(event.units.dimensionality))
+        pos = mtag.positions
+        posquant = create_quantity(pos[:], pos.unit)
+        np.testing.assert_almost_equal(event.as_quantity(), posquant)
         for neol, nixl in zip(event.labels,
                               mtag.positions.dimensions[0].labels):
             # Dirty. Should find the root cause instead
@@ -258,22 +261,28 @@ class NixIOTest(unittest.TestCase):
     def compare_spiketrain_mtag(self, spiketrain, mtag):
         self.assertEqual(mtag.type, "neo.spiketrain")
         self.compare_attr(spiketrain, mtag)
-        np.testing.assert_almost_equal(spiketrain.times.magnitude,
-                                       mtag.positions)
+        pos = mtag.positions
+        posquant = create_quantity(pos[:], pos.unit)
+        np.testing.assert_almost_equal(spiketrain.as_quantity(), posquant)
         if len(mtag.features):
-            neowf = spiketrain.waveforms
-            nixwf = mtag.features[0].data
-            self.assertEqual(np.shape(neowf), np.shape(nixwf))
-            self.assertEqual(nixwf.unit, str(neowf.units.dimensionality))
-            np.testing.assert_almost_equal(neowf.magnitude, nixwf)
-            self.assertEqual(nixwf.dimensions[0].dimension_type,
+            neowfs = spiketrain.waveforms
+            nixwfs = mtag.features[0].data
+            self.assertEqual(np.shape(neowfs), np.shape(nixwfs))
+            for nixwf, neowf in zip(nixwfs, neowfs):
+                for nixrow, neorow in zip(nixwf, neowf):
+                    for nixv, neov in zip(nixrow, neorow):
+                        self.assertEqual(create_quantity(nixv, nixwfs.unit),
+                                         neov)
+            self.assertEqual(nixwfs.dimensions[0].dimension_type,
                              nix.DimensionType.Set)
-            self.assertEqual(nixwf.dimensions[1].dimension_type,
+            self.assertEqual(nixwfs.dimensions[1].dimension_type,
                              nix.DimensionType.Set)
-            self.assertEqual(nixwf.dimensions[2].dimension_type,
+            self.assertEqual(nixwfs.dimensions[2].dimension_type,
                              nix.DimensionType.Sample)
 
     def compare_attr(self, neoobj, nixobj):
+        print(neoobj.annotations["nix_name"])
+        print(nixobj.name)
         if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
             nix_name = ".".join(nixobj.name.split(".")[:-1])
         else:
@@ -293,12 +302,15 @@ class NixIOTest(unittest.TestCase):
                 if k == "nix_name":
                     continue
                 if isinstance(v, pq.Quantity):
-                    self.assertEqual(nixmd.props[str(k)].unit,
-                                     str(v.dimensionality))
-                    np.testing.assert_almost_equal(nixmd[str(k)],
-                                                   v.magnitude)
+                    nixunit = nixmd.props[str(k)].unit
+                    self.assertEqual(nixunit, units_to_string(v.units))
+                    nixvalue = nixmd[str(k)]
+                    if isinstance(nixvalue, Iterable):
+                        nixvalue = np.array(nixvalue)
+                    np.testing.assert_almost_equal(nixvalue, v.magnitude)
                 else:
-                    self.assertEqual(nixmd[str(k)], v)
+                    self.assertEqual(nixmd[str(k)], v,
+                                     "Property value mismatch: {}".format(k))
 
     @classmethod
     def create_full_nix_file(cls, filename):
@@ -359,6 +371,7 @@ class NixIOTest(unittest.TestCase):
                 da_asig.append_set_dimension()
                 group.data_arrays.append(da_asig)
                 siggroup.append(da_asig)
+            asig_md["t_start.dim"] = "ms"
             allsignalgroups.append(siggroup)
 
         # irregularlysampledsignals
@@ -391,25 +404,21 @@ class NixIOTest(unittest.TestCase):
         # SpikeTrains with Waveforms
         for n in range(4):
             stname = "{}-st{}".format(cls.rword(20), n)
-            times = cls.rquant(400, 1, True)
+            times = cls.rquant(40, 1, True)
             times_da = blk.create_data_array(
                 "{}.times".format(stname),
                 "neo.spiketrain.times",
                 data=times
             )
             times_da.unit = "ms"
-            mtag_st = blk.create_multi_tag(stname,
-                                           "neo.spiketrain",
-                                           times_da)
+            mtag_st = blk.create_multi_tag(stname, "neo.spiketrain", times_da)
             group.multi_tags.append(mtag_st)
             mtag_st.definition = cls.rsentence(20, 30)
             mtag_st_md = group.metadata.create_section(
                 mtag_st.name, mtag_st.name + ".metadata"
             )
             mtag_st.metadata = mtag_st_md
-            mtag_st_md.create_property(
-                "t_stop", nix.Value(times[-1] + 1.0)
-            )
+            mtag_st_md.create_property("t_stop", nix.Value(times[-1]+1.0))
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -640,6 +649,7 @@ class NixIOWriteTest(NixIOTest):
 
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
+        self.compare_blocks(blocks, self.reader.blocks)
         self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
         self.compare_blocks(blocks, self.reader.blocks)
 
@@ -714,6 +724,49 @@ class NixIOWriteTest(NixIOTest):
                                      name="some sort of signal",
                                      description="the signal is described")
         )
+        self.write_and_compare([block, anotherblock])
+
+    def test_signals_compound_units(self):
+        block = Block()
+        seg = Segment()
+        block.segments.append(seg)
+
+        units = pq.CompoundUnit("1/30000 * V")
+        srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
+        asig = AnalogSignal(signal=self.rquant((10, 3), units),
+                            sampling_rate=srate)
+        seg.analogsignals.append(asig)
+        self.write_and_compare([block])
+
+        anotherblock = Block("ir signal block")
+        seg = Segment("ir signal seg")
+        anotherblock.segments.append(seg)
+        irsig = IrregularlySampledSignal(
+            signal=np.random.random((20, 3)),
+            times=self.rquant(20, pq.CompoundUnit("0.1 * ms"), True),
+            units=pq.CompoundUnit("10 * V / s")
+        )
+        seg.irregularlysampledsignals.append(irsig)
+        self.write_and_compare([anotherblock])
+
+        block.segments[0].analogsignals.append(
+            AnalogSignal(signal=[10.0, 1.0, 3.0], units=pq.S,
+                         sampling_period=pq.Quantity(3, "s"),
+                         dtype=np.double, name="signal42",
+                         description="this is an analogsignal",
+                         t_start=45 * pq.CompoundUnit("3.14 * s")),
+        )
+        self.write_and_compare([block, anotherblock])
+
+        times = self.rquant(10, pq.CompoundUnit("3 * year"), True)
+        block.segments[0].irregularlysampledsignals.append(
+            IrregularlySampledSignal(times=times,
+                                     signal=np.random.random((10, 3)),
+                                     units="mV", dtype=np.float,
+                                     name="some sort of signal",
+                                     description="the signal is described")
+        )
+
         self.write_and_compare([block, anotherblock])
 
     def test_epoch_write(self):
@@ -1150,7 +1203,7 @@ class NixIOPartialWriteTest(NixIOTest):
         self.io.write_all_blocks(self.neo_blocks)
         callcount = self.io._write_attr_annotations.call_count
         self.assertEqual(callcount, len(self.io._object_hashes))
-        self.compare_blocks(self.neo_blocks, self.io.nix_file.blocks)
+        # self.compare_blocks(self.neo_blocks, self.io.nix_file.blocks)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
