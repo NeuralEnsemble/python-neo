@@ -762,6 +762,9 @@ class NixIOWriteTest(NixIOTest):
         spiketrain.left_sweep = np.random.random(10) * pq.ms
         self.write_and_compare([block])
 
+        spiketrain.left_sweep = pq.Quantity(-10, "ms")
+        self.write_and_compare([block])
+
     def test_metadata_structure_write(self):
         neoblk = self.create_all_annotated()
         self.io.write_block(neoblk)

@@ -1086,20 +1086,23 @@ class NixIO(BaseIO):
         elif isinstance(v, Iterable):
             values = []
             unit = None
-            for item in v:
-                if isinstance(item, pq.Quantity):
-                    unit = str(item.dimensionality)
-                    item = nix.Value(item.magnitude.item())
-                elif isinstance(item, Iterable):
-                    self.logger.warn("Multidimensional arrays and nested "
-                                     "containers are not currently supported "
-                                     "when writing to NIX.")
-                    return None
-                elif type(item).__module__ == "numpy":
-                    item = nix.Value(item.item())
-                else:
-                    item = nix.Value(item)
-                values.append(item)
+            if hasattr(v, "ndim") and v.ndim == 0:
+                values = v.item()
+                if isinstance(v, pq.Quantity):
+                    unit = str(v.dimensionality)
+            else:
+                for item in v:
+                    if isinstance(item, pq.Quantity):
+                        unit = str(item.dimensionality)
+                        item = nix.Value(item.magnitude.item())
+                    elif isinstance(item, Iterable):
+                        self.logger.warn("Multidimensional arrays and nested "
+                                         "containers are not currently "
+                                         "supported when writing to NIX.")
+                        return None
+                    else:
+                        item = nix.Value(item)
+                    values.append(item)
             section[name] = values
             section.props[name].unit = unit
         elif type(v).__module__ == "numpy":
