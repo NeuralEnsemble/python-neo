@@ -16,7 +16,8 @@ class TestSpike2RawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'Cheetah_v5.5.1/original_data/',
-        'Cheetah_v5.7.4/original_data/']
+        'Cheetah_v5.7.4/original_data/',
+        ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
@@ -44,7 +45,8 @@ class TestSpike2RawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
         'Cheetah_v5.7.4/README.txt']
+    
+
 
 if __name__ == "__main__":
     unittest.main()
-
