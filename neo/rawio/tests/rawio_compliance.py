@@ -237,7 +237,8 @@ def read_spike_waveforms(reader):
                 if nb_spike==0: continue
                 
                 raw_waveforms = reader.spike_raw_waveforms(block_index=block_index, 
-                                                    unit_index=unit_index, t_start=None, t_stop=None)
+                                                    seg_index=seg_index, unit_index=unit_index,
+                                                    t_start=None, t_stop=None)
                 if raw_waveforms is None:
                     continue
                 assert raw_waveforms.shape[0] == nb_spike
@@ -265,9 +266,9 @@ def read_events(reader):
                                                                                     event_channel_index=ev_chan)
                 if nb_event==0: continue
 
-                ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=0, seg_index=0,
+                ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=block_index, seg_index=seg_index,
                                                 event_channel_index=ev_chan)
-                assert ev_timestamps.shape[0] == nb_event
+                assert ev_timestamps.shape[0] == nb_event, 'Wrong shape {}, {}'.format(ev_timestamps.shape[0], nb_event)
                 if ev_durations is not None:
                     assert ev_durations.shape[0] == nb_event
                 assert ev_labels.shape[0] == nb_event

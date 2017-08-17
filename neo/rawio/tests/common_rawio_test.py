@@ -138,7 +138,7 @@ class BaseTestRawIO(object):
             #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
                             #~ unit_index=0)
             #~ if wfs is not None:
-            #~ import matplotlib.pyplot as plt
+                #~ import matplotlib.pyplot as plt
                 #~ fig, ax = plt.subplots()
                 #~ ax.plot(wfs[:, 0, :50].T)
                 #~ plt.show()
