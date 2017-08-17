@@ -10,8 +10,8 @@ NSE contains spikes and waveforms
 NTT contains
 
 
-NCS can contains gaps that can be detected in inregularity in timestamps
-of datat block. Each gap lead to one new segment.
+NCS can contains gaps that can be detected in inregularity
+in timestamps of data blocks. Each gap lead to one new segment.
 NCVS files need to be read entirly to detect that gaps.... too bad....
 
 
@@ -33,6 +33,7 @@ from collections import OrderedDict
 
 
 BLOCK_SIZE = 512 #nb sample per signal block
+HEADER_SIZE = 2**14 #file have a txt header of 16kB
 
 class NeuralynxRawIO(BaseRawIO):
     extensions = ['nse', 'ncs', 'nev', 'ntt']
@@ -50,13 +51,13 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = []#NOT DONE
         event_channels = []#NOT DONE
         
+        self.nsc_filenames = OrderedDict() #chan_id: filename
+        
         self._sigs_sampling_rate = None
-        self._sigs_t_start = {}#key is seg_index
-        self._sigs_t_stop = {}#key is seg_index
-        self._raw_sigs_by_chans = {}#key is seg_index then chan_id
         
         
         # explore the directory looking for ncs, nev, nse and ntt
+        # And construct channels headers
         for filename in os.listdir(self.dirname):
             filename = os.path.join(self.dirname, filename)
             
@@ -78,40 +79,14 @@ class NeuralynxRawIO(BaseRawIO):
                     gain *= -1
                 offset = 0.
                 sig_channels.append((chan_name, chan_id, units, gain,offset))
+                
+                self.nsc_filenames[chan_id] = filename
+                
                 if self._sigs_sampling_rate is None:
                     self._sigs_sampling_rate = info['sampling_rate']
                 else:
                     assert self._sigs_sampling_rate == info['sampling_rate'], 'Sampling is not the same across NCS'
                 
-                data = np.memmap(filename, dtype=ncs_dtype, mode='r', offset=2**14)
-                #detect gaps
-                good_delta = int(BLOCK_SIZE*1e6/self._sigs_sampling_rate)
-                timestamps = data['timestamp']
-                deltas = np.diff(timestamps)
-                gap_indexes, = np.nonzero(deltas!=good_delta)
-                gap_bounds = [0] + (gap_indexes+1).tolist() + [data.size]
-                
-                #create segment with subdata block/t_start/t_stop
-                for seg_index in range(len(gap_bounds)-1):
-                    i0 = gap_bounds[seg_index]
-                    i1 = gap_bounds[seg_index+1]
-                    if seg_index not in self._raw_sigs_by_chans:
-                        self._raw_sigs_by_chans[seg_index] = {}
-                    subdata = data[i0:i1]
-                    self._raw_sigs_by_chans[seg_index][chan_id] = subdata
-
-                    t_start = subdata[0]['timestamp']/1e6
-                    if seg_index not in self._sigs_t_start:
-                        self._sigs_t_start[seg_index] = t_start
-                    else:
-                        assert self._sigs_t_start[seg_index] == t_start
-
-                    t_stop = subdata[-1]['timestamp']/1e6 + BLOCK_SIZE/self._sigs_sampling_rate
-                    if seg_index not in self._sigs_t_stop:
-                        self._sigs_t_stop[seg_index] = t_stop
-                    else:
-                        assert self._sigs_t_stop[seg_index] == t_stop
-            
             elif ext=='nse':
                 pass
 
@@ -126,20 +101,9 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
         
-        if len(sig_channels)>0:
-            nb_segment = len(self._raw_sigs_by_chans)
-            #test if all segment length are the same for all channels
-            for seg_index in range(nb_segment):
-                datalength = [ data.size for data in self._raw_sigs_by_chans[seg_index].values()]
-                assert np.unique(datalength).size<=1
-            
-            self._sigs_length = []
-            for seg_index in range(nb_segment):
-                length = list(self._raw_sigs_by_chans[seg_index].values())[0].size * BLOCK_SIZE
-                self._sigs_length.append(length)
-            
-        else:
-            nb_segment = 1
+        #read NSC files for gaps detection and nb_segment computation
+        self.read_nsc_files(self.nsc_filenames)
+        
         
         
         #TODO global t_start/t_stop that include event and spikes
@@ -149,7 +113,7 @@ class NeuralynxRawIO(BaseRawIO):
         #fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
-        self.header['nb_segment'] = [nb_segment]
+        self.header['nb_segment'] = [self._nb_segment]
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
@@ -192,7 +156,7 @@ class NeuralynxRawIO(BaseRawIO):
         
         sigs_chunk = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         for i, chan_id in enumerate(channel_ids):
-            data = self._raw_sigs_by_chans[seg_index][chan_id]
+            data = self._sigs_memmap[seg_index][chan_id]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
         
@@ -228,6 +192,71 @@ class NeuralynxRawIO(BaseRawIO):
     def _rescale_epoch_duration(self, raw_duration, dtype):
         raise(NotImplementedError)
 
+
+    def read_nsc_files(self, nsc_filenames, gap_indexes=None):
+        """
+        Given a list of NSC files contrsuct:
+            * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
+            * self._sigs_t_start = []
+            * self._sigs_t_stop = []
+            * self._sigs_length = []        
+        
+        The first file is read entirely to detect gaps in timestamp.
+        each gap lead to a new segment.
+        
+        Other files are not read entirely but we check than gaps
+        are at the same place.
+        
+        
+        gap_indexes can be given (when cached) to avoid full read.
+        
+        """
+        if len(nsc_filenames)==0:
+            self._nb_segment = 1
+            return
+        
+        good_delta = int(BLOCK_SIZE*1e6/self._sigs_sampling_rate)
+        chan_id0 = list(nsc_filenames.keys())[0]
+        filename0 = nsc_filenames[chan_id0]
+        data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+
+        #detect gaps on first file
+        if gap_indexes is None:
+            #this can be long!!!!
+            timestamps0 = data0['timestamp']
+            deltas0 = np.diff(timestamps0)
+            gap_indexes, = np.nonzero(deltas0!=good_delta)
+            
+        gap_bounds = [0] + (gap_indexes+1).tolist() + [data0.size]
+        self._nb_segment = len(gap_bounds)-1
+        
+        self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
+        self._sigs_t_start = []
+        self._sigs_t_stop = []
+        self._sigs_length = []
+        
+        #create segment with subdata block/t_start/t_stop/length
+        for chan_id, nsc_filename in self.nsc_filenames.items():
+            data = np.memmap(nsc_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+            assert data.size==data0.size, 'NSC files do not have the same data length'
+            
+            for seg_index in range(self._nb_segment):
+                i0 = gap_bounds[seg_index]
+                i1 = gap_bounds[seg_index+1]
+                
+                assert data[i0]['timestamp']==data0[i0]['timestamp'], 'NSC files do not have the same gaps'
+                assert data[i1-1]['timestamp']==data0[i1-1]['timestamp'], 'NSC files do not have the same gaps'
+                
+                subdata = data[i0:i1]
+                self._sigs_memmap[seg_index][chan_id] = subdata
+                
+                if chan_id==chan_id0:
+                    t_start = subdata[0]['timestamp']/1e6
+                    self._sigs_t_start.append(t_start)
+                    t_stop = subdata[-1]['timestamp']/1e6 + BLOCK_SIZE/self._sigs_sampling_rate
+                    self._sigs_t_stop.append(t_stop)
+                    length = subdata.size * BLOCK_SIZE
+                    self._sigs_length.append(length)
 
 
 
@@ -292,7 +321,7 @@ def read_txt_header(filename):
     This include datetime
     """
     with  open(filename, 'rb') as f:
-        txt_header = f.read(2**14)
+        txt_header = f.read(HEADER_SIZE)
     txt_header = txt_header.strip(b'\x00').decode('latin-1')
     
     # find keys
@@ -348,6 +377,8 @@ ncs_dtype = np.dtype([('timestamp', 'uint64'),
                 ('nb_valid', 'uint32'),
                 ('samples', 'int16', (BLOCK_SIZE,))
                 ])
+
+
 
 
     
