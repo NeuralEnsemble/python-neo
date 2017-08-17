@@ -456,37 +456,50 @@ from neo.io.neuralynxio import NeuralynxIO as OldNeuralynxIO
 
 
 import time
+
 def compare_old_and_new_neuralynxio():
     
     base = '/tmp/files_for_testing_neo/neuralynx/'
     dirname = base+'Cheetah_v5.5.1/original_data/'
+    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
+    
     
     t0 = time.perf_counter()
     newreader = NewNeuralynxIO(dirname)
-    bl = newreader.read_block(load_waveforms=True)
     t1 = time.perf_counter()
-    print('newreader', t1-t0, 's')
+    bl = newreader.read_block(load_waveforms=True)
+    t2 = time.perf_counter()
+    print('newreader header', t1-t0, 's')
+    print('newreader data', t2-t1, 's')
+    print('newreader toal', t2-t0, 's')
     for seg in bl.segments:
-        print(seg)
+        print('seg', seg.index)
         for anasig in seg.analogsignals:
-            print(anasig.name, anasig.shape)
+            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:
-            print(st.name, st.shape, st.waveforms.shape)
+            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
+        for ev in seg.events:
+            print(' Event', ev.name, ev.times.shape)
+
 
     print('*'*10)
     
     t0 = time.perf_counter()
-    newreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
-    bl = newreader.read_block(waveforms=True)
+    oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
     t1 = time.perf_counter()
-    print('newreader', t1-t0, 's')
+    bl = oldreader.read_block(waveforms=True)
+    t2 = time.perf_counter()
+    print('oldreader header', t1-t0, 's')
+    print('oldreader data', t2-t1, 's')
+    print('oldreader toal', t2-t0, 's')
     for seg in bl.segments:
-        print(seg)
+        print('seg', seg.index)
         for anasig in seg.analogsignals:
-            print(anasig.name, anasig.shape)
+            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:
-            print(st.name, st.shape, st.waveforms.shape)
-
+            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
+        for ev in seg.events:
+            print(' Event', ev.name, ev.times.shape)
 
 
 

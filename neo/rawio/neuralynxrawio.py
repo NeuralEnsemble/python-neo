@@ -343,8 +343,19 @@ class NeuralynxRawIO(BaseRawIO):
             #this can be long!!!!
             timestamps0 = data0['timestamp']
             deltas0 = np.diff(timestamps0)
-            gap_indexes, = np.nonzero(deltas0!=good_delta)
             
+            #It should be that:
+            #gap_indexes, = np.nonzero(deltas0!=good_delta)
+            
+            # but for a file I have found many deltas0==15999 deltas0==16000
+            # I guess this is a round problem
+            # So this is the same with a tolerance of 1 or 2 ticks
+            mask = deltas0!=good_delta
+            for tolerance in (1,2):
+                mask &= (deltas0!=good_delta-tolerance)
+                mask &= (deltas0!=good_delta+tolerance)
+            gap_indexes, = np.nonzero(mask)
+        
         gap_bounds = [0] + (gap_indexes+1).tolist() + [data0.size]
         self._nb_segment = len(gap_bounds)-1
         

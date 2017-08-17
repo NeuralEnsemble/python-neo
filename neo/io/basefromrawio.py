@@ -154,6 +154,8 @@ class BaseFromRaw(BaseIO):
                     # when channel are grouped by same unit
                     # annotations are empty...
                     annotations = {}
+                    annotations['name'] = 'Channel bundle ({}) '.format(','.join(signal_channels[ind]['name']))
+                    
                 
                 
                 if lazy:
