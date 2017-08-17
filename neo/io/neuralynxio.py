@@ -1,13 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# UNCOMMENT when NeuralynxRawIO is done
-#~ from neo.io.basefromrawio import BaseFromRaw
-#~ from neo.rawio.neuralynxrawio import NeuralynxRawIO
-#~ class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
-    #~ __prefered_signal_group_mode = 'split-all'
-    #~ def __init__(self, filename):
-        #~ NeuralynxRawIO.__init__(self, filename=filename)
-        #~ BaseFromRaw.__init__(self, filename)
+
 
 
 """
@@ -19,11 +12,22 @@ Depends on: numpy
 Supported: Read
 
 Author: Julia Sprenger, Carlos Canova
-Adapted from the exampleIO of python-neo
+
+
 """
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
+
+from neo.io.basefromrawio import BaseFromRaw
+from neo.rawio.neuralynxrawio import NeuralynxRawIO
+class NewNeuralynxIO(NeuralynxRawIO, BaseFromRaw):
+    _prefered_signal_group_mode = 'group-by-same-units'
+    mode = 'dir'
+    def __init__(self, dirname):
+        NeuralynxRawIO.__init__(self, dirname=dirname)
+        BaseFromRaw.__init__(self, dirname)
+
 
 import sys
 import os
@@ -1645,7 +1649,7 @@ class NeuralynxIO(BaseIO):
         if filesize > 16384:
             data = np.memmap(self.sessiondir + sep + filename,
                              dtype='<u2',
-                             shape=((filesize - 16384) / 2 / 56, 56),
+                             shape=((filesize - 16384) // 2 // 56, 56),
                              mode='r', offset=16384)
 
             # reconstructing original data
@@ -1690,7 +1694,7 @@ class NeuralynxIO(BaseIO):
         if filesize > 16384:
             data = np.memmap(self.sessiondir + sep + filename,
                              dtype='<u4',
-                             shape=((filesize - 16384) / 4 / 261, 261),
+                             shape=((filesize - 16384) // 4 // 261, 261),
                              mode='r', offset=16384)
 
             ts = data[:, 0:2]
