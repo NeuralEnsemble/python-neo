@@ -4,7 +4,7 @@ from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.spike2rawio import Spike2RawIO
 
 class Spike2IO(Spike2RawIO, BaseFromRaw):
-    __prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'split-all'
     def __init__(self, filename):
         Spike2RawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)

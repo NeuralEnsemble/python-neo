@@ -8,7 +8,7 @@ class BlackrockIO(BlackrockRawIO, BaseFromRaw):
     description = "This IO reads .nev/.nsX file of the Blackrock " + \
         "(Cerebus) recordings system."
     
-    __prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'split-all'
     
     def __init__(self, filename, nsx_to_load=None, **kargs):
         BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)

@@ -8,7 +8,7 @@ import quantities as pq
 
 
 class AxonIO(AxonRawIO, BaseFromRaw):
-    __prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'split-all'
     def __init__(self, filename):
         AxonRawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)

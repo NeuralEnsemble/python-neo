@@ -45,7 +45,7 @@ class BaseFromRaw(BaseIO):
 
     mode = 'file'
     
-    __prefered_signal_group_mode = 'split-all' #'group-by-same-units'
+    _prefered_signal_group_mode = 'split-all' #'group-by-same-units'
     
 
     def __init__(self, *args, **kargs):
@@ -56,7 +56,7 @@ class BaseFromRaw(BaseIO):
                     load_waveforms=False):
         
         if signal_group_mode is None:
-            signal_group_mode = self.__prefered_signal_group_mode
+            signal_group_mode = self._prefered_signal_group_mode
 
         #annotations
         bl_annotations = dict(self.raw_annotations['blocks'][block_index])
@@ -109,7 +109,7 @@ class BaseFromRaw(BaseIO):
                         signal_group_mode=None, load_waveforms=False):
 
         if signal_group_mode is None:
-            signal_group_mode = self.__prefered_signal_group_mode
+            signal_group_mode = self._prefered_signal_group_mode
 
         #annotations
         seg_annotations = dict(self.raw_annotations['blocks'][block_index]['segments'][seg_index])
