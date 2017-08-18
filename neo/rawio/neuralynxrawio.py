@@ -48,8 +48,8 @@ class NeuralynxRawIO(BaseRawIO):
     def _parse_header(self):
         
         sig_channels = []
-        unit_channels = []#NOT DONE
-        event_channels = []#NOT DONE
+        unit_channels = []
+        event_channels = []
         
         self.ncs_filenames = OrderedDict() #chan_id: filename
         self.nse_ntt_filenames = OrderedDict() #chan_id: filename

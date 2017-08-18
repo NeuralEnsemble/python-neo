@@ -12,7 +12,7 @@ from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 
-class TestSpike2RawIO(BaseTestRawIO, unittest.TestCase, ):
+class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'Cheetah_v5.5.1/original_data/',
