@@ -268,7 +268,7 @@ class PlexonRawIO(BaseRawIO):
             i_stop = self._signal_length
         
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
-        for channel_index in channel_indexes:
+        for c, channel_index in enumerate(channel_indexes):
             chan_header = self.header['signal_channels'][channel_index]
             chan_id = chan_header['id']
             
@@ -292,7 +292,7 @@ class PlexonRawIO(BaseRawIO):
                     #left border
                     border = i_start - data_blocks[bl]['cumsum']
                     data = data[border:]
-                raw_signals[ind:data.size+ind, channel_index] = data
+                raw_signals[ind:data.size+ind, c] = data
                 ind += data.size
             
         return raw_signals

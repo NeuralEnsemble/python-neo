@@ -293,7 +293,7 @@ class Spike2RawIO(BaseRawIO):
         
         dt = self._sig_dtype
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
-        for channel_index in channel_indexes:
+        for c, channel_index in enumerate(channel_indexes):
             #NOTE: this actual way is slow because we run throught
             # the file for each channel. The loop should be reversed.
             # But there is no garanty that channels shared the same data block
@@ -319,7 +319,7 @@ class Spike2RawIO(BaseRawIO):
                     #left border
                     border = i_start - data_blocks[bl]['cumsum']
                     data = data[border:]
-                raw_signals[ind:data.size+ind, channel_index] = data
+                raw_signals[ind:data.size+ind, c] = data
                 ind += data.size
             
         return raw_signals
