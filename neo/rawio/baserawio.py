@@ -413,8 +413,10 @@ class BaseRawIO(object):
         
         float_waveforms = raw_waveforms.astype(dtype)
         
-        float_waveforms *= wf_gain
-        float_waveforms += wf_offset
+        if wf_gain !=1.:
+            float_waveforms *= wf_gain
+        if wf_offset!=0.:
+            float_waveforms += wf_offset
         
         return float_waveforms
 

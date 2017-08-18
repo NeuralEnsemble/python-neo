@@ -135,13 +135,15 @@ class BaseTestRawIO(object):
             #~ ax.plot(sigs[:, 0])
             #~ plt.show()
             
-            #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
-                            #~ unit_index=0)
-            #~ if wfs is not None:
-                #~ import matplotlib.pyplot as plt
-                #~ fig, ax = plt.subplots()
-                #~ ax.plot(wfs[:, 0, :50].T)
-                #~ plt.show()
+            #~ nb_unit = reader.unit_channels_count()
+            #~ for unit_index in range(nb_unit):
+                #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
+                                #~ unit_index=unit_index)
+                #~ if wfs is not None:
+                    #~ import matplotlib.pyplot as plt
+                    #~ fig, ax = plt.subplots()
+                    #~ ax.plot(wfs[:, 0, :50].T)
+                    #~ plt.show()
             
             #lanch a series of test compliance
             compliance.header_is_total(reader)
