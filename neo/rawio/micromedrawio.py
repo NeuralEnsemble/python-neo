@@ -71,7 +71,8 @@ class MicromedRawIO(BaseRawIO):
                 assert zname==zname2.decode('ascii').strip(' ')
             
             #raw signals memmap
-            self._raw_signals = np.memmap(self.filename, dtype='u' + str(Bytes), mode='r',
+            sig_dtype = 'u' + str(Bytes)
+            self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode='r',
                             offset=Data_Start_Offset ).reshape(-1, Num_Chan)
 
             # Reading Code Info
@@ -83,7 +84,6 @@ class MicromedRawIO(BaseRawIO):
                      #~ 101: pq.dimensionless, 102: pq.dimensionless}
             units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
                      101: 'dimensionless', 102: 'dimensionless'}
-            all_sampling_rate = []
             sig_channels = []
             for c in range(Num_Chan):
                 zname2, pos, length = zones['LABCOD']
@@ -104,18 +104,21 @@ class MicromedRawIO(BaseRawIO):
                 f.seek(8, 1)
                 sampling_rate, = f.read_f('H')
                 sampling_rate *= Rate_Min
-                all_sampling_rate.append(sampling_rate)
-
                 chan_id = c
-                sig_channels.append((chan_name, chan_id, units, gain,offset))
+                group_id = 0
+                sig_channels.append((chan_name, chan_id, sampling_rate, sig_dtype,
+                                                        units, gain,offset, group_id))
                 
-            #~ print(all_sampling_rate)
-            assert np.unique(all_sampling_rate).size==1
-            self._sampling_rate = float(np.unique(all_sampling_rate)[0])
-            #~ print('self._sample_rate', self._sample_rate)
             
             sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+            assert np.unique(sig_channels['sampling_rate']).size==1
+            self._sampling_rate = float(np.unique(sig_channels['sampling_rate'])[0])
+            #~ print('self._sample_rate', self._sample_rate)
+
+
             #~ print(sig_channels)
+
+
             #~ exit()
 
             #Event channels
@@ -171,12 +174,6 @@ class MicromedRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
     
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -184,13 +181,15 @@ class MicromedRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0]/self._sampling_rate
         return t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return self._raw_signals.shape
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._raw_signals.shape[0]
     
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(channel_indexes)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
     

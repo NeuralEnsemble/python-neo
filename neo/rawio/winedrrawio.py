@@ -71,7 +71,9 @@ class WinEdrRawIO(BaseRawIO):
             units = header['YU%d'%c]
             gain = AD/( YCF*YAG*(ADCMAX+1))
             offset = -YZ*gain
-            sig_channels.append((name, chan_id, units, gain,offset))
+            group_id = 0
+            sig_channels.append((name, chan_id, self._sampling_rate, 'int16', 
+                                            units, gain,offset, group_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
@@ -94,12 +96,6 @@ class WinEdrRawIO(BaseRawIO):
         # insert some annotation at some place
         self._generate_minimal_annotations()
         
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -107,15 +103,17 @@ class WinEdrRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0]/self._sampling_rate
         return t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return self._raw_signals.shape
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._raw_signals.shape[0]
     
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
-
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         #TODO check if id or index for signals (in the old IO it was ids
         #~ raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
+        if channel_indexes is None:
+            channel_indexes = np.arange(self.header['signal_channels'].size)
         
         l = self.header['signal_channels']['id'].tolist()
         channel_ids = [l.index(c) for c in channel_indexes]

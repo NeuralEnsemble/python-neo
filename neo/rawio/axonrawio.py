@@ -66,14 +66,14 @@ class AxonRawIO(BaseRawIO):
 
         # file format
         if info['nDataFormat'] == 0:
-            dt = np.dtype('i2')
+            sig_dtype = np.dtype('i2')
         elif info['nDataFormat'] == 1:
-            dt = np.dtype('f4')
+            sig_dtype = np.dtype('f4')
 
         if version < 2.:
             nbchannel = info['nADCNumChannels']
             head_offset = info['lDataSectionPtr'] * BLOCKSIZE + info[
-                'nNumPointsIgnored'] * dt.itemsize
+                'nNumPointsIgnored'] * sig_dtype.itemsize
             totalsize = info['lActualAcqLength']
         elif version >= 2.:
             nbchannel = info['sections']['ADCSection']['llNumEntries']
@@ -81,7 +81,7 @@ class AxonRawIO(BaseRawIO):
                 'uBlockIndex'] * BLOCKSIZE
             totalsize = info['sections']['DataSection']['llNumEntries']
 
-        self._raw_data = np.memmap(self.filename, dtype=dt, mode='r',
+        self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode='r',
                         shape=(totalsize,), offset=head_offset)
         
         # 3 possible modes
@@ -193,7 +193,8 @@ class AxonRawIO(BaseRawIO):
                     gain /= info['listADCInfo'][chan_id]['fTelegraphAdditGain']
                 offset = info['listADCInfo'][chan_id]['fInstrumentOffset']
                 offset -= info['listADCInfo'][chan_id]['fSignalOffset']
-            sig_channels.append((name, chan_id, units, offset, gain))
+            group_id = 0
+            sig_channels.append((name, chan_id, self._sampling_rate, sig_dtype, units, offset, gain, group_id))
             
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
@@ -251,12 +252,6 @@ class AxonRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
     
-    def _block_count(self):
-        return 1
-        
-    def _segment_count(self, block_index):
-        return self.header['nb_segment'][block_index]
-    
     def _segment_t_start(self, block_index, seg_index):
         return self._t_starts[seg_index]
 
@@ -264,14 +259,16 @@ class AxonRawIO(BaseRawIO):
         t_stop = self._t_starts[seg_index] + self._raw_signals[seg_index].shape[0]/self._sampling_rate
         return t_stop
     
-    def _analogsignal_shape(self, block_index, seg_index):
+    def get_signal_size(self, block_index, seg_index, channel_indexes):
         shape = self._raw_signals[seg_index].shape
-        return shape
+        return shape[0]
     
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
-
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return self._t_starts[seg_index]
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
         return raw_signals
     

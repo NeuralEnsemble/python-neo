@@ -119,19 +119,27 @@ class ElanRawIO(BaseRawIO):
             info_filter = []
             for c in range(nb_channel + 2):
                 channel_infos[c]['info_filter'] = f.readline()[:-1]
+
+        n = int(round(np.log(channel_infos[0]['max_logic'] - channel_infos[0]['min_logic']) / np.log(2)) / 8)
+        sig_dtype = np.dtype('>i'+str(n))
         
         sig_channels = []
         for c, chan_info in enumerate(channel_infos[:-2]):
+            chan_name = chan_info['label']
+            chan_id = c
+            
             gain = (chan_info['max_physic'] - chan_info['min_physic'])/(chan_info['max_logic'] - chan_info['min_logic'])
             offset = - chan_info['min_logic']*gain +  chan_info['min_physic']
-            sig_channels.append((chan_info['label'], c, chan_info['units'], gain,offset))
+            gourp_id = 0
+            sig_channels.append((chan_name, chan_id, self._sampling_rate, sig_dtype,
+                                            chan_info['units'], gain, offset, gourp_id))
+        
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         #raw data
-        n = int(round(np.log(channel_infos[0]['max_logic'] - channel_infos[0]['min_logic']) / np.log(2)) / 8)
-        dt = np.dtype('>i'+str(n))
-        self._raw_signals = np.memmap(self.filename, dtype=dt, mode='r',
+        self._raw_signals = np.memmap(self.filename, dtype=sig_dtype, mode='r',
                                         offset=0).reshape(-1, nb_channel+2)
+        self._raw_signals = self._raw_signals[:,:-2]
         
         # triggers
         with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
@@ -179,12 +187,6 @@ class ElanRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
     
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -192,13 +194,15 @@ class ElanRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0]/self._sampling_rate
         return t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return self._raw_signals.shape
-    
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
+    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
+        return self._raw_signals.shape[0]
 
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
+        return 0.
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
     

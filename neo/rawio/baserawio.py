@@ -54,10 +54,16 @@ error_header = 'Header is not read yet, do parse_header() first'
 _signal_channel_dtype = [
     ('name','U64'),
     ('id','int64'),
+    ('sampling_rate','float64'),
+    ('dtype','U16'),
     ('units','U64'),
     ('gain','float64'),
     ('offset','float64'),
+    ('group_id','int64'),
 ]
+
+_common_sig_characteristics = ['sampling_rate',  'dtype', 'group_id']
+
 
 _unit_channel_dtype = [
     ('name','U64'),
@@ -111,10 +117,17 @@ class BaseRawIO(object):
         This must parse the file header to get all stuff for fast later one.
         
         This must contain
+        self.header['nb_block']
+        self.header['nb_segment']
         self.header['signal_channels']
+        self.header['units_channels']
+        self.header['event_channels']
+        
+        
         
         """
         self._parse_header()
+        self._group_signal_channel_characteristics()
     
     def source_name(self):
         """Return fancy name of file source"""
@@ -270,12 +283,12 @@ class BaseRawIO(object):
 
     def block_count(self):
         """return number of blocks"""
-        return self._block_count()
+        return self.header['nb_block']
     
     def segment_count(self, block_index):
         """return number of segment for a given block"""
-        return self._segment_count(block_index)
-        
+        return self.header['nb_segment'][block_index]
+    
     def signal_channels_count(self):
         """Return the number of signal channel.
         Same allong all block and Segment.
@@ -295,13 +308,93 @@ class BaseRawIO(object):
         return len(self.header['event_channels'])
 
     def segment_t_start(self, block_index, seg_index):
+        """Global t_start of a Segment in s. shared by all objects except
+        for AnalogSignal.
+        """
         return self._segment_t_start(block_index, seg_index)
 
     def segment_t_stop(self, block_index, seg_index):
+        """Global t_start of a Segment in s. shared by all objects except
+        for AnalogSignal.
+        """
         return self._segment_t_stop(block_index, seg_index)
     
     ###
     # signal and channel zone
+
+    def _group_signal_channel_characteristics(self):
+        """
+        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        
+        Group signals channels by same characteristics:
+          * sampling_rate (global along block and segment)
+          * group_id (explicite channel group)
+        
+        If all channels have the same characteristics them
+        `get_analogsignal_chunk` can be call wihtout restriction.
+        If not then **channel_indexes** must be specified
+        in `get_analogsignal_chunk` and only channels with same 
+        caracteristics can be read at the same time.
+        
+        This is usefull for some IO  than 
+        have internally several signals channels familly.
+        
+        For many RawIO all channels have the same 
+        sampling_rate/size/t_start. In that cases, internal flag
+        **self._several_channel_groups will be set to False, so
+        `get_analogsignal_chunk)` won't suffer in performance.
+        
+        Note that at neo.io level this have an impact on
+        `signal_group_mode`. 'split-all'  will work in any situation
+        But grouping channel in the same AnalogSignal
+        with 'group-by-XXX' will depend on common characteristics
+        of course.
+        
+        """
+        
+        characteristics = self.header['signal_channels'][_common_sig_characteristics]
+        unique_characteristics = np.unique(characteristics)
+        if len(unique_characteristics)==1:
+            self._several_channel_groups = False
+        else:
+            self._several_channel_groups = True
+    
+    
+    def _check_common_characteristics(self, channel_indexes):
+        """
+        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        
+        Check is a set a signal channel_indexes share common 
+        characteristics (**sampling_rate/t_start/size**)
+        Usefull only when RawIO propose differents channels groups
+        with differents sampling_rate for instance.
+        """
+        #~ print('_check_common_characteristics', channel_indexes)
+        
+        assert channel_indexes is not None,\
+                    'You must specify channel_indexes'
+        characteristics = self.header['signal_channels'][_common_sig_characteristics]
+        #~ print(characteristics[channel_indexes])
+        assert np.unique(characteristics[channel_indexes]).size==1, \
+                    'This channel set have differents characteristics'
+    
+    def get_group_channel_indexes(self):
+        """
+        Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
+        
+        Return a list of channel_indexes than have same characteristics
+        """
+        if self._several_channel_groups:
+            characteristics = self.header['signal_channels'][_common_sig_characteristics]
+            unique_characteristics = np.unique(characteristics)
+            channel_indexes_list = []
+            for e in unique_characteristics:
+                channel_indexes,  = np.nonzero(characteristics == e)
+                channel_indexes_list.append(channel_indexes)
+            return channel_indexes_list
+        else:
+            return [None]
+    
     def channel_name_to_index(self, channel_names):
         """
         Transform channel_names to channel_indexes.
@@ -334,14 +427,26 @@ class BaseRawIO(object):
             channel_indexes = self.channel_id_to_index(channel_ids)
         
         return channel_indexes
-
-
-    def analogsignal_shape(self, block_index, seg_index):
-        """Return signals shape for a given block_index, seg_index"""
-        return self._analogsignal_shape(block_index, seg_index)
     
-    def analogsignal_sampling_rate(self):
-        return self._analogsignal_sampling_rate()
+    def get_signal_size(self, block_index, seg_index, channel_indexes=None):
+        if self._several_channel_groups:
+            self._check_common_characteristics(channel_indexes)
+        return self._get_signal_size(block_index, seg_index, channel_indexes)
+
+    def get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
+        if self._several_channel_groups:
+            self._check_common_characteristics(channel_indexes)
+        return self._get_signal_t_start(block_index, seg_index, channel_indexes)
+    
+    def get_signal_sampling_rate(self, channel_indexes=None):
+        if self._several_channel_groups:
+            self._check_common_characteristics(channel_indexes)
+            chan_index0 = channel_indexes[0]
+        else:
+            chan_index0 = 0
+        sr = self.header['signal_channels'][chan_index0]['sampling_rate']
+        return float(sr)
+        
     
     def get_analogsignal_chunk(self, block_index=0, seg_index=0, i_start=None, i_stop=None, 
                         channel_indexes=None, channel_names=None, channel_ids=None):
@@ -353,7 +458,9 @@ class BaseRawIO(object):
         
         """
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
-        
+        if self._several_channel_groups:
+            self._check_common_characteristics(channel_indexes)
+            
         raw_chunk = self._get_analogsignal_chunk(block_index, seg_index,  i_start, i_stop, channel_indexes)
         
         return raw_chunk
@@ -468,11 +575,11 @@ class BaseRawIO(object):
     def _source_name(self):
         raise(NotImplementedError)
     
-    def _block_count(self):
-        raise(NotImplementedError)
+    #~ def _block_count(self):
+        #~ raise(NotImplementedError)
     
-    def _segment_count(self, block_index):
-        raise(NotImplementedError)
+    #~ def _segment_count(self, block_index):
+        #~ raise(NotImplementedError)
     
     def _segment_t_start(self, block_index, seg_index):
         raise(NotImplementedError)
@@ -482,12 +589,12 @@ class BaseRawIO(object):
     
     ###
     # signal and channel zone
-    def _analogsignal_shape(self, block_index, seg_index):
-        raise(NotImplementedError)
-        
-    def _analogsignal_sampling_rate(self):
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
         raise(NotImplementedError)
 
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        raise(NotImplementedError)
+        
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         raise(NotImplementedError)
     

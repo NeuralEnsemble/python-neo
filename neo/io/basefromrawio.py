@@ -72,11 +72,14 @@ class BaseFromRaw(BaseIO):
         #  * some for Units
         
         #ChannelIndex ofr AnalogSignals
-        channels = self.header['signal_channels']
-        for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
-            channel_index = ChannelIndex(index=ind, channel_names=channels[ind]['name'].astype('S'),
-                            channel_ids=channels[ind]['id'], name='Channel group {}'.format(i))
-            bl.channel_indexes.append(channel_index)
+        all_channels = self.header['signal_channels']
+        channel_indexes_list = self.get_group_channel_indexes()
+        for channel_index in channel_indexes_list:
+            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_index, 
+                                                        signal_group_mode=signal_group_mode).items():
+                neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[ind_abs]['name'].astype('S'),
+                                channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i))
+                bl.channel_indexes.append(neo_channel_index)
         
         #ChannelIndex and Unit
         #TODO find something better than this
@@ -124,49 +127,57 @@ class BaseFromRaw(BaseIO):
         
         #AnalogSignal
         signal_channels = self.header['signal_channels']
-        channel_indexes=np.arange(signal_channels.size)
+        #~ channel_indexes=np.arange(signal_channels.size)
 
-        t_start = self.segment_t_start(block_index, seg_index) * pq.s
-        t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
         
-        if channel_indexes.size>0:
-            if not lazy:
-                raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                            i_start=None, i_stop=None, channel_indexes=channel_indexes)
-                float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32', channel_indexes=channel_indexes)
-            else:
-                sig_shape = self.analogsignal_shape(block_index=block_index, seg_index=seg_index,)
+        if signal_channels.size>0:
             
-            sr = self.analogsignal_sampling_rate() * pq.Hz
-            for i, ind in self._make_signal_channel_groups(signal_group_mode=signal_group_mode).items():
-                units = np.unique(signal_channels[ind]['units'])
-                assert len(units)==1
-                units = ensure_signal_units(units[0])
-                
-                if signal_group_mode=='split-all':
-                    #in that case annotations by channel is OK
-                    chan_index = ind[0]
-                    d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
-                    annotations = dict(d)
-                    if 'name' not in annotations:
-                        annotations['name'] = signal_channels['name'][chan_index]
+            channel_indexes_list = self.get_group_channel_indexes()
+            for channel_indexes in channel_indexes_list:
+                if not lazy:
+                    raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+                                i_start=None, i_stop=None, channel_indexes=channel_indexes)
+                    float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
+                                                                                            channel_indexes=channel_indexes)
                 else:
-                    # when channel are grouped by same unit
-                    # annotations are empty...
-                    annotations = {}
-                    annotations['name'] = 'Channel bundle ({}) '.format(','.join(signal_channels[ind]['name']))
+                    sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
+                                                                                            channel_indexes=channel_indexes)
+                
+                sr = self.get_signal_sampling_rate(channel_indexes) * pq.Hz
+                sig_t_start = self.get_signal_t_start(block_index, seg_index, channel_indexes) * pq.s
+                
+                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_indexes,
+                                                signal_group_mode=signal_group_mode).items():
+                    units = np.unique(signal_channels[ind_abs]['units'])
+                    assert len(units)==1
+                    units = ensure_signal_units(units[0])
                     
-                
-                
-                if lazy:
-                    anasig = AnalogSignal(np.array([]), units=units,  copy=False,
-                            sampling_rate=sr, t_start=t_start, **annotations)
-                    anasig.lazy_shape = (sig_shape[0], len(ind))
-                else:
-                    anasig = AnalogSignal(float_signal[:, ind], units=units,  copy=False,
-                            sampling_rate=sr, t_start=t_start, **annotations)
-                
-                seg.analogsignals.append(anasig)
+                    if signal_group_mode=='split-all':
+                        #in that case annotations by channel is OK
+                        chan_index = ind_abs[0]
+                        d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
+                        annotations = dict(d)
+                        if 'name' not in annotations:
+                            annotations['name'] = signal_channels['name'][chan_index]
+                    else:
+                        # when channel are grouped by same unit
+                        # annotations are empty...
+                        annotations = {}
+                        annotations['name'] = 'Channel bundle ({}) '.format(','.join(signal_channels[ind_abs]['name']))
+                    
+                    if lazy:
+                        anasig = AnalogSignal(np.array([]), units=units,  copy=False,
+                                sampling_rate=sr, t_start=sig_t_start, **annotations)
+                        anasig.lazy_shape = (sig_size, len(ind_within))
+                    else:
+                        anasig = AnalogSignal(float_signal[:, ind_within], units=units,  copy=False,
+                                sampling_rate=sr, t_start=sig_t_start, **annotations)
+                    
+                    seg.analogsignals.append(anasig)
+
+        seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
+        seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+                    
         
         #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
@@ -197,15 +208,15 @@ class BaseFromRaw(BaseIO):
                                         unit_index=unit_index, t_start=None, t_stop=None)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
-                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=t_start, t_stop=t_stop,
+                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
                                 waveforms=waveforms, left_sweep=wf_left_sweep, 
                                 sampling_rate=wf_sampling_rate, **annotations)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
                 
-                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=t_start,
-                                t_stop=t_stop, **annotations)
+                sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=seg_t_start,
+                                t_stop=seg_t_stop, **annotations)
                 sptr.lazy_shape = (nb,)
             
             
@@ -253,22 +264,36 @@ class BaseFromRaw(BaseIO):
         return seg
 
 
-    def _make_signal_channel_groups(self, signal_group_mode='group-by-same-units'):
+    def _make_signal_channel_subgroups(self, channel_indexes, signal_group_mode='group-by-same-units'):
         """
-        Aggregate signal channels with same units or split them all.
+        For some RawIO channel are already splitted in groups.
+        But in any cases, channel need to be splitted again in sub groups
+        because they do not have the same units.
+        
+        They can also be splitted one by one to match previous behavior for
+        some IOs in older version of neo (<=0.5).
+        
+        This method aggregate signal channels with same units or split them all.
         """
-        channels = self.header['signal_channels']
+        all_channels = self.header['signal_channels']
+        if channel_indexes is None:
+            channel_indexes = np.arange(all_channels.size, dtype=int)
+        channels = all_channels[channel_indexes]
+        
         groups = collections.OrderedDict()
         if signal_group_mode=='group-by-same-units':
             all_units = np.unique(channels['units'])
 
             for i, unit in enumerate(all_units):
-                ind, = np.nonzero(channels['units']==unit)
-                groups[i] = ind
+                ind_within, = np.nonzero(channels['units']==unit)
+                ind_abs = channel_indexes[ind_within]
+                groups[i] = (ind_within, ind_abs)
 
         elif signal_group_mode=='split-all':
-            for i in range(channels.size):
-                groups[i] = np.array([i])
+            for i, chan_index in enumerate(channel_indexes):
+                ind_within = [i]
+                ind_abs = channel_indexes[ind_within]
+                groups[i] = (ind_within, ind_abs)
         else:
             raise(NotImplementedError)
         return groups

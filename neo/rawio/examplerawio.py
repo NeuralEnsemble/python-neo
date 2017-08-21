@@ -60,7 +60,15 @@ class ExampleRawIO(BaseRawIO):
         sig_channels = []
         for c in range(16):
             #our id is c+1 just for fun
-            sig_channels.append(('ch{}'.format(c), c+1, 'uV', 1000./2**16, 0.))
+            ch_name = 'ch{}'.format(c)
+            ch_id = c+1
+            sr = 10000. #Hz
+            dtype = 'int16'
+            units = 'uV'
+            gain = 1000./2**16
+            offset = 0.
+            group_id = 0 #all channel have the same characteritics
+            sig_channels.append((ch_name, ch_id, sr, dtype,  units, gain,offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
         unit_channels = []
@@ -116,13 +124,6 @@ class ExampleRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
     
-    def _block_count(self):
-        return self.header['nb_block']
-    
-    def _segment_count(self, block_index):
-        assert 0<=block_index<2, "I don't like your jokes"
-        return self.header['nb_segment'][block_index]
-    
     def _segment_t_start(self, block_index, seg_index):
         # always in second
         all_starts = [[0., 15.], [0., 20., 60.]]
@@ -133,15 +134,16 @@ class ExampleRawIO(BaseRawIO):
         all_stops = [[10., 25.], [10., 30., 70.]]
         return all_stops[block_index][seg_index]
 
-    def _analogsignal_shape(self, block_index, seg_index):
+    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
         # it is not always the case
-        return (100000, 16)
+        return 100000
     
-    def _analogsignal_sampling_rate(self):
-        # always float in Hz
-        return 10000.
-
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        #the signal t_start match our segment t_start
+        # this is not always the case
+        return self._segment_t_start(block_index, seg_index)
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         #we are lucky:  our signals is always zeros!!
         #it is not always the case
@@ -154,7 +156,11 @@ class ExampleRawIO(BaseRawIO):
         assert i_start>=0, "I don't like your jokes"
         assert i_stop<=100000, "I don't like your jokes"
         
-        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
+        if channel_indexes is None:
+            nb_chan = 16
+        else:
+            nb_chan = len(channel_indexes)
+        raw_signals = np.zeros((i_stop-i_start, nb_chan), dtype='int16')
         return raw_signals
     
     def _spike_count(self,  block_index, seg_index, unit_index):

@@ -19,6 +19,7 @@ from neo.test.iotest.common_io_test import BaseTestIO
 
 class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuroExplorerIO
+    _prefered_signal_group_mode = 'split-all'
     files_to_test = ['File_neuroexplorer_1.nex',
                      'File_neuroexplorer_2.nex',
                      ]

@@ -51,7 +51,6 @@ class NeuroExplorerRawIO(BaseRawIO):
             for i in range(self.global_header['nvar']):
                 self._entity_headers.append(read_as_dict(fid, EntityHeader, offset=offset + i * 208))
         
-        self._sig_sampling_rates = []
         self._sig_lengths = []
         sig_channels = []
         unit_channels = []
@@ -85,30 +84,23 @@ class NeuroExplorerRawIO(BaseRawIO):
             if entity_header['type'] == 5:#Signals
                 #TODO find a solution for differents sampling rate
                 units = 'mV'
+                sampling_rate = entity_header['WFrequency']
+                dtype = 'int16'
                 gain = entity_header['ADtoMV']
                 offset = entity_header['MVOffset']
-                sig_channels.append((name, _id, units, gain,offset))
-                self._sig_sampling_rates.append(entity_header['WFrequency'])
+                group_id = 0
+                sig_channels.append((name, _id, sampling_rate,dtype,  units,
+                                                                    gain,offset, group_id))
                 self._sig_lengths.append(entity_header['NPointsWave'])
                 
             elif entity_header['type'] == 6:#Markers
                 event_channels.append((name, _id, 'event'))
         
-        #TODO FIX THIS
-        #take only the first signals until fixing the multi sampling rate problem
-        sig_channels = sig_channels[:1]
-        self._sig_sampling_rates = self._sig_sampling_rates[:1]
-        self._sig_lengths = self._sig_lengths[:1]
-        
-        if len(self._sig_sampling_rates)>0:
-            assert np.unique(self._sig_sampling_rates).size==1, 'Signal do not have the same sampling rate'
-            self._sig_sampling_rate = self._sig_sampling_rates[0]
-            assert np.unique(self._sig_lengths).size==1, 'Signal do not have the same length'
-            self._sig_length   = self._sig_lengths[0]
-        
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+        
+        sig_channels['group_id'] = np.arange(sig_channels.size)
         
         self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
         
@@ -142,16 +134,22 @@ class NeuroExplorerRawIO(BaseRawIO):
         t_stop=self.global_header['tend'] / self.global_header['freq']
         return t_stop
 
+
+
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        assert channel_indexes.size==1 , 'only one channel by one channel'
+        return self._sig_lengths[channel_indexes[0]]
+    
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
+        #TODO maybe the very first timastamps of datasection
+
+
     def _analogsignal_shape(self, block_index, seg_index):
         #TODO
         #take only the first signals until fixing the multi sampling rate problem
         return (self._sig_length, self.header['signal_channels'].size)
     
-    def _analogsignal_sampling_rate(self):
-        #TODO
-        #take only the first signals until fixing the multi sampling rate problem
-        return float(self._sig_sampling_rate)
-
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         #TODO
         #take only the first signals until fixing the multi sampling rate problem

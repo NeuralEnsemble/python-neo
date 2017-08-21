@@ -158,7 +158,8 @@ class PlexonRawIO(BaseRawIO):
             if length==0:
                 continue #channel not added
             all_sig_length.append(length)
-            
+            sampling_rate = float(h['ADFreq'])
+            sig_dtype = 'int16'
             units = '' # I dont't knwon units
             if global_header['Version'] in [100, 101]:
                 gain = 5000. / (2048 * h['Gain'] * 1000.)
@@ -169,7 +170,9 @@ class PlexonRawIO(BaseRawIO):
                     .5 * (2 ** global_header['BitsPerSpikeSample']) *
                     h['Gain'] * h['PreampGain'])
             offset = 0.
-            sig_channels.append((name, chan_id, units, gain,offset))
+            group_id = 0
+            sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
+                                                        units, gain, offset, group_id))
         if len(all_sig_length)>0:
             self._signal_length = min(all_sig_length)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -238,12 +241,6 @@ class PlexonRawIO(BaseRawIO):
             d['rec_datetime'] = rec_datetime
             d['plexon_version'] = global_header['Version']
 
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -255,11 +252,11 @@ class PlexonRawIO(BaseRawIO):
         else:
             return t_stop1
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return (self._signal_length, self.header['signal_channels'].size)
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._signal_length
     
-    def _analogsignal_sampling_rate(self):
-        return self._sig_sampling_rate
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         if i_start is None:
@@ -267,6 +264,9 @@ class PlexonRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._signal_length
         
+        if channel_indexes is None:
+            channel_indexes = np.arange(self.header['signal_channels'].size)
+            
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         for c, channel_index in enumerate(channel_indexes):
             chan_header = self.header['signal_channels'][channel_index]

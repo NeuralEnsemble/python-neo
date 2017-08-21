@@ -60,9 +60,6 @@ class NeuralynxRawIO(BaseRawIO):
         self.internal_unit_ids = [] #channel_index > (channel_id, unit_id)
 
         
-        self._sigs_sampling_rate = None
-        
-        
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
         for filename in os.listdir(self.dirname):
@@ -90,14 +87,11 @@ class NeuralynxRawIO(BaseRawIO):
                 if info['input_inverted']:
                     gain *= -1
                 offset = 0.
-                sig_channels.append((chan_name, chan_id, units, gain,offset))
+                group_id = 0
+                sig_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16', 
+                                                    units, gain,offset, group_id))
                 
                 self.ncs_filenames[chan_id] = filename
-                
-                if self._sigs_sampling_rate is None:
-                    self._sigs_sampling_rate = info['sampling_rate']
-                else:
-                    assert self._sigs_sampling_rate == info['sampling_rate'], 'Sampling is not the same across NCS'
                 
             elif ext  in ('nse', 'ntt'):
                 # nse and ntt are pretty similar execept for the wavform shape
@@ -140,11 +134,18 @@ class NeuralynxRawIO(BaseRawIO):
                 # define by  a set of ('event_id',  'ttl_input')
                 # if we keep that then we need to parse the whole file
             
-            
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
+        sampling_rate = np.unique(sig_channels['sampling_rate'])
+        assert sampling_rate.size==1
+        self._sigs_sampling_rate = sampling_rate[0]
+        
+        
+
+        
+
         
         #read ncs files for gaps detection and nb_segment computation
         self.read_ncs_files(self.ncs_filenames)
@@ -180,25 +181,18 @@ class NeuralynxRawIO(BaseRawIO):
                        #~ analog_marker=False,
                        #~ nttl=event_type['nttl'])        
 
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return self.header['nb_segment'][block_index]
-    
     def _segment_t_start(self, block_index, seg_index):
         return self.global_t_start[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
         return self.global_t_stop[seg_index]
     
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._sigs_length[seg_index]
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return (self._sigs_length[seg_index], len(self.header['signal_channels']))
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return self._sigs_t_start[seg_index]
     
-    def _analogsignal_sampling_rate(self):
-        return self._sigs_sampling_rate
-
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         if i_start is None: i_start=0
         if i_stop is None: i_stop=self._sigs_length[seg_index]
@@ -208,9 +202,11 @@ class NeuralynxRawIO(BaseRawIO):
         sl0 = i_start % 512
         sl1 = sl0 + (i_stop-i_start)
         
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         channel_ids = self.header['signal_channels'][channel_indexes]['id']
         
-        sigs_chunk = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
+        sigs_chunk = np.zeros((i_stop-i_start, len(channel_ids)), dtype='int16')
         for i, chan_id in enumerate(channel_ids):
             data = self._sigs_memmap[seg_index][chan_id]
             sub = data[block_start:block_stop]

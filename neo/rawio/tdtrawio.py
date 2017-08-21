@@ -115,74 +115,109 @@ class TdtRawIO(BaseRawIO):
                 except IOError:
                     pass
         
-        #signal channels #'EVTYPE_STREAM' 33025
+        #signal channels EVTYPE_STREAM
         signal_channels =[]
         self._sigs_data_buf = {seg_index:{} for seg_index in range(nb_segment)}
         self._sigs_index = {seg_index:{} for seg_index in range(nb_segment)}
-        keep = info_channel_groups['TankEvType'] == 33025
-        #TODO for the moment only the first grousp of channels i take
-        # because different simpling rate
-        for info in info_channel_groups[keep][2:3]:
+        self._sig_dtype_by_group ={} #key = group_id
+        self._sig_sample_per_chunk = {} #key = group_id
+        self._sigs_lengths = { seg_index:{} for seg_index in range(nb_segment)} #key = seg_index then group_id
         
+        keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
+        for group_id, info in enumerate(info_channel_groups[keep]):
+            self._sig_sample_per_chunk[group_id] = info['NumPoints']
+            
+            
             for c in range(info['NumChan']):
-                chan_name = '{} {}'.format(info['StoreName'], c+1)
-                chan_id = c+1
-                units = 'V' #TODO this is not sur at all
-                gain = 1.
-                offset = 0.
-                signal_channels.append((chan_name, chan_id, units, gain,offset))
+                chan_index = len(signal_channels)
+                chan_id = c+1#I fseveral StoreName then chan_id is not unique in TDT!!!!!
                 
-                
+                #loop over segment to get sampling_rate/data_index/data_buffer
+                sampling_rate = None
+                dtype = None
                 for seg_index, segment_name in enumerate(segment_names):
                     #get data index
                     tsq = self._tsq[seg_index]
-                    
-                    mask = (tsq['code_type']==33025) &\
+                    mask = (tsq['code_type']==EVTYPE_STREAM) &\
                                 (tsq['store_name']==info['StoreName']) &\
                                 (tsq['channel_id']==chan_id)
                     data_index = tsq[mask].copy()
-                    self._sigs_index[seg_index][chan_id] = data_index
+                    self._sigs_index[seg_index][chan_index] = data_index
+                    
+                    size = info['NumPoints'] * data_index.size
+                    if group_id not in self._sigs_lengths[seg_index]:
+                        self._sigs_lengths[seg_index][group_id] = size
+                    else:
+                        assert self._sigs_lengths[seg_index][group_id] == size
+                    
+                    #sampling_rate and dtype
+                    _sampling_rate = float(data_index['frequency'][0])
+                    _dtype = data_formats[data_index['dataformat'][0]]
+                    if sampling_rate is None:
+                        sampling_rate = _sampling_rate
+                        dtype = _dtype
+                        if group_id not in self._sig_dtype_by_group:
+                            self._sig_dtype_by_group[group_id] = np.dtype(dtype)
+                        else:
+                            assert self._sig_dtype_by_group[group_id] == dtype
+                    else:
+                        assert sampling_rate == _sampling_rate, 'sampling is changing!!!'
+                        assert dtype == _dtype, 'sampling is changing!!!'
                     
                     #data buffer test if SEV file exists otherwise TEV
                     path = os.path.join(self.dirname, segment_name)
-                    sev_filename = os.path.join(path, tankname+'_'+segment_name+'_'+info['StoreName'].decode('ascii')+'_ch'+str(chan_id)+'.sev')
+                    sev_filename = os.path.join(path, tankname+'_'+segment_name+'_'+
+                                        info['StoreName'].decode('ascii')+'_ch'+str(chan_id)+'.sev')
                     if os.path.exists(sev_filename):
                         data = np.memmap(sev_filename, mode='r', offset=0, dtype='uint8')
                     else:
                         data = self._tev_datas[seg_index]
-                        assert data is not None, 'no TEV nor SEV'
-                    #TODO chan_id here because it is not unique!!!!!!
-                    self._sigs_data_buf[seg_index][chan_id] = data
-        
-        signal_channels = []
+                    assert data is not None, 'no TEV nor SEV'
+                    self._sigs_data_buf[seg_index][chan_index] = data
+
+                chan_name = '{} {}'.format(info['StoreName'], c+1)
+                sampling_rate = sampling_rate
+                units = 'V' #TODO this is not sur at all
+                gain = 1.
+                offset = 0.
+                signal_channels.append((chan_name, chan_id, sampling_rate, dtype,
+                                                        units, gain,offset, group_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         
-        #TODO assert all signals have the same data_index.size for each segment
-        if len(signal_channels)>0:
-            chan_id0 = signal_channels['id'][0]
-            data_index0 = self._sigs_index[0][chan_id0]
-            self._sig_dtype = np.dtype(data_formats[data_index0['dataformat'][0]])
-            self._sig_sampling_rate = float(data_index0['frequency'][0])
-            self._sig_sample_per_chunk = info['NumPoints']
-            self._sigs_lengths = []
-            for seg_index, segment_name in enumerate(segment_names):
-                data_index0 = self._sigs_index[seg_index][chan_id0]
-                self._sigs_lengths.append(info['NumPoints'] * data_index0.size)
+        #~ print(self._sig_dtype_by_group)
+        #~ print(self._sig_sample_per_chunk)
+        #~ exit()
+        
+        
+        
+        #
+        #~ if len(signal_channels)>0:
+
+                
+            
+            
+            #~ chan_id0 = signal_channels['id'][0]
+            #~ data_index0 = self._sigs_index[0][chan_id0]
+            
+            #~ self._sigs_lengths = []
+            #~ for seg_index, segment_name in enumerate(segment_names):
+                #~ data_index0 = self._sigs_index[seg_index][chan_id0]
+                #~ self._sigs_lengths.append(info['NumPoints'] * data_index0.size)
 
 
-        #unit channels #'EVTYPE_SNIP'
+        #unit channels EVTYPE_SNIP
         self.internal_unit_ids = {}
         self._waveforms_size = []
         self._waveforms_dtype = []
         unit_channels =[]
-        keep = info_channel_groups['TankEvType'] == 33281
+        keep = info_channel_groups['TankEvType'] == EVTYPE_SNIP
         for info in info_channel_groups[keep]:
             for c in range(info['NumChan']):
                 chan_id = c+1
                 #unit_ids is get only from the first segment
                 #otherwise it would to long
                 tsq = self._tsq[seg_index]
-                mask = (tsq['code_type']==33281) &\
+                mask = (tsq['code_type']==EVTYPE_SNIP) &\
                             (tsq['store_name']==info['StoreName']) &\
                             (tsq['channel_id']==chan_id)
                 unit_ids = np.unique(tsq[mask]['sortcode'])
@@ -204,9 +239,9 @@ class TdtRawIO(BaseRawIO):
         
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
-        #signal channels #'EVTYPE_STRON'
+        #signal channels EVTYPE_STRON
         event_channels = []
-        keep = info_channel_groups['TankEvType'] == 257
+        keep = info_channel_groups['TankEvType'] == EVTYPE_STRON
         for info in info_channel_groups[keep]:
             chan_name = info['StoreName']
             chan_id = 1
@@ -239,46 +274,53 @@ class TdtRawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._global_t_stop[seg_index] - self._global_t_start[seg_index]
     
-    def _analogsignal_shape(self, block_index, seg_index):
-        #TODO work only for one channel group
-        return (self._sigs_lengths[seg_index], self.header['signal_channels'].size)
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+        size = self._sigs_lengths[seg_index][group_id]
+        return size
     
-    def _analogsignal_sampling_rate(self):
-        #TODO work only for one channel group
-        return self._sig_sampling_rate
-
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+        return 0.#TODO
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        # check of channel_indexes is same group_id is done outside
+        #so first is identique to others
+        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+        
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._sigs_lengths[seg_index]
+            i_stop = self._sigs_lengths[seg_index][group_id]
         
-        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=self._sig_dtype)
+        
+        dt = self._sig_dtype_by_group[group_id]
+        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
+        
+        sample_per_chunk = self._sig_sample_per_chunk[group_id]
+        bl0 = i_start//sample_per_chunk
+        bl1 = int(np.ceil(i_stop/sample_per_chunk))
+        chunk_nb_bytes = sample_per_chunk*dt.itemsize
+        
         for c, channel_index in enumerate(channel_indexes):
-            chan_header = self.header['signal_channels'][channel_index]
-            chan_id = chan_header['id']
-            
-            data_index = self._sigs_index[seg_index][chan_id]
-            data_buf = self._sigs_data_buf[seg_index][chan_id]
+            data_index = self._sigs_index[seg_index][channel_index]
+            data_buf = self._sigs_data_buf[seg_index][channel_index]
             
             #loop over data blocks and get chunks
-            bl0 = i_start//self._sig_sample_per_chunk
-            bl1 = int(np.ceil(i_stop/self._sig_sample_per_chunk))
-            
             ind = 0
             for bl in range(bl0,  bl1):
                 ind0 = data_index[bl]['offset']
-                ind1 = ind0 + self._sig_sample_per_chunk*self._sig_dtype.itemsize
-                data = data_buf[ind0:ind1].view(self._sig_dtype)
+                ind1 = ind0 + chunk_nb_bytes
+                data = data_buf[ind0:ind1].view(dt)
                 
                 if bl == bl1-1:
                     #right border
                     #be carfull that bl could be both bl0 and bl1!!
-                    border = data.size - (i_stop % self._sig_sample_per_chunk)
+                    border = data.size - (i_stop % sample_per_chunk)
                     data = data[:-border]
                 if bl == bl0:
                     #left border
-                    border = i_start%self._sig_sample_per_chunk
+                    border = i_start%sample_per_chunk
                     data = data[border:]
                 
                 raw_signals[ind:data.size+ind, c] = data
@@ -305,7 +347,7 @@ class TdtRawIO(BaseRawIO):
     def _spike_count(self,  block_index, seg_index, unit_index):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, 33281, store_name, chan_id, unit_id, None, None)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, None, None)
         nb_spike = np.sum(mask)
         return nb_spike
     
@@ -313,7 +355,7 @@ class TdtRawIO(BaseRawIO):
     def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, 33281, store_name, chan_id, unit_id, t_start, t_stop)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
         timestamps = tsq[mask]['timestamp']
         timestamps -= self._global_t_start[seg_index]
         return timestamps
@@ -326,7 +368,7 @@ class TdtRawIO(BaseRawIO):
     def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, 33281, store_name, chan_id, unit_id, t_start, t_stop)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
         nb_spike = np.sum(mask)
         
         data = self._tev_datas[seg_index]
@@ -347,7 +389,7 @@ class TdtRawIO(BaseRawIO):
         store_name = h['name'].encode('ascii')
         tsq = self._tsq[seg_index]
         chan_id = 0
-        mask = self. _get_mask(tsq, seg_index, 257, store_name, chan_id, None, None, None)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_STRON, store_name, chan_id, None, None, None)
         nb_event = np.sum(mask)
         return nb_event
     
@@ -356,7 +398,7 @@ class TdtRawIO(BaseRawIO):
         store_name = h['name'].encode('ascii')
         tsq = self._tsq[seg_index]
         chan_id = 0
-        mask = self. _get_mask(tsq, seg_index, 257, store_name, chan_id, None, None, None)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_STRON, store_name, chan_id, None, None, None)
         
         #TODO one day transform event to epoch
         # with EVTYPE_STROFF=258
@@ -431,16 +473,15 @@ tsq_dtype = [
     ('frequency','float32'),
 ]
 
+EVTYPE_UNKNOWN = 0
+EVTYPE_STRON = 257  # 0x101
+EVTYPE_STROFF = 258  #0x102
+#~ EVTYPE_SCALER = 513 #0x201
+EVTYPE_STREAM = 33025 #0x8101
+EVTYPE_SNIP = 33281 #0x8201
+#~ EVTYPE_MARK = 34817  #0x8801
 
-tdt_code_types = {
-    0: 'EVTYPE_UNKNOWN', 
-    257: 'EVTYPE_STRON', # 0x101
-    258: 'EVTYPE_STROFF', #0x102
-    #~ 513: 'EVTYPE_SCALER', #0x201
-    33025: 'EVTYPE_STREAM', #0x8101
-    33281: 'EVTYPE_SNIP', #0x8201
-    #~ 34817: 'EVTYPE_MARK', #0x8801
-}
+
 
 data_formats = {
         0 : 'float32',

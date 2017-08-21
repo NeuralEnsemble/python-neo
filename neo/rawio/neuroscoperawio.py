@@ -55,7 +55,7 @@ class NeuroScopeRawIO(BaseRawIO):
                 channel_group[int(xml_rc.text)] = grp_index
         
         if nbits==16:
-            dt = 'int16'
+            sig_dtype = 'int16'
             gain  = voltage_range/(2**16)/amplification/1000.
         #~ elif nbits==32:
             #Not sure if it is int or float
@@ -64,7 +64,7 @@ class NeuroScopeRawIO(BaseRawIO):
         else:
             raise(NotImplementedError)
         
-        self._raw_signals = np.memmap(filename+'.dat', dtype=dt, 
+        self._raw_signals = np.memmap(filename+'.dat', dtype=sig_dtype, 
                                         mode='r', offset=0).reshape(-1, nb_channel)
         
         #signals
@@ -74,7 +74,9 @@ class NeuroScopeRawIO(BaseRawIO):
             chan_id = c
             units = 'mV'
             offset = 0.
-            sig_channels.append((name, chan_id, units, gain,offset))
+            group_id = 0
+            sig_channels.append((name, chan_id, self._sampling_rate, 
+                                        sig_dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         
         #No events
@@ -95,12 +97,6 @@ class NeuroScopeRawIO(BaseRawIO):
     
         self._generate_minimal_annotations()
 
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -108,12 +104,14 @@ class NeuroScopeRawIO(BaseRawIO):
         t_stop = self._raw_signals.shape[0]/self._sampling_rate
         return t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return self._raw_signals.shape
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._raw_signals.shape[0]
     
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
-
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals

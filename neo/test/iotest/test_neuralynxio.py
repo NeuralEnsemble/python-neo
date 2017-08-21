@@ -460,8 +460,8 @@ import time
 def compare_old_and_new_neuralynxio():
     
     base = '/tmp/files_for_testing_neo/neuralynx/'
-    dirname = base+'Cheetah_v5.5.1/original_data/'
-    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
+    #~ dirname = base+'Cheetah_v5.5.1/original_data/'
+    dirname = base+'Cheetah_v5.7.4/original_data/'
     
     
     t0 = time.perf_counter()
@@ -487,7 +487,7 @@ def compare_old_and_new_neuralynxio():
     t0 = time.perf_counter()
     oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
     t1 = time.perf_counter()
-    bl = oldreader.read_block(waveforms=True)
+    bl = oldreader.read_block(waveforms=True, events=True)
     t2 = time.perf_counter()
     print('oldreader header', t1-t0, 's')
     print('oldreader data', t2-t1, 's')

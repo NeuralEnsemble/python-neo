@@ -108,7 +108,6 @@ class Spike2RawIO(BaseRawIO):
         unit_channels = []
         event_channels = []
         
-        all_signal_sampling_rate = []
         all_signal_length = []#this is incredible but shape difer channel to channel!!!
         self.internal_unit_ids = {}
         self._spike_sounts = {}
@@ -133,19 +132,19 @@ class Spike2RawIO(BaseRawIO):
                 sig_size = np.sum(self._data_blocks[chan_id]['size'])
                 if sig_size==0:
                     continue
-                
                 units = chan_info['unit']
-                
                 if chan_info['kind'] ==1:#int16
                     gain = chan_info['scale']/6553.6
                     offset = chan_info['offset']
+                    sig_dtype = 'int16'
                 elif chan_info['kind'] ==9:#float32
                     gain = 1.
                     offset = 0.
-                sig_channels.append((name, chan_id, units, gain, offset))
+                    sig_dtype = 'int32'
+                group_id = 0
+                sig_channels.append((name, chan_id, sampling_rate, sig_dtype, 
+                                                            units, gain, offset, group_id))
                 
-                
-                all_signal_sampling_rate.append(sampling_rate)
                 all_signal_length.append(sig_size)
                 
             elif chan_info['kind'] in [2, 3, 4, 5, 8]:
@@ -194,8 +193,9 @@ class Spike2RawIO(BaseRawIO):
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
         if len(sig_channels)>0:
-            assert np.unique(all_signal_sampling_rate).size==1
-            self._sampling_rate = float(np.unique(all_signal_sampling_rate)[0])
+            sampling_rate = np.unique(sig_channels['sampling_rate'])
+            assert sampling_rate.size==1
+            self._sampling_rate = float(sampling_rate[0])
             self._signal_length = min(all_signal_length)
             
             all_kind = [self._channel_infos[chan_id]['kind'] for chan_id in sig_channels['id']]
@@ -267,24 +267,18 @@ class Spike2RawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
     
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
         return self._t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
-        return (self._signal_length, self.header['signal_channels'].size)
-    
-    def _analogsignal_sampling_rate(self):
-        return self._sampling_rate
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        return self._signal_length
 
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return 0.
+    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         if i_start is None:
             i_start = 0
@@ -292,6 +286,9 @@ class Spike2RawIO(BaseRawIO):
             i_stop = self._signal_length
         
         dt = self._sig_dtype
+        if channel_indexes is None:
+            channel_indexes = np.arange(self.header['signal_channels'].size)
+        
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
         for c, channel_index in enumerate(channel_indexes):
             #NOTE: this actual way is slow because we run throught

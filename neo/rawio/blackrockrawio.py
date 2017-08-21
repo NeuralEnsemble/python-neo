@@ -352,6 +352,8 @@ class BlackrockRawIO(BaseRawIO):
         self.nsx_data = self.__nsx_data_reader[spec](nsx_nb)
 
         
+        sampling_rate = float(30000. / self.__nsx_basic_header[nsx_nb]['period'])
+        
         sig_channels = []
         #~ print(self.__nsx_ext_header[nsx_nb].dtype)
         for i, chan in enumerate(self.__nsx_ext_header[nsx_nb]):
@@ -360,14 +362,19 @@ class BlackrockRawIO(BaseRawIO):
             assert chan['max_analog_val']==-chan['min_analog_val']
             assert chan['max_digital_val']==-chan['min_digital_val']
             
+            sig_dtype = 'int16'
             gain = float(chan['max_analog_val'])/float(chan['max_digital_val']) #TODO
             
             offset = 0.
+            group_id = 0
             sig_channels.append((chan['electrode_label'].decode(), 
                                         chan['electrode_id'], 
+                                        sampling_rate,
+                                        sig_dtype,
                                         chan['units'].decode(), 
                                         gain,
                                         offset,
+                                        group_id,
                                         ))
         
 
@@ -378,7 +385,7 @@ class BlackrockRawIO(BaseRawIO):
         nb_seg = len(self.nsx_data)
         
         #~ sampling_rate = self.__nsx_params[spec]('sampling_rate', nsx_nb)
-        sampling_rate = float(30000. / self.__nsx_basic_header[nsx_nb]['period'])
+        #~ sampling_rate = float(30000. / self.__nsx_basic_header[nsx_nb]['period'])
         #~ print(sampling_rate)
         
         t_starts, t_stops = [], []
@@ -407,11 +414,12 @@ class BlackrockRawIO(BaseRawIO):
         
         
         self.header = {}
+        self.header['nb_block'] = 1
         self.header['nb_segment'] = [nb_seg]
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
-        self.header['signal_sampling_rate'] = sampling_rate
+        
         self.header['segment_t_starts'] = [t_starts]
         self.header['segment_t_stops'] = [t_stops]
         
@@ -455,17 +463,6 @@ class BlackrockRawIO(BaseRawIO):
     def _source_name(self):
         return self.filename
 
-
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        #In version 2.1 it is always 1
-        #In version 2.2 and 2.3 if there are pause then
-        #a new segment is created for each pause
-        assert block_index==0
-        return self.header['nb_segment'][block_index]
-
     def _segment_t_start(self, block_index, seg_index):
         t_start = self.header['segment_t_starts'][block_index][seg_index]
         return t_start
@@ -474,14 +471,14 @@ class BlackrockRawIO(BaseRawIO):
         t_stop = self.header['segment_t_stops'][block_index][seg_index]
         return t_stop
 
-    def _analogsignal_shape(self, block_index, seg_index):
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
         assert block_index==0
         memmap_data = self.nsx_data[seg_index]
-        return self.nsx_data[seg_index].shape
+        return memmap_data.shape[0]
 
-    def _analogsignal_sampling_rate(self):
-        return self.header['signal_sampling_rate']
-    
+    def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+        return self._segment_t_start(block_index, seg_index)
+
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
         memmap_data = self.nsx_data[seg_index]

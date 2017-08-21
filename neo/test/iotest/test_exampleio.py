@@ -57,7 +57,8 @@ class TestExample2IO(unittest.TestCase):
         r = ExampleIO(filename=None)
         bl = r.read_block(cascade=True, lazy=True)
         assert len(bl.list_units) == 3
-        assert len(bl.channel_indexes) == 16 + 3 #signals + units
+        print(len(bl.channel_indexes))
+        assert len(bl.channel_indexes) == 1 + 3 #signals grouped + units
 
 
 
