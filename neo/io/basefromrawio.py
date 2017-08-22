@@ -13,7 +13,8 @@ by inheritance of this class.
 
 """
 # needed for python 3 compatibility
-from __future__ import unicode_literals, print_function, division, absolute_import
+from __future__ import print_function, division, absolute_import
+#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 import collections
 import logging
@@ -61,6 +62,7 @@ class BaseFromRaw(BaseIO):
         #annotations
         bl_annotations = dict(self.raw_annotations['blocks'][block_index])
         bl_annotations.pop('segments')
+        bl_annotations = check_annotations(bl_annotations)
 
         bl = Block(**bl_annotations)
         
@@ -87,7 +89,7 @@ class BaseFromRaw(BaseIO):
         # but a new ChannelIndex is created for that!!!!
         unit_channels = self.header['unit_channels']
         for c in range(len(unit_channels)):
-            unit = Unit(name=unit_channels['name'][c], 
+            unit = Unit(name=str(unit_channels['name'][c]),
                             id=unit_channels['id'][c])
             channel_index = ChannelIndex(index=np.array([-2], dtype='i'),
                                     name='ChannelIndex for Unit')
@@ -118,8 +120,9 @@ class BaseFromRaw(BaseIO):
         seg_annotations = dict(self.raw_annotations['blocks'][block_index]['segments'][seg_index])
         for k in ('signals', 'units', 'events'):
             seg_annotations.pop(k)
+        seg_annotations = check_annotations(seg_annotations)
         
-        seg = Segment(index=seg_index, **seg_annotations)#name,
+        seg = Segment(index=seg_index, **seg_annotations)
 
         if not cascade:
             return seg
@@ -164,6 +167,7 @@ class BaseFromRaw(BaseIO):
                         # annotations are empty...
                         annotations = {}
                         annotations['name'] = 'Channel bundle ({}) '.format(','.join(signal_channels[ind_abs]['name']))
+                    annotations = check_annotations(annotations)
                     
                     if lazy:
                         anasig = AnalogSignal(np.array([]), units=units,  copy=False,
@@ -202,6 +206,7 @@ class BaseFromRaw(BaseIO):
             annotations = dict(d)
             if 'name' not in annotations:
                 annotations['name'] = unit_channels['name'][c]
+            annotations = check_annotations(annotations)
             
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
@@ -246,6 +251,8 @@ class BaseFromRaw(BaseIO):
             annotations = dict(d)
             if 'name' not in annotations:
                 annotations['name'] = event_channels['name'][chan_ind]
+            
+            annotations = check_annotations(annotations)
             
             if event_channels['type'][chan_ind] == b'event':
                 e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, **annotations)
@@ -311,3 +318,11 @@ def ensure_signal_units(units):
         logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
         units = ''
     return units
+
+def check_annotations(annotations):
+    #force type to str for some keys
+    # imposed for tests
+    for k in ('name', 'description', 'file_origin'):
+        if k in annotations:
+            annotations[k] = str(annotations[k])
+    return annotations

@@ -7,7 +7,9 @@ Completed with matlab Guillaume BECQ code.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
+from __future__ import print_function, division, absolute_import
+#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
+
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
@@ -17,10 +19,10 @@ import numpy as np
 import datetime
 import os
 import struct
-from io import BufferedReader
+import io
 
 
-class StructFile(BufferedReader):
+class StructFile(io.BufferedReader):
     def read_f(self, fmt, offset=None):
         if offset is not None:
             self.seek(offset)
@@ -38,7 +40,7 @@ class MicromedRawIO(BaseRawIO):
         self.filename = filename 
     
     def _parse_header(self):
-        with open(self.filename, 'rb') as fid:
+        with io.open(self.filename, 'rb') as fid:
             f = StructFile(fid)
 
             # Name
@@ -78,7 +80,7 @@ class MicromedRawIO(BaseRawIO):
             # Reading Code Info
             zname2, pos, length = zones['ORDER']
             f.seek(pos)
-            code = np.fromfile(f, dtype='u2', count=Num_Chan)
+            code = np.frombuffer(f.read(Num_Chan*2), dtype='u2')
 
             units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
                      101: 'dimensionless', 102: 'dimensionless'}

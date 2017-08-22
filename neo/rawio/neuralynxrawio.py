@@ -19,7 +19,9 @@ NCVS files need to be read entirly to detect that gaps.... too bad....
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
+from __future__ import  print_function, division, absolute_import
+#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
+
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
@@ -471,7 +473,7 @@ def read_txt_header(filename):
         info['version'] = distutils.version.LooseVersion(version)
     
     # filename and datetime
-    if info['version']<='5.6.4':
+    if info['version']<=distutils.version.LooseVersion('5.6.4'):
         datetime1_regex = '## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = '## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         filename_regex = '## File Name (?P<filename>\S+)'

@@ -26,7 +26,7 @@ import numpy as np
 import datetime
 import os
 import re
-
+import io
 
 
 class ElanRawIO(BaseRawIO):
@@ -40,7 +40,7 @@ class ElanRawIO(BaseRawIO):
     
     def _parse_header(self):
         
-        with open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
+        with io.open(self.filename + '.ent', mode='rt', encoding='ascii', newline=None) as f:
         
             #version
             version = f.readline()[:-1]
@@ -140,7 +140,7 @@ class ElanRawIO(BaseRawIO):
         self._raw_signals = self._raw_signals[:,:-2]
         
         # triggers
-        with open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
+        with io.open(self.filename + '.pos', mode='rt', encoding='ascii', newline=None) as f:
             self._raw_event_timestamps = []
             self._event_labels = []
             self._reject_codes = []

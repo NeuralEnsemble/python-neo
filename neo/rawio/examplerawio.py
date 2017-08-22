@@ -55,8 +55,8 @@ class ExampleRawIO(BaseRawIO):
     to develop a new IO module.
     
     Two rules for developers:
-      * Respect the Neo RawIO API (:ref:`io`)
-      * Follow :ref:`developers_guide`
+      * Respect the Neo RawIO API (:ref:`_neo_rawio_API`)
+      * Follow :ref:`_io_guiline`
 
     This fake IO:
         * have 2 blocks

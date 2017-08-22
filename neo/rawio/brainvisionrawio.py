@@ -17,7 +17,7 @@ import numpy as np
 import datetime
 import os
 import re
-
+import io
 
 
 class BrainVisionRawIO(BaseRawIO):
@@ -99,8 +99,7 @@ class BrainVisionRawIO(BaseRawIO):
         self._raw_events = []
         event_channels = []
         for c, ev_type in enumerate(np.unique(ev_types)):
-            ind = (ev_type == ev_types)
-            
+            ind = (ev_types == ev_type)
             event_channels.append((ev_type, '', 'event'))
             
             self._raw_events.append((ev_timestamps[ind], ev_labels[ind]))
@@ -175,7 +174,7 @@ class BrainVisionRawIO(BaseRawIO):
     
 
 def read_brain_soup(filename):
-    with open(filename, 'r') as f:
+    with io.open(filename, 'r', encoding='utf8') as f:
         section = None
         all_info = {}
         for line in f:

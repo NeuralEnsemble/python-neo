@@ -23,7 +23,8 @@ Units in this IO are not garanty.
 Author: Samuel Garcia, SummitKwan
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
+from __future__ import  print_function, division, absolute_import
+#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)

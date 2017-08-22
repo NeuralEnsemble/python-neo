@@ -10,6 +10,8 @@ All rules are listed as function so it should be easier to:
 
 """
 import time
+if not hasattr(time, 'perf_counter'):
+    time.perf_counter = time.time
 import logging
 
 import numpy as np
