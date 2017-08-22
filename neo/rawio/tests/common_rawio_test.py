@@ -122,14 +122,14 @@ class BaseTestRawIO(object):
             
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
-            print(txt)
+            #~ print(txt)
             
             #
             txt = reader._repr_annotations()
             #~ reader.print_annotations()
             
             #~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            #~ i_start=None, i_stop=None, channel_indexes=[0])
+                            #~ i_start=None, i_stop=None, channel_indexes=[1])
             #~ import matplotlib.pyplot as plt
             #~ fig, ax = plt.subplots()
             #~ ax.plot(sigs[:, 0])

@@ -4,11 +4,12 @@ Class for reading data from NeuroExplorer (.nex)
 
 Note:
   * NeuroExplorer have introduced a new .nex5 file format
-    with 64 timestamps. This is implemented here.
+    with 64 timestamps. This is NOT implemented here.
     If someone have some file in that new format we could also
     integrate it in neo
   * NeuroExplorer now provide there own python class for
-    reading/writting nex and nex5.
+    reading/writting nex and nex5. This could be usefull
+    for testing this class.
 
 Porting NeuroExplorerIO to NeuroExplorerRawIO have some
 limitation because in neuro explorer signals can differents sampling
@@ -51,7 +52,10 @@ class NeuroExplorerRawIO(BaseRawIO):
             for i in range(self.global_header['nvar']):
                 self._entity_headers.append(read_as_dict(fid, EntityHeader, offset=offset + i * 208))
         
+        self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
+        
         self._sig_lengths = []
+        self._sig_t_starts = []
         sig_channels = []
         unit_channels = []
         event_channels = []
@@ -82,7 +86,6 @@ class NeuroExplorerRawIO(BaseRawIO):
                 pass
 
             if entity_header['type'] == 5:#Signals
-                #TODO find a solution for differents sampling rate
                 units = 'mV'
                 sampling_rate = entity_header['WFrequency']
                 dtype = 'int16'
@@ -92,6 +95,11 @@ class NeuroExplorerRawIO(BaseRawIO):
                 sig_channels.append((name, _id, sampling_rate,dtype,  units,
                                                                     gain,offset, group_id))
                 self._sig_lengths.append(entity_header['NPointsWave'])
+                #sig t_start is the first timestamp if datablock
+                offset = entity_header['offset']
+                timestamps0 = self._memmap[offset:offset+4].view('int32')
+                t_start = timestamps0[0]/self.global_header['freq']
+                self._sig_t_starts.append(t_start)
                 
             elif entity_header['type'] == 6:#Markers
                 event_channels.append((name, _id, 'event'))
@@ -100,11 +108,11 @@ class NeuroExplorerRawIO(BaseRawIO):
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
+        #each signal channel have a dierent groups that force reading
+        #them one by one
         sig_channels['group_id'] = np.arange(sig_channels.size)
         
-        self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
-        
-        #fille into header dict
+        #fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
@@ -120,12 +128,6 @@ class NeuroExplorerRawIO(BaseRawIO):
             d['neuroexplorer_version'] = self.global_header['version']
             d['comment'] = self.global_header['comment']
     
-    def _block_count(self):
-        return 1
-    
-    def _segment_count(self, block_index):
-        return 1
-    
     def _segment_t_start(self, block_index, seg_index):
         t_start = self.global_header['tbeg'] / self.global_header['freq']
         return t_start
@@ -134,41 +136,29 @@ class NeuroExplorerRawIO(BaseRawIO):
         t_stop=self.global_header['tend'] / self.global_header['freq']
         return t_stop
 
-
-
+    
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        assert channel_indexes.size==1 , 'only one channel by one channel'
+        assert len(channel_indexes)==1 , 'only one channel by one channel'
         return self._sig_lengths[channel_indexes[0]]
     
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        return 0.
-        #TODO maybe the very first timastamps of datasection
+        assert len(channel_indexes)==1 , 'only one channel by one channel'
+        return self._sig_t_starts[channel_indexes[0]]
 
-
-    def _analogsignal_shape(self, block_index, seg_index):
-        #TODO
-        #take only the first signals until fixing the multi sampling rate problem
-        return (self._sig_length, self.header['signal_channels'].size)
-    
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
-        #TODO
-        #take only the first signals until fixing the multi sampling rate problem
-        assert len(channel_indexes) == 1, 'One channel supported for now'
+        assert len(channel_indexes)==1 , 'only one channel by one channel'
         channel_index = channel_indexes[0]
         entity_index = int(self.header['signal_channels'][channel_index]['id'])
-        
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
-        offset = entity_header['offset']
         nb_sample = entity_header['NPointsWave']
-        
-        timestamps = self._memmap[offset:offset+n*4].view('int32')
-        offset2 = entity_header['offset'] + n*4
-        fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
+        #offset = entity_header['offset']
+        #timestamps = self._memmap[offset:offset+n*4].view('int32')
+        #offset2 = entity_header['offset'] + n*4
+        #fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
         offset3 = entity_header['offset'] + n*4 + n*4
         raw_signal = self._memmap[offset3:offset3+nb_sample*2].view('int16')
-        raw_signal = raw_signal[:, None]
-        
+        raw_signal = raw_signal[slice(i_start, i_stop), None]#2D for compliance
         return raw_signal
 
     
@@ -177,8 +167,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         nb_spike = entity_header['n']
         return nb_spike
-
-        
+    
     def spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
