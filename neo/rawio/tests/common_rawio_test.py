@@ -122,7 +122,7 @@ class BaseTestRawIO(object):
             
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
-            #~ print(txt)
+            print(txt)
             
             #
             txt = reader._repr_annotations()

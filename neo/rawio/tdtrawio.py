@@ -10,7 +10,17 @@ Note the name Block is ambiguous because it does not refer to same thing in TDT
 terminology and neo.
 
 
-Author: Samuel Garcia
+In a directory there are several files:
+  * TSQ timestamp index of data
+  * TBK some kind of channel info and maybe more
+  * TEV contains data : spike + event + signal (for old version)
+  * SEV contains signals (for new version)
+  * ./sort/ can contain offline spikesorting label for spike
+     and can be use place of TEV.
+
+Units in this IO are not garanty.
+
+Author: Samuel Garcia, SummitKwan
 
 """
 from __future__ import unicode_literals, print_function, division, absolute_import
@@ -122,6 +132,7 @@ class TdtRawIO(BaseRawIO):
         self._sig_dtype_by_group ={} #key = group_id
         self._sig_sample_per_chunk = {} #key = group_id
         self._sigs_lengths = { seg_index:{} for seg_index in range(nb_segment)} #key = seg_index then group_id
+        self._sigs_t_start = { seg_index:{} for seg_index in range(nb_segment)}#key = seg_index then group_id
         
         keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
         for group_id, info in enumerate(info_channel_groups[keep]):
@@ -150,6 +161,14 @@ class TdtRawIO(BaseRawIO):
                     else:
                         assert self._sigs_lengths[seg_index][group_id] == size
                     
+                    
+                    t_start = data_index['timestamp'][0] - self._global_t_start[seg_index]
+                    if group_id not in self._sigs_t_start[seg_index]:
+                        self._sigs_t_start[seg_index][group_id] = t_start
+                    else:
+                        assert self._sigs_t_start[seg_index][group_id] == t_start
+                    
+                    
                     #sampling_rate and dtype
                     _sampling_rate = float(data_index['frequency'][0])
                     _dtype = data_formats[data_index['dataformat'][0]]
@@ -177,34 +196,14 @@ class TdtRawIO(BaseRawIO):
 
                 chan_name = '{} {}'.format(info['StoreName'], c+1)
                 sampling_rate = sampling_rate
-                units = 'V' #TODO this is not sur at all
+                units = 'V' #WARNING this is not sur at all
                 gain = 1.
                 offset = 0.
                 signal_channels.append((chan_name, chan_id, sampling_rate, dtype,
                                                         units, gain,offset, group_id))
         signal_channels = np.array(signal_channels, dtype=_signal_channel_dtype)
         
-        #~ print(self._sig_dtype_by_group)
-        #~ print(self._sig_sample_per_chunk)
-        #~ exit()
         
-        
-        
-        #
-        #~ if len(signal_channels)>0:
-
-                
-            
-            
-            #~ chan_id0 = signal_channels['id'][0]
-            #~ data_index0 = self._sigs_index[0][chan_id0]
-            
-            #~ self._sigs_lengths = []
-            #~ for seg_index, segment_name in enumerate(segment_names):
-                #~ data_index0 = self._sigs_index[seg_index][chan_id0]
-                #~ self._sigs_lengths.append(info['NumPoints'] * data_index0.size)
-
-
         #unit channels EVTYPE_SNIP
         self.internal_unit_ids = {}
         self._waveforms_size = []
@@ -257,10 +256,8 @@ class TdtRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
         
-       # Annotations
+       # Annotations only standart ones:
         self._generate_minimal_annotations()
-        #TODO annotations
-        
     
     def _block_count(self):
         return 1
@@ -269,7 +266,7 @@ class TdtRawIO(BaseRawIO):
         return self.header['nb_segment'][block_index]
     
     def _segment_t_start(self, block_index, seg_index):
-        return 0. #TODO
+        return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
         return self._global_t_stop[seg_index] - self._global_t_start[seg_index]
@@ -281,10 +278,10 @@ class TdtRawIO(BaseRawIO):
     
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-        return 0.#TODO
+        return self._sigs_t_start[seg_index][group_id]
     
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
-        # check of channel_indexes is same group_id is done outside
+        # check of channel_indexes is same group_id is done outside (BaseRawIO)
         #so first is identique to others
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
         
@@ -292,7 +289,6 @@ class TdtRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._sigs_lengths[seg_index][group_id]
-        
         
         dt = self._sig_dtype_by_group[group_id]
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
@@ -329,6 +325,7 @@ class TdtRawIO(BaseRawIO):
         return raw_signals
 
     def _get_mask(self, tsq, seg_index, code_type, store_name, chan_id, unit_id, t_start, t_stop):
+        """Used inside spike and events methods"""
         mask = (tsq['code_type']==code_type) & \
                     (tsq['store_name']==store_name) & \
                     (tsq['channel_id']==chan_id)
@@ -400,15 +397,16 @@ class TdtRawIO(BaseRawIO):
         chan_id = 0
         mask = self. _get_mask(tsq, seg_index, EVTYPE_STRON, store_name, chan_id, None, None, None)
         
-        #TODO one day transform event to epoch
-        # with EVTYPE_STROFF=258
         
         timestamps = tsq[mask]['timestamp']
         timestamps -= self._global_t_start[seg_index]
         labels = tsq[mask]['offset'].astype('U')
         durations = None
+        #TODO if user demand event to epoch
+        # with EVTYPE_STROFF=258
+        # and so durations would be not None
+        # it was not implemented in previous IO.
         return timestamps, durations, labels
-    
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         #already in s
@@ -492,10 +490,7 @@ data_formats = {
         }
 
 def is_tdtblock(blockpath):
-    """
-    A TDT block is a neo.Segment.
-    
-    """
+    """Is tha path a  TDT block (=neo.Segment) ?"""
     file_ext = list()
     if os.path.isdir(blockpath):
         for file in os.listdir( blockpath ):   # for every file, get extension, convert to lowercase and append
