@@ -306,6 +306,8 @@ class AxonRawIO(BaseRawIO):
 
         Returns: list of segments (one for every episode)
                  with list of analog signls (one for every DAC).
+        
+        Author:  JS Nowacki
         """
         info = self._axon_info
 

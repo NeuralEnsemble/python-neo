@@ -13,8 +13,6 @@ An Elan dataset is separated into 3 files :
  - .eeg.ent      hearder file
  - .eeg.pos      event file
 
-
-
 Author: Samuel Garcia
 
 """

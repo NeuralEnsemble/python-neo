@@ -144,14 +144,11 @@ class PlexonRawIO(BaseRawIO):
                 self._data_blocks[bl_type][chan_id] = data_block
         
 
-        
         #signals channels
         sig_channels = []
         all_sig_length = []
         for chan_index in range(nb_sig_chan):
             h = slowChannelHeaders[chan_index]
-            #~ print(h)
-            #~ print(h['ChanId'], h['Channel'])
             name = h['Name'].decode('utf8')
             chan_id = h['Channel']
             length = self._data_blocks[5][chan_id]['size'].sum()//2
@@ -274,7 +271,6 @@ class PlexonRawIO(BaseRawIO):
             
             data_blocks = self._data_blocks[5][chan_id]
             
-            
             #loop over data blocks and get chunks
             bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
             bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
@@ -329,7 +325,6 @@ class PlexonRawIO(BaseRawIO):
         spike_timestamps = data_block[keep]['timestamp']
         
         return spike_timestamps
-
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)

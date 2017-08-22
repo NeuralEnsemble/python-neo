@@ -32,7 +32,7 @@ class BrainVisionRawIO(BaseRawIO):
         self.filename = filename 
     
     def _parse_header(self):
-       # # Read header file (vhdr)
+        # Read header file (vhdr)
         header = read_brain_soup(self.filename)
 
         assert header['Common Infos'][
@@ -79,7 +79,7 @@ class BrainVisionRawIO(BaseRawIO):
         unit_channels = []
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
-        # read all markers
+        # read all markers in memory
         marker_file = os.path.splitext(self.filename)[0] + '.vmrk'
         all_info = read_brain_soup(marker_file)['Marker Infos']
         ev_types = []

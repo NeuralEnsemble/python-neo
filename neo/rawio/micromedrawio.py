@@ -80,19 +80,18 @@ class MicromedRawIO(BaseRawIO):
             f.seek(pos)
             code = np.fromfile(f, dtype='u2', count=Num_Chan)
 
-            #~ units = {-1: pq.nano * pq.V, 0: pq.uV, 1: pq.mV, 2: 1, 100: pq.percent,
-                     #~ 101: pq.dimensionless, 102: pq.dimensionless}
             units_code = {-1: 'nV', 0: 'uV', 1: 'mV', 2: 1, 100: 'percent',
                      101: 'dimensionless', 102: 'dimensionless'}
             sig_channels = []
+            sig_grounds = []
             for c in range(Num_Chan):
                 zname2, pos, length = zones['LABCOD']
                 f.seek(pos + code[c] * 128 + 2, 0)
 
                 chan_name = f.read(6).strip(b"\x00").decode('ascii')
-                ground = f.read(6).strip(b"\x00").decode('ascii')#TODO put in annotations
+                ground = f.read(6).strip(b"\x00").decode('ascii')
+                sig_grounds.append(ground)
                 logical_min, logical_max, logical_ground, physical_min, physical_max = f.read_f('iiiii')
-                #~ print(logical_min, logical_max, logical_ground, physical_min, physical_max)
                 k, = f.read_f('h')
                 units = units_code.get(k, 'uV')
                 
@@ -108,18 +107,11 @@ class MicromedRawIO(BaseRawIO):
                 group_id = 0
                 sig_channels.append((chan_name, chan_id, sampling_rate, sig_dtype,
                                                         units, gain,offset, group_id))
-                
             
             sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
             assert np.unique(sig_channels['sampling_rate']).size==1
             self._sampling_rate = float(np.unique(sig_channels['sampling_rate'])[0])
-            #~ print('self._sample_rate', self._sample_rate)
 
-
-            #~ print(sig_channels)
-
-
-            #~ exit()
 
             #Event channels
             event_channels = []
@@ -170,6 +162,12 @@ class MicromedRawIO(BaseRawIO):
                 d['firstname'] = firstname
                 d['surname'] = surname
                 d['header_version'] = header_version
+            
+            for c in range(sig_channels.size):
+                anasig_an = seg_annotations['signals'][c]
+                anasig_an['ground'] = sig_grounds[c]
+                channel_an = self.raw_annotations['signal_channels'][c]
+                channel_an['ground'] = sig_grounds[c]
         
     def _source_name(self):
         return self.filename
