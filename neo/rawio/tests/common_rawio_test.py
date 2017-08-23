@@ -23,11 +23,7 @@ url_for_tests = "https://portal.g-node.org/neo/"
 
 import os
 import logging
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
         download_test_file, create_local_temp_dir)

@@ -26,10 +26,7 @@ Author: Samuel Garcia
 # needed for python 3 compatibility
 from __future__ import unicode_literals, print_function, division, absolute_import
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.rawio.examplerawio import ExampleRawIO
 
