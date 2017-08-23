@@ -15,9 +15,7 @@ in timestamps of data blocks. Each gap lead to one new segment.
 NCVS files need to be read entirly to detect that gaps.... too bad....
 
 
-
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
-
 """
 from __future__ import  print_function, division, absolute_import
 #from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
@@ -38,6 +36,19 @@ BLOCK_SIZE = 512 #nb sample per signal block
 HEADER_SIZE = 2**14 #file have a txt header of 16kB
 
 class NeuralynxRawIO(BaseRawIO):
+    """"
+    Class for reading dataset recorded by Neuralynx.
+    
+    Examples:
+        >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
+        >>> reader.parse_header()
+        
+            Inspect all file in the directory.
+
+        >>> print(reader)
+            
+            Display all informations about signal channels, units, segment size....
+    """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
     rawmode = 'one-dir'
     def __init__(self, dirname=''):
@@ -64,7 +75,7 @@ class NeuralynxRawIO(BaseRawIO):
         
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
-        for filename in os.listdir(self.dirname):
+        for filename in sorted(os.listdir(self.dirname)):
             filename = os.path.join(self.dirname, filename)
             
             _, ext = os.path.splitext(filename)
@@ -72,15 +83,10 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
             
-            #header
+            #All file have more or less the same header structure
             info = read_txt_header(filename)
-            #~ print(filename)
-            #~ print(info)
             chan_name = info['channel_name']
             chan_id = info['channel_id']
-            #~ print(filename)
-            #~ print(chan_name, chan_id)
-            
             
             if ext=='ncs':
                 # a signal channels
@@ -99,15 +105,13 @@ class NeuralynxRawIO(BaseRawIO):
                 # nse and ntt are pretty similar execept for the wavform shape
                 # a file can contain several unit_id (so several unit channel)
                 assert chan_id not in self.nse_ntt_filenames
-                self.nse_ntt_filenames[chan_id] = filename
+                self.nse_ntt_filenames[chan_id] = filename, 'Several nse or ntt files have the same unit_id!!!'
                 
                 dtype = get_nse_or_ntt_dtype(info, ext)
                 data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
-                #~ print(data)
                 self._spike_memmap[chan_id] = data
                 
                 unit_ids = np.unique(data['unit_id'])
-                
                 for unit_id in unit_ids:
                     # a spike channel for each (chan_id, unit_id)
                     self.internal_unit_ids.append((chan_id, unit_id))
@@ -135,30 +139,42 @@ class NeuralynxRawIO(BaseRawIO):
                 # in the previsous NeuralyxIO an event channel channel is 
                 # define by  a set of ('event_id',  'ttl_input')
                 # if we keep that then we need to parse the whole file
-            
+                # In this new version, there only one event channel
+                # @Jullia: What is the best ????
+        
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         
-        sampling_rate = np.unique(sig_channels['sampling_rate'])
-        assert sampling_rate.size==1
-        self._sigs_sampling_rate = sampling_rate[0]
-        
-        
-
-        
-
+        if sig_channels.size>0:
+            sampling_rate = np.unique(sig_channels['sampling_rate'])
+            assert sampling_rate.size==1
+            self._sigs_sampling_rate = sampling_rate[0]
         
         #read ncs files for gaps detection and nb_segment computation
         self.read_ncs_files(self.ncs_filenames)
+        
+        
         if self._timestamp_limits is None:
-            #TODO scan all file to detect timestamp limit for the unique segment
-            raise(NotImplemented)
-        
-        
-        #TODO global t_start/t_stop that include event and spikes
-        self.global_t_start = self._sigs_t_start
-        self.global_t_stop = self._sigs_t_stop
+            #case when there are no ncs files
+            #so need to scan all spike and event to
+            #have a global t_start/t_stop
+            ts0, ts1 = None, None
+            for _data_memmap in (self._spike_memmap, self._nev_memmap):
+                for chan_id, data in _data_memmap.items():
+                    ts = data['timestamp']
+                    if ts.size==0: continue
+                    if ts0 is None:
+                        ts0 = ts[0]
+                        ts1 = ts[-1]
+                    ts0 = min(ts0, ts[0])
+                    ts1 = max(ts0, ts[-1])
+            self._timestamp_limits = [(ts0, ts1)]
+            self.global_t_start = [ts0 /1e6]
+            self.global_t_stop = [ts1 /1e6]
+        else:
+            self.global_t_start = self._sigs_t_start
+            self.global_t_stop = self._sigs_t_stop
         
         #fille into header dict
         self.header = {}
@@ -168,21 +184,21 @@ class NeuralynxRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
         
-        #TODO
         # Annotations
         self._generate_minimal_annotations()
-        #~ bl_annotations = self.raw_annotations['blocks'][0]
-        #~ seg_annotations = bl_annotations['segments'][0]
-        
-        #TODO event
-                       #~ labels=event_type['name'],
-                       #~ name="Digital Marker " + str(event_type),
-                       #~ file_origin=filename_nev,
-                       #~ marker_id=event_type['event_id'],
-                       #~ digital_marker=True,
-                       #~ analog_marker=False,
-                       #~ nttl=event_type['nttl'])        
-
+        bl_annotations = self.raw_annotations['blocks'][0]
+        for c in range(event_channels.size):
+            #annotations for channel events
+            chan_id = event_channels[c]['id']
+            for seg_index in range(self._nb_segment):
+                seg_annotations = bl_annotations['segments'][seg_index]
+                ev_ann = seg_annotations['events'][c]
+                ev_ann['file_origin'] = self.nev_filenames[chan_id]
+                #~ ev_ann['marker_id'] = 
+                #~ ev_ann['nttl'] = 
+                #~ ev_ann['digital_marker'] = 
+                #~ ev_ann['analog_marker'] = 
+    
     def _segment_t_start(self, block_index, seg_index):
         return self.global_t_start[seg_index]
 

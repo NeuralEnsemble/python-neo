@@ -113,7 +113,7 @@ class BlackrockRawIO(BaseRawIO):
               * must be set at the init before parse_header()
     
     Examples:
-        >>> reader = BlackrockRawIO('FileSpec2.3001', nsx_to_load=5)
+        >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
         >>> reader.parse_header()
         
             Inspect a set of file consisting of files FileSpec2.3001.ns5 and 
