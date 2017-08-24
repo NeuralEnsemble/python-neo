@@ -47,6 +47,8 @@ class TdtRawIO(BaseRawIO):
         which stores the sortcode for every spike; defaults to '', which uses the original online sort
         """
         BaseRawIO.__init__(self)
+        if dirname.endswith('/'):
+            dirname = dirname[:-1]
         self.dirname = dirname
         
         self.sortname = sortname
