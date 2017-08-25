@@ -11,10 +11,7 @@ import quantities as pq
 from datetime import datetime
 import os
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.io.nsdfio import HAVE_NSDF, NSDFIO
 from neo.test.iotest.common_io_test import BaseTestIO

@@ -6,10 +6,7 @@ Tests of the neo.core.analogsignalarray.AnalogSignalArrayArray class
 import os
 import pickle
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 import quantities as pq

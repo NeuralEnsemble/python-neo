@@ -6,10 +6,7 @@ Tests of neo.io.blackrockio
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from numpy.testing import assert_equal
 
