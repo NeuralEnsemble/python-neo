@@ -49,10 +49,10 @@ class RawBinarySignalRawIO(BaseRawIO):
         
     def _parse_header(self):
         
-        try:
+        if os.path.exists(self.filename):
             self._raw_signals = np.memmap(self.filename , dtype=self.dtype, mode='r',
                                                         offset=self.bytesoffset).reshape(-1, self.nb_channel)
-        except:
+        else:
             #The the neo.io.RawBinarySignalIO is used for write_segment
             self._raw_signals = None
         
