@@ -40,10 +40,10 @@ Possible usage of the neo.rawio API are:
       the spike sorting module tridesclous_ do that.
 
 
-The neo.rawio is less flexible that neo.io and have some limitaion:
+The neo.rawio is less flexible that neo.io and have some limitations:
   * read only
   * AnalogSignal must have same caracteristcs along all Block and Segment :
-    sampling_rate, shape, dtype
+    sampling_rate, shape[1], dtype
   * AnalogSignal should all have the same sampling_rate otherwise the won't be read
     a the same time.
   * Units must have SpikeTrain event if empty along all Block and Segment

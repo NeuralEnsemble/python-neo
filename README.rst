@@ -65,5 +65,5 @@ For installation instructions, see doc/source/install.rst
 .. _quantities: http://pypi.python.org/pypi/quantities
 .. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
 .. _`issue tracker`: https://github.c
-.. trdesclous_: https://github.com/tridesclous/tridesclous
-.. ephyviewer_: https://github.com/NeuralEnsemble/ephyviewer
+.. _trdesclous: https://github.com/tridesclous/tridesclous
+.. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer
