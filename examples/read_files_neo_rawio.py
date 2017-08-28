@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-This is an example for reading files with neo.io
+This is an example for reading files with neo.rawio
+compare with read_files_neo_io.py
 """
 
 import urllib
-
-from neo.rawio import PlexonRawIO, Spike2RawIO
-
+from neo.rawio import PlexonRawIO
 
 
-# Plexon files
+
+#Get Plexon files
 distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_3.plx'
 localfile = './File_plexon_3.plx'
 urllib.request.urlretrieve(distantfile, localfile)
+
 
 # create a reader
 reader = PlexonRawIO(filename='File_plexon_3.plx')
 reader.parse_header()
 print(reader)
 print(reader.header)
-
-for k, v in reader.header.items():
-    print(k, v)
 
 #Read signal chunks
 channel_indexes = None #could be channel_indexes = [0]
@@ -36,34 +34,48 @@ print(float_sigs.shape, float_sigs.dtype)
 print(sampling_rate, t_start, units)
 
 
-
-# read the blocks
-#~ blks = reader.read(cascade=True, lazy=False)
-#~ print (blks)
-#~ # access to segments
-#~ for blk in blks:
-    #~ for seg in blk.segments:
-        #~ print (seg)
-        #~ for asig in seg.analogsignals:
-            #~ print (asig)
-        #~ for st in seg.spiketrains:
-            #~ print (st)
+#Count unit and spike per units
+nb_unit = reader.unit_channels_count()
+print('nb_unit', nb_unit)
+for unit_index in range(nb_unit):
+    nb_spike = reader.spike_count(block_index=0, seg_index=0, unit_index=unit_index)
+    print('unit_index', unit_index, 'nb_spike', nb_spike)
 
 
-#~ # CED Spike2 files
-#~ distantfile = 'https://portal.g-node.org/neo/spike2/File_spike2_1.smr'
-#~ localfile = './File_spike2_1.smr'
-#~ urllib.request.urlretrieve(distantfile, localfile)
+#Read spike times
+spike_timestamps = reader.spike_timestamps(block_index=0, seg_index=0, unit_index=0,
+                        t_start=0., t_stop=10.)
+print(spike_timestamps.shape, spike_timestamps.dtype, spike_timestamps[:5])
+spike_times =  reader.rescale_spike_timestamp( spike_timestamps, dtype='float64')
+print(spike_times.shape, spike_times.dtype, spike_times[:5])
 
-#~ # create a reader
-#~ reader = neo.io.Spike2IO(filename='File_spike2_1.smr')
-#~ # read the block
-#~ bl = reader.read(cascade=True, lazy=False)[0]
-#~ print (bl)
-#~ # access to segments
-#~ for seg in bl.segments:
-    #~ print (seg)
-    #~ for asig in seg.analogsignals:
-        #~ print (asig)
-    #~ for st in seg.spiketrains:
-        #~ print (st)
+
+#Read spike waveforms
+raw_waveforms = reader.spike_raw_waveforms(  block_index=0, seg_index=0, unit_index=0,
+                        t_start=0., t_stop=10.)
+print(raw_waveforms.shape, raw_waveforms.dtype, raw_waveforms[0,0,:4])
+float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float32', unit_index=0)
+print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0,0,:4])
+
+
+
+#Count event per channel
+reader = PlexonRawIO(filename='File_plexon_2.plx')
+reader.parse_header()
+nb_event_channel = reader.event_channels_count()
+print('nb_event_channel', nb_event_channel)
+for chan_index in range(nb_event_channel):
+    nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=chan_index)
+    print('chan_index',chan_index, 'nb_event', nb_event)
+
+
+#Read event timestamps and times (take anotehr file)
+distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_2.plx'
+localfile = './File_plexon_2.plx'
+urllib.request.urlretrieve(distantfile, localfile)
+
+ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=0, seg_index=0, event_channel_index=0,
+                        t_start=None, t_stop=None)
+print(ev_timestamps, ev_durations, ev_labels)
+ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
+print(ev_times)
