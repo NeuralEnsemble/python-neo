@@ -93,7 +93,7 @@ class BaseRawIO(object):
     
     name = 'BaseIO'
     description = ''
-    extentions = []
+    extensions = []
 
     rawmode = None # one key in possible_raw_modes
     

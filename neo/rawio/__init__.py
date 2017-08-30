@@ -46,3 +46,23 @@ rawiolist = [
     WinWcpRawIO,
 ]
 
+import os
+def get_rawio_class(filename_or_dirname):
+    """
+    Return a neo.rawio class guess from file extention.
+    """
+    _, ext = os.path.splitext(filename_or_dirname)
+    ext = ext[1:]
+    possibles = []
+    for rawio in rawiolist:
+        if any(ext.lower()== ext2.lower() for ext2  in rawio.extensions):
+            possibles.append(rawio)
+    
+    if len(possibles)==1:
+        return possibles[0]
+    else:
+        return None
+
+    
+    
+    
