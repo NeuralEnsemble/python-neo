@@ -858,7 +858,7 @@ class TestSlice(unittest.TestCase):
         result = self.train1[1:2]
         assert_arrays_equal(self.train1[1:2], result)
         targwaveforms = np.array([[[2., 3.],
-                                   [2.1, 3.1]]])
+                                   [2.1, 3.1]]]) * pq.mV
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
