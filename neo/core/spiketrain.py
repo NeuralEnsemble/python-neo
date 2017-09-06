@@ -20,6 +20,7 @@ the old object.
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+import sys
 
 import copy
 import numpy as np
@@ -429,9 +430,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # I'm not sure how. (If you know, please add an explanatory comment
         # here.) That copies over all of the metadata.
 
-        # update waveforms
-        if obj.waveforms is not None:
-            obj.waveforms = obj.waveforms[i:j]
+        # update waveforms only for python < 2.7. For newer versions,
+        # __getslice__ is calling __getitem__ which is also correcting for this.
+        if not sys.version_info >= (2, 7):
+            if obj.waveforms is not None:
+                obj.waveforms = obj.waveforms[i:j]
         return obj
 
     def __add__(self, time):
