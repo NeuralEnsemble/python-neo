@@ -6,10 +6,7 @@ Tests of neo.io.baseio
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.core import objectlist
 from neo.io.baseio import BaseIO

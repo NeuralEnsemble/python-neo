@@ -5,10 +5,7 @@ Tests of neo.io.hdf5io_new
 """
 
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 import numpy as np
 from numpy.testing import assert_array_equal
 from quantities import kHz, mV, ms, second, nA
