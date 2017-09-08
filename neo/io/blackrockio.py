@@ -249,6 +249,11 @@ class BlackrockIO(BaseIO):
 
         # check which files are available
         self._avail_files = dict.fromkeys(self.extensions, False)
+
+        # check if there are any files present
+        if not any(list(self._avail_files.values())):
+            raise IOError('No Blackrock files present at {}'.format(filename))
+
         self._avail_nsx = []
         for ext in self.extensions:
             if ext.startswith('ns'):
