@@ -2040,7 +2040,7 @@ class BlackrockIO(BaseIO):
         # additional information about the LFP signal
         if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
             # It does not matter which nsX file to ask for this info
-            k = self.__nsx_ext_header.keys()[0]
+            k = list(self.__nsx_ext_header.keys())[0]
             if channel_id in self.__nsx_ext_header[k]['electrode_id']:
                 get_idx = list(
                     self.__nsx_ext_header[k]['electrode_id']).index(
