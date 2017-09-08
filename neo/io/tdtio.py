@@ -28,7 +28,7 @@ import itertools
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
-from neo.io.tools import iteritems
+
 
 PY3K = (sys.version_info[0] == 3)
 

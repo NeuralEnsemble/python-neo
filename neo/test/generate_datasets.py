@@ -20,7 +20,7 @@ from neo.core import (AnalogSignal,
                       Segment, SpikeTrain,
                       Unit,
                       class_by_name)
-from neo.io.tools import iteritems
+
 from neo.core.baseneo import _container_name
 
 
@@ -104,7 +104,7 @@ def generate_one_simple_segment(seg_name='segment 0',
             seg.spiketrains.append(sptr)
 
     if Event in supported_objects:
-        for name, labels in iteritems(event_types):
+        for name, labels in event_types.items():
             evt_size = rand()*np.diff(event_size_range)
             evt_size += event_size_range[0]
             evt_size = int(evt_size)
@@ -114,7 +114,7 @@ def generate_one_simple_segment(seg_name='segment 0',
             seg.events.append(evt)
 
     if Epoch in supported_objects:
-        for name, labels in iteritems(epoch_types):
+        for name, labels in epoch_types.items():
             t = 0
             times = []
             durations = []

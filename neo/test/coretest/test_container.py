@@ -3,10 +3,7 @@
 Tests of the neo.core.container.Container class
 """
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 

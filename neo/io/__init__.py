@@ -46,6 +46,8 @@ Classes:
 
 .. autoclass:: neo.io.NestIO
 
+.. autoclass:: neo.io.NeuralynxIO
+
 .. autoclass:: neo.io.NeuroExplorerIO
 
 .. autoclass:: neo.io.NeuroScopeIO
@@ -53,6 +55,8 @@ Classes:
 .. autoclass:: neo.io.NeuroshareIO
 
 .. autoclass:: neo.io.NixIO
+
+.. autoclass:: neo.io.NSDFIO
 
 .. autoclass:: neo.io.PickleIO
 
@@ -117,6 +121,7 @@ from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
+from neo.io.nsdfio import NSDFIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.pynnio import PyNNNumpyIO
@@ -154,6 +159,7 @@ iolist = [
           NeuroExplorerIO,
           NeuroScopeIO,
           NeuroshareIO,
+          NSDFIO,
           PickleIO,
           PlexonIO,
           PyNNNumpyIO,
@@ -167,13 +173,13 @@ iolist = [
 ]
 
 
-def get_io(filename):
+def get_io(filename, *args, **kwargs):
     """
     Return a Neo IO instance, guessing the type based on the filename suffix.
     """
     extension = os.path.splitext(filename)[1][1:]
     for io in iolist:
         if extension in io.extensions:
-            return io(filename=filename)
+            return io(filename, *args, **kwargs)
 
-    raise IOError("file extension %s not registered" % extension)
+    raise IOError("File extension %s not registered" % extension)

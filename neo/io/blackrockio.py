@@ -48,7 +48,6 @@ from __future__ import division
 import datetime
 import os
 import re
-import types
 
 import numpy as np
 import quantities as pq
@@ -93,19 +92,19 @@ class BlackrockIO(BaseIO):
             ignored when parsing this parameter.
         nsx_override (string):
             File name of the .nsX files (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         nev_override (string):
             File name of the .nev file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         sif_override (string):
             File name of the .sif file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         ccf_override (string):
             File name of the .ccf file (without extension). If None,
-            _filenames is used.
+            filename is used.
             Default: None.
         verbose (boolean):
             If True, the class will output additional diagnostic
@@ -132,16 +131,14 @@ class BlackrockIO(BaseIO):
     is_writable = False
 
     # This IO can only manipulate continuous data, spikes, and events
-    supported_objects  = [Block, Segment, Event, AnalogSignal, SpikeTrain,
-                          Unit, ChannelIndex]
-    readable_objects    = [Block, Segment]
+    supported_objects = [
+        Block, Segment, Event, AnalogSignal, SpikeTrain, Unit, ChannelIndex]
+    readable_objects = [Block, Segment]
     writeable_objects = []
 
-    # TODO: Not sure what header and streamable does
     has_header = False
     is_streameable = False
 
-    # TODO: Not sure if this is needed
     read_params = {
         neo.Block: [
             ('nsx_to_load', {
@@ -219,8 +216,8 @@ class BlackrockIO(BaseIO):
         """
         BaseIO.__init__(self)
 
-        # Remember choice whether to print diagnostic messages or not
-        self._verbose = verbose
+        # Used to avoid unnecessary repetition of verbose messages
+        self.__verbose_messages = []
 
         # remove extension from base _filenames
         for ext in self.extensions:
@@ -313,7 +310,7 @@ class BlackrockIO(BaseIO):
             '2.1': self.__get_nonneural_evtypes_variant_a,
             '2.2': self.__get_nonneural_evtypes_variant_a,
             '2.3': self.__get_nonneural_evtypes_variant_b}
-        
+
         # Load file spec and headers of available nev file
         if self._avail_files['nev']:
             # read nev file specification
@@ -346,8 +343,10 @@ class BlackrockIO(BaseIO):
         """
         Print a verbose diagnostic message (string).
         """
-        if self._verbose:
-            print('BlackrockIO: ' + text)
+        if self.__verbose_messages:
+            if text not in self.__verbose_messages:
+                self.__verbose_messages.append(text)
+                print(str(self.__class__.__name__) + ': ' + text)
 
     def __extract_nsx_file_spec(self, nsx_nb):
         """
@@ -540,7 +539,7 @@ class BlackrockIO(BaseIO):
                 'offset_to_data_block': offset + dh.dtype.itemsize}
 
             # data size = number of data points * (2bytes * number of channels)
-            #int for avoid overflow problem
+            # use of `int` avoids overflow problem
             data_size = int(dh['nb_data_points']) * \
                 int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
             # define new offset (to possible next data block)
@@ -644,13 +643,10 @@ class BlackrockIO(BaseIO):
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
             mask = (raw_ext_header['packet_id'] == packet_id)
-            assert isinstance(mask, np.ndarray)
-
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
             nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
-
         return nev_basic_header, nev_ext_header
 
     def __read_nev_header_variant_a(self):
@@ -1010,6 +1006,9 @@ class BlackrockIO(BaseIO):
             'nb_units': dict(zip(
                 self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
                 self.__nev_ext_header[b'NEUEVWAV']['nb_sorted_units'])),
+            'digitization_factor': dict(zip(
+                self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
+                self.__nev_ext_header[b'NEUEVWAV']['digitization_factor'])),
             'data_size': self.__nev_basic_header['bytes_in_data_packets'],
             'waveform_size': self.__waveform_size[self.__nev_spec](),
             'waveform_dtypes': self.__get_waveforms_dtype(),
@@ -1178,7 +1177,7 @@ class BlackrockIO(BaseIO):
         nb_bytes_wf = self.__nev_basic_header['bytes_in_data_packets'] - 8
 
         wf_sizes = dict([
-            (ch, nb_bytes_wf / np.dtype(dt).itemsize) for ch, dt in
+            (ch, int(nb_bytes_wf / np.dtype(dt).itemsize)) for ch, dt in
             wf_dtypes.items()])
 
         return wf_sizes
@@ -1198,15 +1197,16 @@ class BlackrockIO(BaseIO):
         as the time from the beginning of the waveform to the trigger time of
         the corresponding spike.
         """
-        # TODO: not sure if this is the actual setting for Blackrock
+        # TODO: Double check if this is the actual setting for Blackrock
         wf_t_unit = self.__nev_params('waveform_time_unit')
         all_ch = self.__nev_params('channel_ids')
-        wf_size = self.__nev_params('waveform_size')
 
+        # TODO: Double check if this is the correct assumption (10 samples)
         # default value: threshold crossing after 10 samples of waveform
         wf_left_sweep = dict([(ch, 10 * wf_t_unit) for ch in all_ch])
 
         # non-default: threshold crossing at center of waveform
+        # wf_size = self.__nev_params('waveform_size')
         # wf_left_sweep = dict(
         #     [(ch, (wf_size[ch] / 2) * wf_t_unit) for ch in all_ch])
 
@@ -1217,9 +1217,28 @@ class BlackrockIO(BaseIO):
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.1.
         """
-        # (several are assumed from Blackrock manual)
+        # Here, min/max_analog_val and min/max_digital_val are not available in
+        # the nsx, so that we must estimate these parameters from the
+        # digitization factor of the nev (information by Kian Torab, Blackrock
+        # Microsystems). Here dig_factor=max_analog_val/max_digital_val. We set
+        # max_digital_val to 1000, and max_analog_val=dig_factor. dig_factor is
+        # given in nV by definition, so the units turn out to be uV.
         labels = []
+        dig_factor = []
         for elid in self.__nsx_ext_header[nsx_nb]['electrode_id']:
+            if self._avail_files['nev']:
+                # This is a workaround for the DigitalFactor overflow in NEV
+                # files recorded with buggy Cerebus system.
+                # Fix taken from: NMPK toolbox by Blackrock,
+                # file openNEV, line 464,
+                # git rev. d0a25eac902704a3a29fa5dfd3aed0744f4733ed
+                df = self.__nev_params('digitization_factor')[elid]
+                if df == 21516:
+                    df = 152592.547
+                dig_factor.append(df)
+            else:
+                dig_factor.append(None)
+
             if elid < 129:
                 labels.append('chan%i' % elid)
             else:
@@ -1228,15 +1247,14 @@ class BlackrockIO(BaseIO):
         nsx_parameters = {
             'labels': labels,
             'units': np.array(
-                ['mV'] * self.__nsx_basic_header[nsx_nb]['channel_count']),
-            'min_analog_val': np.array(
-                [-5000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
-            'max_analog_val': np.array(
-                [5000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                ['uV'] *
+                self.__nsx_basic_header[nsx_nb]['channel_count']),
+            'min_analog_val': -1 * np.array(dig_factor),
+            'max_analog_val': np.array(dig_factor),
             'min_digital_val': np.array(
-                [-8192] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [-1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'max_digital_val': np.array(
-                [8192] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb].dtype.itemsize +
@@ -1328,21 +1346,24 @@ class BlackrockIO(BaseIO):
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < n_stop <= t_stops[d_bl - 1]:
                 self._print_verbose(
-                    "User n_start (%s) is smaller than the corresponding "
-                    "t_start of the available ns%i datablock" % (
-                        str(n_start), nsx_nb))
+                    "User n_start ({0}) is smaller than the corresponding "
+                    "t_start of the available ns{1} datablock "
+                    "({2}).".format(n_start, nsx_nb, t_starts[d_bl - 1]))
                 return data_parameters[param_name]
             elif t_starts[d_bl - 1] <= n_start < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_stop (%s) is larger than the corresponding t_stop "
-                    "of the available ns%i datablock" % (str(n_stop), nsx_nb))
+                    "User n_stop ({0}) is larger than the corresponding "
+                    "t_stop of the available ns{1} datablock "
+                    "({2}).".format(n_stop, nsx_nb, t_stops[d_bl - 1]))
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_start (%s) and is smaller than the corresponding "
-                    "t_start and user n_stop (%s) is larger than the "
-                    "corresponding t_stop of the available ns%i datablock" % (
-                        str(n_start), str(n_stop), nsx_nb))
+                    "User n_start ({0}) is smaller than the corresponding "
+                    "t_start and user n_stop ({1}) is larger than the "
+                    "corresponding t_stop of the available ns{2} datablock "
+                    "({3}).".format(
+                        n_start, n_stop, nsx_nb,
+                        (t_starts[d_bl - 1], t_stops[d_bl - 1])))
                 return data_parameters[param_name]
             else:
                 continue
@@ -1487,12 +1508,16 @@ class BlackrockIO(BaseIO):
             (isinstance(channels, str) and channels.lower() == 'none')):
 
             self._print_verbose("No channel is specified, therefore no "
-                                "recordingchannelgroup and unit is loaded.")
+                                "timeseries and unit is loaded.")
 
             return None
 
         all_channels = self.__nev_ext_header[b'NEUEVWAV']['electrode_id'].astype(int).tolist()
         all_channels.extend(self.__channels_from_nsx(nsx_to_load))
+
+        elec_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id']
+        all_channels.extend(elec_id.astype(int))
+
         all_channels = np.unique(all_channels).tolist()
 
         if (isinstance(channels, str) and channels.lower() == 'all'):
@@ -1505,12 +1530,15 @@ class BlackrockIO(BaseIO):
             else:
                 raise ValueError("Channel {} does not exist in channels.".format(channels))
 
-        channels_intersection = set(all_channels) & set(channels)
+        if isinstance(channels, list):
+            if len(set(all_channels) & set(channels)) < len(channels):
+                self._print_verbose(
+                    "Ignoring unknown channel ID(s) specified in in channels.")
 
-        if len(channels_intersection) < len(channels):
-            raise ValueError("Unknown channel id in channels.")
-        else:
-            return channels
+                # Make sure, all channels are valid and contain no duplicates
+                return list(set(all_channels).intersection(set(channels)))
+            else:
+                return channels
 
         raise ValueError("Invalid channel specification.")
 
@@ -1533,7 +1561,7 @@ class BlackrockIO(BaseIO):
                     if u.lower() == 'none':
                         units[ch] = None
                     elif u.lower() == 'all':
-                        units[ch] = range(17)
+                        units[ch] = list(range(17))
                         units[ch].append(255)
                     else:
                         raise ValueError("Invalid unit specification.")
@@ -1588,15 +1616,14 @@ class BlackrockIO(BaseIO):
             self, user_n_starts, user_n_stops, nsx_to_load):
         """
         Merges after a validation the user specified n_starts and n_stops with
-        the intrinsicly given n_starts and n_stops (from e.g, recording pauses)
-        of the file set.
+        the intrinsically given n_starts and n_stops (from e.g, recording
+        pauses) of the file set.
 
         Final n_starts and n_stops are chosen, so that the time range of each
         resulting segment is set to the best meaningful maximum. This means
         that the duration of the signals stored in the segments might be
         smaller than the actually set duration of the segment.
         """
-        self._print_verbose("######## INFO TIME SETTINGS ########")
 
         # define the higest time resolution
         # (for accurate manipulations of the time settings)
@@ -1706,7 +1733,8 @@ class BlackrockIO(BaseIO):
                 n_starts.extend(merged_n_starts)
                 n_stops.extend(merged_n_stops)
 
-        if len(n_starts) > len(user_n_starts) and len(n_stops) > len(user_n_stops):
+        if len(n_starts) > len(user_n_starts) and \
+                len(n_stops) > len(user_n_stops):
             self._print_verbose(
                 "Additional recording pauses were detected. There will be "
                 "more segments than the user expects.")
@@ -1742,8 +1770,8 @@ class BlackrockIO(BaseIO):
         return ev
 
     def __read_spiketrain(
-            self, n_start, n_stop, spikes, channel_idx, unit_id,
-            load_waveforms=False, lazy=False):
+            self, n_start, n_stop, spikes, channel_id, unit_id,
+            load_waveforms=False, scaling='raw', lazy=False):
         """
         Creates spiketrains for Spikes in nev data.
         """
@@ -1751,15 +1779,18 @@ class BlackrockIO(BaseIO):
 
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_idx + unit_id)
+        name = "Unit {0}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
         desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
-            channel_idx, self.__get_unit_classification(unit_id))
+            channel_id, self.__get_unit_classification(unit_id))
 
         # get spike times for given time interval
-        times = spikes['timestamp'] * event_unit
-        mask = (times >= n_start) & (times < n_stop)
-        times = times[mask].astype(float)
+        if not lazy:
+            times = spikes['timestamp'] * event_unit
+            mask = (times >= n_start) & (times < n_stop)
+            times = times[mask].astype(float)
+        else:
+            times = np.array([]) * event_unit
 
         st = SpikeTrain(
             times=times,
@@ -1771,32 +1802,47 @@ class BlackrockIO(BaseIO):
 
         if lazy:
             st.lazy_shape = np.shape(times)
-            st.times = []
 
-        # load waveforms if wanted
+        # load waveforms if requested
         if load_waveforms and not lazy:
-            wf_dtype = self.__nev_params('waveform_dtypes')[channel_idx]
-            wf_size = self.__nev_params('waveform_size')[channel_idx]
+            wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
+            wf_size = self.__nev_params('waveform_size')[channel_id]
 
             waveforms = spikes['waveform'].flatten().view(wf_dtype)
             waveforms = waveforms.reshape(int(spikes.size), 1, int(wf_size))
 
-            st.waveforms = waveforms[mask] * self.__nev_params('waveform_unit')
+            if scaling == 'voltage':
+                st.waveforms = (
+                    waveforms[mask] * self.__nev_params('waveform_unit') *
+                    self.__nev_params('digitization_factor')[channel_id] /
+                    1000.)
+            elif scaling == 'raw':
+                st.waveforms = waveforms[mask] * pq.dimensionless
+            else:
+                raise ValueError(
+                    'Unkown option {1} for parameter scaling.'.format(scaling))
             st.sampling_rate = self.__nev_params('waveform_sampling_rate')
-            st.left_sweep = self.__get_left_sweep_waveforms()[channel_idx]
+            st.left_sweep = self.__get_left_sweep_waveforms()[channel_id]
 
         # add additional annotations
         st.annotate(
-            ch_idx=int(channel_idx),
-            unit_id=int(unit_id))
+            unit_id=int(unit_id),
+            channel_id=int(channel_id))
 
         return st
 
     def __read_analogsignal(
-            self, n_start, n_stop, signal, channel_idx, nsx_nb, lazy=False):
+            self, n_start, n_stop, signal, channel_id, nsx_nb,
+            scaling='raw', lazy=False):
         """
         Creates analogsignal for signal of channel in nsx data.
         """
+
+        # TODO: The following part is extremely slow, since the memmaps for the
+        # headers are created again and again. In particular, this makes lazy
+        # loading slow as well. Solution would be to create header memmaps up
+        # front.
+
         # get parameters
         sampling_rate = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'sampling_rate', nsx_nb)
@@ -1823,73 +1869,81 @@ class BlackrockIO(BaseIO):
             'databl_t_stop', nsx_nb, n_start, n_stop)
 
         elids_nsx = list(self.__nsx_ext_header[nsx_nb]['electrode_id'])
-        if channel_idx in elids_nsx:
-            idx_ch = elids_nsx.index(channel_idx)
+        if channel_id in elids_nsx:
+            idx_ch = elids_nsx.index(channel_id)
         else:
             return None
 
         description = \
             "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
-                channel_idx, labels[idx_ch], nsx_nb)
+                channel_id, labels[idx_ch], nsx_nb)
 
+        # TODO: Find a more time/memory efficient way to handle lazy loading
         data_times = np.arange(
             t_start.item(), t_stop.item(),
             self.__nsx_basic_header[nsx_nb]['period']) * t_start.units
         mask = (data_times >= n_start) & (data_times < n_stop)
-        
+
         if lazy:
             lazy_shape = (np.sum(mask), )
-            sig_ch =  np.array([], dtype='float32')
+            sig_ch = np.array([], dtype='float32')
+            sig_unit = pq.dimensionless
             t_start = n_start.rescale('s')
         else:
-        
             data_times = data_times[mask].astype(float)
-            sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
-            
-            # transform dig value to pysical value
-            sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
-            sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
-            if sym_ana and sym_dig:
-                sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+            if scaling == 'voltage':
+                if not self._avail_files['nev']:
+                    raise ValueError(
+                        'Cannot convert signals in filespec 2.1 nsX '
+                        'files to voltage without nev file.')
+                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype('float32')
+
+                # transform dig value to physical value
+                sym_ana = (max_ana[idx_ch] == -min_ana[idx_ch])
+                sym_dig = (max_dig[idx_ch] == -min_dig[idx_ch])
+                if sym_ana and sym_dig:
+                    sig_ch *= float(max_ana[idx_ch]) / float(max_dig[idx_ch])
+                else:
+                    # general case (same result as above for symmetric input)
+                    sig_ch -= min_dig[idx_ch]
+                    sig_ch *= float(max_ana[idx_ch] - min_ana[idx_ch]) / \
+                        float(max_dig[idx_ch] - min_dig[idx_ch])
+                    sig_ch += float(min_ana[idx_ch])
+                sig_unit = units[idx_ch].decode()
+            elif scaling == 'raw':
+                sig_ch = signal[dbl_idx][:, idx_ch][mask].astype(int)
+                sig_unit = pq.dimensionless
             else:
-                # general case
-                sig_ch -= min_dig[idx_ch]
-                sig_ch *= float(max_ana[idx_ch] - min_ana) / \
-                    float(max_dig[idx_ch] - min_dig)
-                sig_ch += float(min_ana[idx_ch])
-            
-            t_start=data_times[0].rescale(nsx_time_unit)
-            
+                raise ValueError(
+                    'Unkown option {1} for parameter '
+                    'scaling.'.format(scaling))
+
+            t_start = data_times[0].rescale(nsx_time_unit)
+
         anasig = AnalogSignal(
-            signal=pq.Quantity(sig_ch, units[idx_ch].decode(), copy=False),
+            signal=pq.Quantity(sig_ch, sig_unit, copy=False),
             sampling_rate=sampling_rate,
             t_start=t_start,
             name=labels[idx_ch],
             description=description,
             file_origin='.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb]))
-
         if lazy:
             anasig.lazy_shape = lazy_shape
-        
-        
         anasig.annotate(
             nsx=nsx_nb,
-            ch_idx=channel_idx,
-            ch_label=labels[idx_ch])
-
-
+            channel_id=int(channel_id))
         return anasig
 
-    def __read_unit(self, unit_id, channel_idx):
+    def __read_unit(self, unit_id, channel_id):
         """
         Creates unit with unit id for given channel id.
         """
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_idx + unit_id)
+        name = "Unit {0}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
         desc = 'Unit from channel: {0}, id: {1}'.format(
-            channel_idx, self.__get_unit_classification(unit_id))
+            channel_id, self.__get_unit_classification(unit_id))
 
         un = Unit(
             name=name,
@@ -1897,65 +1951,112 @@ class BlackrockIO(BaseIO):
             file_origin='.'.join([self._filenames['nev'], 'nev']))
 
         # add additional annotations
-        un.annotate(ch_idx=int(channel_idx))
-        un.annotate(unit_id=int(unit_id))
+        un.annotate(
+            unit_id=int(unit_id),
+            channel_id=int(channel_id))
 
         return un
 
-    def __read_recordingchannelgroup(
-            self, channel_idx, index=None, channel_units=None, cascade=True):
+    def __read_channelindex(
+            self, channel_id, index=None, channel_units=None, cascade=True):
         """
-        Returns a ChannelIndex with the
-        given index for the given channels containing a neo.core.unit.Unit
-        object list of the given units.
+        Returns a ChannelIndex with the given index for the given channels
+        containing a neo.core.unit.Unit object list of the given units.
         """
 
-        rcg = ChannelIndex(
-            np.array([channel_idx]),
+        flt_type = {0: 'None', 1: 'Butterworth'}
+
+        chidx = ChannelIndex(
+            np.array([channel_id]),
             file_origin=self.filename)
 
         if index is not None:
-            rcg.index = index
-            rcg.name = "ChannelIndex {0}".format(rcg.index)
+            chidx.index = index
+            chidx.name = "ChannelIndex {0}".format(chidx.index)
         else:
-            rcg.name = "ChannelIndex"
+            chidx.name = "ChannelIndex"
 
 
         if self._avail_files['nev']:
             channel_labels = self.__nev_params('channel_labels')
-            if channel_labels is not None and channel_idx in channel_labels:
-                rcg.channel_names = channel_labels[channel_idx]
+            if channel_labels is not None and channel_id in channel_labels:
+                chidx.channel_names = np.array([channel_labels[channel_id]])
+            chidx.channel_ids = np.array([channel_id])
 
             # additional annotations from nev
-            if channel_idx in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
+            if channel_id in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
                 get_idx = list(
                     self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(
-                        channel_idx)
-                rcg.annotate(
+                        channel_id)
+                chidx.annotate(
                     connector_ID=self.__nev_ext_header[
                         b'NEUEVWAV']['physical_connector'][get_idx],
                     connector_pinID=self.__nev_ext_header[
                         b'NEUEVWAV']['connector_pin'][get_idx],
-                    dig_factor=self.__nev_ext_header[
+                    nev_dig_factor=self.__nev_ext_header[
                         b'NEUEVWAV']['digitization_factor'][get_idx],
-                    connector_pin=self.__nev_ext_header[
-                        b'NEUEVWAV']['connector_pin'][get_idx],
-                    energy_threshold=self.__nev_ext_header[
+                    nev_energy_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
-                    hi_threshold=self.__nev_ext_header[
+                    nev_hi_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
-                    lo_threshold=self.__nev_ext_header[
+                    nev_lo_threshold=self.__nev_ext_header[
                         b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
                     nb_sorted_units=self.__nev_ext_header[
                         b'NEUEVWAV']['nb_sorted_units'][get_idx],
                     waveform_size=self.__waveform_size[self.__nev_spec](
-                    )[channel_idx] * self.__nev_params('waveform_time_unit'))
+                    )[channel_id] * self.__nev_params('waveform_time_unit'))
 
-        rcg.description = \
-            "Container for units and groups analogsignals across segments."
+                # additional annotations from nev (only for file_spec > 2.1)
+                if self.__nev_spec in ['2.2', '2.3']:
+                    get_idx = list(
+                        self.__nev_ext_header[
+                            b'NEUEVFLT']['electrode_id']).index(
+                                channel_id)
+                    # filter type codes (extracted from blackrock manual)
+                    chidx.annotate(
+                        nev_hi_freq_corner=self.__nev_ext_header[b'NEUEVFLT'][
+                            'hi_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
+                        nev_hi_freq_order=self.__nev_ext_header[b'NEUEVFLT'][
+                            'hi_freq_order'][get_idx],
+                        nev_hi_freq_type=flt_type[self.__nev_ext_header[
+                            b'NEUEVFLT']['hi_freq_type'][get_idx]],
+                        nev_lo_freq_corner=self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
+                        nev_lo_freq_order=self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_order'][get_idx],
+                        nev_lo_freq_type=flt_type[self.__nev_ext_header[
+                            b'NEUEVFLT']['lo_freq_type'][get_idx]])
+
+        # additional information about the LFP signal
+        if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+            # It does not matter which nsX file to ask for this info
+            k = self.__nsx_ext_header.keys()[0]
+            if channel_id in self.__nsx_ext_header[k]['electrode_id']:
+                get_idx = list(
+                    self.__nsx_ext_header[k]['electrode_id']).index(
+                        channel_id)
+                chidx.annotate(
+                    nsx_hi_freq_corner=self.__nsx_ext_header[k][
+                        'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_lo_freq_corner=self.__nsx_ext_header[k][
+                        'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_hi_freq_order=self.__nsx_ext_header[k][
+                        'hi_freq_order'][get_idx],
+                    nsx_lo_freq_order=self.__nsx_ext_header[k][
+                        'lo_freq_order'][get_idx],
+                    nsx_hi_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]],
+                    nsx_lo_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]])
+
+        chidx.description = \
+            "Container for units and groups analogsignals of one recording " \
+            "channel across segments."
 
         if not cascade:
-            return rcg
+            return chidx
 
         if self._avail_files['nev']:
             # read nev data
@@ -1963,25 +2064,26 @@ class BlackrockIO(BaseIO):
 
             if channel_units is not None:
                 # extract first data for channel
-                ch_mask = (nev_data['Spikes']['packet_id'] == channel_idx)
+                ch_mask = (nev_data['Spikes']['packet_id'] == channel_id)
                 data_ch = nev_data['Spikes'][ch_mask]
 
                 for un_id in channel_units:
                     if un_id in np.unique(data_ch['unit_class_nb']):
 
                         un = self.__read_unit(
-                            unit_id=un_id, channel_idx=channel_idx)
+                            unit_id=un_id, channel_id=channel_id)
 
-                        rcg.units.append(un)
+                        chidx.units.append(un)
 
-        rcg.create_many_to_one_relationship()
+        chidx.create_many_to_one_relationship()
 
-        return rcg
+        return chidx
 
     def read_segment(
             self, n_start, n_stop, name=None, description=None, index=None,
             nsx_to_load='none', channels='none', units='none',
-            load_waveforms=False, load_events=False, lazy=False, cascade=True):
+            load_waveforms=False, load_events=False, scaling='raw',
+            lazy=False, cascade=True):
         """
         Returns an annotated neo.core.segment.Segment.
 
@@ -2019,35 +2121,31 @@ class BlackrockIO(BaseIO):
                 If True, waveforms are attached to all loaded spiketrains.
             load_events (boolean):
                 If True, all recorded events are loaded.
+            scaling (str):
+                Determines whether time series of individual
+                electrodes/channels are returned as AnalogSignals containing
+                raw integer samples ('raw'), or scaled to arrays of floats
+                representing voltage ('voltage'). Note that for file
+                specification 2.1 and lower, the option 'voltage' requires a
+                nev file to be present.
             lazy (boolean):
                 If True, only the shape of the data is loaded.
             cascade (boolean):
                 If True, only the segment without children is returned.
 
-        Returns (neo.segment.Segment):
-            Annotations:
-                t_min (Quantity):
-                    Minimum time point possible for signals in segment
-                    (corresponds to n_start).
-                t_max (Quantity):
-                    Maximum time point possible for signals in segment
-                    (corresponds to n_stop).
+        Returns:
+            Segment (neo.Segment):
+                Returns the specified segment. See documentation of
+                `read_block()` for a full list of annotations of all child
+                objects.
         """
-        self._print_verbose("######## INFO SEGMENT {0} ########".format(index))
-        self._print_verbose("n_start: {0}".format(n_start.rescale('s')))
-        self._print_verbose("n_stop: {0}".format(n_stop.rescale('s')))
+
         # Make sure that input args are transformed into correct instances
-        # Arg: nsx_to_load
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        # Arg: channels
         channels = self.__transform_channels(channels, nsx_to_load)
-        # Arg: units
         units = self.__transform_units(units, channels)
 
         seg = Segment(file_origin=self.filename)
-        seg.annotate(
-            t_min=n_start,
-            t_max=n_stop)
 
         # set user defined annotations if they were provided
         if index is None:
@@ -2106,12 +2204,13 @@ class BlackrockIO(BaseIO):
 
             # get spiketrain
             if units is not None:
-                for ch_idx in units.keys():
+                not_existing_units = []
+                for ch_id in units.keys():
                     # extract first data for channel
-                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_idx)
+                    ch_mask = (nev_data['Spikes']['packet_id'] == ch_id)
                     data_ch = nev_data['Spikes'][ch_mask]
-                    if units[ch_idx] is not None:
-                        for un_id in units[ch_idx]:
+                    if units[ch_id] is not None:
+                        for un_id in units[ch_id]:
                             if un_id in np.unique(data_ch['unit_class_nb']):
                                 # extract then data for unit if unit exists
                                 un_mask = (data_ch['unit_class_nb'] == un_id)
@@ -2121,19 +2220,24 @@ class BlackrockIO(BaseIO):
                                     n_start=n_start,
                                     n_stop=n_stop,
                                     spikes=data_un,
-                                    channel_idx=ch_idx,
+                                    channel_id=ch_id,
                                     unit_id=un_id,
                                     load_waveforms=load_waveforms,
+                                    scaling=scaling,
                                     lazy=lazy)
 
                                 seg.spiketrains.append(st)
                             else:
-                                self._print_verbose(
-                                    "Unit {0} on channel {1} does not "
-                                    "exist".format(un_id, ch_idx))
+                                not_existing_units.append(un_id)
+
+                        if not_existing_units:
+                            self._print_verbose(
+                                "Units {0} on channel {1} do not "
+                                "exist".format(not_existing_units, ch_id))
                     else:
                         self._print_verbose(
-                            "Channel {0} has no units".format(ch_idx))
+                            "There are no units specified for channel "
+                            "{0}".format(ch_id))
 
         if nsx_to_load is not None and channels is not None:
             for nsx_nb in nsx_to_load:
@@ -2141,15 +2245,16 @@ class BlackrockIO(BaseIO):
                 nsx_data = \
                     self.__nsx_data_reader[self.__nsx_spec[nsx_nb]](nsx_nb)
 
-                # read analogsignals
-                for ch_idx in channels:
+                # read Analogsignals
+                for ch_id in channels:
 
                     anasig = self.__read_analogsignal(
                         n_start=n_start,
                         n_stop=n_stop,
                         signal=nsx_data,
-                        channel_idx=ch_idx,
+                        channel_id=ch_id,
                         nsx_nb=nsx_nb,
+                        scaling=scaling,
                         lazy=lazy)
 
                     if anasig is not None:
@@ -2170,7 +2275,8 @@ class BlackrockIO(BaseIO):
     def read_block(
             self, index=None, name=None, description=None, nsx_to_load='none',
             n_starts=None, n_stops=None, channels='none', units='none',
-            load_waveforms=False, load_events=False, lazy=False, cascade=True):
+            load_waveforms=False, load_events=False, scaling='raw',
+            lazy=False, cascade=True):
         """
         Args:
             index (None, int):
@@ -2208,36 +2314,106 @@ class BlackrockIO(BaseIO):
                 If True, waveforms are attached to all loaded spiketrains.
             load_events (boolean):
                 If True, all recorded events are loaded.
+            scaling (str):
+                Determines whether time series of individual
+                electrodes/channels are returned as AnalogSignals containing
+                raw integer samples ('raw'), or scaled to arrays of floats
+                representing voltage ('voltage'). Note that for file
+                specification 2.1 and lower, the option 'voltage' requires a
+                nev file to be present.
             lazy (bool):
                 If True, only the shape of the data is loaded.
             cascade (bool or "lazy"):
                 If True, only the block without children is returned.
 
-        Returns (neo.segment.Segment):
-            Annotations:
-                avail_file_set (list):
-                    List of extensions of all available files for the given
-                    recording.
-                avail_nsx (boolean):
-                    List of available nsx ids (int).
-                avail_nev (boolean):
-                    True if nev is available.
-                avail_sif (boolean):
-                    True if sif is available.
-                avail_ccf (boolean):
-                    True if ccf is available.
-                rec_pauses (boolean):
-                    True if at least one recording pause occurred.
-                nb_segments (int):
-                    Number of created segments after merging recording times
-                    specified by user with the intrinsic ones of the file set.
+        Returns:
+            Block (neo.segment.Block):
+                Block linking all loaded Neo objects.
+
+                Block annotations:
+                    avail_file_set (list):
+                        List of extensions of all available files for the given
+                        recording.
+                    avail_nsx (list of int):
+                        List of integers specifying the .nsX files available,
+                        e.g., [2, 5] indicates that an ns2 and and ns5 file are
+                        available.
+                    avail_nev (bool):
+                        True if a .nev file is available.
+                    avail_ccf (bool):
+                        True if a .ccf file is available.
+                    avail_sif (bool):
+                        True if a .sif file is available.
+                    rec_pauses (bool):
+                        True if the session contains a recording pause (i.e.,
+                        multiple segments).
+                    nb_segments (int):
+                        Number of segments created after merging recording
+                        times specified by user with the intrinsic ones of the
+                        file set.
+
+                Segment annotations:
+                    None.
+
+                ChannelIndex annotations:
+                    waveform_size (Quantitiy):
+                        Length of time used to save spike waveforms (in units
+                        of 1/30000 s).
+                    nev_hi_freq_corner (Quantitiy),
+                    nev_lo_freq_corner (Quantitiy),
+                    nev_hi_freq_order (int), nev_lo_freq_order (int),
+                    nev_hi_freq_type (str), nev_lo_freq_type (str),
+                    nev_hi_threshold, nev_lo_threshold,
+                    nev_energy_threshold (quantity):
+                        Indicates parameters of spike detection.
+                    nsx_hi_freq_corner (Quantity),
+                    nsx_lo_freq_corner (Quantity)
+                    nsx_hi_freq_order (int), nsx_lo_freq_order (int),
+                    nsx_hi_freq_type (str), nsx_lo_freq_type (str)
+                        Indicates parameters of the filtered signal in one of
+                        the files ns1-ns5 (ns6, if available, is not filtered).
+                    nev_dig_factor (int):
+                        Digitization factor in microvolts of the nev file, used
+                        to convert raw samples to volt.
+                    connector_ID, connector_pinID (int):
+                        ID of connector and pin on the connector where the
+                        channel was recorded from.
+                    nb_sorted_units (int):
+                        Number of sorted units on this channel (noise, mua and
+                        sua).
+
+                Unit annotations:
+                    unit_id (int):
+                        ID of the unit.
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the unit was
+                        loaded (equiv. to the single list entry in the
+                        attribute channel_ids of ChannelIndex parent).
+
+                AnalogSignal annotations:
+                    nsx (int):
+                        nsX file the signal was loaded from, e.g., 5 indicates
+                        the .ns5 file.
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the signal was
+                        loaded.
+
+                Spiketrain annotations:
+                    unit_id (int):
+                        ID of the unit from which the spikes were recorded.
+                    channel_id (int):
+                        Channel ID (Blackrock ID) from which the spikes were
+                        loaded.
+
+                Event annotations:
+                    The resulting Block contains one Event object with the name
+                    `digital_input_port`. It contains all digitally recorded
+                    events, with the event code coded in the labels of the
+                    Event. The Event object contains no further annotation.
         """
         # Make sure that input args are transformed into correct instances
-        # Arg: nsx_to_load
         nsx_to_load = self.__transform_nsx_to_load(nsx_to_load)
-        # Arg: channels
         channels = self.__transform_channels(channels, nsx_to_load)
-        # Arg: units
         units = self.__transform_units(units, channels)
 
         # Create block
@@ -2287,28 +2463,29 @@ class BlackrockIO(BaseIO):
                 units=units,
                 load_waveforms=load_waveforms,
                 load_events=load_events,
+                scaling=scaling,
                 lazy=lazy,
                 cascade=cascade)
 
             bl.segments.append(seg)
 
-        # read recordingchannelgroup
+        # read channelindexes
         if channels:
-            for i, ch_idx in enumerate(channels):
-                if units and ch_idx in units.keys() and units[ch_idx] is not None:
-                    ch_units = units[ch_idx]
+            for ch_id in channels:
+                if units and ch_id in units.keys():
+                    ch_units = units[ch_id]
                 else:
                     ch_units = None
 
-                rcg = self.__read_recordingchannelgroup(
-                    channel_idx=ch_idx,
-                    index=i,
+                chidx = self.__read_channelindex(
+                    channel_id=ch_id,
+                    index=0,
                     channel_units=ch_units,
                     cascade=cascade)
 
                 for seg in bl.segments:
                     if ch_units:
-                        for un in rcg.units:
+                        for un in chidx.units:
                             sts = seg.filter(
                                 targdict={'name': un.name},
                                 objects='SpikeTrain')
@@ -2316,12 +2493,12 @@ class BlackrockIO(BaseIO):
                                 un.spiketrains.append(st)
 
                     anasigs = seg.filter(
-                        targdict={'ch_idx': ch_idx},
+                        targdict={'channel_id': ch_id},
                         objects='AnalogSignal')
                     for anasig in anasigs:
-                        rcg.analogsignals.append(anasig)
+                        chidx.analogsignals.append(anasig)
 
-                bl.channel_indexes.append(rcg)
+                bl.channel_indexes.append(chidx)
 
         bl.create_many_to_one_relationship()
 

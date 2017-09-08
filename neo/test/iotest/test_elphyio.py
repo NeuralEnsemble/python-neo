@@ -8,10 +8,7 @@ from __future__ import division
 
 import sys
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 try:
     from neo.io import ElphyIO

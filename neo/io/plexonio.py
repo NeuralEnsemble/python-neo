@@ -24,7 +24,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, SpikeTrain, Event
-from neo.io.tools import iteritems
 
 
 class PlexonIO(BaseIO):
@@ -149,7 +148,7 @@ class PlexonIO(BaseIO):
         # eventarrays
         nb_events = {}
         #maxstrsizeperchannel = { }
-        for chan, h in iteritems(eventHeaders):
+        for chan, h in eventHeaders.items():
             nb_events[chan] = 0
             #maxstrsizeperchannel[chan] = 0
 
@@ -186,7 +185,7 @@ class PlexonIO(BaseIO):
         if not lazy:
             # allocating mem for signal
             sigarrays = {}
-            for chan, h in iteritems(slowChannelHeaders):
+            for chan, h in slowChannelHeaders.items():
                 sigarrays[chan] = np.zeros(nb_samples[chan])
 
             # allocating mem for SpikeTrain
@@ -204,13 +203,13 @@ class PlexonIO(BaseIO):
             # allocating mem for event
             eventpositions = {}
             evarrays = {}
-            for chan, nb in iteritems(nb_events):
+            for chan, nb in nb_events.items():
                 evarrays[chan] = {
                     'times': np.zeros(nb, dtype='f'),
                     'labels': np.zeros(nb, dtype='S4')
                 }
-                eventpositions[chan]=0 
-                
+                eventpositions[chan]=0
+
             fid.seek(start)
             while fid.tell() != -1:
                 dataBlockHeader = HeaderReader(fid, DataBlockHeader).read_f(
@@ -256,7 +255,7 @@ class PlexonIO(BaseIO):
 
 
         ## Step 4: create neo object
-        for chan, h in iteritems(eventHeaders):
+        for chan, h in eventHeaders.items():
             if lazy:
                 times = []
                 labels = None
@@ -273,7 +272,7 @@ class PlexonIO(BaseIO):
                 ea.lazy_shape = nb_events[chan]
             seg.events.append(ea)
 
-        for chan, h in iteritems(slowChannelHeaders):
+        for chan, h in slowChannelHeadersitems():
             if lazy:
                 signal = []
             else:
@@ -329,9 +328,11 @@ class PlexonIO(BaseIO):
                     waveforms = None
             sptr = SpikeTrain(
                 times,
-                units='s', 
+                units='s',
                 t_stop=t_stop*pq.s,
-                waveforms=waveforms
+                waveforms=waveforms,
+                sampling_rate=float(
+                    global_header['WaveformFreq']) * pq.Hz,
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
