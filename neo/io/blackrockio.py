@@ -1967,6 +1967,8 @@ class BlackrockIO(BaseIO):
         containing a neo.core.unit.Unit object list of the given units.
         """
 
+        flt_type = {0: 'None', 1: 'Butterworth'}
+
         chidx = ChannelIndex(
             np.array([channel_id]),
             file_origin=self.filename)
@@ -2010,23 +2012,47 @@ class BlackrockIO(BaseIO):
                 # additional annotations from nev (only for file_spec > 2.1)
                 if self.__nev_spec in ['2.2', '2.3']:
                     get_idx = list(
-                        self.__nev_ext_header[b'NEUEVFLT']['electrode_id']).index(
-                            channel_id)
+                        self.__nev_ext_header[
+                            b'NEUEVFLT']['electrode_id']).index(
+                                channel_id)
                     # filter type codes (extracted from blackrock manual)
-                    flt_type = {0: 'None', 1: 'Butterworth'}
                     chidx.annotate(
-                        nev_hi_freq_corner=self.__nev_ext_header[
-                            b'NEUEVFLT']['hi_freq_corner'][get_idx] * pq.uV,
-                        nev_hi_freq_order=self.__nev_ext_header[
-                            b'NEUEVFLT']['hi_freq_order'][get_idx],
+                        nev_hi_freq_corner=self.__nev_ext_header[b'NEUEVFLT'][
+                            'hi_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
+                        nev_hi_freq_order=self.__nev_ext_header[b'NEUEVFLT'][
+                            'hi_freq_order'][get_idx],
                         nev_hi_freq_type=flt_type[self.__nev_ext_header[
                             b'NEUEVFLT']['hi_freq_type'][get_idx]],
                         nev_lo_freq_corner=self.__nev_ext_header[
-                            b'NEUEVFLT']['lo_freq_corner'][get_idx] * pq.uV,
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
                         nev_lo_freq_order=self.__nev_ext_header[
                             b'NEUEVFLT']['lo_freq_order'][get_idx],
                         nev_lo_freq_type=flt_type[self.__nev_ext_header[
                             b'NEUEVFLT']['lo_freq_type'][get_idx]])
+
+        # additional information about the LFP signal
+        if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+            # It does not matter which nsX file to ask for this info
+            k = self.__nsx_ext_header.keys()[0]
+            if channel_id in self.__nsx_ext_header[k]['electrode_id']:
+                get_idx = list(
+                    self.__nsx_ext_header[k]['electrode_id']).index(
+                        channel_id)
+                chidx.annotate(
+                    nsx_hi_freq_corner=self.__nsx_ext_header[k][
+                        'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_lo_freq_corner=self.__nsx_ext_header[k][
+                        'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
+                    nsx_hi_freq_order=self.__nsx_ext_header[k][
+                        'hi_freq_order'][get_idx],
+                    nsx_lo_freq_order=self.__nsx_ext_header[k][
+                        'lo_freq_order'][get_idx],
+                    nsx_hi_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]],
+                    nsx_lo_freq_type=flt_type[
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]])
 
         chidx.description = \
             "Container for units and groups analogsignals of one recording " \
@@ -2343,6 +2369,12 @@ class BlackrockIO(BaseIO):
                     nev_hi_threshold, nev_lo_threshold,
                     nev_energy_threshold (quantity):
                         Indicates parameters of spike detection.
+                    nsx_hi_freq_corner (Quantity),
+                    nsx_lo_freq_corner (Quantity)
+                    nsx_hi_freq_order (int), nsx_lo_freq_order (int),
+                    nsx_hi_freq_type (str), nsx_lo_freq_type (str)
+                        Indicates parameters of the filtered signal in one of
+                        the files ns1-ns5 (ns6, if available, is not filtered).
                     nev_dig_factor (int):
                         Digitization factor in microvolts of the nev file, used
                         to convert raw samples to volt.
