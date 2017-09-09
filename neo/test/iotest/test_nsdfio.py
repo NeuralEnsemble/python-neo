@@ -15,7 +15,7 @@ import unittest
 
 from neo.io.nsdfio import HAVE_NSDF, NSDFIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import AnalogSignal, Segment, Block
+from neo.core import AnalogSignal, Segment, Block, ChannelIndex
 from neo.test.tools import assert_same_attributes, assert_same_annotations, assert_neo_object_is_compliant
 
 
@@ -65,6 +65,9 @@ class NSDFIOTest(unittest.TestCase):
     def _create_block_children(self, block):
         for i in range(3):
             block.segments.append(self.create_segment(block, name='Segment #{}'.format(i)))
+        for i in range(3):
+            block.channel_indexes.append(self.create_channelindex(block, name='ChannelIndex #{}'.format(i),
+                                            analogsignals=[seg.analogsignals[i] for seg in block.segments]))
 
     def create_segment(self, parent=None, name='Segment'):
         segment = Segment()
@@ -92,9 +95,7 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_rate=100 * pq.Hz, t_start=2 * pq.min)
 
         signal.segment = parent
-
         self._assign_basic_attributes(signal, name=name)
-
         self._assign_annotations(signal)
 
         return signal
@@ -104,7 +105,6 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_period=0.5 * pq.ms)
 
         signal.segment = parent
-
         self._assign_annotations(signal)
 
         return signal
@@ -114,10 +114,25 @@ class NSDFIOTest(unittest.TestCase):
                               sampling_rate=2 * pq.kHz, t_start=100 * pq.s)
 
         signal.segment = parent
-
         self._assign_basic_attributes(signal, name=name)
 
         return signal
+
+    def create_channelindex(self, parent=None, name='ChannelIndex', analogsignals=None):
+        channels_num = min([signal.shape[1] for signal in analogsignals])
+
+        channelindex = ChannelIndex(index=np.arange(channels_num),
+                                    channel_names=['Channel{}'.format(i) for i in range(channels_num)],
+                                    channel_ids=np.arange(channels_num),
+                                    coordinates=([[1.87, -5.2, 4.0]] * channels_num) * pq.cm)
+
+        for signal in analogsignals:
+            channelindex.analogsignals.append(signal)
+
+        self._assign_basic_attributes(channelindex, name)
+        self._assign_annotations(channelindex)
+
+        return channelindex
 
     def _assign_basic_attributes(self, object, name=None):
         if name is None:
@@ -216,7 +231,7 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         else:
             self._compare_objects(signal1, signal2, exclude_attr=['shape', 'signal'])
             assert signal2.lazy_shape == signal1.shape
-            assert signal2.dtype == signal1.dtype
+        assert signal2.dtype == signal1.dtype
 
     def _compare_objects(self, object1, object2, exclude_attr=[]):
         assert object1.__class__.__name__ == object2.__class__.__name__
