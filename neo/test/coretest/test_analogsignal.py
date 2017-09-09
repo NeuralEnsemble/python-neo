@@ -302,7 +302,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.signal1 = AnalogSignal(self.data1quant, sampling_rate=1*pq.kHz,
                                          name='spam', description='eggs',
                                          file_origin='testfile.txt', arg1='test')
-        self.signal1.segment = 1
+        self.signal1.segment = Segment()
         self.signal1.channel_index = ChannelIndex(index=[0])
 
     def test__compliant(self):
@@ -392,8 +392,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__copy_should_let_access_to_parents_objects(self):
         ##copy
         result =  self.signal1.copy()
-        self.assertEqual(result.segment, self.signal1.segment)
-        self.assertEqual(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
         ## deep copy (not fixed yet)
         #result = copy.deepcopy(self.signal1)
         #self.assertEqual(result.segment, self.signal1.segment)
@@ -452,6 +452,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1))
         assert_same_sub_schema(result, self.signal1)
 
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
+
     def test__rescale_new(self):
         result = self.signal1.copy()
         result = result.rescale(pq.pA)
@@ -465,6 +470,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
         self.assertEqual(result.units, 1*pq.pA)
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1)*1000., 1e-10)
+
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
 
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.mV)
