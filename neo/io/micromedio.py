@@ -14,12 +14,7 @@ import datetime
 import os
 import struct
 
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-    file = io.BufferedReader
+from io import BufferedReader
 
 import numpy as np
 import quantities as pq
@@ -28,7 +23,7 @@ from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal, Epoch, Event
 
 
-class StructFile(file):
+class StructFile(BufferedReader):
     def read_f(self, fmt):
         return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
 
@@ -76,16 +71,16 @@ class MicromedIO(BaseIO):
         """
         Arguments:
         """
-        f = StructFile(self.filename, 'rb')
+        f = StructFile(open(self.filename, 'rb'))
 
         # Name
         f.seek(64, 0)
-        surname = f.read(22)
+        surname = f.read(22).decode('ascii')
         while surname[-1] == ' ':
             if len(surname) == 0:
                 break
             surname = surname[:-1]
-        firstname = f.read(20)
+        firstname = f.read(20).decode('ascii')
         while firstname[-1] == ' ':
             if len(firstname) == 0:
                 break
@@ -132,7 +127,7 @@ class MicromedIO(BaseIO):
         if not lazy:
             f.seek(Data_Start_Offset, 0)
             rawdata = np.fromstring(f.read(), dtype='u' + str(Bytes))
-            rawdata = rawdata.reshape((rawdata.size / Num_Chan, Num_Chan))
+            rawdata = rawdata.reshape((-1, Num_Chan))
 
         # Reading Code Info
         zname2, pos, length = zones['ORDER']
@@ -146,8 +141,8 @@ class MicromedIO(BaseIO):
             zname2, pos, length = zones['LABCOD']
             f.seek(pos + code[c] * 128 + 2, 0)
 
-            label = f.read(6).strip("\x00")
-            ground = f.read(6).strip("\x00")
+            label = f.read(6).strip(b"\x00").decode('ascii')
+            ground = f.read(6).strip(b"\x00").decode('ascii')
             (logical_min, logical_max, logical_ground, physical_min,
              physical_max) = f.read_f('iiiii')
             k, = f.read_f('h')
