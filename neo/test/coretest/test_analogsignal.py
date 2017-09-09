@@ -310,28 +310,29 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__slice_should_return_AnalogSignalArray(self):
         # slice
-        result = self.signal1[3:8, 0]
-        self.assertIsInstance(result, AnalogSignal)
-        assert_neo_object_is_compliant(result)
-        self.assertEqual(result.name, 'spam')         # should slicing really preserve name and description?
-        self.assertEqual(result.description, 'eggs')  # perhaps these should be modified to indicate the slice?
-        self.assertEqual(result.file_origin, 'testfile.txt')
-        self.assertEqual(result.annotations, {'arg1': 'test'})
+        for index in (0, np.int64(0)):
+            result = self.signal1[3:8, index]
+            self.assertIsInstance(result, AnalogSignal)
+            assert_neo_object_is_compliant(result)
+            self.assertEqual(result.name, 'spam')         # should slicing really preserve name and description?
+            self.assertEqual(result.description, 'eggs')  # perhaps these should be modified to indicate the slice?
+            self.assertEqual(result.file_origin, 'testfile.txt')
+            self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(result.size, 5)
-        self.assertEqual(result.sampling_period, self.signal1.sampling_period)
-        self.assertEqual(result.sampling_rate, self.signal1.sampling_rate)
-        self.assertEqual(result.t_start,
-                         self.signal1.t_start+3*result.sampling_period)
-        self.assertEqual(result.t_stop,
-                         result.t_start + 5*result.sampling_period)
-        assert_array_equal(result.magnitude, self.data1[3:8].reshape(-1, 1))
+            self.assertEqual(result.size, 5)
+            self.assertEqual(result.sampling_period, self.signal1.sampling_period)
+            self.assertEqual(result.sampling_rate, self.signal1.sampling_rate)
+            self.assertEqual(result.t_start,
+                             self.signal1.t_start+3*result.sampling_period)
+            self.assertEqual(result.t_stop,
+                             result.t_start + 5*result.sampling_period)
+            assert_array_equal(result.magnitude, self.data1[3:8].reshape(-1, 1))
 
-        # Test other attributes were copied over (in this case, defaults)
-        self.assertEqual(result.file_origin, self.signal1.file_origin)
-        self.assertEqual(result.name, self.signal1.name)
-        self.assertEqual(result.description, self.signal1.description)
-        self.assertEqual(result.annotations, self.signal1.annotations)
+            # Test other attributes were copied over (in this case, defaults)
+            self.assertEqual(result.file_origin, self.signal1.file_origin)
+            self.assertEqual(result.name, self.signal1.name)
+            self.assertEqual(result.description, self.signal1.description)
+            self.assertEqual(result.annotations, self.signal1.annotations)
 
     def test__slice_should_let_access_to_parents_objects(self):
         result =  self.signal1.time_slice(1*pq.ms,3*pq.ms)

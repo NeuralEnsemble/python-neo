@@ -230,11 +230,11 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         Get the item or slice :attr:`i`.
         '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
-        if isinstance(i, int):  # a single point in time across all channels
+        if isinstance(i, (int, np.integer)):  # a single point in time across all channels
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
-            if isinstance(j, int):  # a single point in time across some channels
+            if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
@@ -243,7 +243,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                     raise NotImplementedError("Arrays not yet supported")
                 else:
                     raise TypeError("%s not supported" % type(j))
-                if isinstance(k, int):
+                if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
