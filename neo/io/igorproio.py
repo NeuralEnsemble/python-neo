@@ -8,6 +8,7 @@ Depends on: igor (https://pypi.python.org/pypi/igor/)
 Supported: Read
 
 Author: Andrew Davison
+Also contributing: Rick Gerkin
 
 """
 
@@ -73,8 +74,6 @@ class IgorIO(BaseIO):
         self.parse_notes = parse_notes
 
     def read_block(self, lazy=False, cascade=True):
-        #assert self.extension == 'ibw', \
-        #    "This operation is only supported for .ibw files"
         block = Block(file_origin=self.filename)
         if cascade:
             block.segments.append(self.read_segment(lazy=lazy, cascade=cascade))
@@ -82,8 +81,6 @@ class IgorIO(BaseIO):
         return block
 
     def read_segment(self, lazy=False, cascade=True):
-        #assert self.extension == 'ibw', \
-        #    "This operation is only supported for .ibw files"
         segment = Segment(file_origin=self.filename)
         if cascade:
             segment.analogsignals.append(
@@ -123,8 +120,6 @@ class IgorIO(BaseIO):
         note = content['note']
         header = content['wave_header']
         name = header['bname']
-        #assert header['botFullScale'] == 0
-        #assert header['topFullScale'] == 0
         units = "".join([x.decode() for x in header['dataUnits']])
         try:
             time_units = "".join([x.decode() for x in header['xUnits']])
