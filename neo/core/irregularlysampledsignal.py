@@ -208,6 +208,10 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
 
+        # Parent objects
+        self.segment = getattr(obj, 'segment', None)
+        self.channel_index = getattr(obj, 'channel_index', None)
+
     def __repr__(self):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
@@ -456,6 +460,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
             signal = cf * self.magnitude
         new = self.__class__(times=self.times, signal=signal, units=to_u)
         new._copy_data_complement(self)
+        new.channel_index = self.channel_index
+        new.segment = self.segment
         new.annotations.update(self.annotations)
         return new
 
