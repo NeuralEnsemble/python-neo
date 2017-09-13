@@ -128,7 +128,7 @@ class RawBinarySignalIO(BaseIO):
             sig = np.memmap(self.filename, dtype = dtype, mode = 'r', offset = bytesoffset)
             if sig.size % nbchannel != 0 :
                 sig = sig[:- sig.size%nbchannel]
-            sig = sig.reshape((sig.size/nbchannel,nbchannel))
+            sig = sig.reshape((sig.size//nbchannel,nbchannel))
             if dtype.kind == 'i' :
                 sig = sig.astype('f')
                 sig /= 2**(8*dtype.itemsize)
