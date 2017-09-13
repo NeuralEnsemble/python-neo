@@ -14,7 +14,7 @@ import datetime
 import os
 import struct
 
-from io import BufferedReader
+from io import open, BufferedReader
 
 import numpy as np
 import quantities as pq
@@ -102,13 +102,14 @@ class MicromedIO(BaseIO):
         header_version, = f.read_f('b')
         assert header_version == 4
 
-        seg = Segment(name=firstname + ' ' + surname,
+        seg = Segment(name=str(firstname + ' ' + surname),
                       file_origin=os.path.basename(self.filename))
         seg.annotate(surname=surname)
         seg.annotate(firstname=firstname)
         seg.annotate(rec_datetime=rec_datetime)
 
         if not cascade:
+            f.close()
             return seg
 
         # area
@@ -132,7 +133,7 @@ class MicromedIO(BaseIO):
         # Reading Code Info
         zname2, pos, length = zones['ORDER']
         f.seek(pos, 0)
-        code = np.fromfile(f, dtype='u2', count=Num_Chan)
+        code = np.fromstring(f.read(Num_Chan*2), dtype='u2', count=Num_Chan)
 
         units = {-1: pq.nano * pq.V, 0: pq.uV, 1: pq.mV, 2: 1, 100: pq.percent,
                  101: pq.dimensionless, 102: pq.dimensionless}
@@ -164,7 +165,7 @@ class MicromedIO(BaseIO):
                     'f') - logical_ground) * factor * unit
 
             ana_sig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                   name=label, channel_index=c)
+                                   name=str(label), channel_index=c)
             if lazy:
                 ana_sig.lazy_shape = None
             ana_sig.annotate(ground=ground)
@@ -217,4 +218,5 @@ class MicromedIO(BaseIO):
             seg.epochs.append(ep)
 
         seg.create_many_to_one_relationship()
+        f.close()
         return seg
