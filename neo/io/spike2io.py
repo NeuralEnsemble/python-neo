@@ -100,6 +100,7 @@ class Spike2IO(BaseIO):
         )
 
         if not cascade:
+            fid.close()
             return seg
 
         def addannotations(ob, channelHeader):
