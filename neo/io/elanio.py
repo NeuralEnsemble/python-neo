@@ -38,6 +38,7 @@ class VersionError(Exception):
     def __str__(self):
         return repr(self.value)
 
+import io
 
 class ElanIO(BaseIO):
     """
@@ -92,7 +93,7 @@ class ElanIO(BaseIO):
 
         # # Read header file
 
-        f = open(self.filename + '.ent', 'rU')
+        f = io.open(self.filename + '.ent', mode='rt', encoding='ascii')
         #version
         version = f.readline()
         if version[:2] != 'V2' and version[:2] != 'V3':
@@ -142,6 +143,7 @@ class ElanIO(BaseIO):
                       rec_datetime=fulldatetime)
 
         if not cascade:
+            f.close()
             return seg
 
         l = f.readline()
@@ -197,7 +199,7 @@ class ElanIO(BaseIO):
         n = int(round(np.log(max_logic[0] - min_logic[0]) / np.log(2)) / 8)
         data = np.fromfile(self.filename, dtype='i' + str(n))
         data = data.byteswap().reshape(
-            (data.size / (nbchannel + 2), nbchannel + 2)).astype('f4')
+            (data.size // (nbchannel + 2), nbchannel + 2)).astype('float32')
         for c in range(nbchannel):
             if lazy:
                 sig = []
@@ -213,7 +215,7 @@ class ElanIO(BaseIO):
 
             ana_sig = AnalogSignal(
                 sig * unit, sampling_rate=sampling_rate,
-                t_start=0. * pq.s, name=labels[c], channel_index=c)
+                t_start=0. * pq.s, name=str(labels[c]), channel_index=c)
             if lazy:
                 ana_sig.lazy_shape = data.shape[0]
             ana_sig.annotate(channel_name=labels[c])
@@ -235,7 +237,7 @@ class ElanIO(BaseIO):
             reject_codes = []
         else:
             times = np.array(times) * pq.s
-            labels = np.array(labels)
+            labels = np.array(labels, dtype='S')
             reject_codes = np.array(reject_codes)
         ea = Event(times=times, labels=labels, reject_codes=reject_codes)
         if lazy:
