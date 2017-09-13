@@ -107,7 +107,7 @@ class PlexonIO(BaseIO):
         if not cascade:
             fid.close()
             return seg
-
+        
         ## Step 1 : read headers
         # dsp channels header = spikes and waveforms
         dspChannelHeaders = {}
@@ -121,8 +121,8 @@ class PlexonIO(BaseIO):
             dspChannelHeaders[channelHeader['Channel']] = channelHeader
             maxunit = max(channelHeader['NUnits'], maxunit)
             maxchan = max(channelHeader['Channel'], maxchan)
-
-            # event channel header
+        
+        # event channel header
         eventHeaders = {}
         for _ in range(global_header['NumEventChannels']):
             eventHeader = HeaderReader(fid, EventHeader).read_f(offset=None)
@@ -135,7 +135,7 @@ class PlexonIO(BaseIO):
                 offset=None)
             slowChannelHeaders[slowChannelHeader['Channel']] = \
                 slowChannelHeader
-
+        
         ## Step 2 : a first loop for counting size
         # signal
         nb_samples = np.zeros(len(slowChannelHeaders), dtype='int64')
@@ -328,13 +328,22 @@ class PlexonIO(BaseIO):
                     waveforms = swfarrays[chan, unit] * gain * pq.mV
                 else:
                     waveforms = None
+            
+            if global_header['WaveformFreq']>0:
+                wf_sampling_rate=float(global_header['WaveformFreq']) * pq.Hz
+            else:
+                #I hope this is OK
+                associated_chan = dspChannelHeaders[chan]['SIG']
+                if associated_chan in slowChannelHeaders:
+                    wf_sampling_rate = slowChannelHeaders[associated_chan]['ADFreq']*pq.Hz
+                else:
+                    wf_sampling_rate = 0*pq.Hz
             sptr = SpikeTrain(
                 times,
                 units='s',
                 t_stop=t_stop*pq.s,
                 waveforms=waveforms,
-                sampling_rate=float(
-                    global_header['WaveformFreq']) * pq.Hz,
+                sampling_rate=wf_sampling_rate,
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
@@ -355,7 +364,7 @@ GlobalHeader = [
     ('MagicNumber', 'I'),
     ('Version', 'i'),
     ('Comment', '128s'),
-    ('ADFrequency', 'i'),
+    ('ADFrequency', 'i'), #this rate is only for events
     ('NumDSPChannels', 'i'),
     ('NumEventChannels', 'i'),
     ('NumSlowChannels', 'i'),
@@ -399,7 +408,7 @@ ChannelHeader = [
     ('Name', '32s'),
     ('SIGName', '32s'),
     ('Channel', 'i'),
-    ('WFRate', 'i'),
+    ('WFRate', 'i'), #this is not the waveform sampling rate!!!
     ('SIG', 'i'),
     ('Ref', 'i'),
     ('Gain', 'i'),
@@ -480,10 +489,6 @@ class HeaderReader():
                 return None
             val = list(struct.unpack(fmt, buf))
             for i, ival in enumerate(val):
-                #~ if hasattr(ival, 'replace'):
-                    #~ ival = ival.replace(str.encode('\x03'), str.encode(''))
-                    #~ ival = ival.replace(str.encode('\x00'), str.encode(''))
-                    #~ val[i] = ival.decode("utf-8")
                 if hasattr(ival, 'replace'):
                     ival = ival.replace(b'\x03', b'')
                     ival = ival.replace(b'\x00', b'')
