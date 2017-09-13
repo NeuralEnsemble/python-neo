@@ -81,6 +81,9 @@ from fractions import gcd
 from os import path
 import re
 import struct
+from os import path
+from os.path import split
+from datetime import datetime
 from time import time
 
 # note neo.core needs only numpy and quantities
@@ -336,7 +339,8 @@ class ElphySpikeTrain(ElphyEvent):
     
     @property
     def waveforms(self):
-        return self.layout.get_waveform_data(self.episode, self.number) if self.wf_samples else None
+        # is attempting a wf retireval only if there are events and number of samples defined
+        return self.layout.get_waveform_data(self.episode, self.number) if self.n_events and self.wf_samples else None
 
 
 
@@ -886,7 +890,7 @@ class Acquis1Header(Header):
         l_xu, x_unit = struct.unpack('<B3s', fileobj.read(4))
         #extract units for each channel
         y_units = list()
-        for i in range(1, 7) :
+        for _ in range(1, 7) :
             l_yu, y_unit = struct.unpack('<B3s', fileobj.read(4))
             y_units.append(y_unit[0:l_yu])
         
@@ -906,10 +910,10 @@ class Acquis1Header(Header):
         j1 = struct.unpack('<hhhhhh', fileobj.read(12))
         j2 = struct.unpack('<hhhhhh', fileobj.read(12))
         y1 = list()
-        for i in range(1, 7) :
+        for _ in range(1, 7) :
             y1.append(read_from_char(fileobj, 'ext'))
         y2 = list()
-        for i in range(1, 7) :
+        for _ in range(1, 7) :
             y2.append(read_from_char(fileobj, 'ext'))
         dY_ar = list()
         Y0_ar = list()
@@ -927,30 +931,30 @@ class Acquis1Header(Header):
         #fileobj.read(300) #Macq:typeTabMarqueAcq;   { 300 octets }
         max_mark = 100
         Macq = list()
-        for i in range(0, max_mark) :
+        for _ in range(0, max_mark) :
             Macq.append(list(struct.unpack('<ch', fileobj.read(3))))
         
-        #Xmini,Xmaxi,Ymini,Ymaxi:array[1..6] of float; #fileobj.read(240)
+        #Xmini,Xmaxi,Ymini,Ymaxi:array[1..6] of float; #file.read(240) 
         x_mini = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             x_mini.append(read_from_char(fileobj, 'ext'))
         x_maxi = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             x_maxi.append(read_from_char(fileobj, 'ext'))
         y_mini = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             y_mini.append(read_from_char(fileobj, 'ext'))
         y_maxi = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             y_maxi.append(read_from_char(fileobj, 'ext'))
         
-        #modeA:array[1..6] of byte; #fileobj.read(6)
+        #modeA:array[1..6] of byte; #file.read(6)
         modeA = list(struct.unpack('<BBBBBB', fileobj.read(6)))
         
-        continuous = read_from_char(fileobj, '?')
+        continuous = read_from_char(file, '?')
         preSeqI, postSeqI = struct.unpack('<hh', fileobj.read(4))
         
-        #EchelleSeqI:boolean; #fileobj.read(1)
+        #EchelleSeqI:boolean; #file.read(1) 
         ep_scaled = read_from_char(fileobj, '?')
            
         nbptEx = read_from_char(fileobj, 'H')
@@ -958,25 +962,25 @@ class Acquis1Header(Header):
         x1s, x2s = struct.unpack('<ff', fileobj.read(8))
         
         y1s = list()
-        for i in range(0, 6):
+        for _ in range(0, 6):
             y1s.append(read_from_char(fileobj, 'f'))
         
         y2s = list()
-        for i in range(0, 6):
+        for _ in range(0, 6):
             y2s.append(read_from_char(fileobj, 'f'))
         
-        #fileobj.read(96)   # Xminis,Xmaxis,Yminis,Ymaxis:array[1..6] of single;
+        #file.read(96)   # Xminis,Xmaxis,Yminis,Ymaxis:array[1..6] of single;
         x_minis = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             x_minis.append(read_from_char(fileobj, 'f'))
         x_maxis = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             x_maxis.append(read_from_char(fileobj, 'f'))
         y_minis = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             y_minis.append(read_from_char(fileobj, 'f'))
         y_maxis = list()
-        for i in range(0, 6) :
+        for _ in range(0, 6) :
             y_maxis.append(read_from_char(fileobj, 'f'))
         
         n_ep = read_from_char(fileobj, 'h')
@@ -1507,7 +1511,7 @@ class DAC2KSampSubBlock(ElphyBlock):
         ep_block, = [k for k in self.parent_block.sub_blocks if k.identifier.startswith('Ep')]
         n_channels = ep_block.n_channels
         k_sampling = list()
-        for _ in range(0, n_channels) :
+        for _ in range(0, n_channels) : 
             k_sampling.append(read_from_char(fileobj, "H"))
         self.k_sampling = k_sampling
 
@@ -1834,6 +1838,8 @@ class ElphyLayout(object):
         # the specified slice
         if len(chunks)>0 :
             databytes = np.concatenate(chunks)
+            # print len(databytes)
+            # print "databytes[",start,":",end,"]=",databytes[start:end]
             return databytes[start:end]
         else :
             return np.array([])
@@ -1965,7 +1971,7 @@ class ElphyLayout(object):
             #with the specified tag channel
             raw[:, 1] = self.apply_op(raw[:, 1], tag_mask, "mask")
             
-            #computing numpy.diff is useful to know
+            #computing np.diff is useful to know
             #how many times a value is maintained
             #and necessary to reconstruct the 
             #compressed signal ... 
@@ -2163,7 +2169,7 @@ class DAC2GSLayout(ElphyLayout):
     corresponding to episodes.
     """
     
-    def __init__(self, fileobj, data_offset):
+    def __init__(self, fileobj, data_offset): 
         super(DAC2GSLayout, self).__init__(fileobj)
         self.data_offset = data_offset
         self.main_block = None
@@ -2421,6 +2427,24 @@ class DAC2Layout(ElphyLayout):
             ck_blocks.append(DummyDataBlock(self, 'RCyberTag', start, size))
         self.ck_blocks = ck_blocks
     
+    def set_rspk_blocks(self):
+        rspk_blocks = list()
+        blocks = self.get_blocks_of_type('RSPK')
+        for block in blocks :
+            start = block.data_start
+            size = block.end + 1 - start
+            rspk_blocks.append(DummyDataBlock(self, 'RSPK', start, size))
+        self.rspk_blocks = rspk_blocks
+    
+    def set_rspkwave_blocks(self):
+        rspkwave_blocks = list()
+        blocks = self.get_blocks_of_type('RspkWave')
+        for block in blocks :
+            start = block.data_start
+            size = block.end + 1 - start
+            rspkwave_blocks.append(DummyDataBlock(self, 'RspkWave', start, size))
+        self.rspkwave_blocks = rspkwave_blocks
+    
     def episode_block(self, ep):
         return self.episode_blocks[ep - 1]
     
@@ -2480,7 +2504,8 @@ class DAC2Layout(ElphyLayout):
         return block.ks_block.k_sampling[ch - 1] if block.ks_block else 1
     
     def aggregate_size(self, block, ep):
-        ag_count = self.aggregate_sample_count(block)
+        #ag_count = self.aggregate_sample_count(block)
+        ag_count = self.n_channels(ep)
         ag_size = 0
         for ch in range(1, ag_count + 1) :
             if (block.ks_block.k_sampling[ch - 1] != 0) :
@@ -2592,7 +2617,6 @@ class DAC2Layout(ElphyLayout):
         """
         Return the number of sample in an aggregate.
         """
-        
         # compute the least common multiple
         # for channels having block.ks_block.k_sampling[ch] > 0
         lcm0 = 1
@@ -2755,9 +2779,53 @@ class DAC2Layout(ElphyLayout):
         # re-encoding after reading byte by byte
         res = np.frombuffer(raw[0:(4*rspk_block.n_events[evt_channel-1])], dtype='<i4')
         res.sort() # sometimes timings are not sorted
-        #print "load_encoded_data() - spikes:",res
         return res
+    
+    
+    def load_encoded_waveforms(self, episode, electrode_id):
+        """
+        Return times on which waveforms are defined
+        and a numpy recarray containing all the data
+        stored in the RspkWave block.
+        """
+        # load data corresponding to the RspkWave block
+        wf_blocks = [k for k in self.blocks if k.identifier=="RspkWave"]
+        # For any event in the RSPK block, it corresponds a waveform in the Rspkwave
+        # A waveform is made of wavelength 2-byte integer values
+        wf_samples = wf_blocks[episode-1].wavelength
+        events = wf_blocks[episode-1].n_spikes
+        n_events = events[electrode_id - 1]
+        pre_events = np.sum(events[0:electrode_id - 1], dtype=int)
+        start = pre_events
+        end = start + n_events
+        # # TElphySpkPacket record
+        dtype = [
+            # the time of the spike arrival
+            ('elphy_time', 'u4', (1,)),
+            ('device_time', 'u4', (1,)),
+            ('channel_id', 'u2', (1,)),
+            # the 'category' of the waveform
+            ('unit_id', 'u1', (1,)),
+            # not used
+            ('dummy', 'u1', (13,)),
+            # samples of the waveform
+            ('waveform', 'u2', (wf_samples,))
+        ]
+        # Then we find the waveforms for all the n_spk_channels
+        data_start = wf_blocks[episode-1].data_start - wf_blocks[episode-1].start
+        databytes = self.load_bytes(wf_blocks, start=data_start)
+        # data = np.frombuffer(databytes, dtype=dtype)
+        try: # Elphy format for Cyberkinetics/Blackrock files can store additional bytes so they can't express the end bytes
+            data = np.frombuffer(databytes, dtype=dtype)
+        except ValueError: # but the others do have to specify it
+            databytes = self.load_bytes(wf_blocks, start=data_start, end=data_start+(n_events*np.dtype(dtype).itemsize) ) 
+        # # bounduaries of the part to read
+        x_start = wf_blocks[episode-1].pre_trigger
+        x_stop = wf_samples - x_start
+        # reading from databytes a 
+        return np.arange(-x_start, x_stop), np.frombuffer(databytes, dtype=dtype)[start:end]
 
+  
     def get_episode_name( self, episode ):
         episode_name = "episode %s" % episode
         names = [k for k in self.blocks if k.identifier == 'COM']
@@ -2822,53 +2890,6 @@ class DAC2Layout(ElphyLayout):
         times = self.load_encoded_spikes(episode, electrode_id, "RSPK")
         return times * block.ep_block.dX
     
-    def load_encoded_waveforms(self, episode, electrode_id):
-        """
-        Return times on which waveforms are defined
-        and a numpy recarray containing all the data
-        stored in the RspkWave block.
-        """
-        # load data corresponding to the RspkWave block
-        identifier = "RspkWave"
-        data_blocks = self.group_blocks_of_type(episode, identifier)
-        databytes = self.load_bytes(data_blocks)
-        
-        # select only data corresponding
-        # to the specified spk_channel
-        ep_blocks = self.get_blocks_stored_in_episode(episode)
-        wf_blocks = [k for k in ep_blocks if k.identifier == identifier]
-        wf_samples = wf_blocks[0].wavelength
-        events = np.sum([k.n_spikes for k in wf_blocks], dtype=int, axis=0)
-        n_events = events[electrode_id - 1]
-        pre_events = np.sum(events[0:electrode_id - 1], dtype=int)
-        start = pre_events
-        end = start + n_events
-        
-        # data must be reshaped before
-        dtype = [
-            # the time of the spike arrival
-            ('elphy_time', 'u4', (1,)),
-            ('device_time', 'u4', (1,)),
-            
-            # the identifier of the electrode
-            # would also be the 'trodalness'
-            # but this tetrode devices are not
-            # implemented in Elphy
-            ('channel_id', 'u2', (1,)),
-            
-            # the 'category' of the waveform
-            ('unit_id', 'u1', (1,)),
-            
-            #do not used
-            ('dummy', 'u1', (13,)),
-            
-            # samples of the waveform
-            ('waveform', 'i2', (wf_samples,))
-        ]
-        x_start = wf_blocks[0].pre_trigger
-        x_stop = wf_samples - x_start
-        return np.arange(-x_start, x_stop), np.frombuffer(databytes, dtype=dtype)[start:end]
-    
     def get_waveform_data(self, episode, electrode_id):
         """
         Return waveforms corresponding to the specified
@@ -2881,10 +2902,10 @@ class DAC2Layout(ElphyLayout):
         n_events, = databytes.shape
         wf_samples = databytes['waveform'].shape[1]
         dtype = [
-            ('time', float),
+            ('waveform', float, (wf_samples, 2)),
             ('electrode_id', int),
-            ('unit_id', int),
-            ('waveform', float, (wf_samples, 2))
+            ('time', float),
+            ('unit_id', int)
         ]
         data = np.empty(n_events, dtype=dtype)
         data['electrode_id'] = databytes['channel_id'][:, 0]
@@ -3456,11 +3477,12 @@ class ElphyFile(object):
                     block.set_sample_size_block()
 
             # SpikeTrain
-            #if isinstance(header, DAC2Header) and (block.identifier in ['RSPK']) :
-                #print "\nElphyFile.create_layout() - RSPK"
+            #if isinstance(header, DAC2Header) and (block.identifier in ['RSPK', 'RspkWave']) :
+                #print "\nElphyFile.create_layout() - ", block.identifier
                 #print "ElphyFile.create_layout() - n_events",block.n_events
                 #print "ElphyFile.create_layout() - n_evt_channels",block.n_evt_channels
-            
+                # do nothing, it will create the block
+
             layout.add_block(block)
             offset += block.size
             
@@ -3482,7 +3504,9 @@ class ElphyFile(object):
             layout.set_episode_blocks()
         
         layout.set_data_blocks()
-        
+        layout.set_rspk_blocks()
+        layout.set_rspkwave_blocks()
+
         # finally set up the user info block of the layout
         layout.set_info_block()
 
@@ -3819,6 +3843,7 @@ class ElphyIO(BaseIO):
             analogsignals = 0 # init
             nbchan = 0
             nbpt = 0
+            smpls = 0
             chls = 0
             Dxu = 1e-8 #0.0000001
             Rxu = 1e+8 #10000000.0
@@ -3826,8 +3851,10 @@ class ElphyIO(BaseIO):
             CyberTime = 0.0
             aa_units = []
             NbEv = []
+            serialized_segment_data = ''
             serialized_analog_data = ''
             serialized_spike_data = ''
+            serialized_annotation_data = ''
             # AnalogSignals
             # Neo signalarrays are 2D numpy array where each row is an array of samples for a channel:
             # signalarray A = [[  1,  2,  3,  4 ],
@@ -3916,6 +3943,7 @@ class ElphyIO(BaseIO):
             st_fmt = ''
             st_data = []
             BUF_sub = ''
+            ST_keys = ''
             serialized_ST_data = '' 
             serialized_BUF_data = ''
             for key in sorted(annotations.iterkeys()) :
@@ -4176,11 +4204,11 @@ class ElphyIO(BaseIO):
         # spike channel in the episode
         # in case of multi-electrode
         # acquisition context
-        n_spikes = self.elphy_file.n_spiketrains(episode)
-        #print "read_segment() - n_spikes:",n_spikes
-        if n_spikes>0 :
-            for spk in range(1, n_spikes+1) :
-                spiketrain = self.read_spiketrain(episode, spk)
+        n_spiketrains = self.elphy_file.n_spiketrains(episode)
+        #print "read_segment() - n_spiketrains:",n_spiketrains
+        if n_spiketrains>0 :
+            for spkt in range(1, n_spiketrains+1) :
+                spiketrain = self.read_spiketrain(episode, spkt)
                 spiketrain.segment = segment
                 segment.spiketrains.append( spiketrain )
         # segment
@@ -4254,23 +4282,52 @@ class ElphyIO(BaseIO):
             episode : number of elphy episode, roughly corresponding to a segment.
             spk : index of the spike array.
         """
+        # Elphy data:
         block = self.elphy_file.layout.episode_block(episode)
-        spike = self.elphy_file.get_spiketrain(episode, spk)
-        spikes = spike.times * pq.s
-        #print "read_spiketrain() - spikes: %s" % (len(spikes))
-        #print "read_spiketrain() - spikes:",spikes
+        spiketrain = self.elphy_file.get_spiketrain(episode, spk)
+        # check for the presence of waveforms otherwise return none
+        waveforms = spiketrain.waveforms # a property triggering waveforms extraction.
+        sampling_rate = spiketrain.wf_sampling_frequency # sampling frequency of waveforms.
+        # spiketrain_data.wf_samples : number of samples composing waveforms.
+        # spiketrain_data.wf_sampling_period : sampling period of waveforms.
+        # Neo format:
+        # The waveforms of each spike: quantity array 3D (spike, channel_index, time) (nb_spike, channel, nb_point)
+        # spike_index, channel_index, time_sample
+        spikes = spiketrain.times * pq.s
+        # dct = {
+        #     'times':spikes,
+        #     't_start': block.ep_block.X0_wf if block.ep_block.X0_wf < spikes[0] else spikes[0], #check
+        #     't_stop': block.ep_block.cyber_time if block.ep_block.cyber_time > spikes[-1] else spikes[-1],
+        #     'units':'s',
+        #     'label':"episode %s, electrode %s" % (episode, spk),
+        #     'electrode_id':spk,
+        #     # waveforms: quantity array 3D (spike, channel_index, time) The waveforms of each spike.
+        #     'waveforms': pq.Quantity([ [ waveforms[spk]['waveform'][:,1] ] ]) if waveforms else None,
+        #     # sampling_rate: (quantity scalar) Number of samples per unit time for the waveforms.
+        #     'sampling_rate': sampling_rate * pq.s
+        # }
+        tstart = 0
+        if len(spikes) and block.ep_block.X0_wf < spikes[0]:
+            tstart = block.ep_block.X0_wf
+        elif len(spikes):
+            tstart = spikes[0]
+        tstop = 0
+        if len(spikes) and block.ep_block.cyber_time > spikes[-1]:
+            tstop = block.ep_block.cyber_time
+        elif len(spikes):
+            tstop = spikes[-1]
+        # assign dict for spiketrain creation
         dct = {
             'times':spikes,
-            't_start': block.ep_block.X0_wf if block.ep_block.X0_wf < spikes[0] else spikes[0], #check
-            't_stop': block.ep_block.cyber_time if block.ep_block.cyber_time > spikes[-1] else spikes[-1],
+            't_start': tstart,
+            't_stop': tstop,
             'units':'s',
-            # special keywords to identify the 
-            # electrode providing the spiketrain
-            # event though it is redundant with
-            # waveforms
             'label':"episode %s, electrode %s" % (episode, spk),
-            'electrode_id':spk
+            'electrode_id':spk,
+            # waveforms: quantity array 3D (spike, channel_index, time) The waveform of each spike.
+            'waveforms': pq.Quantity(waveforms['waveform']) if len(spikes) else None,
+            # sampling_rate: (quantity scalar) Number of samples per unit time for the waveforms.
+            'sampling_rate': sampling_rate * pq.s
         }
         # new spiketrain
-        return SpikeTrain(**dct)
-  
+        return SpikeTrain( **dct )  
