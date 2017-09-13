@@ -110,12 +110,11 @@ class WinWcpIO(BaseIO):
             # read data
             NP = (SECTORSIZE*header['NBD'])/2
             NP = NP - NP%header['NC']
-            NP = NP/header['NC']
+            NP = int(NP//header['NC'])
             if not lazy:
-                data = np.memmap(self.filename , np.dtype('i2')  , 'r',
-                              #shape = (header['NC'], header['NP']) ,
-                              shape = (NP,header['NC'], ) ,
-                              offset = offset+header['NBA']*SECTORSIZE)
+                data = np.memmap(self.filename , np.dtype('int16')  , mode='r',
+                              shape=(NP,header['NC'], ) ,
+                              offset=offset+header['NBA']*SECTORSIZE)
 
             # create a segment
             seg = Segment()
@@ -135,7 +134,8 @@ class WinWcpIO(BaseIO):
                     YG = float(header['YG%d'%c].replace(',','.'))
                     ADCMAX = header['ADCMAX']
                     VMax = analysisHeader['VMax'][c]
-                    signal = data[:,header['YO%d'%c]].astype('f4')*VMax/ADCMAX/YG * unit
+                    chan = int(header['YO%d'%c])
+                    signal = data[:,chan].astype('f4')*VMax/ADCMAX/YG * unit
                 anaSig = AnalogSignal(signal,
                                       sampling_rate=
                                       pq.Hz /
