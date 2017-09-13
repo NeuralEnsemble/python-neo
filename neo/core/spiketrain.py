@@ -330,12 +330,15 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         if self.dimensionality == pq.quantity.validate_dimensionality(units):
             return self.copy()
         spikes = self.view(pq.Quantity)
-        return SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
-                          sampling_rate=self.sampling_rate,
-                          t_start=self.t_start, waveforms=self.waveforms,
-                          left_sweep=self.left_sweep, name=self.name,
-                          file_origin=self.file_origin,
-                          description=self.description, **self.annotations)
+        obj = SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
+                         sampling_rate=self.sampling_rate,
+                         t_start=self.t_start, waveforms=self.waveforms,
+                         left_sweep=self.left_sweep, name=self.name,
+                         file_origin=self.file_origin,
+                         description=self.description, **self.annotations)
+        obj.segment = self.segment
+        obj.unit = self.unit
+        return obj
 
     def __reduce__(self):
         '''

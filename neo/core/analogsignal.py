@@ -251,7 +251,7 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
 
-        # Parents objects
+        # Parent objects
         self.segment = getattr(obj, 'segment', None)
         self.channel_index = getattr(obj, 'channel_index', None)
 
@@ -437,7 +437,10 @@ class AnalogSignal(BaseNeo, pq.Quantity):
         new = self.__class__(signal=signal, units=to_u,
                              sampling_rate=self.sampling_rate)
         new._copy_data_complement(self)
+        new.channel_index = self.channel_index
+        new.segment = self.segment
         new.annotations.update(self.annotations)
+
         return new
 
     def duplicate_with_new_array(self, signal):
