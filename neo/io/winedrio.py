@@ -100,7 +100,7 @@ class WinEdrIO(BaseIO):
         if not lazy:
             data = np.memmap(self.filename , np.dtype('i2')  , 'r',
                   #shape = (header['NC'], header['NP']) ,
-                  shape = (header['NP']/header['NC'],header['NC'], ) ,
+                  shape = (header['NP']//header['NC'],header['NC'], ) ,
                   offset = header['NBH'])
 
         for c in range(header['NC']):
@@ -126,7 +126,8 @@ class WinEdrIO(BaseIO):
             if lazy:
                 signal = [ ] * unit
             else:
-                signal = (data[:,header['YO%d'%c]].astype('f4')-YZ) *AD/( YCF*YAG*(ADCMAX+1)) * unit
+                chan = int(header['YO%d'%c])
+                signal = (data[:,chan].astype('float32')-YZ) *AD/( YCF*YAG*(ADCMAX+1)) * unit
 
             ana = AnalogSignal(signal,
                                sampling_rate=pq.Hz / DT,
@@ -139,6 +140,7 @@ class WinEdrIO(BaseIO):
             seg.analogsignals.append(ana)
 
         seg.create_many_to_one_relationship()
+        fid.close()
         return seg
 
 
