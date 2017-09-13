@@ -3,8 +3,7 @@
 This module implements generic container base class that all neo container
 object inherit from.  It provides shared methods for all container types.
 
-:class:`Container` is derived from :class:`BaseNeo` but is
-defined in :module:`neo.core.analogsignalarray`.
+:class:`Container` is derived from :class:`BaseNeo`
 """
 
 # needed for python 3 compatibility

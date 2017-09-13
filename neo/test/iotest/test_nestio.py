@@ -7,10 +7,7 @@ Tests of neo.io.exampleio
 from __future__ import absolute_import, division
 import warnings
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import quantities as pq
 import numpy as np

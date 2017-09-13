@@ -6,10 +6,7 @@ Tests of the neo.core.unit.Unit class
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 

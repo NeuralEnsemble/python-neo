@@ -7,11 +7,8 @@ Tests of neo.io.kwikio
 from __future__ import division
 
 import sys
+import unittest
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
 try:
     import h5py
     HAVE_H5PY = True
