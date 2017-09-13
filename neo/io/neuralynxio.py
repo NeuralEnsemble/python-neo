@@ -1634,7 +1634,7 @@ class NeuralynxIO(BaseIO):
         if filesize > 16384:
             data = np.memmap(self.sessiondir + sep + filename,
                              dtype='<u2',
-                             shape=((filesize - 16384) / 2 / 56, 56),
+                             shape=((filesize - 16384) // 2 // 56, 56),
                              mode='r', offset=16384)
 
             # reconstructing original data
@@ -1679,7 +1679,7 @@ class NeuralynxIO(BaseIO):
         if filesize > 16384:
             data = np.memmap(self.sessiondir + sep + filename,
                              dtype='<u4',
-                             shape=((filesize - 16384) / 4 / 261, 261),
+                             shape=((filesize - 16384) // 4 // 261, 261),
                              mode='r', offset=16384)
 
             ts = data[:, 0:2]
