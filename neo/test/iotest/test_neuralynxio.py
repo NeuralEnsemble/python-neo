@@ -455,20 +455,20 @@ from neo import AnalogSignal
 import time
 
 # dummy class used only for automatic downloading of test data
-class DownloadDataIO(BaseTestIO, unittest.TestCase):
-    rawioclass = OldNeuralynxIO
-    files_to_download = ['CSC1.ncs',
-                         'CSC2.ncs',
-                         'CSC3.ncs',
-                         'CSC4.ncs',
-                         'CSC5.ncs',
-                         'Events.nev']
+#~ class DownloadDataIO(BaseTestIO, unittest.TestCase):
+    #~ rawioclass = OldNeuralynxIO
+    #~ files_to_download = ['CSC1.ncs',
+                         #~ 'CSC2.ncs',
+                         #~ 'CSC3.ncs',
+                         #~ 'CSC4.ncs',
+                         #~ 'CSC5.ncs',
+                         #~ 'Events.nev']
 
 def compare_old_and_new_neuralynxio():
     
     base = '/tmp/files_for_testing_neo/neuralynx/'
-    # dirname = base+'Cheetah_v5.5.1/original_data/'
-    dirname = base+'Cheetah_v5.7.4/original_data/'
+    dirname = base+'Cheetah_v5.5.1/original_data/'
+    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
     
     
     t0 = time.perf_counter()
@@ -480,7 +480,7 @@ def compare_old_and_new_neuralynxio():
     print('newreader data', t2-t1, 's')
     print('newreader toal', t2-t0, 's')
     for seg in bl1.segments:
-        # print('seg', seg.index)
+        print('seg', seg.index)
         for anasig in seg.analogsignals:
             print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:
@@ -500,7 +500,7 @@ def compare_old_and_new_neuralynxio():
     print('oldreader data', t2-t1, 's')
     print('oldreader toal', t2-t0, 's')
     for seg in bl2.segments:
-        # print('seg', seg.index)
+        print('seg', seg.index)
         for anasig in seg.analogsignals:
             print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:

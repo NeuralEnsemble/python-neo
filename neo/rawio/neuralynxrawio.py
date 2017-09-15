@@ -71,6 +71,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._nev_memmap = {}
         self._spike_memmap = {}
         self.internal_unit_ids = [] #channel_index > (channel_id, unit_id)
+        self.internal_event_ids = []
 
         
         # explore the directory looking for ncs, nev, nse and ntt
@@ -90,7 +91,7 @@ class NeuralynxRawIO(BaseRawIO):
             
             if ext=='ncs':
                 # a signal channels
-                units = 'mV'
+                units = 'uV'
                 gain = info['bit_to_microVolt']
                 if info['input_inverted']:
                     gain *= -1
@@ -118,7 +119,7 @@ class NeuralynxRawIO(BaseRawIO):
                     
                     unit_name = "ch{}#{}".format(chan_id, unit_id)
                     unit_id = '{}'.format(unit_id)
-                    wf_units = 'mV'
+                    wf_units = 'uV'
                     wf_gain = info['bit_to_microVolt']
                     if info['input_inverted']:
                         wf_gain *= -1
@@ -130,14 +131,24 @@ class NeuralynxRawIO(BaseRawIO):
                 
             elif ext=='nev':
                 # an event channel
-                event_channels.append((chan_name, chan_id, 'event'))
+                # each ('event_id',  'ttl_input') give a new event channel
                 self.nev_filenames[chan_id] = filename
                 data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
+                internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
+                for internal_event_id in internal_ids:
+                    if internal_event_id not in self.internal_event_ids:
+                        event_id, ttl_input =  internal_event_id
+                        name = '{} event_id={} ttl={}'.format(chan_name, event_id, ttl_input)
+                        event_channels.append((name, chan_id, 'event'))
+                        self.internal_event_ids.append(internal_event_id)
+                    
+                
                 self._nev_memmap[chan_id] = data
+                
                 
                 # TODO DISCUSSION
                 # in the previsous NeuralyxIO an event channel channel is 
-                # define by  a set of ('event_id',  'ttl_input')
+                # define by  a set of 
                 # if we keep that then we need to parse the whole file
                 # In this new version, there only one event channel
                 # @Jullia: What is the best ????
@@ -184,15 +195,10 @@ class NeuralynxRawIO(BaseRawIO):
             self._seg_t_stops[-1] = self.global_t_stop
         else:
             #case HAVE ncs but  NO nev or nse
-            print('yep')
             self._seg_t_starts = self._sigs_t_start
             self._seg_t_stops = self._sigs_t_stop
             self.global_t_start = self._sigs_t_start[0]
             self.global_t_stop = self._sigs_t_stop[-1]
-
-            
-            
-        print('self.global_t_start', self.global_t_start)
         
         #fille into header dict
         self.header = {}
@@ -207,6 +213,7 @@ class NeuralynxRawIO(BaseRawIO):
         bl_annotations = self.raw_annotations['blocks'][0]
         for c in range(event_channels.size):
             #annotations for channel events
+            event_id, ttl_input =  self.internal_event_ids[c]
             chan_id = event_channels[c]['id']
             for seg_index in range(self._nb_segment):
                 seg_annotations = bl_annotations['segments'][seg_index]
@@ -280,6 +287,7 @@ class NeuralynxRawIO(BaseRawIO):
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= 1e6
+        spike_times -= self.global_t_start
         return spike_times
 
     def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
@@ -306,19 +314,20 @@ class NeuralynxRawIO(BaseRawIO):
         return waveforms
     
     def _event_count(self, block_index, seg_index, event_channel_index):
+        event_id, ttl_input =  self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
         ts0, ts1 = self._timestamp_limits[seg_index]
         ts = data['timestamp']
-        keep = (ts>=ts0) & (ts<=ts1)
+        keep = (ts>=ts0) & (ts<=ts1) & (data['event_id']==event_id) &\
+                    (data['ttl_input']==ttl_input)
         nb_event = int(data[keep].size)
         return nb_event
-
     
     def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+        event_id, ttl_input =  self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
-        
         ts0, ts1 = self._timestamp_limits[seg_index]
         
         if t_start is not None:
@@ -327,17 +336,18 @@ class NeuralynxRawIO(BaseRawIO):
             ts1 = int(t_stop*1e6)
         
         ts = data['timestamp']
-        keep = (ts>=ts0) & (ts<=ts1)
+        keep = (ts>=ts0) & (ts<=ts1) & (data['event_id']==event_id) &\
+                    (data['ttl_input']==ttl_input)
         subdata = data[keep]
         timestamps = subdata['timestamp']
         labels = subdata['event_string'].astype('U')
         durations = None
-        
         return timestamps, durations, labels
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = event_timestamps.astype(dtype)
         event_times /= 1e6
+        event_times -= self.global_t_start
         return event_times
     
     def read_ncs_files(self, ncs_filenames, gap_indexes=None):
