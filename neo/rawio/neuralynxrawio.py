@@ -154,27 +154,45 @@ class NeuralynxRawIO(BaseRawIO):
         #read ncs files for gaps detection and nb_segment computation
         self.read_ncs_files(self.ncs_filenames)
         
+        #timestamp limit in nev, nse
+        #so need to scan all spike and event to
+        ts0, ts1 = None, None
+        for _data_memmap in (self._spike_memmap, self._nev_memmap):
+            for chan_id, data in _data_memmap.items():
+                ts = data['timestamp']
+                if ts.size==0: continue
+                if ts0 is None:
+                    ts0 = ts[0]
+                    ts1 = ts[-1]
+                ts0 = min(ts0, ts[0])
+                ts1 = max(ts0, ts[-1])
         
         if self._timestamp_limits is None:
-            #case when there are no ncs files
-            #so need to scan all spike and event to
-            #have a global t_start/t_stop
-            ts0, ts1 = None, None
-            for _data_memmap in (self._spike_memmap, self._nev_memmap):
-                for chan_id, data in _data_memmap.items():
-                    ts = data['timestamp']
-                    if ts.size==0: continue
-                    if ts0 is None:
-                        ts0 = ts[0]
-                        ts1 = ts[-1]
-                    ts0 = min(ts0, ts[0])
-                    ts1 = max(ts0, ts[-1])
+            #case  NO ncs but HAVE nev or nse
             self._timestamp_limits = [(ts0, ts1)]
-            self.global_t_start = [ts0 /1e6]
-            self.global_t_stop = [ts1 /1e6]
+            self._seg_t_starts = [ts0 /1e6]
+            self._seg_t_stops = [ts1 /1e6]
+            self.global_t_start = ts0 /1e6
+            self.global_t_stop = ts1 /1e6
+        elif ts0 is not None:
+            #case  HAVE ncs AND HAVE nev or nse
+            self.global_t_start = min(ts0 /1e6, self._sigs_t_start[0])
+            self.global_t_stop = max(ts1 /1e6, self._sigs_t_stop[-1])
+            self._seg_t_starts = list(self._sigs_t_start)
+            self._seg_t_starts[0] = self.global_t_start
+            self._seg_t_stops = list(self._sigs_t_stop)
+            self._seg_t_stops[-1] = self.global_t_stop
         else:
-            self.global_t_start = self._sigs_t_start
-            self.global_t_stop = self._sigs_t_stop
+            #case HAVE ncs but  NO nev or nse
+            print('yep')
+            self._seg_t_starts = self._sigs_t_start
+            self._seg_t_stops = self._sigs_t_stop
+            self.global_t_start = self._sigs_t_start[0]
+            self.global_t_stop = self._sigs_t_stop[-1]
+
+            
+            
+        print('self.global_t_start', self.global_t_start)
         
         #fille into header dict
         self.header = {}
@@ -200,16 +218,16 @@ class NeuralynxRawIO(BaseRawIO):
                 #~ ev_ann['analog_marker'] = 
     
     def _segment_t_start(self, block_index, seg_index):
-        return self.global_t_start[seg_index]
+        return self._seg_t_starts[seg_index] - self.global_t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self.global_t_stop[seg_index]
+        return self._seg_t_stops[seg_index]  - self.global_t_start
     
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         return self._sigs_length[seg_index]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        return self._sigs_t_start[seg_index]
+        return self._sigs_t_start[seg_index] - self.global_t_start
     
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         if i_start is None: i_start=0

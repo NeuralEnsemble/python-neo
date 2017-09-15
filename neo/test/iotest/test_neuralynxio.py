@@ -16,12 +16,12 @@ import unittest
 import numpy as np
 import quantities as pq
 
-from neo import NeuralynxIO, AnalogSignal, SpikeTrain, Event
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import Segment
+from neo.core import *
 
 from neo.io.neuralynxio import NewNeuralynxIO
 from neo.io.neuralynxio import NeuralynxIO as OldNeuralynxIO
+from neo import AnalogSignal
 
 
 #~ class CommonTests(BaseTestIO):
@@ -454,23 +454,33 @@ from neo.io.neuralynxio import NeuralynxIO as OldNeuralynxIO
 
 import time
 
+# dummy class used only for automatic downloading of test data
+class DownloadDataIO(BaseTestIO, unittest.TestCase):
+    rawioclass = OldNeuralynxIO
+    files_to_download = ['CSC1.ncs',
+                         'CSC2.ncs',
+                         'CSC3.ncs',
+                         'CSC4.ncs',
+                         'CSC5.ncs',
+                         'Events.nev']
+
 def compare_old_and_new_neuralynxio():
     
     base = '/tmp/files_for_testing_neo/neuralynx/'
-    #~ dirname = base+'Cheetah_v5.5.1/original_data/'
+    # dirname = base+'Cheetah_v5.5.1/original_data/'
     dirname = base+'Cheetah_v5.7.4/original_data/'
     
     
     t0 = time.perf_counter()
     newreader = NewNeuralynxIO(dirname)
     t1 = time.perf_counter()
-    bl = newreader.read_block(load_waveforms=True)
+    bl1 = newreader.read_block(load_waveforms=True)
     t2 = time.perf_counter()
     print('newreader header', t1-t0, 's')
     print('newreader data', t2-t1, 's')
     print('newreader toal', t2-t0, 's')
-    for seg in bl.segments:
-        print('seg', seg.index)
+    for seg in bl1.segments:
+        # print('seg', seg.index)
         for anasig in seg.analogsignals:
             print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:
@@ -484,13 +494,13 @@ def compare_old_and_new_neuralynxio():
     t0 = time.perf_counter()
     oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
     t1 = time.perf_counter()
-    bl = oldreader.read_block(waveforms=True, events=True)
+    bl2 = oldreader.read_block(waveforms=True, events=True)
     t2 = time.perf_counter()
     print('oldreader header', t1-t0, 's')
     print('oldreader data', t2-t1, 's')
     print('oldreader toal', t2-t0, 's')
-    for seg in bl.segments:
-        print('seg', seg.index)
+    for seg in bl2.segments:
+        # print('seg', seg.index)
         for anasig in seg.analogsignals:
             print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
         for st in seg.spiketrains:
@@ -498,8 +508,63 @@ def compare_old_and_new_neuralynxio():
         for ev in seg.events:
             print(' Event', ev.name, ev.times.shape)
 
+    print('*' * 10)
+    compare_neo_content(bl1, bl2)
+
+
+def compare_neo_content(bl1, bl2):
+    print('*'*5, 'Comparison of blocks', '*'*5)
+    object_types_to_test = [Segment, ChannelIndex, Unit, AnalogSignal,
+                            SpikeTrain, Event, Epoch]
+    for objtype in object_types_to_test:
+        print('Testing {}'.format(objtype))
+        children1 = bl1.list_children_by_class(objtype)
+        children2 = bl2.list_children_by_class(objtype)
+
+        if len(children1) != len(children2):
+            warnings.warn('Number of {} is different in both blocks ({} != {'
+                          '}). Skipping comparison'.format(objtype,
+                                                           len(children1),
+                                                      len(children2)))
+            continue
+
+
+        for child1, child2 in zip(children1,children2):
+            compare_annotations(child1.annotations, child2.annotations)
+            compare_attributes(child1, child2)
+
+def compare_annotations(anno1, anno2):
+    if len(anno1) != len(anno2):
+        warnings.warn('Different numbers of annotations! {} != {'
+                      '}\nSkipping further comparison of this '
+                      'annotation list.'.format(
+            anno1.keys(), anno2.keys()))
+        return
+    assert anno1.keys() == anno2.keys()
+    for key in anno1.keys():
+        anno1[key] = anno2[key]
+
+def compare_attributes(child1, child2):
+    assert child1._all_attrs == child2._all_attrs
+    for attr_id in range(len(child1._all_attrs)):
+        attr_name, attr_dtype, *_ = child1._all_attrs[attr_id]
+        if type(child1)==AnalogSignal and attr_name=='signal':
+            continue
+        if type(child1)==SpikeTrain and attr_name=='times':
+            continue
+        unequal = child1.__getattribute__(attr_name) != \
+                     child2.__getattribute__(attr_name)
+        if hasattr(unequal, 'any'):
+            unequal = unequal.any()
+        if unequal:
+            warnings.warn('Attributes differ! {}.{}={} is not equal to {}.{'
+                          '}={}'.format(child1.__class__.__name__, attr_name,
+                                        child1.__getattribute__(attr_name),
+                                        child2.__class__.__name__, attr_name,
+                                        child2.__getattribute__(attr_name)))
 
 
 if __name__ == '__main__':
     #~ unittest.main()
     compare_old_and_new_neuralynxio()
+
