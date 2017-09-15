@@ -195,8 +195,11 @@ class BaseFromRaw(BaseIO):
                 waveforms = pq.Quantity(float_waveforms, units=wf_units, dtype='float32', copy=False)
                 wf_sampling_rate = unit_channels['wf_sampling_rate'][unit_index]
                 wf_left_sweep = unit_channels['wf_left_sweep'][unit_index]
+                if wf_left_sweep>0:
+                    wf_left_sweep = float(wf_left_sweep)/wf_sampling_rate * pq.s
+                else:
+                    wf_left_sweep = None
                 wf_sampling_rate = wf_sampling_rate*pq.Hz
-                wf_left_sweep = float(wf_left_sweep)/wf_sampling_rate * pq.s
             else:
                 waveforms = None
                 wf_left_sweep = None

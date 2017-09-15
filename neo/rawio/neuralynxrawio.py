@@ -124,7 +124,7 @@ class NeuralynxRawIO(BaseRawIO):
                     if info['input_inverted']:
                         wf_gain *= -1
                     wf_offset = 0.
-                    wf_left_sweep = 0 #DONT KNOWN
+                    wf_left_sweep = -1 #DONT KNOWN
                     wf_sampling_rate = info['sampling_rate']
                     unit_channels.append((unit_name, '{}'.format(unit_id), wf_units, wf_gain, wf_offset, 
                                             wf_left_sweep, wf_sampling_rate))
