@@ -8,10 +8,7 @@ from __future__ import absolute_import
 
 import sys
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -858,7 +855,7 @@ class TestSlice(unittest.TestCase):
         result = self.train1[1:2]
         assert_arrays_equal(self.train1[1:2], result)
         targwaveforms = np.array([[[2., 3.],
-                                   [2.1, 3.1]]])
+                                   [2.1, 3.1]]]) * pq.mV
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -1180,6 +1177,20 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.assertEqual(signal1b.t_stop, new_t_stop)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
 
+    def test_deep_copy_attributes(self):
+        signal1 = self.train
+        new_t_start = -10*pq.s
+        new_t_stop = 10*pq.s
+        new_data = np.sort(np.random.uniform(new_t_start.magnitude,
+                                             new_t_stop.magnitude,
+                                             len(self.train))) * pq.ms
+
+        signal1b = signal1.duplicate_with_new_data(new_data,
+                                                   t_start=new_t_start,
+                                                   t_stop=new_t_stop)
+        signal1.annotate(new_annotation='for signal 1')
+        self.assertTrue('new_annotation' not in signal1b.annotations)
+
 class TestAttributesAnnotations(unittest.TestCase):
     def test_set_universally_recommended_attributes(self):
         train = SpikeTrain([3, 4, 5], units='sec', name='Name',
@@ -1383,11 +1394,16 @@ class TestChanging(unittest.TestCase):
     def test__rescale(self):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
+        train.segment = Segment()
+        train.unit = Unit()
         result = train.rescale(pq.s)
         assert_neo_object_is_compliant(train)
         assert_neo_object_is_compliant(result)
         assert_arrays_equal(train, result)
         self.assertEqual(result.units, 1 * pq.s)
+        self.assertIs(result.segment, train.segment)
+        self.assertIs(result.unit, train.unit)
+
 
     def test__rescale_same_units(self):
         data = [3, 4, 5] * pq.ms

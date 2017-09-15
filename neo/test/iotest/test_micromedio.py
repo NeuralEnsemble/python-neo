@@ -8,10 +8,7 @@ from __future__ import absolute_import, division
 
 import sys
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.io import MicromedIO
 from neo.test.iotest.common_io_test import BaseTestIO

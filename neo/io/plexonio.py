@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 
 from neo.io.basefromrawio import BaseFromRaw
@@ -8,4 +9,3 @@ class PlexonIO(PlexonRawIO, BaseFromRaw):
     def __init__(self, filename):
         PlexonRawIO.__init__(self, filename=filename)
         BaseFromRaw.__init__(self, filename)
-

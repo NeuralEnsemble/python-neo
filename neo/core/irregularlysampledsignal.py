@@ -30,14 +30,17 @@ from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
-                                  annotations=None):
+                                  annotations=None, segment=None, channel_index=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to function that
     does not do the unit checking. This is needed for pickle to work.
     '''
-    return cls(times=times, signal=signal, units=units, time_units=time_units, 
+    iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
                dtype=dtype, copy=copy, name=name, file_origin=file_origin,
                description=description, **annotations)
+    iss.segment = segment
+    iss.channel_index = channel_index
+    return iss
 
 
 class IrregularlySampledSignal(BaseNeo, pq.Quantity):
@@ -177,7 +180,9 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                                                self.name, 
                                                self.file_origin,
                                                self.description,
-                                               self.annotations)
+                                               self.annotations,
+                                               self.segment,
+                                               self.channel_index)
 
     def __array_finalize__(self, obj):
         '''
@@ -203,6 +208,10 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
 
+        # Parent objects
+        self.segment = getattr(obj, 'segment', None)
+        self.channel_index = getattr(obj, 'channel_index', None)
+
     def __repr__(self):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
@@ -225,11 +234,11 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         Get the item or slice :attr:`i`.
         '''
         obj = super(IrregularlySampledSignal, self).__getitem__(i)
-        if isinstance(i, int):  # a single point in time across all channels
+        if isinstance(i, (int, np.integer)):  # a single point in time across all channels
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
-            if isinstance(j, int):  # a single point in time across some channels
+            if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
@@ -238,7 +247,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
                     raise NotImplementedError("Arrays not yet supported")
                 else:
                     raise TypeError("%s not supported" % type(j))
-                if isinstance(k, int):
+                if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
@@ -451,6 +460,8 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
             signal = cf * self.magnitude
         new = self.__class__(times=self.times, signal=signal, units=to_u)
         new._copy_data_complement(self)
+        new.channel_index = self.channel_index
+        new.segment = self.segment
         new.annotations.update(self.annotations)
         return new
 

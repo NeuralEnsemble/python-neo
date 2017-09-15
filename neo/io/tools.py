@@ -72,11 +72,11 @@ from neo.core import (AnalogSignal, Block,
 #         recordingchannels[ind].channel_indexes.append(chx)
 
 
-def iteritems(D):
-    try:
-        return D.iteritems()  # Python 2
-    except AttributeError:
-        return D.items()  # Python 3
+#def iteritems(D):
+#    try:
+#        return D.iteritems()  # Python 2
+#    except AttributeError:
+#        return D.items()  # Python 3
 
 
 class LazyList(collections.MutableSequence):

@@ -20,13 +20,15 @@ PY_VER = sys.version_info[0]
 
 def _new_event(cls, signal, times = None, labels=None, units=None, name=None, 
                file_origin=None, description=None,
-               annotations=None):
+               annotations=None, segment=None):
     '''
     A function to map Event.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
-    return Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
+    e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
                  description=description, **annotations)
+    e.segment = segment
+    return e
 
 class Event(BaseNeo, pq.Quantity):
     '''
@@ -112,7 +114,7 @@ class Event(BaseNeo, pq.Quantity):
         '''
         return _new_event, (self.__class__, self.times, np.array(self), self.labels, self.units,
                             self.name, self.file_origin, self.description,
-                            self.annotations)
+                            self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)

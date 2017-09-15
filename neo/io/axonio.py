@@ -18,7 +18,6 @@ class AxonIO(AxonRawIO, BaseFromRaw):
         Read the protocol waveform of the file, if present;
         function works with ABF2 only. Protocols can be reconstructed
         from the ABF1 header.
-
         Returns: list of segments (one for every episode)
                  with list of analog signls (one for every DAC).
         """
@@ -34,4 +33,3 @@ class AxonIO(AxonRawIO, BaseFromRaw):
             segments.append(seg)
         
         return segments
-

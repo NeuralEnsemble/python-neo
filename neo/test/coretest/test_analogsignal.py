@@ -9,10 +9,7 @@ from __future__ import division
 import os
 import pickle
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import numpy as np
 import quantities as pq
@@ -305,7 +302,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.signal1 = AnalogSignal(self.data1quant, sampling_rate=1*pq.kHz,
                                          name='spam', description='eggs',
                                          file_origin='testfile.txt', arg1='test')
-        self.signal1.segment = 1
+        self.signal1.segment = Segment()
         self.signal1.channel_index = ChannelIndex(index=[0])
 
     def test__compliant(self):
@@ -313,28 +310,29 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__slice_should_return_AnalogSignalArray(self):
         # slice
-        result = self.signal1[3:8, 0]
-        self.assertIsInstance(result, AnalogSignal)
-        assert_neo_object_is_compliant(result)
-        self.assertEqual(result.name, 'spam')         # should slicing really preserve name and description?
-        self.assertEqual(result.description, 'eggs')  # perhaps these should be modified to indicate the slice?
-        self.assertEqual(result.file_origin, 'testfile.txt')
-        self.assertEqual(result.annotations, {'arg1': 'test'})
+        for index in (0, np.int64(0)):
+            result = self.signal1[3:8, index]
+            self.assertIsInstance(result, AnalogSignal)
+            assert_neo_object_is_compliant(result)
+            self.assertEqual(result.name, 'spam')         # should slicing really preserve name and description?
+            self.assertEqual(result.description, 'eggs')  # perhaps these should be modified to indicate the slice?
+            self.assertEqual(result.file_origin, 'testfile.txt')
+            self.assertEqual(result.annotations, {'arg1': 'test'})
 
-        self.assertEqual(result.size, 5)
-        self.assertEqual(result.sampling_period, self.signal1.sampling_period)
-        self.assertEqual(result.sampling_rate, self.signal1.sampling_rate)
-        self.assertEqual(result.t_start,
-                         self.signal1.t_start+3*result.sampling_period)
-        self.assertEqual(result.t_stop,
-                         result.t_start + 5*result.sampling_period)
-        assert_array_equal(result.magnitude, self.data1[3:8].reshape(-1, 1))
+            self.assertEqual(result.size, 5)
+            self.assertEqual(result.sampling_period, self.signal1.sampling_period)
+            self.assertEqual(result.sampling_rate, self.signal1.sampling_rate)
+            self.assertEqual(result.t_start,
+                             self.signal1.t_start+3*result.sampling_period)
+            self.assertEqual(result.t_stop,
+                             result.t_start + 5*result.sampling_period)
+            assert_array_equal(result.magnitude, self.data1[3:8].reshape(-1, 1))
 
-        # Test other attributes were copied over (in this case, defaults)
-        self.assertEqual(result.file_origin, self.signal1.file_origin)
-        self.assertEqual(result.name, self.signal1.name)
-        self.assertEqual(result.description, self.signal1.description)
-        self.assertEqual(result.annotations, self.signal1.annotations)
+            # Test other attributes were copied over (in this case, defaults)
+            self.assertEqual(result.file_origin, self.signal1.file_origin)
+            self.assertEqual(result.name, self.signal1.name)
+            self.assertEqual(result.description, self.signal1.description)
+            self.assertEqual(result.annotations, self.signal1.annotations)
 
     def test__slice_should_let_access_to_parents_objects(self):
         result =  self.signal1.time_slice(1*pq.ms,3*pq.ms)
@@ -394,8 +392,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__copy_should_let_access_to_parents_objects(self):
         ##copy
         result =  self.signal1.copy()
-        self.assertEqual(result.segment, self.signal1.segment)
-        self.assertEqual(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
         ## deep copy (not fixed yet)
         #result = copy.deepcopy(self.signal1)
         #self.assertEqual(result.segment, self.signal1.segment)
@@ -454,6 +452,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1))
         assert_same_sub_schema(result, self.signal1)
 
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
+
     def test__rescale_new(self):
         result = self.signal1.copy()
         result = result.rescale(pq.pA)
@@ -467,6 +470,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
         self.assertEqual(result.units, 1*pq.pA)
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1)*1000., 1e-10)
+
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
 
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.mV)
