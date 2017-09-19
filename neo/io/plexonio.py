@@ -330,14 +330,10 @@ class PlexonIO(BaseIO):
                     waveforms = None
             
             if global_header['WaveformFreq']>0:
-                wf_sampling_rate=float(global_header['WaveformFreq']) * pq.Hz
+                wf_sampling_rate= float(global_header['WaveformFreq']) * pq.Hz
             else:
-                #I hope this is OK
-                associated_chan = dspChannelHeaders[chan]['SIG']
-                if associated_chan in slowChannelHeaders:
-                    wf_sampling_rate = slowChannelHeaders[associated_chan]['ADFreq']*pq.Hz
-                else:
-                    wf_sampling_rate = 0*pq.Hz
+                wf_sampling_rate = float(global_header['ADFrequency']) * pq.Hz
+            
             sptr = SpikeTrain(
                 times,
                 units='s',
