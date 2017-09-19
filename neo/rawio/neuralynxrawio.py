@@ -76,6 +76,9 @@ class NeuralynxRawIO(BaseRawIO):
         
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
+        signal_annotations = []
+        unit_annotations = []
+        event_annotations = []
         for filename in sorted(os.listdir(self.dirname)):
             filename = os.path.join(self.dirname, filename)
             
@@ -99,8 +102,14 @@ class NeuralynxRawIO(BaseRawIO):
                 group_id = 0
                 sig_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16', 
                                                     units, gain,offset, group_id))
-                
                 self.ncs_filenames[chan_id] = filename
+                keys = ['DspFilterDelay_µs', 'recording_opened', 'FileType',  'DspDelayCompensation', 'recording_closed',
+                        'DspLowCutFilterType', 'HardwareSubSystemName',  'DspLowCutNumTaps', 'DSPLowCutFilterEnabled', 
+                        'HardwareSubSystemType', 'DspHighCutNumTaps', 'ADMaxValue', 'DspLowCutFrequency',
+                        'DSPHighCutFilterEnabled', 'RecordSize', 'InputRange', 'DspHighCutFrequency',  
+                        'input_inverted', 'NumADChannels', 'DspHighCutFilterType', ]
+                d = {k:info[k] for k in keys if k in info}
+                signal_annotations.append(d)
                 
             elif ext  in ('nse', 'ntt'):
                 # nse and ntt are pretty similar execept for the wavform shape
@@ -128,6 +137,7 @@ class NeuralynxRawIO(BaseRawIO):
                     wf_sampling_rate = info['sampling_rate']
                     unit_channels.append((unit_name, '{}'.format(unit_id), wf_units, wf_gain, wf_offset, 
                                             wf_left_sweep, wf_sampling_rate))
+                    unit_annotations.append(dict(file_origin=filename))
                 
             elif ext=='nev':
                 # an event channel
@@ -141,17 +151,8 @@ class NeuralynxRawIO(BaseRawIO):
                         name = '{} event_id={} ttl={}'.format(chan_name, event_id, ttl_input)
                         event_channels.append((name, chan_id, 'event'))
                         self.internal_event_ids.append(internal_event_id)
-                    
                 
                 self._nev_memmap[chan_id] = data
-                
-                
-                # TODO DISCUSSION
-                # in the previsous NeuralyxIO an event channel channel is 
-                # define by  a set of 
-                # if we keep that then we need to parse the whole file
-                # In this new version, there only one event channel
-                # @Jullia: What is the best ????
         
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -211,12 +212,23 @@ class NeuralynxRawIO(BaseRawIO):
         # Annotations
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations['blocks'][0]
-        for c in range(event_channels.size):
-            #annotations for channel events
-            event_id, ttl_input =  self.internal_event_ids[c]
-            chan_id = event_channels[c]['id']
-            for seg_index in range(self._nb_segment):
-                seg_annotations = bl_annotations['segments'][seg_index]
+
+        for seg_index in range(self._nb_segment):
+            seg_annotations = bl_annotations['segments'][seg_index]
+
+            for c in range(sig_channels.size):
+                sig_ann = seg_annotations['signals'][c]
+                sig_ann.update(signal_annotations[c])
+            
+            for c in range(unit_channels.size):
+                unit_ann = seg_annotations['units'][c]
+                unit_ann.update(unit_annotations[c])
+            
+            for c in range(event_channels.size):
+                #annotations for channel events
+                event_id, ttl_input =  self.internal_event_ids[c]
+                chan_id = event_channels[c]['id']
+                
                 ev_ann = seg_annotations['events'][c]
                 ev_ann['file_origin'] = self.nev_filenames[chan_id]
                 #~ ev_ann['marker_id'] = 
@@ -276,9 +288,9 @@ class NeuralynxRawIO(BaseRawIO):
         
         ts0, ts1 = self._timestamp_limits[seg_index]
         if t_start is not None:
-            ts0 = int(t_start*1e6)
+            ts0 = int((t_start+self.global_t_start)*1e6)
         if t_start is not None:
-            ts1 = int(t_stop*1e6)
+            ts1 = int((t_stop+self.global_t_start)*1e6)
         
         keep = (ts>=ts0) & (ts<=ts1) & (unit_id==data['unit_id'])
         timestamps = ts[keep]
@@ -297,9 +309,9 @@ class NeuralynxRawIO(BaseRawIO):
         
         ts0, ts1 = self._timestamp_limits[seg_index]
         if t_start is not None:
-            ts0 = int(t_start*1e6)
+            ts0 = int((t_start+self.global_t_start)*1e6)
         if t_start is not None:
-            ts1 = int(t_stop*1e6)
+            ts1 = int((t_stop+self.global_t_start)*1e6)
         
         keep = (ts>=ts0) & (ts<=ts1) & (unit_id==data['unit_id'])
         
@@ -331,9 +343,9 @@ class NeuralynxRawIO(BaseRawIO):
         ts0, ts1 = self._timestamp_limits[seg_index]
         
         if t_start is not None:
-            ts0 = int(t_start*1e6)
+            ts0 = int((t_start+self.global_t_start)*1e6)
         if t_start is not None:
-            ts1 = int(t_stop*1e6)
+            ts1 = int((t_stop+self.global_t_start)*1e6)
         
         ts = data['timestamp']
         keep = (ts>=ts0) & (ts<=ts1) & (data['event_id']==event_id) &\
@@ -457,7 +469,7 @@ txt_header_keys = [
     ('DspHighCutNumTaps', '', None),
     ('DspHighCutFilterType', '', None),
     ('DspDelayCompensation', '', None),
-    ('DspFilterDelay_\xb5s', '', None),
+    ('DspFilterDelay_µs', '', None),
     ('DisabledSubChannels', '', None),
     ('WaveformLength', '', int),
     ('AlignmentPt', '', None),

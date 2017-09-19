@@ -547,7 +547,8 @@ def compare_annotations(anno1, anno2):
 def compare_attributes(child1, child2):
     assert child1._all_attrs == child2._all_attrs
     for attr_id in range(len(child1._all_attrs)):
-        attr_name, attr_dtype, *_ = child1._all_attrs[attr_id]
+        attr_name  = child1._all_attrs[attr_id][0]
+        attr_dtype = child1._all_attrs[attr_id][1]
         if type(child1)==AnalogSignal and attr_name=='signal':
             continue
         if type(child1)==SpikeTrain and attr_name=='times':
