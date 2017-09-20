@@ -51,9 +51,9 @@ class NeuralynxRawIO(BaseRawIO):
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
     rawmode = 'one-dir'
-    def __init__(self, dirname=''):
-        BaseRawIO.__init__(self)
+    def __init__(self, dirname='', use_cache=True, **kargs):
         self.dirname = dirname
+        BaseRawIO.__init__(self, use_cache=use_cache, **kargs)
     
     def _source_name(self):
         return self.dirname
@@ -362,7 +362,7 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
     
-    def read_ncs_files(self, ncs_filenames, gap_indexes=None):
+    def read_ncs_files(self, ncs_filenames):
         """
         Given a list of ncs files contrsuct:
             * self._sigs_memmap = [ {} for seg_index in range(self._nb_segment) ]
@@ -391,7 +391,11 @@ class NeuralynxRawIO(BaseRawIO):
         chan_id0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_id0]
         data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
-
+        
+        gap_indexes = None
+        if self.use_cache:
+            gap_indexes = self._cache.get('gap_indexes')
+        
         #detect gaps on first file
         if gap_indexes is None:
             #this can be long!!!!
@@ -409,6 +413,9 @@ class NeuralynxRawIO(BaseRawIO):
                 mask &= (deltas0!=good_delta-tolerance)
                 mask &= (deltas0!=good_delta+tolerance)
             gap_indexes, = np.nonzero(mask)
+            
+            if self.use_cache:
+                self.add_in_cache(gap_indexes=gap_indexes)
         
         gap_bounds = [0] + (gap_indexes+1).tolist() + [data0.size]
         self._nb_segment = len(gap_bounds)-1

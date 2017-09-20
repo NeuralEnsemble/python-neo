@@ -8,12 +8,14 @@ import unittest
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
+import logging
+logging.getLogger().setLevel(logging.INFO)
 
 class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
-        'Cheetah_v5.5.1/original_data/',
-        'Cheetah_v5.7.4/original_data/',
+        'Cheetah_v5.5.1/original_data',
+        'Cheetah_v5.7.4/original_data',
         ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
