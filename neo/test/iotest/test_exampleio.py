@@ -22,7 +22,7 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     files_to_download = []
 
 
-class TestExample2IO(unittest.TestCase):
+class Specific_TestExampleIO(unittest.TestCase):
 
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)
@@ -83,6 +83,22 @@ class TestExample2IO(unittest.TestCase):
         assert event_full.size>event_slice.size
         assert np.all(event_slice.times>=t_start)
         assert np.all(event_slice.times<=t_stop)
+
+    def test_read_block_with_time_slices(self):
+        r = ExampleIO(filename=None)
+        bl = r.read_block(time_slices=None)
+        real_segments = bl.segments
+        assert len(real_segments)==2
+        
+        
+        time_slices = [(1, 3), (4, 5), (16, 21), (21.5, 22.)]
+        bl = r.read_block(time_slices=time_slices)
+        sliced_segments = bl.segments
+        assert len(sliced_segments)==len(time_slices)
+        
+        with self.assertRaises(ValueError):
+            buggy_time_slices = [(11, 14)]
+            bl = r.read_block(time_slices=buggy_time_slices)
         
         
         

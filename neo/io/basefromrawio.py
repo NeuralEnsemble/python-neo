@@ -54,7 +54,7 @@ class BaseFromRaw(BaseIO):
         self.parse_header()
     
     def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None,  
-                    load_waveforms=False):
+                    load_waveforms=False, time_slices=None):
         
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -96,15 +96,44 @@ class BaseFromRaw(BaseIO):
             channel_index.units.append(unit)
             bl.channel_indexes.append(channel_index)
         
-        #Segment
-        for seg_index in range(self.segment_count(block_index)):
-            seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
-                                                                lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
-                                                                load_waveforms=load_waveforms)
-            bl.segments.append(seg)
+        if time_slices is None:
+            #Read the real segment counts
+            for seg_index in range(self.segment_count(block_index)):
+                seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
+                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                    load_waveforms=load_waveforms)
+                bl.segments.append(seg)
+                
+                for i, anasig in enumerate(seg.analogsignals):
+                    bl.channel_indexes[i].analogsignals.append(anasig)
+        else:
+            #return a fake segment list corresponding to time_slices
+                
+            for s, time_slice in enumerate(time_slices):
+                #find in which segment time_slice is
+                t_start, t_stop = time_slice
+                t_start = ensure_second(t_start)
+                t_stop = ensure_second(t_stop)
+                related_seg_index = None
+                for seg_index in range(self.segment_count(block_index)):
+                    seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
+                    seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+                    if (seg_t_start<=t_start<=seg_t_stop) and (seg_t_start<=t_stop<=seg_t_stop):
+                        related_seg_index = seg_index
+                
+                if related_seg_index is None:
+                    raise(ValueError('time_slice not in any segment range  {}'.format(time_slice)))
+                
+                seg =  self.read_segment(block_index=block_index, seg_index=related_seg_index,
+                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                    load_waveforms=load_waveforms, time_slice=time_slice)
+                seg.index = s
+                bl.segments.append(seg)
+                
+                for i, anasig in enumerate(seg.analogsignals):
+                    bl.channel_indexes[i].analogsignals.append(anasig)
+                
             
-            for i, anasig in enumerate(seg.analogsignals):
-                bl.channel_indexes[i].analogsignals.append(anasig)
         
         bl.create_many_to_one_relationship()
         
@@ -139,15 +168,8 @@ class BaseFromRaw(BaseIO):
             assert not lazy, 'time slice only work when not lazy'
             t_start, t_stop = time_slice
             
-            if isinstance(t_start, float):
-                t_start = t_start * pq.s
-            if isinstance(t_stop, float):
-                t_stop = t_stop * pq.s
-            
-            if isinstance(t_start, pq.Quantity):
-                t_start = t_start.rescale('s')
-            if isinstance(t_stop, pq.Quantity):
-                t_stop = t_stop.rescale('s')
+            t_start = ensure_second(t_start)
+            t_stop = ensure_second(t_stop)
             
             #checks limits
             if t_start<seg_t_start:
@@ -374,3 +396,12 @@ def check_annotations(annotations):
         if k in annotations:
             annotations[k] = str(annotations[k])
     return annotations
+
+def ensure_second(v):
+    if isinstance(v, float):
+        return v*pq.s
+    elif isinstance(v, pq.Quantity):
+        return v.rescale('s')
+    elif isinstance(v, int):
+        return float(v)*pq.s
+
