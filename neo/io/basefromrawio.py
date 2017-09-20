@@ -111,7 +111,7 @@ class BaseFromRaw(BaseIO):
         return bl
 
     def read_segment(self, block_index=0, seg_index=0, lazy=False, cascade=True, 
-                        signal_group_mode=None, load_waveforms=False):
+                        signal_group_mode=None, load_waveforms=False, time_slice=None):
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -128,26 +128,73 @@ class BaseFromRaw(BaseIO):
             return seg
         
         
+        seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
+        seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+        
+        # get only a slice of objects limited by t_start and t_stop time_slice = (t_start, t_stop)
+        if time_slice is None:
+            t_start, t_stop = None, None
+            t_start_, t_stop_ = None, None
+        else:
+            assert not lazy, 'time slice only work when not lazy'
+            t_start, t_stop = time_slice
+            
+            if isinstance(t_start, float):
+                t_start = t_start * pq.s
+            if isinstance(t_stop, float):
+                t_stop = t_stop * pq.s
+            
+            if isinstance(t_start, pq.Quantity):
+                t_start = t_start.rescale('s')
+            if isinstance(t_stop, pq.Quantity):
+                t_stop = t_stop.rescale('s')
+            
+            #checks limits
+            if t_start<seg_t_start:
+                t_start = seg_t_start
+            if t_stop>seg_t_stop:
+                t_stop = seg_t_stop
+            
+            #in float format in second (for rawio clip)
+            t_start_, t_stop_ = float(t_start.magnitude), float(t_stop.magnitude)
+            
+            #new spiketrain limits
+            seg_t_start = t_start
+            seg_t_stop = t_stop
+            
+        
         #AnalogSignal
         signal_channels = self.header['signal_channels']
         #~ channel_indexes=np.arange(signal_channels.size)
 
-        
         if signal_channels.size>0:
             
             channel_indexes_list = self.get_group_channel_indexes()
             for channel_indexes in channel_indexes_list:
-                if not lazy:
-                    raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                                i_start=None, i_stop=None, channel_indexes=channel_indexes)
-                    float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
-                                                                                            channel_indexes=channel_indexes)
-                else:
-                    sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
-                                                                                            channel_indexes=channel_indexes)
-                
                 sr = self.get_signal_sampling_rate(channel_indexes) * pq.Hz
                 sig_t_start = self.get_signal_t_start(block_index, seg_index, channel_indexes) * pq.s
+
+                sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
+                                                                                        channel_indexes=channel_indexes)
+                
+                if not lazy:
+                    if t_start is not None:
+                        i_start = int((t_start-sig_t_start).magnitude * sr.magnitude)
+                        if i_start<0:
+                            i_start = 0
+                    else:
+                        i_start = None
+                    if t_stop is not None:
+                        i_stop = int((t_stop-sig_t_start).magnitude * sr.magnitude)
+                        if i_stop>sig_size:
+                            i_stop = sig_size
+                    else:
+                        i_stop = None
+                    
+                    raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+                                i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
+                    float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
+                                                                                            channel_indexes=channel_indexes)
                 
                 for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_indexes,
                                                 signal_group_mode=signal_group_mode).items():
@@ -179,8 +226,6 @@ class BaseFromRaw(BaseIO):
                     
                     seg.analogsignals.append(anasig)
 
-        seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
-        seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
                     
         
         #SpikeTrain and waveforms (optional)
@@ -188,7 +233,7 @@ class BaseFromRaw(BaseIO):
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
                 raw_waveforms = self.spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
-                                                    unit_index=unit_index, t_start=None, t_stop=None)
+                                                    unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
                                 unit_index=unit_index)
                 wf_units = ensure_signal_units(unit_channels['wf_units'][unit_index])
@@ -213,7 +258,7 @@ class BaseFromRaw(BaseIO):
             
             if not lazy:
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
-                                        unit_index=unit_index, t_start=None, t_stop=None)
+                                        unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 
                 sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
@@ -235,7 +280,7 @@ class BaseFromRaw(BaseIO):
         for chan_ind in range(len(event_channels)):
             if not lazy:
                 ev_timestamp, ev_raw_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
-                                        event_channel_index=chan_ind)
+                                        event_channel_index=chan_ind, t_start=t_start_, t_stop=t_stop_)
                 ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
                 if ev_raw_durations is None:
                     ev_durations = None

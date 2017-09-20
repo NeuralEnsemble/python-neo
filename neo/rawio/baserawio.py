@@ -617,7 +617,7 @@ class BaseRawIO(object):
         #the hash of the ressource (dir of file) is done with filename+datetime
         #TODO make something more sofisticated when rawmode='one-dir' that use all filename and datetime
         d = dict(ressource_name=ressource_name, mtime=os.path.getmtime(ressource_name))
-        hash = joblib.hash(d)
+        hash = joblib.hash(d, hash_name='md5')
         
         #name is compund by the real_n,ame and the hash
         name = '{}_{}'.format(os.path.basename(ressource_name), hash)

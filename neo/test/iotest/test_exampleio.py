@@ -11,6 +11,8 @@ import unittest
 from neo.io.exampleio import ExampleIO#, HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
 
+import quantities as pq
+import numpy as np
 
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
@@ -54,10 +56,42 @@ class TestExample2IO(unittest.TestCase):
         r = ExampleIO(filename=None)
         bl = r.read_block(cascade=True, lazy=True)
         assert len(bl.list_units) == 3
-        print(len(bl.channel_indexes))
+        #~ print(len(bl.channel_indexes))
         assert len(bl.channel_indexes) == 1 + 3 #signals grouped + units
+
+    def test_read_segment_with_time_slice(self):
+        r = ExampleIO(filename=None)
+        seg = r.read_segment(time_slice=None)
+        shape_full = seg.analogsignals[0].shape
+        spikes_full = seg.spiketrains[0]
+        event_full = seg.events[0]
+        
+        t_start, t_stop = 260*pq.ms, 1.854*pq.s
+        seg = r.read_segment(time_slice=(t_start, t_stop))
+        shape_slice = seg.analogsignals[0].shape
+        spikes_slice = seg.spiketrains[0]
+        event_slice = seg.events[0]
+        
+        assert shape_full[0]>shape_slice[0]
+        
+        assert spikes_full.size>spikes_slice.size
+        assert np.all(spikes_slice>=t_start)
+        assert np.all(spikes_slice<=t_stop)
+        assert spikes_slice.t_start==t_start
+        assert spikes_slice.t_stop==t_stop
+        
+        assert event_full.size>event_slice.size
+        assert np.all(event_slice.times>=t_start)
+        assert np.all(event_slice.times<=t_stop)
+        
+        
+        
+        
+        
 
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
