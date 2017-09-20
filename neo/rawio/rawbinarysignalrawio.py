@@ -63,7 +63,7 @@ class RawBinarySignalRawIO(BaseRawIO):
                 chan_id = c
                 units = ''
                 group_id = 0
-                sig_channels.append((name, chan_id, self.sampling_rate, 'int16', 
+                sig_channels.append((name, chan_id, self.sampling_rate, self.dtype, 
                                             units, self.signal_gain,self.signal_offset, group_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)

@@ -229,8 +229,8 @@ def benchmark_speed_read_signals(reader):
             nb_samples += raw_chunk.shape[0]
         t1 = time.perf_counter()
         speed = (nb_samples*nb_sig)/(t1-t0)/1e6
-        logging.info('{} read ({}signals x {}samples) from {} in {:0.3f} s so speed {:0.3f} MSPS'.format(print_class(reader),
-                                    nb_sig, nb_samples,  reader.source_name(), t1-t0, speed))
+        logging.info('{} read ({}signals x {}samples) in {:0.3f} s so speed {:0.3f} MSPS from {}'.format(print_class(reader),
+                                    nb_sig, nb_samples, t1-t0, speed, reader.source_name()))
 
 
 
