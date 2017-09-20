@@ -201,13 +201,13 @@ class PlexonRawIO(BaseRawIO):
             elif 103 <= global_header['Version'] <105:
                 wf_gain = global_header['SpikeMaxMagnitudeMV'] / (
                     .5 * 2. ** (global_header['BitsPerSpikeSample']) *
-                    1000.)
+                    h['Gain'] * 1000.)
             elif global_header['Version'] >= 105:
                 wf_gain = global_header['SpikeMaxMagnitudeMV'] / (
                     .5 * 2. ** (global_header['BitsPerSpikeSample']) *
-                    global_header['SpikePreAmpGain'])            
+                    h['Gain'] * global_header['SpikePreAmpGain'])            
             wf_offset = 0.
-            wf_left_sweep = 0 #DONT KNOWN
+            wf_left_sweep = -1 #DONT KNOWN
             wf_sampling_rate = global_header['WaveformFreq']
             unit_channels.append((name, _id, wf_units, wf_gain, wf_offset, 
                                     wf_left_sweep, wf_sampling_rate))
