@@ -436,7 +436,7 @@ class BlackrockIO(BaseIO):
         dt1 = [('electrode_id', 'uint32')]
 
         nsx_ext_header = np.memmap(
-            filename, shape=shape, offset=offset_dt0, dtype=dt1)
+            filename, mode='r', shape=shape, offset=offset_dt0, dtype=dt1)
 
         return nsx_basic_header, nsx_ext_header
 
@@ -500,7 +500,7 @@ class BlackrockIO(BaseIO):
             ('lo_freq_type', 'uint16')]  # 0=None, 1=Butterworth
 
         nsx_ext_header = np.memmap(
-            filename, shape=shape, offset=offset_dt0, dtype=dt1)
+            filename, mode='r', shape=shape, offset=offset_dt0, dtype=dt1)
 
         return nsx_basic_header, nsx_ext_header
 
@@ -516,7 +516,8 @@ class BlackrockIO(BaseIO):
             ('timestamp', 'uint32'),
             ('nb_data_points', 'uint32')]
 
-        return np.memmap(filename, dtype=dt2, shape=1, offset=offset)[0]
+        return np.memmap(
+            filename, mode='r', dtype=dt2, shape=1, offset=offset)[0]
 
     def __read_nsx_dataheader_variant_a(
             self, nsx_nb, filesize=None, offset=None):
@@ -577,7 +578,7 @@ class BlackrockIO(BaseIO):
         # read nsx data
         # store as dict for compatibility with higher file specs
         data = {1: np.memmap(
-            filename, dtype='int16', shape=shape, offset=offset)}
+            filename, mode='r', dtype='int16', shape=shape, offset=offset)}
 
         return data
 
@@ -599,7 +600,7 @@ class BlackrockIO(BaseIO):
 
             # read data
             data[data_bl] = np.memmap(
-                filename, dtype='int16', shape=shape, offset=offset)
+                filename, mode='r', dtype='int16', shape=shape, offset=offset)
 
         return data
 
@@ -653,7 +654,7 @@ class BlackrockIO(BaseIO):
             ('info_field', 'S24')]
 
         raw_ext_header = np.memmap(
-            filename, offset=offset_dt0, dtype=dt1, shape=shape)
+            filename, mode='r', offset=offset_dt0, dtype=dt1, shape=shape)
 
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
@@ -730,7 +731,7 @@ class BlackrockIO(BaseIO):
             ('packet_id', 'uint16'),
             ('value', 'S{0}'.format(data_size - 6))]
 
-        raw_data = np.memmap(filename, offset=header_size, dtype=dt0)
+        raw_data = np.memmap(filename, mode='r', offset=header_size, dtype=dt0)
 
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
@@ -1082,7 +1083,8 @@ class BlackrockIO(BaseIO):
         offset = \
             self.__get_file_size(filename) - \
             self.__nev_params('bytes_in_data_packets')
-        last_data_packet = np.memmap(filename, offset=offset, dtype=dt)[0]
+        last_data_packet = np.memmap(
+            filename, mode='r', offset=offset, dtype=dt)[0]
 
         n_starts = [0 * self.__nev_params('event_unit')]
         n_stops = [
