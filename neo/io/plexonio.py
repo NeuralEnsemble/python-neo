@@ -320,10 +320,12 @@ class PlexonIO(BaseIO):
                             'Version'] < 105:
                         gain = global_header['SpikeMaxMagnitudeMV'] / (
                             .5 * 2. ** (global_header['BitsPerSpikeSample']) *
+                            dspChannelHeaders[chan]['Gain'] *
                             1000.)
                     elif global_header['Version'] > 105:
                         gain = global_header['SpikeMaxMagnitudeMV'] / (
                             .5 * 2. ** (global_header['BitsPerSpikeSample']) *
+                            dspChannelHeaders[chan]['Gain'] *
                             global_header['SpikePreAmpGain'])
                     waveforms = swfarrays[chan, unit] * gain * pq.mV
                 else:
