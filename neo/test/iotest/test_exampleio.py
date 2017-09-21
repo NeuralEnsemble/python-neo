@@ -14,6 +14,7 @@ from neo.test.iotest.common_io_test import BaseTestIO
 import quantities as pq
 import numpy as np
 
+#This run standart tests, this is mandatory for all IO
 class TestExampleIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ExampleIO
     files_to_test = ['fake1',
@@ -23,7 +24,6 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
 
 
 class Specific_TestExampleIO(unittest.TestCase):
-
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)
         seg = r.read_segment(cascade=True, lazy=True)

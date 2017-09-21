@@ -47,17 +47,21 @@ class BaseFromRaw(BaseIO):
     mode = 'file'
     
     _prefered_signal_group_mode = 'split-all' #'group-by-same-units'
+    _prefered_units_group_mode = 'all-in-one' #'split-all'
     
 
     def __init__(self, *args, **kargs):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
     
-    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None,  
-                    load_waveforms=False, time_slices=None):
+    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None, 
+                units_group_mode=None, load_waveforms=False, time_slices=None):
         
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
+
+        if units_group_mode is None:
+            units_group_mode = self._prefered_units_group_mode
 
         #annotations
         bl_annotations = dict(self.raw_annotations['blocks'][block_index])
@@ -84,17 +88,29 @@ class BaseFromRaw(BaseIO):
                 bl.channel_indexes.append(neo_channel_index)
         
         #ChannelIndex and Unit
-        #TODO find something better than this
-        # For simplification Unit are not attached to real channelindex
-        # but a new ChannelIndex is created for that!!!!
+        #2 case are possible in neo defifferent IO have choosen one or other:
+        #  * All units are group in the same ChannelIndex and indexes are all channels : 'all-in-one'
+        #  * Each units is assigned to one ChannelIndex : 'split-all'
+        # This is kept for compatibility
         unit_channels = self.header['unit_channels']
-        for c in range(len(unit_channels)):
-            unit = Unit(name=str(unit_channels['name'][c]),
-                            id=unit_channels['id'][c])
-            channel_index = ChannelIndex(index=np.array([-2], dtype='i'),
-                                    name='ChannelIndex for Unit')
-            channel_index.units.append(unit)
-            bl.channel_indexes.append(channel_index)
+        if units_group_mode=='all-in-one':
+            if unit_channels.size>0:
+                channel_index = ChannelIndex(index=np.array([], dtype='i'),
+                                        name='ChannelIndex for all Unit')
+                bl.channel_indexes.append(channel_index)
+            for c in range(unit_channels.size):
+                unit = Unit(name=str(unit_channels['name'][c]),
+                                id=unit_channels['id'][c])
+                channel_index.units.append(unit)
+                
+        elif units_group_mode=='split-all':
+            for c in range(len(unit_channels)):
+                unit = Unit(name=str(unit_channels['name'][c]),
+                                id=unit_channels['id'][c])
+                channel_index = ChannelIndex(index=np.array([], dtype='i'),
+                                        name='ChannelIndex for Unit')
+                channel_index.units.append(unit)
+                bl.channel_indexes.append(channel_index)
         
         if time_slices is None:
             #Read the real segment counts
@@ -104,11 +120,8 @@ class BaseFromRaw(BaseIO):
                                                                     load_waveforms=load_waveforms)
                 bl.segments.append(seg)
                 
-                for i, anasig in enumerate(seg.analogsignals):
-                    bl.channel_indexes[i].analogsignals.append(anasig)
         else:
             #return a fake segment list corresponding to time_slices
-                
             for s, time_slice in enumerate(time_slices):
                 #find in which segment time_slice is
                 t_start, t_stop = time_slice
@@ -130,10 +143,20 @@ class BaseFromRaw(BaseIO):
                 seg.index = s
                 bl.segments.append(seg)
                 
-                for i, anasig in enumerate(seg.analogsignals):
-                    bl.channel_indexes[i].analogsignals.append(anasig)
-                
+                for c, anasig in enumerate(seg.analogsignals):
+                    bl.channel_indexes[c].analogsignals.append(anasig)
+        
+        #create link to other containers ChannelIndex and Units
+        for seg in bl.segments:
+            for c, anasig in enumerate(seg.analogsignals):
+                bl.channel_indexes[c].analogsignals.append(anasig)
             
+            nsig = len(seg.analogsignals)
+            for c, sptr in enumerate(seg.spiketrains):
+                if units_group_mode=='all-in-one':
+                    bl.channel_indexes[nsig].units[c].spiketrains.append(sptr)
+                elif units_group_mode=='split-all':
+                    bl.channel_indexes[nsig+c].units[0].spiketrains.append(sptr)
         
         bl.create_many_to_one_relationship()
         
@@ -187,10 +210,8 @@ class BaseFromRaw(BaseIO):
         
         #AnalogSignal
         signal_channels = self.header['signal_channels']
-        #~ channel_indexes=np.arange(signal_channels.size)
-
+        
         if signal_channels.size>0:
-            
             channel_indexes_list = self.get_group_channel_indexes()
             for channel_indexes in channel_indexes_list:
                 sr = self.get_signal_sampling_rate(channel_indexes) * pq.Hz
@@ -198,20 +219,21 @@ class BaseFromRaw(BaseIO):
 
                 sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
                                                                                         channel_indexes=channel_indexes)
-                
                 if not lazy:
-                    if t_start is not None:
-                        i_start = int((t_start-sig_t_start).magnitude * sr.magnitude)
-                        if i_start<0:
-                            i_start = 0
-                    else:
-                        i_start = None
+                    #in case of time_slice get: get i_start, i_stop, new sig_t_start
                     if t_stop is not None:
                         i_stop = int((t_stop-sig_t_start).magnitude * sr.magnitude)
                         if i_stop>sig_size:
                             i_stop = sig_size
                     else:
                         i_stop = None
+                    if t_start is not None:
+                        i_start = int((t_start-sig_t_start).magnitude * sr.magnitude)
+                        if i_start<0:
+                            i_start = 0
+                        sig_t_start += (i_start/sr).rescale('s')
+                    else:
+                        i_start = None
                     
                     raw_signal = self.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
                                 i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
