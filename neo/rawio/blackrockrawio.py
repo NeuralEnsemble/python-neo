@@ -454,7 +454,7 @@ class BlackrockRawIO(BaseRawIO):
             ind_stop = None
         else:
             ts = int(t_stop*self.__nev_basic_header['timestamp_resolution'])
-            ind_stop = np.searchsorted(timestamp, ts)+1
+            ind_stop = np.searchsorted(timestamp, ts) #+1
         
         sl = slice(ind_start, ind_stop)
         return sl

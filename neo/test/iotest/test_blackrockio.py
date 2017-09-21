@@ -52,111 +52,78 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
     
     def test_load_waveforms(self):
-        reader = BlackrockIO(filename=
-                get_test_file_full_path(
-                    ioclass=BlackrockIO,
-                    filename='FileSpec2.3001',
-                    directory=self.local_test_dir, clean=False),
-                verbose=False)
+        filename = self.get_filename_path('FileSpec2.3001')
+        reader = BlackrockIO(filename=filename, verbose=False)
         
         bl = reader.read_block(load_waveforms=True)
         assert_neo_object_is_compliant(bl)
         
         
-    #API of BlackrockIO V4 had special adaptation
-    #with standart neo.io API like n_starts, n_stops that create
-    #fake segment clip by that time limits
-    #all that test will fail because of that
-    
-    #~ def test_inputs_V23(self):
-        #~ """
-        #~ Test various inputs to BlackrockIO.read_block with version 2.3 file
-        #~ to check for parsing errors.
-        #~ """
+    def test_inputs_V23(self):
+        """
+        Test various inputs to BlackrockIO.read_block with version 2.3 file
+        to check for parsing errors.
+        """
+        filename = self.get_filename_path('FileSpec2.3001')
+        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5,)
+        
+        
+        # Load data to maximum extent, one None is not given as list
+        block = reader.read_block(time_slices=None,  load_waveforms=False)
+        lena = len(block.segments[0].analogsignals[0])
+        numspa = len(block.segments[0].spiketrains[0])
 
-        #~ try:
-            #~ b = BlackrockIO(
-                #~ get_test_file_full_path(
-                    #~ ioclass=BlackrockIO,
-                    #~ filename='FileSpec2.3001',
-                    #~ directory=self.local_test_dir, clean=False),
-                #~ verbose=False)
-        #~ except:
-            #~ self.fail()
+        # Load data using a negative time and a time exceeding the end of the
+        # recording raise an error
+        too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
+        buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        #~ # Load data to maximum extent, one None is not given as list
-        #~ block = b.read_block(
-            #~ n_starts=[None], n_stops=None, channels=range(1, 9),
-            #~ nsx_to_load=5, units='all', load_events=True,
-            #~ load_waveforms=False)
-        #~ lena = len(block.segments[0].analogsignals[0])
-        #~ numspa = len(block.segments[0].spiketrains[0])
+        #this raise error in read_block
+        with self.assertRaises(ValueError):
+            block = reader.read_block(time_slices=[buggy_slice])
+        
+        #but this is valid in read_segment because seg_index is specified
+        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
+        
+        lenb = len(seg.analogsignals[0])
+        numspb = len(seg.spiketrains[0])
 
-        #~ # Load data using a negative time and a time exceeding the end of the
-        #~ # recording
-        #~ too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
-        #~ block = b.read_block(
-            #~ n_starts=[-100 * pq.ms], n_stops=[too_large_tstop],
-            #~ channels=range(1, 9), nsx_to_load=[5], units='all',
-            #~ load_events=False, load_waveforms=False)
-        #~ lenb = len(block.segments[0].analogsignals[0])
-        #~ numspb = len(block.segments[0].spiketrains[0])
+        # Same length of analog signal?
+        # Both should have read the complete data set!
+        self.assertEqual(lena, lenb)
 
-        #~ # Same length of analog signal?
-        #~ # Both should have read the complete data set!
-        #~ self.assertEqual(lena, lenb)
+        # Same length of spike train?
+        # Both should have read the complete data set!
+        self.assertEqual(numspa, numspb)
 
-        #~ # Same length of spike train?
-        #~ # Both should have read the complete data set!
-        #~ self.assertEqual(numspa, numspb)
+        # n_starts and n_stops not given as list
+        # verifies identical length of returned signals given equal durations
+        # as input
+        ns5_unit = block.segments[0].analogsignals[0].sampling_period
+        time_slice = (100 * ns5_unit, 200 * ns5_unit)
+        block = reader.read_block(time_slices=[time_slice])
+        lena = len(block.segments[0].analogsignals[0])
+        
+        time_slice = (100 * ns5_unit, 200 * ns5_unit)
+        block = reader.read_block(time_slices=[time_slice])
+        lenb = len(block.segments[0].analogsignals[0])
 
-        #~ # n_starts and n_stops not given as list
-        #~ # verifies identical length of returned signals given equal durations
-        #~ # as input
-        #~ ns5_unit = block.segments[0].analogsignals[0].sampling_period
-        #~ block = b.read_block(
-            #~ n_starts=100 * ns5_unit, n_stops=200 * ns5_unit,
-            #~ channels=range(1, 9), nsx_to_load=5, units='all',
-            #~ load_events=False, load_waveforms=False)
-        #~ lena = len(block.segments[0].analogsignals[0])
+        # Same length?
+        self.assertEqual(lena, lenb)
+        # Length should be 100 samples exactly
+        self.assertEqual(lena, 100)
 
-        #~ block = b.read_block(
-            #~ n_starts=301 * ns5_unit, n_stops=401 * ns5_unit,
-            #~ channels=range(1, 9), nsx_to_load=5, units='all',
-            #~ load_events=False, load_waveforms=False)
-        #~ lenb = len(block.segments[0].analogsignals[0])
+        # test 4 Units
+        time_slices=[(0, 1000*pq.ms), (3000*pq.ms, 4000*pq.ms)]
+        block = reader.read_block(time_slices=time_slices, load_waveforms=True,
+                    units_group_mode='all-in-one')
 
-        #~ # Same length?
-        #~ self.assertEqual(lena, lenb)
-        #~ # Length should be 100 samples exactly
-        #~ self.assertEqual(lena, 100)
+        self.assertEqual(len(block.segments), 2)
+        self.assertEqual(len(block.segments[0].analogsignals), 10)
+        self.assertEqual(len(block.channel_indexes[-1].units), 4)
+        self.assertEqual(len(block.channel_indexes[-1].units), 
+                    len(block.segments[0].spiketrains))
 
-        #~ # Load partial data types and check if this is selection is made
-        #~ block = b.read_block(
-            #~ n_starts=None, n_stops=None, channels=range(1, 9),
-            #~ nsx_to_load=5, units='none', load_events=False,
-            #~ load_waveforms=True)
-
-        #~ self.assertEqual(len(block.segments), 1)
-        #~ self.assertEqual(len(block.segments[0].analogsignals), 8)
-        #~ self.assertEqual(len(block.channel_indexes), 8)
-        #~ self.assertEqual(len(block.channel_indexes[0].units), 0)
-        #~ self.assertEqual(len(block.segments[0].events), 0)
-        #~ self.assertEqual(len(block.segments[0].spiketrains), 0)
-
-        #~ # NOTE: channel 6 does not contain any unit
-        #~ block = b.read_block(
-            #~ n_starts=[None, 3000 * pq.ms], n_stops=[1000 * pq.ms, None],
-            #~ channels=range(1, 9), nsx_to_load='none',
-            #~ units={1: 0, 5: 0, 6: 0}, load_events=True,
-            #~ load_waveforms=True)
-
-        #~ self.assertEqual(len(block.segments), 2)
-        #~ self.assertEqual(len(block.segments[0].analogsignals), 0)
-        #~ self.assertEqual(len(block.channel_indexes), 8)
-        #~ self.assertEqual(len(block.channel_indexes[0].units), 1)
-        #~ self.assertEqual(len(block.segments[0].events), 0)
-        #~ self.assertEqual(len(block.segments[0].spiketrains), 2)
 
 if __name__ == '__main__':
     unittest.main()

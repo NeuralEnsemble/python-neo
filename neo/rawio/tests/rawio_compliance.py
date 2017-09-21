@@ -259,8 +259,8 @@ def read_spike_times(reader):
                 
                 if spike_times.size>3:
                     #load only one spike by forcing limits
-                    t_start = spike_times[1] - 0.00001
-                    t_stop = spike_times[1] + 0.00001
+                    t_start = spike_times[1] - 0.001
+                    t_stop = spike_times[1] + 0.001
                     
                     spike_timestamp2 = reader.spike_timestamps(block_index=block_index, seg_index=seg_index,
                                                     unit_index=unit_index, t_start=t_start, t_stop=t_stop)

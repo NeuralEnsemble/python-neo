@@ -47,7 +47,7 @@ class BaseFromRaw(BaseIO):
     mode = 'file'
     
     _prefered_signal_group_mode = 'split-all' #'group-by-same-units'
-    _prefered_units_group_mode = 'all-in-one' #'split-all'
+    _prefered_units_group_mode = 'split-all' # 'all-in-one'
     
 
     def __init__(self, *args, **kargs):
@@ -304,18 +304,15 @@ class BaseFromRaw(BaseIO):
                 spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
-                
                 sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
-                                waveforms=waveforms, left_sweep=wf_left_sweep, 
-                                sampling_rate=wf_sampling_rate, **annotations)
+                                    waveforms=waveforms, left_sweep=wf_left_sweep, 
+                                    sampling_rate=wf_sampling_rate, **annotations)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
-                
                 sptr = SpikeTrain(np.array([]), units='s', copy=False, t_start=seg_t_start,
                                 t_stop=seg_t_stop, **annotations)
                 sptr.lazy_shape = (nb,)
-            
             
             seg.spiketrains.append(sptr)
         
