@@ -51,9 +51,9 @@ class NeuralynxRawIO(BaseRawIO):
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
     rawmode = 'one-dir'
-    def __init__(self, dirname='', use_cache=True, **kargs):
+    def __init__(self, dirname='', **kargs):
         self.dirname = dirname
-        BaseRawIO.__init__(self, use_cache=use_cache, **kargs)
+        BaseRawIO.__init__(self, **kargs)
     
     def _source_name(self):
         return self.dirname
