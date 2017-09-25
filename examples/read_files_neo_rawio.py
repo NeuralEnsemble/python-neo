@@ -58,6 +58,11 @@ float_waveforms = reader.rescale_waveforms_to_float(raw_waveforms, dtype='float3
 print(float_waveforms.shape, float_waveforms.dtype, float_waveforms[0,0,:4])
 
 
+#Read event timestamps and times (take anotehr file)
+distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_2.plx'
+localfile = './File_plexon_2.plx'
+urllib.request.urlretrieve(distantfile, localfile)
+
 
 #Count event per channel
 reader = PlexonRawIO(filename='File_plexon_2.plx')
@@ -68,11 +73,6 @@ for chan_index in range(nb_event_channel):
     nb_event = reader.event_count(block_index=0, seg_index=0, event_channel_index=chan_index)
     print('chan_index',chan_index, 'nb_event', nb_event)
 
-
-#Read event timestamps and times (take anotehr file)
-distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_2.plx'
-localfile = './File_plexon_2.plx'
-urllib.request.urlretrieve(distantfile, localfile)
 
 ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=0, seg_index=0, event_channel_index=0,
                         t_start=None, t_stop=None)

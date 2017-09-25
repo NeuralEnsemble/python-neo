@@ -73,7 +73,7 @@ First create a reader from a class::
 Then browse the internal header and display informations::
 
     >>> reader.parse_header()
-    >>> print(header)
+    >>> print(reader)
     PlexonRawIO: File_plexon_3.plx
     nb_block: 1
     nb_segment:  [1]
@@ -116,11 +116,11 @@ Read signal chunk of data and scale them::
 
 Inspect units channel. Each channel give a SpikeTrain for each Segment.
 Note that for many format a physical channel can have several units after spike
-sorting. So th nb_unit could be more than physical channel or signal channels.
+sorting. So the nb_unit could be more than physical channel or signal channels.
 
     >>> nb_unit = reader.unit_channels_count()
-    nb_unit 30
     >>> print('nb_unit', nb_unit)
+    nb_unit 30
     >>> for unit_index in range(nb_unit):
     ...     nb_spike = reader.spike_count(block_index=0, seg_index=0, unit_index=unit_index)
     ...     print('unit_index', unit_index, 'nb_spike', nb_spike)
@@ -136,7 +136,7 @@ sorting. So th nb_unit could be more than physical channel or signal channels.
     ...
 
     
-Get spike timestamps and convert to spike times between 0 and 10 seconds::
+Get spike timestamps only between 0 and 10 seconds and convert them to spike times::
 
     >>> spike_timestamps = reader.spike_timestamps(block_index=0, seg_index=0, unit_index=0,
                         t_start=0., t_stop=10.)
