@@ -14,7 +14,6 @@ from neo.io import ElanIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class TestElanIO(BaseTestIO, unittest.TestCase, ):
     ioclass = ElanIO
     files_to_test = ['File_elan_1.eeg']

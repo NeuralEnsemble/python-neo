@@ -32,13 +32,15 @@ from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
 
 PY3K = (sys.version_info[0] == 3)
 
+if not PY3K:
+    zip = itertools.izip
 
 def get_chunks(sizes, offsets, big_array):
     # offsets are octect count
     # sizes are not!!
     # so need this (I really do not knwo why...):
     sizes = (sizes -10)  * 4 #
-    all = np.concatenate([ big_array[o:o+s] for s, o in itertools.izip(sizes, offsets) ])
+    all = np.concatenate([ big_array[o:o+s] for s, o in zip(sizes, offsets) ])
     return all
 
 class TdtIO(BaseIO):
@@ -175,12 +177,12 @@ class TdtIO(BaseIO):
                     if type_label in ['EVTYPE_STRON', 'EVTYPE_STROFF']:
                         if lazy:
                             times = [ ]*pq.s
-                            labels = np.array([ ], dtype=str)
+                            labels = np.array([ ], dtype='S')
                         else:
                             times = (tsq[mask3]['timestamp'] - global_t_start) * pq.s
                             labels = tsq[mask3]['eventoffset'].view('float64').astype('S')
                         ea = Event(times=times,
-                                   name=code,
+                                   name=str(code),
                                    channel_index=int(channel),
                                    labels=labels)
                         if lazy:

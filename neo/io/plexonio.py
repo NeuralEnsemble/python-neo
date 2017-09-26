@@ -105,8 +105,9 @@ class PlexonIO(BaseIO):
             seg.annotate(**{key: val})
 
         if not cascade:
+            fid.close()
             return seg
-
+        
         ## Step 1 : read headers
         # dsp channels header = spikes and waveforms
         dspChannelHeaders = {}
@@ -120,8 +121,8 @@ class PlexonIO(BaseIO):
             dspChannelHeaders[channelHeader['Channel']] = channelHeader
             maxunit = max(channelHeader['NUnits'], maxunit)
             maxchan = max(channelHeader['Channel'], maxchan)
-
-            # event channel header
+        
+        # event channel header
         eventHeaders = {}
         for _ in range(global_header['NumEventChannels']):
             eventHeader = HeaderReader(fid, EventHeader).read_f(offset=None)
@@ -134,12 +135,12 @@ class PlexonIO(BaseIO):
                 offset=None)
             slowChannelHeaders[slowChannelHeader['Channel']] = \
                 slowChannelHeader
-
+        
         ## Step 2 : a first loop for counting size
         # signal
-        nb_samples = np.zeros(len(slowChannelHeaders))
-        sample_positions = np.zeros(len(slowChannelHeaders))
-        t_starts = np.zeros(len(slowChannelHeaders), dtype='f')
+        nb_samples = np.zeros(len(slowChannelHeaders), dtype='int64')
+        sample_positions = np.zeros(len(slowChannelHeaders), dtype='int64')
+        t_starts = np.zeros(len(slowChannelHeaders), dtype='float64')
 
         #spiketimes and waveform
         nb_spikes = np.zeros((maxchan + 1, maxunit + 1), dtype='i')
@@ -272,7 +273,7 @@ class PlexonIO(BaseIO):
                 ea.lazy_shape = nb_events[chan]
             seg.events.append(ea)
 
-        for chan, h in slowChannelHeadersitems():
+        for chan, h in slowChannelHeaders.items():
             if lazy:
                 signal = []
             else:
@@ -290,9 +291,10 @@ class PlexonIO(BaseIO):
                         slowChannelHeaders[chan]['PreampGain'])
                 signal = sigarrays[chan] * gain
             anasig = AnalogSignal(
-                signal * pq.V,
+                signal,
                 sampling_rate=float(
                     slowChannelHeaders[chan]['ADFreq']) * pq.Hz,
+                units='mV',
                 t_start=t_starts[chan] * pq.s,
                 channel_index=slowChannelHeaders[chan]['Channel'],
                 channel_name=slowChannelHeaders[chan]['Name'])
@@ -318,21 +320,28 @@ class PlexonIO(BaseIO):
                             'Version'] < 105:
                         gain = global_header['SpikeMaxMagnitudeMV'] / (
                             .5 * 2. ** (global_header['BitsPerSpikeSample']) *
+                            dspChannelHeaders[chan]['Gain'] *
                             1000.)
                     elif global_header['Version'] > 105:
                         gain = global_header['SpikeMaxMagnitudeMV'] / (
                             .5 * 2. ** (global_header['BitsPerSpikeSample']) *
+                            dspChannelHeaders[chan]['Gain'] *
                             global_header['SpikePreAmpGain'])
-                    waveforms = swfarrays[chan, unit] * gain * pq.V
+                    waveforms = swfarrays[chan, unit] * gain * pq.mV
                 else:
                     waveforms = None
+            
+            if global_header['WaveformFreq']>0:
+                wf_sampling_rate= float(global_header['WaveformFreq']) * pq.Hz
+            else:
+                wf_sampling_rate = float(global_header['ADFrequency']) * pq.Hz
+            
             sptr = SpikeTrain(
                 times,
                 units='s',
                 t_stop=t_stop*pq.s,
                 waveforms=waveforms,
-                sampling_rate=float(
-                    global_header['WaveformFreq']) * pq.Hz,
+                sampling_rate=wf_sampling_rate,
             )
             sptr.annotate(unit_name = dspChannelHeaders[chan]['Name'])
             sptr.annotate(channel_index = chan)
@@ -342,8 +351,10 @@ class PlexonIO(BaseIO):
             if lazy:
                 sptr.lazy_shape = nb_spikes[chan, unit]
             seg.spiketrains.append(sptr)
-
+        
         seg.create_many_to_one_relationship()
+        
+        fid.close()
         return seg
 
 
@@ -351,7 +362,7 @@ GlobalHeader = [
     ('MagicNumber', 'I'),
     ('Version', 'i'),
     ('Comment', '128s'),
-    ('ADFrequency', 'i'),
+    ('ADFrequency', 'i'), #this rate is only for events
     ('NumDSPChannels', 'i'),
     ('NumEventChannels', 'i'),
     ('NumSlowChannels', 'i'),
@@ -395,7 +406,7 @@ ChannelHeader = [
     ('Name', '32s'),
     ('SIGName', '32s'),
     ('Channel', 'i'),
-    ('WFRate', 'i'),
+    ('WFRate', 'i'), #this is not the waveform sampling rate!!!
     ('SIG', 'i'),
     ('Ref', 'i'),
     ('Gain', 'i'),
@@ -462,7 +473,6 @@ DataBlockHeader = [
 
 
 class HeaderReader():
-
     def __init__(self, fid, description):
         self.fid = fid
         self.description = description
@@ -478,8 +488,8 @@ class HeaderReader():
             val = list(struct.unpack(fmt, buf))
             for i, ival in enumerate(val):
                 if hasattr(ival, 'replace'):
-                    ival = ival.replace(str.encode('\x03'), str.encode(''))
-                    ival = ival.replace(str.encode('\x00'), str.encode(''))
+                    ival = ival.replace(b'\x03', b'')
+                    ival = ival.replace(b'\x00', b'')
                     val[i] = ival.decode("utf-8")
             if len(val) == 1:
                 val = val[0]
