@@ -14,10 +14,7 @@ Tests for neo.io.nixio
 import os
 from datetime import datetime
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 try:
     from unittest import mock
@@ -65,6 +62,13 @@ class NixIOTest(unittest.TestCase):
         nix_channels = list(src for src in nixsrc.sources
                             if src.type == "neo.channelindex")
         self.assertEqual(len(neochx.index), len(nix_channels))
+
+        if len(neochx.channel_ids):
+            nix_chanids = list(src.metadata["channel_id"] for src
+                               in nixsrc.sources
+                               if src.type == "neo.channelindex")
+            self.assertEqual(len(neochx.channel_ids), len(nix_chanids))
+
         for nixchan in nix_channels:
             nixchanidx = nixchan.metadata["index"]
             try:
@@ -78,6 +82,12 @@ class NixIOTest(unittest.TestCase):
                     neochanname = neochanname.decode()
                 nixchanname = nixchan.metadata["neo_name"]
                 self.assertEqual(neochanname, nixchanname)
+            if len(neochx.channel_ids):
+                neochanid = neochx.channel_ids[neochanpos]
+                nixchanid = nixchan.metadata["channel_id"]
+                self.assertEqual(neochanid, nixchanid)
+            elif "channel_id" in nixchan.metadata:
+                self.fail("Channel ID not loaded")
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
@@ -494,6 +504,7 @@ class NixIOTest(unittest.TestCase):
                 nixrc.name, "neo.channelindex.metadata"
             )
             nixrc.metadata.create_property("index", nix.Value(chan))
+            nixrc.metadata.create_property("channel_id", nix.Value(chan+1))
             dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
@@ -600,7 +611,7 @@ class NixIOTest(unittest.TestCase):
         spiketrain.annotate(**d)
         seg.spiketrains.append(spiketrain)
 
-        chx = ChannelIndex(name="achx", index=[1, 2])
+        chx = ChannelIndex(name="achx", index=[1, 2], channel_ids=[0, 10])
         chx.annotate(**cls.rdict(5))
         blk.channel_indexes.append(chx)
 
@@ -611,6 +622,7 @@ class NixIOTest(unittest.TestCase):
         return blk
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOWriteTest(NixIOTest):
 
     def setUp(self):
@@ -629,6 +641,7 @@ class NixIOWriteTest(NixIOTest):
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
+        self.compare_blocks(blocks, self.reader.blocks)
 
     def test_block_write(self):
         block = Block(name=self.rword(),
@@ -651,6 +664,7 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name=self.rword())
         chx = ChannelIndex(name=self.rword(),
                            description=self.rsentence(),
+                           channel_ids=[10, 20, 30, 50, 80, 130],
                            index=[1, 2, 3, 5, 8, 13])
         block.channel_indexes.append(chx)
         self.write_and_compare([block])
@@ -681,7 +695,7 @@ class NixIOWriteTest(NixIOTest):
             units=pq.A
         )
         seg.irregularlysampledsignals.append(irsig)
-        self.write_and_compare([anotherblock])
+        self.write_and_compare([block, anotherblock])
 
         block.segments[0].analogsignals.append(
             AnalogSignal(signal=[10.0, 1.0, 3.0], units=pq.S,
@@ -813,13 +827,39 @@ class NixIOWriteTest(NixIOTest):
                                                       units=pq.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
-                                   index=[1, 2])
+                                   index=[1, 2],
+                                   channel_ids=[11, 22])
                 blk.channel_indexes.append(chx)
                 for unidx in range(nunits):
                     unit = Unit()
                     chx.units.append(unit)
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
+
+    def test_multiref_write(self):
+        blk = Block("blk1")
+        signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
+                              sampling_period=pq.Quantity(1, "ms"))
+
+        for idx in range(3):
+            segname = "seg" + str(idx)
+            seg = Segment(segname)
+            blk.segments.append(seg)
+            seg.analogsignals.append(signal)
+
+        chidx = ChannelIndex([10, 20, 29])
+        seg = blk.segments[0]
+        st = SpikeTrain(name="choochoo", times=[10, 11, 80], t_stop=1000,
+                        units="s")
+        seg.spiketrains.append(st)
+        blk.channel_indexes.append(chidx)
+        for idx in range(6):
+            unit = Unit("unit" + str(idx))
+            chidx.units.append(unit)
+            unit.spiketrains.append(st)
+
+        self.writer.write_block(blk)
+        self.compare_blocks([blk], self.reader.blocks)
 
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test",
@@ -867,6 +907,7 @@ class NixIOWriteTest(NixIOTest):
         self.assertEqual(val, section["val"])
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
 
     filename = "testfile_readtest.h5"
@@ -888,6 +929,7 @@ class NixIOReadTest(NixIOTest):
     def tearDownClass(cls):
         if HAVE_NIX:
             cls.nixfile.close()
+            os.remove(cls.filename)
 
     def tearDown(self):
         self.io.close()
@@ -974,6 +1016,7 @@ class NixIOReadTest(NixIOTest):
         self.assertEqual(np.shape(segment.analogsignals[0]), (100, 3))
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOHashTest(NixIOTest):
 
     def setUp(self):
@@ -1072,6 +1115,7 @@ class NixIOHashTest(NixIOTest):
         self._hash_test(SpikeTrain, argfuncs)
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOPartialWriteTest(NixIOTest):
 
     filename = "testfile_partialwrite.h5"
@@ -1094,6 +1138,7 @@ class NixIOPartialWriteTest(NixIOTest):
     def tearDownClass(cls):
         if HAVE_NIX:
             cls.nixfile.close()
+            os.remove(cls.filename)
 
     def tearDown(self):
         self.restore_methods()
@@ -1163,6 +1208,7 @@ class NixIOPartialWriteTest(NixIOTest):
         self.compare_blocks(self.neo_blocks, self.io.nix_file.blocks)
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOContextTests(NixIOTest):
 
     filename = "context_test.h5"
@@ -1184,6 +1230,7 @@ class NixIOContextTests(NixIOTest):
                                 backend="h5py")
         self.compare_blocks([neoblock], nixfile.blocks)
         nixfile.close()
+        os.remove(self.filename)
 
     def test_context_read(self):
         nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite,
@@ -1199,6 +1246,7 @@ class NixIOContextTests(NixIOTest):
 
         self.assertEqual(blocks[0].annotations["nix_name"], name_one)
         self.assertEqual(blocks[1].annotations["nix_name"], name_two)
+        os.remove(self.filename)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")

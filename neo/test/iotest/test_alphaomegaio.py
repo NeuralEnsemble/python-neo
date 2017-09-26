@@ -6,10 +6,7 @@ Tests of neo.io.alphaomegaio
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.io import AlphaOmegaIO
 from neo.test.iotest.common_io_test import BaseTestIO

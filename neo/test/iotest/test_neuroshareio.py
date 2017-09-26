@@ -13,10 +13,7 @@ import zipfile
 import tempfile
 import platform
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 try:
     from urllib import urlretrieve  # Py2

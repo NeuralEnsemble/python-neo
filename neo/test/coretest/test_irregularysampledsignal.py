@@ -3,10 +3,7 @@
 Tests of the neo.core.irregularlysampledsignal.IrregularySampledSignal class
 """
 
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import os
 import pickle
@@ -22,7 +19,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
-from neo.core import Segment
+from neo.core import Segment, ChannelIndex
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -274,6 +271,8 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
                                                 description='eggs',
                                                 file_origin='testfile.txt',
                                                 arg1='test')
+        self.signal1.segment = Segment()
+        self.signal1.channel_index = ChannelIndex([0])
 
     def test__compliant(self):
         assert_neo_object_is_compliant(self.signal1)
@@ -348,6 +347,11 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_array_equal(result.times, self.time1quant)
         assert_same_sub_schema(result, self.signal1)
 
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
+
     def test__rescale_new(self):
         result = self.signal1.copy()
         result = result.rescale(pq.uV)
@@ -362,6 +366,11 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.units, 1*pq.uV)
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1)*1000., 1e-10)
         assert_array_equal(result.times, self.time1quant)
+
+        self.assertIsInstance(result.channel_index, ChannelIndex)
+        self.assertIsInstance(result.segment, Segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
+        self.assertIs(result.segment, self.signal1.segment)
 
     def test__rescale_new_incompatible_ValueError(self):
         self.assertRaises(ValueError, self.signal1.rescale, pq.nA)
@@ -552,6 +561,11 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         sig_as_q = self.signal1.as_quantity()
         self.assertIsInstance(sig_as_q, pq.Quantity)
         assert_array_equal(self.data1, sig_as_q.magnitude.flat)
+
+    def test__copy_should_preserve_parent_objects(self):
+        result = self.signal1.copy()
+        self.assertIs(result.segment, self.signal1.segment)
+        self.assertIs(result.channel_index, self.signal1.channel_index)
 
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):

@@ -46,7 +46,6 @@ import quantities as pq
 
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal, Event
-from neo.io.tools import iteritems
 
 
 class StructFile(BufferedReader):
@@ -576,7 +575,7 @@ class AxonIO(BaseIO):
                     # Go over EpochInfoPerDAC and change the analog signal
                     # according to the epochs
                     epochInfo = header['dictEpochInfoPerDAC'][DACNum]
-                    for epochNum, epoch in iteritems(epochInfo):
+                    for epochNum, epoch in epochInfo.items():
                         i_begin = i_last
                         i_end = i_last + epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
