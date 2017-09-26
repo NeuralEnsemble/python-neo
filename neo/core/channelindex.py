@@ -171,4 +171,8 @@ class ChannelIndex(Container):
                            channel_names=channel_names,
                            channel_ids=channel_ids)
         obj.block = self.block
+        obj.analogsignals = self.analogsignals
+        obj.irregularlysampledsignals = self.irregularlysampledsignals
+        # we do not copy the list of units, since these are related to
+        # the entire set of channels in the parent ChannelIndex
         return obj
