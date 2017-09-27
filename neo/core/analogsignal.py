@@ -3,7 +3,7 @@
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` and 
-:class:`quantites.Quantity`, which inherits from :class:`numpy.array`.
+:class:`quantities.Quantity`, which inherits from :class:`numpy.array`.
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
@@ -434,7 +434,7 @@ class AnalogSignal(basesignal.BaseSignal):
 
     def rescale(self, units):
         '''
-        Return a copy of the Signal converted to the specified
+        Return a copy of the AnalogSignal converted to the specified
         units
         '''
         to_dims = pq.quantity.validate_dimensionality(units)
