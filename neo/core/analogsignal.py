@@ -26,6 +26,7 @@ import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.channelindex import ChannelIndex
+from copy import copy, deepcopy
 
 logger = logging.getLogger("Neo")
 
@@ -227,6 +228,20 @@ class AnalogSignal(BaseNeo, pq.Quantity):
                                         self.annotations,
                                         self.channel_index,
                                         self.segment)
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        new_AS = cls(np.array(self), units=self.units, dtype=self.dtype,
+               t_start=self.t_start, sampling_rate=self.sampling_rate,
+               sampling_period=self.sampling_period, name=self.name,
+               file_origin=self.file_origin, description=self.description)
+        new_AS.__dict__.update(self.__dict__)
+        memo[id(self)] = new_AS
+        for k, v in self.__dict__.items():
+            try:
+                setattr(new_AS, k, deepcopy(v, memo))
+            except:
+                setattr(new_AS, k, v)
+        return new_AS
 
     def __array_finalize__(self, obj):
         '''
