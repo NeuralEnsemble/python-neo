@@ -498,6 +498,79 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertIsInstance(sig_as_q, pq.Quantity)
         assert_array_equal(self.data1, sig_as_q.magnitude.flat)
 
+    def test_splice_1channel_inplace(self):
+        signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                           t_start=3*pq.ms,
+                                           sampling_rate=self.signal1.sampling_rate,
+                                           units=pq.uA)
+        result = self.signal1.splice(signal_for_splicing, copy=False)
+        assert_array_equal(result.magnitude.flatten(),
+                           np.array([0.0, 1.0, 2.0, 100.0, 100.0, 100.0, 6.0, 7.0, 8.0, 9.0]))
+        assert_array_equal(self.signal1, result)  # in-place
+        self.assertEqual(result.segment, self.signal1.segment)
+
+    def test_splice_1channel_with_copy(self):
+        signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                           t_start=3*pq.ms,
+                                           sampling_rate=self.signal1.sampling_rate,
+                                           units=pq.uA)
+        result = self.signal1.splice(signal_for_splicing, copy=True)
+        assert_array_equal(result.magnitude.flatten(),
+                           np.array([0.0, 1.0, 2.0, 100.0, 100.0, 100.0, 6.0, 7.0, 8.0, 9.0]))
+        assert_array_equal(self.signal1.magnitude.flatten(),
+                           np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]))
+        self.assertIs(result.segment, None)
+
+    def test_splice_2channels_inplace(self):
+        signal = AnalogSignal(np.arange(20.0).reshape((10, 2)),
+                              sampling_rate=1 * pq.kHz,
+                              units="mV")
+        signal_for_splicing = AnalogSignal(np.array([[0.1, 0.0], [0.2, 0.0], [0.3, 0.0]]),
+                                           t_start=3*pq.ms,
+                                           sampling_rate=self.signal1.sampling_rate,
+                                           units=pq.V)
+        result = signal.splice(signal_for_splicing, copy=False)
+        assert_array_equal(result.magnitude,
+                           np.array([[0.0, 1.0],
+                                     [2.0, 3.0],
+                                     [4.0, 5.0],
+                                     [100.0, 0.0],
+                                     [200.0, 0.0],
+                                     [300.0, 0.0],
+                                     [12.0, 13.0],
+                                     [14.0, 15.0],
+                                     [16.0, 17.0],
+                                     [18.0, 19.0]]))
+        assert_array_equal(signal, result)  # in-place
+
+    def test_splice_1channel_invalid_t_start(self):
+        signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                           t_start=12*pq.ms,  # after the end of the signal
+                                           sampling_rate=self.signal1.sampling_rate,
+                                           units=pq.uA)
+        self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
+
+    def test_splice_1channel_invalid_t_stop(self):
+            signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                               t_start=8 * pq.ms,  # too close to the end of the signal
+                                               sampling_rate=self.signal1.sampling_rate,
+                                               units=pq.uA)
+            self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
+
+    def test_splice_1channel_invalid_sampling_rate(self):
+            signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                               t_start=3 * pq.ms,  # too close to the end of the signal
+                                               sampling_rate=2 * self.signal1.sampling_rate,
+                                               units=pq.uA)
+            self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
+
+    def test_splice_1channel_invalid_units(self):
+            signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
+                                               t_start=3 * pq.ms,  # too close to the end of the signal
+                                               sampling_rate=self.signal1.sampling_rate,
+                                               units=pq.uV)
+            self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
+
 
 class TestAnalogSignalEquality(unittest.TestCase):
     def test__signals_with_different_data_complement_should_be_not_equal(self):
