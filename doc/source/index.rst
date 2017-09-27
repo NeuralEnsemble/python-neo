@@ -43,8 +43,6 @@ Documentation
    whatisnew
    developers_guide
    io_developers_guide
-   gif2011workshop
-   specific_annotations
    authors
 
 
