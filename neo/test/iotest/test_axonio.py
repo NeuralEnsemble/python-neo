@@ -26,7 +26,15 @@ class TestAxonIO(BaseTestIO, unittest.TestCase):
                      ]
     files_to_download = files_to_test
     ioclass = AxonIO
-
+    
+    def test_read_protocol(self):
+        for f in self.files_to_test:
+            filename = self.get_filename_path(f)
+            reader = AxonIO(filename=filename)
+            bl = reader.read_block(lazy=True)
+            if bl.annotations['abf_version'].startswith('2'):
+                reader.read_protocol()
+        
 
 if __name__ == "__main__":
     unittest.main()
