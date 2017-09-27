@@ -430,18 +430,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
         Doesn't get called in Python 3, :meth:`__getitem__` is called instead
         '''
-        # first slice the Quantity array
-        obj = super(SpikeTrain, self).__getslice__(i, j)
-        # somehow this knows to call SpikeTrain.__array_finalize__, though
-        # I'm not sure how. (If you know, please add an explanatory comment
-        # here.) That copies over all of the metadata.
-
-        # update waveforms only for python < 2.7. For newer versions,
-        # __getslice__ is calling __getitem__ which is also correcting for this.
-        if not sys.version_info >= (2, 7):
-            if obj.waveforms is not None:
-                obj.waveforms = obj.waveforms[i:j]
-        return obj
+        return self.__getitem__(slice(i, j))
 
     def __add__(self, time):
         '''
