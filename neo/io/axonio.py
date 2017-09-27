@@ -584,7 +584,8 @@ class AxonIO(BaseIO):
                             pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)
-                        i_last += epoch['lEpochInitDuration']
+                        i_last += epoch['lEpochInitDuration'] +\
+                            epoch['lEpochDurationInc'] * epiNum
                 seg.analogsignals.append(ana_sig)
             segments.append(seg)
 
