@@ -350,7 +350,8 @@ class AxonRawIO(BaseRawIO):
                             pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
                                                     epoch['fEpochLevelInc'] *
                                                     epiNum)
-                        i_last += epoch['lEpochInitDuration']
+                        i_last += epoch['lEpochInitDuration'] +\
+                            epoch['lEpochDurationInc'] * epiNum
                 signals.append(sig)
             sigs_by_segments.append(signals)
         
