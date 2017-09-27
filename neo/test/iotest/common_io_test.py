@@ -23,6 +23,7 @@ __test__ = False
 url_for_tests = "https://portal.g-node.org/neo/"
 
 import os
+from copy import copy
 
 try:
     import unittest2 as unittest
@@ -87,6 +88,7 @@ class BaseTestIO(object):
         '''
         Set up the test fixture.  This is run for every test
         '''
+        self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().strip('io')
         # these objects can both be written and read

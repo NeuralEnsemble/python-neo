@@ -3,9 +3,9 @@
 This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
-:class:`IrregularlySampledSignal` derives from :class:`BaseNeo`, from
-:module:`neo.core.baseneo`, and from :class:`quantites.Quantity`, which
-inherits from :class:`numpy.array`.
+:class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
+and  derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
+and from :class:`quantites.Quantity`, which inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -27,6 +27,7 @@ import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 
+from neo.core import basesignal
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
@@ -43,7 +44,7 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
     return iss
 
 
-class IrregularlySampledSignal(BaseNeo, pq.Quantity):
+class IrregularlySampledSignal(basesignal.BaseSignal):
     '''
     An array of one or more analog signals with samples taken at arbitrary time points.
 
@@ -98,7 +99,7 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
 
     *Slicing*:
         :class:`IrregularlySampledSignal` objects can be sliced. When this
-        occurs, a new :class:`IrregularlySampledSignal` (actually a view) is
+        occurs, a new :cresclass:`IrregularlySampledSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`times` is also
         sliced in the same way.
 
@@ -290,23 +291,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         return (super(IrregularlySampledSignal, self).__eq__(other).all() and
                 (self.times == other.times).all())
 
-    def __ne__(self, other):
-        '''
-        Non-equality test (!=)
-        '''
-        return not self.__eq__(other)
-
-    def _apply_operator(self, other, op, *args):
-        '''
-        Handle copying metadata to the new :class:`IrregularlySampledSignal`
-        after a mathematical operation.
-        '''
-        self._check_consistency(other)
-        f = getattr(super(IrregularlySampledSignal, self), op)
-        new_signal = f(other, *args)
-        new_signal._copy_data_complement(self)
-        return new_signal
-
     def _check_consistency(self, other):
         '''
         Check if the attributes of another :class:`IrregularlySampledSignal`
@@ -339,39 +323,6 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         for attr in ("times", "name", "file_origin",
                      "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
-
-    def __add__(self, other, *args):
-        '''
-        Addition (+)
-        '''
-        return self._apply_operator(other, "__add__", *args)
-
-    def __sub__(self, other, *args):
-        '''
-        Subtraction (-)
-        '''
-        return self._apply_operator(other, "__sub__", *args)
-
-    def __mul__(self, other, *args):
-        '''
-        Multiplication (*)
-        '''
-        return self._apply_operator(other, "__mul__", *args)
-
-    def __truediv__(self, other, *args):
-        '''
-        Float division (/)
-        '''
-        return self._apply_operator(other, "__truediv__", *args)
-
-    def __div__(self, other, *args):
-        '''
-        Integer division (//)
-        '''
-        return self._apply_operator(other, "__div__", *args)
-
-    __radd__ = __add__
-    __rmul__ = __sub__
 
     def __rsub__(self, other, *args):
         '''
@@ -541,20 +492,3 @@ class IrregularlySampledSignal(BaseNeo, pq.Quantity):
         new_st = self[id_start:id_stop]
 
         return new_st
-
-    def as_array(self, units=None):
-        """
-        Return the signal as a plain NumPy array.
-
-        If `units` is specified, first rescale to those units.
-        """
-        if units:
-            return self.rescale(units).magnitude
-        else:
-            return self.magnitude
-
-    def as_quantity(self):
-        """
-        Return the signal as a quantities array.
-        """
-        return self.view(pq.Quantity)

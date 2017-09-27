@@ -36,12 +36,12 @@ class NestIO(BaseIO):
     files for analog signals are possible.
 
     Usage:
-        from neo.io.nestio import NestIO
+        >>> from neo.io.nestio import NestIO
 
-        files = ['membrane_voltages-1261-0.dat',
+        >>> files = ['membrane_voltages-1261-0.dat',
                  'spikes-1258-0.gdf']
-        r = NestIO(filenames=files)
-        seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
+        >>> r = NestIO(filenames=files)
+        >>> seg = r.read_segment(gid_list=[], t_start=400 * pq.ms,
                              t_stop=600 * pq.ms,
                              id_column_gdf=0, time_column_gdf=1,
                              id_column_dat=0, time_column_dat=1,

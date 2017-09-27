@@ -341,14 +341,13 @@ class AxonRawIO(BaseRawIO):
                     # Go over EpochInfoPerDAC and change the analog signal
                     # according to the epochs
                     epochInfo = info['dictEpochInfoPerDAC'][DACNum]
-                    for epochNum, epoch in iteritems(epochInfo):
+                    for epochNum, epoch in epochInfo.items():
                         i_begin = i_last
                         i_end = i_last + epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end-i_begin
-                        sig[i_begin:i_end] = np.ones((dif, 1)) *\
-                            pq.Quantity(1, unit) * (epoch['fEpochInitLevel'] +
-                                                    epoch['fEpochLevelInc'] *
+                        sig[i_begin:i_end] = np.ones((dif)) *\
+                            (epoch['fEpochInitLevel'] +epoch['fEpochLevelInc'] *
                                                     epiNum)
                         i_last += epoch['lEpochInitDuration'] +\
                             epoch['lEpochDurationInc'] * epiNum
