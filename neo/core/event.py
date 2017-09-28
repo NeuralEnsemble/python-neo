@@ -221,3 +221,25 @@ class Event(BaseNeo, pq.Quantity):
         Return the event times as a quantities array.
         """
         return self.view(pq.Quantity)
+
+    def to_epoch(self):
+        """
+        Transform Events into an array of Epoch 
+        """
+        from neo.core import Epoch, Event, Segment
+
+        print("self.time : " + str(self.times))
+        print("self.label : " + str(self.labels))
+        i = 0
+        duration = []
+        for t in self.times:
+            if i==0 :
+                duration.append(self.times[i])
+            else :
+                duration.append(self.times[i] - self.times[i-1])
+            i+=1
+
+        print(str(duration))
+        epc = Epoch(times=self.times, durations=duration, labels=self.labels)
+
+        return epc
