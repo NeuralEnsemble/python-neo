@@ -228,8 +228,6 @@ class Event(BaseNeo, pq.Quantity):
         """
         from neo.core import Epoch, Event, Segment
 
-        print("self.time : " + str(self.times))
-        print("self.label : " + str(self.labels))
         i = 0
         duration = []
         for t in self.times:
@@ -239,7 +237,6 @@ class Event(BaseNeo, pq.Quantity):
                 duration.append(self.times[i] - self.times[i-1])
             i+=1
 
-        print(str(duration))
         epc = Epoch(times=self.times, durations=duration, labels=self.labels)
 
         return epc
