@@ -19,6 +19,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.event import Event
+from neo import  Event, Segment
 from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal,
@@ -433,5 +434,15 @@ class TestEventFunctions(unittest.TestCase):
         fobj.close()
         assert_array_equal(event1.times, event2.times)
         os.remove('./pickle')
+
+    def test_event_to_epoch(self):
+        seg = Segment(name="test")
+        event = Event(times=np.array([5.0, 12.0, 23.0, 45.0]), units="ms", labels=np.array(["A", "B", "C", "D"]))
+        print("event : " + str(event))
+        event.segment = seg
+        epoch = event.to_epoch()
+        self.assertEqual(str(type(epoch).__name__), 'Epoch')
+        pass
+
 if __name__ == "__main__":
     unittest.main()
