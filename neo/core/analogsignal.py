@@ -630,6 +630,9 @@ class AnalogSignal(basesignal.BaseSignal):
         """
         Replace part of the current signal by a new piece of signal.
         
+        The new piece of signal will overwrite part of the current signal
+        starting at the time given by the new piece's `t_start` attribute.
+        
         The signal to be spliced in must have the same physical dimensions,
         sampling rate, and number of channels as the current signal and
         fit within it.
