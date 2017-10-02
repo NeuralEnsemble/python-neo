@@ -123,6 +123,10 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(len(block.channel_indexes[-1].units), 4)
         self.assertEqual(len(block.channel_indexes[-1].units), 
                     len(block.segments[0].spiketrains))
+        
+        anasig = block.segments[0].analogsignals[0]
+        self.assertIsNotNone(anasig.file_origin)
+        
 
 
 if __name__ == '__main__':

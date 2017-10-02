@@ -99,14 +99,14 @@ class BaseFromRaw(BaseIO):
                                         name='ChannelIndex for all Unit')
                 bl.channel_indexes.append(channel_index)
             for c in range(unit_channels.size):
-                unit = Unit(name=str(unit_channels['name'][c]),
-                                id=unit_channels['id'][c])
+                unit_annotations = self.raw_annotations['unit_channels'][c]
+                unit = Unit(**unit_annotations)
                 channel_index.units.append(unit)
                 
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
-                unit = Unit(name=str(unit_channels['name'][c]),
-                                id=unit_channels['id'][c])
+                unit_annotations = self.raw_annotations['unit_channels'][c]
+                unit = Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
                                         name='ChannelIndex for Unit')
                 channel_index.units.append(unit)
@@ -259,7 +259,6 @@ class BaseFromRaw(BaseIO):
                         annotations = {}
                         annotations['name'] = 'Channel bundle ({}) '.format(','.join(signal_channels[ind_abs]['name']))
                     annotations = check_annotations(annotations)
-                    
                     if lazy:
                         anasig = AnalogSignal(np.array([]), units=units,  copy=False,
                                 sampling_rate=sr, t_start=sig_t_start, **annotations)
@@ -267,7 +266,6 @@ class BaseFromRaw(BaseIO):
                     else:
                         anasig = AnalogSignal(float_signal[:, ind_within], units=units,  copy=False,
                                 sampling_rate=sr, t_start=sig_t_start, **annotations)
-                    
                     seg.analogsignals.append(anasig)
 
                     

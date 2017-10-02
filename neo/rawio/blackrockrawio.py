@@ -136,6 +136,7 @@ class BlackrockRawIO(BaseRawIO):
         BaseRawIO.__init__(self)
 
         self.filename = filename
+        
         # remove extension from base _filenames
         for ext in self.extensions:
             if self.filename.endswith(os.path.extsep + ext):
@@ -349,6 +350,13 @@ class BlackrockRawIO(BaseRawIO):
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = self.__nev_params('rec_datetime')
+        
+        for c in range(unit_channels.size):
+            unit_ann = self.raw_annotations['unit_channels'][c]
+            unit_ann['channel_id'] = channel_id
+            unit_ann['unit_id'] = unit_id
+            unit_ann['unit_tag'] = {0: 'unclassified', 255: 'noise'}.get(unit_id, str(unit_id))
+        
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]
             seg_ann['file_origin'] = self.filename
@@ -363,20 +371,24 @@ class BlackrockRawIO(BaseRawIO):
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                             c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
+                anasig_an['file_origin'] = self.filename+'.ns'+str(self.nsx_to_load)
             
             for c in range(unit_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
                 st_ann = seg_ann['units'][c]
-                st_ann['channel_id'] = channel_id
-                st_ann['unit_id'] = unit_id
+                unit_ann = self.raw_annotations['unit_channels'][c]
+                st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
                         channel_id, unit_id)
+                st_ann['file_origin'] = self.filename+'.nev'
+                
                 
             ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
             for c in range(event_channels.size):
                 ev_ann = seg_ann['events'][c]
                 name = event_channels['name'][c]
                 ev_ann['description'] = ev_dict[name]['desc']
+                
     
     def _source_name(self):
         return self.filename
