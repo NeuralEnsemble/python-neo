@@ -21,7 +21,7 @@ from neo.core import *
 
 from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuralynxio import NeuralynxIO as NewNeuralynxIO
-from neo.io.neuralynxio import OldNeuralynxIO 
+from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo import AnalogSignal
 
 

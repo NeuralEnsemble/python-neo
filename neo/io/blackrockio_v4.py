@@ -2,6 +2,11 @@
 """
 Module for reading data from files in the Blackrock format.
 
+This module is an older implementation  with old neo.io API.
+A new class Blackrock compunded by BlackrockRawIO and BaseFromIO
+superseed this one.
+
+
 This work is based on:
   * Chris Rodgers - first version
   * Michael Denker, Lyuba Zehl - second version
@@ -249,6 +254,7 @@ class BlackrockIO(BaseIO):
 
         # check which files are available
         self._avail_files = dict.fromkeys(self.extensions, False)
+
         self._avail_nsx = []
         for ext in self.extensions:
             if ext.startswith('ns'):
@@ -263,6 +269,20 @@ class BlackrockIO(BaseIO):
                 self._avail_files[ext] = True
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
+
+        # check if there are any files present
+        if not any(list(self._avail_files.values())):
+            raise IOError(
+                'No Blackrock files present at {}'.format(filename))
+
+        # check if manually specified files were found
+        exts = ['nsx', 'nev', 'sif', 'ccf']
+        ext_overrides = [nsx_override, nev_override, sif_override, ccf_override]
+        for ext, ext_override in zip(exts, ext_overrides):
+            if ext_override is not None and self._avail_files[ext] == False:
+                raise ValueError('Specified {} file {} could not be '
+                                 'found.'.format(ext, ext_override))
+
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
@@ -421,7 +441,7 @@ class BlackrockIO(BaseIO):
         dt1 = [('electrode_id', 'uint32')]
 
         nsx_ext_header = np.memmap(
-            filename, shape=shape, offset=offset_dt0, dtype=dt1)
+            filename, mode='r', shape=shape, offset=offset_dt0, dtype=dt1)
 
         return nsx_basic_header, nsx_ext_header
 
@@ -485,7 +505,7 @@ class BlackrockIO(BaseIO):
             ('lo_freq_type', 'uint16')]  # 0=None, 1=Butterworth
 
         nsx_ext_header = np.memmap(
-            filename, shape=shape, offset=offset_dt0, dtype=dt1)
+            filename, mode='r', shape=shape, offset=offset_dt0, dtype=dt1)
 
         return nsx_basic_header, nsx_ext_header
 
@@ -501,7 +521,8 @@ class BlackrockIO(BaseIO):
             ('timestamp', 'uint32'),
             ('nb_data_points', 'uint32')]
 
-        return np.memmap(filename, dtype=dt2, shape=1, offset=offset)[0]
+        return np.memmap(
+            filename, mode='r', dtype=dt2, shape=1, offset=offset)[0]
 
     def __read_nsx_dataheader_variant_a(
             self, nsx_nb, filesize=None, offset=None):
@@ -562,7 +583,7 @@ class BlackrockIO(BaseIO):
         # read nsx data
         # store as dict for compatibility with higher file specs
         data = {1: np.memmap(
-            filename, dtype='int16', shape=shape, offset=offset)}
+            filename, mode='r', dtype='int16', shape=shape, offset=offset)}
 
         return data
 
@@ -584,7 +605,7 @@ class BlackrockIO(BaseIO):
 
             # read data
             data[data_bl] = np.memmap(
-                filename, dtype='int16', shape=shape, offset=offset)
+                filename, mode='r', dtype='int16', shape=shape, offset=offset)
 
         return data
 
@@ -638,7 +659,7 @@ class BlackrockIO(BaseIO):
             ('info_field', 'S24')]
 
         raw_ext_header = np.memmap(
-            filename, offset=offset_dt0, dtype=dt1, shape=shape)
+            filename, mode='r', offset=offset_dt0, dtype=dt1, shape=shape)
 
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
@@ -715,7 +736,7 @@ class BlackrockIO(BaseIO):
             ('packet_id', 'uint16'),
             ('value', 'S{0}'.format(data_size - 6))]
 
-        raw_data = np.memmap(filename, offset=header_size, dtype=dt0)
+        raw_data = np.memmap(filename, mode='r', offset=header_size, dtype=dt0)
 
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
@@ -1067,7 +1088,8 @@ class BlackrockIO(BaseIO):
         offset = \
             self.__get_file_size(filename) - \
             self.__nev_params('bytes_in_data_packets')
-        last_data_packet = np.memmap(filename, offset=offset, dtype=dt)[0]
+        last_data_packet = np.memmap(
+            filename, mode='r', offset=offset, dtype=dt)[0]
 
         n_starts = [0 * self.__nev_params('event_unit')]
         n_stops = [
@@ -1609,33 +1631,45 @@ class BlackrockIO(BaseIO):
 
         # define the higest time resolution
         # (for accurate manipulations of the time settings)
+        max_time = self.__get_max_time()
+        min_time = self.__get_min_time()
         highest_res = self.__nev_params('event_unit')
         user_n_starts = self.__transform_times(
-            user_n_starts, self.__get_min_time())
+            user_n_starts, min_time)
         user_n_stops = self.__transform_times(
-            user_n_stops, self.__get_max_time())
+            user_n_stops, max_time)
 
         # check if user provided as many n_starts as n_stops
         if len(user_n_starts) != len(user_n_stops):
             raise ValueError("n_starts and n_stops must be of equal length")
 
         # if necessary reset max n_stop to max time of file set
-        if user_n_starts[0] < self.__get_min_time():
-            user_n_starts[0] = self.__get_min_time()
-            self._print_verbose(
-                "First entry of n_start is smaller than min time of the file "
-                "set: n_start[0] set to min time of file set")
-        if user_n_starts[-1] > self.__get_max_time():
-            user_n_starts = user_n_starts[:-1]
-            user_n_stops = user_n_stops[:-1]
-            self._print_verbose(
-                "Last entry of n_start is larger than max time of the file "
-                "set: last n_start and n_stop entry are excluded")
-        if user_n_stops[-1] > self.__get_max_time():
-            user_n_stops[-1] = self.__get_max_time()
-            self._print_verbose(
-                "Last entry of n_stop is larger than max time of the file "
-                "set: n_stop[-1] set to max time of file set")
+        start_stop_id = 0
+        while start_stop_id < len(user_n_starts):
+            if user_n_starts[start_stop_id] < min_time:
+                user_n_starts[start_stop_id] = min_time
+                self._print_verbose(
+                    "Entry of n_start '{}' is smaller than min time of the file "
+                    "set: n_start set to min time of file set"
+                    "".format(user_n_starts[start_stop_id]))
+            if user_n_stops[start_stop_id] > max_time:
+                user_n_stops[start_stop_id] = max_time
+                self._print_verbose(
+                    "Entry of n_stop '{}' is larger than max time of the file "
+                    "set: n_stop set to max time of file set"
+                    "".format(user_n_stops[start_stop_id]))
+
+            if (user_n_stops[start_stop_id] < min_time
+                or user_n_starts[start_stop_id] > max_time):
+                user_n_stops.pop(start_stop_id)
+                user_n_starts.pop(start_stop_id)
+                self._print_verbose(
+                    "Entry of n_start is larger than max time or entry of "
+                    "n_stop is smaller than min time of the "
+                    "file set: n_start and n_stop are ignored")
+                continue
+            start_stop_id += 1
+
 
         # get intrinsic time settings of nsx files (incl. rec pauses)
         n_starts_files = []
@@ -1769,7 +1803,7 @@ class BlackrockIO(BaseIO):
         # get spike times for given time interval
         if not lazy:
             times = spikes['timestamp'] * event_unit
-            mask = (times >= n_start) & (times < n_stop)
+            mask = (times >= n_start) & (times <= n_stop)
             times = times[mask].astype(float)
         else:
             times = np.array([]) * event_unit
@@ -2014,7 +2048,7 @@ class BlackrockIO(BaseIO):
         # additional information about the LFP signal
         if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
             # It does not matter which nsX file to ask for this info
-            k = self.__nsx_ext_header.keys()[0]
+            k = list(self.__nsx_ext_header.keys())[0]
             if channel_id in self.__nsx_ext_header[k]['electrode_id']:
                 get_idx = list(
                     self.__nsx_ext_header[k]['electrode_id']).index(
