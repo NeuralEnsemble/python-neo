@@ -317,7 +317,7 @@ class PlexonRawIO(BaseRawIO):
         nb_spike = np.sum(data_block['unit_id']==unit_id)
         return nb_spike
         
-    def spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data_block = self._data_blocks[1][chan_id]
         
@@ -332,7 +332,7 @@ class PlexonRawIO(BaseRawIO):
         spike_times /= self._global_ssampling_rate
         return spike_times
 
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data_block = self._data_blocks[1][chan_id]
 
@@ -359,7 +359,7 @@ class PlexonRawIO(BaseRawIO):
         nb_event = self._data_blocks[4][chan_id].size
         return nb_event
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         chan_id = int(self.header['event_channels'][event_channel_index]['id'])
         data_block = self._data_blocks[4][chan_id]
         keep = self._get_internal_mask( data_block, t_start, t_stop)

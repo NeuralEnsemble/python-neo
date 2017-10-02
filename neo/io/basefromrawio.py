@@ -31,6 +31,22 @@ from neo.io.baseio import BaseIO
 import quantities as pq
 
 class BaseFromRaw(BaseIO):
+    """
+    This implement generic reader on top of RawIO reader.
+    
+    Arguments depend on `mode` (dir or file)
+    
+    File case::
+        
+        reader = BlackRockIO(filename='FileSpec2.3001.nev')
+    
+    Dir case::
+        
+        reader = NeuralynxIO(dirname='Cheetah_v5.7.4/original_data')
+    
+    Other arguments are IO specific.
+
+    """
     is_readable = True
     is_writable = False
 
@@ -56,6 +72,33 @@ class BaseFromRaw(BaseIO):
     
     def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None, 
                 units_group_mode=None, load_waveforms=False, time_slices=None):
+        """
+        
+        
+        :param block_index: int default 0. In case of several block block_index can be specified.
+        
+        :param lazy: False by default. 
+        
+        :param cascade: True by Default
+        
+        :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
+        This control behavior for grouping channels in AnalogSignal.
+            * 'split-all': each channel will give an AnalogSignal
+            * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
+            a 2D AnalogSignal
+        
+        :param units_group_mode: 'split-all' or 'all-in-one'(default depend IO)
+        This control behavior for grouping Unit in ChannelIndex:
+            * 'split-all': each neo.Unit is assigned to a new neo.ChannelIndex
+            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex (global spike sorting for instance)
+        
+        :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
+        
+        :param time_slices: None by default. List of time_slice. A time slice is (t_start, t_stop) both are quantities.
+            each element will lead to a fake neo.Segment. So len(block.segment) == len(time_slice)
+            all time_slice must be compatible with original time range.
+        
+        """
         
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -164,6 +207,27 @@ class BaseFromRaw(BaseIO):
 
     def read_segment(self, block_index=0, seg_index=0, lazy=False, cascade=True, 
                         signal_group_mode=None, load_waveforms=False, time_slice=None):
+        """
+        :param block_index: int default 0. In case of several block block_index can be specified.
+        
+        :param seg_index: int default 0. Index of segment.
+        
+        :param lazy: False by default. 
+        
+        :param cascade: True by Default
+
+        :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
+        This control behavior for grouping channels in AnalogSignal.
+            * 'split-all': each channel will give an AnalogSignal
+            * 'group-by-same-units' all channel sharing the same quantity units ar grouped in
+            a 2D AnalogSignal
+        
+        :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
+        
+        :param time_slice: None by default means no limit.
+            A time slice is (t_start, t_stop) both are quantities.
+            All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
+        """
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -274,7 +338,7 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
-                raw_waveforms = self.spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
+                raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
                                                     unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
                                 unit_index=unit_index)
@@ -299,7 +363,7 @@ class BaseFromRaw(BaseIO):
             annotations = check_annotations(annotations)
             
             if not lazy:
-                spike_timestamp = self.spike_timestamps(block_index=block_index, seg_index=seg_index, 
+                spike_timestamp = self.get_spike_timestamps(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
@@ -318,7 +382,7 @@ class BaseFromRaw(BaseIO):
         event_channels = self.header['event_channels']
         for chan_ind in range(len(event_channels)):
             if not lazy:
-                ev_timestamp, ev_raw_durations, ev_labels = self.event_timestamps(block_index=block_index, seg_index=seg_index, 
+                ev_timestamp, ev_raw_durations, ev_labels = self.get_event_timestamps(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind, t_start=t_start_, t_stop=t_stop_)
                 ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
                 if ev_raw_durations is None:

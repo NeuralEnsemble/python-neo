@@ -200,7 +200,7 @@ class MicromedRawIO(BaseRawIO):
         n = self._raw_events[event_channel_index].size
         return n
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         
         raw_event = self._raw_events[event_channel_index]
         

@@ -210,7 +210,7 @@ class ElanRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_event_timestamps.size
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         timestamp = self._raw_event_timestamps
         labels = self._event_labels
         durations = None

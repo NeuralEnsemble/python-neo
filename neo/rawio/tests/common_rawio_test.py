@@ -100,9 +100,9 @@ class BaseTestRawIO(object):
         return os.path.join(self.local_test_dir, filename)
     
     def test_read_all(self):
-        """
-        Read all file.
-        """
+        #Read all file in self.entities_to_test 
+        
+        
         for entity_name in self.entities_to_test:
             entity_name = self.get_filename_path(entity_name)
             

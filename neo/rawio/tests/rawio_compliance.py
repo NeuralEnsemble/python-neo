@@ -250,7 +250,7 @@ def read_spike_times(reader):
                                         seg_index=seg_index, unit_index=unit_index)
                 if nb_spike==0: continue
                 
-                spike_timestamp = reader.spike_timestamps(block_index=block_index, seg_index=seg_index,
+                spike_timestamp = reader.get_spike_timestamps(block_index=block_index, seg_index=seg_index,
                                                     unit_index=unit_index, t_start=None, t_stop=None)
                 assert spike_timestamp.shape[0] == nb_spike, 'nb_spike {} != {}'.format(spike_timestamp.shape[0] , nb_spike)
                 
@@ -262,7 +262,7 @@ def read_spike_times(reader):
                     t_start = spike_times[1] - 0.001
                     t_stop = spike_times[1] + 0.001
                     
-                    spike_timestamp2 = reader.spike_timestamps(block_index=block_index, seg_index=seg_index,
+                    spike_timestamp2 = reader.get_spike_timestamps(block_index=block_index, seg_index=seg_index,
                                                     unit_index=unit_index, t_start=t_start, t_stop=t_stop)
                     assert spike_timestamp2.shape[0]==1
                     
@@ -287,7 +287,7 @@ def read_spike_waveforms(reader):
                                         seg_index=seg_index, unit_index=unit_index)
                 if nb_spike==0: continue
                 
-                raw_waveforms = reader.spike_raw_waveforms(block_index=block_index, 
+                raw_waveforms = reader.get_spike_raw_waveforms(block_index=block_index, 
                                                     seg_index=seg_index, unit_index=unit_index,
                                                     t_start=None, t_stop=None)
                 if raw_waveforms is None:
@@ -317,7 +317,7 @@ def read_events(reader):
                                                                                     event_channel_index=ev_chan)
                 if nb_event==0: continue
 
-                ev_timestamps, ev_durations, ev_labels = reader.event_timestamps(block_index=block_index, seg_index=seg_index,
+                ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(block_index=block_index, seg_index=seg_index,
                                                 event_channel_index=ev_chan)
                 assert ev_timestamps.shape[0] == nb_event, 'Wrong shape {}, {}'.format(ev_timestamps.shape[0], nb_event)
                 if ev_durations is not None:

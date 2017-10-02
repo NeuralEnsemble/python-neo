@@ -433,7 +433,7 @@ class BlackrockRawIO(BaseRawIO):
             nb = timestamp.size
         return nb
         
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
         
         all_spikes = self.nev_data['Spikes']
@@ -476,7 +476,7 @@ class BlackrockRawIO(BaseRawIO):
         spike_times /= self.__nev_basic_header['timestamp_resolution']
         return spike_times
     
-    def  _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def  _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
         all_spikes = self.nev_data['Spikes']
 
@@ -510,7 +510,7 @@ class BlackrockRawIO(BaseRawIO):
             nb = timestamp.size
         return nb
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
         events_data = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]

@@ -263,7 +263,7 @@ class ExampleRawIO(BaseRawIO):
         nb_spikes = 20
         return nb_spikes
     
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         # In our IO, timstamp are internally coded 'int64' and they
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
@@ -291,7 +291,7 @@ class ExampleRawIO(BaseRawIO):
         spike_times /= 10000. # because 10kHz
         return spike_times
 
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         #this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
         #in the original dtype
         #this must be as fast as possible.
@@ -322,7 +322,7 @@ class ExampleRawIO(BaseRawIO):
             #epoch channel
             return 10
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         #the main difference between spike channel and event channel
         # is that for here we have 3 numpy array timestamp, durations, labels
         #durations must be None for 'event'

@@ -352,7 +352,7 @@ class TdtRawIO(BaseRawIO):
         return nb_spike
     
     
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
         mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
@@ -365,7 +365,7 @@ class TdtRawIO(BaseRawIO):
         spike_times = spike_timestamps.astype(dtype)
         return spike_times
 
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
         mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
@@ -393,7 +393,7 @@ class TdtRawIO(BaseRawIO):
         nb_event = np.sum(mask)
         return nb_event
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         h = self.header['event_channels'][event_channel_index]
         store_name = h['name'].encode('ascii')
         tsq = self._tsq[seg_index]

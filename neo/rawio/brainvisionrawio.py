@@ -149,7 +149,7 @@ class BrainVisionRawIO(BaseRawIO):
         all_timestamps, all_label = self._raw_events[event_channel_index]
         return all_timestamps.size
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         timestamps, labels = self._raw_events[event_channel_index]
 
         if t_start is not None:

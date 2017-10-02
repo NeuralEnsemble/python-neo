@@ -19,10 +19,10 @@ class TestTdtRawIO(BaseTestRawIO, unittest.TestCase, ):
         'aep_05/Block-1/aep_05_Block-1.tev',
         'aep_05/Block-1/aep_05_Block-1.tsq',
 
-        'aep_05/Block-2/aep_05_Block-2.Tbk',
-        'aep_05/Block-2/aep_05_Block-2.Tdx',
-        'aep_05/Block-2/aep_05_Block-2.tev',
-        'aep_05/Block-2/aep_05_Block-2.tsq',
+        #~ 'aep_05/Block-2/aep_05_Block-2.Tbk',
+        #~ 'aep_05/Block-2/aep_05_Block-2.Tdx',
+        #~ 'aep_05/Block-2/aep_05_Block-2.tev',
+        #~ 'aep_05/Block-2/aep_05_Block-2.tsq',
 
         #~ 'aep_05/Block-3/aep_05_Block-3.Tbk',
         #~ 'aep_05/Block-3/aep_05_Block-3.Tdx',

@@ -169,7 +169,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         nb_spike = entity_header['n']
         return nb_spike
     
-    def spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
@@ -190,7 +190,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         spike_times /= self.global_header['freq']
         return spike_times
 
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         if entity_header['type'] == 0:
@@ -211,7 +211,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         nb_event = entity_header['n']
         return nb_event
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         entity_index = int(self.header['event_channels'][event_channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
         

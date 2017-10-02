@@ -478,10 +478,6 @@ class BaseRawIO(object):
                         channel_indexes=None, channel_names=None, channel_ids=None):
         """
         Return a chunk of raw signal.
-        
-        
-        
-        
         """
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
         if self._several_channel_groups:
@@ -514,7 +510,7 @@ class BaseRawIO(object):
     def spike_count(self,  block_index=0, seg_index=0, unit_index=0):
         return self._spike_count(block_index, seg_index, unit_index)
     
-    def spike_timestamps(self,  block_index=0, seg_index=0, unit_index=0,
+    def get_spike_timestamps(self,  block_index=0, seg_index=0, unit_index=0,
                         t_start=None, t_stop=None):
         """
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
@@ -524,7 +520,7 @@ class BaseRawIO(object):
         t_start/t_sop are limits in seconds.
         
         """
-        timestamp = self._spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
+        timestamp = self._get_spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
         return timestamp
     
     def rescale_spike_timestamp(self, spike_timestamps, dtype='float64'):
@@ -534,11 +530,10 @@ class BaseRawIO(object):
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
     
     # spiketrain waveform zone
-    def spike_raw_waveforms(self,  block_index=0, seg_index=0, unit_index=0,
+    def get_spike_raw_waveforms(self,  block_index=0, seg_index=0, unit_index=0,
                         t_start=None, t_stop=None):
-        wf = self._spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
+        wf = self._get_spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
         return wf
-    
     
     def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32', unit_index=0):
         wf_gain = self.header['unit_channels']['wf_gain'][unit_index]
@@ -558,7 +553,7 @@ class BaseRawIO(object):
     def event_count(self,  block_index=0, seg_index=0, event_channel_index=0):
         return self._event_count(block_index, seg_index, event_channel_index)
 
-    def event_timestamps(self,  block_index=0, seg_index=0, event_channel_index=0,
+    def get_event_timestamps(self,  block_index=0, seg_index=0, event_channel_index=0,
                         t_start=None, t_stop=None):
         """
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
@@ -573,7 +568,7 @@ class BaseRawIO(object):
             durations
 
         """
-        timestamp, durations, labels = self._event_timestamps(block_index, seg_index, event_channel_index, t_start, t_stop)
+        timestamp, durations, labels = self._get_event_timestamps(block_index, seg_index, event_channel_index, t_start, t_stop)
         return timestamp, durations, labels
     
     def rescale_event_timestamp(self, event_timestamps, dtype='float64'):
@@ -675,7 +670,7 @@ class BaseRawIO(object):
     def _spike_count(self,  block_index, seg_index, unit_index):
         raise(NotImplementedError)
     
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         raise(NotImplementedError)
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -683,7 +678,7 @@ class BaseRawIO(object):
 
     ###
     # spike waveforms zone
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         raise(NotImplementedError)
     
     ###
@@ -691,7 +686,7 @@ class BaseRawIO(object):
     def _event_count(self, block_index, seg_index, event_channel_index):
         raise(NotImplementedError)
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         raise(NotImplementedError)
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):

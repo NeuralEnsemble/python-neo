@@ -372,7 +372,7 @@ class Spike2RawIO(BaseRawIO):
     def _spike_count(self,  block_index, seg_index, unit_index):
         return self._spike_sounts[unit_index]
         
-    def _spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         unit_header = self.header['unit_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         
@@ -390,7 +390,7 @@ class Spike2RawIO(BaseRawIO):
         spike_times *= self._time_factor
         return spike_times
 
-    def _spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         unit_header = self.header['unit_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         
@@ -413,7 +413,7 @@ class Spike2RawIO(BaseRawIO):
         nb_event = data_blocks['size'].sum()
         return nb_event
     
-    def _event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         event_header = self.header['event_channels'][event_channel_index]
         chan_id = int(event_header['id']) #because set to string in header
         chan_info = self._channel_infos[chan_id]

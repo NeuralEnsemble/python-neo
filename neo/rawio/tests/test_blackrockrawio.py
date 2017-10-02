@@ -79,12 +79,12 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             
             matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
             
-            io_spikes = reader.spike_timestamps(unit_index=unit_index)
+            io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
             assert_equal(io_spikes, matlab_spikes)
 
             # Check waveforms of channel 1, unit 0
             if channel_id == 1 and unit_id == 0:
-                io_waveforms = reader.spike_raw_waveforms(unit_index=unit_index)
+                io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
                 io_waveforms = io_waveforms[:, 0, :]#remove dim 1
                 assert_equal(io_waveforms, wf_ml)
         
@@ -96,7 +96,7 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             name = reader.header['event_channels']['name'][ev_chan]
             #~ print(name)
             if name == 'digital_input_port':
-                all_timestamps, _, labels = reader.event_timestamps(event_channel_index=ev_chan)
+                all_timestamps, _, labels = reader.get_event_timestamps(event_channel_index=ev_chan)
                 
                 for label in np.unique(labels):
                     python_digievents = all_timestamps[labels==label]

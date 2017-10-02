@@ -20,9 +20,14 @@ if os.environ.get('TRAVIS') == 'true' and \
     os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
     install_requires.append('unittest2>=0.5.1')
 
+with open("neo/version.py") as fp:
+    d = {}
+    exec(fp.read(), d)
+    neo_version = d['version']
+
 setup(
     name = "neo",
-    version = '0.5.1',
+    version = neo_version,
     packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest', 
                 'neo.rawio', 'neo.rawio.tests'],
     install_requires=install_requires,
