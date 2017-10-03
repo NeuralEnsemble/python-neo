@@ -343,13 +343,17 @@ class BlackrockRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
         
+        
+        rec_datetime = self.__nev_params('rec_datetime') if self._avail_files['nev'] else None
+        
+        
         #Put annotations at some places for compatibility
         #with previous BlackrockIO version
         self._generate_minimal_annotations()
         block_ann = self.raw_annotations['blocks'][0]
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
-        block_ann['rec_datetime'] = self.__nev_params('rec_datetime')
+        block_ann['rec_datetime'] = rec_datetime
         
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
@@ -364,7 +368,7 @@ class BlackrockRawIO(BaseRawIO):
             if seg_index==0:
                 # if more than 1 segment means pause
                 # so datetime is valide only for seg_index=0
-                seg_ann['rec_datetime'] = self.__nev_params('rec_datetime')
+                seg_ann['rec_datetime'] = rec_datetime
             
             for c in range(sig_channels.size):
                 anasig_an = seg_ann['signals'][c]
@@ -382,12 +386,13 @@ class BlackrockRawIO(BaseRawIO):
                         channel_id, unit_id)
                 st_ann['file_origin'] = self.filename+'.nev'
                 
-                
-            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
-            for c in range(event_channels.size):
-                ev_ann = seg_ann['events'][c]
-                name = event_channels['name'][c]
-                ev_ann['description'] = ev_dict[name]['desc']
+            
+            if self._avail_files['nev']:
+                ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+                for c in range(event_channels.size):
+                    ev_ann = seg_ann['events'][c]
+                    name = event_channels['name'][c]
+                    ev_ann['description'] = ev_dict[name]['desc']
                 
     
     def _source_name(self):
