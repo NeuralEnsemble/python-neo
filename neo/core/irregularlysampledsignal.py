@@ -5,7 +5,7 @@ signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
 and  derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
-and from :class:`quantites.Quantity`, which inherits from :class:`numpy.array`.
+and from :class:`quantities.Quantity`, which inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -99,7 +99,7 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
 
     *Slicing*:
         :class:`IrregularlySampledSignal` objects can be sliced. When this
-        occurs, a new :cresclass:`IrregularlySampledSignal` (actually a view) is
+        occurs, a new :class:`IrregularlySampledSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`times` is also
         sliced in the same way.
 

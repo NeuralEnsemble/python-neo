@@ -35,6 +35,7 @@ and may not be the current affiliation of a contributor.
 * Mark Hollenbeck [14]
 * Mieszko Grodzicki
 * Rick Gerkin [15]
+* Matthieu Sénoville [2]
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1

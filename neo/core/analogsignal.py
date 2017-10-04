@@ -3,7 +3,7 @@
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` and 
-:class:`quantites.Quantity`, which inherits from :class:`numpy.array`.
+:class:`quantities.Quantity`, which inherits from :class:`numpy.array`.
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
@@ -434,7 +434,7 @@ class AnalogSignal(basesignal.BaseSignal):
 
     def rescale(self, units):
         '''
-        Return a copy of the Signal converted to the specified
+        Return a copy of the AnalogSignal converted to the specified
         units
         '''
         to_dims = pq.quantity.validate_dimensionality(units)
@@ -530,6 +530,12 @@ class AnalogSignal(basesignal.BaseSignal):
                      ]:
             _pp(line)
 
+    def time_index(self, t):
+        """Return the array index corresponding to the time `t`"""
+        t = t.rescale(self.sampling_period.units)
+        i = (t - self.t_start) / self.sampling_period
+        i = int(np.rint(i.magnitude))
+        return i
 
     def time_slice(self, t_start, t_stop):
         '''
@@ -544,17 +550,13 @@ class AnalogSignal(basesignal.BaseSignal):
         if t_start is None:
             i = 0
         else:
-            t_start = t_start.rescale(self.sampling_period.units)
-            i = (t_start - self.t_start) / self.sampling_period
-            i = int(np.rint(i.magnitude))
+            i = self.time_index(t_start)
 
         # checking stop time and transforming to stop index
         if t_stop is None:
             j = len(self)
         else:
-            t_stop = t_stop.rescale(self.sampling_period.units)
-            j = (t_stop - self.t_start) / self.sampling_period
-            j = int(np.rint(j.magnitude))
+            j = self.time_index(t_stop)
 
         if (i < 0) or (j > len(self)):
             raise ValueError('t_start, t_stop have to be withing the analog \
@@ -623,3 +625,36 @@ class AnalogSignal(basesignal.BaseSignal):
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
         return signal
+
+    def splice(self, signal, copy=False):
+        """
+        Replace part of the current signal by a new piece of signal.
+        
+        The new piece of signal will overwrite part of the current signal
+        starting at the time given by the new piece's `t_start` attribute.
+        
+        The signal to be spliced in must have the same physical dimensions,
+        sampling rate, and number of channels as the current signal and
+        fit within it.
+        
+        If `copy` is False (the default), modify the current signal in place.
+        If `copy` is True, return a new signal and leave the current one untouched.
+        In this case, the new signal will not be linked to any parent objects.        
+        """
+        if signal.t_start < self.t_start:
+            raise ValueError("Cannot splice earlier than the start of the signal")
+        if signal.t_stop > self.t_stop:
+            raise ValueError("Splice extends beyond signal")
+        if signal.sampling_rate != self.sampling_rate:
+            raise ValueError("Sampling rates do not match")
+        i = self.time_index(signal.t_start)
+        j = i + signal.shape[0]
+        if copy:
+            new_signal = deepcopy(self)
+            new_signal.segment = None
+            new_signal.channel_index = None
+            new_signal[i:j, :] = signal
+            return new_signal
+        else:
+            self[i:j, :] = signal
+            return self

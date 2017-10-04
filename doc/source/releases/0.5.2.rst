@@ -1,0 +1,21 @@
+=======================
+Neo 0.5.2 release notes
+=======================
+
+27th September 2017
+
+
+* Removed support for Python 2.6
+* Pickling :class:`AnalogSignal` and :class:`SpikeTrain` now preserves parent objects
+* Added NSDFIO, which reads and writes NSDF files
+* Fixes and improvements to PlexonIO, NixIO, BlackrockIO, NeuralynxIO, IgorIO, ElanIO, MicromedIO, TdtIO and others.
+
+Thanks to Michael Denker, Achilleas Koutsou, Mieszko Grodzicki, Samuel Garcia, Julia Sprenger, Andrew Davison,
+Rohan Shah, Richard C Gerkin, Mieszko Grodzicki, Mikkel Elle Lepperød, Joffrey Gonin, Hélissande Fragnaud,
+Elodie Legouée and Matthieu Sénoville for their contributions to this release.
+
+(Full `list of closed issues`_)
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.5.2+is%3Aclosed
+
+
