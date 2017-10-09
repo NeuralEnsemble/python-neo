@@ -229,7 +229,6 @@ class BlackrockRawIO(BaseRawIO):
             
             # read nev file specification
             self.__nev_spec = self.__extract_nev_file_spec()
-            print(self.__nev_spec)
 
             # read nev headers
             self.__nev_basic_header, self.__nev_ext_header = \

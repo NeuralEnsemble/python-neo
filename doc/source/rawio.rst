@@ -114,6 +114,21 @@ Read signal chunk of data and scale them::
     1000.0 0.0 V
 
 
+There are 3 ways for selecting a subset of channels: by index (0 based), by id or by name.
+By index is not ambiguous 0 to n-1 (included), for some IOs channel_names (and sometimes channel_ids) have no garanties to
+be unique, in such cases it would raise an error.
+
+Example with BlackrockRawIO for the file FileSpec2.3001::
+
+    >>> raw_sigs = reader.get_analogsignal_chunk(channel_indexes=None) #Take all channels
+    >>> raw_sigs1 = reader.get_analogsignal_chunk(channel_indexes=[0,  2, 4])) #Take 0 2 and 4
+    >>> raw_sigs2 = reader.get_analogsignal_chunk(channel_ids=[1, 3, 5]) # Same but with there id (1 based)
+    >>> raw_sigs3 = reader.get_analogsignal_chunk(channel_names=['chan1', 'chan3', 'chan5'])) # Same but with there name
+    print(raw_sigs1.shape[1], raw_sigs2.shape[1], raw_sigs3.shape[1])
+    3, 3, 3
+
+
+
 Inspect units channel. Each channel give a SpikeTrain for each Segment.
 Note that for many format a physical channel can have several units after spike
 sorting. So the nb_unit could be more than physical channel or signal channels.
