@@ -229,6 +229,7 @@ class BlackrockRawIO(BaseRawIO):
             
             # read nev file specification
             self.__nev_spec = self.__extract_nev_file_spec()
+            print(self.__nev_spec)
 
             # read nev headers
             self.__nev_basic_header, self.__nev_ext_header = \
@@ -240,9 +241,9 @@ class BlackrockRawIO(BaseRawIO):
             #scan all channel to get number of Unit
             unit_channels = []
             self.internal_unit_ids = [] #pair of chan['packet_id'], spikes['unit_class_nb']
-            for i in range(len(self.__nev_ext_header[b'NEUEVFLT'])):
+            for i in range(len(self.__nev_ext_header[b'NEUEVWAV'])):
                 
-                channel_id = self.__nev_ext_header[b'NEUEVFLT']['electrode_id'][i]
+                channel_id = self.__nev_ext_header[b'NEUEVWAV']['electrode_id'][i]
 
                 chan_mask = (spikes['packet_id'] == channel_id)
                 chan_spikes = spikes[chan_mask]
