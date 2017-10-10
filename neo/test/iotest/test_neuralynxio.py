@@ -16,14 +16,21 @@ import unittest
 import numpy as np
 import quantities as pq
 
-from neo import NeuralynxIO, AnalogSignal, SpikeTrain, Event
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import Segment
+from neo.core import *
+
+from neo.io.neuralynxio import NeuralynxIO
+from neo.io.neuralynxio import NeuralynxIO as NewNeuralynxIO
+from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
+from neo import AnalogSignal
 
 
-class CommonTests(BaseTestIO):
+class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
     ioclass = NeuralynxIO
-    files_to_test = []
+    files_to_test = [
+        'Cheetah_v5.5.1/original_data',
+        'Cheetah_v5.7.4/original_data',
+        ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
         'Cheetah_v5.5.1/original_data/CheetahLostADRecords.txt',
@@ -52,39 +59,27 @@ class CommonTests(BaseTestIO):
         'Cheetah_v5.7.4/plain_data/Events.txt',
         'Cheetah_v5.7.4/README.txt']
 
-    def setUp(self):
-        super(CommonTests, self).setUp()
-        data_dir = os.path.join(self.local_test_dir,
-                                'Cheetah_v{}'.format(self.cheetah_version))
 
-        self.sn = os.path.join(data_dir, 'original_data')
-        self.pd = os.path.join(data_dir, 'plain_data')
-        if not os.path.exists(self.sn):
-            raise unittest.SkipTest('data file does not exist:' + self.sn)
-
-
-class TestCheetah_v551(CommonTests, unittest.TestCase):
+class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
     cheetah_version = '5.5.1'
-
+    files_to_test = []
+    
     def test_read_block(self):
         """Read data in a certain time range into one block"""
+        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        #play with time_slice
         t_start, t_stop = 3 * pq.s, 4 * pq.s
-
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        block = nio.read_block(t_starts=[t_start], t_stops=[t_stop])
-        self.assertEqual(len(nio.parameters_ncs), 2)
-        self.assertTrue(
-                {'event_id': 11, 'name': 'Starting Recording', 'nttl': 0} in
-                nio.parameters_nev['Events.nev']['event_types'])
-
+        block = nio.read_block(time_slices=[(t_start, t_stop)])
+        
         # Everything put in one segment
         self.assertEqual(len(block.segments), 1)
         seg = block.segments[0]
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 2)
 
-        self.assertEqual(seg.analogsignals[0].sampling_rate.units,
-                         pq.CompoundUnit('32*kHz'))
+        self.assertEqual(seg.analogsignals[0].sampling_rate, 32.*pq.kHz)
         self.assertEqual(seg.analogsignals[0].t_start, t_start)
         self.assertEqual(seg.analogsignals[0].t_stop, t_stop)
         self.assertEqual(len(seg.spiketrains), 2)
@@ -97,184 +92,59 @@ class TestCheetah_v551(CommonTests, unittest.TestCase):
         block = nio.read_block(cascade=False)
         self.assertEqual(len(block.segments), 0)
 
-        block = nio.read_block(electrode_list=[0])
-        self.assertEqual(len(block.segments[0].analogsignals), 1)
-        self.assertEqual(len(block.channel_indexes[-1].units), 1)
-
-        block = nio.read_block(t_starts=None, t_stops=None, events=True,
-                               waveforms=True)
+        block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 2)
-        self.assertEqual(len(block.segments[0].spiketrains[0].waveforms),
-                         len(block.segments[0].spiketrains[0]))
+        self.assertEqual(block.segments[0].spiketrains[0].waveforms.shape[0],
+                         block.segments[0].spiketrains[0].shape[0])
         self.assertGreater(len(block.segments[0].events), 0)
-        self.assertEqual(len(block.channel_indexes[-1].units), 2)
+        
+        self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), 2) #2 segment
+        
+        block = nio.read_block(load_waveforms=True, units_group_mode='all-in-one')
+        self.assertEqual(len(block.channel_indexes[-1].units), 2) #2 units
 
-        block = nio.read_block(t_starts=[t_start], t_stops=[t_stop],
-                               unit_list=[0], electrode_list=[0])
-        self.assertEqual(len(block.channel_indexes[-1].units), 1)
-
-        block = nio.read_block(t_starts=[t_start], t_stops=[t_stop],
-                               unit_list=False)
-        self.assertEqual(len(block.channel_indexes[-1].units), 0)
+        block = nio.read_block(load_waveforms=True, units_group_mode='split-all')
+        self.assertEqual(len(block.channel_indexes[-1].units), 1) #1 units by ChannelIndex
+        
 
     def test_read_segment(self):
-        """Read data in a certain time range into one block"""
-
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        seg = nio.read_segment(t_start=None, t_stop=None)
-
+        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        
+        #read first segment entirely
+        seg = nio.read_segment(seg_index=0, time_slice=None)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 2)
-
-        self.assertEqual(seg.analogsignals[0].sampling_rate.units,
-                         pq.CompoundUnit('32*kHz'))
-
+        self.assertEqual(seg.analogsignals[0].sampling_rate,32*pq.kHz)
         self.assertEqual(len(seg.spiketrains), 2)
-
+        
         # Testing different parameter combinations
-        seg = nio.read_segment(lazy=True)
-        self.assertEqual(len(seg.analogsignals[0]), 0)
-        self.assertEqual(len(seg.spiketrains[0]), 0)
-
-        seg = nio.read_segment(cascade=False)
+        seg = nio.read_segment(seg_index=0, lazy=True)
+        self.assertEqual(seg.analogsignals[0].size, 0)
+        self.assertEqual(seg.spiketrains[0].size, 0)
+        
+        seg = nio.read_segment(seg_index=0, cascade=False)
         self.assertEqual(len(seg.analogsignals), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
-        seg = nio.read_segment(electrode_list=[0])
-        self.assertEqual(len(seg.analogsignals), 1)
-
-        seg = nio.read_segment(t_start=None, t_stop=None, events=True,
-                               waveforms=True)
+        seg = nio.read_segment(seg_index=0, load_waveforms=True)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.spiketrains), 2)
         self.assertTrue(len(seg.spiketrains[0].waveforms) > 0)
         self.assertTrue(len(seg.events) > 0)
 
-    def test_read_ncs_data(self):
-        t_start, t_stop = 0, 500 * 512  # in samples
 
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        seg = Segment('testsegment')
-
-        for el_id, el_dict in nio.parameters_ncs.items():
-            filepath = nio.parameters_ncs[el_id]['recording_file_name']
-            filename = filepath.split('/')[-1].split('\\')[-1].split('.')[0]
-            nio.read_ncs(filename, seg, t_start=t_start, t_stop=t_stop)
-            anasig = seg.filter({'electrode_id': el_id},
-                                objects=AnalogSignal)[0]
-
-            target_data = np.zeros((16679, 512))
-            with open(self.pd + '/%s.txt' % filename) as datafile:
-                for i, line in enumerate(datafile):
-                    line = line.strip('\xef\xbb\xbf')
-                    entries = line.split()
-                    target_data[i, :] = np.asarray(entries[4:])
-
-            target_data = target_data.reshape((-1, 1)) * el_dict['ADBitVolts']
-
-            np.testing.assert_array_equal(target_data[:len(anasig)],
-                                          anasig.magnitude)
-
-    def test_read_nse_data(self):
-        t_start, t_stop = None, None  # in samples
-
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        seg = Segment('testsegment')
-
-        for el_id, el_dict in nio.parameters_nse.items():
-            filepath = nio.parameters_nse[el_id]['recording_file_name']
-            filename = filepath.split('/')[-1].split('\\')[-1].split('.')[0]
-            nio.read_nse(filename, seg, t_start=t_start, t_stop=t_stop,
-                         waveforms=True)
-            spiketrain = seg.filter({'electrode_id': el_id},
-                                    objects=SpikeTrain)[0]
-
-            # target_data = np.zeros((500, 32))
-            # timestamps = np.zeros(500)
-            entries = []
-            with open(self.pd + '/%s.txt' % filename) as datafile:
-                for i, line in enumerate(datafile):
-                    line = line.strip('\xef\xbb\xbf')
-                    entries.append(line.split())
-            entries = np.asarray(entries, dtype=float)
-            target_data = entries[:-1, 11:]
-            timestamps = entries[:-1, 0]
-
-            timestamps = (timestamps * pq.microsecond -
-                          nio.parameters_global['t_start'])
-
-            np.testing.assert_array_equal(timestamps.magnitude,
-                                          spiketrain.magnitude)
-            np.testing.assert_array_equal(target_data,
-                                          spiketrain.waveforms)
-
-    def test_read_nev_data(self):
-        t_start, t_stop = 0 * pq.s, 1000 * pq.s
-
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        seg = Segment('testsegment')
-
-        filename = 'Events'
-        nio.read_nev(filename + '.nev', seg, t_start=t_start, t_stop=t_stop)
-
-        timestamps = []
-        nttls = []
-        names = []
-        event_ids = []
-
-        with open(self.pd + '/%s.txt' % filename) as datafile:
-            for i, line in enumerate(datafile):
-                line = line.strip('\xef\xbb\xbf')
-                entries = line.split('\t')
-                nttls.append(int(entries[5]))
-                timestamps.append(int(entries[3]))
-                names.append(entries[10].rstrip('\r\n'))
-                event_ids.append(int(entries[4]))
-
-        timestamps = (np.array(timestamps) * pq.microsecond -
-                      nio.parameters_global['t_start'])
-        # masking only requested spikes
-        mask = np.where(timestamps < t_stop)[0]
-
-        # return if no event fits criteria
-        if len(mask) == 0:
-            return
-        timestamps = timestamps[mask]
-        nttls = np.asarray(nttls)[mask]
-        names = np.asarray(names)[mask]
-        event_ids = np.asarray(event_ids)[mask]
-
-        for i in range(len(timestamps)):
-            events = seg.filter({'nttl': nttls[i]}, objects=Event)
-            events = [e for e in events
-                      if (e.annotations['marker_id'] == event_ids[i] and
-                          e.labels == names[i])]
-            self.assertTrue(len(events) == 1)
-            self.assertTrue(timestamps[i] in events[0].times)
-
-    def test_read_ntt_data(self):
-        pass
-
-        # TODO: Implement test_read_ntt_data once ntt files are available
-
-
-class TestCheetah_v574(TestCheetah_v551, CommonTests, unittest.TestCase):
+class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
     cheetah_version = '5.7.4'
+    files_to_test = []
 
     def test_read_block(self):
-        """Read data in a certain time range into one block"""
+        dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        
         t_start, t_stop = 3 * pq.s, 4 * pq.s
-
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        block = nio.read_block(t_starts=[t_start], t_stops=[t_stop])
-        self.assertEqual(len(nio.parameters_ncs), 5)
-        self.assertTrue(
-                {'event_id': 19, 'name': 'Starting Recording', 'nttl': 0} in
-                nio.parameters_nev['Events.nev']['event_types'])
-        self.assertTrue(
-                {'event_id': 19, 'name': 'Stopping Recording', 'nttl': 0} in
-                nio.parameters_nev['Events.nev']['event_types'])
+        block = nio.read_block(time_slices=[(t_start, t_stop)])
 
         # Everything put in one segment
         self.assertEqual(len(block.segments), 1)
@@ -282,8 +152,7 @@ class TestCheetah_v574(TestCheetah_v551, CommonTests, unittest.TestCase):
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 5)
 
-        self.assertEqual(seg.analogsignals[0].sampling_rate.units,
-                         pq.CompoundUnit('32*kHz'))
+        self.assertEqual(seg.analogsignals[0].sampling_rate, 32*pq.kHz)
         self.assertAlmostEqual(seg.analogsignals[0].t_start, t_start, places=4)
         self.assertAlmostEqual(seg.analogsignals[0].t_stop, t_stop, places=4)
         self.assertEqual(len(seg.spiketrains), 0)  # no nse files available
@@ -295,27 +164,30 @@ class TestCheetah_v574(TestCheetah_v551, CommonTests, unittest.TestCase):
         block = nio.read_block(cascade=False)
         self.assertEqual(len(block.segments), 0)
 
-        block = nio.read_block(electrode_list=[0])
-        self.assertEqual(len(block.segments[0].analogsignals), 1)
-
-        block = nio.read_block(t_starts=None, t_stops=None, events=True,
-                               waveforms=True)
+        block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 0)
         self.assertGreater(len(block.segments[0].events), 0)
+        
+        
+        block = nio.read_block(signal_group_mode = 'split-all')
         self.assertEqual(len(block.channel_indexes), 5)
+        
+        block = nio.read_block(signal_group_mode = 'group-by-same-units')
+        self.assertEqual(len(block.channel_indexes), 1)
+        
 
     def test_read_segment(self):
-        """Read data in a certain time range into one block"""
 
-        nio = NeuralynxIO(self.sn, use_cache='never')
-        seg = nio.read_segment(t_start=None, t_stop=None)
+        dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        seg = nio.read_segment(time_slice=None)
 
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 5)
 
-        self.assertEqual(seg.analogsignals[0].sampling_rate.units,
-                         pq.CompoundUnit('32*kHz'))
+        self.assertEqual(seg.analogsignals[0].sampling_rate, 32*pq.kHz)
 
         self.assertEqual(len(seg.spiketrains), 0)
 
@@ -328,126 +200,141 @@ class TestCheetah_v574(TestCheetah_v551, CommonTests, unittest.TestCase):
         self.assertEqual(len(seg.analogsignals), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
-        seg = nio.read_segment(electrode_list=[0])
-        self.assertEqual(len(seg.analogsignals), 1)
-
-        seg = nio.read_segment(t_start=None, t_stop=None, events=True,
-                               waveforms=True)
+        seg = nio.read_segment(load_waveforms=True)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.spiketrains), 0)
         self.assertTrue(len(seg.events) > 0)
 
 
-class TestGaps(CommonTests, unittest.TestCase):
+class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
     cheetah_version = '5.5.1'
 
     def test_gap_handling(self):
-        nio = NeuralynxIO(self.sn, use_cache='never')
-
-        block = nio.read_block(t_starts=None, t_stops=None)
+        dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+        
+        block = nio.read_block(time_slices=None)
 
         # known gap values
         n_gaps = 1
+        
+        #so 2 segments, 2 anasigs by Channelindex, 2 SpikeTrain by Units
 
         self.assertEqual(len(block.segments), n_gaps + 1)
-        # one channel index for analogsignals for each of the 3 segments and
-        # one for spiketrains
-        self.assertEqual(len(block.channel_indexes), len(block.segments) + 1)
-        self.assertEqual(len(block.channel_indexes[-1].units), 2)
-        for unit in block.channel_indexes[-1].units:
-            self.assertEqual(len(unit.spiketrains), n_gaps + 1)
-
-        anasig_channels = [i for i in block.channel_indexes
-                           if 'analogsignal' in i.name]
-        self.assertEqual(len(anasig_channels), n_gaps + 1)
-
-    def test_gap_warning(self):
-        nio = NeuralynxIO(self.sn, use_cache='never')
-
-        with reset_warning_registry():
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter('always')
-                nio.read_block(t_starts=None, t_stops=None)
-
-                self.assertGreater(len(w), 0)
-                self.assertTrue(issubclass(w[0].category, UserWarning))
-                self.assertEqual('Substituted t_starts and t_stops in order to'
-                                 ' skip gap in recording session.',
-                                 str(w[0].message))
-
-    def test_analogsignal_shortening_warning(self):
-        nio = NeuralynxIO(self.sn, use_cache='never')
-
-        with reset_warning_registry():
-            with warnings.catch_warnings(record=True) as w:
-                seg = Segment('testsegment')
-                nio.read_ncs(os.path.join(self.sn, 'Tet3a.ncs'), seg)
-
-                self.assertGreater(len(w), 0)
-                self.assertTrue(issubclass(w[0].category, UserWarning))
-                self.assertTrue('Analogsignalarray was shortened due to gap in'
-                                ' recorded data  of file'
-                                in str(w[0].message))
+        
+        self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
+        
+        self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
+        
 
 
-# This class is copied from
-# 'http://bugs.python.org/file40031/reset_warning_registry.py' by Eli Collins
-# and is related to http://bugs.python.org/issue21724 Python<3.4
-class reset_warning_registry(object):
-    """
-    context manager which archives & clears warning registry for duration of
-    context.
+#All above must delete before merging to master
+# the purpose is to test Old and New NeuralynxIO
 
-    :param pattern:
-          optional regex pattern, causes manager to only reset modules whose
-          names match this pattern. defaults to ``".*"``.
-    """
+import time
 
-    #: regexp for filtering which modules are reset
-    _pattern = None
+def compare_old_and_new_neuralynxio():
+    
+    base = '/tmp/files_for_testing_neo/neuralynx/'
+    dirname = base+'Cheetah_v5.5.1/original_data/'
+    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
+    
+    
+    t0 = time.perf_counter()
+    newreader = NewNeuralynxIO(dirname)
+    t1 = time.perf_counter()
+    bl1 = newreader.read_block(load_waveforms=True)
+    t2 = time.perf_counter()
+    print('newreader header', t1-t0, 's')
+    print('newreader data', t2-t1, 's')
+    print('newreader toal', t2-t0, 's')
+    for seg in bl1.segments:
+        print('seg', seg.index)
+        for anasig in seg.analogsignals:
+            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
+        for st in seg.spiketrains:
+            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
+        for ev in seg.events:
+            print(' Event', ev.name, ev.times.shape)
 
-    #: dict mapping module name -> old registry contents
-    _backup = None
 
-    def __init__(self, pattern=None):
-        self._pattern = re.compile(pattern or ".*")
+    print('*'*10)
+    
+    t0 = time.perf_counter()
+    oldreader = OldNeuralynxIO(sessiondir=dirname, use_cache='never')
+    t1 = time.perf_counter()
+    bl2 = oldreader.read_block(waveforms=True, events=True)
+    t2 = time.perf_counter()
+    print('oldreader header', t1-t0, 's')
+    print('oldreader data', t2-t1, 's')
+    print('oldreader toal', t2-t0, 's')
+    for seg in bl2.segments:
+        print('seg', seg.index)
+        for anasig in seg.analogsignals:
+            print(' AnalogSignal', anasig.name, anasig.shape, anasig.t_start)
+        for st in seg.spiketrains:
+            print(' SpikeTrain', st.name, st.shape, st.waveforms.shape, st[:5])
+        for ev in seg.events:
+            print(' Event', ev.name, ev.times.shape)
 
-    def __enter__(self):
-        # archive and clear the __warningregistry__ key for all modules
-        # that match the 'reset' pattern.
-        pattern = self._pattern
-        backup = self._backup = {}
-        for name, mod in list(sys.modules.items()):
-            if pattern.match(name):
-                reg = getattr(mod, "__warningregistry__", None)
-                if reg:
-                    backup[name] = reg.copy()
-                    reg.clear()
-        return self
+    print('*' * 10)
+    compare_neo_content(bl1, bl2)
 
-    def __exit__(self, *exc_info):
-        # restore warning registry from backup
-        modules = sys.modules
-        backup = self._backup
-        for name, content in backup.items():
-            mod = modules.get(name)
-            if mod is None:
-                continue
-            reg = getattr(mod, "__warningregistry__", None)
-            if reg is None:
-                setattr(mod, "__warningregistry__", content)
-            else:
-                reg.clear()
-                reg.update(content)
 
-        # clear all registry entries that we didn't archive
-        pattern = self._pattern
-        for name, mod in list(modules.items()):
-            if pattern.match(name) and name not in backup:
-                reg = getattr(mod, "__warningregistry__", None)
-                if reg:
-                    reg.clear()
+def compare_neo_content(bl1, bl2):
+    print('*'*5, 'Comparison of blocks', '*'*5)
+    object_types_to_test = [Segment, ChannelIndex, Unit, AnalogSignal,
+                            SpikeTrain, Event, Epoch]
+    for objtype in object_types_to_test:
+        print('Testing {}'.format(objtype))
+        children1 = bl1.list_children_by_class(objtype)
+        children2 = bl2.list_children_by_class(objtype)
+
+        if len(children1) != len(children2):
+            warnings.warn('Number of {} is different in both blocks ({} != {'
+                          '}). Skipping comparison'.format(objtype,
+                                                           len(children1),
+                                                      len(children2)))
+            continue
+
+
+        for child1, child2 in zip(children1,children2):
+            compare_annotations(child1.annotations, child2.annotations)
+            compare_attributes(child1, child2)
+
+def compare_annotations(anno1, anno2):
+    if len(anno1) != len(anno2):
+        warnings.warn('Different numbers of annotations! {} != {'
+                      '}\nSkipping further comparison of this '
+                      'annotation list.'.format(
+            anno1.keys(), anno2.keys()))
+        return
+    assert anno1.keys() == anno2.keys()
+    for key in anno1.keys():
+        anno1[key] = anno2[key]
+
+def compare_attributes(child1, child2):
+    assert child1._all_attrs == child2._all_attrs
+    for attr_id in range(len(child1._all_attrs)):
+        attr_name  = child1._all_attrs[attr_id][0]
+        attr_dtype = child1._all_attrs[attr_id][1]
+        if type(child1)==AnalogSignal and attr_name=='signal':
+            continue
+        if type(child1)==SpikeTrain and attr_name=='times':
+            continue
+        unequal = child1.__getattribute__(attr_name) != \
+                     child2.__getattribute__(attr_name)
+        if hasattr(unequal, 'any'):
+            unequal = unequal.any()
+        if unequal:
+            warnings.warn('Attributes differ! {}.{}={} is not equal to {}.{'
+                          '}={}'.format(child1.__class__.__name__, attr_name,
+                                        child1.__getattribute__(attr_name),
+                                        child2.__class__.__name__, attr_name,
+                                        child2.__getattribute__(attr_name)))
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #~ unittest.main()
+    compare_old_and_new_neuralynxio()
+

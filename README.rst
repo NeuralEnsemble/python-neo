@@ -13,9 +13,11 @@ shared object model. In order to be as lightweight a dependency as possible,
 Neo is deliberately limited to represention of data, with no functions for data
 analysis or visualization.
 
-Neo is used by a number of other software tools, including OpenElectrophy_
-and SpykeViewer_ (data analysis and visualization), Elephant_ (data analysis),
-the G-node_ suite (databasing) and PyNN_ (simulations).
+Neo is used by a number of other software tools, including 
+SpykeViewer_ (data analysis and visualization), Elephant_ (data analysis),
+the G-node_ suite (databasing), PyNN_ (simulations), trdesclous_ (spike sorting)
+and ephyviewer_ (data visualization).
+OpenElectrophy_ (data analysis and visualization) used older version of neo.
 
 Neo implements a hierarchical data model well adapted to intracellular and
 extracellular electrophysiology and EEG data with support for multi-electrodes
@@ -63,3 +65,5 @@ For installation instructions, see doc/source/install.rst
 .. _quantities: http://pypi.python.org/pypi/quantities
 .. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
 .. _`issue tracker`: https://github.c
+.. _trdesclous: https://github.com/tridesclous/tridesclous
+.. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer

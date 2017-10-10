@@ -36,14 +36,17 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_sub_schema_is_lazy_loaded,
                             assert_lazy_sub_schema_can_be_loaded,
                             assert_children_empty)
-from neo.test.iotest.tools import (can_use_network, cleanup_test_file,
+
+from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+        download_test_file, create_local_temp_dir)
+
+from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
                                    create_generic_reader,
                                    create_generic_writer,
-                                   create_local_temp_dir, download_test_file,
                                    iter_generic_io_objects,
                                    iter_generic_readers, iter_read_objects,
-                                   make_all_directories, read_generic,
+                                   read_generic,
                                    write_generic)
 from neo.test.generate_datasets import generate_from_supported_objects
 
