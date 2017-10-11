@@ -570,9 +570,9 @@ class BlackrockRawIO(BaseRawIO):
 
     def __extract_nev_file_spec(self):
         """
-        Extract file specification from an .nsx file
+        Extract file specification from an .nev file
         """
-        filename = '.'.join([self._filenames['nsx'], 'nev'])
+        filename = '.'.join([self._filenames['nev'], 'nev'])
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [
