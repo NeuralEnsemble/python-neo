@@ -2,11 +2,6 @@
 """
 Module for reading data from files in the Blackrock format.
 
-This module is an older implementation  with old neo.io API.
-A new class Blackrock compunded by BlackrockRawIO and BaseFromIO
-superseed this one.
-
-
 This work is based on:
   * Chris Rodgers - first version
   * Michael Denker, Lyuba Zehl - second version
@@ -394,9 +389,9 @@ class BlackrockIO(BaseIO):
 
     def __extract_nev_file_spec(self):
         """
-        Extract file specification from an .nsx file
+        Extract file specification from an .nev file
         """
-        filename = '.'.join([self._filenames['nsx'], 'nev'])
+        filename = '.'.join([self._filenames['nev'], 'nev'])
         # Header structure of files specification 2.2 and higher. For files 2.1
         # and lower, the entries ver_major and ver_minor are not supported.
         dt0 = [
