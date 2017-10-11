@@ -2,6 +2,10 @@
 """
 Module for reading data from files in the Blackrock format.
 
+This module is an older implementation  with old neo.io API.
+A new class Blackrock compunded by BlackrockRawIO and BaseFromIO
+superseed this one.
+
 This work is based on:
   * Chris Rodgers - first version
   * Michael Denker, Lyuba Zehl - second version
