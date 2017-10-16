@@ -91,19 +91,19 @@ class TdtRawIO(BaseRawIO):
         
         # TSQ index with timestamp
         self._tsq = []
-        self._global_t_start = []
-        self._global_t_stop = []
+        self._seg_t_starts = []
+        self._seg_t_stops = []
         for seg_index, segment_name in enumerate(segment_names):
             path = os.path.join(self.dirname, segment_name)
             tsq_filename = os.path.join(path, tankname + '_' + segment_name + '.tsq')
             tsq = np.fromfile(tsq_filename, dtype=tsq_dtype)
             self._tsq.append(tsq)
-            # self._global_t_start.append(tsq[tsq['store_name'] == b'\x01']['timestamp'])  # Mark Hanus suggested this
-            # self._global_t_stop.append(tsq[tsq['store_name'] == b'\x02']['timestamp'])   # is correct. But it's slower
+            # self._seg_t_starts.append(tsq[tsq['store_name'] == b'\x01']['timestamp'])  # Mark Hanus suggested this
+            # self._seg_t_stops.append(tsq[tsq['store_name'] == b'\x02']['timestamp'])   # is correct. But it's slower.
             rec_marker = tsq[tsq['code_type'] == EVTYPE_MARK]['timestamp']
-            global_t_start, global_t_stop = rec_marker
-            self._global_t_start.append(global_t_start)
-            self._global_t_stop.append(global_t_stop)
+            seg_t_start, seg_t_stop = rec_marker
+            self._seg_t_starts.append(seg_t_start)
+            self._seg_t_stops.append(seg_t_stop)
 
             # If there exists an external sortcode in ./sort/[sortname]/*.SortResult (generated after offline sorting)
             if self.sortname is not '':
@@ -121,6 +121,16 @@ class TdtRawIO(BaseRawIO):
                     pass
                 except IOError:
                     pass
+
+        # Re-order segments according to their start times
+        sort_inds = np.argsort(self._seg_t_starts)
+        if not np.array_equal(sort_inds, list(range(nb_segment))):
+            segment_names = [segment_names[x] for x in sort_inds]
+            self._tev_datas = [self._tev_datas[x] for x in sort_inds]
+            self._seg_t_starts = [self._seg_t_starts[x] for x in sort_inds]
+            self._seg_t_stops = [self._seg_t_stops[x] for x in sort_inds]
+            self._tsq[x] = [self._tsq[x] for x in sort_inds]
+        self._global_t_start = self._seg_t_starts[0]
         
         # signal channels EVTYPE_STREAM
         signal_channels = []
@@ -158,7 +168,7 @@ class TdtRawIO(BaseRawIO):
                         assert self._sigs_lengths[seg_index][group_id] == size
 
                     # signal start time, relative to start of segment
-                    t_start = data_index['timestamp'][0] - self._global_t_start[seg_index]
+                    t_start = data_index['timestamp'][0]
                     if group_id not in self._sigs_t_start[seg_index]:
                         self._sigs_t_start[seg_index][group_id] = t_start
                     else:
@@ -204,12 +214,11 @@ class TdtRawIO(BaseRawIO):
         self._waveforms_dtype = []
         unit_channels = []
         keep = info_channel_groups['TankEvType'] == EVTYPE_SNIP
+        tsq = np.hstack(self._tsq)
+        # If there is no chance the differet TSQ files will have different units, then we can do tsq = self._tsq[0]
         for info in info_channel_groups[keep]:
             for c in range(info['NumChan']):
                 chan_id = c + 1
-                # unit_ids is get only from the first segment
-                # otherwise it would too long
-                tsq = self._tsq[seg_index]  # TODO: Don't we need to iterate through seg_index?!
                 mask = (tsq['code_type'] == EVTYPE_SNIP) &\
                        (tsq['store_name'] == info['StoreName']) &\
                        (tsq['channel_id'] == chan_id)
@@ -261,10 +270,10 @@ class TdtRawIO(BaseRawIO):
         return self.header['nb_segment'][block_index]
 
     def _segment_t_start(self, block_index, seg_index):
-        return 0.
+        return self._seg_t_starts[seg_index] - self._global_t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self._global_t_stop[seg_index] - self._global_t_start[seg_index]
+        return self._seg_t_stops[seg_index] - self._global_t_start
     
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
@@ -273,7 +282,7 @@ class TdtRawIO(BaseRawIO):
     
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
-        return self._sigs_t_start[seg_index][group_id]
+        return self._sigs_t_start[seg_index][group_id] - self._global_t_start
     
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         # check of channel_indexes is same group_id is done outside (BaseRawIO)
@@ -286,12 +295,12 @@ class TdtRawIO(BaseRawIO):
             i_stop = self._sigs_lengths[seg_index][group_id]
         
         dt = self._sig_dtype_by_group[group_id]
-        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
+        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
         
         sample_per_chunk = self._sig_sample_per_chunk[group_id]
         bl0 = i_start//sample_per_chunk
         bl1 = int(np.ceil(i_stop/sample_per_chunk))
-        chunk_nb_bytes = sample_per_chunk*dt.itemsize
+        chunk_nb_bytes = sample_per_chunk * dt.itemsize
         
         for c, channel_index in enumerate(channel_indexes):
             data_index = self._sigs_index[seg_index][channel_index]
@@ -329,10 +338,10 @@ class TdtRawIO(BaseRawIO):
             mask &= (tsq['sortcode'] == unit_id)
         
         if t_start is not None:
-            mask &= tsq['timestamp'] >= (t_start+self._global_t_start[seg_index])
+            mask &= tsq['timestamp'] >= (t_start + self._global_t_start)
         
         if t_stop is not None:
-            mask &= tsq['timestamp'] <= (t_stop+self._global_t_start[seg_index])
+            mask &= tsq['timestamp'] <= (t_stop + self._global_t_start)
         
         return mask
     
@@ -346,9 +355,9 @@ class TdtRawIO(BaseRawIO):
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
+        mask = self._get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
         timestamps = tsq[mask]['timestamp']
-        timestamps -= self._global_t_start[seg_index]
+        timestamps -= self._global_t_start
         return timestamps
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -392,7 +401,7 @@ class TdtRawIO(BaseRawIO):
         mask = self. _get_mask(tsq, seg_index, EVTYPE_STRON, store_name, chan_id, None, None, None)
 
         timestamps = tsq[mask]['timestamp']
-        timestamps -= self._global_t_start[seg_index]
+        timestamps -= self._global_t_start
         labels = tsq[mask]['offset'].astype('U')
         durations = None
         # TODO if user demand event to epoch
