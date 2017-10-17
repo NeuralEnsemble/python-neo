@@ -98,12 +98,17 @@ class TdtRawIO(BaseRawIO):
             tsq_filename = os.path.join(path, tankname + '_' + segment_name + '.tsq')
             tsq = np.fromfile(tsq_filename, dtype=tsq_dtype)
             self._tsq.append(tsq)
-            # self._seg_t_starts.append(tsq[tsq['store_name'] == b'\x01']['timestamp'])  # Mark Hanus suggested this
-            # self._seg_t_stops.append(tsq[tsq['store_name'] == b'\x02']['timestamp'])   # is correct. But it's slower.
-            rec_marker = tsq[tsq['code_type'] == EVTYPE_MARK]['timestamp']
-            seg_t_start, seg_t_stop = rec_marker
-            self._seg_t_starts.append(seg_t_start)
-            self._seg_t_stops.append(seg_t_stop)
+            # Start and stop times are only found in the second and last header row, respectively.
+            if tsq[1]['evname'] == chr(EVMARK_STARTBLOCK).encode():
+                self._seg_t_starts.append(tsq[1]['timestamp'])
+            else:
+                self._seg_t_starts.append(np.nan)
+                print('segment start time not found')
+            if tsq[-1]['evname'] == chr(EVMARK_STOPBLOCK).encode():
+                self._seg_t_stops.append(tsq[-1]['timestamp'])
+            else:
+                self._seg_t_stops.append(np.nan)
+                print('segment stop time not found')
 
             # If there exists an external sortcode in ./sort/[sortname]/*.SortResult (generated after offline sorting)
             if self.sortname is not '':
@@ -155,9 +160,9 @@ class TdtRawIO(BaseRawIO):
                 for seg_index, segment_name in enumerate(segment_names):
                     # get data index
                     tsq = self._tsq[seg_index]
-                    mask = (tsq['code_type'] == EVTYPE_STREAM) &\
-                           (tsq['store_name'] == info['StoreName']) &\
-                           (tsq['channel_id'] == chan_id)
+                    mask = (tsq['evtype'] == EVTYPE_STREAM) &\
+                           (tsq['evname'] == info['StoreName']) &\
+                           (tsq['channel'] == chan_id)
                     data_index = tsq[mask].copy()
                     self._sigs_index[seg_index][chan_index] = data_index
                     
@@ -219,9 +224,9 @@ class TdtRawIO(BaseRawIO):
         for info in info_channel_groups[keep]:
             for c in range(info['NumChan']):
                 chan_id = c + 1
-                mask = (tsq['code_type'] == EVTYPE_SNIP) &\
-                       (tsq['store_name'] == info['StoreName']) &\
-                       (tsq['channel_id'] == chan_id)
+                mask = (tsq['evtype'] == EVTYPE_SNIP) &\
+                       (tsq['evname'] == info['StoreName']) &\
+                       (tsq['channel'] == chan_id)
                 unit_ids = np.unique(tsq[mask]['sortcode'])
                 for unit_id in unit_ids:
                     unit_index = len(unit_channels)
@@ -328,11 +333,11 @@ class TdtRawIO(BaseRawIO):
             
         return raw_signals
 
-    def _get_mask(self, tsq, seg_index, code_type, store_name, chan_id, unit_id, t_start, t_stop):
+    def _get_mask(self, tsq, seg_index, evtype, evname, chan_id, unit_id, t_start, t_stop):
         """Used inside spike and events methods"""
-        mask = (tsq['code_type'] == code_type) & \
-               (tsq['store_name'] == store_name) & \
-               (tsq['channel_id'] == chan_id)
+        mask = (tsq['evtype'] == evtype) & \
+               (tsq['evname'] == evname) & \
+               (tsq['channel'] == chan_id)
         
         if unit_id is not None:
             mask &= (tsq['sortcode'] == unit_id)
@@ -462,24 +467,31 @@ def read_tbk(tbk_filename):
 
 
 tsq_dtype = [
-    ('size', 'int32'),                               # bytes 0-4
-    ('code_type', 'int32'),  # ('evtype','int32')    # bytes 5-8
-    ('store_name', 'S4'),   # ('code','S4')          # bytes 9-12
-    ('channel_id', 'uint16'),  # ('channel','uint16')# bytes 13-14
-    ('sortcode', 'uint16'),                          # bytes 15-16
-    ('timestamp', 'float64'),                        # bytes 17-24
-    ('offset', 'int64'),                             # bytes 25-32
-    ('dataformat', 'int32'),                         # bytes 33-36
-    ('frequency', 'float32'),                        # bytes 37-40
+    ('size', 'int32'),          # bytes 0-4
+    ('evtype', 'int32'),        # bytes 5-8
+    ('evname', 'S4'),           # bytes 9-12
+    ('channel', 'uint16'),      # bytes 13-14
+    ('sortcode', 'uint16'),     # bytes 15-16
+    ('timestamp', 'float64'),   # bytes 17-24
+    ('offset', 'int64'),        # bytes 25-32
+    ('dataformat', 'int32'),    # bytes 33-36
+    ('frequency', 'float32'),   # bytes 37-40
 ]
 
-EVTYPE_UNKNOWN = 0
-EVTYPE_STRON = 257  # 0x101
-EVTYPE_STROFF = 258  # 0x102
-# EVTYPE_SCALER = 513  # 0x201
-EVTYPE_STREAM = 33025  # 0x8101
-EVTYPE_SNIP = 33281  # 0x8201
-EVTYPE_MARK = 34817  # 0x8801
+EVTYPE_UNKNOWN  = int('00000000', 16)       # 0
+EVTYPE_STRON    = int('00000101', 16)       # 257
+EVTYPE_STROFF   = int('00000102', 16)       # 258
+EVTYPE_SCALAR   = int('00000201', 16)       # 513
+EVTYPE_STREAM   = int('00008101', 16)       # 33025
+EVTYPE_SNIP     = int('00008201', 16)       # 33281
+EVTYPE_MARK     = int('00008801', 16)       # 34817
+EVTYPE_HASDATA  = int('00008000', 16)       # 32768
+EVTYPE_UCF      = int('00000010', 16)       # 16
+EVTYPE_PHANTOM  = int('00000020', 16)       # 32
+EVTYPE_MASK     = int('0000FF0F', 16)       # 65295
+EVTYPE_INVALID_MASK = int('FFFF0000', 16)   # 4294901760
+EVMARK_STARTBLOCK   = int('0001', 16)       # 1
+EVMARK_STOPBLOCK    = int('0002', 16)       # 2
 
 
 data_formats = {
