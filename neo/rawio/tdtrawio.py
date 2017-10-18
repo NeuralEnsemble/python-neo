@@ -134,7 +134,7 @@ class TdtRawIO(BaseRawIO):
             self._tev_datas = [self._tev_datas[x] for x in sort_inds]
             self._seg_t_starts = [self._seg_t_starts[x] for x in sort_inds]
             self._seg_t_stops = [self._seg_t_stops[x] for x in sort_inds]
-            self._tsq[x] = [self._tsq[x] for x in sort_inds]
+            self._tsq = [self._tsq[x] for x in sort_inds]
         self._global_t_start = self._seg_t_starts[0]
         
         # signal channels EVTYPE_STREAM
