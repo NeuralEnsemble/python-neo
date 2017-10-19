@@ -20,7 +20,7 @@ In a directory there are several files:
 
 Units in this IO are not garanty.
 
-Author: Samuel Garcia, SummitKwan
+Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 
 """
 from __future__ import print_function, division, absolute_import
