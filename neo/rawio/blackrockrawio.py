@@ -222,6 +222,7 @@ class BlackrockRawIO(BaseRawIO):
         event_channels = []
         unit_channels = []
         sig_channels = []
+        unit_channel_ids = []
 
         # Step1 NEV file
         if self._avail_files['nev']:
@@ -251,6 +252,7 @@ class BlackrockRawIO(BaseRawIO):
                     self.internal_unit_ids.append((channel_id, unit_id))
                     name = "ch{}#{}".format(channel_id, unit_id)
                     _id = "Unit {}".format(1000 * channel_id + unit_id)
+                    unit_channel_ids.append((channel_id, unit_id))
                     wf_gain = self.__nev_params('digitization_factor')[channel_id] / 1000.
                     wf_offset = 0.
                     wf_units = 'uV'
@@ -354,11 +356,11 @@ class BlackrockRawIO(BaseRawIO):
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = rec_datetime
-        
+
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
-            unit_ann['channel_id'] = channel_id
-            unit_ann['unit_id'] = unit_id
+            unit_ann['channel_id'] = unit_channel_ids[c][0]
+            unit_ann['unit_id'] = unit_channel_ids[c][1]
             unit_ann['unit_tag'] = {0: 'unclassified', 255: 'noise'}.get(unit_id, str(unit_id))
         
         for seg_index in range(self._nb_segment):
