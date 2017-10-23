@@ -119,7 +119,9 @@ class BaseFromRaw(BaseIO):
         #ChannelIndex are plit in 2 parts:
         #  * some for AnalogSignals
         #  * some for Units
-        
+
+        filename = self._source_name()
+
         #ChannelIndex ofr AnalogSignals
         all_channels = self.header['signal_channels']
         channel_indexes_list = self.get_group_channel_indexes()
@@ -128,7 +130,7 @@ class BaseFromRaw(BaseIO):
                                                         signal_group_mode=signal_group_mode).items():
                 neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[ind_abs]['name'].astype('S'),
                                 channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i),
-                                                 file_origin=self.source_name())
+                                                 file_origin=self.filename)
                 bl.channel_indexes.append(neo_channel_index)
         
         #ChannelIndex and Unit
@@ -140,19 +142,19 @@ class BaseFromRaw(BaseIO):
         if units_group_mode=='all-in-one':
             if unit_channels.size>0:
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for all Unit', file_origin=self.source_name())
+                                        name='ChannelIndex for all Unit', file_origin=self.filename)
                 bl.channel_indexes.append(channel_index)
             for c in range(unit_channels.size):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit = Unit(file_origin=self.source_name(), **unit_annotations)
+                unit = Unit(file_origin=self.filename, **unit_annotations)
                 channel_index.units.append(unit)
                 
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit = Unit(file_origin=self.source_name(), **unit_annotations)
+                unit = Unit(file_origin=self.filename, **unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for Unit', file_origin=self.source_name())
+                                        name='ChannelIndex for Unit', file_origin=self.filename)
                 channel_index.units.append(unit)
                 bl.channel_indexes.append(channel_index)
         
@@ -407,13 +409,13 @@ class BaseFromRaw(BaseIO):
             annotations = check_annotations(annotations)
             
             if event_channels['type'][chan_ind] == b'event':
-                e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, file_origin=self.source_name(),
+                e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, file_origin=self.filename,
                           **annotations)
                 e.segment = seg
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
                 e = Epoch(times=ev_times, durations=ev_durations, labels=ev_labels,
-                                        units='s', copy=False, file_origin=self.source_name(), **annotations)
+                                        units='s', copy=False, file_origin=self.filename, **annotations)
                 e.segment = seg
                 seg.epochs.append(e)
             
