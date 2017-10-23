@@ -309,8 +309,8 @@ class BlackrockRawIO(BaseRawIO):
                                                             units, gain, offset,group_id,))
             
             #t_start/t_stop for segment are given by nsx limits or nev limits
-            self._t_starts, self._t_stops = [], []
-            self._seg_t_starts = []
+            self._sigs_t_starts = []
+            self._seg_t_starts, self._seg_t_stops = [], []
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
                 if self.__nsx_data_header[self.nsx_to_load] is None:
@@ -334,8 +334,8 @@ class BlackrockRawIO(BaseRawIO):
                     self._seg_t_starts.append(min_nev_time)
                 else:
                     self._seg_t_starts.append(t_start)
-                self._t_starts.append(float(t_start))
-                self._t_stops.append(float(t_stop))
+                self._seg_t_stops.append(float(t_stop))
+                self._sigs_t_starts.append(float(t_start))
        
         else:
             #not signal at all so 1 segment
@@ -352,8 +352,8 @@ class BlackrockRawIO(BaseRawIO):
                 if data.size > 0:
                     t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
                     min_nev_time = min(min_nev_time, t)
-            self._t_starts, self._t_stops = [min_nev_time], [max_nev_time]
-            self._seg_t_starts = [min_nev_time]
+            self._sigs_t_starts = [min_nev_time]
+            self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
 
         #finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -426,7 +426,7 @@ class BlackrockRawIO(BaseRawIO):
         return self._seg_t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self._t_stops[seg_index]
+        return self._seg_t_stops[seg_index]
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         memmap_data = self.nsx_data[seg_index]
@@ -434,7 +434,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         #same as segment starts
-        return self._t_starts[seg_index]
+        return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
@@ -483,7 +483,7 @@ class BlackrockRawIO(BaseRawIO):
             if t_start is None:
                 t_start = self._seg_t_starts[seg_index]
             if t_stop is None:
-                t_stop = self._t_stops[seg_index]
+                t_stop = self._seg_t_stops[seg_index]
         
         if t_start is None:
             ind_start = None
