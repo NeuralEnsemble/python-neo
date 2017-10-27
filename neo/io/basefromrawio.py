@@ -120,7 +120,6 @@ class BaseFromRaw(BaseIO):
         #  * some for AnalogSignals
         #  * some for Units
 
-        filename = self._source_name()
 
         #ChannelIndex ofr AnalogSignals
         all_channels = self.header['signal_channels']
