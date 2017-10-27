@@ -303,19 +303,19 @@ class BlackrockRawIO(BaseRawIO):
             elif spec == '2.1':
                 self.__get_nsx_param_variant_a('labels', self.nsx_to_load)
                 ext_header = self.nsx_parameters
-                #print(ext_header)
+                print(ext_header)
 
-            for i, chan in enumerate(ext_header):
-                print(chan)
-                ch_name = chan['electrode_label'].decode()
-                ch_id = chan['electrode_id']
+            for i, chan in enumerate(self.__nsx_ext_header[self.nsx_to_load]):
+                print(ext_header)
+                ch_name = ext_header['labels'][i].decode()
+                ch_id = i
                 sig_dtype = 'int16'
-                units = chan['units'].decode()
+                units = ext_header['units'][i].decode()
                 #max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
                 #dangarous situation so cast to float everyone
-                gain = (float(chan['max_analog_val']) - float(chan['min_analog_val']))/\
-                                                    (float(chan['max_digital_val']) - float(chan['min_digital_val']))
-                offset = -float(chan['min_digital_val'])*gain + float(chan['min_analog_val'])
+                gain = (float(ext_header['max_analog_val'][i]) - float(ext_header['min_analog_val'][i]))/\
+                                                    (float(ext_header['max_digital_val'][i]) - float(ext_header['min_digital_val'][i]))
+                offset = -float(ext_header['min_digital_val'][i])*gain + float(ext_header['min_analog_val'][i])
                 group_id = 0
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype, 
                                                             units, gain, offset,group_id,))
