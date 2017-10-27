@@ -355,16 +355,16 @@ class BlackrockRawIO(BaseRawIO):
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = rec_datetime
 
-        flt_type = {0: 'None', 1: 'Butterworth'}
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
             unit_ann['channel_id'] = self.internal_unit_ids[c][0]
             unit_ann['unit_id'] = self.internal_unit_ids[c][1]
             unit_ann['unit_tag'] = {0: 'unclassified', 255: 'noise'}.get(unit_id, str(unit_id))
 
+        flt_type = {0: 'None', 1: 'Butterworth'}
         for c in range(sig_channels.size):
             if self._avail_files['nev']:
-                chidx_ann = self.raw_annotations['chidx'][c]
+                chidx_ann = self.raw_annotations['signal_channels'][c]
                 if sig_channels[c]['id'] in self.__nev_ext_header[b'NEUEVWAV']['electrode_id']:
                     get_idx = list(
                         self.__nev_ext_header[b'NEUEVWAV']['electrode_id']).index(sig_channels[c]['id'])
