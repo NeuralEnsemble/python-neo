@@ -127,9 +127,10 @@ class BaseFromRaw(BaseIO):
         for channel_index in channel_indexes_list:
             for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_index, 
                                                         signal_group_mode=signal_group_mode).items():
+                chidx_annotations = self.raw_annotations['signal_channels'][i]
+                chidx_annotations.pop('name')
                 neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[ind_abs]['name'].astype('S'),
-                                channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i),
-                                                 file_origin=self.filename)
+                                channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i), **chidx_annotations)
                 bl.channel_indexes.append(neo_channel_index)
         
         #ChannelIndex and Unit
@@ -140,20 +141,22 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         if units_group_mode=='all-in-one':
             if unit_channels.size>0:
+                chidx_annotations = self.raw_annotations['signal_channels'][-1]
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for all Unit', file_origin=self.filename)
+                                        name='ChannelIndex for all Unit', **chidx_annotations)
                 bl.channel_indexes.append(channel_index)
             for c in range(unit_channels.size):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit = Unit(file_origin=self.filename, **unit_annotations)
+                unit = Unit(**unit_annotations)
                 channel_index.units.append(unit)
                 
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
+                chidx_annotations = self.raw_annotations['signal_channels'][-(len(unit_channels)-c)]
                 unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit = Unit(file_origin=self.filename, **unit_annotations)
+                unit = Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for Unit', file_origin=self.filename)
+                                        name='ChannelIndex for Unit', **chidx_annotations)
                 channel_index.units.append(unit)
                 bl.channel_indexes.append(channel_index)
         
@@ -408,13 +411,12 @@ class BaseFromRaw(BaseIO):
             annotations = check_annotations(annotations)
             
             if event_channels['type'][chan_ind] == b'event':
-                e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, file_origin=self.filename,
-                          **annotations)
+                e = Event(times=ev_times, labels=ev_labels, units='s', copy=False, **annotations)
                 e.segment = seg
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
                 e = Epoch(times=ev_times, durations=ev_durations, labels=ev_labels,
-                                        units='s', copy=False, file_origin=self.filename, **annotations)
+                                        units='s', copy=False, **annotations)
                 e.segment = seg
                 seg.epochs.append(e)
             

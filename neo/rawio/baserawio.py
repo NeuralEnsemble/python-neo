@@ -233,6 +233,7 @@ class BaseRawIO(object):
                     d = {}
                     d['name'] = event_channels['name'][c]
                     d['id'] = event_channels['id'][c]
+                    d['file_origin'] = self._source_name()
                     a['blocks'][block_index]['segments'][seg_index]['events'].append(d)
         
         for c in range(signal_channels.size):
@@ -240,6 +241,7 @@ class BaseRawIO(object):
             d = {}
             d['name'] = signal_channels['name'][c]
             d['channel_id'] = signal_channels['id'][c]
+            d['file_origin'] = self._source_name()
             a['signal_channels'].append(d)
 
         for c in range(unit_channels.size):
@@ -247,13 +249,21 @@ class BaseRawIO(object):
             d = {}
             d['name'] = unit_channels['name'][c]
             d['id'] = unit_channels['id'][c]
+            d['file_origin'] = self._source_name()
             a['unit_channels'].append(d)
+
+        for c in range(unit_channels.size):
+            #use for ChannelIndex.annotations
+            d = {}
+            d['file_origin'] = self._source_name()
+            a['signal_channels'].append(d)
 
         for c in range(event_channels.size):
             #not used in neo.io at the moment could usefull one day
             d = {}
             d['name'] = event_channels['name'][c]
             d['id'] = event_channels['id'][c]
+            d['file_origin'] = self._source_name()
             a['event_channel'].append(d)
         
         self.raw_annotations = a
