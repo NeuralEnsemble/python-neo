@@ -130,6 +130,7 @@ class BaseFromRaw(BaseIO):
                 chidx_annotations = self.raw_annotations['signal_channels'][i]
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
+                chidx_annotations = check_annotations(chidx_annotations)
                 neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[ind_abs]['name'].astype('S'),
                                 channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i), **chidx_annotations)
                 bl.channel_indexes.append(neo_channel_index)
@@ -143,6 +144,7 @@ class BaseFromRaw(BaseIO):
         if units_group_mode=='all-in-one':
             if unit_channels.size>0:
                 chidx_annotations = self.raw_annotations['signal_channels'][-1]
+                chidx_annotations = check_annotations(chidx_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
                                         name='ChannelIndex for all Unit', **chidx_annotations)
                 bl.channel_indexes.append(channel_index)
@@ -154,6 +156,7 @@ class BaseFromRaw(BaseIO):
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
                 chidx_annotations = self.raw_annotations['signal_channels'][-(len(unit_channels)-c)]
+                chidx_annotations = check_annotations(chidx_annotations)
                 unit_annotations = self.raw_annotations['unit_channels'][c]
                 unit = Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
