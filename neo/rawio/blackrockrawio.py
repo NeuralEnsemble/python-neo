@@ -193,6 +193,10 @@ class BlackrockRawIO(BaseRawIO):
             '2.1': self.__get_nsx_param_variant_a,
             '2.2': self.__get_nsx_param_variant_b,
             '2.3': self.__get_nsx_param_variant_b}
+        self.__nsx_databl_param = {
+            '2.1': self.__get_nsx_databl_param_variant_a} #,
+            #'2.2': self.__get_nsx_databl_param_variant_b,
+            #'2.3': self.__get_nsx_databl_param_variant_b}
         #NEV
         self.__nev_header_reader = {
             '2.1': self.__read_nev_header_variant_a,
@@ -293,8 +297,16 @@ class BlackrockRawIO(BaseRawIO):
             self._nb_segment = len(self.nsx_data)
             
             sig_sampling_rate = float(main_sampling_rate / self.__nsx_basic_header[self.nsx_to_load]['period'])
-            
-            for i, chan in enumerate(self.__nsx_ext_header[self.nsx_to_load]):
+
+            if spec in ['2.2', '2.3']:                                      #  CHANGED THIS, CHECK BACK HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                ext_header = self.__nsx_ext_header[self.nsx_to_load]
+            elif spec == '2.1':
+                self.__get_nsx_param_variant_a('labels', self.nsx_to_load)
+                ext_header = self.nsx_parameters
+                #print(ext_header)
+
+            for i, chan in enumerate(ext_header):
+                print(chan)
                 ch_name = chan['electrode_label'].decode()
                 ch_id = chan['electrode_id']
                 sig_dtype = 'int16'
@@ -783,6 +795,32 @@ class BlackrockRawIO(BaseRawIO):
                 filename, dtype='int16', shape=shape, offset=offset, mode='r')
 
         return data
+
+    def __get_nsx_databl_param_variant_a(
+            self, param_name, nsx_nb, n_start=None, n_stop=None):
+        """
+        Returns data block parameter (param_name) for a given nsx (nsx_nb) for
+        file spec 2.1. Arg 'n_start' should not be specified! It is only set
+        for compatibility reasons with higher file spec.
+        """
+        filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
+
+        #t_starts, t_stops = \
+        #    self.__nsx_rec_times[self.__nsx_spec[nsx_nb]](nsx_nb)
+
+        bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
+            'bytes_in_headers', nsx_nb)
+
+        # extract parameters from nsx basic extended and data header
+        data_parameters = {
+            'nb_data_points': int(
+                (self.__get_file_size(filename) - bytes_in_headers) /
+                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)}  #   ,
+            #'databl_idx': 1,
+            #'databl_t_start': t_starts[0],
+            #'databl_t_stop': t_stops[0]}
+
+        return data_parameters[param_name]
 
     def __read_nev_header(self, ext_header_variants):
         """
@@ -1393,7 +1431,7 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 labels.append('ainp%i' % (elid - 129 + 1))
 
-        nsx_parameters = {
+        self.nsx_parameters = {
             'labels': labels,
             'units': np.array(
                 ['uV'] *
@@ -1414,7 +1452,7 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters[param_name]
+        return self.nsx_parameters[param_name]
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """
