@@ -204,7 +204,7 @@ class BaseRawIO(object):
         unit_channels = self.header['unit_channels']
         event_channels = self.header['event_channels']
         
-        a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channel':[]}
+        a = {'blocks':[], 'signal_channels':[], 'unit_channels':[], 'event_channels':[]}
         for block_index in range(self.block_count()):
             d = {'segments':[]}
             d['file_origin'] = self.source_name()
@@ -264,7 +264,7 @@ class BaseRawIO(object):
             d['name'] = event_channels['name'][c]
             d['id'] = event_channels['id'][c]
             d['file_origin'] = self._source_name()
-            a['event_channel'].append(d)
+            a['event_channels'].append(d)
         
         self.raw_annotations = a
     
