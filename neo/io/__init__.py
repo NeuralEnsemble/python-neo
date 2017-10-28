@@ -105,6 +105,7 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
+from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
@@ -142,6 +143,7 @@ iolist = [
           AsciiSignalIO,
           AsciiSpikeTrainIO,
           AxonIO,
+          BCI2000IO,
           BlackrockIO,
           BrainVisionIO,
           BrainwareDamIO,

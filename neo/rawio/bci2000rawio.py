@@ -70,7 +70,7 @@ class BCI2000RawIO(BaseRawIO):
 
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            ch_name = param_defs['ChannelNames']['value'][chan_ix]
+            ch_name = param_defs['ChannelNames']['value'][chan_ix] if 'ChannelNames' in param_defs else 'ch' + str(chan_ix)
             chan_id = chan_ix + 1
             sr = param_defs['SamplingRate']['value'] #Hz
             dtype = file_info['DataFormat']
@@ -164,7 +164,7 @@ class BCI2000RawIO(BaseRawIO):
         return np.array((0, 0, 0))
     
     def _event_count(self, block_index, seg_index, event_channel_index):
-        return self._event_arrays_list[event_channel_index].shape[0]
+        return self._event_arrays_list[event_channel_index][0].shape[0]
     
     def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         # Return 3 numpy arrays: timestamp, durations, labels
@@ -184,13 +184,12 @@ class BCI2000RawIO(BaseRawIO):
         return ts[keep], dur[keep], labels[keep]
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # really easy here because in our case it is already seconds
-        event_times = event_timestamps.astype(dtype)
+        event_times = (event_timestamps / float(self._read_info['sampling_rate'])).astype(dtype)
         return event_times
     
     def _rescale_epoch_duration(self, raw_duration, dtype):
         # really easy here because in our case it is already seconds
-        durations = raw_duration.astype(dtype)
+        durations = (raw_duration / float(self._read_info['sampling_rate'])).astype(dtype)
         return durations
 
     @property
@@ -218,8 +217,8 @@ class BCI2000RawIO(BaseRawIO):
                 # In the state vector, find 'events' whenever the state changes
                 st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
                 if len(st_ch_ix) > 0:
-                    ev_times = st_ch_ix / float(self._read_info['sampling_rate'])
-                    durs = np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1])) / self._read_info['sampling_rate']
+                    ev_times = st_ch_ix
+                    durs = np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
                     vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String needed.
                 else:
                     ev_times = durs = vals = np.array([])
@@ -323,7 +322,7 @@ def parse_bci2000_header(filename):
                 else:
                     param_value, units = rescale_value(param_value, dtype)
             elif dtype in ('string', 'variant'):
-                param_value = temp.pop(0)
+                param_value = urllib.parse.unquote(temp.pop(0))
             elif dtype.endswith('list'):  # e.g., intlist, stringlist, floatlist, list
                 dtype = dtype[:-4]
                 # The list parameter values will begin with either an int to specify the number of elements
