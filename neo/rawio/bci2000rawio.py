@@ -197,31 +197,37 @@ class BCI2000RawIO(BaseRawIO):
         if self._my_events is None:
             self._my_events = []
             for s_ix, sd in enumerate(self.raw_annotations['event_channel']):
-                # Determine which bytes of self._memmap['state_vector'] are needed.
-                nbytes = int(np.ceil((sd['bitPos'] + sd['length']) / 8))
-                byte_slice = slice(sd['bytePos'], sd['bytePos'] + nbytes)
-                # Then determine how to mask those bytes to get only the needed bits.
-                bit_mask = np.array([255] * nbytes, dtype=np.uint8)
-                bit_mask[0] &= 255 & (255 << sd['bitPos'])  # Fix the mask for the first byte
-                extra_bits = 8 - (sd['bitPos'] + sd['length']) % 8
-                bit_mask[-1] &= 255 & (255 >> extra_bits)  # Fix the mask for the last byte
-                # When converting to an int, we need to know which integer type it will become
-                n_max_bytes = 1 << (nbytes - 1).bit_length()
-                view_type = {1: np.int8, 2: np.int16, 4: np.int32, 8: np.int64}.get(n_max_bytes)
-                # Slice and mask the data
-                masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
-                # Convert byte array to a vector of ints: pad to give even columns then view as larger int type
-                state_vec = np.pad(masked_byte_array, ((0, n_max_bytes - nbytes)), 'constant').view(dtype=view_type)
-                state_vec = np.right_shift(state_vec, sd['bitPos'])[:, 0]
+                ev_times = durs = vals = np.array([])
+                if sd['name'] not in ['SourceTime', 'StimulusTime']:  # Skip these big but mostly useless (?) states.
+                    # Determine which bytes of self._memmap['state_vector'] are needed.
+                    nbytes = int(np.ceil((sd['bitPos'] + sd['length']) / 8))
+                    byte_slice = slice(sd['bytePos'], sd['bytePos'] + nbytes)
+                    # Then determine how to mask those bytes to get only the needed bits.
+                    bit_mask = np.array([255] * nbytes, dtype=np.uint8)
+                    bit_mask[0] &= 255 & (255 << sd['bitPos'])  # Fix the mask for the first byte
+                    extra_bits = 8 - (sd['bitPos'] + sd['length']) % 8
+                    bit_mask[-1] &= 255 & (255 >> extra_bits)  # Fix the mask for the last byte
+                    # When converting to an int, we need to know which integer type it will become
+                    n_max_bytes = 1 << (nbytes - 1).bit_length()
+                    view_type = {1: np.int8, 2: np.int16, 4: np.int32, 8: np.int64}.get(n_max_bytes)
+                    # Slice and mask the data
+                    masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
+                    # Convert byte array to a vector of ints: pad to give even columns then view as larger int type
+                    state_vec = np.pad(masked_byte_array, ((0, n_max_bytes - nbytes)), 'constant').view(dtype=view_type)
+                    state_vec = np.right_shift(state_vec, sd['bitPos'])[:, 0]
 
-                # In the state vector, find 'events' whenever the state changes
-                st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
-                if len(st_ch_ix) > 0:
-                    ev_times = st_ch_ix
-                    durs = np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
-                    vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String needed.
-                else:
-                    ev_times = durs = vals = np.array([])
+                    # In the state vector, find 'events' whenever the state changes
+                    st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
+                    if len(st_ch_ix) > 0:
+                        ev_times = st_ch_ix
+                        durs = np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
+                        vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String needed by neo.
+                        # For states with infrequent changes, eliminate events where the value was changing to 0
+                        if len(st_ch_ix) < (0.05 * self._read_info['n_samps']):
+                            b_keep = state_vec[st_ch_ix] != 0
+                            ev_times = ev_times[b_keep]
+                            durs = durs[b_keep]
+                            vals = vals[b_keep]
                 self._my_events.append([ev_times, durs, vals])
 
         return self._my_events
