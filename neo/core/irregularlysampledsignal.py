@@ -292,7 +292,7 @@ class IrregularlySampledSignal(BaseSignal):
         Backwards subtraction (other-self)
         '''
         return self.__mul__(-1) + other
-https://forge.in2p3.fr/projects/gitlab/wiki/Wiki#Cr%C3%A9ation-de-compteS39enregistrer
+
     def _repr_pretty_(self, pp, cycle):
         '''
         Handle pretty-printing the :class:`IrregularlySampledSignal`.
