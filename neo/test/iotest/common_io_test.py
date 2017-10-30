@@ -23,6 +23,7 @@ __test__ = False
 url_for_tests = "https://portal.g-node.org/neo/"
 
 import os
+from copy import copy
 
 try:
     import unittest2 as unittest
@@ -35,14 +36,17 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_sub_schema_is_lazy_loaded,
                             assert_lazy_sub_schema_can_be_loaded,
                             assert_children_empty)
-from neo.test.iotest.tools import (can_use_network, cleanup_test_file,
+
+from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+        download_test_file, create_local_temp_dir)
+
+from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
                                    create_generic_reader,
                                    create_generic_writer,
-                                   create_local_temp_dir, download_test_file,
                                    iter_generic_io_objects,
                                    iter_generic_readers, iter_read_objects,
-                                   make_all_directories, read_generic,
+                                   read_generic,
                                    write_generic)
 from neo.test.generate_datasets import generate_from_supported_objects
 
@@ -84,6 +88,7 @@ class BaseTestIO(object):
         '''
         Set up the test fixture.  This is run for every test
         '''
+        self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
         self.shortname = self.ioclass.__name__.lower().strip('io')
         # these objects can both be written and read

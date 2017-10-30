@@ -4,6 +4,7 @@ This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
+
 which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
 and from :class:`quantites.Quantity`, which in turn inherits from 
 :class:`numpy.array`.
@@ -100,7 +101,7 @@ class IrregularlySampledSignal(BaseSignal):
 
     *Slicing*:
         :class:`IrregularlySampledSignal` objects can be sliced. When this
-        occurs, a new :cresclass:`IrregularlySampledSignal` (actually a view) is
+        occurs, a new :class:`IrregularlySampledSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`times` is also
         sliced in the same way.
 
@@ -291,7 +292,7 @@ class IrregularlySampledSignal(BaseSignal):
         Backwards subtraction (other-self)
         '''
         return self.__mul__(-1) + other
-
+https://forge.in2p3.fr/projects/gitlab/wiki/Wiki#Cr%C3%A9ation-de-compteS39enregistrer
     def _repr_pretty_(self, pp, cycle):
         '''
         Handle pretty-printing the :class:`IrregularlySampledSignal`.

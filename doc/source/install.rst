@@ -8,7 +8,7 @@ system.
 Dependencies
 ============
   
-    * Python_ >= 2.6
+    * Python_ >= 2.7
     * numpy_ >= 1.7.1
     * quantities_ >= 0.9.0
 
@@ -47,12 +47,12 @@ on).
     
 To download and install manually, download:
 
-    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.1.zip
+    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.2.zip
 
 Then::
 
-    $ unzip neo-0.5.1.zip
-    $ cd neo-0.5.1
+    $ unzip neo-0.5.2.zip
+    $ cd neo-0.5.2
     $ python setup.py install
     
 or::

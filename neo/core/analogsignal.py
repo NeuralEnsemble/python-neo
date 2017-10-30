@@ -5,6 +5,7 @@ This module implements :class:`AnalogSignal`, an array of analog signals.
 :class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which 
 derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which 
 in turn inherits from :class:`numpy.array`.
+
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
@@ -224,6 +225,20 @@ class AnalogSignal(BaseSignal):
                                         self.annotations,
                                         self.channel_index,
                                         self.segment)
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        new_AS = cls(np.array(self), units=self.units, dtype=self.dtype,
+               t_start=self.t_start, sampling_rate=self.sampling_rate,
+               sampling_period=self.sampling_period, name=self.name,
+               file_origin=self.file_origin, description=self.description)
+        new_AS.__dict__.update(self.__dict__)
+        memo[id(self)] = new_AS
+        for k, v in self.__dict__.items():
+            try:
+                setattr(new_AS, k, deepcopy(v, memo))
+            except:
+                setattr(new_AS, k, v)
+        return new_AS
 
     def _array_finalize_spec(self, obj):
         '''
@@ -488,6 +503,42 @@ class AnalogSignal(BaseSignal):
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj
+
+    def splice(self, signal, copy=False):
+        """
+        Replace part of the current signal by a new piece of signal.
+        
+        The new piece of signal will overwrite part of the current signal
+        starting at the time given by the new piece's `t_start` attribute.
+        
+        The signal to be spliced in must have the same physical dimensions,
+        sampling rate, and number of channels as the current signal and
+        fit within it.
+        
+        If `copy` is False (the default), modify the current signal in place.
+        If `copy` is True, return a new signal and leave the current one untouched.
+        In this case, the new signal will not be linked to any parent objects.        
+        """
+        if signal.t_start < self.t_start:
+            raise ValueError("Cannot splice earlier than the start of the signal")
+        if signal.t_stop > self.t_stop:
+            raise ValueError("Splice extends beyond signal")
+        if signal.sampling_rate != self.sampling_rate:
+            raise ValueError("Sampling rates do not match")
+        i = self.time_index(signal.t_start)
+        j = i + signal.shape[0]
+        if copy:
+            new_signal = deepcopy(self)
+            new_signal.segment = None
+            new_signal.channel_index = None
+            new_signal[i:j, :] = signal
+            return new_signal
+        else:
+          signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
+
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+        return signal
 
     def splice(self, signal, copy=False):
         """

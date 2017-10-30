@@ -35,6 +35,8 @@ and may not be the current affiliation of a contributor.
 * Mark Hollenbeck [14]
 * Mieszko Grodzicki
 * Rick Gerkin [15]
+* Matthieu Sénoville [2]
+* Chadwick Boulay [16]
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
@@ -52,6 +54,7 @@ and may not be the current affiliation of a contributor.
 13. INM-6, Forschungszentrum Jülich, Germany
 14. University of Texas at Austin
 15. Arizona State University
+16. Ottawa Hospital Research Institute, Canada
 
 
 If we've somehow missed you off the list we're very sorry - please let us know.

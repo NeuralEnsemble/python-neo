@@ -30,7 +30,8 @@ Classes:
 
 .. autoclass:: neo.io.ElanIO
 
-.. autoclass:: neo.io.ElphyIO
+..
+  .. autoclass:: neo.io.ElphyIO
 
 .. autoclass:: neo.io.IgorIO
 
@@ -103,6 +104,7 @@ from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
+from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
 from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
@@ -118,6 +120,7 @@ from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
 from neo.io.nestio import NestIO
 from neo.io.neuralynxio import NeuralynxIO
+from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
