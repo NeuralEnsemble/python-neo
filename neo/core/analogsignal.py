@@ -173,7 +173,7 @@ class AnalogSignal(BaseSignal):
 
         __array_finalize__ is called on the new object.
         '''
-        BaseSignal._test_attr_units(cls, signal, units=units)
+        BaseSignal._test_attr_units(signal, units=units)
         obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
 
         if obj.ndim == 1:
