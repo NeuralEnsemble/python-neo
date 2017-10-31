@@ -735,8 +735,8 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
                                     name='signal4',
                                     description='test signal',
                                     file_origin='testfile.txt')
-
-        merged13 = self.signal1.merge(signal3)
+        
+        merged13 = self.signal1.merge(signal3)        
         merged23 = signal2.merge(signal3)
         merged24 = signal2.merge(signal4)
         mergeddata13 = np.array(merged13)

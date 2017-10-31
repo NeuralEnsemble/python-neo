@@ -33,6 +33,7 @@ from neo.core.segment import Segment
 from neo.core.channelindex import ChannelIndex
 from neo.core.unit import Unit
 
+# from neo.core.basesignal import BaseSignal
 from neo.core.analogsignal import AnalogSignal
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 
