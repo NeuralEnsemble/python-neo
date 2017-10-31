@@ -125,7 +125,7 @@ class IrregularlySampledSignal(BaseSignal):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         '''
-        BaseSignal._test_attr_units(cls, signal, units=units)
+        BaseSignal._test_attr_units(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
                 time_units = times.units
