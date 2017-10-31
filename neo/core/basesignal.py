@@ -77,6 +77,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         self.segment = getattr(obj, 'segment', None)
         self.channel_index = getattr(obj, 'channel_index', None)
 
+    @classmethod
     def _test_attr_units(self, signal, units=None):
         '''
         Check units of a signal. This is called whenever a new signal is
