@@ -515,7 +515,7 @@ class BlackrockRawIO(BaseRawIO):
             nb = timestamp.size
         return nb
     
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
         events_data = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
@@ -524,7 +524,7 @@ class BlackrockRawIO(BaseRawIO):
         labels = events_data[ev_dict['mask']][ev_dict['field']]
         
         #time clip
-        sl =  self._get_timestamp_slice(timestamp, seg_index,  None, None)
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
         timestamp = timestamp[sl]
         labels = labels[sl]
         durations = None
