@@ -193,10 +193,6 @@ class BlackrockRawIO(BaseRawIO):
             '2.1': self.__get_nsx_param_variant_a,
             '2.2': self.__get_nsx_param_variant_b,
             '2.3': self.__get_nsx_param_variant_b}
-        self.__nsx_databl_param = {
-            '2.1': self.__get_nsx_databl_param_variant_a} #,
-            #'2.2': self.__get_nsx_databl_param_variant_b,
-            #'2.3': self.__get_nsx_databl_param_variant_b}
         #NEV
         self.__nev_header_reader = {
             '2.1': self.__read_nev_header_variant_a,
@@ -301,7 +297,7 @@ class BlackrockRawIO(BaseRawIO):
             if spec in ['2.2', '2.3']:
                 ext_header = self.__nsx_ext_header[self.nsx_to_load]
             elif spec == '2.1':
-                self.__get_nsx_param_variant_a('labels', self.nsx_to_load)
+                self.__nsx_params[spec]('labels', self.nsx_to_load)
                 ext_header = []
                 keys = ['labels', 'units', 'min_analog_val', 'max_analog_val', 'min_digital_val', 'max_digital_val']
                 for i in range(len(self.__nsx_params[spec]('labels', self.nsx_to_load))):
@@ -795,7 +791,7 @@ class BlackrockRawIO(BaseRawIO):
 
         # get shape of data
         shape = (
-            self.__nsx_databl_param['2.1']('nb_data_points', nsx_nb),
+            self.__nsx_params['2.1']('nb_data_points', nsx_nb),
             self.__nsx_basic_header[nsx_nb]['channel_count'])
         offset = self.__nsx_params['2.1']('bytes_in_headers', nsx_nb)
 
@@ -828,25 +824,6 @@ class BlackrockRawIO(BaseRawIO):
 
         return data
 
-    def __get_nsx_databl_param_variant_a(
-            self, param_name, nsx_nb, n_start=None, n_stop=None):
-        """
-        Returns data block parameter (param_name) for a given nsx (nsx_nb) for
-        file spec 2.1. Arg 'n_start' should not be specified! It is only set
-        for compatibility reasons with higher file spec.
-        """
-        filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
-
-        bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
-            'bytes_in_headers', nsx_nb)
-
-        # extract parameters from nsx basic extended and data header
-        data_parameters = {
-            'nb_data_points': int(
-                (self.__get_file_size(filename) - bytes_in_headers) /
-                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)}  #   ,
-
-        return data_parameters[param_name]
 
     def __read_nev_header(self, ext_header_variants):
         """
@@ -1457,7 +1434,16 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 labels.append('ainp%i' % (elid - 129 + 1))
 
+        filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
+
+        bytes_in_headers = self.__nsx_basic_header[nsx_nb].dtype.itemsize + \
+                           self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
+                           self.__nsx_basic_header[nsx_nb]['channel_count']
+
         nsx_parameters = {
+            'nb_data_points': int(
+                (self.__get_file_size(filename) - bytes_in_headers) /
+                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'labels': labels,
             'units': np.array(
                 ['uV'] *
@@ -1469,10 +1455,7 @@ class BlackrockRawIO(BaseRawIO):
             'max_digital_val': np.array(
                 [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
-            'bytes_in_headers':
-                self.__nsx_basic_header[nsx_nb].dtype.itemsize +
-                self.__nsx_ext_header[nsx_nb].dtype.itemsize *
-                self.__nsx_basic_header[nsx_nb]['channel_count'],
+            'bytes_in_headers': bytes_in_headers,
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
