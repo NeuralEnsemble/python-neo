@@ -309,16 +309,14 @@ class BlackrockRawIO(BaseRawIO):
                     for key in keys:
                         d[key] = self.__nsx_params[spec](key, self.nsx_to_load)[i]
                     ext_header.append(d)
-                print(ext_header)
 
             for i, chan in enumerate(ext_header):
-                print(ext_header)
                 if spec in ['2.2', '2.3']:
                     ch_name = chan['electrode_label'].decode()
                     ch_id = chan['electrode_id']
                 elif spec == '2.1':
                     ch_name = chan['labels'].decode()
-                    ch_id = i                                           # Not sure here
+                    ch_id = self.__nsx_ext_header[self.nsx_to_load][i]['electrode_id']
                 sig_dtype = 'int16'
                 units = chan['units'].decode()
                 #max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
