@@ -308,16 +308,34 @@ class BlackrockRawIO(BaseRawIO):
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype, 
                                                             units, gain, offset,group_id,))
             
-            #t_start/t_stop for segment are given by nsx limits
-            self._t_starts, self._t_stops = [], []
+            #t_start/t_stop for segment are given by nsx limits or nev limits
+            self._sigs_t_starts = []
+            self._seg_t_starts, self._seg_t_stops = [], []
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
                 if self.__nsx_data_header[self.nsx_to_load] is None:
                     t_start = 0.
                 else:
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp']/sig_sampling_rate
-                self._t_starts.append(float(t_start))
-                self._t_stops.append(float(t_start + length/sig_sampling_rate))
+                t_stop = t_start + length / sig_sampling_rate
+                max_nev_time = 0
+                for k, data in self.nev_data.items():
+                    if data.size > 0:
+                        t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        max_nev_time = max(max_nev_time, t)
+                if max_nev_time > t_stop:
+                    t_stop = max_nev_time
+                min_nev_time = max_nev_time
+                for k, data in self.nev_data.items():
+                    if data.size > 0:
+                        t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        min_nev_time = min(min_nev_time, t)
+                if min_nev_time < t_start:
+                    self._seg_t_starts.append(min_nev_time)
+                else:
+                    self._seg_t_starts.append(t_start)
+                self._seg_t_stops.append(float(t_stop))
+                self._sigs_t_starts.append(float(t_start))
        
         else:
             #not signal at all so 1 segment
@@ -329,8 +347,14 @@ class BlackrockRawIO(BaseRawIO):
                 if data.size>0:
                     t = data[-1]['timestamp']/self.__nev_basic_header['timestamp_resolution']
                     max_nev_time = max(max_nev_time, t)
-            self._t_starts, self._t_stops = [0.], [max_nev_time]
-        
+            min_nev_time = max_nev_time
+            for k, data in self.nev_data.items():
+                if data.size > 0:
+                    t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                    min_nev_time = min(min_nev_time, t)
+            self._sigs_t_starts = [min_nev_time]
+            self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
+
         #finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
@@ -405,10 +429,10 @@ class BlackrockRawIO(BaseRawIO):
         return self.filename
 
     def _segment_t_start(self, block_index, seg_index):
-        return self._t_starts[seg_index]
+        return self._seg_t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        return self._t_stops[seg_index]
+        return self._seg_t_stops[seg_index]
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         memmap_data = self.nsx_data[seg_index]
@@ -416,7 +440,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         #same as segment starts
-        return self._t_starts[seg_index]
+        return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index==0
@@ -463,14 +487,14 @@ class BlackrockRawIO(BaseRawIO):
         if self._nb_segment>1:
             #we must clip event in seg time limits
             if t_start is None:
-                t_start = self._t_starts[seg_index]
+                t_start = self._seg_t_starts[seg_index]
             if t_stop is None:
-                t_stop = self._t_stops[seg_index]
+                t_stop = self._seg_t_stops[seg_index]
         
         if t_start is None:
             ind_start = None
         else:
-            ts = int(t_start*self.__nev_basic_header['timestamp_resolution'])
+            ts = np.math.ceil(t_start*self.__nev_basic_header['timestamp_resolution'])
             ind_start = np.searchsorted(timestamp, ts)
         
         if t_stop is None:
@@ -521,7 +545,7 @@ class BlackrockRawIO(BaseRawIO):
             nb = timestamp.size
         return nb
     
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
         events_data = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
@@ -530,7 +554,7 @@ class BlackrockRawIO(BaseRawIO):
         labels = events_data[ev_dict['mask']][ev_dict['field']]
         
         #time clip
-        sl =  self._get_timestamp_slice(timestamp, seg_index,  None, None)
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
         timestamp = timestamp[sl]
         labels = labels[sl]
         durations = None
