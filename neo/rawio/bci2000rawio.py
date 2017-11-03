@@ -2,40 +2,6 @@
 """
 BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
-
-
-Rules for creating a new class:
-  1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits BaseRawIO
-    * copy/paste all methods that need to be implemented.
-      See the end a neo.rawio.baserawio.BaseRawIO
-    * code hard! The main difficulty **is _parse_header()**.
-      In short you have a create a mandatory dict than
-      contains channel informations::
-      
-            self.header = {}
-            self.header['nb_block'] = 2
-            self.header['nb_segment'] = [2, 3]
-            self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
-            self.header['event_channels'] = event_channels    
-    
-  2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
-  
-  3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that endith with "io.py"
-    * Create a that hinerits bot yrou RawIO class and BaseFromRaw class
-    * copy/paste from neo/io/exampleio.py
-
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
-
-
-
 """
 from __future__ import unicode_literals, print_function, division, absolute_import
 
