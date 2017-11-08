@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 This module implements :class:`BaseSignal`, an array of signals.
-This represents a parent class from which all signal objects inherit:
+This is a parent class from which all signal objects inherit:
     :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 
-:class:`BaseSignal` inherits from :class:`quantites.Quantity`, which
+:class:`BaseSignal` inherits from :class:`quantities.Quantity`, which
 inherits from :class:`numpy.array`.
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -15,7 +15,7 @@ Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
 
-# needed for python 3 compatibility
+# needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
 import logging
@@ -28,13 +28,14 @@ from neo.core.channelindex import ChannelIndex
 
 logger = logging.getLogger("Neo")
 
+
 class BaseSignal(BaseNeo, pq.Quantity):
     '''
     This is the base class from which all signal objects inherit:
     :class:`AnalogSignal` and :class:`IrregularlySampledSignal`.
 
     This class contains all common methods of both child classes.
-    It use the following child class attributes:
+    It uses the following child class attributes:
 
         :_necessary_attrs: a list of the attributes that the class must have. 
 
@@ -44,7 +45,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
     def _array_finalize_spec(self, obj):
         '''
-        Useful for :meth:`__array_finalize__`.
+        Called by :meth:`__array_finalize__`, used to customize behaviour of sub-classes.
         '''
         return obj
 
@@ -58,7 +59,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         User-specified values are only relevant for construction from
         constructor, and these are set in __new__ in the child object.
         Then they are just copied over here. Default values for the 
-        specific attributes for inherit objects (:class:`AnalogSignal`
+        specific attributes for subclasses (:class:`AnalogSignal`
         and :class:`IrregularlySampledSignal`) are set in 
         :meth:`_array_finalize_spec`
         '''
@@ -78,10 +79,11 @@ class BaseSignal(BaseNeo, pq.Quantity):
         self.channel_index = getattr(obj, 'channel_index', None)
 
     @classmethod
-    def _test_attr_units(self, signal, units=None):
+    def _rescale(self, signal, units=None):
         '''
-        Check units of a signal. This is called whenever a new signal is
-        created from the constructor. See :meth:`__new__' into child 
+        Check that units are present, and rescale the signal if necessary.
+        This is called whenever a new signal is
+        created from the constructor. See :meth:`__new__' in  
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
         ''' 
         if units is None:
@@ -91,6 +93,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
             # could improve this test, what if units is a string?
             if units != signal.units:
                 signal = signal.rescale(units)
+        return signal
 
     def __getslice__(self, i, j):
         '''
@@ -159,10 +162,10 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
     def duplicate_with_new_array(self, signal):
         '''
-        Create a new signal with the same metadata but different data.abs.
+        Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
         '''
-        #signal is the new signal
+        # signal is the new signal
         required_attributes = self._get_required_attributes(signal,self.units)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)

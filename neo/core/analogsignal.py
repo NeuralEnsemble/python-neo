@@ -81,8 +81,8 @@ class AnalogSignal(BaseSignal):
     Basically, it is a 2D array: dim 0 is time, dim 1 is
     channel index
 
-    Inherits from :class:`basesignal.Basesignal`, which in turn inherits from
-    :class:`quantites.Quantity`.
+    Inherits from :class:`quantities.Quantity`, which in turn inherits from
+    :class:`numpy.ndarray`.
 
     *Usage*::
 
@@ -173,7 +173,7 @@ class AnalogSignal(BaseSignal):
 
         __array_finalize__ is called on the new object.
         '''
-        BaseSignal._test_attr_units(signal, units=units)
+        signal = cls._rescale(signal, units=units)
         obj = pq.Quantity(signal, units=units, dtype=dtype, copy=copy).view(cls)
 
         if obj.ndim == 1:
@@ -225,30 +225,15 @@ class AnalogSignal(BaseSignal):
                                         self.annotations,
                                         self.channel_index,
                                         self.segment)
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_AS = cls(np.array(self), units=self.units, dtype=self.dtype,
-               t_start=self.t_start, sampling_rate=self.sampling_rate,
-               sampling_period=self.sampling_period, name=self.name,
-               file_origin=self.file_origin, description=self.description)
-        new_AS.__dict__.update(self.__dict__)
-        memo[id(self)] = new_AS
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_AS, k, deepcopy(v, memo))
-            except:
-                setattr(new_AS, k, v)
-        return new_AS
 
     def _array_finalize_spec(self, obj):
         '''
-        Useful for :meth:`__array_finalize__`, which is definied in the 
-        parent :class:`basesignal.BaseSignal`, and called every time 
-        a new signal is created.
-
-        It is the appropriate place to set default values for specific 
-        attributes of a signal (common attributes are defined into 
-        :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`)
+        Set default values for attributes specific to :class:`AnalogSignal`.
+        
+        Common attributes are defined in
+        :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
+        which is called every time a new signal is created
+        and calls this method.
         '''
         self._t_start = getattr(obj, '_t_start', 0 * pq.s)
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
@@ -256,18 +241,18 @@ class AnalogSignal(BaseSignal):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_AS = cls(np.array(self), units=self.units, dtype=self.dtype,
+        new_signal = cls(np.array(self), units=self.units, dtype=self.dtype,
                t_start=self.t_start, sampling_rate=self.sampling_rate,
                sampling_period=self.sampling_period, name=self.name,
                file_origin=self.file_origin, description=self.description)
-        new_AS.__dict__.update(self.__dict__)
-        memo[id(self)] = new_AS
+        new_signal.__dict__.update(self.__dict__)
+        memo[id(self)] = new_signal
         for k, v in self.__dict__.items():
             try:
-                setattr(new_AS, k, deepcopy(v, memo))
+                setattr(new_signal, k, deepcopy(v, memo))
             except:
-                setattr(new_AS, k, v)
-        return new_AS
+                setattr(new_signal, k, v)
+        return new_signal
 
     def __repr__(self):
         '''

@@ -4,10 +4,9 @@ This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
-
 which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
-and from :class:`quantites.Quantity`, which in turn inherits from 
-:class:`numpy.array`.
+and from :class:`quantities.Quantity`, which in turn inherits from 
+:class:`numpy.ndarray`.
 
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -28,14 +27,15 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
-
 from neo.core.basesignal import BaseSignal
+from neo.core.channelindex import ChannelIndex
+
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
                                   annotations=None, segment=None, channel_index=None):
     '''
-    A function to map IrregularlySampledSignal.__new__ to function that
+    A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
@@ -53,6 +53,9 @@ class IrregularlySampledSignal(BaseSignal):
     A representation of one or more continuous, analog signals acquired at time
     :attr:`t_start` with a varying sampling interval. Each channel is sampled
     at the same time points.
+
+    Inherits from :class:`quantities.Quantity`, which in turn inherits from
+    :class:`numpy.ndarray`.
 
     *Usage*::
 
@@ -125,7 +128,7 @@ class IrregularlySampledSignal(BaseSignal):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         '''
-        BaseSignal._test_attr_units(signal, units=units)
+        signal = cls._rescale(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
                 time_units = times.units
@@ -181,13 +184,12 @@ class IrregularlySampledSignal(BaseSignal):
 
     def _array_finalize_spec(self, obj):
         '''
-        Useful for :meth:`__array_finalize__`, which is definied in the 
-        parent :class:`basesignal.BaseSignal`, and called every time 
-        a new signal is created.
-
-        It is the appropriate place to set default values for specific 
-        attributes of a signal (common attributes are defined into 
-        :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`)
+        Set default values for attributes specific to :class:`IrregularlySampledSignal`.
+        
+        Common attributes are defined in
+        :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
+        which is called every time a new signal is created
+        and calls this method.
         '''
         self.times = getattr(obj, 'times', None)
         return obj
@@ -220,7 +222,7 @@ class IrregularlySampledSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
-                    #add if channel_index
+                    # add if channel_index
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
         else:
@@ -385,3 +387,62 @@ class IrregularlySampledSignal(BaseSignal):
         new_st = self[id_start:id_stop]
 
         return new_st
+
+    def merge(self, other):
+        '''
+        Merge another signal into this one.
+
+        The signal objects are concatenated horizontally
+        (column-wise, :func:`np.hstack`).
+
+        If the attributes of the two signals are not
+        compatible, an Exception is raised.
+
+        Required attributes of the signal are used.
+        '''
+
+        if not np.array_equal(self.times, other.times):
+            raise MergeError("Cannot merge these two signals as the sample times differ.")
+
+        if self.segment != other.segment:
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[0] != other.lazy_shape[0]:
+                    raise MergeError("Cannot merge signals of different length.")
+                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+        stack = np.hstack(map(np.array, (self, other)))
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        kwargs.update(merged_annotations)
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
+                                copy=False, **kwargs)
+        signal.segment = self.segment
+
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+
+        # merge channel_index (move to ChannelIndex.merge()?)
+        if self.channel_index and other.channel_index:
+            signal.channel_index = ChannelIndex(
+                    index=np.arange(signal.shape[1]),
+                    channel_ids=np.hstack([self.channel_index.channel_ids,
+                                           other.channel_index.channel_ids]),
+                    channel_names=np.hstack([self.channel_index.channel_names,
+                                             other.channel_index.channel_names]))
+        else:
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
+
+        return signal
