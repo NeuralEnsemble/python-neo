@@ -91,7 +91,7 @@ class BCI2000RawIO(BaseRawIO):
         self._read_info['n_samps'] = int((os.stat(self.filename).st_size - file_info['HeaderLen'])
                                          / np.dtype(self._read_info['line_dtype']).itemsize)
 
-        # TODO: Do we just memmap it now, or elsewhere?
+        # memmap is fast so we can get the data ready for reading now.
         self._memmap = np.memmap(self.filename, dtype=self._read_info['line_dtype'],
                                  offset=self._read_info['header_len'], mode='r')
 
@@ -121,13 +121,13 @@ class BCI2000RawIO(BaseRawIO):
         return 0
     
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
-        return []
+        return None
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        return spike_timestamps
+        return None
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return np.array((0, 0, 0))
+        return None
     
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._event_arrays_list[event_channel_index][0].shape[0]
@@ -136,17 +136,13 @@ class BCI2000RawIO(BaseRawIO):
         # Return 3 numpy arrays: timestamp, durations, labels
         # durations must be None for 'event'
         # label must a dtype ='U'
-
         ts, dur, labels = self._event_arrays_list[event_channel_index]
-        if ts is None:
-            keep = np.zeros(ts.shape, dtype=np.bool)
-        else:
-            seg_t_start = self._segment_t_start(block_index, seg_index)
-            keep = np.ones(ts.shape, dtype=np.bool)
-            if t_start is not None:
-                keep = np.logical_and(keep, ts >= t_start)
-            if t_stop is not None:
-                keep = np.logical_and(keep, ts <= t_stop)
+        seg_t_start = self._segment_t_start(block_index, seg_index)
+        keep = np.ones(ts.shape, dtype=np.bool)
+        if t_start is not None:
+            keep = np.logical_and(keep, ts >= t_start)
+        if t_stop is not None:
+            keep = np.logical_and(keep, ts <= t_stop)
         return ts[keep], dur[keep], labels[keep]
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
@@ -154,7 +150,6 @@ class BCI2000RawIO(BaseRawIO):
         return event_times
     
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # really easy here because in our case it is already seconds
         durations = (raw_duration / float(self._read_info['sampling_rate'])).astype(dtype)
         return durations
 
@@ -186,14 +181,9 @@ class BCI2000RawIO(BaseRawIO):
                     st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
                     if len(st_ch_ix) > 0:
                         ev_times = st_ch_ix
-                        durs = np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
-                        vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String needed by neo.
-                        # For states with infrequent changes, eliminate events where the value was changing to 0
-                        if len(st_ch_ix) < (0.05 * self._read_info['n_samps']):
-                            b_keep = state_vec[st_ch_ix] != 0
-                            ev_times = ev_times[b_keep]
-                            durs = durs[b_keep]
-                            vals = vals[b_keep]
+                        durs = np.asarray([None] * len(st_ch_ix))  # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
+                        vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String'd for neo.
+
                 self._my_events.append([ev_times, durs, vals])
 
         return self._my_events
@@ -308,11 +298,11 @@ def parse_bci2000_header(filename):
                     param_value, units = np.nan, ''
                 temp = temp[num_elements:]
                 # Sometimes an element list will be a list of ints even though the element_type is '' (str)...
-                # This usually happens for known parameters, such as SourceChOffset, that can be dealth with
+                # This usually happens for known parameters, such as SourceChOffset, that can be dealt with
                 # explicitly later.
             elif dtype.endswith('matrix'):
                 dtype = dtype[:-6]
-                # The parameter values will be preceded by two dimension descriptors.
+                # The parameter values will be preceded by two dimension descriptors, first rows then columns
                 # Each dimension might be described by an int or a list of labels surrounded by {}
                 n_rows, row_labels = parse_dimensions(temp)
                 n_cols, col_labels = parse_dimensions(temp)
@@ -335,6 +325,7 @@ def parse_bci2000_header(filename):
                 'dtype': dtype
             })
 
+            # At the end of the parameter definition, we might get default, min, max values for the parameter.
             temp.reverse()
             if len(temp): param_def.update({'max_val': rescale_value(temp.pop(0), dtype)})
             if len(temp): param_def.update({'min_val': rescale_value(temp.pop(0), dtype)})
