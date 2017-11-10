@@ -4,8 +4,9 @@ This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
-and  derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
-and from :class:`quantities.Quantity`, which inherits from :class:`numpy.array`.
+which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
+and from :class:`quantities.Quantity`, which in turn inherits from 
+:class:`numpy.ndarray`.
 
 Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -26,14 +27,15 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.basesignal import BaseSignal
+from neo.core.channelindex import ChannelIndex
 
-from neo.core import basesignal
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
                                   annotations=None, segment=None, channel_index=None):
     '''
-    A function to map IrregularlySampledSignal.__new__ to function that
+    A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
@@ -44,13 +46,16 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
     return iss
 
 
-class IrregularlySampledSignal(basesignal.BaseSignal):
+class IrregularlySampledSignal(BaseSignal):
     '''
     An array of one or more analog signals with samples taken at arbitrary time points.
 
     A representation of one or more continuous, analog signals acquired at time
     :attr:`t_start` with a varying sampling interval. Each channel is sampled
     at the same time points.
+
+    Inherits from :class:`quantities.Quantity`, which in turn inherits from
+    :class:`numpy.ndarray`.
 
     *Usage*::
 
@@ -123,15 +128,7 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
         This is called whenever a new :class:`IrregularlySampledSignal` is
         created from the constructor, but not when slicing.
         '''
-        if units is None:
-            if hasattr(signal, "units"):
-                units = signal.units
-            else:
-                raise ValueError("Units must be specified")
-        elif isinstance(signal, pq.Quantity):
-             # could improve this test, what if units is a string?
-            if units != signal.units:
-                signal = signal.rescale(units)
+        signal = cls._rescale(signal, units=units)
         if time_units is None:
             if hasattr(times, "units"):
                 time_units = times.units
@@ -185,33 +182,17 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
                                                self.segment,
                                                self.channel_index)
 
-    def __array_finalize__(self, obj):
+    def _array_finalize_spec(self, obj):
         '''
-        This is called every time a new :class:`IrregularlySampledSignal` is
-        created.
-
-        It is the appropriate place to set default values for attributes
-        for :class:`IrregularlySampledSignal` constructed by slicing or
-        viewing.
-
-        User-specified values are only relevant for construction from
-        constructor, and these are set in __new__. Then they are just
-        copied over here.
+        Set default values for attributes specific to :class:`IrregularlySampledSignal`.
+        
+        Common attributes are defined in
+        :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
+        which is called every time a new signal is created
+        and calls this method.
         '''
-        super(IrregularlySampledSignal, self).__array_finalize__(obj)
         self.times = getattr(obj, 'times', None)
-
-        # The additional arguments
-        self.annotations = getattr(obj, 'annotations', None)
-
-        # Globally recommended attributes
-        self.name = getattr(obj, 'name', None)
-        self.file_origin = getattr(obj, 'file_origin', None)
-        self.description = getattr(obj, 'description', None)
-
-        # Parent objects
-        self.segment = getattr(obj, 'segment', None)
-        self.channel_index = getattr(obj, 'channel_index', None)
+        return obj
 
     def __repr__(self):
         '''
@@ -220,15 +201,6 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
         return '<%s(%s at times %s)>' % (self.__class__.__name__,
                                          super(IrregularlySampledSignal,
                                                self).__repr__(), self.times)
-
-    def __getslice__(self, i, j):
-        '''
-        Get a slice from :attr:`i` to :attr:`j`.
-
-        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
-        '''
-        return self.__getitem__(slice(i, j))
-
 
     def __getitem__(self, i):
         '''
@@ -250,6 +222,7 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
+                    # add if channel_index
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
         else:
@@ -315,14 +288,6 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
         if not (self.times == other.times).all():
             raise ValueError('Times do not match: %s vs %s' %
                              (self.times, other.times))
-
-    def _copy_data_complement(self, other):
-        '''
-        Copy the metadata from another :class:`IrregularlySampledSignal`.
-        '''
-        for attr in ("times", "name", "file_origin",
-                     "description", "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
 
     def __rsub__(self, other, *args):
         '''
@@ -390,76 +355,6 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
         # further interpolation methods could be added
         raise NotImplementedError
 
-    def rescale(self, units):
-        '''
-        Return a copy of the :class:`IrregularlySampledSignal` converted to the
-        specified units
-        '''
-        to_dims = pq.quantity.validate_dimensionality(units)
-        if self.dimensionality == to_dims:
-            to_u = self.units
-            signal = np.array(self)
-        else:
-            to_u = pq.Quantity(1.0, to_dims)
-            from_u = pq.Quantity(1.0, self.dimensionality)
-            try:
-                cf = pq.quantity.get_conversion_factor(from_u, to_u)
-            except AssertionError:
-                raise ValueError('Unable to convert between units of "%s" \
-                                 and "%s"' % (from_u._dimensionality,
-                                              to_u._dimensionality))
-            signal = cf * self.magnitude
-        new = self.__class__(times=self.times, signal=signal, units=to_u)
-        new._copy_data_complement(self)
-        new.channel_index = self.channel_index
-        new.segment = self.segment
-        new.annotations.update(self.annotations)
-        return new
-
-    def merge(self, other):
-        '''
-        Merge another :class:`IrregularlySampledSignal` with this one, and return the
-        merged signal.
-
-        The :class:`IrregularlySampledSignal` objects are concatenated horizontally
-        (column-wise, :func:`np.hstack`).
-
-        If the attributes of the two :class:`IrregularlySampledSignal` are not
-        compatible, a :class:`MergeError` is raised.
-        '''
-        if not np.array_equal(self.times, other.times):
-            raise MergeError("Cannot merge these two signals as the sample times differ.")
-        if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to different segments.")
-        if hasattr(self, "lazy_shape"):
-            if hasattr(other, "lazy_shape"):
-                if self.lazy_shape[0] != other.lazy_shape[0]:
-                    raise MergeError("Cannot merge signals of different length.")
-                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
-            else:
-                raise MergeError("Cannot merge a lazy object with a real object.")
-        if other.units != self.units:
-            other = other.rescale(self.units)
-        stack = np.hstack(map(np.array, (self, other)))
-        kwargs = {}
-        for name in ("name", "description", "file_origin"):
-            attr_self = getattr(self, name)
-            attr_other = getattr(other, name)
-            if attr_self == attr_other:
-                kwargs[name] = attr_self
-            else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
-        kwargs.update(merged_annotations)
-        signal = IrregularlySampledSignal(self.times, stack, units=self.units,
-                                         dtype=self.dtype, copy=False,
-                                         **kwargs)
-        signal.segment = self.segment
-        if hasattr(self, "lazy_shape"):
-            signal.lazy_shape = merged_lazy_shape
-        return signal
-
     def time_slice (self, t_start, t_stop):
         '''
         Creates a new :class:`IrregularlySampledSignal` corresponding to the time slice of
@@ -492,3 +387,62 @@ class IrregularlySampledSignal(basesignal.BaseSignal):
         new_st = self[id_start:id_stop]
 
         return new_st
+
+    def merge(self, other):
+        '''
+        Merge another signal into this one.
+
+        The signal objects are concatenated horizontally
+        (column-wise, :func:`np.hstack`).
+
+        If the attributes of the two signals are not
+        compatible, an Exception is raised.
+
+        Required attributes of the signal are used.
+        '''
+
+        if not np.array_equal(self.times, other.times):
+            raise MergeError("Cannot merge these two signals as the sample times differ.")
+
+        if self.segment != other.segment:
+            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+        if hasattr(self, "lazy_shape"):
+            if hasattr(other, "lazy_shape"):
+                if self.lazy_shape[0] != other.lazy_shape[0]:
+                    raise MergeError("Cannot merge signals of different length.")
+                merged_lazy_shape = (self.lazy_shape[0], self.lazy_shape[1] + other.lazy_shape[1])
+            else:
+                raise MergeError("Cannot merge a lazy object with a real object.")
+        if other.units != self.units:
+            other = other.rescale(self.units)
+        stack = np.hstack(map(np.array, (self, other)))
+        kwargs = {}
+        for name in ("name", "description", "file_origin"):
+            attr_self = getattr(self, name)
+            attr_other = getattr(other, name)
+            if attr_self == attr_other:
+                kwargs[name] = attr_self
+            else:
+                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+        merged_annotations = merge_annotations(self.annotations,
+                                               other.annotations)
+        kwargs.update(merged_annotations)
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
+                                copy=False, **kwargs)
+        signal.segment = self.segment
+
+        if hasattr(self, "lazy_shape"):
+            signal.lazy_shape = merged_lazy_shape
+
+        # merge channel_index (move to ChannelIndex.merge()?)
+        if self.channel_index and other.channel_index:
+            signal.channel_index = ChannelIndex(
+                    index=np.arange(signal.shape[1]),
+                    channel_ids=np.hstack([self.channel_index.channel_ids,
+                                           other.channel_index.channel_ids]),
+                    channel_names=np.hstack([self.channel_index.channel_names,
+                                             other.channel_index.channel_names]))
+        else:
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
+
+        return signal

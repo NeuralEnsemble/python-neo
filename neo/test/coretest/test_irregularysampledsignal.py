@@ -20,6 +20,7 @@ else:
 
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core import Segment, ChannelIndex
+from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_almost_equal, assert_arrays_equal,
                             assert_neo_object_is_compliant,
                             assert_same_sub_schema)
@@ -721,6 +722,42 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
                 ("sample times: %s" % (signal.times[:10],)))
         self.assertEqual(res, targ)
 
+    def test__merge(self):
+        data1 = np.arange(1000.0, 1066.0).reshape((11, 6)) * pq.uV
+        data2 = np.arange(2.0, 2.033, 0.001).reshape((11, 3)) * pq.mV
+        times1 = np.arange(11.0) * pq.ms
+        times2 = np.arange(1.0, 12.0) * pq.ms
+
+        signal1 = IrregularlySampledSignal(times1, data1,
+                                           name='signal1',
+                                           description='test signal',
+                                           file_origin='testfile.txt')
+        signal2 = IrregularlySampledSignal(times1, data2,
+                                           name='signal2',
+                                           description='test signal',
+                                           file_origin='testfile.txt')
+        signal3 = IrregularlySampledSignal(times2, data2,
+                                           name='signal3',
+                                           description='test signal',
+                                           file_origin='testfile.txt')
+
+        merged12 = signal1.merge(signal2)
+
+        target_data12 = np.hstack([data1, data2.rescale(pq.uV)])
+
+        assert_neo_object_is_compliant(signal1)
+        assert_neo_object_is_compliant(signal2)
+        assert_neo_object_is_compliant(merged12)
+
+        self.assertAlmostEqual(merged12[5, 0], 1030.0 * pq.uV, 9)
+        self.assertAlmostEqual(merged12[5, 6], 2015.0 * pq.uV, 9)
+
+        self.assertEqual(merged12.name, 'merge(signal1, signal2)')
+        self.assertEqual(merged12.file_origin, 'testfile.txt')
+
+        assert_arrays_equal(merged12.magnitude, target_data12)
+
+        self.assertRaises(MergeError, signal1.merge, signal3)
 
 
 class TestAnalogSignalFunctions(unittest.TestCase):
@@ -741,7 +778,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         assert_array_equal(signal1, signal2)
         fobj.close()
         os.remove('./pickle')
-        
+
 
 class TestIrregularlySampledSignalEquality(unittest.TestCase):
     def test__signals_with_different_times_should_be_not_equal(self):
