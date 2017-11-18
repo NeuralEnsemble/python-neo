@@ -3,14 +3,17 @@
 BCI2000RawIO is a class to read BCI2000 .dat files.
 https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_Format
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
+from __future__ import print_function, division, absolute_import  # unicode_literals
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
         _event_channel_dtype)
 
 import numpy as np
 import re
-import urllib
+try:
+    from urllib.parse import unquote
+except ImportError:
+    from urllib import url2pathname as unquote
 
 class BCI2000RawIO(BaseRawIO):
     """
@@ -211,7 +214,7 @@ def parse_bci2000_header(filename):
                 if len(units) > 0:
                     param_value *= scales_dict.get(units.lower(), 1)
         else:
-            param_value = urllib.parse.unquote(param_value)
+            param_value = unquote(param_value)
         return param_value, units
 
     def parse_dimensions(param_list):
@@ -219,7 +222,7 @@ def parse_bci2000_header(filename):
         # Sometimes the number of elements isn't given, but the list of element labels is wrapped with {}
         if num_elements == '{':
             num_elements = param_list.index('}')
-            element_labels = [urllib.parse.unquote(param_list.pop(0)) for x in range(num_elements)]
+            element_labels = [unquote(param_list.pop(0)) for x in range(num_elements)]
             param_list.pop(0)  # Remove the '}'
         else:
             num_elements = int(num_elements)
@@ -236,7 +239,8 @@ def parse_bci2000_header(filename):
         keys = [k.rstrip('=') for k in temp[::2]]
         vals = temp[1::2]
         # Insert default version and format
-        file_info = {**{'BCI2000V': 1.0, 'DataFormat': 'int16'}, **dict(zip(keys, vals))}
+        file_info = {'BCI2000V': 1.0, 'DataFormat': 'int16'}
+        file_info.update(**dict(zip(keys, vals)))
         # From string to float/int
         file_info['BCI2000V'] = float(file_info['BCI2000V'])
         for k in ['HeaderLen', 'SourceCh', 'StatevectorLen']:
@@ -245,7 +249,7 @@ def parse_bci2000_header(filename):
 
         # The next lines contain state vector definitions.
         temp = fid.readline().decode('utf8').strip()
-        assert temp == '[ State Vector Definition ]', "State definitions not found in header %s" % self.filename
+        assert temp == '[ State Vector Definition ]', "State definitions not found in header %s" % filename
         state_defs = []
         state_def_dtype = [('name', 'a64'), ('length', int), ('startVal', int), ('bytePos', int), ('bitPos', int)]
         while True:
@@ -258,7 +262,7 @@ def parse_bci2000_header(filename):
         state_defs = np.array(state_defs, dtype=state_def_dtype)
 
         # The next lines contain parameter definitions. There are many, and their formatting can be complicated.
-        assert temp == '[ Parameter Definition ]', "Parameter definitions not found in header %s" % self.filename
+        assert temp == '[ Parameter Definition ]', "Parameter definitions not found in header %s" % filename
         param_defs = {}
         while True:
             temp = fid.readline().decode('utf8')
@@ -272,9 +276,9 @@ def parse_bci2000_header(filename):
             param_def = {'comment': temp[1].strip() if len(temp) > 1 else ''}
             # Parse the parameter definition. Generally it is sec:cat:name dtype name param_value+
             temp = temp[0].split()
-            param_def.update({'section_category_name': [urllib.parse.unquote(x) for x in temp.pop(0).split(':')]})
+            param_def.update({'section_category_name': [unquote(x) for x in temp.pop(0).split(':')]})
             dtype = temp.pop(0)
-            param_name = urllib.parse.unquote(temp.pop(0).rstrip('='))
+            param_name = unquote(temp.pop(0).rstrip('='))
             # Parse the rest. Parse method depends on the dtype
             if dtype in ('int', 'float'):
                 param_value = temp.pop(0)
@@ -284,7 +288,7 @@ def parse_bci2000_header(filename):
                 else:
                     param_value, units = rescale_value(param_value, dtype)
             elif dtype in ('string', 'variant'):
-                param_value = urllib.parse.unquote(temp.pop(0))
+                param_value = unquote(temp.pop(0))
             elif dtype.endswith('list'):  # e.g., intlist, stringlist, floatlist, list
                 dtype = dtype[:-4]
                 # The list parameter values will begin with either an int to specify the number of elements
