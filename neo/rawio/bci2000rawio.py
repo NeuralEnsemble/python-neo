@@ -5,8 +5,7 @@ https://www.bci2000.org/mediawiki/index.php/Technical_Reference:BCI2000_File_For
 """
 from __future__ import print_function, division, absolute_import  # unicode_literals
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
-        _event_channel_dtype)
+from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype
 
 import numpy as np
 import re
@@ -14,6 +13,7 @@ try:
     from urllib.parse import unquote
 except ImportError:
     from urllib import url2pathname as unquote
+
 
 class BCI2000RawIO(BaseRawIO):
     """
@@ -39,15 +39,16 @@ class BCI2000RawIO(BaseRawIO):
 
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            ch_name = param_defs['ChannelNames']['value'][chan_ix] if 'ChannelNames' in param_defs else 'ch' + str(chan_ix)
+            ch_name = param_defs['ChannelNames']['value'][chan_ix]\
+                if 'ChannelNames' in param_defs else 'ch' + str(chan_ix)
             chan_id = chan_ix + 1
-            sr = param_defs['SamplingRate']['value'] #Hz
+            sr = param_defs['SamplingRate']['value']  # Hz
             dtype = file_info['DataFormat']
             units = 'uV'
             gain = param_defs['SourceChGain']['value'][chan_ix]
             offset = param_defs['SourceChOffset']['value'][chan_ix]
             group_id = 0 
-            sig_channels.append((ch_name, chan_id, sr, dtype,  units, gain,offset, group_id))
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
@@ -98,7 +99,6 @@ class BCI2000RawIO(BaseRawIO):
         self._memmap = np.memmap(self.filename, dtype=self._read_info['line_dtype'],
                                  offset=self._read_info['header_len'], mode='r')
 
-    
     def _segment_t_start(self, block_index, seg_index):
         return 0.
 
@@ -112,10 +112,12 @@ class BCI2000RawIO(BaseRawIO):
         return 0.
     
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        if i_start is None: i_start = 0
-        if i_stop is None: i_stop = self._read_info['n_samps']
-        assert (i_start >= 0 and i_start <= self._read_info['n_samps']), "i_start outside data range"
-        assert (i_stop >= 0 and i_stop <= self._read_info['n_samps']), "i_stop outside data range"
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self._read_info['n_samps']
+        assert (0 <= i_start <= self._read_info['n_samps']), "i_start outside data range"
+        assert (0 <= i_stop <= self._read_info['n_samps']), "i_stop outside data range"
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
         return self._memmap['raw_vector'][i_start:i_stop, channel_indexes]
@@ -140,7 +142,7 @@ class BCI2000RawIO(BaseRawIO):
         # durations must be None for 'event'
         # label must a dtype ='U'
         ts, dur, labels = self._event_arrays_list[event_channel_index]
-        seg_t_start = self._segment_t_start(block_index, seg_index)
+        # seg_t_start = self._segment_t_start(block_index, seg_index)
         keep = np.ones(ts.shape, dtype=np.bool)
         if t_start is not None:
             keep = np.logical_and(keep, ts >= t_start)
@@ -177,14 +179,15 @@ class BCI2000RawIO(BaseRawIO):
                     # Slice and mask the data
                     masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
                     # Convert byte array to a vector of ints: pad to give even columns then view as larger int type
-                    state_vec = np.pad(masked_byte_array, ((0, n_max_bytes - nbytes)), 'constant').view(dtype=view_type)
+                    state_vec = np.pad(masked_byte_array, (0, n_max_bytes - nbytes), 'constant').view(dtype=view_type)
                     state_vec = np.right_shift(state_vec, sd['bitPos'])[:, 0]
 
                     # In the state vector, find 'events' whenever the state changes
                     st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
                     if len(st_ch_ix) > 0:
                         ev_times = st_ch_ix
-                        durs = np.asarray([None] * len(st_ch_ix))  # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
+                        durs = np.asarray([None] * len(st_ch_ix))
+                        # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
                         vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String'd for neo.
 
                 self._my_events.append([ev_times, durs, vals])
@@ -202,32 +205,32 @@ def parse_bci2000_header(filename):
         'sec': 1, 'usec': 0.000001, 'musec': 0.000001, 'msec': 0.001
     }
 
-    def rescale_value(param_value, dtype):
-        units = ''
-        if param_value.lower().startswith('0x'):
-            param_value = int(param_value, 16)
-        elif dtype in ['int', 'float']:
-            matches = re.match('(-*\d+)(\w*)', param_value)
+    def rescale_value(param_val, data_type):
+        unit_str = ''
+        if param_val.lower().startswith('0x'):
+            param_val = int(param_val, 16)
+        elif data_type in ['int', 'float']:
+            matches = re.match('(-*\d+)(\w*)', param_val)
             if matches is not None:  # Can be None for % in def, min, max vals
-                param_value, units = matches.group(1), matches.group(2)
-                param_value = int(param_value) if dtype == 'int' else float(param_value)
-                if len(units) > 0:
-                    param_value *= scales_dict.get(units.lower(), 1)
+                param_val, unit_str = matches.group(1), matches.group(2)
+                param_val = int(param_val) if data_type == 'int' else float(param_val)
+                if len(unit_str) > 0:
+                    param_val *= scales_dict.get(unit_str.lower(), 1)
         else:
-            param_value = unquote(param_value)
-        return param_value, units
+            param_val = unquote(param_val)
+        return param_val, unit_str
 
     def parse_dimensions(param_list):
-        num_elements = param_list.pop(0)
+        num_els = param_list.pop(0)
         # Sometimes the number of elements isn't given, but the list of element labels is wrapped with {}
-        if num_elements == '{':
-            num_elements = param_list.index('}')
-            element_labels = [unquote(param_list.pop(0)) for x in range(num_elements)]
+        if num_els == '{':
+            num_els = param_list.index('}')
+            el_labels = [unquote(param_list.pop(0)) for x in range(num_els)]
             param_list.pop(0)  # Remove the '}'
         else:
-            num_elements = int(num_elements)
-            element_labels = [str(ix) for ix in range(num_elements)]
-        return num_elements, element_labels
+            num_els = int(num_els)
+            el_labels = [str(ix) for ix in range(num_els)]
+        return num_els, el_labels
 
     import io
     with io.open(filename, 'rb') as fid:
@@ -280,6 +283,7 @@ def parse_bci2000_header(filename):
             dtype = temp.pop(0)
             param_name = unquote(temp.pop(0).rstrip('='))
             # Parse the rest. Parse method depends on the dtype
+            param_value, units = None, None
             if dtype in ('int', 'float'):
                 param_value = temp.pop(0)
                 if param_value == 'auto':
@@ -331,9 +335,12 @@ def parse_bci2000_header(filename):
 
             # At the end of the parameter definition, we might get default, min, max values for the parameter.
             temp.reverse()
-            if len(temp): param_def.update({'max_val': rescale_value(temp.pop(0), dtype)})
-            if len(temp): param_def.update({'min_val': rescale_value(temp.pop(0), dtype)})
-            if len(temp): param_def.update({'default_val': rescale_value(temp.pop(0), dtype)})
+            if len(temp):
+                param_def.update({'max_val': rescale_value(temp.pop(0), dtype)})
+            if len(temp):
+                param_def.update({'min_val': rescale_value(temp.pop(0), dtype)})
+            if len(temp):
+                param_def.update({'default_val': rescale_value(temp.pop(0), dtype)})
 
             param_defs.update({param_name: param_def})
         # End parameter block
