@@ -297,13 +297,13 @@ class BlackrockRawIO(BaseRawIO):
             if spec in ['2.2', '2.3']:
                 ext_header = self.__nsx_ext_header[self.nsx_to_load]
             elif spec == '2.1':
-                self.__nsx_params[spec]('labels', self.nsx_to_load)
                 ext_header = []
                 keys = ['labels', 'units', 'min_analog_val', 'max_analog_val', 'min_digital_val', 'max_digital_val']
-                for i in range(len(self.__nsx_params[spec]('labels', self.nsx_to_load))):
+                params = self.__nsx_params[spec](self.nsx_to_load)
+                for i in range(len(params['labels'])):
                     d = {}
                     for key in keys:
-                        d[key] = self.__nsx_params[spec](key, self.nsx_to_load)[i]
+                        d[key] = params[key][i]
                     ext_header.append(d)
 
             for i, chan in enumerate(ext_header):
@@ -791,9 +791,9 @@ class BlackrockRawIO(BaseRawIO):
 
         # get shape of data
         shape = (
-            self.__nsx_params['2.1']('nb_data_points', nsx_nb),
+            self.__nsx_params['2.1'](nsx_nb)['nb_data_points'],
             self.__nsx_basic_header[nsx_nb]['channel_count'])
-        offset = self.__nsx_params['2.1']('bytes_in_headers', nsx_nb)
+        offset = self.__nsx_params['2.1'](nsx_nb)['bytes_in_headers']
 
         # read nsx data
         # store as dict for compatibility with higher file specs
@@ -1402,7 +1402,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return wf_left_sweep
 
-    def __get_nsx_param_variant_a(self, param_name, nsx_nb):
+    def __get_nsx_param_variant_a(self, nsx_nb):
         """
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.1.
@@ -1461,7 +1461,7 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters[param_name]
+        return nsx_parameters       # Returns complete dictionary because then it does not need to be called so often
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """
