@@ -310,11 +310,12 @@ class BlackrockRawIO(BaseRawIO):
                 if spec in ['2.2', '2.3']:
                     ch_name = chan['electrode_label'].decode()
                     ch_id = chan['electrode_id']
+                    units = chan['units'].decode()
                 elif spec == '2.1':
-                    ch_name = chan['labels'].decode()
+                    ch_name = chan['labels']
                     ch_id = self.__nsx_ext_header[self.nsx_to_load][i]['electrode_id']
+                    units = chan['units']
                 sig_dtype = 'int16'
-                units = chan['units'].decode()
                 #max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
                 #dangarous situation so cast to float everyone
                 gain = (float(chan['max_analog_val']) - float(chan['min_analog_val']))/\
