@@ -395,6 +395,12 @@ class BlackrockRawIO(BaseRawIO):
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = rec_datetime
+        block_ann['avail_file_set'] = [k for k, v in self._avail_files.items() if v]
+        block_ann['avail_nsx'] = self._avail_nsx
+        block_ann['avail_nev'] = self._avail_files['nev']
+#        block_ann['avail_sif'] = self._avail_files['sif']  #  'sif' and 'ccf' files not yet supported
+#        block_ann['avail_ccf'] = self._avail_files['ccf']
+        block_ann['rec_pauses'] = False
 
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
