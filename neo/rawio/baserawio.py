@@ -252,12 +252,6 @@ class BaseRawIO(object):
             d['file_origin'] = self._source_name()
             a['unit_channels'].append(d)
 
-        for c in range(unit_channels.size):
-            #use for ChannelIndex.annotations
-            d = {}
-            d['file_origin'] = self._source_name()
-            a['signal_channels'].append(d)
-
         for c in range(event_channels.size):
             #not used in neo.io at the moment could usefull one day
             d = {}

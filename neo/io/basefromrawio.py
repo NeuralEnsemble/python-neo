@@ -143,10 +143,8 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         if units_group_mode=='all-in-one':
             if unit_channels.size>0:
-                chidx_annotations = self.raw_annotations['signal_channels'][-1]
-                chidx_annotations = check_annotations(chidx_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for all Unit', **chidx_annotations)
+                                        name='ChannelIndex for all Unit')
                 bl.channel_indexes.append(channel_index)
             for c in range(unit_channels.size):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
@@ -155,12 +153,10 @@ class BaseFromRaw(BaseIO):
                 
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
-                chidx_annotations = self.raw_annotations['signal_channels'][-(len(unit_channels)-c)]
-                chidx_annotations = check_annotations(chidx_annotations)
                 unit_annotations = self.raw_annotations['unit_channels'][c]
                 unit = Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
-                                        name='ChannelIndex for Unit', **chidx_annotations)
+                                        name='ChannelIndex for Unit')
                 channel_index.units.append(unit)
                 bl.channel_indexes.append(channel_index)
         
