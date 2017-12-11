@@ -260,7 +260,7 @@ class AxonRawIO(BaseRawIO):
         t_stop = self._t_starts[seg_index] + self._raw_signals[seg_index].shape[0]/self._sampling_rate
         return t_stop
     
-    def get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
         shape = self._raw_signals[seg_index].shape
         return shape[0]
     
