@@ -128,13 +128,15 @@ class BaseFromRaw(BaseIO):
                                                         signal_group_mode=signal_group_mode).items():
                 chidx_annotations = {}
                 if signal_group_mode=="split-all":
-                    chidx_annotations = self.raw_annotations['chidx'][i]
+                    chidx_annotations = self.raw_annotations['signal_channels'][i]
                 elif signal_group_mode=="group-by-same-units":
-                    for key in list(self.raw_annotations['chidx'][i].keys()):
+                    for key in list(self.raw_annotations['signal_channels'][i].keys()):
                         chidx_annotations[key] = []
                     for j in ind_abs:
-                        for key in list(self.raw_annotations['chidx'][i].keys()):
-                            chidx_annotations[key].append(self.raw_annotations['chidx'][j][key])
+                        for key in list(self.raw_annotations['signal_channels'][i].keys()):
+                            chidx_annotations[key].append(self.raw_annotations['signal_channels'][j][key])
+                if 'name' in list(chidx_annotations.keys()):
+                    chidx_annotations.pop('name')
                 neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[
                          ind_abs]['name'].astype('S'), channel_ids=all_channels[ind_abs]['id'],
                          name='Channel group {}'.format(i), **chidx_annotations)
