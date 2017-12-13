@@ -331,43 +331,50 @@ class BlackrockRawIO(BaseRawIO):
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
                 if self.__nsx_data_header[self.nsx_to_load] is None:
-                    t_start = 0.
+                    t_start = 0.*pq.CompoundUnit("1.0/{0} * s".format(self.__nev_basic_header['timestamp_resolution']))
                 else:
-                    t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp']/sig_sampling_rate
-                t_stop = t_start + length / sig_sampling_rate
-                max_nev_time = 0
+                    t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] * \
+                                        pq.CompoundUnit("1.0/{0} * s".format(sig_sampling_rate))
+                t_stop = t_start + length * pq.CompoundUnit("1.0/{0} * s".format(sig_sampling_rate))
+                max_nev_time = 0 * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                 for k, data in self.nev_data.items():
                     if data.size > 0:
-                        t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        t = data[-1]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                         max_nev_time = max(max_nev_time, t)
                 if max_nev_time > t_stop:
                     t_stop = max_nev_time
                 min_nev_time = max_nev_time
                 for k, data in self.nev_data.items():
                     if data.size > 0:
-                        t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        t = data[0]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                         min_nev_time = min(min_nev_time, t)
                 if min_nev_time < t_start:
                     self._seg_t_starts.append(min_nev_time)
                 else:
                     self._seg_t_starts.append(t_start)
-                self._seg_t_stops.append(float(t_stop))
-                self._sigs_t_starts.append(float(t_start))
+                self._seg_t_stops.append(t_stop)
+                self._sigs_t_starts.append(t_start)
        
         else:
             #not signal at all so 1 segment
             self._nb_segment = 1
 
             #no nsx so use nev min/max timestamp
-            max_nev_time = 0.
+            max_nev_time = 0 * pq.CompoundUnit("1.0/{0} * s".format(
+                    self.__nev_basic_header['timestamp_resolution']))
             for k, data in self.nev_data.items():
                 if data.size>0:
-                    t = data[-1]['timestamp']/self.__nev_basic_header['timestamp_resolution']
+                    t = data[-1]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                    self.__nev_basic_header['timestamp_resolution']))
                     max_nev_time = max(max_nev_time, t)
             min_nev_time = max_nev_time
             for k, data in self.nev_data.items():
                 if data.size > 0:
-                    t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                    t = data[0]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                    self.__nev_basic_header['timestamp_resolution']))
                     min_nev_time = min(min_nev_time, t)
             self._sigs_t_starts = [min_nev_time]
             self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
@@ -457,6 +464,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         #same as segment starts
+        print(self._sigs_t_starts[seg_index])
         return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
@@ -525,7 +533,9 @@ class BlackrockRawIO(BaseRawIO):
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= self.__nev_basic_header['timestamp_resolution']
+        #spike_times /= self.__nev_basic_header['timestamp_resolution']
+        spike_times = spike_times * pq.CompoundUnit("1.0/{0} * s".format(
+                self.__nev_basic_header['timestamp_resolution']))
         return spike_times
     
     def  _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):

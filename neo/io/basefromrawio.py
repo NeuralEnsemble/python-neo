@@ -177,8 +177,10 @@ class BaseFromRaw(BaseIO):
                 t_stop = ensure_second(t_stop)
                 related_seg_index = None
                 for seg_index in range(self.segment_count(block_index)):
-                    seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
-                    seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+                    seg_t_start = ensure_second(self.segment_t_start(block_index, seg_index))
+                    seg_t_stop = ensure_second(self.segment_t_stop(block_index, seg_index))
+                    t_start = t_start.rescale(seg_t_start.units)
+                    t_stop = t_stop.rescale(seg_t_stop.units)
                     if (seg_t_start<=t_start<=seg_t_stop) and (seg_t_start<=t_stop<=seg_t_stop):
                         related_seg_index = seg_index
                 
@@ -249,8 +251,8 @@ class BaseFromRaw(BaseIO):
             return seg
         
         
-        seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
-        seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+        seg_t_start = ensure_second(self.segment_t_start(block_index, seg_index))
+        seg_t_stop = ensure_second(self.segment_t_stop(block_index, seg_index))
         
         # get only a slice of objects limited by t_start and t_stop time_slice = (t_start, t_stop)
         if time_slice is None:
@@ -262,7 +264,8 @@ class BaseFromRaw(BaseIO):
             
             t_start = ensure_second(t_start)
             t_stop = ensure_second(t_stop)
-            
+            t_start = t_start.rescale(seg_t_start.units)
+            t_stop = t_stop.rescale(seg_t_stop.units)
             #checks limits
             if t_start<seg_t_start:
                 t_start = seg_t_start
@@ -270,7 +273,7 @@ class BaseFromRaw(BaseIO):
                 t_stop = seg_t_stop
             
             #in float format in second (for rawio clip)
-            t_start_, t_stop_ = float(t_start.magnitude), float(t_stop.magnitude)
+            t_start_, t_stop_ = t_start.rescale('s'), t_stop.rescale('s').magnitude
             
             #new spiketrain limits
             seg_t_start = t_start
@@ -284,23 +287,27 @@ class BaseFromRaw(BaseIO):
             channel_indexes_list = self.get_group_channel_indexes()
             for channel_indexes in channel_indexes_list:
                 sr = self.get_signal_sampling_rate(channel_indexes) * pq.Hz
-                sig_t_start = self.get_signal_t_start(block_index, seg_index, channel_indexes) * pq.s
+                sig_t_start = self.get_signal_t_start(block_index, seg_index, channel_indexes)
+                print(sig_t_start)
+                if not hasattr(sig_t_start, 'dimensionality'):
+                    print("HERE")
+                    sig_t_start *= pq.s
 
                 sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
                                                                                         channel_indexes=channel_indexes)
                 if not lazy:
                     #in case of time_slice get: get i_start, i_stop, new sig_t_start
                     if t_stop is not None:
-                        i_stop = int((t_stop-sig_t_start).magnitude * sr.magnitude)
+                        i_stop = int(((t_stop-sig_t_start) * sr).rescale('Hz*s').magnitude)
                         if i_stop>sig_size:
                             i_stop = sig_size
                     else:
                         i_stop = None
                     if t_start is not None:
-                        i_start = int((t_start-sig_t_start).magnitude * sr.magnitude)
-                        if i_start<0:
+                        i_start = int(((t_start-sig_t_start) * sr).rescale('Hz*s').magnitude)
+                        if i_start < 0:
                             i_start = 0
-                        sig_t_start += (i_start/sr).rescale('s')
+                        sig_t_start = (sig_t_start + i_start/sr)
                     else:
                         i_start = None
                     
@@ -351,7 +358,7 @@ class BaseFromRaw(BaseIO):
                 waveforms = pq.Quantity(float_waveforms, units=wf_units, dtype='float32', copy=False)
                 wf_sampling_rate = unit_channels['wf_sampling_rate'][unit_index]
                 wf_left_sweep = unit_channels['wf_left_sweep'][unit_index]
-                if wf_left_sweep>0:
+                if wf_left_sweep > 0:
                     wf_left_sweep = float(wf_left_sweep)/wf_sampling_rate * pq.s
                 else:
                     wf_left_sweep = None
@@ -368,11 +375,15 @@ class BaseFromRaw(BaseIO):
             annotations = check_annotations(annotations)
             
             if not lazy:
-                spike_timestamp = self.get_spike_timestamps(block_index=block_index, seg_index=seg_index, 
+                spike_timestamp = self.get_spike_timestamps(block_index=block_index, seg_index=seg_index,
                                         unit_index=unit_index, t_start=t_start_, t_stop=t_stop_)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
-                sptr = SpikeTrain(spike_times, units='s', copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
-                                    waveforms=waveforms, left_sweep=wf_left_sweep, 
+                if hasattr(spike_times, 'dimensionality'):
+                    units = None
+                else:
+                    units = 's'
+                sptr = SpikeTrain(spike_times, units=units, copy=False, t_start=seg_t_start, t_stop=seg_t_stop,
+                                    waveforms=waveforms, left_sweep=wf_left_sweep,
                                     sampling_rate=wf_sampling_rate, **annotations)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index, 
@@ -487,7 +498,7 @@ def ensure_second(v):
     if isinstance(v, float):
         return v*pq.s
     elif isinstance(v, pq.Quantity):
-        return v.rescale('s')
+        return v  # .rescale('s')
     elif isinstance(v, int):
         return float(v)*pq.s
 
