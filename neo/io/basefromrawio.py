@@ -273,7 +273,7 @@ class BaseFromRaw(BaseIO):
                 t_stop = seg_t_stop
             
             #in float format in second (for rawio clip)
-            t_start_, t_stop_ = t_start.rescale('s'), t_stop.rescale('s').magnitude
+            t_start_, t_stop_ = t_start.rescale('s').magnitude, t_stop.rescale('s').magnitude
             
             #new spiketrain limits
             seg_t_start = t_start
@@ -288,9 +288,7 @@ class BaseFromRaw(BaseIO):
             for channel_indexes in channel_indexes_list:
                 sr = self.get_signal_sampling_rate(channel_indexes) * pq.Hz
                 sig_t_start = self.get_signal_t_start(block_index, seg_index, channel_indexes)
-                print(sig_t_start)
                 if not hasattr(sig_t_start, 'dimensionality'):
-                    print("HERE")
                     sig_t_start *= pq.s
 
                 sig_size = self.get_signal_size(block_index=block_index, seg_index=seg_index, 
@@ -400,7 +398,9 @@ class BaseFromRaw(BaseIO):
             if not lazy:
                 ev_timestamp, ev_raw_durations, ev_labels = self.get_event_timestamps(block_index=block_index, seg_index=seg_index, 
                                         event_channel_index=chan_ind, t_start=t_start_, t_stop=t_stop_)
-                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
+                ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64')
+                if not hasattr(ev_times, 'dimensionality'):
+                    ev_times *= pq.s
                 if ev_raw_durations is None:
                     ev_durations = None
                 else:

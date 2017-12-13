@@ -464,7 +464,6 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         #same as segment starts
-        print(self._sigs_t_starts[seg_index])
         return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
@@ -591,7 +590,8 @@ class BlackrockRawIO(BaseRawIO):
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         ev_times = event_timestamps.astype(dtype)
-        ev_times /= self.__nev_basic_header['timestamp_resolution']
+        ev_times *= pq.CompoundUnit("1.0/{0} * s".format(
+                self.__nev_basic_header['timestamp_resolution']))
         return ev_times
 
     
