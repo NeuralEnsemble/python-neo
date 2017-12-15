@@ -119,15 +119,20 @@ class BaseFromRaw(BaseIO):
         #ChannelIndex are plit in 2 parts:
         #  * some for AnalogSignals
         #  * some for Units
-        
+
+
         #ChannelIndex ofr AnalogSignals
         all_channels = self.header['signal_channels']
         channel_indexes_list = self.get_group_channel_indexes()
         for channel_index in channel_indexes_list:
             for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_index, 
                                                         signal_group_mode=signal_group_mode).items():
+                chidx_annotations = self.raw_annotations['signal_channels'][i]
+                if 'name' in list(chidx_annotations.keys()):
+                    chidx_annotations.pop('name')
+                chidx_annotations = check_annotations(chidx_annotations)
                 neo_channel_index = ChannelIndex(index=ind_within, channel_names=all_channels[ind_abs]['name'].astype('S'),
-                                channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i))
+                                channel_ids=all_channels[ind_abs]['id'], name='Channel group {}'.format(i), **chidx_annotations)
                 bl.channel_indexes.append(neo_channel_index)
         
         #ChannelIndex and Unit
