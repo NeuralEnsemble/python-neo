@@ -405,7 +405,7 @@ class BlackrockRawIO(BaseRawIO):
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                             c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
-                anasig_an['file_origin'] = self.filename+'.ns'+str(self.nsx_to_load)
+                anasig_an['file_origin'] = self._filenames['nsX']+'.ns'+str(self.nsx_to_load)
             
             for c in range(unit_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
@@ -414,7 +414,7 @@ class BlackrockRawIO(BaseRawIO):
                 st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
                         channel_id, unit_id)
-                st_ann['file_origin'] = self.filename+'.nev'
+                st_ann['file_origin'] = self._filenames['nev'] + '.nev'
                 
             
             if self._avail_files['nev']:
@@ -423,6 +423,7 @@ class BlackrockRawIO(BaseRawIO):
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
+                    ev_ann['file_origin'] = self._filenames['nev'] + '.nev'
                 
     
     def _source_name(self):
