@@ -405,7 +405,7 @@ class BlackrockRawIO(BaseRawIO):
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                             c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
-                anasig_an['file_origin'] = self._filenames['nsX']+'.ns'+str(self.nsx_to_load)
+                anasig_an['file_origin'] = self._filenames['nsx']+'.ns'+str(self.nsx_to_load)
             
             for c in range(unit_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
