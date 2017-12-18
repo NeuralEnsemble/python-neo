@@ -373,7 +373,6 @@ class BaseFromRaw(BaseIO):
         #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
         unit_indexes = compare_unit_channels(unit_channels, channels_to_load)
-        #start1 = time.time()
         for unit_index in unit_indexes:
             if not lazy and load_waveforms:
                 raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index, seg_index=seg_index, 
