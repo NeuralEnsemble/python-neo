@@ -184,10 +184,17 @@ class BaseFromRaw(BaseIO):
                 seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
 
                 # If a part of the segment is in the current time_slice, load this segment
-                if (t_start is None and (t_stop is None or t_stop >= seg_t_start)) or \
-                        (t_stop is None and t_start <= seg_t_stop) or \
-                        (t_start <= seg_t_stop and t_stop >= seg_t_start):
-
+                # None means read the maximum number of data points (from beginning / to end respectively)
+                read_this_seg = False
+                if t_start is None and t_stop is None:
+                    read_this_seg = True
+                elif t_start is None and t_stop >= seg_t_start:
+                    read_this_seg = True
+                elif t_stop is None and t_start <= seg_t_stop:
+                    read_this_seg = True
+                elif t_start <= seg_t_stop and t_stop >= seg_t_start:
+                    read_this_seg = True
+                if read_this_seg:
                     seg = self.read_segment(block_index=block_index, seg_index=seg_index,
                                             lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
                                             load_waveforms=load_waveforms, time_slice=time_slice)
