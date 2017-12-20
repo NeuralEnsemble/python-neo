@@ -179,6 +179,10 @@ class BaseFromRaw(BaseIO):
                 for seg_index in range(self.segment_count(block_index)):
                     seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
                     seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+                    if t_start is None:
+                        t_start = seg_t_start
+                    if t_stop is None:
+                        t_stop = seg_t_stop
                     if (seg_t_start<=t_start<=seg_t_stop) and (seg_t_start<=t_stop<=seg_t_stop):
                         related_seg_index = seg_index
                 
@@ -253,7 +257,7 @@ class BaseFromRaw(BaseIO):
         seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
         
         # get only a slice of objects limited by t_start and t_stop time_slice = (t_start, t_stop)
-        if time_slice is None:
+        if time_slice is None or time_slice == (None, None):
             t_start, t_stop = None, None
             t_start_, t_stop_ = None, None
         else:
