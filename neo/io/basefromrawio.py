@@ -189,7 +189,7 @@ class BaseFromRaw(BaseIO):
                 if related_seg_index is None:
                     raise(ValueError('time_slice not in any segment range  {}'.format(time_slice)))
                 
-                seg =  self.read_segment(block_index=block_index, seg_index=related_seg_index,
+                seg = self.read_segment(block_index=block_index, seg_index=related_seg_index,
                                                                     lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
                                                                     load_waveforms=load_waveforms, time_slice=time_slice)
                 seg.index = s
@@ -255,7 +255,7 @@ class BaseFromRaw(BaseIO):
         
         seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
         seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
-        
+
         # get only a slice of objects limited by t_start and t_stop time_slice = (t_start, t_stop)
         if time_slice is None or time_slice == (None, None):
             t_start, t_stop = None, None
@@ -263,7 +263,12 @@ class BaseFromRaw(BaseIO):
         else:
             assert not lazy, 'time slice only work when not lazy'
             t_start, t_stop = time_slice
-            
+
+            if t_start is None:
+                t_start = seg_t_start
+            if t_stop is None:
+                t_stop = seg_t_stop
+
             t_start = ensure_second(t_start)
             t_stop = ensure_second(t_stop)
             
