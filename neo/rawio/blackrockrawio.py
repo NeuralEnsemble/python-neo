@@ -399,6 +399,7 @@ class BlackrockRawIO(BaseRawIO):
             seg_ann = block_ann['segments'][seg_index]
             seg_ann['file_origin'] = self.filename
             seg_ann['name'] = "Segment {}".format(seg_index)
+            seg_ann['description'] = "Segment containing data from t_start to t_stop"
             if seg_index == 0:
                 # if more than 1 segment means pause
                 # so datetime is valide only for seg_index=0
