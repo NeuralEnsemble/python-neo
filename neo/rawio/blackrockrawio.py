@@ -375,6 +375,7 @@ class BlackrockRawIO(BaseRawIO):
         #with previous BlackrockIO version
         self._generate_minimal_annotations()
         block_ann = self.raw_annotations['blocks'][0]
+        block_ann['description'] = 'Block of data from Blackrock file set.'
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = rec_datetime
@@ -387,26 +388,33 @@ class BlackrockRawIO(BaseRawIO):
 
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
+            channel_id, unit_id = self.internal_unit_ids[c]
             unit_ann['channel_id'] = self.internal_unit_ids[c][0]
             unit_ann['unit_id'] = self.internal_unit_ids[c][1]
             unit_ann['unit_tag'] = {0: 'unclassified', 255: 'noise'}.get(unit_id, str(unit_id))
-        
+            unit_ann['description'] = 'Unit channel_id: {}, unit_id: {}, unit_tag: {}'.format(
+                channel_id, unit_id, unit_ann['unit_tag'])
+
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]
             seg_ann['file_origin'] = self.filename
             seg_ann['name'] = "Segment {}".format(seg_index)
-            if seg_index==0:
+            if seg_index == 0:
                 # if more than 1 segment means pause
                 # so datetime is valide only for seg_index=0
                 seg_ann['rec_datetime'] = rec_datetime
-            
+
             for c in range(sig_channels.size):
                 anasig_an = seg_ann['signals'][c]
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                             c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
-                anasig_an['file_origin'] = self.filename+'.ns'+str(self.nsx_to_load)
-            
+                anasig_an['file_origin'] = self.filename + '.ns' + str(self.nsx_to_load)
+                anasig_an['nsx'] = self.nsx_to_load
+                chidx_ann = self.raw_annotations['signal_channels'][c]
+                chidx_ann['description'] = 'Container for Units and AnalogSignals of ' \
+                                           'one recording channel across segments.'
+
             for c in range(unit_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
                 st_ann = seg_ann['units'][c]
