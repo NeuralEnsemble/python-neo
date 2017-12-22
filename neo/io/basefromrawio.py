@@ -252,7 +252,10 @@ class BaseFromRaw(BaseIO):
         for k in ('signals', 'units', 'events'):
             seg_annotations.pop(k)
         seg_annotations = check_annotations(seg_annotations)
-        
+
+        if 'description' not in seg_annotations:
+            seg_annotations['description'] = "Segment with index {}".format(self._segment_indexes)
+
         seg = Segment(index=self._segment_indexes, **seg_annotations)
 
         self._segment_indexes += 1
