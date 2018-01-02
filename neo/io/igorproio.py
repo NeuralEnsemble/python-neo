@@ -28,10 +28,9 @@ except ImportError:
 
 class IgorIO(BaseIO):
     """
-    Class for reading Igor Binary Waves (.ibw) written by WaveMetrics’ 
+    Class for reading Igor Binary Waves (.ibw) 
+    or Packed Experiment (.pxp) files written by WaveMetrics’ 
     IGOR Pro software.
-
-    Support for Packed Experiment (.pxp) files is planned.
 
     It requires the `igor` Python package by W. Trevor King.
 

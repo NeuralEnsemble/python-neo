@@ -7,6 +7,7 @@ Tests of the neo.core.block.Block class
 from __future__ import absolute_import, division, print_function
 
 from datetime import datetime
+from copy import deepcopy
 
 import unittest
 
@@ -743,6 +744,10 @@ class TestBlock(unittest.TestCase):
                                self.blk1.list_children_by_class('Unit'))
         assert_same_sub_schema(self.units2,
                                self.blk2.list_children_by_class('Unit'))
+
+    def test__deepcopy(self):
+        blk1_copy = deepcopy(self.blk1)
+        assert_same_sub_schema(blk1_copy, self.blk1)
 
 
 if __name__ == "__main__":
