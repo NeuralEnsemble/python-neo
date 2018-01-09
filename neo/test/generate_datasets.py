@@ -284,21 +284,21 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
             iseed = None
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
     
-    if 'waveforms' in kwargs :   #everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[0]
-        if len(kwargs["times"]) != kwargs["waveforms"].shape[0] :
-            if len(kwargs["times"]) < kwargs["waveforms"].shape[0] :
+    if 'waveforms' in kwargs :   #everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[1]
+        if len(kwargs["times"]) != kwargs["waveforms"].shape[1] :
+            if len(kwargs["times"]) < kwargs["waveforms"].shape[1] :
                 
-                dif = kwargs["waveforms"].shape[0] - len(kwargs["times"])
+                dif = kwargs["waveforms"].shape[1] - len(kwargs["times"])
 
                 new_times =[]
-                for i in kwargs["times"].magnitude :
+                for i in kwargs["times"].magnitude:
                     new_times.append(i)
 
                 np.random.seed(0)
                 new_times = np.concatenate([new_times, np.random.random(dif)])
                 kwargs["times"] = pq.Quantity(new_times, units=pq.ms)
             else :
-                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]] 
+                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[1]]
 
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]

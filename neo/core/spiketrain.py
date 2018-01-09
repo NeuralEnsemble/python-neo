@@ -73,7 +73,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
 def _check_waveform_dimensions(spiketrain):
     '''
     Verify that waveform is compliant with the waveform definition as
-    quantity array 3D (spike, channel_index, time)
+    quantity array 3D (time, spike, channel_index)
     '''
 
     if not spiketrain.size:
@@ -84,10 +84,10 @@ def _check_waveform_dimensions(spiketrain):
     if (waveforms is None) or (not waveforms.size):
         return
 
-    if waveforms.shape[0] != len(spiketrain):
+    if waveforms.shape[1] != len(spiketrain):
         raise ValueError("Spiketrain length (%s) does not match to number of "
                          "waveforms present (%s)" % (len(spiketrain),
-                                                     waveforms.shape[0]))
+                                                     waveforms.shape[1]))
 
 
 def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
@@ -158,7 +158,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             :class:`SpikeTrain` began. This will be converted to the
             same units as :attr:`times`.
             Default: 0.0 seconds.
-        :waveforms: (quantity array 3D (spike, channel_index, time))
+        :waveforms: (quantity array 3D (time, spike, channel_index))
             The waveforms of each spike.
         :sampling_rate: (quantity scalar) Number of samples per unit time
             for the waveforms.
@@ -181,7 +181,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
             read-only.
             (:attr:`t_stop` - :attr:`t_start`)
         :spike_duration: (quantity scalar) Duration of a waveform, read-only.
-            (:attr:`waveform`.shape[2] * :attr:`sampling_period`)
+            (:attr:`waveform`.shape[0] * :attr:`sampling_period`)
         :right_sweep: (quantity scalar) Time from the trigger times of the
             spikes to the end of the waveforms, read-only.
             (:attr:`left_sweep` + :attr:`spike_duration`)
@@ -218,8 +218,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         constructor, but not when slicing.
         '''
         if len(times) != 0 and waveforms is not None and len(times) != \
-                waveforms.shape[
-                    0]:  # len(times)!=0 has been used to workaround a bug occuring during neo import)
+                waveforms.shape[1]:
             raise ValueError(
                 "the number of waveforms should be equal to the number of spikes")
 
@@ -433,7 +432,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # sort the waveforms by the times
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
-            self.waveforms = self.waveforms[sort_indices]
+            self.waveforms = self.waveforms[:,sort_indices,:]
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -490,7 +489,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         '''
         obj = super(SpikeTrain, self).__getitem__(i)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
-            obj.waveforms = obj.waveforms.__getitem__(i)
+            obj.waveforms = obj.waveforms.__getitem__([slice(None),i,slice(None)])
         return obj
 
     def __setitem__(self, i, value):
@@ -568,7 +567,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         new_st.t_start = max(_t_start, self.t_start)
         new_st.t_stop = min(_t_stop, self.t_stop)
         if self.waveforms is not None:
-            new_st.waveforms = self.waveforms[indices]
+            new_st.waveforms = self.waveforms[:,indices,:]
 
         return new_st
 
@@ -625,8 +624,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                            sampling_rate=self.sampling_rate,
                            left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
-            wfs_stack = np.vstack((self.waveforms, other.waveforms))
-            wfs_stack = wfs_stack[sorting]
+            wfs_stack = np.concatenate((self.waveforms, other.waveforms),axis=1)
+            wfs_stack = wfs_stack[:,sorting,:]
             train.waveforms = wfs_stack
         train.segment = self.segment
         if train.segment is not None:
@@ -659,11 +658,11 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         '''
         Duration of a waveform.
 
-        (:attr:`waveform`.shape[2] * :attr:`sampling_period`)
+        (:attr:`waveform`.shape[0] * :attr:`sampling_period`)
         '''
         if self.waveforms is None or self.sampling_rate is None:
             return None
-        return self.waveforms.shape[2] / self.sampling_rate
+        return self.waveforms.shape[0] / self.sampling_rate
 
     @property
     def sampling_period(self):

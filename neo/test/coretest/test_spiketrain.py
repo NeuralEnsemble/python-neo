@@ -41,9 +41,9 @@ class Test__generate_datasets(unittest.TestCase):
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
         waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
-        shape = waveforms.shape[0]
+        shape = waveforms.shape[1]
         times = get_fake_value('times', pq.Quantity, seed=0, dim=1,
-                               shape=waveforms.shape[0])
+                               shape=waveforms.shape[1])
         t_start = get_fake_value('t_start', pq.Quantity, seed=1, dim=0)
         t_stop = get_fake_value('t_stop', pq.Quantity, seed=2, dim=0)
         left_sweep = get_fake_value('left_sweep', pq.Quantity, seed=4, dim=0)
@@ -815,6 +815,7 @@ class TestConstructor(unittest.TestCase):
 class TestSorting(unittest.TestCase):
     def test_sort(self):
         waveforms = np.array([[[0., 1.]], [[2., 3.]], [[4., 5.]]]) * pq.mV
+        waveforms = np.moveaxis(waveforms, 2, 0)
         train = SpikeTrain([3, 4, 5] * pq.s, waveforms=waveforms, name='n',
                            t_stop=10.0)
         assert_neo_object_is_compliant(train)
@@ -831,7 +832,7 @@ class TestSorting(unittest.TestCase):
         train.sort()
         assert_neo_object_is_compliant(train)
         assert_arrays_equal(train, [3, 4, 5] * pq.s)
-        assert_arrays_equal(train.waveforms, waveforms[[0, 2, 1]])
+        assert_arrays_equal(train.waveforms, waveforms[:,[0, 2, 1],:])
         self.assertEqual(train.name, 'n')
         self.assertEqual(train.t_start, 0.0 * pq.s)
         self.assertEqual(train.t_stop, 10.0 * pq.s)
@@ -845,6 +846,7 @@ class TestSlice(unittest.TestCase):
                                      [2.1, 3.1]],
                                     [[4., 5.],
                                      [4.1, 5.1]]]) * pq.mV
+        self.waveforms1 = np.moveaxis(self.waveforms1,2,0)
         self.data1 = np.array([3, 4, 5])
         self.data1quant = self.data1 * pq.s
         self.train1 = SpikeTrain(self.data1quant, waveforms=self.waveforms1,
@@ -859,6 +861,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(self.train1[1:2], result)
         targwaveforms = np.array([[[2., 3.],
                                    [2.1, 3.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -871,7 +874,7 @@ class TestSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
         # except we update the waveforms
-        assert_arrays_equal(self.train1.waveforms[1:2], result.waveforms)
+        assert_arrays_equal(self.train1.waveforms[:,1:2,:], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_to_end(self):
@@ -882,6 +885,7 @@ class TestSlice(unittest.TestCase):
                                    [2.1, 3.1]],
                                   [[4., 5.],
                                    [4.1, 5.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -894,7 +898,7 @@ class TestSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
         # except we update the waveforms
-        assert_arrays_equal(self.train1.waveforms[1:], result.waveforms)
+        assert_arrays_equal(self.train1.waveforms[:,1:,:], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_from_beginning(self):
@@ -905,6 +909,7 @@ class TestSlice(unittest.TestCase):
                                    [0.1, 1.1]],
                                   [[2., 3.],
                                    [2.1, 3.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -917,7 +922,7 @@ class TestSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
         # except we update the waveforms
-        assert_arrays_equal(self.train1.waveforms[:2], result.waveforms)
+        assert_arrays_equal(self.train1.waveforms[:,:2,:], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
     def test_slice_negative_idxs(self):
@@ -928,6 +933,7 @@ class TestSlice(unittest.TestCase):
                                    [0.1, 1.1]],
                                   [[2., 3.],
                                    [2.1, 3.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -940,7 +946,7 @@ class TestSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
         # except we update the waveforms
-        assert_arrays_equal(self.train1.waveforms[:-1], result.waveforms)
+        assert_arrays_equal(self.train1.waveforms[:,:-1,:], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
 
@@ -958,6 +964,7 @@ class TestTimeSlice(unittest.TestCase):
                                      [8.1, 9.1]],
                                     [[10., 11.],
                                      [10.1, 11.1]]]) * pq.mV
+        self.waveforms1 = np.moveaxis(self.waveforms1,2,0)
         self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data1quant = self.data1 * pq.ms
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
@@ -981,6 +988,7 @@ class TestTimeSlice(unittest.TestCase):
                                    [4.1, 5.1]],
                                   [[6., 7.],
                                    [6.1, 7.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
         # but keep everything else pristine
@@ -1006,6 +1014,7 @@ class TestTimeSlice(unittest.TestCase):
                                    [4.1, 5.1]],
                                   [[6., 7.],
                                    [6.1, 7.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
         # but keep everything else pristine
@@ -1067,7 +1076,7 @@ class TestTimeSlice(unittest.TestCase):
         t_stop = 70.0 * pq.ms
         result = train.time_slice(t_start, t_stop)
         assert_arrays_equal(train, result)
-        assert_arrays_equal(waveforms[:-1], result.waveforms)
+        assert_arrays_equal(waveforms[:,:-1,:], result.waveforms)
 
         # but keep everything else pristine
         assert_neo_object_is_compliant(result)
@@ -1092,6 +1101,7 @@ class TestTimeSlice(unittest.TestCase):
                                    [8.1, 9.1]],
                                   [[10., 11.],
                                    [10.1, 11.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
         # but keep everything else pristine
@@ -1113,6 +1123,7 @@ class TestTimeSlice(unittest.TestCase):
                                    [0.1, 1.1]],
                                   [[2., 3.],
                                    [2.1, 3.1]]]) * pq.mV
+        targwaveforms = np.moveaxis(targwaveforms, 2, 0)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
         # but keep everything else pristine
@@ -1159,6 +1170,7 @@ class TestMerge(unittest.TestCase):
                                      [8.1, 9.1]],
                                     [[10., 11.],
                                      [10.1, 11.1]]]) * pq.mV
+        self.waveforms1 = np.moveaxis(self.waveforms1,2,0)
         self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data1quant = self.data1 * pq.ms
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
@@ -1176,6 +1188,7 @@ class TestMerge(unittest.TestCase):
                                      [8.1, 9.1]],
                                     [[10., 11.],
                                      [10.1, 11.1]]]) * pq.mV
+        self.waveforms2 = np.moveaxis(self.waveforms2,2,0)
         self.data2 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data2quant = self.data1 * pq.ms
         self.train2 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
@@ -1253,18 +1266,13 @@ class TestMerge(unittest.TestCase):
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
-        self.waveforms = np.array([[[0., 1.],
-                                    [0.1, 1.1]],
-                                   [[2., 3.],
-                                    [2.1, 3.1]],
-                                   [[4., 5.],
-                                    [4.1, 5.1]],
-                                   [[6., 7.],
-                                    [6.1, 7.1]],
-                                   [[8., 9.],
-                                    [8.1, 9.1]],
-                                   [[10., 11.],
-                                    [10.1, 11.1]]]) * pq.mV
+        self.waveforms = np.array([[[0., 1.], [0.1, 1.1]],
+                                   [[2., 3.], [2.1, 3.1]],
+                                   [[4., 5.], [4.1, 5.1]],
+                                   [[6., 7.], [6.1, 7.1]],
+                                   [[8., 9.], [8.1, 9.1]],
+                                   [[10., 11.], [10.1, 11.1]]]) * pq.mV
+        self.waveforms = np.moveaxis(self.waveforms,2,0)
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.dataquant = self.data * pq.ms
         self.train = SpikeTrain(self.dataquant, t_stop=10.0 * pq.ms,
@@ -1540,6 +1548,7 @@ class TestPropertiesMethods(unittest.TestCase):
                                      [2.1, 3.1]],
                                     [[4., 5.],
                                      [4.1, 5.1]]]) * pq.mV
+        self.waveforms1 = np.moveaxis(self.waveforms1,2,0)
         self.t_start1 = 0.5
         self.t_stop1 = 10.0
         self.t_start1quant = self.t_start1 * pq.ms
