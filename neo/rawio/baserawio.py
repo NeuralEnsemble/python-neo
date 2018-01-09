@@ -397,14 +397,13 @@ class BaseRawIO(object):
         sampling_rate for instance.
 
         """
-        #~ print('_check_common_characteristics', channel_indexes)
+        #  print('_check_common_characteristics', channel_indexes)
 
-        assert channel_indexes is not None,\
-                    'You must specify channel_indexes'
+        assert channel_indexes is not None, 'You must specify channel_indexes'
         characteristics = self.header['signal_channels'][_common_sig_characteristics]
-        #~ print(characteristics[channel_indexes])
-        assert np.unique(characteristics[channel_indexes]).size==1, \
-                    'This channel set have differents characteristics'
+        #  print(characteristics[channel_indexes])
+        assert np.unique(characteristics[channel_indexes]).size == 1, \
+            'This channel set have differents characteristics'
 
     def get_group_channel_indexes(self):
         """Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
