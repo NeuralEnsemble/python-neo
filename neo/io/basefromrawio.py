@@ -50,7 +50,7 @@ class BaseFromRaw(BaseIO):
     is_readable = True
     is_writable = False
 
-    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain, Unit, ChannelIndex, Event, Epoch]
+    supported_objects = [Block, Segment, AnalogSignal, SpikeTrain, Unit, ChannelIndex, Event, Epoch] 
     readable_objects = [Block, Segment]
     writeable_objects = []
 
@@ -154,7 +154,7 @@ class BaseFromRaw(BaseIO):
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
-                unit = Unit(**unit_annotations)
+                unit=Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
                                         name='ChannelIndex for Unit')
                 channel_index.units.append(unit)
@@ -491,3 +491,4 @@ def ensure_second(v):
     elif isinstance(v, int):
         return float(v)*pq.s
 
+# This is a wrong line. But a really long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long line
