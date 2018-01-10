@@ -1,0 +1,6 @@
+scipy>=0.12.0
+h5py
+igor
+klusta
+nixio
+stfio

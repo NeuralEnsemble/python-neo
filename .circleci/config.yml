@@ -33,7 +33,8 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -r requirements.txt
-            pip install .
+            pip install -r .circleci/requirements_testing.txt
+            pip install . 
 
       - save_cache:
           paths:
