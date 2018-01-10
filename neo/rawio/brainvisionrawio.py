@@ -33,22 +33,22 @@ class BrainVisionRawIO(BaseRawIO):
     
     def _parse_header(self):
         # Read header file (vhdr)
-        header = read_brainvsion_soup(self.filename)
+        vhdr_header = read_brainvsion_soup(self.filename)
 
         bname = os.path.basename(self.filename)
-        marker_filename = self.filename.replace(bname, header['Common Infos']['MarkerFile'])
-        binary_filename = self.filename.replace(bname, header['Common Infos']['DataFile'])
+        marker_filename = self.filename.replace(bname, vhdr_header['Common Infos']['MarkerFile'])
+        binary_filename = self.filename.replace(bname, vhdr_header['Common Infos']['DataFile'])
         
-        assert header['Common Infos'][
+        assert vhdr_header['Common Infos'][
             'DataFormat'] == 'BINARY', NotImplementedError
-        assert header['Common Infos'][
+        assert vhdr_header['Common Infos'][
             'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
 
-        nb_channel = int(header['Common Infos']['NumberOfChannels'])
-        sr=1.e6 /float(header['Common Infos']['SamplingInterval'])
+        nb_channel = int(vhdr_header['Common Infos']['NumberOfChannels'])
+        sr=1.e6 /float(vhdr_header['Common Infos']['SamplingInterval'])
         self._sampling_rate = sr
 
-        fmt = header['Binary Infos']['BinaryFormat']
+        fmt = vhdr_header['Binary Infos']['BinaryFormat']
         fmts = { 'INT_16':np.int16,  'INT_32':np.int32, 'IEEE_FLOAT_32':np.float32,}
 
         assert fmt in fmts, NotImplementedError
@@ -63,7 +63,7 @@ class BrainVisionRawIO(BaseRawIO):
         
         sig_channels = []
         for c in range(nb_channel):
-            name, ref, res, units = header['Channel Infos'][
+            name, ref, res, units = vhdr_header['Channel Infos'][
                 'Ch%d' % (c + 1,)].split(',')
             units =units.replace('µ', 'u')
             chan_id = c+1
@@ -118,6 +118,12 @@ class BrainVisionRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
         
         self._generate_minimal_annotations()
+        for c in range(sig_channels.size):
+            coords = vhdr_header['Coordinates']['Ch{}'.format(c+1)]
+            coords = [float(v) for v in coords.split(',')]
+            
+            self.raw_annotations['signal_channels'][c]['coordinates'] = coords
+            self.raw_annotations['signal_channels'][c]['coordinates_mode'] = 'polar'
     
     def _source_name(self):
         return self.filename
