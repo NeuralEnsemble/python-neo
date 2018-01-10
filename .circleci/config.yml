@@ -14,6 +14,8 @@ jobs:
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/postgres:9.4
+    environment:
+      - NEO_TEST_FILE_DIR: "/home/circleci/repo/files_for_testing_neo"
 
     working_directory: ~/repo
 
@@ -26,6 +28,10 @@ jobs:
           - v1-dependencies-{{ checksum "requirements.txt" }}
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
+
+      - restore-cache:
+          keys:
+            - test-files
 
       - run:
           name: install dependencies
@@ -40,7 +46,12 @@ jobs:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
-        
+
+      - save_cache:
+          paths:
+            - ./files_for_testing_neo
+          key: test-files
+
       # run tests!
       - run:
           name: run tests
