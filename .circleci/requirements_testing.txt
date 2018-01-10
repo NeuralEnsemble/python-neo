@@ -3,4 +3,3 @@ h5py
 igor
 klusta
 nixio
-stfio
