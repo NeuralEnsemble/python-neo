@@ -33,8 +33,12 @@ class BrainVisionRawIO(BaseRawIO):
     
     def _parse_header(self):
         # Read header file (vhdr)
-        header = read_brain_soup(self.filename)
+        header = read_brainvsion_soup(self.filename)
 
+        bname = os.path.basename(self.filename)
+        marker_filename = self.filename.replace(bname, header['Common Infos']['MarkerFile'])
+        binary_filename = self.filename.replace(bname, header['Common Infos']['DataFile'])
+        
         assert header['Common Infos'][
             'DataFormat'] == 'BINARY', NotImplementedError
         assert header['Common Infos'][
@@ -52,8 +56,7 @@ class BrainVisionRawIO(BaseRawIO):
 
 
         #raw signals memmap
-        binary_file = os.path.splitext(self.filename)[0] + '.eeg'
-        sigs = np.memmap(binary_file, dtype=sig_dtype, mode='r', offset=0 )
+        sigs = np.memmap(binary_filename, dtype=sig_dtype, mode='r', offset=0 )
         if sigs.size%nb_channel!=0:
             sigs = sigs[:-sigs.size%nb_channel]
         self._raw_signals = sigs.reshape(-1, nb_channel)
@@ -80,8 +83,8 @@ class BrainVisionRawIO(BaseRawIO):
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
         # read all markers in memory
-        marker_file = os.path.splitext(self.filename)[0] + '.vmrk'
-        all_info = read_brain_soup(marker_file)['Marker Infos']
+        
+        all_info = read_brainvsion_soup(marker_filename)['Marker Infos']
         ev_types = []
         ev_timestamps = []
         ev_labels = []
@@ -89,7 +92,7 @@ class BrainVisionRawIO(BaseRawIO):
             ev_type, ev_label, pos, size, channel = all_info[
                 'Mk%d' % (i + 1,)].split(',')[:5]
             ev_types.append(ev_type)
-            ev_timestamps.append(pos)
+            ev_timestamps.append(int(pos))
             ev_labels.append(ev_label)
         ev_types = np.array(ev_types)
         ev_timestamps = np.array(ev_timestamps)
@@ -173,7 +176,7 @@ class BrainVisionRawIO(BaseRawIO):
         return event_times
     
 
-def read_brain_soup(filename):
+def read_brainvsion_soup(filename):
     with io.open(filename, 'r', encoding='utf8') as f:
         section = None
         all_info = {}
