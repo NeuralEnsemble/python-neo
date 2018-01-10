@@ -63,14 +63,13 @@ class TestPickleIO(unittest.TestCase):
         self.assertIsInstance(r_seg.spiketrains[0].unit, Unit)
         self.assertIsInstance(r_seg.epochs[0], Epoch)
         os.remove('blk.pkl')
+
         ##Epoch
-        train = Epoch(times=np.arange(0, 30, 10)*pq.s,durations=[10, 5, 7]*pq.ms,labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
-        train.segment = Segment()
-        unit = Unit()
-        unit.spiketrains.append(train)
+        epoch = Epoch(times=np.arange(0, 30, 10)*pq.s,durations=[10, 5, 7]*pq.ms,labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        epoch.segment = Segment()
         blk = Block()
         seg = Segment()
-        seg.spiketrains.append(train)
+        seg.epochs.append(epoch)
         blk.segments.append(seg)
 
         reader = PickleIO(filename="blk.pkl")
@@ -79,17 +78,16 @@ class TestPickleIO(unittest.TestCase):
         reader = PickleIO(filename="blk.pkl")
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
-        self.assertIsInstance(r_seg.spiketrains[0].segment, Segment)
+        self.assertIsInstance(r_seg.epochs[0].segment, Segment)
         os.remove('blk.pkl')
+
         ##Event
-        train = Event(np.arange(0, 30, 10)*pq.s,labels=np.array(['trig0', 'trig1', 'trig2'],dtype='S'))
-        train.segment = Segment()
-        unit = Unit()
-        unit.spiketrains.append(train)
+        event = Event(np.arange(0, 30, 10)*pq.s,labels=np.array(['trig0', 'trig1', 'trig2'],dtype='S'))
+        event.segment = Segment()
 
         blk = Block()
         seg = Segment()
-        seg.spiketrains.append(train)
+        seg.events.append(event)
         blk.segments.append(seg)
 
         reader = PickleIO(filename="blk.pkl")
@@ -98,18 +96,16 @@ class TestPickleIO(unittest.TestCase):
         reader = PickleIO(filename="blk.pkl")
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
-        self.assertIsInstance(r_seg.spiketrains[0].segment, Segment)
+        self.assertIsInstance(r_seg.events[0].segment, Segment)
         os.remove('blk.pkl')
+
         ##IrregularlySampledSignal
-        train =  IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],units='mV', time_units='ms')
-        train.segment = Segment()
-        unit = Unit()
-        train.channel_index = ChannelIndex(1)
-        unit.spiketrains.append(train)
+        signal =  IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3],units='mV', time_units='ms')
+        signal.segment = Segment()
 
         blk = Block()
         seg = Segment()
-        seg.spiketrains.append(train)
+        seg.irregularlysampledsignals.append(signal)
         blk.segments.append(seg)
         blk.segments[0].block = blk
 
@@ -119,8 +115,7 @@ class TestPickleIO(unittest.TestCase):
         reader = PickleIO(filename="blk.pkl")
         r_blk = reader.read_block()
         r_seg = r_blk.segments[0]
-        self.assertIsInstance(r_seg.spiketrains[0].segment, Segment)
-        self.assertIsInstance(r_seg.spiketrains[0].channel_index, ChannelIndex)
+        self.assertIsInstance(r_seg.irregularlysampledsignals[0].segment, Segment)
         os.remove('blk.pkl')
 
 if __name__ == '__main__':
