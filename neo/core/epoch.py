@@ -24,10 +24,10 @@ def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
                name=None, description=None, file_origin=None, annotations=None, segment=None):
     '''
     A function to map epoch.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
-              description=description, **annotations)
+    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name,
+              file_origin=file_origin, description=description, **annotations)
     e.segment = segment
     return e
 
@@ -242,10 +242,7 @@ class Epoch(BaseNeo, pq.Quantity):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-
         new_epc = self[indices]
-        #new_epc.durations = self.durations[indices]
-        #new_epc.labels = self.labels[indices]
         return new_epc
 
     def as_array(self, units=None):

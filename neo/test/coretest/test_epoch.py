@@ -507,7 +507,7 @@ class TestEpoch(unittest.TestCase):
         assert_array_equal(single_epoch.times, np.array([4.0]))
         assert_array_equal(single_epoch.durations, np.array([0.3]))
         assert_array_equal(single_epoch.labels, np.array(["C"]))
-    
+
     def test_slice(self):
         times = [2, 3, 4, 5]
         durations = [0.1, 0.2, 0.3, 0.4]
