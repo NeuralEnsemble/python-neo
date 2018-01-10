@@ -112,7 +112,7 @@ class BaseTestIO(object):
 
         The directory path is also written to self.local_test_dir
         '''
-        self.local_test_dir = create_local_temp_dir(self.shortname)
+        self.local_test_dir = create_local_temp_dir(self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):
