@@ -151,6 +151,16 @@ class Epoch(BaseNeo, pq.Quantity):
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
+    def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
+        obj = Epoch(times=super(Epoch, self).__getitem__(i))
+        obj._copy_data_complement(self)
+        obj.durations = self.durations[i]
+        obj.labels = self.labels[i]
+        return obj
+
     @property
     def times(self):
         return pq.Quantity(self)
@@ -234,8 +244,8 @@ class Epoch(BaseNeo, pq.Quantity):
         indices = (self >= _t_start) & (self <= _t_stop)
 
         new_epc = self[indices]
-        new_epc.durations = self.durations[indices]
-        new_epc.labels = self.labels[indices]
+        #new_epc.durations = self.durations[indices]
+        #new_epc.labels = self.labels[indices]
         return new_epc
 
     def as_array(self, units=None):
