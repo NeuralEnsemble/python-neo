@@ -12,6 +12,7 @@ import quantities as pq
 import neo
 from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 def assert_arrays_equal(a, b, dtype=False):
@@ -197,7 +198,7 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10,
     if exclude is None:
         exclude = []
 
-    if isinstance(ob1, list):
+    if isinstance(ob1, (list, SpikeTrainList)):
         assert len(ob1) == len(ob2), \
             'lens %s and %s not equal for %s and %s' % \
             (len(ob1), len(ob2), ob1, ob2)

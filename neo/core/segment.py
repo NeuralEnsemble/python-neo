@@ -15,6 +15,7 @@ from datetime import datetime
 import numpy as np
 
 from neo.core.container import Container
+from neo.core.spiketrainlist import SpikeTrainList
 
 
 class Segment(Container):
@@ -92,7 +93,7 @@ class Segment(Container):
         '''
         super(Segment, self).__init__(name=name, description=description,
                                       file_origin=file_origin, **annotations)
-
+        self.spiketrains = SpikeTrainList(segment=self)
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index

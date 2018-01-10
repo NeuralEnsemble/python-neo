@@ -235,7 +235,7 @@ class TestSegment(unittest.TestCase):
         seg1a.epochs.append(self.epcs2[0])
         seg1a.annotate(seed=self.seed2)
         seg1a.merge(self.seg2)
-        self.check_creation(self.seg2)
+        self.check_creation(seg1a)
 
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
                                seg1a.analogsignals)
