@@ -22,14 +22,14 @@ Recipe to develop an IO module for a new data format:
        implementing a :meth:`load_lazy_cascade` method.
     9. Write good docstrings. List dependencies, including minimum version numbers.
     10. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
-    11. Contact the Neo maintainers to put sample files for testing on the G-Node server (write access is not public).
+    11. Create a account at gin.g-node.org and deposite files in NeuralEnsemble/ephy_testing_data.
     12. Write tests in ``neo/test/io/test_xxxxxio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestIO`).
     13. Commit or send a patch only if all tests pass.
 
 Miscellaneous
 =============
 
-    * If your IO supports several version of a format (like ABF1, ABF2), upload to G-node test file repository all file version possible. (for utest coverage).
+    * If your IO supports several version of a format (like ABF1, ABF2), upload to gin.g-node.org test file repository all file version possible. (for utest coverage).
     * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
     * :py:func:`neo.io.tools.populate_RecordingChannel` offers a utility to
       create inside a :class:`Block` all :class:`RecordingChannel` objects and links to :class:`AnalogSignal`, :class:`SpikeTrain`, ...
@@ -70,14 +70,14 @@ Tests
 =====
 
 :py:class:`neo.test.io.commun_io_test.BaseTestIO` provide standard tests.
-To use these you need to upload some sample data files at the `G-Node portal`_. They will be publicly accessible for testing Neo.
+To use these you need to upload some sample data files at the `gin-gnode`_. They will be publicly accessible for testing Neo.
 These tests:
 
   * check the compliance with the schema: hierachy, attribute types, ...
   * check if the IO respects the *lazy* and *cascade* keywords.
   * For IO able to both write and read data, it compares a generated dataset with the same data after a write/read cycle.
 
-The test scripts download all files from the `G-Node portal`_ and store them locally in ``neo/test/io/files_for_tests/``.
+The test scripts download all files from the `gin-gnode`_ and store them locally in ``neo/test/io/files_for_tests/``.
 Subsequent test runs use the previously downloaded files, rather than trying to download them each time.
 
 Here is an example test script taken from the distribution: ``test_axonio.py``:
@@ -120,4 +120,4 @@ Here is the entire file:
 
 
 .. _`mailing list`: http://groups.google.com/group/neuralensemble
-.. _G-node portal: https://portal.g-node.org/neo/
+.. _gin-gnode: https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
