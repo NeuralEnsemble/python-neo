@@ -294,8 +294,8 @@ class TestAnalogSignalProperties(unittest.TestCase):
             targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n' %
                      (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)) +
                     ('annotations: %s\n' % signal.annotations) +
-                    ('sampling rate: %s\n' % signal.sampling_rate) +
-                    ('time: %s to %s' % (signal.t_start, signal.t_stop)))
+                    ('sampling rate: {}\n'.format(signal.sampling_rate)) +
+                    ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
             self.assertEqual(prepr, targ)
 
 
