@@ -93,6 +93,7 @@ jobs:
             . venv2/bin/activate
             pip install -r requirements.txt
             pip install -r .circleci/requirements_testing.txt
+            pip install mock  # only needed for Python 2
             pip install . 
 
       - save_cache:
