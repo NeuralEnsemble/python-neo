@@ -121,7 +121,7 @@ class BrainVisionRawIO(BaseRawIO):
         for c in range(sig_channels.size):
             coords = vhdr_header['Coordinates']['Ch{}'.format(c+1)]
             coords = [float(v) for v in coords.split(',')]
-            if coords[0]!=0.:
+            if coords[0]>0.:
                 self.raw_annotations['signal_channels'][c]['coordinates'] = coords
     
     def _source_name(self):
