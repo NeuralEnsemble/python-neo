@@ -34,7 +34,7 @@ class BaseProxyTest(unittest.TestCase):
 class TestAnalogSignalProxy(BaseProxyTest):
     
     def test_AnalogSignalProxy(self):
-        proxy_anasig = AnalogSignalProxy(rawio=self.reader, channel_indexes=None,
+        proxy_anasig = AnalogSignalProxy(rawio=self.reader, global_channel_indexes=None,
                         block_index=0, seg_index=0,)
         
         assert proxy_anasig.sampling_rate==10*pq.kHz
@@ -80,7 +80,28 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig_int.units==pq.CompoundUnit('0.0152587890625*uV')
         
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
+    
+    def test_global_local_channel_indexes(self):
+        proxy_anasig = AnalogSignalProxy(rawio=self.reader,
+                    global_channel_indexes=slice(0,10, 2), block_index=0, seg_index=0,)
+        #~ print(proxy_anasig.shape)
+        assert proxy_anasig.shape==(100000, 5)
+        assert '(ch0,ch2,ch4,ch6,ch8)' in proxy_anasig.name
+        
+        #should be channel ch0 and ch6
+        anasig = proxy_anasig.load(channel_indexes=[0,3])
+        assert anasig.shape==(100000, 2)
+        print(anasig.name)
+        assert '(ch0,ch6)' in anasig.name
 
+        
+        
+        
+        
+        
+        
+        #~ print(proxy_anasig.shape)
+        
 
 
 

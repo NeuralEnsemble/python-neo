@@ -58,16 +58,18 @@ class AnalogSignalProxy(BaseProxy):
                                     ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
     
-    def __init__(self, rawio=None, channel_indexes=None, block_index=0, seg_index=0):
+    def __init__(self, rawio=None, global_channel_indexes=None, block_index=0, seg_index=0):
         
         self._rawio = rawio
-        self._channel_indexes = channel_indexes
         self._block_index = block_index
         self._seg_index = seg_index
+        if global_channel_indexes is None:
+            global_channel_indexes = slice(None)
+        total_nb_chan = self._rawio.header['signal_channels'].size
+        self._global_channel_indexes = np.arange(total_nb_chan)[global_channel_indexes]
+        self._nb_chan = self._global_channel_indexes.size
         
-        if channel_indexes is None:
-            channel_indexes = slice(None)
-        sig_chans = self._rawio.header['signal_channels'][channel_indexes]
+        sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
         
         assert np.unique(sig_chans['units']).size==1, 'Channel do not have same units'
         assert np.unique(sig_chans['dtype']).size==1, 'Channel do not have same dtype'
@@ -77,9 +79,9 @@ class AnalogSignalProxy(BaseProxy):
         self.dtype = sig_chans['dtype'][0]
         self.sampling_rate = sig_chans['sampling_rate'][0] * pq.Hz
         sigs_size = self._rawio.get_signal_size(block_index=block_index, seg_index=seg_index, 
-                                                            channel_indexes=channel_indexes)
-        self.shape = (sigs_size, sig_chans.size)
-        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index, channel_indexes) * pq.s
+                                                            channel_indexes=self._global_channel_indexes)
+        self.shape = (sigs_size, self._nb_chan)
+        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index, self._global_channel_indexes) * pq.s
         
         #magnitude_mode='raw' is supported only if all offset=0
         #and all gain are the same
@@ -92,10 +94,17 @@ class AnalogSignalProxy(BaseProxy):
 
         #both necessary attr and annotations
         kargs = {}
-        kargs['name'] = 'Channel bundle ({}) '.format(','.join(sig_chans['name']))
+        kargs['name'] = self._make_name(None)
         
         BaseProxy.__init__(self, **kargs)
-
+    
+    def _make_name(self, channel_indexes):
+        sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
+        if channel_indexes is not None:
+            sig_chans = sig_chans[channel_indexes]
+        name = 'Channel bundle ({}) '.format(','.join(sig_chans['name']))
+        return name
+    
     @property
     def duration(self):
         '''Signal duration'''
@@ -112,6 +121,8 @@ class AnalogSignalProxy(BaseProxy):
             :time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
             :channel_indexes: None or list. Channels to load. None is all channels
+                    Be carefull that channel_indexes represent the local channel index inside
+                    the AnalogSignal and not the global_channel_indexes like in rawio.
             :magnitude_mode: 'rescaled' or 'raw'.
                 For instance if the internal dtype is int16:
                     * **rescaled** give [1.,2.,3.]*pq.uV and the dtype is float32
@@ -120,6 +131,9 @@ class AnalogSignalProxy(BaseProxy):
                 postpone the scaling when needed and having an internal dtype=int16
                 but it less intuitive when you don't know so well quantities.
         '''
+        
+        if channel_indexes is None:
+            channel_indexes = slice(None)
         
         sr = self.sampling_rate
         
@@ -147,8 +161,17 @@ class AnalogSignalProxy(BaseProxy):
                 assert t_start<=t_stop<=self.t_stop, 't_stop is outside'
                 i_stop = int((t_stop-self.t_start).magnitude * sr.magnitude)
         
-        raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index, seg_index=self._seg_index,
-                    i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
+        raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
+                    seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
+                    channel_indexes=self._global_channel_indexes[channel_indexes])
+        
+        #if slice in channel so the name change
+        #and also array_annotations
+        #TODO later: implement array_annotations slice here
+        if raw_signal.shape[1]!=self._nb_chan:
+            name = self._make_name(channel_indexes)
+        else:
+            name = self.name
         
         if magnitude_mode=='raw':
             assert self._raw_units is not None,\
@@ -158,11 +181,11 @@ class AnalogSignalProxy(BaseProxy):
             
         elif magnitude_mode=='rescaled':
             sig = self._rawio.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
-                                                                                channel_indexes=channel_indexes)
+                                            channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
         
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
-                    sampling_rate=self.sampling_rate, name=self.name,
+                    sampling_rate=self.sampling_rate, name=name,
                     file_origin=self.file_origin, description=self.description,
                     **self.annotations)
         
