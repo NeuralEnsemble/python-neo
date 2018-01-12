@@ -90,7 +90,7 @@ class BaseTestIO(object):
         '''
         self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
-        self.shortname = self.ioclass.__name__.lower().strip('io')
+        self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
         self.io_readandwrite = list(set(self.ioclass.readable_objects) &
                                     set(self.ioclass.writeable_objects))
@@ -112,7 +112,7 @@ class BaseTestIO(object):
 
         The directory path is also written to self.local_test_dir
         '''
-        self.local_test_dir = create_local_temp_dir(self.shortname)
+        self.local_test_dir = create_local_temp_dir(self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):

@@ -25,7 +25,7 @@ from neo.io import NeuroshareIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-
+@unittest.skipUnless(sys.platform.startswith("win"), "Only works on Windows")
 class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
     ioclass = NeuroshareIO
     files_to_test = [ ]
