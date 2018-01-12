@@ -109,8 +109,8 @@ class AnalogSignalProxy(BaseProxy):
     def load(self, time_slice=None, channel_indexes=None, magnitude_mode='rescaled'):
         '''
         *Args*:
-            :time_slice: None or tuple of the time slice exprimed with quantities.
-                              None is the entire signal.
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire signal.
             :channel_indexes: None or list. Channels to load. None is all channels
             :magnitude_mode: 'rescaled' or 'raw'.
                 For instance if the internal dtype is int16:
@@ -118,7 +118,7 @@ class AnalogSignalProxy(BaseProxy):
                     * **raw** give [10, 20, 30]*pq.CompoundUnit('0.1*uV')
                 The CompoundUnit with magnitude_mode='raw' is usefull to
                 postpone the scaling when needed and having an internal dtype=int16
-                but it less intuitive when you don't knwon so well quantities.
+                but it less intuitive when you don't know so well quantities.
         '''
         
         sr = self.sampling_rate
