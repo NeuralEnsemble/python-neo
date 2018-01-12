@@ -57,7 +57,13 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            nosetests -v
+            nosetests -v --with-coverage --cover-package=neo
+
+      - run:
+          name: coveralls
+          command: |
+            . venv/bin/activate
+            coveralls
 
       - store_artifacts:
           path: test-reports
@@ -111,7 +117,7 @@ jobs:
           name: run tests
           command: |
             . venv2/bin/activate
-            nosetests -v
+            nosetests -v --with-coverage --cover-package=neo
 
       - store_artifacts:
           path: test-reports
