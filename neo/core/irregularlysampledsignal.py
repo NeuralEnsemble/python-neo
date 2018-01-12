@@ -39,9 +39,9 @@ def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=Non
     A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
     '''
-    iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
-               dtype=dtype, copy=copy, name=name, file_origin=file_origin,
-               description=description, **annotations)
+    iss = cls(times=times, signal=signal, units=units, time_units=time_units,
+              dtype=dtype, copy=copy, name=name, file_origin=file_origin,
+              description=description, **annotations)
     iss.segment = segment
     iss.channel_index = channel_index
     return iss
@@ -170,13 +170,13 @@ class IrregularlySampledSignal(BaseSignal):
         works
         '''
         return _new_IrregularlySampledSignal, (self.__class__,
-                                               self.times, 
+                                               self.times,
                                                np.array(self),
-                                               self.units, 
-                                               self.times.units, 
+                                               self.units,
+                                               self.times.units,
                                                self.dtype,
-                                               True, 
-                                               self.name, 
+                                               True,
+                                               self.name,
                                                self.file_origin,
                                                self.description,
                                                self.annotations,
@@ -186,7 +186,7 @@ class IrregularlySampledSignal(BaseSignal):
     def _array_finalize_spec(self, obj):
         '''
         Set default values for attributes specific to :class:`IrregularlySampledSignal`.
-        
+
         Common attributes are defined in
         :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
         which is called every time a new signal is created
@@ -244,7 +244,6 @@ class IrregularlySampledSignal(BaseSignal):
         else:
             raise IndexError("index should be an integer, tuple or slice")
         return obj
-
 
     @property
     def duration(self):
@@ -351,7 +350,7 @@ class IrregularlySampledSignal(BaseSignal):
         stepwise at sampling times.
         '''
         if interpolation is None:
-            return (self[:-1]*self.sampling_intervals.reshape(-1, 1)).sum()/self.duration
+            return (self[:-1] * self.sampling_intervals.reshape(-1, 1)).sum() / self.duration
         else:
             raise NotImplementedError
 
@@ -371,7 +370,7 @@ class IrregularlySampledSignal(BaseSignal):
         # further interpolation methods could be added
         raise NotImplementedError
 
-    def time_slice (self, t_start, t_stop):
+    def time_slice(self, t_start, t_stop):
         '''
         Creates a new :class:`IrregularlySampledSignal` corresponding to the time slice of
         the original :class:`IrregularlySampledSignal` between times
@@ -390,16 +389,16 @@ class IrregularlySampledSignal(BaseSignal):
         count = 0
         id_start = None
         id_stop = None
-        for i in indices :
-            if id_start == None :
-                if i == True :
+        for i in indices:
+            if id_start is None:
+                if i == True:
                     id_start = count
-            else :
-                if i == False : 
+            else:
+                if i == False:
                     id_stop = count
                     break
             count += 1
-        
+
         new_st = self[id_start:id_stop]
 
         return new_st
@@ -421,7 +420,8 @@ class IrregularlySampledSignal(BaseSignal):
             raise MergeError("Cannot merge these two signals as the sample times differ.")
 
         if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+            raise MergeError(
+                "Cannot merge these two signals as they belong to different segments.")
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[0] != other.lazy_shape[0]:
@@ -453,11 +453,11 @@ class IrregularlySampledSignal(BaseSignal):
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
             signal.channel_index = ChannelIndex(
-                    index=np.arange(signal.shape[1]),
-                    channel_ids=np.hstack([self.channel_index.channel_ids,
-                                           other.channel_index.channel_ids]),
-                    channel_names=np.hstack([self.channel_index.channel_names,
-                                             other.channel_index.channel_names]))
+                index=np.arange(signal.shape[1]),
+                channel_ids=np.hstack([self.channel_index.channel_ids,
+                                       other.channel_index.channel_ids]),
+                channel_names=np.hstack([self.channel_index.channel_names,
+                                         other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 

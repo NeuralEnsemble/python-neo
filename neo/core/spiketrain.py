@@ -282,14 +282,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # using items() is orders of magnitude faster
         if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
                 hasattr(t_start, 'dimensionality') and
-                    t_start.dimensionality.items() == dim.items()):
+                t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
-                    t_stop.dimensionality.items() == dim.items()):
+                t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
             obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
@@ -406,8 +406,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         cls = self.__class__
         new_st = cls(np.array(self), self.t_stop, units=self.units,
                      dtype=self.dtype, copy=True, sampling_rate=self.sampling_rate,
-                     t_start=self.t_start, waveforms=self.waveforms, 
-                     left_sweep=self.left_sweep, name=self.name, 
+                     t_start=self.t_start, waveforms=self.waveforms,
+                     left_sweep=self.left_sweep, name=self.name,
                      file_origin=self.file_origin, description=self.description)
         new_st.__dict__.update(self.__dict__)
         memo[id(self)] = new_st
