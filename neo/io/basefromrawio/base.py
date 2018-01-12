@@ -28,6 +28,13 @@ from neo.core import (AnalogSignal, Block,
                       Segment, SpikeTrain, Unit)
 from neo.io.baseio import BaseIO
 
+from neo.io.basefromrawio.proxyobjects import (AnalogSignalProxy,
+                SpikeTrainProxy, EventProxy, EpochProxy,
+                ensure_signal_units, check_annotations,
+                ensure_second)
+
+
+
 import quantities as pq
 
 class BaseFromRaw(BaseIO):
@@ -463,33 +470,4 @@ class BaseFromRaw(BaseIO):
             raise(NotImplementedError)
         return groups
 
-
-unit_convert = {'Volts': 'V',  'volts': 'V','Volt': 'V', 'volt': 'V', ' Volt' : 'V','microV': 'V'}
-def ensure_signal_units(units):
-    #test units
-    units = units.replace(' ', '')
-    if units in unit_convert:
-        units = unit_convert[units]
-    try:
-        units = pq.Quantity(1, units)
-    except:
-        logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
-        units = ''
-    return units
-
-def check_annotations(annotations):
-    #force type to str for some keys
-    # imposed for tests
-    for k in ('name', 'description', 'file_origin'):
-        if k in annotations:
-            annotations[k] = str(annotations[k])
-    return annotations
-
-def ensure_second(v):
-    if isinstance(v, float):
-        return v*pq.s
-    elif isinstance(v, pq.Quantity):
-        return v.rescale('s')
-    elif isinstance(v, int):
-        return float(v)*pq.s
 

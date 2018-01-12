@@ -95,16 +95,19 @@ def assert_file_contents_equal(a, b):
     assert file_digest(a) == file_digest(b), generate_error_message(a, b)
 
 
-def assert_neo_object_is_compliant(ob):
+def assert_neo_object_is_compliant(ob, check_type=True):
     '''
     Test neo compliance of one object and sub objects
     (one_to_many_relation only):
       * check types and/or presence of necessary and recommended attribute.
       * If attribute is Quantities or numpy.ndarray it also check ndim.
       * If attribute is numpy.ndarray also check dtype.kind.
+    
+    check_type=True by default can be set to false for testing ProxyObject
     '''
-    assert type(ob) in objectlist, \
-        '%s is not a neo object' % (type(ob))
+    if check_type:
+        assert type(ob) in objectlist, \
+            '%s is not a neo object' % (type(ob))
     classname = ob.__class__.__name__
 
     # test presence of necessary attributes
