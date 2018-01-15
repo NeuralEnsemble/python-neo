@@ -1145,7 +1145,7 @@ class NixIO(BaseIO):
                     neo_attrs[prop.name] = values[0]
                 else:
                     neo_attrs[prop.name] = values
-        neo_attrs["name"] = neo_attrs.get("neo_name")
+        neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
 
         if "file_datetime" in neo_attrs:
             neo_attrs["file_datetime"] = datetime.fromtimestamp(

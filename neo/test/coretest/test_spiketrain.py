@@ -1563,7 +1563,11 @@ class TestPropertiesMethods(unittest.TestCase):
 
     def test__repr(self):
         result = repr(self.train1)
-        targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
+        if np.__version__.split(".")[:2] > ['1', '13']:
+            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
+            targ = '<SpikeTrain(array([3., 4., 5.]) * ms, [0.5 ms, 10.0 ms])>'
+        else:
+            targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
         self.assertEqual(result, targ)
 
     def test__duration(self):

@@ -250,7 +250,7 @@ class AnalogSignal(BaseSignal):
         for k, v in self.__dict__.items():
             try:
                 setattr(new_signal, k, deepcopy(v, memo))
-            except:
+            except TypeError:
                 setattr(new_signal, k, v)
         return new_signal
 

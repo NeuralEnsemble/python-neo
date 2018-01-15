@@ -33,18 +33,22 @@ class BrainVisionRawIO(BaseRawIO):
     
     def _parse_header(self):
         # Read header file (vhdr)
-        header = read_brain_soup(self.filename)
+        vhdr_header = read_brainvsion_soup(self.filename)
 
-        assert header['Common Infos'][
+        bname = os.path.basename(self.filename)
+        marker_filename = self.filename.replace(bname, vhdr_header['Common Infos']['MarkerFile'])
+        binary_filename = self.filename.replace(bname, vhdr_header['Common Infos']['DataFile'])
+        
+        assert vhdr_header['Common Infos'][
             'DataFormat'] == 'BINARY', NotImplementedError
-        assert header['Common Infos'][
+        assert vhdr_header['Common Infos'][
             'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
 
-        nb_channel = int(header['Common Infos']['NumberOfChannels'])
-        sr=1.e6 /float(header['Common Infos']['SamplingInterval'])
+        nb_channel = int(vhdr_header['Common Infos']['NumberOfChannels'])
+        sr=1.e6 /float(vhdr_header['Common Infos']['SamplingInterval'])
         self._sampling_rate = sr
 
-        fmt = header['Binary Infos']['BinaryFormat']
+        fmt = vhdr_header['Binary Infos']['BinaryFormat']
         fmts = { 'INT_16':np.int16,  'INT_32':np.int32, 'IEEE_FLOAT_32':np.float32,}
 
         assert fmt in fmts, NotImplementedError
@@ -52,15 +56,14 @@ class BrainVisionRawIO(BaseRawIO):
 
 
         #raw signals memmap
-        binary_file = os.path.splitext(self.filename)[0] + '.eeg'
-        sigs = np.memmap(binary_file, dtype=sig_dtype, mode='r', offset=0 )
+        sigs = np.memmap(binary_filename, dtype=sig_dtype, mode='r', offset=0 )
         if sigs.size%nb_channel!=0:
             sigs = sigs[:-sigs.size%nb_channel]
         self._raw_signals = sigs.reshape(-1, nb_channel)
         
         sig_channels = []
         for c in range(nb_channel):
-            name, ref, res, units = header['Channel Infos'][
+            name, ref, res, units = vhdr_header['Channel Infos'][
                 'Ch%d' % (c + 1,)].split(',')
             units =units.replace('µ', 'u')
             chan_id = c+1
@@ -80,8 +83,8 @@ class BrainVisionRawIO(BaseRawIO):
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
         # read all markers in memory
-        marker_file = os.path.splitext(self.filename)[0] + '.vmrk'
-        all_info = read_brain_soup(marker_file)['Marker Infos']
+        
+        all_info = read_brainvsion_soup(marker_filename)['Marker Infos']
         ev_types = []
         ev_timestamps = []
         ev_labels = []
@@ -89,7 +92,7 @@ class BrainVisionRawIO(BaseRawIO):
             ev_type, ev_label, pos, size, channel = all_info[
                 'Mk%d' % (i + 1,)].split(',')[:5]
             ev_types.append(ev_type)
-            ev_timestamps.append(pos)
+            ev_timestamps.append(int(pos))
             ev_labels.append(ev_label)
         ev_types = np.array(ev_types)
         ev_timestamps = np.array(ev_timestamps)
@@ -115,6 +118,12 @@ class BrainVisionRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
         
         self._generate_minimal_annotations()
+        for c in range(sig_channels.size):
+            coords = vhdr_header['Coordinates']['Ch{}'.format(c+1)]
+            coords = [float(v) for v in coords.split(',')]
+            if coords[0]>0.:
+                # if radius is 0 we do not have coordinates.
+                self.raw_annotations['signal_channels'][c]['coordinates'] = coords
     
     def _source_name(self):
         return self.filename
@@ -173,7 +182,7 @@ class BrainVisionRawIO(BaseRawIO):
         return event_times
     
 
-def read_brain_soup(filename):
+def read_brainvsion_soup(filename):
     with io.open(filename, 'r', encoding='utf8') as f:
         section = None
         all_info = {}

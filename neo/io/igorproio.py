@@ -28,10 +28,9 @@ except ImportError:
 
 class IgorIO(BaseIO):
     """
-    Class for reading Igor Binary Waves (.ibw) written by WaveMetrics’ 
+    Class for reading Igor Binary Waves (.ibw) 
+    or Packed Experiment (.pxp) files written by WaveMetrics’ 
     IGOR Pro software.
-
-    Support for Packed Experiment (.pxp) files is planned.
 
     It requires the `igor` Python package by W. Trevor King.
 
@@ -119,7 +118,7 @@ class IgorIO(BaseIO):
             signal = content['wData']
         note = content['note']
         header = content['wave_header']
-        name = header['bname']
+        name = str(header['bname'].decode('utf-8'))
         units = "".join([x.decode() for x in header['dataUnits']])
         try:
             time_units = "".join([x.decode() for x in header['xUnits']])
