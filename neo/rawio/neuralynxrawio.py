@@ -30,22 +30,22 @@ import distutils.version
 import datetime
 from collections import OrderedDict
 
-BLOCK_SIZE = 512    #nb sample per signal block
-HEADER_SIZE = 2**14    #file have a txt header of 16kB
+BLOCK_SIZE = 512    # nb sample per signal block
+HEADER_SIZE = 2**14    # file have a txt header of 16kB
 
 
 class NeuralynxRawIO(BaseRawIO):
     """"
     Class for reading dataset recorded by Neuralynx.
-    
+
     Examples:
         >>> reader = NeuralynxRawIO(dirname='Cheetah_v5.5.1/original_data')
         >>> reader.parse_header()
-        
+
             Inspect all file in the directory.
 
         >>> print(reader)
-            
+
             Display all informations about signal channels, units, segment size....
     """
     extensions = ['nse', 'ncs', 'nev', 'ntt']
@@ -64,13 +64,13 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = []
         event_channels = []
 
-        self.ncs_filenames = OrderedDict()    #chan_id: filename
-        self.nse_ntt_filenames = OrderedDict()    #chan_id: filename
-        self.nev_filenames = OrderedDict()    #chan_id: filename
+        self.ncs_filenames = OrderedDict()    # chan_id: filename
+        self.nse_ntt_filenames = OrderedDict()    # chan_id: filename
+        self.nev_filenames = OrderedDict()    # chan_id: filename
 
         self._nev_memmap = {}
         self._spike_memmap = {}
-        self.internal_unit_ids = []    #channel_index > (channel_id, unit_id)
+        self.internal_unit_ids = []    # channel_index > (channel_id, unit_id)
         self.internal_event_ids = []
 
         # explore the directory looking for ncs, nev, nse and ntt
@@ -82,11 +82,11 @@ class NeuralynxRawIO(BaseRawIO):
             filename = os.path.join(self.dirname, filename)
 
             _, ext = os.path.splitext(filename)
-            ext = ext[1:]    #remove dot
+            ext = ext[1:]    # remove dot
             if ext not in self.extensions:
                 continue
 
-            #All file have more or less the same header structure
+            # All file have more or less the same header structure
             info = read_txt_header(filename)
             chan_name = info['channel_name']
             chan_id = info['channel_id']
@@ -151,7 +151,7 @@ class NeuralynxRawIO(BaseRawIO):
                     if info['input_inverted']:
                         wf_gain *= -1
                     wf_offset = 0.
-                    wf_left_sweep = -1    #DONT KNOWN
+                    wf_left_sweep = -1    # DONT KNOWN
                     wf_sampling_rate = info['sampling_rate']
                     unit_channels.append(
                         (unit_name, '{}'.format(unit_id), wf_units, wf_gain,
@@ -185,11 +185,11 @@ class NeuralynxRawIO(BaseRawIO):
             assert sampling_rate.size == 1
             self._sigs_sampling_rate = sampling_rate[0]
 
-        #read ncs files for gaps detection and nb_segment computation
+        # read ncs files for gaps detection and nb_segment computation
         self.read_ncs_files(self.ncs_filenames)
 
-        #timestamp limit in nev, nse
-        #so need to scan all spike and event to
+        # timestamp limit in nev, nse
+        # so need to scan all spike and event to
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
             for chan_id, data in _data_memmap.items():
@@ -202,14 +202,14 @@ class NeuralynxRawIO(BaseRawIO):
                 ts1 = max(ts0, ts[-1])
 
         if self._timestamp_limits is None:
-            #case  NO ncs but HAVE nev or nse
+            # case  NO ncs but HAVE nev or nse
             self._timestamp_limits = [(ts0, ts1)]
             self._seg_t_starts = [ts0 / 1e6]
             self._seg_t_stops = [ts1 / 1e6]
             self.global_t_start = ts0 / 1e6
             self.global_t_stop = ts1 / 1e6
         elif ts0 is not None:
-            #case  HAVE ncs AND HAVE nev or nse
+            # case  HAVE ncs AND HAVE nev or nse
             self.global_t_start = min(ts0 / 1e6, self._sigs_t_start[0])
             self.global_t_stop = max(ts1 / 1e6, self._sigs_t_stop[-1])
             self._seg_t_starts = list(self._sigs_t_start)
@@ -217,13 +217,13 @@ class NeuralynxRawIO(BaseRawIO):
             self._seg_t_stops = list(self._sigs_t_stop)
             self._seg_t_stops[-1] = self.global_t_stop
         else:
-            #case HAVE ncs but  NO nev or nse
+            # case HAVE ncs but  NO nev or nse
             self._seg_t_starts = self._sigs_t_start
             self._seg_t_stops = self._sigs_t_stop
             self.global_t_start = self._sigs_t_start[0]
             self.global_t_stop = self._sigs_t_stop[-1]
 
-        #fille into header dict
+        # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [self._nb_segment]
@@ -247,16 +247,16 @@ class NeuralynxRawIO(BaseRawIO):
                 unit_ann.update(unit_annotations[c])
 
             for c in range(event_channels.size):
-                #annotations for channel events
+                # annotations for channel events
                 event_id, ttl_input = self.internal_event_ids[c]
                 chan_id = event_channels[c]['id']
 
                 ev_ann = seg_annotations['events'][c]
                 ev_ann['file_origin'] = self.nev_filenames[chan_id]
-                #~ ev_ann['marker_id'] =
-                #~ ev_ann['nttl'] =
-                #~ ev_ann['digital_marker'] =
-                #~ ev_ann['analog_marker'] =
+                # ~ ev_ann['marker_id'] =
+                # ~ ev_ann['nttl'] =
+                # ~ ev_ann['digital_marker'] =
+                # ~ ev_ann['analog_marker'] =
 
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start
@@ -342,10 +342,10 @@ class NeuralynxRawIO(BaseRawIO):
 
         wfs = data[keep]['samples']
         if wfs.ndim == 2:
-            #case for nse
+            # case for nse
             waveforms = wfs[:, None, :]
         else:
-            #case for ntt change (n, 32, 4) to (n, 4, 32)
+            # case for ntt change (n, 32, 4) to (n, 4, 32)
             waveforms = wfs.swapaxes(1, 2)
 
         return waveforms
@@ -397,16 +397,16 @@ class NeuralynxRawIO(BaseRawIO):
             * self._sigs_length = []
             * self._nb_segment
             * self._timestamp_limits
-        
+
         The first file is read entirely to detect gaps in timestamp.
         each gap lead to a new segment.
-        
+
         Other files are not read entirely but we check than gaps
         are at the same place.
-        
-        
+
+
         gap_indexes can be given (when cached) to avoid full read.
-        
+
         """
         if len(ncs_filenames) == 0:
             self._nb_segment = 1
@@ -423,14 +423,14 @@ class NeuralynxRawIO(BaseRawIO):
         if self.use_cache:
             gap_indexes = self._cache.get('gap_indexes')
 
-        #detect gaps on first file
+        # detect gaps on first file
         if gap_indexes is None:
-            #this can be long!!!!
+            # this can be long!!!!
             timestamps0 = data0['timestamp']
             deltas0 = np.diff(timestamps0)
 
-            #It should be that:
-            #gap_indexes, = np.nonzero(deltas0!=good_delta)
+            # It should be that:
+            # gap_indexes, = np.nonzero(deltas0!=good_delta)
 
             # but for a file I have found many deltas0==15999 deltas0==16000
             # I guess this is a round problem
@@ -452,7 +452,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._sigs_t_stop = []
         self._sigs_length = []
         self._timestamp_limits = []
-        #create segment with subdata block/t_start/t_stop/length
+        # create segment with subdata block/t_start/t_stop/length
         for chan_id, ncs_filename in self.ncs_filenames.items():
             data = np.memmap(
                 ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
@@ -485,19 +485,19 @@ class NeuralynxRawIO(BaseRawIO):
 
 # keys in
 txt_header_keys = [
-    ('AcqEntName', 'channel_name', None),    #used
+    ('AcqEntName', 'channel_name', None),    # used
     ('FileType', '', None),
     ('FileVersion', '', None),
     ('RecordSize', '', None),
     ('HardwareSubSystemName', '', None),
     ('HardwareSubSystemType', '', None),
-    ('SamplingFrequency', 'sampling_rate', float),    #used
+    ('SamplingFrequency', 'sampling_rate', float),    # used
     ('ADMaxValue', '', None),
-    ('ADBitVolts', 'bit_to_microVolt', float),    #used
+    ('ADBitVolts', 'bit_to_microVolt', float),    # used
     ('NumADChannels', '', None),
-    ('ADChannel', 'channel_id', int),    #used
+    ('ADChannel', 'channel_id', int),    # used
     ('InputRange', '', None),
-    ('InputInverted', 'input_inverted', bool),    #used
+    ('InputInverted', 'input_inverted', bool),    # used
     ('DSPLowCutFilterEnabled', '', None),
     ('DspLowCutFrequency', '', None),
     ('DspLowCutNumTaps', '', None),
@@ -525,13 +525,13 @@ txt_header_keys = [
     ('Feature NthSample 7', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
-    ('CheetahRev', 'version', None),    #used  possibilty 1 for version
+    ('CheetahRev', 'version', None),    # used  possibilty 1 for version
     ('ProbeName', '', None),
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
     ('ApplicationName Cheetah', 'version',
-     None),    #used  possibilty 2 for version
+     None),    # used  possibilty 2 for version
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
@@ -560,7 +560,7 @@ def read_txt_header(filename):
             if type_ is not None:
                 info[k2] = type_(info[k2])
 
-    #some conversions
+    # some conversions
     if 'bit_to_microVolt' in info:
         info['bit_to_microVolt'] = info['bit_to_microVolt'] * 1e6
     if 'version' in info:
@@ -597,14 +597,13 @@ def read_txt_header(filename):
     if 'channel_id' not in info:
         info['channel_id'] = name
 
-    #~ for k, v in info.items():
-    #~ print(' ', k, ':', v)
+    # ~ for k, v in info.items():
+    # ~ print(' ', k, ':', v)
 
     return info
 
 
-ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate',
-                                                                 'uint32'),
+ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
              ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE, ))]
 
 nev_dtype = [
@@ -625,18 +624,18 @@ nev_dtype = [
 def get_nse_or_ntt_dtype(info, ext):
     """
     For NSE and NTT the dtype depend on the header.
-    
-    """
-    dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'),
-             ('unit_id', 'uint32'), ('features', 'int32', (8, ))]
 
-    #count sample
+    """
+    dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('unit_id', 'uint32'),
+             ('features', 'int32', (8, ))]
+
+    # count sample
     if ext == 'nse':
         nb_sample = info['WaveformLength']
         dtype += [('samples', 'int16', (nb_sample, ))]
     elif ext == 'ntt':
         nb_sample = info['WaveformLength']
-        nb_chan = 4    #check this if not tetrode
+        nb_chan = 4    # check this if not tetrode
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
