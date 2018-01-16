@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import quantities as pq
 from neo.rawio.examplerawio import ExampleRawIO
-from neo.io.basefromrawio.proxyobjects import AnalogSignalProxy
+from neo.io.basefromrawio.proxyobjects import AnalogSignalProxy, SpikeTrainProxy
 
 from neo.core import (AnalogSignal, 
                       Epoch, Event, SpikeTrain)
@@ -28,7 +28,7 @@ from neo.test.tools import (
 
 class BaseProxyTest(unittest.TestCase):
     def setUp(self):
-        self.reader = ExampleRawIO()
+        self.reader = ExampleRawIO(filename='my_filename.fake')
         self.reader.parse_header()
 
 class TestAnalogSignalProxy(BaseProxyTest):
@@ -41,6 +41,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert proxy_anasig.t_start==0*pq.s
         assert proxy_anasig.t_stop==10*pq.s
         assert proxy_anasig.duration==10*pq.s
+        assert proxy_anasig.file_origin =='my_filename.fake'
         
         #full load
         full_anasig = proxy_anasig.load(time_slice=None)
@@ -74,7 +75,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig_float.units==pq.uV
         assert anasig_float.units==proxy_anasig.units
 
-        #magnitude mode rescaled
+        #magnitude mode raw
         anasig_int = proxy_anasig.load(magnitude_mode='raw')
         assert anasig_int.dtype=='int16'
         assert anasig_int.units==pq.CompoundUnit('0.0152587890625*uV')
@@ -84,24 +85,68 @@ class TestAnalogSignalProxy(BaseProxyTest):
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
                     global_channel_indexes=slice(0,10, 2), block_index=0, seg_index=0,)
-        #~ print(proxy_anasig.shape)
+        
         assert proxy_anasig.shape==(100000, 5)
         assert '(ch0,ch2,ch4,ch6,ch8)' in proxy_anasig.name
         
         #should be channel ch0 and ch6
         anasig = proxy_anasig.load(channel_indexes=[0,3])
         assert anasig.shape==(100000, 2)
-        print(anasig.name)
         assert '(ch0,ch6)' in anasig.name
 
+class TestSpikeTrainProxy(BaseProxyTest):
+    
+    def test_SpikeTrainProxy(self):
+        proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+                        block_index=0, seg_index=0)
         
+        assert proxy_sptr.name=='unit0'
+        assert proxy_sptr.t_start==0*pq.s
+        assert proxy_sptr.t_stop==10*pq.s
+        assert proxy_sptr.shape==(20,)
+        assert proxy_sptr.left_sweep == 0.002*pq.s
+        assert proxy_sptr.sampling_rate == 10*pq.kHz
         
+        #full load
+        full_sptr = proxy_sptr.load(time_slice=None)
+        assert isinstance(full_sptr, SpikeTrain)
+        assert_same_attributes(proxy_sptr, full_sptr)
+        assert full_sptr.shape==proxy_sptr.shape
+
+        #slice time
+        sptr = proxy_sptr.load(time_slice=(250*pq.ms, 500*pq.ms))
+        assert sptr.t_start == .25*pq.s
+        assert sptr.t_stop == .5*pq.s
+        assert sptr.shape == (6,)
         
+        #magnitude mode rescaled
+        sptr_float = proxy_sptr.load(magnitude_mode='rescaled')
+        assert sptr_float.dtype=='float64'
+        assert sptr_float.units==pq.s
+
+        #magnitude mode raw
+        #TODO when raw mode implemented
+        #~ sptr_int = proxy_sptr.load(magnitude_mode='raw')
+        #~ assert sptr_int.dtype=='int64'
+        #~ assert sptr_int.units==pq.CompoundUnit('1/10000*s')
         
+        #~ assert_arrays_almost_equal(sptr_float, sptr_int.rescale('s'), 1e-9)
         
+        #Without waveforms
+        sptr = proxy_sptr.load(load_waveforms=False)
+        assert sptr.waveforms is None
         
-        #~ print(proxy_anasig.shape)
+        #With waveforms
+        sptr = proxy_sptr.load(load_waveforms=True, magnitude_mode='rescaled')
+        assert sptr.waveforms is not None
+        assert sptr.waveforms.shape == (20, 1, 50)
+        assert sptr.waveforms.units == 1*pq.uV
         
+        #slice waveforms
+        sptr = proxy_sptr.load(load_waveforms=True, time_slice=(250*pq.ms, 500*pq.ms))
+        assert sptr.waveforms.shape == (6, 1, 50)
+
+
 
 
 

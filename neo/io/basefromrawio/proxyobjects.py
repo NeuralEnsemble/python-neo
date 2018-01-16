@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Here a list of proxy object that can be used when lazy=True.
+Here a list of proxy object that can be used when lazy=True at neo.io level.
 
 This idea is to be able to postpone that real in memory loading 
 for objects that contains big data (AnalogSIgnal, SpikeTrain, Event, Epoch).
 
 The implementation rely on neo.rawio, so it will available only for neo.io that
 ineherits neo.rawio.
-
 
 """
 
@@ -25,6 +24,8 @@ class BaseProxy(BaseNeo):
     def __init__(self, **kargs):
         #this for py27 str vs py3 str in neo attributes ompatibility
         kargs = check_annotations(kargs)
+        if 'file_origin' not in kargs:
+            kargs['file_origin'] = self._rawio.source_name()
         BaseNeo.__init__(self, **kargs)
 
 class AnalogSignalProxy(BaseProxy):
@@ -37,7 +38,7 @@ class AnalogSignalProxy(BaseProxy):
     on neo.rawio.
     
     This object must not be constructed directly but is given
-    neo.io when lazy=True.
+    neo.io when lazy=True instead of a true AnalogSignal.
     
     The AnalogSignalProxy is able to load:
       * only a slice of time
@@ -46,7 +47,7 @@ class AnalogSignalProxy(BaseProxy):
         a pq.CompoundUnit().
     
     Usage:
-    >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader, channel_indexes=None,
+    >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader, global_channel_indexes=None,
                         block_index=0, seg_index=0,)
     >>> anasig = proxy_anasig.load()
     >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
@@ -95,6 +96,7 @@ class AnalogSignalProxy(BaseProxy):
         #both necessary attr and annotations
         kargs = {}
         kargs['name'] = self._make_name(None)
+        #TODO array annotations here
         
         BaseProxy.__init__(self, **kargs)
     
@@ -193,15 +195,124 @@ class AnalogSignalProxy(BaseProxy):
 
 
 class SpikeTrainProxy(BaseProxy):
+    '''
+    This object mimic SpikeTrain except that it does not
+    have the spike time nor waveforms.
+    All attributes and annotations are here.
+    
+    The goal is to postpone the loading of data into memory
+    when reading a file with the new lazy load system based
+    on neo.rawio.
+    
+    This object must not be constructed directly but is given
+    neo.io when lazy=True instead of a true SpikeTrain.
+    
+    The SpikeTrainProxy is able to load:
+      * only a slice of time
+      * load wveforms or not.
+      * have an internal raw magnitude identic to the file (generally the ticks
+        of clock in int64) or the rescale to seconds.
+    
+    Usage:
+    >>> proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_channel=0,
+                        block_index=0, seg_index=0,)
+    >>> sptr = proxy_sptr.load()
+    >>> slice_of_sptr = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
+    
+    '''
+    
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('t_start', pq.Quantity, 0),
                                     ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ()    
     
-    def __init__(self, rawio=None, **kargs):
-        BaseProxy.__init__(self, rawio=rawio, **kargs)
+    def __init__(self, rawio=None, unit_index=None, block_index=0, seg_index=0):
         
+        self._rawio = rawio
+        self._block_index = block_index
+        self._seg_index = seg_index
+        self._unit_index = unit_index
+        
+        nb_sipike = self._rawio.spike_count(block_index=block_index, seg_index=seg_index, 
+                                        unit_index=unit_index)
+        self.shape = (nb_sipike, )
+        
+        self.t_start = self._rawio.segment_t_start(block_index, seg_index) * pq.s
+        self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
+        
+        #both necessary attr and annotations
+        kargs = {}
+        for k in ('name', 'id'):
+            kargs[k] = self._rawio.header['unit_channels'][unit_index][k]
+        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
+        kargs.update(ann)
+        
+        #TODO waveforms
+        h = self._rawio.header['unit_channels'][unit_index]
+        wf_sampling_rate = h['wf_sampling_rate']
+        if not np.isnan(wf_sampling_rate) and wf_sampling_rate>0:
+            self.sampling_rate = wf_sampling_rate * pq.Hz
+            self.left_sweep = (h['wf_left_sweep']/self.sampling_rate).rescale('s')
+            self._wf_units = h['wf_units']
+        else:
+            self.sampling_rate = None
+            self.left_sweep = None
+            
+        BaseProxy.__init__(self, **kargs)
+    
+    def load(self, time_slice=None, magnitude_mode='rescaled', load_waveforms=False):
+        '''
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire signal.
+            :magnitude_mode: 'rescaled' or 'raw'.
+            :load_waveforms: bool load waveforms or not.
+        '''
+        
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
+        _t_start = t_start.rescale('s').magnitude
+        _t_stop = t_stop.rescale('s').magnitude
+
+        spike_timestamps = self._rawio.get_spike_timestamps(block_index=self._block_index, 
+                        seg_index=self._seg_index, unit_index=self._unit_index, t_start=_t_start,
+                        t_stop=_t_stop)
+        
+        if magnitude_mode == 'raw':
+            #we must modify a bit the neo.rawio interface to also read the spike_timestamps
+            #underlying clock wich is not always same as sigs
+            raise(NotImplementedError)
+        elif magnitude_mode=='rescaled':
+            dtype = 'float64'
+            spike_times = self._rawio.rescale_spike_timestamp(spike_timestamps, dtype=dtype)
+            units = 's'
+        
+        if load_waveforms:
+            assert self.sampling_rate is not None, 'Do not have waveforms'
+            
+            raw_wfs = self._rawio.get_spike_raw_waveforms(block_index=self._block_index,
+                seg_index=self._seg_index, unit_index=self._unit_index,
+                            t_start=_t_start, t_stop=_t_stop)
+            if magnitude_mode=='rescaled':
+                float_wfs= self._rawio.rescale_waveforms_to_float(raw_wfs,
+                                dtype='float32', unit_index=self._unit_index)
+                waveforms = pq.Quantity(float_wfs, units=self._wf_units,
+                            dtype='float32', copy=False)
+            elif magnitude_mode=='raw':
+                #could code also CompundUnit here but it is over killed
+                #so we used dimentionless
+                waveforms = pq.Quantity(raw_wfs, units='', 
+                            dtype=raw_wfs.dtype, copy=False)
+        else:
+            waveforms = None
+
+        sptr = SpikeTrain(spike_times, t_stop, units=units, dtype=dtype,
+                t_start=t_start, copy=False, sampling_rate=self.sampling_rate,
+                waveforms=waveforms, left_sweep=self.left_sweep, name=self.name, 
+                file_origin=self.file_origin, description=self.description, **self.annotations)
+        
+        return sptr
+
 
 class EventProxy(BaseProxy):
     _single_parent_objects = ('Segment',)
@@ -256,3 +367,18 @@ def ensure_second(v):
         return float(v)*pq.s
 
 
+def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):
+    if time_slice is None:
+        t_start, t_stop = None, None
+    else:
+        t_start, t_stop = time_slice
+    
+    if t_start is None:
+        t_start = seg_t_start
+    t_start = ensure_second(t_start)
+    
+    if t_stop is None:
+        t_stop = seg_t_stop
+    t_stop = ensure_second(t_stop)
+    
+    return (t_start, t_stop)
