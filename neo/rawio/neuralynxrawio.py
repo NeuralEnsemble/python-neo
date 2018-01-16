@@ -18,7 +18,7 @@ NCS files need to be read entirely to detect that gaps.... too bad....
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 """
 from __future__ import print_function, division, absolute_import
-#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
+# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -194,7 +194,8 @@ class NeuralynxRawIO(BaseRawIO):
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
             for chan_id, data in _data_memmap.items():
                 ts = data['timestamp']
-                if ts.size == 0: continue
+                if ts.size == 0:
+                    continue
                 if ts0 is None:
                     ts0 = ts[0]
                     ts1 = ts[-1]
@@ -270,10 +271,11 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop,
-                                channel_indexes):
-        if i_start is None: i_start = 0
-        if i_stop is None: i_stop = self._sigs_length[seg_index]
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self._sigs_length[seg_index]
 
         block_start = i_start // BLOCK_SIZE
         block_stop = i_stop // BLOCK_SIZE + 1
@@ -356,8 +358,8 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._nev_memmap[chan_id]
         ts0, ts1 = self._timestamp_limits[seg_index]
         ts = data['timestamp']
-        keep = (ts>=ts0) & (ts<=ts1) & (data['event_id']==event_id) &\
-                    (data['ttl_input']==ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
+               (data['ttl_input'] == ttl_input)
         nb_event = int(data[keep].size)
         return nb_event
 
@@ -374,8 +376,8 @@ class NeuralynxRawIO(BaseRawIO):
             ts1 = int((t_stop + self.global_t_start) * 1e6)
 
         ts = data['timestamp']
-        keep = (ts>=ts0) & (ts<=ts1) & (data['event_id']==event_id) &\
-                    (data['ttl_input']==ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
+               (data['ttl_input'] == ttl_input)
         subdata = data[keep]
         timestamps = subdata['timestamp']
         labels = subdata['event_string'].astype('U')
