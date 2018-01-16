@@ -12,7 +12,7 @@ NTT contains spikes and waveforms for tetrode
 
 NCS can contains gaps that can be detected in inregularity
 in timestamps of data blocks. Each gap lead to one new segment.
-NCVS files need to be read entirly to detect that gaps.... too bad....
+NCS files need to be read entirely to detect that gaps.... too bad....
 
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
@@ -601,14 +601,8 @@ def get_nse_or_ntt_dtype(info, ext):
         ('timestamp', 'uint64'),
         ('channel_id', 'uint32'),
         ('unit_id', 'uint32'),
+        ('features', 'int32', (8,))
     ]
-    
-    # count feature
-    nb_feature = 0
-    for k in info.keys():
-        if k.startswith('Feature '):
-            nb_feature += 1
-    dtype += [('features', 'int32', (nb_feature,))]
     
     #count sample
     if ext == 'nse':
