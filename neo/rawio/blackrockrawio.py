@@ -291,14 +291,31 @@ class BlackrockRawIO(BaseRawIO):
             self.nsx_data = self.__nsx_data_reader[spec](self.nsx_to_load)
             
             self._nb_segment = len(self.nsx_data)
-            
+
             sig_sampling_rate = float(main_sampling_rate / self.__nsx_basic_header[self.nsx_to_load]['period'])
-            
-            for i, chan in enumerate(self.__nsx_ext_header[self.nsx_to_load]):
-                ch_name = chan['electrode_label'].decode()
-                ch_id = chan['electrode_id']
+
+            if spec in ['2.2', '2.3']:
+                ext_header = self.__nsx_ext_header[self.nsx_to_load]
+            elif spec == '2.1':
+                ext_header = []
+                keys = ['labels', 'units', 'min_analog_val', 'max_analog_val', 'min_digital_val', 'max_digital_val']
+                params = self.__nsx_params[spec](self.nsx_to_load)
+                for i in range(len(params['labels'])):
+                    d = {}
+                    for key in keys:
+                        d[key] = params[key][i]
+                    ext_header.append(d)
+
+            for i, chan in enumerate(ext_header):
+                if spec in ['2.2', '2.3']:
+                    ch_name = chan['electrode_label'].decode()
+                    ch_id = chan['electrode_id']
+                    units = chan['units'].decode()
+                elif spec == '2.1':
+                    ch_name = chan['labels']
+                    ch_id = self.__nsx_ext_header[self.nsx_to_load][i]['electrode_id']
+                    units = chan['units']
                 sig_dtype = 'int16'
-                units = chan['units'].decode()
                 #max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
                 #dangarous situation so cast to float everyone
                 gain = (float(chan['max_analog_val']) - float(chan['min_analog_val']))/\
@@ -314,43 +331,50 @@ class BlackrockRawIO(BaseRawIO):
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
                 if self.__nsx_data_header[self.nsx_to_load] is None:
-                    t_start = 0.
+                    t_start = 0.*pq.CompoundUnit("1.0/{0} * s".format(self.__nev_basic_header['timestamp_resolution']))
                 else:
-                    t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp']/sig_sampling_rate
-                t_stop = t_start + length / sig_sampling_rate
-                max_nev_time = 0
+                    t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] * \
+                                        pq.CompoundUnit("1.0/{0} * s".format(sig_sampling_rate))
+                t_stop = t_start + length * pq.CompoundUnit("1.0/{0} * s".format(sig_sampling_rate))
+                max_nev_time = 0 * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                 for k, data in self.nev_data.items():
                     if data.size > 0:
-                        t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        t = data[-1]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                         max_nev_time = max(max_nev_time, t)
                 if max_nev_time > t_stop:
                     t_stop = max_nev_time
                 min_nev_time = max_nev_time
                 for k, data in self.nev_data.items():
                     if data.size > 0:
-                        t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                        t = data[0]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                            self.__nev_basic_header['timestamp_resolution']))
                         min_nev_time = min(min_nev_time, t)
                 if min_nev_time < t_start:
                     self._seg_t_starts.append(min_nev_time)
                 else:
                     self._seg_t_starts.append(t_start)
-                self._seg_t_stops.append(float(t_stop))
-                self._sigs_t_starts.append(float(t_start))
+                self._seg_t_stops.append(t_stop)
+                self._sigs_t_starts.append(t_start)
        
         else:
             #not signal at all so 1 segment
             self._nb_segment = 1
 
             #no nsx so use nev min/max timestamp
-            max_nev_time = 0.
+            max_nev_time = 0 * pq.CompoundUnit("1.0/{0} * s".format(
+                    self.__nev_basic_header['timestamp_resolution']))
             for k, data in self.nev_data.items():
                 if data.size>0:
-                    t = data[-1]['timestamp']/self.__nev_basic_header['timestamp_resolution']
+                    t = data[-1]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                    self.__nev_basic_header['timestamp_resolution']))
                     max_nev_time = max(max_nev_time, t)
             min_nev_time = max_nev_time
             for k, data in self.nev_data.items():
                 if data.size > 0:
-                    t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                    t = data[0]['timestamp'] * pq.CompoundUnit("1.0/{0} * s".format(
+                                    self.__nev_basic_header['timestamp_resolution']))
                     min_nev_time = min(min_nev_time, t)
             self._sigs_t_starts = [min_nev_time]
             self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
@@ -508,7 +532,9 @@ class BlackrockRawIO(BaseRawIO):
     
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
-        spike_times /= self.__nev_basic_header['timestamp_resolution']
+        #spike_times /= self.__nev_basic_header['timestamp_resolution']
+        spike_times = spike_times * pq.CompoundUnit("1.0/{0} * s".format(
+                self.__nev_basic_header['timestamp_resolution']))
         return spike_times
     
     def  _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
@@ -564,7 +590,8 @@ class BlackrockRawIO(BaseRawIO):
     
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         ev_times = event_timestamps.astype(dtype)
-        ev_times /= self.__nev_basic_header['timestamp_resolution']
+        ev_times *= pq.CompoundUnit("1.0/{0} * s".format(
+                self.__nev_basic_header['timestamp_resolution']))
         return ev_times
 
     
@@ -781,9 +808,9 @@ class BlackrockRawIO(BaseRawIO):
 
         # get shape of data
         shape = (
-            self.__nsx_databl_param['2.1']('nb_data_points', nsx_nb),
+            self.__nsx_params['2.1'](nsx_nb)['nb_data_points'],
             self.__nsx_basic_header[nsx_nb]['channel_count'])
-        offset = self.__nsx_params['2.1']('bytes_in_headers', nsx_nb)
+        offset = self.__nsx_params['2.1'](nsx_nb)['bytes_in_headers']
 
         # read nsx data
         # store as dict for compatibility with higher file specs
@@ -813,6 +840,7 @@ class BlackrockRawIO(BaseRawIO):
                 filename, dtype='int16', shape=shape, offset=offset, mode='r')
 
         return data
+
 
     def __read_nev_header(self, ext_header_variants):
         """
@@ -1391,7 +1419,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return wf_left_sweep
 
-    def __get_nsx_param_variant_a(self, param_name, nsx_nb):
+    def __get_nsx_param_variant_a(self, nsx_nb):
         """
         Returns parameter (param_name) for a given nsx (nsx_nb) for file spec
         2.1.
@@ -1423,7 +1451,16 @@ class BlackrockRawIO(BaseRawIO):
             else:
                 labels.append('ainp%i' % (elid - 129 + 1))
 
+        filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
+
+        bytes_in_headers = self.__nsx_basic_header[nsx_nb].dtype.itemsize + \
+                           self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
+                           self.__nsx_basic_header[nsx_nb]['channel_count']
+
         nsx_parameters = {
+            'nb_data_points': int(
+                (self.__get_file_size(filename) - bytes_in_headers) /
+                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'labels': labels,
             'units': np.array(
                 ['uV'] *
@@ -1435,16 +1472,13 @@ class BlackrockRawIO(BaseRawIO):
             'max_digital_val': np.array(
                 [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
-            'bytes_in_headers':
-                self.__nsx_basic_header[nsx_nb].dtype.itemsize +
-                self.__nsx_ext_header[nsx_nb].dtype.itemsize *
-                self.__nsx_basic_header[nsx_nb]['channel_count'],
+            'bytes_in_headers': bytes_in_headers,
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters[param_name]
+        return nsx_parameters       # Returns complete dictionary because then it does not need to be called so often
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """
