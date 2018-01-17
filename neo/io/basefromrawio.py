@@ -64,6 +64,8 @@ class BaseFromRaw(BaseIO):
     
     _prefered_signal_group_mode = 'split-all' #'group-by-same-units'
     _prefered_units_group_mode = 'split-all' # 'all-in-one'
+
+    _segment_indexes = 0
     
 
     def __init__(self, *args, **kargs):
@@ -95,8 +97,10 @@ class BaseFromRaw(BaseIO):
         :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
         
         :param time_slices: None by default. List of time_slice. A time slice is (t_start, t_stop) both are quantities.
-            each element will lead to a fake neo.Segment. So len(block.segment) == len(time_slice)
-            all time_slice must be compatible with original time range.
+            This will load all segments in the specified time ranges. Data outside the time slice is cut off.
+            If overlapping time slices are specified, data will be loaded multiple times.
+            If t_start or t_stop is None or out of the files range, the respective end of the file will be chosen.
+            Thus, (None, None) loads the whole file. As will (float('-inf), float('inf)).
         
         """
         
@@ -161,42 +165,48 @@ class BaseFromRaw(BaseIO):
                                         name='ChannelIndex for Unit')
                 channel_index.units.append(unit)
                 bl.channel_indexes.append(channel_index)
-        
+
+
         if time_slices is None:
-            #Read the real segment counts
+            # Use implementation below to avoid duplicate code
+            time_slices = [(None, None)]
+
+        # Create a list of all segments that are in the specified time_slices
+        for s, time_slice in enumerate(time_slices):
+            t_start, t_stop = time_slice
+
+            assert t_start is None or t_stop is None or t_start < t_stop, \
+                "Start of time slice needs to be before its end!"
+
+            t_start = ensure_second(t_start)
+            t_stop = ensure_second(t_stop)
+
             for seg_index in range(self.segment_count(block_index)):
-                seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
-                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
-                                                                    load_waveforms=load_waveforms)
-                bl.segments.append(seg)
-                
-        else:
-            #return a fake segment list corresponding to time_slices
-            for s, time_slice in enumerate(time_slices):
-                #find in which segment time_slice is
-                t_start, t_stop = time_slice
-                t_start = ensure_second(t_start)
-                t_stop = ensure_second(t_stop)
-                related_seg_index = None
-                for seg_index in range(self.segment_count(block_index)):
-                    seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
-                    seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
-                    if (seg_t_start<=t_start<=seg_t_stop) and (seg_t_start<=t_stop<=seg_t_stop):
-                        related_seg_index = seg_index
-                
-                if related_seg_index is None:
-                    raise(ValueError('time_slice not in any segment range  {}'.format(time_slice)))
-                
-                seg =  self.read_segment(block_index=block_index, seg_index=related_seg_index,
-                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
-                                                                    load_waveforms=load_waveforms, time_slice=time_slice)
-                seg.index = s
-                bl.segments.append(seg)
-                
-                for c, anasig in enumerate(seg.analogsignals):
-                    bl.channel_indexes[c].analogsignals.append(anasig)
-        
-        #create link to other containers ChannelIndex and Units
+                seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
+                seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
+
+                # If a part of the segment is in the current time_slice, load this segment
+                # None means read the maximum number of data points (from beginning / to end respectively)
+                read_this_seg = False
+                if t_start is None and t_stop is None:
+                    read_this_seg = True
+                elif t_start is None and t_stop >= seg_t_start:
+                    read_this_seg = True
+                elif t_stop is None and t_start <= seg_t_stop:
+                    read_this_seg = True
+                elif t_start <= seg_t_stop and t_stop >= seg_t_start:
+                    read_this_seg = True
+                if read_this_seg:
+                    seg = self.read_segment(block_index=block_index, seg_index=seg_index,
+                                            lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                            load_waveforms=load_waveforms, time_slice=time_slice)
+                    bl.segments.append(seg)
+
+            # Raise an error if nothing was loaded because there are no recordings in the specified time range
+            if len(bl.segments) == 0:
+                raise (ValueError('time_slice not in any segment range  {}'.format(time_slice)))
+
+        # Create link to other containers ChannelIndex and Units
         for seg in bl.segments:
             for c, anasig in enumerate(seg.analogsignals):
                 bl.channel_indexes[c].analogsignals.append(anasig)
@@ -244,8 +254,13 @@ class BaseFromRaw(BaseIO):
         for k in ('signals', 'units', 'events'):
             seg_annotations.pop(k)
         seg_annotations = check_annotations(seg_annotations)
-        
-        seg = Segment(index=seg_index, **seg_annotations)
+
+        if 'description' not in seg_annotations:
+            seg_annotations['description'] = "Segment with index {}".format(self._segment_indexes)
+
+        seg = Segment(index=self._segment_indexes, **seg_annotations)
+
+        self._segment_indexes += 1
 
         if not cascade:
             return seg
@@ -253,22 +268,22 @@ class BaseFromRaw(BaseIO):
         
         seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
         seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
-        
+
         # get only a slice of objects limited by t_start and t_stop time_slice = (t_start, t_stop)
-        if time_slice is None:
+        if time_slice is None or time_slice == (None, None):
             t_start, t_stop = None, None
             t_start_, t_stop_ = None, None
         else:
             assert not lazy, 'time slice only work when not lazy'
             t_start, t_stop = time_slice
-            
+
             t_start = ensure_second(t_start)
             t_stop = ensure_second(t_stop)
             
             #checks limits
-            if t_start<seg_t_start:
+            if t_start is None or t_start<seg_t_start:
                 t_start = seg_t_start
-            if t_stop>seg_t_stop:
+            if t_stop is None or t_stop>seg_t_stop:
                 t_stop = seg_t_stop
             
             #in float format in second (for rawio clip)

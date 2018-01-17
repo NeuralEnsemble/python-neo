@@ -78,11 +78,10 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        #this raise error in read_block
-        with self.assertRaises(ValueError):
-            block = reader.read_block(time_slices=[buggy_slice])
+        # This is valid because the whole file is read in this case
+        block = reader.read_block(time_slices=[buggy_slice])
         
-        #but this is valid in read_segment because seg_index is specified
+        # This is valid in read_segment because seg_index is specified, thus the whole segment is read
         seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
         
         lenb = len(seg.analogsignals[0])
