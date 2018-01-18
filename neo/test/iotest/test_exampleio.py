@@ -26,7 +26,7 @@ class TestExampleIO(BaseTestIO, unittest.TestCase, ):
 class Specific_TestExampleIO(unittest.TestCase):
     def test_read_segment_lazy(self):
         r = ExampleIO(filename=None)
-        seg = r.read_segment(cascade=True, lazy=True)
+        seg = r.read_segment(lazy=True)
         for ana in seg.analogsignals:
             self.assertEqual(ana.size, 0)
             assert hasattr(ana, 'lazy_shape')
@@ -34,7 +34,7 @@ class Specific_TestExampleIO(unittest.TestCase):
             self.assertEqual(st.size, 0)
             assert hasattr(st, 'lazy_shape')
 
-        seg = r.read_segment(cascade=True, lazy=False)
+        seg = r.read_segment(lazy=False)
         for anasig in seg.analogsignals:
             self.assertNotEqual(anasig.size, 0)
         for st in seg.spiketrains:
@@ -54,7 +54,7 @@ class Specific_TestExampleIO(unittest.TestCase):
     
     def test_read_block(self):
         r = ExampleIO(filename=None)
-        bl = r.read_block(cascade=True, lazy=True)
+        bl = r.read_block(lazy=True)
         assert len(bl.list_units) == 3
         #~ print(len(bl.channel_indexes))
         assert len(bl.channel_indexes) == 1 + 3 #signals grouped + units

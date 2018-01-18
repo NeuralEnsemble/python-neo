@@ -89,7 +89,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
         self.assertEqual(len(block.segments[0].spiketrains[0]), 0)
 
-        block = nio.read_block(cascade=False)
+        block = nio.read_block()
         self.assertEqual(len(block.segments), 0)
 
         block = nio.read_block(load_waveforms=True)
@@ -124,7 +124,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(seg.analogsignals[0].size, 0)
         self.assertEqual(seg.spiketrains[0].size, 0)
         
-        seg = nio.read_segment(seg_index=0, cascade=False)
+        seg = nio.read_segment(seg_index=0)
         self.assertEqual(len(seg.analogsignals), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
@@ -161,7 +161,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(lazy=True)
         self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
 
-        block = nio.read_block(cascade=False)
+        block = nio.read_block()
         self.assertEqual(len(block.segments), 0)
 
         block = nio.read_block(load_waveforms=True)
@@ -196,7 +196,7 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(seg.analogsignals[0]), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
-        seg = nio.read_segment(cascade=False)
+        seg = nio.read_segment()
         self.assertEqual(len(seg.analogsignals), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
