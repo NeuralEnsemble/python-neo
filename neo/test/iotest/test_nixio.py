@@ -281,8 +281,6 @@ class NixIOTest(unittest.TestCase):
                              nix.DimensionType.Sample)
 
     def compare_attr(self, neoobj, nixobj):
-        print(neoobj.annotations["nix_name"])
-        print(nixobj.name)
         if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
             nix_name = ".".join(nixobj.name.split(".")[:-1])
         else:
@@ -665,6 +663,7 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name=self.rword())
         segment = Segment(name=self.rword(), description=self.rword())
         block.segments.append(segment)
+        print(f"Pre  {len(block.segments)} segments")
         self.write_and_compare([block])
 
         segment.annotate(**self.rdict(2))

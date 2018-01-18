@@ -28,10 +28,11 @@ from uuid import uuid4
 import quantities as pq
 import numpy as np
 
-from neo.io.baseio import BaseIO
-from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
-                      IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
-from neo.io.tools import LazyList
+from .baseio import BaseIO
+from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
+                    IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
+from .tools import LazyList
+from ..version import version as neover
 
 try:
     import nixio as nix
@@ -90,7 +91,7 @@ class NixIO(BaseIO):
     writeable_objects = [Block]
 
     name = "NIX"
-    extensions = ["h5"]
+    extensions = ["h5", "nix"]
     mode = "file"
 
     nix_version = nix.__version__ if HAVE_NIX else "NIX NOT FOUND"
@@ -131,12 +132,12 @@ class NixIO(BaseIO):
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
                              " 'ow' (Overwrite).".format(mode))
         self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
-        self._neo_map = dict()
-        self._nix_map = dict()
-        self._lazy_loaded = list()
-        self._object_hashes = dict()
+        if self.nix_file.mode == nix.FileMode.Overwrite:
+            filemd = self.nix_file.create_section("neo", "neo.metadata")
+            filemd["neo.version"] = neover
+        # TODO: Version check for existing files
         self._block_read_counter = 0
-        self._path_map = dict()
+        self._neo_map = dict()
 
     def __enter__(self):
         return self
@@ -144,41 +145,26 @@ class NixIO(BaseIO):
     def __exit__(self, *args):
         self.close()
 
-    def read_all_blocks(self, lazy=False):
-        assert not lazy, 'Do not support lazy'
+    def read_all_blocks(self):
         blocks = list()
         for blk in self.nix_file.blocks:
-            blocks.append(self.read_block("/" + blk.name, lazy))
+            blocks.append(self.read_block(blk))
         return blocks
 
-    def read_block(self, path="/", lazy=False):
-        assert not lazy, 'Do not support lazy'
-        if path == "/":
-            try:
-                nix_block = self.nix_file.blocks[self._block_read_counter]
-                path += nix_block.name
-                self._block_read_counter += 1
-            except KeyError:
-                return None
-        else:
-            nix_block = self._get_object_at(path)
-        neo_block = self._block_to_neo(nix_block)
-        neo_block.path = path
-        self._read_cascade(nix_block, path, True, lazy)
-        self._update_maps(neo_block, lazy)
-        return neo_block
+    def read_block(self, nixblock):
+        neoblock = self._block_to_neo(nixblock)
+        for group in nixblock.groups:
+            neoblock.segments.append(
+                self.read_segment(group)
+            )
+        return neoblock
 
-    def read_segment(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
-        nix_group = self._get_object_at(path)
-        neo_segment = self._group_to_neo(nix_group)
-        neo_segment.path = path
-        self._read_cascade(nix_group, path, True, lazy)
-        self._update_maps(neo_segment, lazy)
-        nix_parent = self._get_parent(path)
-        neo_parent = self._neo_map.get(nix_parent.name)
-        if neo_parent:
-            neo_segment.block = neo_parent
+    def read_segment(self, nixgroup):
+        neo_segment = self._group_to_neo(nixgroup)
+        # nix_parent = self._get_parent(path)
+        # neo_parent = self._neo_map.get(nix_parent.name)
+        # if neo_parent:
+        #     neo_segment.block = neo_parent
         return neo_segment
 
     def read_channelindex(self, path, lazy=False):
@@ -507,13 +493,10 @@ class NixIO(BaseIO):
 
     def _write_object(self, obj, loc=""):
         objtype = type(obj).__name__.lower()
-        if isinstance(obj, Block):
-            containerstr = "/"
+        if objtype == "channelindex":
+            containerstr = "/channel_indexes/"
         else:
-            if objtype == "channelindex":
-                containerstr = "/channel_indexes/"
-            else:
-                containerstr = "/" + type(obj).__name__.lower() + "s/"
+            containerstr = "/" + type(obj).__name__.lower() + "s/"
         if "nix_name" in obj.annotations:
             nix_name = obj.annotations["nix_name"]
         else:
@@ -655,15 +638,45 @@ class NixIO(BaseIO):
         else:
             container.append(obj)
 
-    def write_block(self, bl, loc=""):
+    def write_block(self, block):
         """
-        Convert ``bl`` to the NIX equivalent and write it to the file.
+        Convert the provided Neo Block to a NIX Block and write it to
+        the NIX file.
 
-        :param bl: Neo block to be written
-        :param loc: Unused for blocks
+        :param block: Neo Block to be written
         """
-        self._write_object(bl, loc)
-        self._create_references(bl)
+        if "nix_name" in block.annotations:
+            nix_name = block.annotations["nix_name"]
+        else:
+            nix_name = "neo.block.{}".format(self._generate_nix_name())
+            block.annotate(nix_name=nix_name)
+        if nix_name in self.nix_file.blocks:
+            nixblock = self.nix_file.blocks[nix_name]
+        else:
+            nixblock = self.nix_file.create_block(nix_name, "neo.block")
+            nixblock.metadata = self.nix_file.create_section(
+                nix_name, "neo.block.metadata"
+            )
+        metadata = nixblock.metadata
+        neoname = block.name if block.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixblock.definition = block.description
+        if block.rec_datetime:
+            nixblock.force_created_at(
+                calculate_timestamp(block.rec_datetime)
+            )
+        if block.file_datetime:
+            metadata["file_datetime"] = block.file_datetime
+        if block.annotations:
+            for k, v in block.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # descend into ChannelIndexes
+        for chx in block.channel_indexes:
+            self.write_channelindex(chx, nixblock)
+
+        # self._link_nix_obj(nixblock, loc, containerstr)
+        # self._create_references(neoblock)
 
     def write_channelindex(self, chx, loc=""):
         """
@@ -675,15 +688,51 @@ class NixIO(BaseIO):
         """
         self._write_object(chx, loc)
 
-    def write_segment(self, seg, loc=""):
+    def write_segment(self, segment, nixblock):
         """
-        Convert the provided ``seg`` to a NIX Group and write it to the NIX
-        file at the location defined by ``loc``.
+        Convert the provided Neo Segment to a NIX Group and write it to the
+        NIX file.
 
-        :param seg: Neo seg to be written
-        :param loc: Path to the parent of the new Segment
+        :param segment: Neo Segment to be written
+        :param nixblock: NIX Block where the Group will be created
         """
-        self._write_object(seg, loc)
+        if "nix_name" in segment.annotations:
+            nix_name = segment.annotations["nix_name"]
+        else:
+            nix_name = "neo.segment.{}".format(self._generate_nix_name())
+            segment.annotate(nix_name=nix_name)
+        if nix_name in nixblock.groups:
+            nixgroup = nixblock.groups[nix_name]
+        else:
+            nixgroup = nixblock.create_group(nix_name, "neo.segment")
+            nixgroup.metadata = nixblock.metadata.create_section(
+                nix_name, "neo.segment.metadata"
+            )
+        metadata = nixgroup.metadata
+        neoname = segment.name if segment.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixgroup.definition = segment.description
+        if segment.rec_datetime:
+            nixgroup.force_created_at(
+                calculate_timestamp(segment.rec_datetime)
+            )
+        if segment.file_datetime:
+            metadata["file_datetime"] = segment.file_datetime
+        if segment.annotations:
+            for k, v in segment.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # write signals, events, epochs, and spiketrains
+        for asig in segment.analogsignals:
+            self.write_analogsignal(asig, nixblock, nixgroup)
+        for isig in segment.irregularlysampledsignals:
+            self.write_irregularlysampledsignal(isig, nixblock, nixgroup)
+        for event in segment.events:
+            self.write_event(event, nixblock, nixgroup)
+        for epoch in segment.epochs:
+            self.write_epoch(epoch, nixblock, nixgroup)
+        for spiketrain in segment.spiketrains:
+            self.write_spiketrain(spiketrain, nixblock, nixgroup)
 
     def write_indices(self, chx, loc=""):
         """
