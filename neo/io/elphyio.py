@@ -26,7 +26,7 @@ As regards reading an existing Elphy file, start by initializing a IO class with
 
 Read the file content into NEO object Block:
 
->>> bl = r.read_block(lazy=False, cascade=True)
+>>> bl = r.read_block()
 >>> bl
 <neo.core.block.Block object at 0x9e3d44c>
 
@@ -3684,12 +3684,12 @@ class ElphyIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.ElphyIO(filename='ElphyExample.DAT')
-        >>> seg = r.read_block(lazy=False, cascade=True)
+        >>> seg = r.read_block()
         >>> print(seg.analogsignals)  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(seg.spiketrains)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(seg.events)    # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         >>> print(anasig._data_description)
-        >>> anasig = r.read_analogsignal(lazy=False, cascade=False)
+        >>> anasig = r.read_analogsignal()
 
         >>> bl = Block()
         >>> # creating segments, their contents and append to bl
@@ -3735,43 +3735,35 @@ class ElphyIO(BaseIO):
         self.elphy_file = ElphyFile(self.filename)
 
 
-    def read_block(self,
-                   # the 2 first key arguments are imposed by neo.io API
-                   lazy = False,
-                   cascade = True
-                   ):
+    def read_block(self, lazy = False,):
         """
-        Return :class:`Block` filled or not depending on 'cascade' parameter.
+        Return :class:`Block`.
 
         Parameters:
              lazy : postpone actual reading of the file.
-             cascade : normally you want this True, otherwise method will only ready Block label.
         """
+        assert not lazy, 'Do not support lazy'
+        
         # basic
         block = Block(name=None)
-        # laziness
-        if lazy:
+
+        # get analog and tag channels
+        try :
+            self.elphy_file.open()
+        except Exception as e:
+            self.elphy_file.close()
+            raise Exception("cannot open file %s : %s" % (self.filename, e))
+            
+        # create a segment containing all analog,
+        # tag and event channels for the episode
+        if self.elphy_file.n_episodes == None :
+            print("File '%s' appears to have no episodes" % (self.filename))
             return block
-        else:
-            # get analog and tag channels
-            try :
-                self.elphy_file.open()
-            except Exception as e:
-                self.elphy_file.close()
-                raise Exception("cannot open file %s : %s" % (self.filename, e))
-        # cascading
-        #print "\n\n==========================================\n"
-        #print "read_block() - n_episodes:",self.elphy_file.n_episodes
-        if cascade:
-            # create a segment containing all analog,
-            # tag and event channels for the episode
-            if self.elphy_file.n_episodes == None :
-                print("File '%s' appears to have no episodes" % (self.filename))
-                return block
-            for episode in range(1, self.elphy_file.n_episodes+1) :
-                segment = self.read_segment(episode)
-                segment.block = block
-                block.segments.append(segment)
+        for episode in range(1, self.elphy_file.n_episodes+1) :
+            segment = self.read_segment(episode)
+            segment.block = block
+            block.segments.append(segment)
+        
         # close file
         self.elphy_file.close()
         # result    

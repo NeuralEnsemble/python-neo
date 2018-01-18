@@ -93,7 +93,6 @@ class KwikIO(BaseIO):
 
     def read_block(self,
                    lazy=False,
-                   cascade=True,
                    get_waveforms=True,
                    cluster_group=None,
                    raw_data_units='uV',
@@ -113,55 +112,51 @@ class KwikIO(BaseIO):
             Which clusters to load, possibilities are "noise", "unsorted",
             "good", if None all is loaded.
         """
+        assert not lazy, 'Do not support lazy'
+        
         blk = Block()
-        if cascade:
-            seg = Segment(file_origin=self.filename)
-            blk.segments += [seg]
-            for model in self.models:
-                group_id = model.channel_group
-                group_meta = {'group_id': group_id}
-                group_meta.update(model.metadata)
-                chx = ChannelIndex(name='channel group #{}'.format(group_id),
-                                   index=model.channels,
-                                   **group_meta)
-                blk.channel_indexes.append(chx)
-                clusters = model.spike_clusters
-                for cluster_id in model.cluster_ids:
-                    meta = model.cluster_metadata[cluster_id]
-                    if cluster_group is None:
-                        pass
-                    elif cluster_group != meta:
-                        continue
-                    sptr = self.read_spiketrain(cluster_id=cluster_id,
-                                                model=model, lazy=lazy,
-                                                cascade=cascade,
-                                                get_waveforms=get_waveforms,
-                                                raw_data_units=raw_data_units)
-                    sptr.annotations.update({'cluster_group': meta,
-                                             'group_id': model.channel_group})
-                    sptr.channel_index = chx
-                    unit = Unit(cluster_group=meta,
-                                group_id=model.channel_group,
-                                name='unit #{}'.format(cluster_id))
-                    unit.spiketrains.append(sptr)
-                    chx.units.append(unit)
-                    unit.channel_index = chx
-                    seg.spiketrains.append(sptr)
-                if get_raw_data:
-                    ana = self.read_analogsignal(model, raw_data_units,
-                                                 lazy, cascade)
-                    ana.channel_index = chx
-                    seg.analogsignals.append(ana)
+        seg = Segment(file_origin=self.filename)
+        blk.segments += [seg]
+        for model in self.models:
+            group_id = model.channel_group
+            group_meta = {'group_id': group_id}
+            group_meta.update(model.metadata)
+            chx = ChannelIndex(name='channel group #{}'.format(group_id),
+                               index=model.channels,
+                               **group_meta)
+            blk.channel_indexes.append(chx)
+            clusters = model.spike_clusters
+            for cluster_id in model.cluster_ids:
+                meta = model.cluster_metadata[cluster_id]
+                if cluster_group is None:
+                    pass
+                elif cluster_group != meta:
+                    continue
+                sptr = self.read_spiketrain(cluster_id=cluster_id,
+                                            model=model,
+                                            get_waveforms=get_waveforms,
+                                            raw_data_units=raw_data_units)
+                sptr.annotations.update({'cluster_group': meta,
+                                         'group_id': model.channel_group})
+                sptr.channel_index = chx
+                unit = Unit(cluster_group=meta,
+                            group_id=model.channel_group,
+                            name='unit #{}'.format(cluster_id))
+                unit.spiketrains.append(sptr)
+                chx.units.append(unit)
+                unit.channel_index = chx
+                seg.spiketrains.append(sptr)
+            if get_raw_data:
+                ana = self.read_analogsignal(model, units=raw_data_units)
+                ana.channel_index = chx
+                seg.analogsignals.append(ana)
 
-            seg.duration = model.duration * pq.s
+        seg.duration = model.duration * pq.s
 
         blk.create_many_to_one_relationship()
         return blk
 
-    def read_analogsignal(self, model, units='uV',
-                          lazy=False,
-                          cascade=True,
-                          ):
+    def read_analogsignal(self, model, units='uV', lazy=False):
         """
         Reads analogsignals
 
@@ -169,6 +164,8 @@ class KwikIO(BaseIO):
         units: str, default = "uV"
             SI units of the raw trace according to voltage_gain given to klusta
         """
+        assert not lazy, 'Do not support lazy'
+        
         arr = model.traces[:]*model.metadata['voltage_gain']
         ana = AnalogSignal(arr, sampling_rate=model.sample_rate*pq.Hz,
                            units=units,
@@ -177,7 +174,6 @@ class KwikIO(BaseIO):
 
     def read_spiketrain(self, cluster_id, model,
                         lazy=False,
-                        cascade=True,
                         get_waveforms=True,
                         raw_data_units=None
                         ):

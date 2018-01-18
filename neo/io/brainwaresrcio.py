@@ -184,13 +184,6 @@ class BrainwareSrcIO(BaseIO):
         # whole file
         self._damaged = False
 
-        # this stores whether the current file is lazy loaded
-        self._lazy = False
-
-        # this stores whether the current file is cascading
-        # this is false by default so if we use read_block on its own it works
-        self._cascade = False
-
         # this stores an empty SpikeTrain which is used in various places.
         self._default_spiketrain = None
 
@@ -225,27 +218,27 @@ class BrainwareSrcIO(BaseIO):
         self._damaged = False
         self._fsrc = None
         self._seg0 = None
-        self._cascade = False
         self._file_origin = None
         self._lazy = False
         self._default_spiketrain = None
 
-    def read(self, lazy=False, cascade=True, **kargs):
+    def read(self, lazy=False, **kargs):
         """
         Reads the first Block from the Spike ReCording file "filename"
         generated with BrainWare.
 
         If you wish to read more than one Block, please use read_all_blocks.
         """
-        return self.read_block(lazy=lazy, cascade=cascade, **kargs)
+        return self.read_block(lazy=lazy, **kargs)
 
-    def read_block(self, lazy=False, cascade=True, **kargs):
+    def read_block(self, lazy=False, **kargs):
         """
         Reads the first Block from the Spike ReCording file "filename"
         generated with BrainWare.
 
         If you wish to read more than one Block, please use read_all_blocks.
         """
+        assert not lazy, 'Do not support lazy'
 
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
@@ -254,11 +247,11 @@ class BrainwareSrcIO(BaseIO):
             raise NotImplementedError('This method does not have any '
                                       'arguments implemented yet')
 
-        blockobj = self.read_next_block(cascade=cascade, lazy=lazy)
+        blockobj = self.read_next_block()
         self.close()
         return blockobj
 
-    def read_next_block(self, cascade=True, lazy=False, **kargs):
+    def read_next_block(self, **kargs):
         """
         Reads a single Block from the Spike ReCording file "filename"
         generated with BrainWare.
@@ -276,19 +269,15 @@ class BrainwareSrcIO(BaseIO):
             raise NotImplementedError('This method does not have any '
                                       'arguments implemented yet')
 
-        self._lazy = lazy
         self._opensrc()
 
         # create _default_spiketrain here for performance reasons
         self._default_spiketrain = self._init_default_spiketrain.copy()
         self._default_spiketrain.file_origin = self._file_origin
-        if lazy:
-            self._default_spiketrain.lazy_shape = (0,)
 
         # create the Block and the contents all Blocks of from IO share
         self._blk = Block(file_origin=self._file_origin)
-        if not cascade:
-            return self._blk
+        
         self._chx = ChannelIndex(file_origin=self._file_origin,
                                           index=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
@@ -334,7 +323,7 @@ class BrainwareSrcIO(BaseIO):
 
         return blockobj
 
-    def read_all_blocks(self, cascade=True, lazy=False, **kargs):
+    def read_all_blocks(self, lazy=False, **kargs):
         """
         Reads all Blocks from the Spike ReCording file "filename"
         generated with BrainWare.
@@ -348,12 +337,11 @@ class BrainwareSrcIO(BaseIO):
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
+        assert not lazy, 'Do not support lazy'
+        
         if kargs:
             raise NotImplementedError('This method does not have any '
                                       'argument implemented yet')
-
-        self._lazy = lazy
-        self._cascade = True
 
         self.close()
         self._opensrc()
@@ -364,8 +352,7 @@ class BrainwareSrcIO(BaseIO):
         blocks = []
         while self._isopen:
             try:
-                blocks.append(self.read_next_block(cascade=cascade,
-                                                   lazy=lazy))
+                blocks.append(self.read_next_block())
             except:
                 self.close()
                 raise
@@ -518,13 +505,11 @@ class BrainwareSrcIO(BaseIO):
         _combine_events(events) - combine a list of Events
         with single events into one long Event
         """
-        if not events or self._lazy:
+        if not events:
             event = Event(times=pq.Quantity([], units=pq.s),
                           labels=np.array([], dtype='S'),
                           senders=np.array([], dtype='S'),
                           t_start=0)
-            if self._lazy:
-                event.lazy_shape = len(events)
             return event
 
         times = []
@@ -569,9 +554,6 @@ class BrainwareSrcIO(BaseIO):
 
         if hasattr(spiketrains[0], 'waveforms') and len(spiketrains) == 1:
             train = spiketrains[0]
-            if self._lazy and not hasattr(train, 'lazy_shape'):
-                train.lazy_shape = train.shape
-                train = train[:0]
             return train
 
         if hasattr(spiketrains[0], 't_stop'):
@@ -637,12 +619,7 @@ class BrainwareSrcIO(BaseIO):
         # get the maximum time
         t_stop = times[-1] * 2.
 
-        if self._lazy:
-            timesshape = times.shape
-            times = pq.Quantity([], units=pq.ms, copy=False)
-            waveforms = pq.Quantity([[[]]], units=pq.mV)
-        else:
-            waveforms = pq.Quantity(waveforms, units=pq.mV, copy=False)
+        waveforms = pq.Quantity(waveforms, units=pq.mV, copy=False)
 
         train = SpikeTrain(times=times, copy=False,
                            t_start=self._default_t_start.copy(), t_stop=t_stop,
@@ -651,8 +628,6 @@ class BrainwareSrcIO(BaseIO):
                            timestamp=self._default_datetime,
                            respwin=np.array([], dtype=np.int32),
                            dama_index=-1, trig2=trig2, side='')
-        if self._lazy:
-            train.lazy_shape = timesshape
         return train
 
     # -------------------------------------------------------------------------
@@ -1583,4 +1558,3 @@ if __name__ == '__main__':
                                         directory=local_test_dir):
         ioobj = BrainwareSrcIO(path)
         ioobj.read_all_blocks(lazy=False)
-        ioobj.read_all_blocks(lazy=True)

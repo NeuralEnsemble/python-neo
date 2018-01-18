@@ -60,9 +60,8 @@ class NeoHdf5IO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self._data = h5py.File(filename, 'r')
         self.object_refs = {}
-        self._lazy = False
 
-    def read_all_blocks(self, lazy=False, cascade=True, merge_singles=True, **kargs):
+    def read_all_blocks(self, lazy=False, merge_singles=True, **kargs):
         """
         Loads all blocks in the file that are attached to the root (which
         happens when they are saved with save() or write_block()).
@@ -71,8 +70,8 @@ class NeoHdf5IO(BaseIO):
          `AnalogSignal` objects into multichannel objects, and similarly for single `Epoch`,
          `Event` and `IrregularlySampledSignal` objects.
         """
-        self._lazy = lazy
-        self._cascade = cascade
+        assert not lazy, 'Do not support lazy'
+        
         self.merge_singles = merge_singles
 
         blocks = []
@@ -81,11 +80,12 @@ class NeoHdf5IO(BaseIO):
                 blocks.append(self._read_block(node))
         return blocks
 
-    def read_block(self, lazy=False, cascade=True, **kargs):
+    def read_block(self, lazy=False, **kargs):
         """
         Load the first block in the file.
         """
-        return self.read_all_blocks(lazy=lazy, cascade=cascade)[0]
+        assert not lazy, 'Do not support lazy'
+        return self.read_all_blocks(lazy=lazy)[0]
 
     def _read_block(self, node):
         attributes = self._get_standard_attributes(node)
@@ -93,28 +93,29 @@ class NeoHdf5IO(BaseIO):
             attributes["index"] = int(attributes["index"])
         block = Block(**attributes)
 
-        if self._cascade:
-            for name, child_node in node['segments'].items():
-                if "Segment" in name:
-                    block.segments.append(self._read_segment(child_node, parent=block))
 
-            if len(node['recordingchannelgroups']) > 0:
-                for name, child_node in node['recordingchannelgroups'].items():
-                    if "RecordingChannelGroup" in name:
-                        block.channel_indexes.append(self._read_recordingchannelgroup(child_node, parent=block))
-                self._resolve_channel_indexes(block)
-            elif self.merge_singles:
-                # if no RecordingChannelGroups are defined, merging
-                # takes place here.
-                for segment in block.segments:
-                    if hasattr(segment, 'unmerged_analogsignals'):
-                        segment.analogsignals.extend(
-                                self._merge_data_objects(segment.unmerged_analogsignals))
-                        del segment.unmerged_analogsignals
-                    if hasattr(segment, 'unmerged_irregularlysampledsignals'):
-                        segment.irregularlysampledsignals.extend(
-                                self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
-                        del segment.unmerged_irregularlysampledsignals
+        for name, child_node in node['segments'].items():
+            if "Segment" in name:
+                block.segments.append(self._read_segment(child_node, parent=block))
+
+        if len(node['recordingchannelgroups']) > 0:
+            for name, child_node in node['recordingchannelgroups'].items():
+                if "RecordingChannelGroup" in name:
+                    block.channel_indexes.append(self._read_recordingchannelgroup(child_node, parent=block))
+            self._resolve_channel_indexes(block)
+        elif self.merge_singles:
+            # if no RecordingChannelGroups are defined, merging
+            # takes place here.
+            for segment in block.segments:
+                if hasattr(segment, 'unmerged_analogsignals'):
+                    segment.analogsignals.extend(
+                            self._merge_data_objects(segment.unmerged_analogsignals))
+                    del segment.unmerged_analogsignals
+                if hasattr(segment, 'unmerged_irregularlysampledsignals'):
+                    segment.irregularlysampledsignals.extend(
+                            self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
+                    del segment.unmerged_irregularlysampledsignals
+        
         return block
 
     def _read_segment(self, node, parent):
@@ -183,10 +184,6 @@ class NeoHdf5IO(BaseIO):
         signal = AnalogSignal(self._get_quantity(node["signal"]),
                               sampling_rate=sampling_rate, t_start=t_start,
                               **attributes)
-        if self._lazy:
-            signal.lazy_shape = node["signal"].shape
-            if len(signal.lazy_shape) == 1:
-                signal.lazy_shape = (signal.lazy_shape[0], 1)
         signal.segment = parent
         self.object_refs[node.attrs["object_ref"]] = signal
         return signal
@@ -200,10 +197,6 @@ class NeoHdf5IO(BaseIO):
                                           signal=self._get_quantity(node["signal"]),
                                           **attributes)
         signal.segment = parent
-        if self._lazy:
-            signal.lazy_shape = node["signal"].shape
-            if len(signal.lazy_shape) == 1:
-                signal.lazy_shape = (signal.lazy_shape[0], 1)
         return signal
 
     def _read_spiketrain(self, node, parent):
@@ -215,8 +208,6 @@ class NeoHdf5IO(BaseIO):
                                 t_start=t_start, t_stop=t_stop,
                                 **attributes)
         spiketrain.segment = parent
-        if self._lazy:
-            spiketrain.lazy_shape = node["times"].shape
         self.object_refs[node.attrs["object_ref"]] = spiketrain
         return spiketrain
 
@@ -224,14 +215,9 @@ class NeoHdf5IO(BaseIO):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
         durations = self._get_quantity(node["durations"])
-        if self._lazy:
-            labels = np.array((), dtype=node["labels"].dtype)
-        else:
-            labels = node["labels"].value
+        labels = node["labels"].value
         epoch = Epoch(times=times, durations=durations, labels=labels, **attributes)
         epoch.segment = parent
-        if self._lazy:
-            epoch.lazy_shape = node["times"].shape
         return epoch
 
     def _read_epoch(self, node, parent):
@@ -240,14 +226,9 @@ class NeoHdf5IO(BaseIO):
     def _read_eventarray(self, node, parent):
         attributes = self._get_standard_attributes(node)
         times = self._get_quantity(node["times"])
-        if self._lazy:
-            labels = np.array((), dtype=node["labels"].dtype)
-        else:
-            labels = node["labels"].value
+        labels = node["labels"].value
         event = Event(times=times, labels=labels, **attributes)
         event.segment = parent
-        if self._lazy:
-            event.lazy_shape = node["times"].shape
         return event
 
     def _read_event(self, node, parent):
@@ -327,10 +308,7 @@ class NeoHdf5IO(BaseIO):
             return objects
 
     def _get_quantity(self, node):
-        if self._lazy and len(node.shape) > 0:
-            value = np.array((), dtype=node.dtype)
-        else:
-            value = node.value
+        value = node.value
         unit_str = [x for x in node.attrs.keys() if "unit" in x][0].split("__")[1]
         units = getattr(pq, unit_str)
         return value * units

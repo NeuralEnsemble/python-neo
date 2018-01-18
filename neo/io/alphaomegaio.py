@@ -98,7 +98,7 @@ class AlphaOmegaIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.AlphaOmegaIO( filename = 'File_AlphaOmega_1.map')
-        >>> blck = r.read_block(lazy = False, cascade = True)
+        >>> blck = r.read_block()
         >>> print blck.segments[0].analogsignals
 
     """
@@ -144,15 +144,13 @@ class AlphaOmegaIO(BaseIO):
 
     # write is not supported so I do not overload write method from BaseIO
 
-    def read_block(self,
-                   # the 2 first keyword arguments are imposed by neo.io API
-                   lazy = False,
-                   cascade = True):
+    def read_block(self, lazy=False):
         """
         Return a Block.
 
         """
-
+        assert not lazy, 'Do not support lazy'
+        
         def count_samples(m_length):
             """
             Count the number of signal samples available in a type 5 data block
@@ -184,184 +182,159 @@ class AlphaOmegaIO(BaseIO):
         pos_block = 0 # position of the current block in the file
         file_blocks = [] # list of data blocks available in the file
 
-        if not cascade:
-            # we read only the main header
+        seg = Segment(file_origin = os.path.basename(self.filename))
+        seg.file_origin = os.path.basename(self.filename)
+        blck.segments.append(seg)
 
-            m_length, m_TypeBlock = struct.unpack('Hcx' , fid.read(4))
-            # m_TypeBlock should be 'h', as we read the first block
+        while True:
+            first_4_bytes = fid.read(4)
+            if len(first_4_bytes) < 4:
+                # we have reached the end of the file
+                break
+            else:
+                m_length, m_TypeBlock = struct.unpack('Hcx', first_4_bytes)
+
             block = HeaderReader(fid,
-                                 dict_header_type.get(m_TypeBlock,
-                                                      Type_Unknown)).read_f()
+                            dict_header_type.get(m_TypeBlock,
+                                                 Type_Unknown)).read_f()
             block.update({'m_length': m_length,
                           'm_TypeBlock': m_TypeBlock,
                           'pos': pos_block})
+
+            if m_TypeBlock == '2':
+                # The beginning of the block of type '2' is identical for
+                # all types of channels, but the following part depends on
+                # the type of channel. So we need a special case here.
+
+                # WARNING: How to check the type of channel is not
+                # described in the documentation. So here I use what is
+                # proposed in the C code [2].
+                # According to this C code, it seems that the 'm_isAnalog'
+                # is used to distinguished analog and digital channels, and
+                # 'm_Mode' encodes the type of analog channel:
+                # 0 for continuous, 1 for level, 2 for external trigger.
+                # But in some files, I found channels that seemed to be
+                # continuous channels with 'm_Modes' = 128 or 192. So I
+                # decided to consider every channel with 'm_Modes'
+                # different from 1 or 2 as continuous. I also couldn't
+                # check that values of 1 and 2 are really for level and
+                # external trigger as I had no test files containing data
+                # of this types.
+
+                type_subblock = 'unknown_channel_type(m_Mode=' \
+                                + str(block['m_Mode'])+ ')'
+                description = Type2_SubBlockUnknownChannels
+                block.update({'m_Name': 'unknown_name'})
+                if block['m_isAnalog'] == 0:
+                    # digital channel
+                    type_subblock = 'digital'
+                    description = Type2_SubBlockDigitalChannels
+                elif block['m_isAnalog'] == 1:
+                    # analog channel
+                    if block['m_Mode'] == 1:
+                        # level channel
+                        type_subblock = 'level'
+                        description = Type2_SubBlockLevelChannels
+                    elif block['m_Mode'] == 2:
+                        # external trigger channel
+                        type_subblock = 'external_trigger'
+                        description = Type2_SubBlockExtTriggerChannels
+                    else:
+                        # continuous channel
+                        type_subblock = 'continuous(Mode' \
+                                        + str(block['m_Mode']) +')'
+                        description = Type2_SubBlockContinuousChannels
+
+                subblock = HeaderReader(fid, description).read_f()
+
+                block.update(subblock)
+                block.update({'type_subblock': type_subblock})
+
             file_blocks.append(block)
+            pos_block += m_length
+            fid.seek(pos_block)
 
-        else: # cascade == True
+        # step 2: find the available channels
+        list_chan = [] # list containing indexes of channel blocks
+        for ind_block, block in enumerate(file_blocks):
+            if block['m_TypeBlock'] == '2':
+                list_chan.append(ind_block)
 
-            seg = Segment(file_origin = os.path.basename(self.filename))
-            seg.file_origin = os.path.basename(self.filename)
-            blck.segments.append(seg)
-
-            while True:
-                first_4_bytes = fid.read(4)
-                if len(first_4_bytes) < 4:
-                    # we have reached the end of the file
-                    break
-                else:
-                    m_length, m_TypeBlock = struct.unpack('Hcx', first_4_bytes)
-
-                block = HeaderReader(fid,
-                                dict_header_type.get(m_TypeBlock,
-                                                     Type_Unknown)).read_f()
-                block.update({'m_length': m_length,
-                              'm_TypeBlock': m_TypeBlock,
-                              'pos': pos_block})
-
-                if m_TypeBlock == '2':
-                    # The beginning of the block of type '2' is identical for
-                    # all types of channels, but the following part depends on
-                    # the type of channel. So we need a special case here.
-
-                    # WARNING: How to check the type of channel is not
-                    # described in the documentation. So here I use what is
-                    # proposed in the C code [2].
-                    # According to this C code, it seems that the 'm_isAnalog'
-                    # is used to distinguished analog and digital channels, and
-                    # 'm_Mode' encodes the type of analog channel:
-                    # 0 for continuous, 1 for level, 2 for external trigger.
-                    # But in some files, I found channels that seemed to be
-                    # continuous channels with 'm_Modes' = 128 or 192. So I
-                    # decided to consider every channel with 'm_Modes'
-                    # different from 1 or 2 as continuous. I also couldn't
-                    # check that values of 1 and 2 are really for level and
-                    # external trigger as I had no test files containing data
-                    # of this types.
-
-                    type_subblock = 'unknown_channel_type(m_Mode=' \
-                                    + str(block['m_Mode'])+ ')'
-                    description = Type2_SubBlockUnknownChannels
-                    block.update({'m_Name': 'unknown_name'})
-                    if block['m_isAnalog'] == 0:
-                        # digital channel
-                        type_subblock = 'digital'
-                        description = Type2_SubBlockDigitalChannels
-                    elif block['m_isAnalog'] == 1:
-                        # analog channel
-                        if block['m_Mode'] == 1:
-                            # level channel
-                            type_subblock = 'level'
-                            description = Type2_SubBlockLevelChannels
-                        elif block['m_Mode'] == 2:
-                            # external trigger channel
-                            type_subblock = 'external_trigger'
-                            description = Type2_SubBlockExtTriggerChannels
-                        else:
-                            # continuous channel
-                            type_subblock = 'continuous(Mode' \
-                                            + str(block['m_Mode']) +')'
-                            description = Type2_SubBlockContinuousChannels
-
-                    subblock = HeaderReader(fid, description).read_f()
-
-                    block.update(subblock)
-                    block.update({'type_subblock': type_subblock})
-
-                file_blocks.append(block)
-                pos_block += m_length
-                fid.seek(pos_block)
-
-            # step 2: find the available channels
-            list_chan = [] # list containing indexes of channel blocks
+        # step 3: find blocks containing data for the available channels
+        list_data = [] # list of lists of indexes of data blocks
+                       # corresponding to each channel
+        for ind_chan, chan in enumerate(list_chan):
+            list_data.append([])
+            num_chan = file_blocks[chan]['m_numChannel']
             for ind_block, block in enumerate(file_blocks):
-                if block['m_TypeBlock'] == '2':
-                    list_chan.append(ind_block)
-
-            # step 3: find blocks containing data for the available channels
-            list_data = [] # list of lists of indexes of data blocks
-                           # corresponding to each channel
-            for ind_chan, chan in enumerate(list_chan):
-                list_data.append([])
-                num_chan = file_blocks[chan]['m_numChannel']
-                for ind_block, block in enumerate(file_blocks):
-                    if block['m_TypeBlock'] == '5':
-                        if block['m_numChannel'] == num_chan:
-                            list_data[ind_chan].append(ind_block)
+                if block['m_TypeBlock'] == '5':
+                    if block['m_numChannel'] == num_chan:
+                        list_data[ind_chan].append(ind_block)
 
 
-            # step 4: compute the length (number of samples) of the channels
-            chan_len = np.zeros(len(list_data), dtype = np.int)
-            for ind_chan, list_blocks in enumerate(list_data):
-                for ind_block in list_blocks:
-                    chan_len[ind_chan] += count_samples(
-                                          file_blocks[ind_block]['m_length'])
+        # step 4: compute the length (number of samples) of the channels
+        chan_len = np.zeros(len(list_data), dtype = np.int)
+        for ind_chan, list_blocks in enumerate(list_data):
+            for ind_block in list_blocks:
+                chan_len[ind_chan] += count_samples(
+                                      file_blocks[ind_block]['m_length'])
 
-            # step 5: find channels for which data are available
-            ind_valid_chan = np.nonzero(chan_len)[0]
+        # step 5: find channels for which data are available
+        ind_valid_chan = np.nonzero(chan_len)[0]
 
-            # step 6: load the data
-            # TODO give the possibility to load data as AnalogSignalArrays
-            for ind_chan in ind_valid_chan:
-                list_blocks = list_data[ind_chan]
-                ind = 0 # index in the data vector
+        # step 6: load the data
+        # TODO give the possibility to load data as AnalogSignalArrays
+        for ind_chan in ind_valid_chan:
+            list_blocks = list_data[ind_chan]
+            ind = 0 # index in the data vector
 
-                # read time stamp for the beginning of the signal
-                form = '<l' # reading format
-                ind_block = list_blocks[0]
-                count = count_samples(file_blocks[ind_block]['m_length'])
-                fid.seek(file_blocks[ind_block]['pos']+6+count*2)
-                buf = fid.read(struct.calcsize(form))
-                val = struct.unpack(form , buf)
-                start_index = val[0]
+            # read time stamp for the beginning of the signal
+            form = '<l' # reading format
+            ind_block = list_blocks[0]
+            count = count_samples(file_blocks[ind_block]['m_length'])
+            fid.seek(file_blocks[ind_block]['pos']+6+count*2)
+            buf = fid.read(struct.calcsize(form))
+            val = struct.unpack(form , buf)
+            start_index = val[0]
 
-                # WARNING: in the following blocks are read supposing taht they
-                # are all contiguous and sorted in time. I don't know if it's
-                # always the case. Maybe we should use the time stamp of each
-                # data block to choose where to put the read data in the array.
-                if not lazy:
-                    temp_array = np.empty(chan_len[ind_chan], dtype = np.int16)
-                    # NOTE: we could directly create an empty AnalogSignal and
-                    # load the data in it, but it is much faster to load data
-                    # in a temporary numpy array and create the AnalogSignals
-                    # from this temporary array
-                    for ind_block in list_blocks:
-                        count = count_samples(
-                                file_blocks[ind_block]['m_length'])
-                        fid.seek(file_blocks[ind_block]['pos']+6)
-                        temp_array[ind:ind+count] = \
-                            np.fromfile(fid, dtype = np.int16, count = count)
-                        ind += count
+            # WARNING: in the following blocks are read supposing taht they
+            # are all contiguous and sorted in time. I don't know if it's
+            # always the case. Maybe we should use the time stamp of each
+            # data block to choose where to put the read data in the array.
 
-                sampling_rate = \
-                    file_blocks[list_chan[ind_chan]]['m_SampleRate'] * pq.kHz
-                t_start = (start_index / sampling_rate).simplified
-                if lazy:
-                    ana_sig = AnalogSignal([],
-                                           sampling_rate = sampling_rate,
-                                           t_start = t_start,
-                                           name = file_blocks\
-                                               [list_chan[ind_chan]]['m_Name'],
-                                           file_origin = \
-                                               os.path.basename(self.filename),
-                                           units = pq.dimensionless)
-                    ana_sig.lazy_shape = chan_len[ind_chan]
-                else:
-                    ana_sig = AnalogSignal(temp_array,
-                                           sampling_rate = sampling_rate,
-                                           t_start = t_start,
-                                           name = file_blocks\
-                                               [list_chan[ind_chan]]['m_Name'],
-                                           file_origin = \
-                                               os.path.basename(self.filename),
-                                           units = pq.dimensionless)
+            temp_array = np.empty(chan_len[ind_chan], dtype = np.int16)
+            # NOTE: we could directly create an empty AnalogSignal and
+            # load the data in it, but it is much faster to load data
+            # in a temporary numpy array and create the AnalogSignals
+            # from this temporary array
+            for ind_block in list_blocks:
+                count = count_samples(
+                        file_blocks[ind_block]['m_length'])
+                fid.seek(file_blocks[ind_block]['pos']+6)
+                temp_array[ind:ind+count] = \
+                    np.fromfile(fid, dtype = np.int16, count = count)
+                ind += count
+
+            sampling_rate = \
+                file_blocks[list_chan[ind_chan]]['m_SampleRate'] * pq.kHz
+            t_start = (start_index / sampling_rate).simplified
+            
+            ana_sig = AnalogSignal(temp_array,
+                                   sampling_rate = sampling_rate,
+                                   t_start = t_start,
+                                   name = file_blocks\
+                                       [list_chan[ind_chan]]['m_Name'],
+                                   file_origin = \
+                                       os.path.basename(self.filename),
+                                   units = pq.dimensionless)
 # todo apibreak: create ChannelIndex for each signals
 #                ana_sig.channel_index = \
 #                            file_blocks[list_chan[ind_chan]]['m_numChannel']
-                ana_sig.annotate(channel_name = \
-                            file_blocks[list_chan[ind_chan]]['m_Name'])
-                ana_sig.annotate(channel_type = \
-                            file_blocks[list_chan[ind_chan]]['type_subblock'])
-                seg.analogsignals.append(ana_sig)
+            ana_sig.annotate(channel_name = \
+                        file_blocks[list_chan[ind_chan]]['m_Name'])
+            ana_sig.annotate(channel_type = \
+                        file_blocks[list_chan[ind_chan]]['type_subblock'])
+            seg.analogsignals.append(ana_sig)
 
         fid.close()
 
@@ -378,14 +351,15 @@ class AlphaOmegaIO(BaseIO):
                 # to microsecond
             version = file_blocks[0]['m_version']
             blck.annotate(alphamap_version = version)
-            if cascade:
-                seg.rec_datetime = blck.rec_datetime.replace()
-                # I couldn't find a simple copy function for datetime,
-                # using replace without arguments is a twisted way to make a
-                # copy
-                seg.annotate(alphamap_version = version)
-        if cascade:
-            blck.create_many_to_one_relationship()
+
+            seg.rec_datetime = blck.rec_datetime.replace()
+            # I couldn't find a simple copy function for datetime,
+            # using replace without arguments is a twisted way to make a
+            # copy
+            seg.annotate(alphamap_version = version)
+        
+
+        blck.create_many_to_one_relationship()
 
         return blck
 
