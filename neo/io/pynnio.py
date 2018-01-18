@@ -63,37 +63,23 @@ class BasePyNNIO(BaseIO):
         else:
             raise IOError("Cannot determine units")
 
-    def _extract_signals(self, data, metadata, lazy):
+    def _extract_signals(self, data, metadata):
 
-        signal = None
-        if lazy and data.size > 0:
-            signal = AnalogSignal([],
+        arr = numpy.vstack(self._extract_array(data, channel_index)
+                           for channel_index in range(metadata['first_index'], metadata['last_index'] + 1))
+        if len(arr) > 0:
+            signal = AnalogSignal(arr.T,
                                   units=self._determine_units(metadata),
                                   sampling_period=metadata['dt']*pq.ms)
-            signal.lazy_shape = None
-        else:
-            arr = numpy.vstack(self._extract_array(data, channel_index)
-                               for channel_index in range(metadata['first_index'], metadata['last_index'] + 1))
-            if len(arr) > 0:
-                signal = AnalogSignal(arr.T,
-                                      units=self._determine_units(metadata),
-                                      sampling_period=metadata['dt']*pq.ms)
-        if signal is not None:
-            signal.annotate(label=metadata["label"],
-                            variable=metadata["variable"])
+        signal.annotate(label=metadata["label"],
+                        variable=metadata["variable"])
         return signal
 
-    def _extract_spikes(self, data, metadata, channel_index, lazy):
+    def _extract_spikes(self, data, metadata, channel_index):
         spiketrain = None
-        if lazy:
-            if channel_index in data[:, 1]:
-                spiketrain = SpikeTrain([], units=pq.ms, t_stop=0.0)
-                spiketrain.lazy_shape = None
-        else:
-            spike_times = self._extract_array(data, channel_index)
-            if len(spike_times) > 0:
-                spiketrain = SpikeTrain(spike_times, units=pq.ms, t_stop=spike_times.max())
-        if spiketrain is not None:
+        spike_times = self._extract_array(data, channel_index)
+        if len(spike_times) > 0:
+            spiketrain = SpikeTrain(spike_times, units=pq.ms, t_stop=spike_times.max())
             spiketrain.annotate(label=metadata["label"],
                                 channel_index=channel_index,
                                 dt=metadata["dt"])
@@ -102,22 +88,23 @@ class BasePyNNIO(BaseIO):
     def _write_file_contents(self, data, metadata):
         raise NotImplementedError
 
-    def read_segment(self, lazy=False, cascade=True):
+    def read_segment(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        
         data, metadata = self._read_file_contents()
         annotations = dict((k, metadata.get(k, 'unknown')) for k in ("label", "variable", "first_id", "last_id"))
         seg = Segment(**annotations)
-        if cascade:
-            if metadata['variable'] == 'spikes':
-                for i in range(metadata['first_index'], metadata['last_index'] + 1):
-                    spiketrain = self._extract_spikes(data, metadata, i, lazy)
-                    if spiketrain is not None:
-                        seg.spiketrains.append(spiketrain)
-                seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
-            else:
-                signal = self._extract_signals(data, metadata, lazy)
-                if signal is not None:
-                    seg.analogsignals.append(signal)
-            seg.create_many_to_one_relationship()
+        if metadata['variable'] == 'spikes':
+            for i in range(metadata['first_index'], metadata['last_index'] + 1):
+                spiketrain = self._extract_spikes(data, metadata, i)
+                if spiketrain is not None:
+                    seg.spiketrains.append(spiketrain)
+            seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
+        else:
+            signal = self._extract_signals(data, metadata)
+            if signal is not None:
+                seg.analogsignals.append(signal)
+        seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment):
@@ -165,22 +152,25 @@ class BasePyNNIO(BaseIO):
         self._write_file_contents(data, metadata)
 
     def read_analogsignal(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        
         data, metadata = self._read_file_contents()
         if metadata['variable'] == 'spikes':
             raise TypeError("File contains spike data, not analog signals")
         else:
-            signal = self._extract_signals(data, metadata, lazy)
+            signal = self._extract_signals(data, metadata)
             if signal is None:
                 raise IndexError("File does not contain a signal")
             else:
                 return signal
 
     def read_spiketrain(self, lazy=False, channel_index=0):
+        assert not lazy, 'Do not support lazy'
         data, metadata = self._read_file_contents()
         if metadata['variable'] != 'spikes':
             raise TypeError("File contains analog signals, not spike data")
         else:
-            spiketrain = self._extract_spikes(data, metadata, channel_index, lazy)
+            spiketrain = self._extract_spikes(data, metadata, channel_index)
             if spiketrain is None:
                 raise IndexError("File does not contain any spikes with channel index %d" % channel_index)
             else:

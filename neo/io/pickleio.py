@@ -40,7 +40,8 @@ class PickleIO(BaseIO):
     name = "Python pickle file"
     extensions = ['pkl', 'pickle']
 
-    def read_block(self, lazy=False, cascade=True):
+    def read_block(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
         with open(self.filename, "rb") as fp:
             block = pickle.load(fp)
         return block

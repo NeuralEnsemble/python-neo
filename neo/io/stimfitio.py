@@ -116,8 +116,9 @@ class StimfitIO(BaseIO):
             self.stfio_rec = filename
             self.filename = None
 
-    def read_block(self, lazy=False, cascade=True):
-
+    def read_block(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        
         if self.filename is not None:
             self.stfio_rec = stfio.read(self.filename)
 
@@ -128,9 +129,6 @@ class StimfitIO(BaseIO):
             bl.rec_datetime = self.stfio_rec.datetime
         except:
             bl.rec_datetime = None
-
-        if not cascade:
-            return bl
 
         dt = np.round(self.stfio_rec.dt * 1e-3, 9) * pq.s  # ms to s
         sampling_rate = 1.0/dt
@@ -150,15 +148,10 @@ class StimfitIO(BaseIO):
                 except:
                     unit = ''
 
-                if lazy:
-                    signal = pq.Quantity([], unit)
-                else:
-                    signal = pq.Quantity(recsig[j], unit)
+                signal = pq.Quantity(recsig[j], unit)
                 anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                       t_start=t_start, name=str(name),
                                       channel_index=i)
-                if lazy:
-                    anaSig.lazy_shape = length
                 seg.analogsignals.append(anaSig)
 
             bl.segments.append(seg)

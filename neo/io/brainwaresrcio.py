@@ -315,7 +315,7 @@ class BrainwareSrcIO(BaseIO):
         # result is None iff the end of the file is reached, so we can
         # close the file
         # this notification is not helpful if using the read method with
-        # cascade==True, since the user will know it is done when the method
+        # cascading, since the user will know it is done when the method
         # returns a value
         if result is None:
             self.logger.info('Last Block read.  Closing file.')
