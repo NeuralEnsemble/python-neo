@@ -9,8 +9,10 @@ The code should be shared for common parts.
 
 The public URL is in url_for_tests.
 
-The private url for writing is
-ssh://gate.g-node.org/groups/neo/io_test_files/
+To deposite new testing files,  please create a account at
+gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
+data repo.
+
 
 '''
 
@@ -19,7 +21,8 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 __test__ = False
 
-url_for_tests = "https://portal.g-node.org/neo/"
+#url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 import os
 import logging
