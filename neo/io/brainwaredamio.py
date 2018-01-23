@@ -114,18 +114,20 @@ class BrainwareDamIO(BaseIO):
         self._filename = os.path.basename(filename)
         self._fsrc = None
 
-    def read(self, lazy=False, cascade=True, **kargs):
+    def read(self, lazy=False, **kargs):
         '''
         Reads raw data file "fname" generated with BrainWare
         '''
-        return self.read_block(lazy=lazy, cascade=cascade)
+        assert not lazy, 'Do not support lazy'
+        return self.read_block(lazy=lazy)
 
-    def read_block(self, lazy=False, cascade=True, **kargs):
+    def read_block(self, lazy=False, **kargs):
         '''
         Reads a block from the raw data file "fname" generated
         with BrainWare
         '''
-
+        assert not lazy, 'Do not support lazy'
+        
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
@@ -135,10 +137,6 @@ class BrainwareDamIO(BaseIO):
         self._fsrc = None
 
         block = Block(file_origin=self._filename)
-
-        # if we aren't doing cascade, don't load anything
-        if not cascade:
-            return block
 
         # create the objects to store other objects
         chx = ChannelIndex(file_origin=self._filename,
@@ -153,7 +151,7 @@ class BrainwareDamIO(BaseIO):
         with open(self._path, 'rb') as fobject:
             # while the file is not done keep reading segments
             while True:
-                seg = self._read_segment(fobject, lazy)
+                seg = self._read_segment(fobject)
                 # if there are no more Segments, stop
                 if not seg:
                     break
@@ -179,7 +177,7 @@ class BrainwareDamIO(BaseIO):
     # -------------------------------------------------------------------------
     # -------------------------------------------------------------------------
 
-    def _read_segment(self, fobject, lazy):
+    def _read_segment(self, fobject):
         '''
         Read a single segment with a single analogsignal
 
@@ -226,20 +224,11 @@ class BrainwareDamIO(BaseIO):
         # int16 * numpts -- the AnalogSignal itself
         signal = np.fromfile(fobject, dtype=np.int16, count=numpts)
 
-        # handle lazy loading
-        if lazy:
-            sig = AnalogSignal([], t_start=t_start*pq.d,
-                               file_origin=self._filename,
-                               sampling_period=1.*pq.s,
-                               units=pq.mV,
-                               dtype=np.float)
-            sig.lazy_shape = len(signal)
-        else:
-            sig = AnalogSignal(signal.astype(np.float)*pq.mV,
-                               t_start=t_start*pq.d,
-                               file_origin=self._filename,
-                               sampling_period=1.*pq.s,
-                               copy=False)
+        sig = AnalogSignal(signal.astype(np.float)*pq.mV,
+                           t_start=t_start*pq.d,
+                           file_origin=self._filename,
+                           sampling_period=1.*pq.s,
+                           copy=False)
         # Note: setting the sampling_period to 1 s is arbitrary
 
         # load the AnalogSignal and parameters into a new Segment

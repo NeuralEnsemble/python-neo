@@ -31,7 +31,7 @@ class AsciiSignalIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.AsciiSignalIO(filename='File_asciisignal_2.txt')
-        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> seg = r.read_segment()
         >>> print seg.analogsignals
         [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875 ...
 
@@ -85,7 +85,6 @@ class AsciiSignalIO(BaseIO):
 
     def read_segment(self,
                                         lazy = False,
-                                        cascade = True,
                                         delimiter = '\t',
                                         usecols = None,
                                         skiprows =0,
@@ -117,9 +116,9 @@ class AsciiSignalIO(BaseIO):
                         'homemade' use a intuitive more robust but slow method
 
         """
+        assert not lazy, 'Do not support lazy'
+        
         seg = Segment(file_origin = os.path.basename(self.filename))
-        if not cascade:
-            return seg
 
         if type(sampling_rate) == float or type(sampling_rate)==int:
             # if not quantitities Hz by default
@@ -170,16 +169,12 @@ class AsciiSignalIO(BaseIO):
             if timecolumn == i : continue
             if usecols is not None and i not in usecols: continue
 
-            if lazy:
-                signal = [ ]*unit
-            else:
-                signal = sig[:,i]*unit
+            signal = sig[:,i]*unit
 
             anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                   t_start=t_start, channel_index=i,
                                   name='Column %d'%i)
-            if lazy:
-                anaSig.lazy_shape = sig.shape
+
             seg.analogsignals.append( anaSig )
 
         seg.create_many_to_one_relationship()

@@ -190,6 +190,7 @@ class Spike2RawIO(BaseRawIO):
                                     wf_left_sweep, wf_sampling_rate))
         
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        print(sig_channels)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
         

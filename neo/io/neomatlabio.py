@@ -218,11 +218,13 @@ class NeoMatlabIO(BaseIO):
         BaseIO.__init__(self)
         self.filename = filename
 
-    def read_block(self, cascade=True, lazy=False,):
+    def read_block(self, lazy=False):
         """
         Arguments:
 
         """
+        assert not lazy, 'Do not support lazy'
+        
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True, mat_dtype=True)
         if not 'block' in d:
@@ -231,7 +233,7 @@ class NeoMatlabIO(BaseIO):
 
         bl_struct = d['block']
         bl = self.create_ob_from_struct(
-            bl_struct, 'Block', cascade=cascade, lazy=lazy)
+            bl_struct, 'Block')
         bl.create_many_to_one_relationship()
         return bl
 
@@ -307,8 +309,7 @@ class NeoMatlabIO(BaseIO):
 
         return struct
 
-    def create_ob_from_struct(self, struct, classname,
-                              cascade=True, lazy=False):
+    def create_ob_from_struct(self, struct, classname):
         cl = class_by_name[classname]
         # check if hinerits Quantity
         #~ is_quantity = False
@@ -339,11 +340,7 @@ class NeoMatlabIO(BaseIO):
                 else:
                     data_complement["t_start"] = 0.0
 
-            if lazy:
-                ob = cl([], **data_complement)
-                ob.lazy_shape = arr.shape
-            else:
-                ob = cl(arr, **data_complement)
+            ob = cl(arr, **data_complement)
         else:
             ob = cl()
 
@@ -352,20 +349,16 @@ class NeoMatlabIO(BaseIO):
             if attrname in getattr(ob, '_single_child_containers', []):
                 try:
                     for c in range(len(getattr(struct, attrname))):
-                        if cascade:
-                            child = self.create_ob_from_struct(
-                                getattr(struct, attrname)[c],
-                                classname_lower_to_upper[attrname[:-1]],
-                                cascade=cascade, lazy=lazy)
-                            getattr(ob, attrname.lower()).append(child)
+                        child = self.create_ob_from_struct(
+                            getattr(struct, attrname)[c],
+                            classname_lower_to_upper[attrname[:-1]])
+                        getattr(ob, attrname.lower()).append(child)
                 except TypeError:
                     # strange scipy.io behavior: if len is 1 there is no len()
-                    if cascade:
-                        child = self.create_ob_from_struct(
-                            getattr(struct, attrname),
-                            classname_lower_to_upper[attrname[:-1]],
-                            cascade=cascade, lazy=lazy)
-                        getattr(ob, attrname.lower()).append(child)
+                    child = self.create_ob_from_struct(
+                        getattr(struct, attrname),
+                        classname_lower_to_upper[attrname[:-1]])
+                    getattr(ob, attrname.lower()).append(child)
                 continue
 
             # attributes
@@ -391,22 +384,14 @@ class NeoMatlabIO(BaseIO):
                         item = None
                 elif attrtype == np.ndarray:
                     dt = dict_attributes[attrname][2]
-                    if lazy:
-                        item = np.array([], dtype=dt)
-                        ob.lazy_shape = item.shape
-                    else:
-                        item = item.astype(dt)
+                    item = item.astype(dt)
                 elif attrtype == pq.Quantity:
                     ndim = dict_attributes[attrname][1]
                     units = str(getattr(struct, attrname+'_units'))
                     if ndim == 0:
                         item = pq.Quantity(item, units)
                     else:
-                        if lazy:
-                            item = pq.Quantity([], units)
-                            item.lazy_shape = item.shape
-                        else:
-                            item = pq.Quantity(item, units)
+                        item = pq.Quantity(item, units)
                 else:
                     item = attrtype(item)
 

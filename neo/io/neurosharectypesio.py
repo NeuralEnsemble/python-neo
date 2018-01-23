@@ -78,7 +78,7 @@ class NeurosharectypesIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.NeuroshareIO(filename='a_file', dllname=the_name_of_dll)
-        >>> seg = r.read_segment(lazy=False, cascade=True, import_neuroshare_segment=True)
+        >>> seg = r.read_segment(import_neuroshare_segment=True)
         >>> print seg.analogsignals        # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         [<AnalogSignal(array([ -1.77246094e+02,  -2.24707031e+02,  -2.66015625e+02,
         ...
@@ -133,12 +133,14 @@ class NeurosharectypesIO(BaseIO):
 
 
     def read_segment(self, import_neuroshare_segment = True,
-                     lazy=False, cascade=True):
+                     lazy=False):
         """
         Arguments:
             import_neuroshare_segment: import neuroshare segment as SpikeTrain with associated waveforms or not imported at all.
 
         """
+        assert not lazy, 'Do not support lazy'
+        
         seg = Segment( file_origin = os.path.basename(self.filename), )
         
         if sys.platform.startswith('win'):
@@ -154,9 +156,6 @@ class NeurosharectypesIO(BaseIO):
         info = ns_LIBRARYINFO()
         neuroshare.ns_GetLibraryInfo(ctypes.byref(info) , ctypes.sizeof(info))
         seg.annotate(neuroshare_version = str(info.dwAPIVersionMaj)+'.'+str(info.dwAPIVersionMin))
-
-        if not cascade:
-            return seg
 
 
         # open file
@@ -189,19 +188,18 @@ class NeurosharectypesIO(BaseIO):
                 pdwDataRetSize = ctypes.c_uint32(0)
 
                 ea = Event(name = str(entityInfo.szEntityLabel),)
-                if not lazy:
-                    times = [ ]
-                    labels = [ ]
-                    for dwIndex in range(entityInfo.dwItemCount ):
-                        neuroshare.ns_GetEventData ( hFile, dwEntityID, dwIndex,
-                                            ctypes.byref(pdTimeStamp), ctypes.byref(pData),
-                                            ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize) )
-                        times.append(pdTimeStamp.value)
-                        labels.append(str(pData.value))
-                    ea.times = times*pq.s
-                    ea.labels = np.array(labels, dtype ='S')
-                else :
-                    ea.lazy_shape = entityInfo.dwItemCount
+
+                times = [ ]
+                labels = [ ]
+                for dwIndex in range(entityInfo.dwItemCount ):
+                    neuroshare.ns_GetEventData ( hFile, dwEntityID, dwIndex,
+                                        ctypes.byref(pdTimeStamp), ctypes.byref(pData),
+                                        ctypes.sizeof(pData), ctypes.byref(pdwDataRetSize) )
+                    times.append(pdTimeStamp.value)
+                    labels.append(str(pData.value))
+                ea.times = times*pq.s
+                ea.labels = np.array(labels, dtype ='S')
+                
                 seg.eventarrays.append(ea)
 
             # analog
@@ -211,21 +209,18 @@ class NeurosharectypesIO(BaseIO):
                 neuroshare.ns_GetAnalogInfo( hFile, dwEntityID,ctypes.byref(pAnalogInfo),ctypes.sizeof(pAnalogInfo) )
                 dwIndexCount = entityInfo.dwItemCount
 
-                if lazy:
-                    signal = [ ]*pq.Quantity(1, pAnalogInfo.szUnits)
-                else:
-                    pdwContCount = ctypes.c_uint32(0)
-                    pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
-                    total_read = 0
-                    while total_read< entityInfo.dwItemCount:
-                        dwStartIndex = ctypes.c_uint32(total_read)
-                        dwStopIndex = ctypes.c_uint32(entityInfo.dwItemCount - total_read)
+                pdwContCount = ctypes.c_uint32(0)
+                pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
+                total_read = 0
+                while total_read< entityInfo.dwItemCount:
+                    dwStartIndex = ctypes.c_uint32(total_read)
+                    dwStopIndex = ctypes.c_uint32(entityInfo.dwItemCount - total_read)
+                    
+                    neuroshare.ns_GetAnalogData( hFile,  dwEntityID,  dwStartIndex,
+                                 dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+                    total_read += pdwContCount.value
                         
-                        neuroshare.ns_GetAnalogData( hFile,  dwEntityID,  dwStartIndex,
-                                     dwStopIndex, ctypes.byref( pdwContCount) , pData[total_read:].ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
-                        total_read += pdwContCount.value
-                            
-                    signal =  pq.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
+                signal =  pq.Quantity(pData, units=pAnalogInfo.szUnits, copy = False)
 
                 #t_start
                 dwIndex = 0
@@ -238,8 +233,6 @@ class NeurosharectypesIO(BaseIO):
                                                     name = str(entityInfo.szEntityLabel),
                                                     )
                 anaSig.annotate( probe_info = str(pAnalogInfo.szProbeInfo))
-                if lazy:
-                    anaSig.lazy_shape = entityInfo.dwItemCount
                 seg.analogsignals.append( anaSig )
 
 
@@ -262,35 +255,31 @@ class NeurosharectypesIO(BaseIO):
                     neuroshare.ns_GetSegmentSourceInfo( hFile,  dwEntityID, dwSourceID,
                                     ctypes.byref(pSourceInfo), ctypes.sizeof(pSourceInfo) )
 
-                if lazy:
-                    sptr = SpikeTrain(times, name = str(entityInfo.szEntityLabel), t_stop = 0.*pq.s)
-                    sptr.lazy_shape = entityInfo.dwItemCount
-                else:
-                    pdTimeStamp  = ctypes.c_double(0.)
-                    dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount*pdwSegmentInfo.dwSourceCount
-                    pData = np.zeros( (dwDataBufferSize), dtype = 'float64')
-                    pdwSampleCount = ctypes.c_uint32(0)
-                    pdwUnitID= ctypes.c_uint32(0)
+                pdTimeStamp  = ctypes.c_double(0.)
+                dwDataBufferSize = pdwSegmentInfo.dwMaxSampleCount*pdwSegmentInfo.dwSourceCount
+                pData = np.zeros( (dwDataBufferSize), dtype = 'float64')
+                pdwSampleCount = ctypes.c_uint32(0)
+                pdwUnitID= ctypes.c_uint32(0)
 
-                    nsample  = int(dwDataBufferSize)
-                    times = np.empty( (entityInfo.dwItemCount), dtype = 'f')
-                    waveforms = np.empty( (entityInfo.dwItemCount, nsource, nsample), dtype = 'f')
-                    for dwIndex in range(entityInfo.dwItemCount ):
-                        neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
-                            ctypes.byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                            dwDataBufferSize * 8, ctypes.byref(pdwSampleCount),
-                                ctypes.byref(pdwUnitID ) )
+                nsample  = int(dwDataBufferSize)
+                times = np.empty( (entityInfo.dwItemCount), dtype = 'f')
+                waveforms = np.empty( (entityInfo.dwItemCount, nsource, nsample), dtype = 'f')
+                for dwIndex in range(entityInfo.dwItemCount ):
+                    neuroshare.ns_GetSegmentData ( hFile,  dwEntityID,  dwIndex,
+                        ctypes.byref(pdTimeStamp), pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                        dwDataBufferSize * 8, ctypes.byref(pdwSampleCount),
+                            ctypes.byref(pdwUnitID ) )
 
-                        times[dwIndex] = pdTimeStamp.value
-                        waveforms[dwIndex, :,:] = pData[:nsample*nsource].reshape(nsample ,nsource).transpose()
-                    
-                    sptr = SpikeTrain(times = pq.Quantity(times, units = 's', copy = False),
-                                        t_stop = times.max(),
-                                        waveforms = pq.Quantity(waveforms, units = str(pdwSegmentInfo.szUnits), copy = False ),
-                                        left_sweep = nsample/2./float(pdwSegmentInfo.dSampleRate)*pq.s,
-                                        sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
-                                        name = str(entityInfo.szEntityLabel),
-                                        )
+                    times[dwIndex] = pdTimeStamp.value
+                    waveforms[dwIndex, :,:] = pData[:nsample*nsource].reshape(nsample ,nsource).transpose()
+                
+                sptr = SpikeTrain(times = pq.Quantity(times, units = 's', copy = False),
+                                    t_stop = times.max(),
+                                    waveforms = pq.Quantity(waveforms, units = str(pdwSegmentInfo.szUnits), copy = False ),
+                                    left_sweep = nsample/2./float(pdwSegmentInfo.dSampleRate)*pq.s,
+                                    sampling_rate = float(pdwSegmentInfo.dSampleRate)*pq.Hz,
+                                    name = str(entityInfo.szEntityLabel),
+                                    )
                 seg.spiketrains.append(sptr)
 
 
@@ -301,21 +290,16 @@ class NeurosharectypesIO(BaseIO):
                 neuroshare.ns_GetNeuralInfo ( hFile,  dwEntityID,
                                  ctypes.byref(pNeuralInfo), ctypes.sizeof(pNeuralInfo))
 
-                if lazy:
-                    times = [ ]*pq.s
-                    t_stop = 0*pq.s
-                else:
-                    pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
-                    dwStartIndex = 0
-                    dwIndexCount = entityInfo.dwItemCount
-                    neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
-                        dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
-                    times = pData*pq.s
-                    t_stop = times.max()
+                pData = np.zeros( (entityInfo.dwItemCount,), dtype = 'float64')
+                dwStartIndex = 0
+                dwIndexCount = entityInfo.dwItemCount
+                neuroshare.ns_GetNeuralData( hFile,  dwEntityID,  dwStartIndex,
+                    dwIndexCount,  pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
+                times = pData*pq.s
+                t_stop = times.max()
+                
                 sptr = SpikeTrain(times, t_stop =t_stop,
                                                 name = str(entityInfo.szEntityLabel),)
-                if lazy:
-                    sptr.lazy_shape = entityInfo.dwItemCount
                 seg.spiketrains.append(sptr)
 
         # close

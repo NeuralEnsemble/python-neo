@@ -28,7 +28,7 @@ class AsciiSpikeTrainIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.AsciiSpikeTrainIO( filename = 'File_ascii_spiketrain_1.txt')
-        >>> seg = r.read_segment(lazy = False, cascade = True,)
+        >>> seg = r.read_segment()
         >>> print seg.spiketrains     # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         [<SpikeTrain(array([ 3.89981604,  4.73258781,  0.608428  ,  4.60246277,  1.23805797,
         ...
@@ -78,7 +78,6 @@ class AsciiSpikeTrainIO(BaseIO):
 
     def read_segment(self,
                             lazy = False,
-                            cascade = True,
                             delimiter = '\t',
                             t_start = 0.*pq.s,
                             unit = pq.s,
@@ -89,28 +88,23 @@ class AsciiSpikeTrainIO(BaseIO):
             t_start : time start of all spiketrain 0 by default
             unit : unit of spike times, can be a str or directly a Quantities
         """
+        assert not lazy, 'Do not support lazy'
+        
         unit = pq.Quantity(1, unit)
 
         seg = Segment(file_origin = os.path.basename(self.filename))
-        if not cascade:
-            return seg
 
         f = open(self.filename, 'Ur')
         for i,line in enumerate(f) :
             alldata = line[:-1].split(delimiter)
             if alldata[-1] == '': alldata = alldata[:-1]
             if alldata[0] == '': alldata = alldata[1:]
-            if lazy:
-                spike_times = [ ]
-                t_stop = t_start
-            else:
-                spike_times = np.array(alldata).astype('f')
-                t_stop = spike_times.max()*unit
+            
+            spike_times = np.array(alldata).astype('f')
+            t_stop = spike_times.max()*unit
 
             sptr = SpikeTrain(spike_times*unit, t_start=t_start, t_stop=t_stop)
-            if lazy:
-                sptr.lazy_shape = len(alldata)
-
+ 
             sptr.annotate(channel_index = i)
             seg.spiketrains.append(sptr)
         f.close()
