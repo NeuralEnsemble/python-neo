@@ -67,7 +67,7 @@ class NSDFIOTest(unittest.TestCase):
             block.segments.append(self.create_segment(block, name='Segment #{}'.format(i)))
         for i in range(3):
             block.channel_indexes.append(self.create_channelindex(block, name='ChannelIndex #{}'.format(i),
-                                            analogsignals=[seg.analogsignals[i] for seg in block.segments]))
+                                                                  analogsignals=[seg.analogsignals[i] for seg in block.segments]))
 
     def create_segment(self, parent=None, name='Segment'):
         segment = Segment()
@@ -86,9 +86,12 @@ class NSDFIOTest(unittest.TestCase):
 
     def _create_segment_children(self, segment):
         for i in range(2):
-            segment.analogsignals.append(self.create_analogsignal(segment, name='Signal #{}'.format(i * 3)))
-            segment.analogsignals.append(self.create_analogsignal2(segment, name='Signal #{}'.format(i * 3 + 1)))
-            segment.analogsignals.append(self.create_analogsignal3(segment, name='Signal #{}'.format(i * 3 + 2)))
+            segment.analogsignals.append(self.create_analogsignal(
+                segment, name='Signal #{}'.format(i * 3)))
+            segment.analogsignals.append(self.create_analogsignal2(
+                segment, name='Signal #{}'.format(i * 3 + 1)))
+            segment.analogsignals.append(self.create_analogsignal3(
+                segment, name='Signal #{}'.format(i * 3 + 2)))
 
     def create_analogsignal(self, parent=None, name='AnalogSignal1'):
         signal = AnalogSignal([[1.0, 2.5], [2.2, 3.1], [3.2, 4.4]], units='mV',
@@ -122,7 +125,8 @@ class NSDFIOTest(unittest.TestCase):
         channels_num = min([signal.shape[1] for signal in analogsignals])
 
         channelindex = ChannelIndex(index=np.arange(channels_num),
-                                    channel_names=['Channel{}'.format(i) for i in range(channels_num)],
+                                    channel_names=['Channel{}'.format(
+                                        i) for i in range(channels_num)],
                                     channel_ids=np.arange(channels_num),
                                     coordinates=([[1.87, -5.2, 4.0]] * channels_num) * pq.cm)
 
@@ -226,7 +230,8 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
     def _compare_objects(self, object1, object2, exclude_attr=[]):
         assert object1.__class__.__name__ == object2.__class__.__name__
         assert object2.file_origin == self.filename
-        assert_same_attributes(object1, object2, exclude=['file_origin', 'file_datetime'] + exclude_attr)
+        assert_same_attributes(object1, object2, exclude=[
+                               'file_origin', 'file_datetime'] + exclude_attr)
         assert_same_annotations(object1, object2)
 
 

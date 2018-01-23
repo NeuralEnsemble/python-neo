@@ -69,21 +69,21 @@ Notice that the last line must end with a newline or carriage return.
 class KlustaKwikIO(BaseIO):
     """Reading and writing from KlustaKwik-format files."""
     # Class variables demonstrating capabilities of this IO
-    is_readable        = True
-    is_writable        = True
+    is_readable = True
+    is_writable = True
 
     # This IO can only manipulate objects relating to spike times
-    supported_objects  = [Block, SpikeTrain, Unit]
+    supported_objects = [Block, SpikeTrain, Unit]
 
     # Keep things simple by always returning a block
-    readable_objects    = [Block]
+    readable_objects = [Block]
 
     # And write a block
-    writeable_objects   = [Block]
+    writeable_objects = [Block]
 
     # Not sure what these do, if anything
-    has_header         = False
-    is_streameable     = False
+    has_header = False
+    is_streameable = False
 
     # GUI params
     read_params = {}
@@ -92,8 +92,8 @@ class KlustaKwikIO(BaseIO):
     write_params = {}
 
     # The IO name and the file extensions it uses
-    name               = 'KlustaKwik'
-    extensions          = ['fet', 'clu', 'res', 'spk']
+    name = 'KlustaKwik'
+    extensions = ['fet', 'clu', 'res', 'spk']
 
     # Operates on directories
     mode = 'file'
@@ -130,7 +130,7 @@ class KlustaKwikIO(BaseIO):
         segments.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         # Create block and segment to hold all the data
         block = Block()
         # Search data directory for KlustaKwik files.
@@ -169,11 +169,11 @@ class KlustaKwikIO(BaseIO):
             for unit_id in sorted(unique_unit_ids):
                 # Initialize the unit
                 u = Unit(name=('unit %d from group %d' % (unit_id, group)),
-                    index=unit_id, group=group)
+                         index=unit_id, group=group)
 
                 # Initialize a new SpikeTrain for the spikes from this unit
                 st = SpikeTrain(
-                    times=spks[uids==unit_id] / self.sampling_rate,
+                    times=spks[uids == unit_id] / self.sampling_rate,
                     units='sec', t_start=0.0,
                     t_stop=spks.max() / self.sampling_rate,
                     name=('unit %d from group %d' % (unit_id, group)))
@@ -242,7 +242,6 @@ class KlustaKwikIO(BaseIO):
                 len(np.unique(cluster_ids)), nbClusters, clufilename))
 
         return cluster_ids
-
 
     # writing functions
     def write_block(self, block):
@@ -325,8 +324,8 @@ class KlustaKwikIO(BaseIO):
                     fetfilehandle.write("%d\n" % n_features)
                 if n_features != all_features.shape[1]:
                     raise ValueError("inconsistent number of features: " +
-                        "supposed to be %d but I got %d" %\
-                        (n_features, all_features.shape[1]))
+                                     "supposed to be %d but I got %d" %
+                                     (n_features, all_features.shape[1]))
 
                 # Write features and time for each spike
                 for stt, features in zip(spike_times_in_samples, all_features):
@@ -384,9 +383,9 @@ class KlustaKwikIO(BaseIO):
     def _new_group(self, id_group, nbClusters):
         # generate filenames
         fetfilename = os.path.join(self.filename,
-            self.basename + ('.fet.%d' % id_group))
+                                   self.basename + ('.fet.%d' % id_group))
         clufilename = os.path.join(self.filename,
-            self.basename + ('.clu.%d' % id_group))
+                                   self.basename + ('.clu.%d' % id_group))
 
         # back up before overwriting
         if os.path.exists(fetfilename):
@@ -399,16 +398,19 @@ class KlustaKwikIO(BaseIO):
         self._clufilehandles[id_group] = file(clufilename, 'w')
 
         # write out first line
-        #self._fetfilehandles[id_group].write("0\n") # Number of features
+        # self._fetfilehandles[id_group].write("0\n") # Number of features
         self._clufilehandles[id_group].write("%d\n" % nbClusters)
 
     def _close_all_files(self):
-        for val in self._fetfilehandles.values(): val.close()
-        for val in self._clufilehandles.values(): val.close()
+        for val in self._fetfilehandles.values():
+            val.close()
+        for val in self._clufilehandles.values():
+            val.close()
 
 
 class FilenameParser:
     """Simple class to interpret user's requests into KlustaKwik filenames"""
+
     def __init__(self, dirname, basename=None):
         """Initialize a new parser for a directory containing files
 
@@ -445,7 +447,6 @@ class FilenameParser:
         """
         all_filenames = glob.glob(os.path.join(self.dirname, '*'))
 
-
         # Fill the dict with valid filenames
         d = {}
         for v in all_filenames:
@@ -466,6 +467,3 @@ class FilenameParser:
                     d[tetn] = v
 
         return d
-
-
-

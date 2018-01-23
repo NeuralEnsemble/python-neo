@@ -140,7 +140,7 @@ class BrainwareF32IO(BaseIO):
         with BrainWare
         '''
         assert not lazy, 'Do not support lazy'
-        
+
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
@@ -154,7 +154,7 @@ class BrainwareF32IO(BaseIO):
 
         # create the objects to store other objects
         chx = ChannelIndex(file_origin=self._filename,
-                                    index=np.array([], dtype=np.int))
+                           index=np.array([], dtype=np.int))
         self.__unit = Unit(file_origin=self._filename)
 
         # load objects into their containers
@@ -282,7 +282,7 @@ class BrainwareF32IO(BaseIO):
         times = pq.Quantity(self.__spiketimes, dtype=np.float32,
                             units=pq.ms)
         train = SpikeTrain(times,
-                           t_start=0*pq.ms, t_stop=self.__t_stop * pq.ms,
+                           t_start=0 * pq.ms, t_stop=self.__t_stop * pq.ms,
                            file_origin=self._filename)
 
         self.__seg.spiketrains = [train]

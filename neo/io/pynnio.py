@@ -31,7 +31,7 @@ except NameError:
 UNITS_MAP = {
     'spikes': pq.ms,
     'v': pq.mV,
-    'gsyn': pq.UnitQuantity('microsiemens', 1e-6*pq.S, 'uS', 'µS'), # checked
+    'gsyn': pq.UnitQuantity('microsiemens', 1e-6 * pq.S, 'uS', 'µS'),  # checked
 }
 
 
@@ -42,7 +42,7 @@ class BasePyNNIO(BaseIO):
     is_readable = True
     is_writable = True
     has_header = True
-    is_streameable = False # TODO - correct spelling to "is_streamable"
+    is_streameable = False  # TODO - correct spelling to "is_streamable"
     supported_objects = [Segment, AnalogSignal, SpikeTrain]
     readable_objects = supported_objects
     writeable_objects = supported_objects
@@ -70,7 +70,7 @@ class BasePyNNIO(BaseIO):
         if len(arr) > 0:
             signal = AnalogSignal(arr.T,
                                   units=self._determine_units(metadata),
-                                  sampling_period=metadata['dt']*pq.ms)
+                                  sampling_period=metadata['dt'] * pq.ms)
         signal.annotate(label=metadata["label"],
                         variable=metadata["variable"])
         return signal
@@ -90,16 +90,18 @@ class BasePyNNIO(BaseIO):
 
     def read_segment(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         data, metadata = self._read_file_contents()
-        annotations = dict((k, metadata.get(k, 'unknown')) for k in ("label", "variable", "first_id", "last_id"))
+        annotations = dict((k, metadata.get(k, 'unknown'))
+                           for k in ("label", "variable", "first_id", "last_id"))
         seg = Segment(**annotations)
         if metadata['variable'] == 'spikes':
             for i in range(metadata['first_index'], metadata['last_index'] + 1):
                 spiketrain = self._extract_spikes(data, metadata, i)
                 if spiketrain is not None:
                     seg.spiketrains.append(spiketrain)
-            seg.annotate(dt=metadata['dt']) # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
+            # store dt for SpikeTrains only, as can be retrieved from sampling_period for AnalogSignal
+            seg.annotate(dt=metadata['dt'])
         else:
             signal = self._extract_signals(data, metadata)
             if signal is not None:
@@ -125,7 +127,7 @@ class BasePyNNIO(BaseIO):
         metadata['last_index'] = metadata['size'] - 1
         if 'label' not in metadata:
             metadata['label'] = 'unknown'
-        if 'dt' not in metadata: # dt not included in annotations if Segment contains only AnalogSignals
+        if 'dt' not in metadata:  # dt not included in annotations if Segment contains only AnalogSignals
             metadata['dt'] = s0.sampling_period.rescale(pq.ms).magnitude
         metadata['n'] = n
         data = numpy.empty((n, 2))
@@ -144,16 +146,16 @@ class BasePyNNIO(BaseIO):
             metadata['units'] = units.u_symbol
 
         start = 0
-        for i, signal in enumerate(source): # here signal may be AnalogSignal or SpikeTrain
+        for i, signal in enumerate(source):  # here signal may be AnalogSignal or SpikeTrain
             end = start + signal.size
             data[start:end, 0] = numpy.array(signal.rescale(units))
-            data[start:end, 1] = i*numpy.ones((signal.size,), dtype=float)
+            data[start:end, 1] = i * numpy.ones((signal.size,), dtype=float)
             start = end
         self._write_file_contents(data, metadata)
 
     def read_analogsignal(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         data, metadata = self._read_file_contents()
         if metadata['variable'] == 'spikes':
             raise TypeError("File contains spike data, not analog signals")
@@ -172,7 +174,8 @@ class BasePyNNIO(BaseIO):
         else:
             spiketrain = self._extract_spikes(data, metadata, channel_index)
             if spiketrain is None:
-                raise IndexError("File does not contain any spikes with channel index %d" % channel_index)
+                raise IndexError(
+                    "File does not contain any spikes with channel index %d" % channel_index)
             else:
                 return spiketrain
 
@@ -188,7 +191,7 @@ class PyNNNumpyIO(BasePyNNIO):
         contents = numpy.load(self.filename)
         data = contents["data"]
         metadata = {}
-        for name,value in contents['metadata']:
+        for name, value in contents['metadata']:
             try:
                 metadata[name] = eval(value)
             except Exception:
