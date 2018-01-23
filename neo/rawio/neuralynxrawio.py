@@ -132,7 +132,8 @@ class NeuralynxRawIO(BaseRawIO):
                 elif ext in ('nse', 'ntt'):
                     # nse and ntt are pretty similar except for the wavform shape
                     # a file can contain several unit_id (so several unit channel)
-                    assert chan_id not in self.nse_ntt_filenames, 'Several nse or ntt files have the same unit_id!!!'
+                    assert chan_id not in self.nse_ntt_filenames, \
+                        'Several nse or ntt files have the same unit_id!!!'
                     self.nse_ntt_filenames[chan_id] = filename
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
