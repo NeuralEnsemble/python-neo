@@ -14,6 +14,6 @@ class TestRawBinarySignalRawIO(BaseTestRawIO, unittest.TestCase, ):
     entities_to_test = ['File_rawbinary_10kHz_2channels_16bit.raw']
     files_to_download = entities_to_test
 
+
 if __name__ == "__main__":
     unittest.main()
-
