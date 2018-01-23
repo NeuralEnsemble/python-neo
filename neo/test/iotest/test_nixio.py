@@ -160,8 +160,6 @@ class NixIOTest(unittest.TestCase):
 
     def compare_signals_das(self, neosignals, data_arrays):
         for sig in neosignals:
-            if self.io._find_lazy_loaded(sig) is not None:
-                sig = self.io.load_lazy_object(sig)
             dalist = list()
             nixname = sig.annotations["nix_name"]
             for da in data_arrays:
@@ -663,7 +661,6 @@ class NixIOWriteTest(NixIOTest):
         block = Block(name=self.rword())
         segment = Segment(name=self.rword(), description=self.rword())
         block.segments.append(segment)
-        print(f"Pre  {len(block.segments)} segments")
         self.write_and_compare([block])
 
         segment.annotate(**self.rdict(2))

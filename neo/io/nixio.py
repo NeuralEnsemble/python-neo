@@ -776,31 +776,137 @@ class NixIO(BaseIO):
                 chanprop = chanmd.create_property("coordinates", nixcoords)
                 chanprop.unit = coordunits
 
-    def write_analogsignal(self, anasig, loc=""):
+    def write_analogsignal(self, anasig, nixblock, nixgroup):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
-        DataArray objects and write them to the NIX file at the location
-        defined by ``loc``. All DataArray objects created from the same
-        AnalogSignal have their metadata section point to the same object.
+        DataArray objects and write them to the NIX file. All DataArray objects
+        created from the same AnalogSignal have their metadata section point to
+        the same object.
 
         :param anasig: The Neo AnalogSignal to be written
-        :param loc: Path to the parent of the new AnalogSignal
+        :param nixblock: NIX Block where the DataArrays will be created
+        :param nixgroup: NIX Group where the DataArrays will be attached
         """
-        self._write_object(anasig, loc)
+        if "nix_name" in anasig.annotations:
+            nix_name = anasig.annotations["nix_name"]
+        else:
+            nix_name = "neo.analogsignal.{}".format(self._generate_nix_name())
+            anasig.annotate(nix_name=nix_name)
 
-    def write_irregularlysampledsignal(self, irsig, loc=""):
+        def get_all_sigs():
+            ret = list()
+            for idx in itertools.count():
+                name = "{}.{}".format(nix_name, idx)
+                if name in nixblock.data_arrays:
+                    ret.append(nixblock.data_arrays[name])
+                else:
+                    return ret
+
+        firstdaname = "{}.0".format(nix_name)
+        if firstdaname in nixblock.data_arrays:
+            nixdas = get_all_sigs()
+            metadata = nixdas[0].metadata
+        else:
+            data = np.transpose(anasig[:].magnitude)
+            metadata = nixgroup.metadata.create_section(
+                nix_name, "neo.analogsignal.metadata"
+            )
+            nixdas = list()
+            for idx, row in enumerate(data):
+                daname = "{}.{}".format(nix_name, idx)
+                da = nixblock.create_data_array(daname,
+                                                "neo.analogsignal",
+                                                data=row)
+                da.metadata = metadata
+                da.definition = anasig.description
+                da.unit = units_to_string(anasig.units)
+
+                timedim = da.append_sampled_dimension(
+                    anasig.sampling_period.magnitude.item()
+                )
+                timedim.unit = units_to_string(anasig.sampling_period.units)
+                tstart = anasig.t_start
+                metadata["t_start"] = tstart.magnitude.item()
+                metadata.props["t_start"].unit = units_to_string(tstart.units)
+                timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+                timedim.label = "time"
+
+                nixdas.append(da)
+                nixgroup.data_arrays.append(da)
+
+        neoname = anasig.name if anasig.name is not None else ""
+        metadata["neo_name"] = neoname
+        if anasig.annotations:
+            for k, v in anasig.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # TODO: Dimensions
+
+    def write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
         """
         Convert the provided ``irsig`` (IrregularlySampledSignal) to a list of
-        NIX DataArray objects and write them to the NIX file at the location
-        defined by ``loc``. All DataArray objects created from the same
-        IrregularlySampledSignal have their metadata section point to the same
-        object.
+        NIX DataArray objects and write them to the NIX file at the location.
+        All DataArray objects created from the same IrregularlySampledSignal
+        have their metadata section point to the same object.
 
         :param irsig: The Neo IrregularlySampledSignal to be written
-        :param loc: Path to the parent of the new
-        :return: The newly created NIX DataArray
+        :param nixblock: NIX Block where the DataArrays will be created
+        :param nixgroup: NIX Group where the DataArrays will be attached
         """
-        self._write_object(irsig, loc)
+        if "nix_name" in irsig.annotations:
+            nix_name = irsig.annotations["nix_name"]
+        else:
+            nix_name = "neo.irregularlysampledsignal.{}".format(
+                self._generate_nix_name()
+            )
+            irsig.annotate(nix_name=nix_name)
+
+        def get_all_sigs():
+            ret = list()
+            for idx in itertools.count():
+                name = "{}.{}".format(nix_name, idx)
+                if name in nixblock.data_arrays:
+                    ret.append(nixblock.data_arrays[name])
+                else:
+                    return ret
+
+        firstdaname = "{}.0".format(nix_name)
+        if firstdaname in nixblock.data_arrays:
+            nixdas = get_all_sigs()
+            metadata = nixdas[0].metadata
+        else:
+            data = np.transpose(irsig[:].magnitude)
+            metadata = nixgroup.metadata.create_section(
+                nix_name, "neo.irregularlysampledsignal.metadata"
+            )
+            nixdas = list()
+            for idx, row in enumerate(data):
+                daname = "{}.{}".format(nix_name, idx)
+                da = nixblock.create_data_array(
+                    daname, "neo.irregularlysampledsignal", data=row
+                )
+                da.metadata = metadata
+                da.definition = irsig.description
+                da.unit = units_to_string(irsig.units)
+
+                timedim = da.append_range_dimension(irsig.times.magnitude)
+                timedim.unit = units_to_string(irsig.times.units)
+                tstart = irsig.t_start
+                metadata["t_start"] = tstart.magnitude.item()
+                metadata.props["t_start"].unit = units_to_string(tstart.units)
+                timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+                timedim.label = "time"
+
+                nixdas.append(da)
+                nixgroup.data_arrays.append(da)
+
+        neoname = irsig.name if irsig.name is not None else ""
+        metadata["neo_name"] = neoname
+        if irsig.annotations:
+            for k, v in irsig.annotations.items():
+                self._write_property(metadata, k, v)
+
+        # TODO: Dimensions
 
     def write_epoch(self, ep, loc=""):
         """
