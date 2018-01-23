@@ -935,86 +935,27 @@ class NixIOReadTest(NixIOTest):
         self.io.close()
 
     def test_all_read(self):
-        neo_blocks = self.io.read_all_blocks(cascade=True, lazy=False)
+        neo_blocks = self.io.read_all_blocks(lazy=False)
         nix_blocks = self.io.nix_file.blocks
         self.compare_blocks(neo_blocks, nix_blocks)
 
-    def test_lazyload_fullcascade_read(self):
-        neo_blocks = self.io.read_all_blocks(cascade=True, lazy=True)
-        nix_blocks = self.io.nix_file.blocks
-        # data objects should be empty
-        for block in neo_blocks:
-            for seg in block.segments:
-                for asig in seg.analogsignals:
-                    self.assertEqual(len(asig), 0)
-                for isig in seg.irregularlysampledsignals:
-                    self.assertEqual(len(isig), 0)
-                for epoch in seg.epochs:
-                    self.assertEqual(len(epoch), 0)
-                for event in seg.events:
-                    self.assertEqual(len(event), 0)
-                for st in seg.spiketrains:
-                    self.assertEqual(len(st), 0)
-        self.compare_blocks(neo_blocks, nix_blocks)
-
-    def test_lazyload_lazycascade_read(self):
-        neo_blocks = self.io.read_all_blocks(cascade="lazy", lazy=True)
-        nix_blocks = self.io.nix_file.blocks
-        self.compare_blocks(neo_blocks, nix_blocks)
-
-    def test_lazycascade_read(self):
-        def getitem(self, index):
-            return self._data.__getitem__(index)
-        from neo.io.nixio import LazyList
-        getitem_original = LazyList.__getitem__
-        LazyList.__getitem__ = getitem
-        neo_blocks = self.io.read_all_blocks(cascade="lazy", lazy=False)
-        for block in neo_blocks:
-            self.assertIsInstance(block.segments, LazyList)
-            self.assertIsInstance(block.channel_indexes, LazyList)
-            for seg in block.segments:
-                self.assertIsInstance(seg, string_types)
-            for chx in block.channel_indexes:
-                self.assertIsInstance(chx, string_types)
-        LazyList.__getitem__ = getitem_original
-
-    def test_load_lazy_cascade(self):
-        from neo.io.nixio import LazyList
-        neo_blocks = self.io.read_all_blocks(cascade="lazy", lazy=False)
-        for block in neo_blocks:
-            self.assertIsInstance(block.segments, LazyList)
-            self.assertIsInstance(block.channel_indexes, LazyList)
-            name = block.annotations["nix_name"]
-            block = self.io.load_lazy_cascade("/" + name, lazy=False)
-            self.assertIsInstance(block.segments, list)
-            self.assertIsInstance(block.channel_indexes, list)
-            for seg in block.segments:
-                self.assertIsInstance(seg.analogsignals, list)
-                self.assertIsInstance(seg.irregularlysampledsignals, list)
-                self.assertIsInstance(seg.epochs, list)
-                self.assertIsInstance(seg.events, list)
-                self.assertIsInstance(seg.spiketrains, list)
-
-    def test_nocascade_read(self):
-        self.io._read_cascade = mock.Mock()
-        neo_blocks = self.io.read_all_blocks(cascade=False)
-        self.io._read_cascade.assert_not_called()
-        for block in neo_blocks:
-            self.assertEqual(len(block.segments), 0)
-            nix_block = self.io.nix_file.blocks[block.annotations["nix_name"]]
-            self.compare_attr(block, nix_block)
-
-    def test_lazy_load_subschema(self):
-        blk = self.io.nix_file.blocks[0]
-        segpath = "/" + blk.name + "/segments/" + blk.groups[0].name
-        segment = self.io.load_lazy_cascade(segpath, lazy=True)
-        self.assertIsInstance(segment, Segment)
-        self.assertEqual(segment.annotations["nix_name"], blk.groups[0].name)
-        self.assertIs(segment.block, None)
-        self.assertEqual(len(segment.analogsignals[0]), 0)
-        segment = self.io.load_lazy_cascade(segpath, lazy=False)
-        self.assertEqual(np.shape(segment.analogsignals[0]), (100, 3))
-
+    #def test_lazyload_fullcascade_read(self):
+    #    neo_blocks = self.io.read_all_blocks(lazy=True)
+    #    nix_blocks = self.io.nix_file.blocks
+    #    # data objects should be empty
+    #    for block in neo_blocks:
+    #       for seg in block.segments:
+    #            for asig in seg.analogsignals:
+    #                self.assertEqual(len(asig), 0)
+    #            for isig in seg.irregularlysampledsignals:
+    #                self.assertEqual(len(isig), 0)
+    #            for epoch in seg.epochs:
+    #                self.assertEqual(len(epoch), 0)
+    #            for event in seg.events:
+    #                self.assertEqual(len(event), 0)
+    #            for st in seg.spiketrains:
+    #                self.assertEqual(len(st), 0)
+    #    self.compare_blocks(neo_blocks, nix_blocks)
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOHashTest(NixIOTest):
@@ -1254,3 +1195,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
     ioclass = NixIO
     read_and_write_is_bijective = False
+
+if __name__ == "__main__":
+    unittest.main()
+

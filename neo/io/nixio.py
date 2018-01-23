@@ -128,17 +128,13 @@ class NixIO(BaseIO):
 
     def read_all_blocks(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        cascade = True#TODO remove it
-        
         blocks = list()
         for blk in self.nix_file.blocks:
-            blocks.append(self.read_block("/" + blk.name, cascade, lazy))
+            blocks.append(self.read_block("/" + blk.name, lazy))
         return blocks
 
     def read_block(self, path="/", lazy=False):
         assert not lazy, 'Do not support lazy'
-        cascade = True#TODO remove it
-        
         if path == "/":
             try:
                 nix_block = self.nix_file.blocks[self._block_read_counter]
@@ -150,20 +146,16 @@ class NixIO(BaseIO):
             nix_block = self._get_object_at(path)
         neo_block = self._block_to_neo(nix_block)
         neo_block.path = path
-        if cascade:
-            self._read_cascade(nix_block, path, cascade, lazy)
+        self._read_cascade(nix_block, path, True, lazy)
         self._update_maps(neo_block, lazy)
         return neo_block
 
     def read_segment(self, path, lazy=False):
         assert not lazy, 'Do not support lazy'
-        cascade = True#TODO remove it
-        
         nix_group = self._get_object_at(path)
         neo_segment = self._group_to_neo(nix_group)
         neo_segment.path = path
-        if cascade:
-            self._read_cascade(nix_group, path, cascade, lazy)
+        self._read_cascade(nix_group, path, True, lazy)
         self._update_maps(neo_segment, lazy)
         nix_parent = self._get_parent(path)
         neo_parent = self._neo_map.get(nix_parent.name)
@@ -173,13 +165,10 @@ class NixIO(BaseIO):
 
     def read_channelindex(self, path, lazy=False):
         assert not lazy, 'Do not support lazy'
-        cascade = True#TODO remove it
-        
         nix_source = self._get_object_at(path)
         neo_rcg = self._source_chx_to_neo(nix_source)
         neo_rcg.path = path
-        if cascade:
-            self._read_cascade(nix_source, path, cascade, lazy)
+        self._read_cascade(nix_source, path, True, lazy)
         self._update_maps(neo_rcg, lazy)
         nix_parent = self._get_parent(path)
         neo_parent = self._neo_map.get(nix_parent.name)
@@ -248,8 +237,7 @@ class NixIO(BaseIO):
         nix_source = self._get_object_at(path)
         neo_unit = self._source_unit_to_neo(nix_source)
         neo_unit.path = path
-        if cascade:
-            self._read_cascade(nix_source, path, cascade, lazy)
+        self._read_cascade(nix_source, path, True, lazy)
         self._update_maps(neo_unit, lazy)
         nix_parent = self._get_parent(path)
         neo_parent = self._neo_map.get(nix_parent.name)
@@ -471,7 +459,7 @@ class NixIO(BaseIO):
                 chpaths = self._group_signals(chpaths)
             if cascade != "lazy":
                 read_func = getattr(self, "read_" + neotype)
-                children = list(read_func(cp, cascade, lazy)
+                children = list(read_func(cp, lazy)
                                 for cp in chpaths)
             else:
                 children = LazyList(self, lazy, chpaths)
@@ -503,7 +491,7 @@ class NixIO(BaseIO):
                 neo_obj.spiketrains.append(st)
                 st.unit = neo_obj
 
-    def get(self, path, cascade, lazy):
+    def get(self, path, lazy):
         parts = path.split("/")
         if len(parts) > 2:
             neotype = parts[-2][:-1]
@@ -512,10 +500,7 @@ class NixIO(BaseIO):
         if neotype == "channel_indexe":
             neotype = "channelindex"
         read_func = getattr(self, "read_" + neotype)
-        return read_func(path, cascade, lazy)
-
-    def load_lazy_object(self, obj):
-        return self.get(obj.path, cascade=False, lazy=False)
+        return read_func(path, lazy)
 
     def load_lazy_cascade(self, path, lazy):
         """
@@ -526,7 +511,7 @@ class NixIO(BaseIO):
         :param lazy: Do not load data if True
         :return: The loaded object
         """
-        neoobj = self.get(path, cascade=True, lazy=lazy)
+        neoobj = self.get(path, lazy=lazy)
         return neoobj
 
     def write_all_blocks(self, neo_blocks):
@@ -558,7 +543,7 @@ class NixIO(BaseIO):
         oldhash = self._object_hashes.get(nix_name)
         if oldhash is None:
             try:
-                oldobj = self.get(objpath, cascade=False, lazy=False)
+                oldobj = self.get(objpath, lazy=False)
                 oldhash = self._hash_object(oldobj)
             except (KeyError, IndexError):
                 oldhash = None
