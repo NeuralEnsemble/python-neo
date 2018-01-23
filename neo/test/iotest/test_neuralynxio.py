@@ -89,9 +89,6 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
         self.assertEqual(len(block.segments[0].spiketrains[0]), 0)
 
-        block = nio.read_block()
-        self.assertEqual(len(block.segments), 0)
-
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 2)
@@ -124,10 +121,6 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(seg.analogsignals[0].size, 0)
         self.assertEqual(seg.spiketrains[0].size, 0)
         
-        seg = nio.read_segment(seg_index=0)
-        self.assertEqual(len(seg.analogsignals), 0)
-        self.assertEqual(len(seg.spiketrains), 0)
-
         seg = nio.read_segment(seg_index=0, load_waveforms=True)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.spiketrains), 2)
@@ -161,9 +154,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(lazy=True)
         self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
 
-        block = nio.read_block()
-        self.assertEqual(len(block.segments), 0)
-
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 0)
@@ -194,10 +184,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         # Testing different parameter combinations
         seg = nio.read_segment(lazy=True)
         self.assertEqual(len(seg.analogsignals[0]), 0)
-        self.assertEqual(len(seg.spiketrains), 0)
-
-        seg = nio.read_segment()
-        self.assertEqual(len(seg.analogsignals), 0)
         self.assertEqual(len(seg.spiketrains), 0)
 
         seg = nio.read_segment(load_waveforms=True)
@@ -335,6 +321,6 @@ def compare_attributes(child1, child2):
 
 
 if __name__ == '__main__':
-    #~ unittest.main()
-    compare_old_and_new_neuralynxio()
+    unittest.main()
+    #~ compare_old_and_new_neuralynxio()
 
