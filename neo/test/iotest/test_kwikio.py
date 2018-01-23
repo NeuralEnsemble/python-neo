@@ -17,14 +17,15 @@ except ImportError:
 from neo.io import kwikio
 from neo.test.iotest.common_io_test import BaseTestIO
 
+@unittest.skipUnless(False, "temporarily disable, pending update of new test files, see #395")
 @unittest.skipUnless(HAVE_H5PY, "requires h5py")
 @unittest.skipUnless(kwikio.HAVE_KWIK, "requires klusta")
 class TestKwikIO(BaseTestIO, unittest.TestCase):
     ioclass = kwikio.KwikIO
-    files_to_test = ['experiment1.kwik']
-    files_to_download =  ['experiment1.kwik',
-                          'experiment1.kwx',
-                          'experiment1_100.raw.kwd']
+    files_to_test = ['neo.kwik']
+    files_to_download =  ['neo.kwik',
+                          'neo.kwx',
+                          'neo.dat']
 
 
 if __name__ == "__main__":

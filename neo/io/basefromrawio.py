@@ -148,12 +148,14 @@ class BaseFromRaw(BaseIO):
                 bl.channel_indexes.append(channel_index)
             for c in range(unit_channels.size):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
+                unit_annotations = check_annotations(unit_annotations)
                 unit = Unit(**unit_annotations)
                 channel_index.units.append(unit)
                 
         elif units_group_mode=='split-all':
             for c in range(len(unit_channels)):
                 unit_annotations = self.raw_annotations['unit_channels'][c]
+                unit_annotations = check_annotations(unit_annotations)
                 unit = Unit(**unit_annotations)
                 channel_index = ChannelIndex(index=np.array([], dtype='i'),
                                         name='ChannelIndex for Unit')
@@ -481,6 +483,12 @@ def check_annotations(annotations):
     for k in ('name', 'description', 'file_origin'):
         if k in annotations:
             annotations[k] = str(annotations[k])
+    
+    if 'coordinates' in annotations:
+        #some rawio expose some coordinates in annotations but is not standardized
+        #(x, y, z) or polar, at the moment it is more resonable to remove them
+        annotations.pop('coordinates')
+    
     return annotations
 
 def ensure_second(v):

@@ -10,8 +10,9 @@ See BaseTestIO.
 
 The public URL is in url_for_tests.
 
-The private url for writing is
-ssh://gate.g-node.org/groups/neo/io_test_files/
+To deposite new testing files,  please create a account at
+gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
+data repo.
 
 '''
 
@@ -20,7 +21,9 @@ from __future__ import absolute_import
 
 __test__ = False
 
-url_for_tests = "https://portal.g-node.org/neo/"
+#url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
+
 
 import os
 from copy import copy
@@ -90,7 +93,7 @@ class BaseTestIO(object):
         '''
         self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
-        self.shortname = self.ioclass.__name__.lower().strip('io')
+        self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
         self.io_readandwrite = list(set(self.ioclass.readable_objects) &
                                     set(self.ioclass.writeable_objects))
@@ -112,7 +115,7 @@ class BaseTestIO(object):
 
         The directory path is also written to self.local_test_dir
         '''
-        self.local_test_dir = create_local_temp_dir(self.shortname)
+        self.local_test_dir = create_local_temp_dir(self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):

@@ -224,8 +224,13 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
                                        test1=1)
         assert_neo_object_is_compliant(sig)
 
-        targ = ('<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) * V ' +
-                'at times [ 1.1  1.5  1.7] s)>')
+        if np.__version__.split(".")[:2] > ['1', '13']:
+            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
+            targ = ('<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V ' +
+                    'at times [1.1 1.5 1.7] s)>')
+        else:
+            targ = ('<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) * V ' +
+                    'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
 

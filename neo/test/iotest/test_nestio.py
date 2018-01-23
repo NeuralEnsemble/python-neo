@@ -722,6 +722,7 @@ class TestNestIO_multiple_signal_types(BaseTestIO, unittest.TestCase):
 
 class TestColumnIO(BaseTestIO, unittest.TestCase):
     ioclass = NestIO
+    files_to_download = ['0gid-1time-2Vm-3gex-4gin-1260-0.dat']
 
     def setUp(self):
         BaseTestIO.setUp(self)

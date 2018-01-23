@@ -118,7 +118,7 @@ class IgorIO(BaseIO):
             signal = content['wData']
         note = content['note']
         header = content['wave_header']
-        name = header['bname']
+        name = str(header['bname'].decode('utf-8'))
         units = "".join([x.decode() for x in header['dataUnits']])
         try:
             time_units = "".join([x.decode() for x in header['xUnits']])
