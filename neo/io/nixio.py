@@ -126,13 +126,19 @@ class NixIO(BaseIO):
     def __exit__(self, *args):
         self.close()
 
-    def read_all_blocks(self, cascade=True, lazy=False):
+    def read_all_blocks(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        cascade = True#TODO remove it
+        
         blocks = list()
         for blk in self.nix_file.blocks:
             blocks.append(self.read_block("/" + blk.name, cascade, lazy))
         return blocks
 
-    def read_block(self, path="/", cascade=True, lazy=False):
+    def read_block(self, path="/", lazy=False):
+        assert not lazy, 'Do not support lazy'
+        cascade = True#TODO remove it
+        
         if path == "/":
             try:
                 nix_block = self.nix_file.blocks[self._block_read_counter]
@@ -149,7 +155,10 @@ class NixIO(BaseIO):
         self._update_maps(neo_block, lazy)
         return neo_block
 
-    def read_segment(self, path, cascade=True, lazy=False):
+    def read_segment(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        cascade = True#TODO remove it
+        
         nix_group = self._get_object_at(path)
         neo_segment = self._group_to_neo(nix_group)
         neo_segment.path = path
@@ -162,7 +171,10 @@ class NixIO(BaseIO):
             neo_segment.block = neo_parent
         return neo_segment
 
-    def read_channelindex(self, path, cascade=True, lazy=False):
+    def read_channelindex(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
+        cascade = True#TODO remove it
+        
         nix_source = self._get_object_at(path)
         neo_rcg = self._source_chx_to_neo(nix_source)
         neo_rcg.path = path
@@ -201,10 +213,12 @@ class NixIO(BaseIO):
             neo_signal.segment = neo_parent
         return neo_signal
 
-    def read_analogsignal(self, path, cascade=True, lazy=False):
+    def read_analogsignal(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         return self.read_signal(path, lazy)
 
-    def read_irregularlysampledsignal(self, path, cascade=True, lazy=False):
+    def read_irregularlysampledsignal(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         return self.read_signal(path, lazy)
 
     def read_eest(self, path, lazy=False):
@@ -217,16 +231,20 @@ class NixIO(BaseIO):
         neo_eest.segment = neo_parent
         return neo_eest
 
-    def read_epoch(self, path, cascade=True, lazy=False):
+    def read_epoch(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         return self.read_eest(path, lazy)
 
-    def read_event(self, path, cascade=True, lazy=False):
+    def read_event(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         return self.read_eest(path, lazy)
 
-    def read_spiketrain(self, path, cascade=True, lazy=False):
+    def read_spiketrain(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         return self.read_eest(path, lazy)
 
-    def read_unit(self, path, cascade=True, lazy=False):
+    def read_unit(self, path, lazy=False):
+        assert not lazy, 'Do not support lazy'
         nix_source = self._get_object_at(path)
         neo_unit = self._source_unit_to_neo(nix_source)
         neo_unit.path = path
