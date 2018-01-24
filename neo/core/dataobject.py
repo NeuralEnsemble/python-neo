@@ -62,6 +62,7 @@ class DataObject(BaseNeo, pq.Quantity):
 
     def array_annotate(self, array_annotations):
         array_annotations = self._check_array_annotations(array_annotations)
+        self.array_annotations.update(array_annotations)
 
     def array_annotations_at_index(self, index):  # TODO: Should they be sorted by key (current) or index?
 
