@@ -972,15 +972,72 @@ class NixIO(BaseIO):
         nixgroup.multi_tags.append(nixmt)
         nixgroup.data_arrays.append(timesda)
 
-    def write_epoch(self, *args):
+    def write_epoch(self, epoch, nixblock, nixgroup):
         """
-        Convert the provided ``ep`` (Epoch) to a NIX MultiTag and write it to
-        the NIX file at the location defined by ``loc``.
+        Convert the provided Neo Epoch to a NIX MultiTag and write it to the
+        NIX file.
 
-        :param ep: The Neo Epoch to be written
-        :param loc: Path to the parent of the new MultiTag
+        :param epoch: The Neo Epoch to be written
+        :param nixblock: NIX Block where the MultiTag will be created
+        :param nixgroup: NIX Group where the MultiTag will be attached
         """
-        pass
+        if "nix_name" in epoch.annotations:
+            nix_name = epoch.annotations["nix_name"]
+        else:
+            nix_name = "neo.epoch.{}".format(self._generate_nix_name())
+            epoch.annotate(nix_name=nix_name)
+
+        if nix_name in nixblock.multi_tags:
+            # delete to recreate
+            mtag = nixblock.multi_tags[nix_name]
+            timesda = mtag.positions
+            durada = mtag.durations
+            tdaname = timesda.name
+            ddaname = durada.name
+            del nixgroup.multi_tags[nix_name]
+            del nixgroup.data_arrays[tdaname]
+            del nixgroup.data_arrays[ddaname]
+            del nixblock.multi_tags[nix_name]
+            del nixblock.data_arrays[tdaname]
+            del nixblock.data_arrays[ddaname]
+
+        times = epoch.times.magnitude
+        tunits = units_to_string(epoch.times.units)
+        durations = epoch.durations.magnitude
+        dunits = units_to_string(epoch.durations.units)
+
+        timesda = nixblock.create_data_array(
+            "{}.times".format(nix_name), "neo.epoch.times", data=times
+        )
+        timesda.unit = tunits
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.epoch",
+                                          positions=timesda)
+
+        durada = nixblock.create_data_array(
+            "{}.durations".format(nix_name), "neo.epoch.durations",
+            data=durations
+        )
+        durada.unit = dunits
+        nixmt.extents = durada
+
+        nixmt.metadata = nixblock.metadata.create_section(
+            nix_name, "neo.epoch.metadata"
+        )
+        metadata = nixmt.metadata
+
+        labeldim = timesda.append_set_dimension()
+        labeldim.labels = epoch.labels
+
+        neoname = epoch.name if epoch.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixmt.definition = epoch.description
+        if epoch.annotations:
+            for k, v in epoch.annotations.items():
+                self._write_property(metadata, k, v)
+
+        nixgroup.multi_tags.append(nixmt)
+        nixgroup.data_arrays.append(timesda)
+        nixgroup.data_arrays.append(durada)
 
     def write_spiketrain(self, *args):
         """
