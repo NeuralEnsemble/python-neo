@@ -21,15 +21,16 @@ from neo.core.dataobject import DataObject
 
 PY_VER = sys.version_info[0]
 
+
 def _new_event(cls, signal, times = None, labels=None, units=None, name=None, 
-               file_origin=None, description=None,
+               file_origin=None, description=None, array_annotations=None,
                annotations=None, segment=None):
     '''
     A function to map Event.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
     e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
-                 description=description, **annotations)
+              description=description, array_annotations=array_annotations, **annotations)
     e.segment = segment
     return e
 
@@ -119,13 +120,14 @@ class Event(DataObject):
         works
         '''
         return _new_event, (self.__class__, self.times, np.array(self), self.labels, self.units,
-                            self.name, self.file_origin, self.description,
+                            self.name, self.file_origin, self.description, self.array_annotations,
                             self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
         self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
+        self.array_annotations = getattr(obj, 'array_annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
@@ -180,7 +182,7 @@ class Event(DataObject):
         Copy the metadata from another :class:`Event`.
         '''
         for attr in ("labels", "name", "file_origin", "description",
-                     "annotations"):
+                     "annotations", "array_annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):

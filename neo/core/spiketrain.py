@@ -95,7 +95,8 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
                     copy=True, sampling_rate=1.0 * pq.Hz,
                     t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
                     name=None, file_origin=None, description=None,
-                    annotations=None, segment=None, unit=None):
+                    array_annotations=None, annotations=None,
+                    segment=None, unit=None):
     '''
     A function to map :meth:`BaseAnalogSignal.__new__` to function that
     does not do the unit checking. This is needed for :module:`pickle` to work.
@@ -104,7 +105,7 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
         annotations = {}
     obj = SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
                      t_start, waveforms, left_sweep, name, file_origin,
-                     description, **annotations)
+                     description, array_annotations, **annotations)
     obj.segment = segment
     obj.unit = unit
     return obj
@@ -340,7 +341,9 @@ class SpikeTrain(DataObject):
                          t_start=self.t_start, waveforms=self.waveforms,
                          left_sweep=self.left_sweep, name=self.name,
                          file_origin=self.file_origin,
-                         description=self.description, **self.annotations)
+                         description=self.description,
+                         array_annotations=self.array_annotations,
+                         **self.annotations)
         obj.segment = self.segment
         obj.unit = self.unit
         return obj
@@ -356,7 +359,8 @@ class SpikeTrain(DataObject):
                                  self.sampling_rate, self.t_start,
                                  self.waveforms, self.left_sweep,
                                  self.name, self.file_origin, self.description,
-                                 self.annotations, self.segment, self.unit)
+                                 self.array_annotations, self.annotations,
+                                 self.segment, self.unit)
 
     def __array_finalize__(self, obj):
         '''
@@ -395,6 +399,7 @@ class SpikeTrain(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
+        self.array_annotations = getattr(obj, 'array_annotations', {})
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -466,7 +471,9 @@ class SpikeTrain(DataObject):
                           t_start=self.t_start, waveforms=self.waveforms,
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
-                          description=self.description, **self.annotations)
+                          description=self.description,
+                          array_annotations=self.array_annotations,
+                          **self.annotations)
 
     def __sub__(self, time):
         '''
@@ -484,7 +491,9 @@ class SpikeTrain(DataObject):
                           t_start=self.t_start, waveforms=self.waveforms,
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
-                          description=self.description, **self.annotations)
+                          description=self.description,
+                          array_annotations=self.array_annotations,
+                          **self.annotations)
 
     def __getitem__(self, i):
         '''
@@ -518,7 +527,7 @@ class SpikeTrain(DataObject):
         Copy the metadata from another :class:`SpikeTrain`.
         '''
         for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
-                     "description", "annotations"):
+                     "description", "annotations", "array_annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)

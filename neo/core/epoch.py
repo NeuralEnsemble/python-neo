@@ -21,14 +21,14 @@ from neo.core.dataobject import DataObject
 
 PY_VER = sys.version_info[0]
 
-def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
-                name=None, description=None, file_origin=None, annotations = None, segment=None):
+def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None, description=None,
+               file_origin=None, array_annotations=None, annotations=None, segment=None):
     '''
     A function to map epoch.__new__ to function that
     does not do the unit checking. This is needed for pickle to work. 
     '''
-    e = Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
-                 description=description, **annotations)
+    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
+              description=description, array_annotations=array_annotations,  **annotations)
     e.segment = segment
     return e
 
@@ -127,7 +127,7 @@ class Epoch(DataObject):
         works
         '''
         return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
-                            self.name, self.file_origin, self.description,
+                            self.name, self.file_origin, self.description, self.array_annotations,
                             self.annotations, self.segment)      
 
     def __array_finalize__(self, obj):
@@ -135,6 +135,7 @@ class Epoch(DataObject):
         self.durations = getattr(obj, 'durations', None)
         self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
+        self.array_annotations = getattr(obj, 'array_annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
@@ -193,7 +194,7 @@ class Epoch(DataObject):
         Copy the metadata from another :class:`Epoch`.
         '''
         for attr in ("labels", "durations", "name", "file_origin",
-                     "description", "annotations"):
+                     "description", "annotations", "array_annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):

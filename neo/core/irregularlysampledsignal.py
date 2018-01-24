@@ -35,14 +35,15 @@ from neo.core.dataobject import DataObject
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
-                                  annotations=None, segment=None, channel_index=None):
+                                  array_annotations=None, annotations=None, segment=None,
+                                  channel_index=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     iss = cls(times=times, signal=signal, units=units, time_units=time_units, 
                dtype=dtype, copy=copy, name=name, file_origin=file_origin,
-               description=description, **annotations)
+               description=description, array_annotations=array_annotations, **annotations)
     iss.segment = segment
     iss.channel_index = channel_index
     return iss
@@ -156,8 +157,8 @@ class IrregularlySampledSignal(BaseSignal):
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
-                 copy=True, name=None, file_origin=None, description=None, array_annotations=None,
-                 **annotations):
+                 copy=True, name=None, file_origin=None, description=None,
+                 array_annotations=None, **annotations):
         '''
         Initializes a newly constructed :class:`IrregularlySampledSignal`
         instance.
@@ -181,6 +182,7 @@ class IrregularlySampledSignal(BaseSignal):
                                                self.name, 
                                                self.file_origin,
                                                self.description,
+                                               self.array_annotations,
                                                self.annotations,
                                                self.segment,
                                                self.channel_index)

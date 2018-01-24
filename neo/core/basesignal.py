@@ -69,6 +69,7 @@ class BaseSignal(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
+        self.array_annotations = getattr(obj, 'array_annotations', {})
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -159,6 +160,7 @@ class BaseSignal(DataObject):
         new.channel_index = self.channel_index
         new.segment = self.segment
         new.annotations.update(self.annotations)
+        new.array_annotations.update(self.array_annotations)
         return new
 
     def duplicate_with_new_array(self, signal):
@@ -171,6 +173,7 @@ class BaseSignal(DataObject):
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
+        new.array_annotations.update(self.array_annotations)
         return new
 
     def _copy_data_complement(self, other):
@@ -183,7 +186,8 @@ class BaseSignal(DataObject):
             for attr in sub_at:
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
-        setattr(self, 'annotations', getattr(other, 'annotations', None))  
+        setattr(self, 'annotations', getattr(other, 'annotations', None))
+        setattr(self, 'array_annotations', getattr(other, 'array_annotations', None))
 
     def __rsub__(self, other, *args):
         '''

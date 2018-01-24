@@ -22,8 +22,11 @@ class DataObject(BaseNeo, pq.Quantity):
         This method is called from each data object and initializes the newly created object by adding array annotations
         and calling __init__ of the super class, where more annotations and attributes are processed.
         """
-        array_annotations = self._check_array_annotations(array_annotations)
-        self.array_annotations = array_annotations
+
+        if array_annotations is None:
+            self.array_annotations = {}
+        else:
+            self.array_annotations = self._check_array_annotations(array_annotations)
 
         BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin, **annotations)
 
@@ -40,11 +43,13 @@ class DataObject(BaseNeo, pq.Quantity):
             for key in value.keys():
                 if isinstance(value[key], dict):
                     raise ValueError("Dicts are not allowed as array annotations")  # TODO: Is this really the case?
-                value[key] = self._check_annotations(value[key])
+                value[key] = self._check_array_annotations(value[key])
 
+        elif value is None:
+            raise ValueError("Array annotations must not be None")
         # If not array annotation, pass on to regular check and make it a list, that is checked again
         # This covers array annotations with length 1
-        # TODO: Should this be the case or just raise an Error?
+        # TODO: Should this be like this or just raise an Error?
         elif not isinstance(value, (list, np.ndarray)):
             _check_annotations(value)
             value = self._check_array_annotations(np.array([value]))
@@ -76,7 +81,7 @@ class DataObject(BaseNeo, pq.Quantity):
                     raise ValueError("Array annotations should only be 1-dimensional")
 
                 # Perform regular check for elements of array or list
-                _check_annotations(value)
+                _check_annotations(element)
 
             # Create arrays from lists, because array annotations should be numpy arrays
             if isinstance(value, list):

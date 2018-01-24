@@ -55,10 +55,10 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
-                          t_start=0*pq.s, sampling_rate=None,
-                          sampling_period=None, name=None, file_origin=None,
-                          description=None, annotations=None,
-                          channel_index=None, segment=None):
+                           t_start=0*pq.s, sampling_rate=None,
+                           sampling_period=None, name=None, file_origin=None,
+                           description=None, annotations=None, array_annotations=None,
+                           channel_index=None, segment=None):
     '''
     A function to map AnalogSignal.__new__ to function that
         does not do the unit checking. This is needed for pickle to work.
@@ -67,7 +67,7 @@ def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
               t_start=t_start, sampling_rate=sampling_rate,
               sampling_period=sampling_period, name=name,
               file_origin=file_origin, description=description,
-              **annotations)
+              array_annotations=array_annotations, **annotations)
     obj.channel_index = channel_index
     obj.segment = segment
     return obj
@@ -224,6 +224,7 @@ class AnalogSignal(BaseSignal):
                                         self.name,
                                         self.file_origin,
                                         self.description,
+                                        self.array_annotations,
                                         self.annotations,
                                         self.channel_index,
                                         self.segment)
