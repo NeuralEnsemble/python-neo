@@ -940,6 +940,7 @@ class NixIO(BaseIO):
             mtag = nixblock.multi_tags[nix_name]
             timesda = mtag.positions
             daname = timesda.name
+            del nixgroup.metadata[nix_name]
             del nixgroup.multi_tags[nix_name]
             del nixgroup.data_arrays[daname]
             del nixblock.multi_tags[nix_name]
@@ -994,6 +995,7 @@ class NixIO(BaseIO):
             durada = mtag.durations
             tdaname = timesda.name
             ddaname = durada.name
+            del nixgroup.metadata[nix_name]
             del nixgroup.multi_tags[nix_name]
             del nixgroup.data_arrays[tdaname]
             del nixgroup.data_arrays[ddaname]
