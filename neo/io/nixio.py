@@ -650,13 +650,16 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.block.{}".format(self._generate_nix_name())
             block.annotate(nix_name=nix_name)
+
         if nix_name in self.nix_file.blocks:
             nixblock = self.nix_file.blocks[nix_name]
-        else:
-            nixblock = self.nix_file.create_block(nix_name, "neo.block")
-            nixblock.metadata = self.nix_file.create_section(
-                nix_name, "neo.block.metadata"
-            )
+            del self.nix_file.blocks[nix_name]
+            del self.nix_file.sections[nix_name]
+
+        nixblock = self.nix_file.create_block(nix_name, "neo.block")
+        nixblock.metadata = self.nix_file.create_section(
+            nix_name, "neo.block.metadata"
+        )
         metadata = nixblock.metadata
         neoname = block.name if block.name is not None else ""
         metadata["neo_name"] = neoname
@@ -809,46 +812,32 @@ class NixIO(BaseIO):
             nix_name = "neo.analogsignal.{}".format(self._generate_nix_name())
             anasig.annotate(nix_name=nix_name)
 
-        def get_all_sigs():
-            ret = list()
-            for idx in itertools.count():
-                name = "{}.{}".format(nix_name, idx)
-                if name in nixblock.data_arrays:
-                    ret.append(nixblock.data_arrays[name])
-                else:
-                    return ret
+        data = np.transpose(anasig[:].magnitude)
+        metadata = nixgroup.metadata.create_section(
+            nix_name, "neo.analogsignal.metadata"
+        )
+        nixdas = list()
+        for idx, row in enumerate(data):
+            daname = "{}.{}".format(nix_name, idx)
+            da = nixblock.create_data_array(daname,
+                                            "neo.analogsignal",
+                                            data=row)
+            da.metadata = metadata
+            da.definition = anasig.description
+            da.unit = units_to_string(anasig.units)
 
-        firstdaname = "{}.0".format(nix_name)
-        if firstdaname in nixblock.data_arrays:
-            nixdas = get_all_sigs()
-            metadata = nixdas[0].metadata
-        else:
-            data = np.transpose(anasig[:].magnitude)
-            metadata = nixgroup.metadata.create_section(
-                nix_name, "neo.analogsignal.metadata"
+            timedim = da.append_sampled_dimension(
+                anasig.sampling_period.magnitude.item()
             )
-            nixdas = list()
-            for idx, row in enumerate(data):
-                daname = "{}.{}".format(nix_name, idx)
-                da = nixblock.create_data_array(daname,
-                                                "neo.analogsignal",
-                                                data=row)
-                da.metadata = metadata
-                da.definition = anasig.description
-                da.unit = units_to_string(anasig.units)
+            timedim.unit = units_to_string(anasig.sampling_period.units)
+            tstart = anasig.t_start
+            metadata["t_start"] = tstart.magnitude.item()
+            metadata.props["t_start"].unit = units_to_string(tstart.units)
+            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+            timedim.label = "time"
 
-                timedim = da.append_sampled_dimension(
-                    anasig.sampling_period.magnitude.item()
-                )
-                timedim.unit = units_to_string(anasig.sampling_period.units)
-                tstart = anasig.t_start
-                metadata["t_start"] = tstart.magnitude.item()
-                metadata.props["t_start"].unit = units_to_string(tstart.units)
-                timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
-                timedim.label = "time"
-
-                nixdas.append(da)
-                nixgroup.data_arrays.append(da)
+            nixdas.append(da)
+            nixgroup.data_arrays.append(da)
 
         neoname = anasig.name if anasig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -875,44 +864,30 @@ class NixIO(BaseIO):
             )
             irsig.annotate(nix_name=nix_name)
 
-        def get_all_sigs():
-            ret = list()
-            for idx in itertools.count():
-                name = "{}.{}".format(nix_name, idx)
-                if name in nixblock.data_arrays:
-                    ret.append(nixblock.data_arrays[name])
-                else:
-                    return ret
-
-        firstdaname = "{}.0".format(nix_name)
-        if firstdaname in nixblock.data_arrays:
-            nixdas = get_all_sigs()
-            metadata = nixdas[0].metadata
-        else:
-            data = np.transpose(irsig[:].magnitude)
-            metadata = nixgroup.metadata.create_section(
-                nix_name, "neo.irregularlysampledsignal.metadata"
+        data = np.transpose(irsig[:].magnitude)
+        metadata = nixgroup.metadata.create_section(
+            nix_name, "neo.irregularlysampledsignal.metadata"
+        )
+        nixdas = list()
+        for idx, row in enumerate(data):
+            daname = "{}.{}".format(nix_name, idx)
+            da = nixblock.create_data_array(
+                daname, "neo.irregularlysampledsignal", data=row
             )
-            nixdas = list()
-            for idx, row in enumerate(data):
-                daname = "{}.{}".format(nix_name, idx)
-                da = nixblock.create_data_array(
-                    daname, "neo.irregularlysampledsignal", data=row
-                )
-                da.metadata = metadata
-                da.definition = irsig.description
-                da.unit = units_to_string(irsig.units)
+            da.metadata = metadata
+            da.definition = irsig.description
+            da.unit = units_to_string(irsig.units)
 
-                timedim = da.append_range_dimension(irsig.times.magnitude)
-                timedim.unit = units_to_string(irsig.times.units)
-                tstart = irsig.t_start
-                metadata["t_start"] = tstart.magnitude.item()
-                metadata.props["t_start"].unit = units_to_string(tstart.units)
-                timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
-                timedim.label = "time"
+            timedim = da.append_range_dimension(irsig.times.magnitude)
+            timedim.unit = units_to_string(irsig.times.units)
+            tstart = irsig.t_start
+            metadata["t_start"] = tstart.magnitude.item()
+            metadata.props["t_start"].unit = units_to_string(tstart.units)
+            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+            timedim.label = "time"
 
-                nixdas.append(da)
-                nixgroup.data_arrays.append(da)
+            nixdas.append(da)
+            nixgroup.data_arrays.append(da)
 
         neoname = irsig.name if irsig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -935,17 +910,6 @@ class NixIO(BaseIO):
             nix_name = "neo.event.{}".format(self._generate_nix_name())
             event.annotate(nix_name=nix_name)
 
-        if nix_name in nixblock.multi_tags:
-            # delete to recreate
-            mtag = nixblock.multi_tags[nix_name]
-            timesda = mtag.positions
-            daname = timesda.name
-            del nixgroup.metadata[nix_name]
-            del nixgroup.multi_tags[nix_name]
-            del nixgroup.data_arrays[daname]
-            del nixblock.multi_tags[nix_name]
-            del nixblock.data_arrays[daname]
-
         times = event.times.magnitude
         units = units_to_string(event.times.units)
         timesda = nixblock.create_data_array(
@@ -955,7 +919,7 @@ class NixIO(BaseIO):
         nixmt = nixblock.create_multi_tag(nix_name, "neo.event",
                                           positions=timesda)
 
-        nixmt.metadata = nixblock.metadata.create_section(
+        nixmt.metadata = nixgroup.metadata.create_section(
             nix_name, "neo.event.metadata"
         )
         metadata = nixmt.metadata
@@ -988,21 +952,6 @@ class NixIO(BaseIO):
             nix_name = "neo.epoch.{}".format(self._generate_nix_name())
             epoch.annotate(nix_name=nix_name)
 
-        if nix_name in nixblock.multi_tags:
-            # delete to recreate
-            mtag = nixblock.multi_tags[nix_name]
-            timesda = mtag.positions
-            durada = mtag.durations
-            tdaname = timesda.name
-            ddaname = durada.name
-            del nixgroup.metadata[nix_name]
-            del nixgroup.multi_tags[nix_name]
-            del nixgroup.data_arrays[tdaname]
-            del nixgroup.data_arrays[ddaname]
-            del nixblock.multi_tags[nix_name]
-            del nixblock.data_arrays[tdaname]
-            del nixblock.data_arrays[ddaname]
-
         times = epoch.times.magnitude
         tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
@@ -1022,7 +971,7 @@ class NixIO(BaseIO):
         durada.unit = dunits
         nixmt.extents = durada
 
-        nixmt.metadata = nixblock.metadata.create_section(
+        nixmt.metadata = nixgroup.metadata.create_section(
             nix_name, "neo.epoch.metadata"
         )
         metadata = nixmt.metadata
