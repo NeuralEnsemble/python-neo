@@ -30,6 +30,7 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.basesignal import BaseSignal
 from neo.core.channelindex import ChannelIndex
+from neo.core.dataobject import DataObject
 
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
@@ -121,7 +122,7 @@ class IrregularlySampledSignal(BaseSignal):
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, file_origin=None,
-                description=None,
+                description=None, array_annotations=None,
                 **annotations):
         '''
         Construct a new :class:`IrregularlySampledSignal` instance.
@@ -155,14 +156,15 @@ class IrregularlySampledSignal(BaseSignal):
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None,
-                 copy=True, name=None, file_origin=None, description=None,
+                 copy=True, name=None, file_origin=None, description=None, array_annotations=None,
                  **annotations):
         '''
         Initializes a newly constructed :class:`IrregularlySampledSignal`
         instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin,
+                            description=description, array_annotations=array_annotations,
+                            **annotations)
 
     def __reduce__(self):
         '''

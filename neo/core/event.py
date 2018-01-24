@@ -16,6 +16,8 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
+from neo.core.dataobject import DataObject
+
 
 PY_VER = sys.version_info[0]
 
@@ -32,7 +34,7 @@ def _new_event(cls, signal, times = None, labels=None, units=None, name=None,
     return e
 
 
-class Event(BaseNeo, pq.Quantity):
+class Event(DataObject):
     '''
     Array of events.
 
@@ -72,7 +74,7 @@ class Event(BaseNeo, pq.Quantity):
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
-                file_origin=None, **annotations):
+                file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
         if labels is None:
@@ -103,12 +105,14 @@ class Event(BaseNeo, pq.Quantity):
         return obj
 
     def __init__(self, times=None, labels=None, units=None, name=None, description=None,
-                 file_origin=None, **annotations):
+                 file_origin=None, array_annotations=None, **annotations):
         '''
         Initialize a new :class:`Event` instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin,
+                            description=description, array_annotations=array_annotations,
+                            **annotations)
+
     def __reduce__(self):
         '''
         Map the __new__ function onto _new_BaseAnalogSignal, so that pickle

@@ -27,6 +27,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.dataobject import DataObject
 from neo.core.channelindex import ChannelIndex
 from copy import copy, deepcopy
 
@@ -163,7 +164,7 @@ class AnalogSignal(BaseSignal):
 
     def __new__(cls, signal, units=None, dtype=None, copy=True,
                 t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
-                name=None, file_origin=None, description=None,
+                name=None, file_origin=None, description=None, array_annotations=None,
                 **annotations):
         '''
         Constructs new :class:`AnalogSignal` from data.
@@ -191,7 +192,7 @@ class AnalogSignal(BaseSignal):
 
     def __init__(self, signal, units=None, dtype=None, copy=True,
                  t_start=0 * pq.s, sampling_rate=None, sampling_period=None,
-                 name=None, file_origin=None, description=None,
+                 name=None, file_origin=None, description=None, array_annotations=None,
                  **annotations):
         '''
         Initializes a newly constructed :class:`AnalogSignal` instance.
@@ -203,8 +204,9 @@ class AnalogSignal(BaseSignal):
 
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin,
+                            description=description, array_annotations=array_annotations,
+                            **annotations)
 
     def __reduce__(self):
         '''

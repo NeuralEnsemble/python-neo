@@ -26,6 +26,7 @@ import copy
 import numpy as np
 import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.dataobject import DataObject
 
 
 def check_has_dimensions_time(*values):
@@ -109,7 +110,7 @@ def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
     return obj
 
 
-class SpikeTrain(BaseNeo, pq.Quantity):
+class SpikeTrain(DataObject):
     '''
     :class:`SpikeTrain` is a :class:`Quantity` array of spike times.
 
@@ -210,7 +211,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
                 left_sweep=None, name=None, file_origin=None, description=None,
-                **annotations):
+                array_annotations=None, **annotations):
         '''
         Constructs a new :clas:`Spiketrain` instance from data.
 
@@ -311,7 +312,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     def __init__(self, times, t_stop, units=None, dtype=np.float,
                  copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
                  waveforms=None, left_sweep=None, name=None, file_origin=None,
-                 description=None, **annotations):
+                 description=None, array_annotations=None, **annotations):
         '''
         Initializes a newly constructed :class:`SpikeTrain` instance.
         '''
@@ -322,8 +323,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
 
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin,
+                            description=description, array_annotations=array_annotations,
+                            **annotations)
 
     def rescale(self, units):
         '''
