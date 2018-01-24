@@ -27,15 +27,6 @@ NCELLS = 5
 class CommonTestPickleIO(BaseTestIO, unittest.TestCase):
     ioclass = PickleIO
 
-    def test_readed_with_cascade_is_compliant(self):
-        pass
-    test_readed_with_cascade_is_compliant.__test__ = False  # PickleIO does not support lazy loading
-
-    def test_readed_with_lazy_is_compliant(self):
-        pass
-    test_readed_with_lazy_is_compliant.__test__ = False
-
-
 class TestPickleIO(unittest.TestCase):
 
     def test__issue_285(self):

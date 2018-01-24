@@ -54,7 +54,7 @@ class BaseTestPyNNIO(object):
         in_ = self.io_cls(self.test_file)
         write_test_file = "write_test.%s" % self.file_extension
         out = self.io_cls(write_test_file)
-        out.write_segment(in_.read_segment(lazy=False, cascade=True))
+        out.write_segment(in_.read_segment(lazy=False))
         assert_file_contents_equal(self.test_file, write_test_file)
         if os.path.exists(write_test_file):
             os.remove(write_test_file)
@@ -93,7 +93,7 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
     def test_read_segment_containing_analogsignals_using_eager_cascade(self):
         # eager == not lazy
         io = self.io_cls(self.test_file)
-        segment = io.read_segment(lazy=False, cascade=True)
+        segment = io.read_segment(lazy=False)
         self.assertIsInstance(segment, Segment)
         self.assertEqual(len(segment.analogsignals), 1)
 
@@ -137,7 +137,7 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
 
     def test_read_segment_containing_spiketrains_using_eager_cascade(self):
         io = self.io_cls(self.test_file)
-        segment = io.read_segment(lazy=False, cascade=True)
+        segment = io.read_segment(lazy=False)
         self.assertIsInstance(segment, Segment)
         self.assertEqual(len(segment.spiketrains), NCELLS)
         st0 = segment.spiketrains[0]

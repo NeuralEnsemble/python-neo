@@ -164,68 +164,58 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
 
     all test_{object} methods run "write then read" test for a/an {object}
     all compare_{object} methods check if the second {object} is a proper copy
-        of the first one, read in suitable lazy and cascade mode
+        of the first one
     """
-    lazy_modes = [False, True]
-    cascade_modes = [False, True]
+    lazy_modes = [False]
 
-    def test_list_of_blocks(self, lazy=False, cascade=True):
+    def test_list_of_blocks(self, lazy=False):
         blocks = self.create_list_of_blocks()
         self.io.write(blocks)
         for lazy in self.lazy_modes:
-            for cascade in self.cascade_modes:
-                blocks2 = self.io.read(lazy=lazy, cascade=cascade)
-                self.compare_list_of_blocks(blocks, blocks2, lazy, cascade)
+            blocks2 = self.io.read(lazy=lazy)
+            self.compare_list_of_blocks(blocks, blocks2, lazy)
 
-    def test_block(self, lazy=False, cascade=True):
+    def test_block(self, lazy=False):
         block = self.create_block()
         self.io.write_block(block)
         for lazy in self.lazy_modes:
-            for cascade in self.cascade_modes:
-                block2 = self.io.read_block(lazy=lazy, cascade=cascade)
-                self.compare_blocks(block, block2, lazy, cascade)
+            block2 = self.io.read_block(lazy=lazy)
+            self.compare_blocks(block, block2, lazy)
 
-    def test_segment(self, lazy=False, cascade=True):
+    def test_segment(self, lazy=False):
         segment = self.create_segment()
         self.io.write_segment(segment)
         for lazy in self.lazy_modes:
-            for cascade in self.cascade_modes:
-                segment2 = self.io.read_segment(lazy=lazy, cascade=cascade)
-                self.compare_segments(segment, segment2, lazy, cascade)
+            segment2 = self.io.read_segment(lazy=lazy)
+            self.compare_segments(segment, segment2, lazy)
 
-    def compare_list_of_blocks(self, blocks1, blocks2, lazy=False, cascade=True):
+    def compare_list_of_blocks(self, blocks1, blocks2, lazy=False):
         assert len(blocks1) == len(blocks2)
         for block1, block2 in zip(blocks1, blocks2):
-            self.compare_blocks(block1, block2, lazy, cascade)
+            self.compare_blocks(block1, block2, lazy)
 
-    def compare_blocks(self, block1, block2, lazy=False, cascade=True):
+    def compare_blocks(self, block1, block2, lazy=False):
         self._compare_objects(block1, block2)
         assert block2.file_datetime == datetime.fromtimestamp(os.stat(self.filename).st_mtime)
         assert_neo_object_is_compliant(block2)
-        if cascade:
-            self._compare_blocks_children(block1, block2, lazy=lazy)
-        else:
-            assert len(block2.segments) == 0
+        self._compare_blocks_children(block1, block2, lazy=lazy)
 
     def _compare_blocks_children(self, block1, block2, lazy):
         assert len(block1.segments) == len(block2.segments)
         for segment1, segment2 in zip(block1.segments, block2.segments):
             self.compare_segments(segment1, segment2, lazy=lazy)
 
-    def compare_segments(self, segment1, segment2, lazy=False, cascade=True):
+    def compare_segments(self, segment1, segment2, lazy=False):
         self._compare_objects(segment1, segment2)
         assert segment2.file_datetime == datetime.fromtimestamp(os.stat(self.filename).st_mtime)
-        if cascade:
-            self._compare_segments_children(segment1, segment2, lazy=lazy)
-        else:
-            assert len(segment2.analogsignals) == 0
+        self._compare_segments_children(segment1, segment2, lazy=lazy)
 
     def _compare_segments_children(self, segment1, segment2, lazy):
         assert len(segment1.analogsignals) == len(segment2.analogsignals)
         for signal1, signal2 in zip(segment1.analogsignals, segment2.analogsignals):
             self.compare_analogsignals(signal1, signal2, lazy=lazy)
 
-    def compare_analogsignals(self, signal1, signal2, lazy=False, cascade=True):
+    def compare_analogsignals(self, signal1, signal2, lazy=False):
         if not lazy:
             self._compare_objects(signal1, signal2)
         else:
