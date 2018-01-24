@@ -63,7 +63,7 @@ jobs:
           name: coveralls
           command: |
             . venv/bin/activate
-            coveralls
+            coveralls || true  # a coveralls failure shouldn't cause a build failure
 
       - store_artifacts:
           path: test-reports
