@@ -120,9 +120,7 @@ class KlustaKwikIO(BaseIO):
         # initialize a helper object to parse filenames
         self._fp = FilenameParser(dirname=self.filename, basename=self.basename)
 
-    # The reading methods. The `lazy` and `cascade` parameters are imposed
-    # by neo.io API
-    def read_block(self, lazy=False, cascade=True):
+    def read_block(self, lazy=False):
         """Returns a Block containing spike information.
 
         There is no obvious way to infer the segment boundaries from
@@ -131,13 +129,15 @@ class KlustaKwikIO(BaseIO):
         boundaries, and then change this code to put the spikes in the right
         segments.
         """
+        assert not lazy, 'Do not support lazy'
+        
         # Create block and segment to hold all the data
         block = Block()
         # Search data directory for KlustaKwik files.
         # If nothing found, return empty block
         self._fetfiles = self._fp.read_filenames('fet')
         self._clufiles = self._fp.read_filenames('clu')
-        if len(self._fetfiles) == 0 or not cascade:
+        if len(self._fetfiles) == 0:
             return block
 
         # Create a single segment to hold all of the data
@@ -172,24 +172,16 @@ class KlustaKwikIO(BaseIO):
                     index=unit_id, group=group)
 
                 # Initialize a new SpikeTrain for the spikes from this unit
-                if lazy:
-                    st = SpikeTrain(
-                        times=[],
-                        units='sec', t_start=0.0,
-                        t_stop=spks.max() / self.sampling_rate,
-                        name=('unit %d from group %d' % (unit_id, group)))
-                    st.lazy_shape = len(spks[uids==unit_id])
-                else:
-                    st = SpikeTrain(
-                        times=spks[uids==unit_id] / self.sampling_rate,
-                        units='sec', t_start=0.0,
-                        t_stop=spks.max() / self.sampling_rate,
-                        name=('unit %d from group %d' % (unit_id, group)))
+                st = SpikeTrain(
+                    times=spks[uids==unit_id] / self.sampling_rate,
+                    units='sec', t_start=0.0,
+                    t_stop=spks.max() / self.sampling_rate,
+                    name=('unit %d from group %d' % (unit_id, group)))
                 st.annotations['cluster'] = unit_id
                 st.annotations['group'] = group
 
                 # put features in
-                if not lazy and len(features) != 0:
+                if len(features) != 0:
                     st.annotations['waveform_features'] = features
 
                 # Link

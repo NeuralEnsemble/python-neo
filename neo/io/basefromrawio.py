@@ -49,12 +49,13 @@ class BaseFromRaw(BaseIO):
     """
     is_readable = True
     is_writable = False
+    
 
     supported_objects = [Block, Segment, AnalogSignal, SpikeTrain, Unit, ChannelIndex, Event, Epoch]
     readable_objects = [Block, Segment]
     writeable_objects = []
-
-    is_streameable = True
+    
+    support_lazy = True
 
     name = 'BaseIO'
     description = ''
@@ -70,7 +71,7 @@ class BaseFromRaw(BaseIO):
         BaseIO.__init__(self, *args, **kargs)
         self.parse_header()
     
-    def read_block(self, block_index=0, lazy=False, cascade=True, signal_group_mode=None, 
+    def read_block(self, block_index=0, lazy=False, signal_group_mode=None, 
                 units_group_mode=None, load_waveforms=False, time_slices=None):
         """
         
@@ -78,8 +79,6 @@ class BaseFromRaw(BaseIO):
         :param block_index: int default 0. In case of several block block_index can be specified.
         
         :param lazy: False by default. 
-        
-        :param cascade: True by Default
         
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
@@ -112,9 +111,6 @@ class BaseFromRaw(BaseIO):
         bl_annotations = check_annotations(bl_annotations)
 
         bl = Block(**bl_annotations)
-        
-        if not cascade:
-            return bl
         
         #ChannelIndex are plit in 2 parts:
         #  * some for AnalogSignals
@@ -166,7 +162,7 @@ class BaseFromRaw(BaseIO):
             #Read the real segment counts
             for seg_index in range(self.segment_count(block_index)):
                 seg =  self.read_segment(block_index=block_index, seg_index=seg_index, 
-                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                    lazy=lazy, signal_group_mode=signal_group_mode,
                                                                     load_waveforms=load_waveforms)
                 bl.segments.append(seg)
                 
@@ -188,7 +184,7 @@ class BaseFromRaw(BaseIO):
                     raise(ValueError('time_slice not in any segment range  {}'.format(time_slice)))
                 
                 seg =  self.read_segment(block_index=block_index, seg_index=related_seg_index,
-                                                                    lazy=lazy, cascade=cascade, signal_group_mode=signal_group_mode,
+                                                                    lazy=lazy, signal_group_mode=signal_group_mode,
                                                                     load_waveforms=load_waveforms, time_slice=time_slice)
                 seg.index = s
                 bl.segments.append(seg)
@@ -212,7 +208,7 @@ class BaseFromRaw(BaseIO):
         
         return bl
 
-    def read_segment(self, block_index=0, seg_index=0, lazy=False, cascade=True, 
+    def read_segment(self, block_index=0, seg_index=0, lazy=False, 
                         signal_group_mode=None, load_waveforms=False, time_slice=None):
         """
         :param block_index: int default 0. In case of several block block_index can be specified.
@@ -221,8 +217,6 @@ class BaseFromRaw(BaseIO):
         
         :param lazy: False by default. 
         
-        :param cascade: True by Default
-
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
             * 'split-all': each channel will give an AnalogSignal
@@ -247,10 +241,6 @@ class BaseFromRaw(BaseIO):
         
         seg = Segment(index=seg_index, **seg_annotations)
 
-        if not cascade:
-            return seg
-        
-        
         seg_t_start = self.segment_t_start(block_index, seg_index) * pq.s
         seg_t_stop = self.segment_t_stop(block_index, seg_index) * pq.s
         

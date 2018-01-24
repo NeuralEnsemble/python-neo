@@ -1,0 +1,14 @@
+=======================
+Neo 0.6.0 release notes
+=======================
+
+DD MM 2018
+
+  * remove cascade support from all IOs
+  * remove lazy loading axcept for IOs based on rawio
+
+
+
+
+
+
