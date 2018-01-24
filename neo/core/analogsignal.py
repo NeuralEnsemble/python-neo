@@ -306,6 +306,7 @@ class AnalogSignal(BaseSignal):
                 obj.t_start = self.t_start + i.start * self.sampling_period
         else:
             raise IndexError("index should be an integer, tuple or slice")
+        obj.array_annotations = self.array_annotations
         return obj
 
     def __setitem__(self, i, value):

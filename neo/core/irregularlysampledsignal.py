@@ -247,6 +247,7 @@ class IrregularlySampledSignal(BaseSignal):
             obj.times = self.times.__getitem__(i)
         else:
             raise IndexError("index should be an integer, tuple or slice")
+        obj.array_annotations = self.array_annotations
         return obj
 
 
@@ -405,6 +406,9 @@ class IrregularlySampledSignal(BaseSignal):
             count += 1
         
         new_st = self[id_start:id_stop]
+
+        # Note: Array annotations can simply be copied over, because the number of traces is kept the same
+        new_st.array_annotations = self.array_annotations
 
         return new_st
 

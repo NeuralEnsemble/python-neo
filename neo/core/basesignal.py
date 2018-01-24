@@ -69,7 +69,6 @@ class BaseSignal(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
-        self.array_annotations = getattr(obj, 'array_annotations', {})
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -120,6 +119,8 @@ class BaseSignal(DataObject):
         f = getattr(super(BaseSignal, self), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
+        # _copy_data_complement can't always copy array annotations, so this needs to be done locally
+        new_signal.array_annotations = self.array_annotations
         return new_signal
 
     def _get_required_attributes(self,signal,units):
@@ -173,7 +174,8 @@ class BaseSignal(DataObject):
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
-        new.array_annotations.update(self.array_annotations)
+        # Note: Array annotations are not copied here, because it is not ensured that the same number of signals is used
+        # and they would possibly make no sense when combined with another signal
         return new
 
     def _copy_data_complement(self, other):
@@ -187,7 +189,7 @@ class BaseSignal(DataObject):
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
-        setattr(self, 'array_annotations', getattr(other, 'array_annotations', None))
+        # Note: Array annotations cannot be copied because they belong to their respective time series
 
     def __rsub__(self, other, *args):
         '''

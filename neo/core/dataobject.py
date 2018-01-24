@@ -57,11 +57,8 @@ class DataObject(BaseNeo, pq.Quantity):
         # If array annotation, check for correct length, only single dimension and
         else:
             # TODO: Are those assumptions correct?
-            try:
-                # Number of items is second dimension in current objects, if this does not exist, it's 1
-                own_length = self.shape[1]
-            except IndexError:
-                own_length = 1
+            # Number of items is last dimension in current objects
+            own_length = self.shape[-1]
 
             # Escape check if empty array or list and just annotate an empty array
             # TODO: Does this make sense?
@@ -121,8 +118,8 @@ class DataObject(BaseNeo, pq.Quantity):
 
         # Use what is given as an index to determine the corresponding annotations,
         # if not possible, numpy raises an Error
-        for ann in self.annotations.keys():
-            index_annotations[ann] = self.annotations[ann][index]
+        for ann in self.array_annotations.keys():
+            index_annotations[ann] = self.array_annotations[ann][index]
 
         return index_annotations
 

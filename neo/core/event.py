@@ -127,7 +127,6 @@ class Event(DataObject):
         super(Event, self).__array_finalize__(obj)
         self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
-        self.array_annotations = getattr(obj, 'array_annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
@@ -181,8 +180,9 @@ class Event(DataObject):
         '''
         Copy the metadata from another :class:`Event`.
         '''
+        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
         for attr in ("labels", "name", "file_origin", "description",
-                     "annotations", "array_annotations"):
+                     "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):
@@ -225,5 +225,7 @@ class Event(DataObject):
 
         indices = (self >= _t_start) & (self <= _t_stop)
         new_evt = self[indices]
+
+        new_evt.array_annotations = self.array_annotations_at_index(indices)
 
         return new_evt

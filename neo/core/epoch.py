@@ -135,7 +135,6 @@ class Epoch(DataObject):
         self.durations = getattr(obj, 'durations', None)
         self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
-        self.array_annotations = getattr(obj, 'array_annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
@@ -193,8 +192,9 @@ class Epoch(DataObject):
         '''
         Copy the metadata from another :class:`Epoch`.
         '''
+        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
         for attr in ("labels", "durations", "name", "file_origin",
-                     "description", "annotations", "array_annotations"):
+                     "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):
@@ -240,4 +240,5 @@ class Epoch(DataObject):
         new_epc = self[indices]
         new_epc.durations = self.durations[indices]
         new_epc.labels = self.labels[indices]
+        new_epc.array_annotations = self.array_annotations_at_index(indices)
         return new_epc

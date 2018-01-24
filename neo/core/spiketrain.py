@@ -399,7 +399,9 @@ class SpikeTrain(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
-        self.array_annotations = getattr(obj, 'array_annotations', {})
+
+        # Note: Array annotations have to be changed when slicing or initializing an object,
+        # copying them over in spite of changed data would result in unexpected behaviour
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -441,6 +443,7 @@ class SpikeTrain(DataObject):
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
+        self.array_annotations = self.array_annotations_at_index(sort_indices)
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -502,6 +505,7 @@ class SpikeTrain(DataObject):
         obj = super(SpikeTrain, self).__getitem__(i)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
+        obj.array_annotations = self.array_annotations_at_index(i)
         return obj
 
     def __setitem__(self, i, value):
@@ -526,8 +530,9 @@ class SpikeTrain(DataObject):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
         '''
+        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
         for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
-                     "description", "annotations", "array_annotations"):
+                     "description", "annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)
