@@ -920,7 +920,59 @@ class NixIO(BaseIO):
             for k, v in irsig.annotations.items():
                 self._write_property(metadata, k, v)
 
-    def write_epoch(self, ep, loc=""):
+    def write_event(self, event, nixblock, nixgroup):
+        """
+        Convert the provided Neo Event to a NIX MultiTag and write it to the
+        NIX file.
+
+        :param event: The Neo Event to be written
+        :param nixblock: NIX Block where the MultiTag will be created
+        :param nixgroup: NIX Group where the MultiTag will be attached
+        """
+        if "nix_name" in event.annotations:
+            nix_name = event.annotations["nix_name"]
+        else:
+            nix_name = "neo.event.{}".format(self._generate_nix_name())
+            event.annotate(nix_name=nix_name)
+
+        if nix_name in nixblock.multi_tags:
+            # delete to recreate
+            mtag = nixblock.multi_tags[nix_name]
+            timesda = mtag.positions
+            daname = timesda.name
+            del nixgroup.multi_tags[nix_name]
+            del nixgroup.data_arrays[daname]
+            del nixblock.multi_tags[nix_name]
+            del nixblock.data_arrays[daname]
+
+        times = event.times.magnitude
+        units = units_to_string(event.times.units)
+        timesda = nixblock.create_data_array(
+            "{}.times".format(nix_name), "neo.event.times", data=times
+        )
+        timesda.unit = units
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.event",
+                                          positions=timesda)
+
+        nixmt.metadata = nixblock.metadata.create_section(
+            nix_name, "neo.event.metadata"
+        )
+        metadata = nixmt.metadata
+
+        labeldim = timesda.append_set_dimension()
+        labeldim.labels = event.labels
+
+        neoname = event.name if event.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixmt.definition = event.description
+        if event.annotations:
+            for k, v in event.annotations.items():
+                self._write_property(metadata, k, v)
+
+        nixgroup.multi_tags.append(nixmt)
+        nixgroup.data_arrays.append(timesda)
+
+    def write_epoch(self, *args):
         """
         Convert the provided ``ep`` (Epoch) to a NIX MultiTag and write it to
         the NIX file at the location defined by ``loc``.
@@ -928,19 +980,9 @@ class NixIO(BaseIO):
         :param ep: The Neo Epoch to be written
         :param loc: Path to the parent of the new MultiTag
         """
-        self._write_object(ep, loc)
+        pass
 
-    def write_event(self, ev, loc=""):
-        """
-        Convert the provided ``ev`` (Event) to a NIX MultiTag and write it to
-        the NIX file at the location defined by ``loc``.
-
-        :param ev: The Neo Event to be written
-        :param loc: Path to the parent of the new MultiTag
-        """
-        self._write_object(ev, loc)
-
-    def write_spiketrain(self, sptr, loc=""):
+    def write_spiketrain(self, *args):
         """
         Convert the provided ``sptr`` (SpikeTrain) to a NIX MultiTag and write
         it to the NIX file at the location defined by ``loc``.
@@ -948,7 +990,7 @@ class NixIO(BaseIO):
         :param sptr: The Neo SpikeTrain to be written
         :param loc: Path to the parent of the new MultiTag
         """
-        self._write_object(sptr, loc)
+        pass
 
     def write_unit(self, neounit, nixchxsource):
         """
