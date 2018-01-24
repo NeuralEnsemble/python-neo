@@ -26,7 +26,7 @@ Author: Samuel Garcia, luc estebanez, mark hollenbeck
 from __future__ import  print_function, division, absolute_import
 #from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
         _event_channel_dtype)
 
 import numpy as np
@@ -41,10 +41,10 @@ class NeuroExplorerRawIO(BaseRawIO):
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
-    
+
     def _source_name(self):
         return self.filename
-    
+
     def _parse_header(self):
         with open(self.filename, 'rb') as fid:
             self.global_header = read_as_dict(fid, GlobalHeader, offset=0)
@@ -52,9 +52,9 @@ class NeuroExplorerRawIO(BaseRawIO):
             self._entity_headers = []
             for i in range(self.global_header['nvar']):
                 self._entity_headers.append(read_as_dict(fid, EntityHeader, offset=offset + i * 208))
-        
+
         self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
-        
+
         self._sig_lengths = []
         self._sig_t_starts = []
         sig_channels = []
@@ -66,22 +66,22 @@ class NeuroExplorerRawIO(BaseRawIO):
             _id = i
             if entity_header['type'] == 0:#Unit
                 unit_channels.append((name, _id,'', 0,0, 0, 0))
-            
+
             elif entity_header['type'] == 1:#Event
                 event_channels.append((name, _id, 'event'))
-            
+
             elif entity_header['type'] == 2:# interval = Epoch
                 event_channels.append((name, _id, 'epoch'))
-            
+
             elif entity_header['type'] == 3:# spiketrain and wavefoms
                 wf_units = 'mV'
                 wf_gain = entity_header['ADtoMV']
                 wf_offset = entity_header['MVOffset']
                 wf_left_sweep = 0
                 wf_sampling_rate = entity_header['WFrequency']
-                unit_channels.append((name, _id, wf_units, wf_gain, wf_offset, 
+                unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                     wf_left_sweep, wf_sampling_rate))
-            
+
             elif entity_header['type'] == 4:
                 # popvectors
                 pass
@@ -101,18 +101,18 @@ class NeuroExplorerRawIO(BaseRawIO):
                 timestamps0 = self._memmap[offset:offset+4].view('int32')
                 t_start = timestamps0[0]/self.global_header['freq']
                 self._sig_t_starts.append(t_start)
-                
+
             elif entity_header['type'] == 6:#Markers
                 event_channels.append((name, _id, 'event'))
-        
+
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
-        
+
         #each signal channel have a dierent groups that force reading
         #them one by one
         sig_channels['group_id'] = np.arange(sig_channels.size)
-        
+
         #fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
@@ -120,7 +120,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
-        
+
         #Annotations
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations['blocks'][0]
@@ -128,20 +128,20 @@ class NeuroExplorerRawIO(BaseRawIO):
         for d in (bl_annotations, seg_annotations):
             d['neuroexplorer_version'] = self.global_header['version']
             d['comment'] = self.global_header['comment']
-    
+
     def _segment_t_start(self, block_index, seg_index):
         t_start = self.global_header['tbeg'] / self.global_header['freq']
         return t_start
-        
+
     def _segment_t_stop(self, block_index, seg_index):
         t_stop=self.global_header['tend'] / self.global_header['freq']
         return t_stop
 
-    
+
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         assert len(channel_indexes)==1 , 'only one channel by one channel'
         return self._sig_lengths[channel_indexes[0]]
-    
+
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         assert len(channel_indexes)==1 , 'only one channel by one channel'
         return self._sig_t_starts[channel_indexes[0]]
@@ -162,13 +162,13 @@ class NeuroExplorerRawIO(BaseRawIO):
         raw_signal = raw_signal[slice(i_start, i_stop), None]#2D for compliance
         return raw_signal
 
-    
+
     def _spike_count(self,  block_index, seg_index, unit_index):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         nb_spike = entity_header['n']
         return nb_spike
-    
+
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
@@ -184,7 +184,7 @@ class NeuroExplorerRawIO(BaseRawIO):
             timestamps = timestamps[keep]
 
         return timestamps
-    
+
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= self.global_header['freq']
@@ -196,29 +196,30 @@ class NeuroExplorerRawIO(BaseRawIO):
         if entity_header['type'] == 0:
             return None
         assert entity_header['type'] == 3
-        
+
         n = entity_header['n']
         width = entity_header['NPointsWave']
         offset = entity_header['offset'] + n*2
         waveforms = self._memmap[offset:offset+n*2*width].view('int16')
         waveforms = waveforms.reshape(n, 1, width)
-        
+        waveforms = np.moveaxis(waveforms, 2, 0)
+
         return waveforms
-    
+
     def _event_count(self, block_index, seg_index, event_channel_index):
         entity_index = int(self.header['event_channels'][event_channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
         nb_event = entity_header['n']
         return nb_event
-    
+
     def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         entity_index = int(self.header['event_channels'][event_channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
-        
+
         n = entity_header['n']
         offset = entity_header['offset']
         timestamps = self._memmap[offset:offset+n*4].view('int32')
-        
+
         if t_start is None:
             i_start = None
         else:
@@ -228,9 +229,9 @@ class NeuroExplorerRawIO(BaseRawIO):
         else:
             i_stop = np.searchsorted(timestamps, int(t_stop*self.global_header['freq']))
         keep = slice(i_start, i_stop)
-        
+
         timestamps = timestamps[keep]
-        
+
         if entity_header['type'] == 1:#Event
             durations = None
             labels = np.array([''] * timestamps.size, dtype='U')
@@ -245,9 +246,9 @@ class NeuroExplorerRawIO(BaseRawIO):
             s = entity_header['MarkerLength']
             labels = self._memmap[offset2:offset2+s*n].view('S'+str(s))
             labels = labels[keep].astype('U')
-        
+
         return timestamps, durations, labels
-    
+
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = event_timestamps.astype(dtype)
         event_times /= self.global_header['freq']
@@ -272,11 +273,11 @@ def read_as_dict(fid, dtype, offset=None):
     info = OrderedDict()
     for k in dt.names:
         v = h[k]
-        
+
         if dt[k].kind == 'S':
             v = v.replace(b'\x00', b'')
             v = v.decode('utf8')
-        
+
         info[k] = v
     return info
 

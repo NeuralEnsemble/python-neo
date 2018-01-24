@@ -25,7 +25,7 @@ Author: Samuel Garcia
 from __future__ import  print_function, division, absolute_import
 #from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, 
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
         _event_channel_dtype)
 
 import numpy as np
@@ -37,49 +37,49 @@ import datetime
 class PlexonRawIO(BaseRawIO):
     extensions = ['plx']
     rawmode = 'one-file'
-    
+
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
-    
+
     def _source_name(self):
         return self.filename
-    
+
     def _parse_header(self):
-        
+
         #global header
         with open(self.filename, 'rb') as fid:
             offset0 = 0
             global_header = read_as_dict(fid, GlobalHeader, offset=offset0)
-        
+
         rec_datetime = datetime.datetime(global_header['Year'],
                                              global_header['Month'],
                                              global_header['Day'],
                                              global_header['Hour'],
                                              global_header['Minute'],
                                              global_header['Second'])
-        
-        # dsp channels header = spikes and waveforms 
+
+        # dsp channels header = spikes and waveforms
         nb_unit_chan = global_header['NumDSPChannels']
         offset1 = np.dtype(GlobalHeader).itemsize
         dspChannelHeaders = np.memmap(self.filename, dtype=DspChannelHeader, mode='r',
                     offset=offset1, shape=(nb_unit_chan,))
-        
+
         # event channel header
         nb_event_chan = global_header['NumEventChannels']
         offset2 = offset1 + np.dtype(DspChannelHeader).itemsize * nb_unit_chan
         eventHeaders = np.memmap(self.filename, dtype=EventChannelHeader, mode='r',
                     offset=offset2, shape=(nb_event_chan,))
-        
+
         # slow channel header = signal
         nb_sig_chan = global_header['NumSlowChannels']
         offset3 = offset2 + np.dtype(EventChannelHeader).itemsize * nb_event_chan
         slowChannelHeaders = np.memmap(self.filename, dtype=SlowChannelHeader, mode='r',
                     offset=offset3, shape=(nb_sig_chan,))
-        
-        
+
+
         offset4 = offset3 + np.dtype(SlowChannelHeader).itemsize * nb_sig_chan
-        
+
         #loop over data blocks and put them by type and channel
         block_headers = {1:{c:[] for c in dspChannelHeaders['Channel']},
                                 4:{c:[] for c in eventHeaders['Channel']},
@@ -99,9 +99,9 @@ class PlexonRawIO(BaseRawIO):
             block_headers[bl_type][chan_id].append(bl_header)
             block_pos[bl_type][chan_id].append(pos)
             pos += length
-        
+
         self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp']*2** 32 +bl_header['TimeStamp']
-        
+
         #... and finalize them in self._data_blocks
         # for a faster acces depending on type (1, 4, 5)
         self._data_blocks = {}
@@ -119,9 +119,9 @@ class PlexonRawIO(BaseRawIO):
             for chan_id in block_headers[bl_type]:
                 bl_header = np.array(block_headers[bl_type][chan_id], dtype=DataBlockHeader)
                 bl_pos = np.array(block_pos[bl_type][chan_id], dtype='int64')
-                
+
                 timestamps = bl_header['UpperByteOf5ByteTimestamp']*2** 32 +bl_header['TimeStamp']
-                
+
                 n1 = bl_header['NumberOfWaveforms']
                 n2 = bl_header['NumberOfWordsInWaveform']
                 dt = dtype_by_bltype[bl_type]
@@ -129,7 +129,7 @@ class PlexonRawIO(BaseRawIO):
                 data_block['pos'] = bl_pos+16
                 data_block['timestamp'] = timestamps
                 data_block['size'] = n1*n2*2
-                
+
                 if bl_type==1:#Spikes and waveforms
                     data_block['unit_id'] = bl_header['Unit']
                     data_block['n1'] = n1
@@ -141,9 +141,9 @@ class PlexonRawIO(BaseRawIO):
                         #cumulative some of sample index for fast acces to chunks
                         data_block['cumsum'][0] = 0
                         data_block['cumsum'][1:] = np.cumsum(data_block['size'][:-1])//2
-                
+
                 self._data_blocks[bl_type][chan_id] = data_block
-        
+
 
         #signals channels
         sig_channels = []
@@ -174,25 +174,25 @@ class PlexonRawIO(BaseRawIO):
         if len(all_sig_length)>0:
             self._signal_length = min(all_sig_length)
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        
+
         self._global_ssampling_rate = global_header['ADFrequency']
         if slowChannelHeaders.size>0:
             assert np.unique(slowChannelHeaders['ADFreq']).size==1, 'Signal do not have the same sampling rate'
             self._sig_sampling_rate = float(slowChannelHeaders['ADFreq'][0])
-        
+
         #Determine number of units per channels
         self.internal_unit_ids = []
         for chan_id, data_clock in self._data_blocks[1].items():
             unit_ids = np.unique(data_clock['unit_id'])
             for unit_id in unit_ids:
                 self.internal_unit_ids.append((chan_id, unit_id))
-        
+
         #Spikes channels
         unit_channels = []
         for unit_index, (chan_id, unit_id) in enumerate(self.internal_unit_ids):
             c = np.nonzero(dspChannelHeaders['Channel']==chan_id)[0][0]
             h = dspChannelHeaders[c]
-            
+
             name = h['Name'].decode('utf8')
             _id = 'ch{}#{}'.format(chan_id, unit_id)
             wf_units = ''
@@ -205,14 +205,14 @@ class PlexonRawIO(BaseRawIO):
             elif global_header['Version'] >= 105:
                 wf_gain = global_header['SpikeMaxMagnitudeMV'] / (
                     .5 * 2. ** (global_header['BitsPerSpikeSample']) *
-                    h['Gain'] * global_header['SpikePreAmpGain'])            
+                    h['Gain'] * global_header['SpikePreAmpGain'])
             wf_offset = 0.
             wf_left_sweep = -1 #DONT KNOWN
             wf_sampling_rate = global_header['WaveformFreq']
-            unit_channels.append((name, _id, wf_units, wf_gain, wf_offset, 
+            unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
                                     wf_left_sweep, wf_sampling_rate))
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
-        
+
         #Event channels
         event_channels = []
         for chan_index in range(nb_event_chan):
@@ -222,7 +222,7 @@ class PlexonRawIO(BaseRawIO):
             _id = h['Channel']
             event_channels.append((name, _id, 'event'))
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
-        
+
         #fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
@@ -230,7 +230,7 @@ class PlexonRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
-        
+
         #Annotations
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations['blocks'][0]
@@ -252,7 +252,7 @@ class PlexonRawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
         return self._signal_length
-    
+
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
@@ -261,17 +261,17 @@ class PlexonRawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._signal_length
-        
+
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
-            
+
         raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype='int16')
         for c, channel_index in enumerate(channel_indexes):
             chan_header = self.header['signal_channels'][channel_index]
             chan_id = chan_header['id']
-            
+
             data_blocks = self._data_blocks[5][chan_id]
-            
+
             #loop over data blocks and get chunks
             bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
             bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
@@ -291,24 +291,24 @@ class PlexonRawIO(BaseRawIO):
                     data = data[border:]
                 raw_signals[ind:data.size+ind, c] = data
                 ind += data.size
-            
+
         return raw_signals
-    
+
     def _get_internal_mask(self, data_block, t_start, t_stop):
         timestamps = data_block['timestamp']
-        
+
         if t_start is None:
             lim0 = 0
         else:
             lim0 = int(t_start*self._global_ssampling_rate)
-            
+
         if t_stop is None:
             lim1 = self._last_timestamps
         else:
             lim1 = int(t_stop*self._global_ssampling_rate)
-        
+
         keep = (timestamps>=lim0) & (timestamps<=lim1)
-        
+
         return keep
 
     def _spike_count(self,  block_index, seg_index, unit_index):
@@ -316,17 +316,17 @@ class PlexonRawIO(BaseRawIO):
         data_block = self._data_blocks[1][chan_id]
         nb_spike = np.sum(data_block['unit_id']==unit_id)
         return nb_spike
-        
+
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data_block = self._data_blocks[1][chan_id]
-        
+
         keep = self._get_internal_mask( data_block, t_start, t_stop)
         keep &= data_block['unit_id']==unit_id
         spike_timestamps = data_block[keep]['timestamp']
-        
+
         return spike_timestamps
-    
+
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         spike_times = spike_timestamps.astype(dtype)
         spike_times /= self._global_ssampling_rate
@@ -338,10 +338,10 @@ class PlexonRawIO(BaseRawIO):
 
         n1 = data_block['n1'][0]
         n2 = data_block['n2'][0]
-        
+
         keep = self._get_internal_mask( data_block, t_start, t_stop)
         keep &= data_block['unit_id']==unit_id
-        
+
         data_block = data_block[keep]
         nb_spike = data_block.size
 
@@ -351,26 +351,27 @@ class PlexonRawIO(BaseRawIO):
             ind1 = db['size'] + ind0
             data = self._memmap[ind0:ind1].view('int16').reshape(n1, n2)
             waveforms[i, :, :] = data
-            
+        waveforms = np.moveaxis(waveforms, 2, 0)
+
         return waveforms
-    
+
     def _event_count(self, block_index, seg_index, event_channel_index):
         chan_id = int(self.header['event_channels'][event_channel_index]['id'])
         nb_event = self._data_blocks[4][chan_id].size
         return nb_event
-    
+
     def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         chan_id = int(self.header['event_channels'][event_channel_index]['id'])
         data_block = self._data_blocks[4][chan_id]
         keep = self._get_internal_mask( data_block, t_start, t_stop)
-        
+
         db = data_block[keep]
         timestamps = db['timestamp']
         labels = db['label'].astype('U')
         durations = None
-        
+
         return timestamps, durations, labels
-    
+
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = event_timestamps.astype(dtype)
         event_times /= self._global_ssampling_rate
@@ -390,12 +391,12 @@ def read_as_dict(fid, dtype, offset=None):
     info = OrderedDict()
     for k in dt.names:
         v = h[k]
-        
+
         if dt[k].kind == 'S':
             v = v.decode('utf8')
             v = v.replace('\x03', '')
             v = v.replace('\x00', '')
-        
+
         info[k] = v
     return info
 
@@ -456,7 +457,7 @@ DspChannelHeader = [
     ('Threshold', 'int32'),
     ('Method', 'int32'),
     ('NUnits', 'int32'),
-    ('Template', 'uint16', (320,)), 
+    ('Template', 'uint16', (320,)),
     ('Fit', 'int32', (5,)),
     ('SortWidth', 'int32'),
     ('Boxes', 'uint16', (40,)),
