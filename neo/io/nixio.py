@@ -990,15 +990,51 @@ class NixIO(BaseIO):
         nixgroup.data_arrays.append(timesda)
         nixgroup.data_arrays.append(durada)
 
-    def write_spiketrain(self, *args):
+    def write_spiketrain(self, spiketrain, nixblock, nixgroup):
         """
-        Convert the provided ``sptr`` (SpikeTrain) to a NIX MultiTag and write
-        it to the NIX file at the location defined by ``loc``.
+        Convert the provided Neo SpikeTrain to a NIX MultiTag and write it to
+        the NIX file.
 
-        :param sptr: The Neo SpikeTrain to be written
-        :param loc: Path to the parent of the new MultiTag
+        :param spiketrain: The Neo SpikeTrain to be written
+        :param nixblock: NIX Block where the MultiTag will be created
+        :param nixgroup: NIX Group where the MultiTag will be attached
         """
-        pass
+        if "nix_name" in spiketrain.annotations:
+            nix_name = spiketrain.annotations["nix_name"]
+        else:
+            nix_name = "neo.spiketrain.{}".format(self._generate_nix_name())
+            spiketrain.annotate(nix_name=nix_name)
+
+        times = spiketrain.times.magnitude
+        tunits = units_to_string(spiketrain.times.units)
+
+        timesda = nixblock.create_data_array(
+            "{}.times".format(nix_name), "neo.spiketrain.times", data=times
+        )
+        timesda.unit = tunits
+        nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
+                                          positions=timesda)
+
+        nixmt.metadata = nixgroup.metadata.create_section(
+            nix_name, "neo.spiketrain.metadata"
+        )
+        metadata = nixmt.metadata
+
+        neoname = spiketrain.name if spiketrain.name is not None else ""
+        metadata["neo_name"] = neoname
+        nixmt.definition = spiketrain.description
+
+        self._write_property(metadata, "t_start", spiketrain.t_start)
+        self._write_property(metadata, "t_stop", spiketrain.t_stop)
+        # TODO: waveforms
+        # TODO: left_sweep
+
+        if spiketrain.annotations:
+            for k, v in spiketrain.annotations.items():
+                self._write_property(metadata, k, v)
+
+        nixgroup.multi_tags.append(nixmt)
+        nixgroup.data_arrays.append(timesda)
 
     def write_unit(self, neounit, nixchxsource):
         """
