@@ -23,21 +23,21 @@ http://www.neuroexplorer.com/downloadspage/
 Author: Samuel Garcia, luc estebanez, mark hollenbeck
 
 """
-from __future__ import  print_function, division, absolute_import
-#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
+from __future__ import print_function, division, absolute_import
+# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-        _event_channel_dtype)
+                        _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
 import datetime
 
 
-
 class NeuroExplorerRawIO(BaseRawIO):
     extensions = ['nex']
     rawmode = 'one-file'
+
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -51,7 +51,8 @@ class NeuroExplorerRawIO(BaseRawIO):
             offset = 544
             self._entity_headers = []
             for i in range(self.global_header['nvar']):
-                self._entity_headers.append(read_as_dict(fid, EntityHeader, offset=offset + i * 208))
+                self._entity_headers.append(read_as_dict(
+                    fid, EntityHeader, offset=offset + i * 208))
 
         self._memmap = np.memmap(self.filename, dtype='u1', mode='r')
 
@@ -64,56 +65,56 @@ class NeuroExplorerRawIO(BaseRawIO):
             entity_header = self._entity_headers[i]
             name = entity_header['name']
             _id = i
-            if entity_header['type'] == 0:#Unit
-                unit_channels.append((name, _id,'', 0,0, 0, 0))
+            if entity_header['type'] == 0:  # Unit
+                unit_channels.append((name, _id, '', 0, 0, 0, 0))
 
-            elif entity_header['type'] == 1:#Event
+            elif entity_header['type'] == 1:  # Event
                 event_channels.append((name, _id, 'event'))
 
-            elif entity_header['type'] == 2:# interval = Epoch
+            elif entity_header['type'] == 2:  # interval = Epoch
                 event_channels.append((name, _id, 'epoch'))
 
-            elif entity_header['type'] == 3:# spiketrain and wavefoms
+            elif entity_header['type'] == 3:  # spiketrain and wavefoms
                 wf_units = 'mV'
                 wf_gain = entity_header['ADtoMV']
                 wf_offset = entity_header['MVOffset']
                 wf_left_sweep = 0
                 wf_sampling_rate = entity_header['WFrequency']
                 unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
-                                    wf_left_sweep, wf_sampling_rate))
+                                      wf_left_sweep, wf_sampling_rate))
 
             elif entity_header['type'] == 4:
                 # popvectors
                 pass
 
-            if entity_header['type'] == 5:#Signals
+            if entity_header['type'] == 5:  # Signals
                 units = 'mV'
                 sampling_rate = entity_header['WFrequency']
                 dtype = 'int16'
                 gain = entity_header['ADtoMV']
                 offset = entity_header['MVOffset']
                 group_id = 0
-                sig_channels.append((name, _id, sampling_rate,dtype,  units,
-                                                                    gain,offset, group_id))
+                sig_channels.append((name, _id, sampling_rate, dtype,  units,
+                                     gain, offset, group_id))
                 self._sig_lengths.append(entity_header['NPointsWave'])
-                #sig t_start is the first timestamp if datablock
+                # sig t_start is the first timestamp if datablock
                 offset = entity_header['offset']
-                timestamps0 = self._memmap[offset:offset+4].view('int32')
-                t_start = timestamps0[0]/self.global_header['freq']
+                timestamps0 = self._memmap[offset:offset + 4].view('int32')
+                t_start = timestamps0[0] / self.global_header['freq']
                 self._sig_t_starts.append(t_start)
 
-            elif entity_header['type'] == 6:#Markers
+            elif entity_header['type'] == 6:  # Markers
                 event_channels.append((name, _id, 'event'))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        #each signal channel have a dierent groups that force reading
-        #them one by one
+        # each signal channel have a dierent groups that force reading
+        # them one by one
         sig_channels['group_id'] = np.arange(sig_channels.size)
 
-        #fill into header dict
+        # fill into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
@@ -121,7 +122,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
 
-        #Annotations
+        # Annotations
         self._generate_minimal_annotations()
         bl_annotations = self.raw_annotations['blocks'][0]
         seg_annotations = bl_annotations['segments'][0]
@@ -134,20 +135,19 @@ class NeuroExplorerRawIO(BaseRawIO):
         return t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop=self.global_header['tend'] / self.global_header['freq']
+        t_stop = self.global_header['tend'] / self.global_header['freq']
         return t_stop
 
-
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes)==1 , 'only one channel by one channel'
+        assert len(channel_indexes) == 1, 'only one channel by one channel'
         return self._sig_lengths[channel_indexes[0]]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes)==1 , 'only one channel by one channel'
+        assert len(channel_indexes) == 1, 'only one channel by one channel'
         return self._sig_t_starts[channel_indexes[0]]
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
-        assert len(channel_indexes)==1 , 'only one channel by one channel'
+        assert len(channel_indexes) == 1, 'only one channel by one channel'
         channel_index = channel_indexes[0]
         entity_index = int(self.header['signal_channels'][channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
@@ -157,11 +157,10 @@ class NeuroExplorerRawIO(BaseRawIO):
         #timestamps = self._memmap[offset:offset+n*4].view('int32')
         #offset2 = entity_header['offset'] + n*4
         #fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
-        offset3 = entity_header['offset'] + n*4 + n*4
-        raw_signal = self._memmap[offset3:offset3+nb_sample*2].view('int16')
-        raw_signal = raw_signal[slice(i_start, i_stop), None]#2D for compliance
+        offset3 = entity_header['offset'] + n * 4 + n * 4
+        raw_signal = self._memmap[offset3:offset3 + nb_sample * 2].view('int16')
+        raw_signal = raw_signal[slice(i_start, i_stop), None]  # 2D for compliance
         return raw_signal
-
 
     def _spike_count(self,  block_index, seg_index, unit_index):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
@@ -174,13 +173,13 @@ class NeuroExplorerRawIO(BaseRawIO):
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
         offset = entity_header['offset']
-        timestamps = self._memmap[offset:offset+n*4].view('int32')
+        timestamps = self._memmap[offset:offset + n * 4].view('int32')
 
         if t_start is not None:
-            keep = timestamps>=int(t_start*self.global_header['freq'])
+            keep = timestamps >= int(t_start * self.global_header['freq'])
             timestamps = timestamps[keep]
         if t_stop is not None:
-            keep = timestamps<=int(t_stop*self.global_header['freq'])
+            keep = timestamps <= int(t_stop * self.global_header['freq'])
             timestamps = timestamps[keep]
 
         return timestamps
@@ -199,8 +198,8 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         n = entity_header['n']
         width = entity_header['NPointsWave']
-        offset = entity_header['offset'] + n*2
-        waveforms = self._memmap[offset:offset+n*2*width].view('int16')
+        offset = entity_header['offset'] + n * 2
+        waveforms = self._memmap[offset:offset + n * 2 * width].view('int16')
         waveforms = waveforms.reshape(n, 1, width)
         waveforms = np.moveaxis(waveforms, 2, 0)
 
@@ -218,33 +217,33 @@ class NeuroExplorerRawIO(BaseRawIO):
 
         n = entity_header['n']
         offset = entity_header['offset']
-        timestamps = self._memmap[offset:offset+n*4].view('int32')
+        timestamps = self._memmap[offset:offset + n * 4].view('int32')
 
         if t_start is None:
             i_start = None
         else:
-            i_start = np.searchsorted(timestamps, int(t_start*self.global_header['freq']))
+            i_start = np.searchsorted(timestamps, int(t_start * self.global_header['freq']))
         if t_stop is None:
             i_stop = None
         else:
-            i_stop = np.searchsorted(timestamps, int(t_stop*self.global_header['freq']))
+            i_stop = np.searchsorted(timestamps, int(t_stop * self.global_header['freq']))
         keep = slice(i_start, i_stop)
 
         timestamps = timestamps[keep]
 
-        if entity_header['type'] == 1:#Event
+        if entity_header['type'] == 1:  # Event
             durations = None
             labels = np.array([''] * timestamps.size, dtype='U')
-        elif entity_header['type'] == 2:#Epoch
-            offset2 = offset + n*4
-            stop_timestamps = self._memmap[offset2:offset2+n*4].view('int32')
+        elif entity_header['type'] == 2:  # Epoch
+            offset2 = offset + n * 4
+            stop_timestamps = self._memmap[offset2:offset2 + n * 4].view('int32')
             durations = stop_timestamps[keep] - timestamps
             labels = np.array([''] * timestamps.size, dtype='U')
-        elif entity_header['type'] == 6:#Marker
+        elif entity_header['type'] == 6:  # Marker
             durations = None
-            offset2 = offset + n*4 + 64
+            offset2 = offset + n * 4 + 64
             s = entity_header['MarkerLength']
-            labels = self._memmap[offset2:offset2+s*n].view('S'+str(s))
+            labels = self._memmap[offset2:offset2 + s * n].view('S' + str(s))
             labels = labels[keep].astype('U')
 
         return timestamps, durations, labels
@@ -268,7 +267,7 @@ def read_as_dict(fid, dtype, offset=None):
     """
     if offset is not None:
         fid.seek(offset)
-    dt =np.dtype(dtype)
+    dt = np.dtype(dtype)
     h = np.fromstring(fid.read(dt.itemsize), dt)[0]
     info = OrderedDict()
     for k in dt.names:
@@ -280,6 +279,7 @@ def read_as_dict(fid, dtype, offset=None):
 
         info[k] = v
     return info
+
 
 GlobalHeader = [
     ('signature', 'S4'),

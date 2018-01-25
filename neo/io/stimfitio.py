@@ -118,7 +118,7 @@ class StimfitIO(BaseIO):
 
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         if self.filename is not None:
             self.stfio_rec = stfio.read(self.filename)
 
@@ -131,7 +131,7 @@ class StimfitIO(BaseIO):
             bl.rec_datetime = None
 
         dt = np.round(self.stfio_rec.dt * 1e-3, 9) * pq.s  # ms to s
-        sampling_rate = 1.0/dt
+        sampling_rate = 1.0 / dt
         t_start = 0 * pq.s
 
         # iterate over sections first:

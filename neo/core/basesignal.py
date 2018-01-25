@@ -85,7 +85,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         This is called whenever a new signal is
         created from the constructor. See :meth:`__new__' in  
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
-        ''' 
+        '''
         if units is None:
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
@@ -102,7 +102,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         Doesn't get called in Python 3, :meth:`__getitem__` is called instead
         '''
         return self.__getitem__(slice(i, j))
-    
+
     def __ne__(self, other):
         '''
         Non-equality test (!=)
@@ -120,7 +120,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         new_signal._copy_data_complement(self)
         return new_signal
 
-    def _get_required_attributes(self,signal,units):
+    def _get_required_attributes(self, signal, units):
         '''
         Return a list of the required attributes for a signal as a dictionary
         '''
@@ -152,7 +152,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
                                  and "%s"' % (from_u._dimensionality,
                                               to_u._dimensionality))
             signal = cf * self.magnitude
-        required_attributes = self._get_required_attributes(signal,to_u)
+        required_attributes = self._get_required_attributes(signal, to_u)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.channel_index = self.channel_index
@@ -166,7 +166,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         Required attributes of the signal are used.
         '''
         # signal is the new signal
-        required_attributes = self._get_required_attributes(signal,self.units)
+        required_attributes = self._get_required_attributes(signal, self.units)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
@@ -177,12 +177,12 @@ class BaseSignal(BaseNeo, pq.Quantity):
         Copy the metadata from another signal.
         Required and recommended attributes of the signal are used.
         '''
-        all_attr = {self._recommended_attrs,self._necessary_attrs}
+        all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
             for attr in sub_at:
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
-        setattr(self, 'annotations', getattr(other, 'annotations', None))  
+        setattr(self, 'annotations', getattr(other, 'annotations', None))
 
     def __rsub__(self, other, *args):
         '''
@@ -259,7 +259,8 @@ class BaseSignal(BaseNeo, pq.Quantity):
                     raise MergeError("Cannot merge these two signals as the %s differ." % attr[0])
 
         if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+            raise MergeError(
+                "Cannot merge these two signals as they belong to different segments.")
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[0] != other.lazy_shape[0]:
@@ -282,9 +283,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
                                                other.annotations)
         kwargs.update(merged_annotations)
         signal = self.__class__(stack, units=self.units, dtype=self.dtype,
-                              copy=False, t_start=self.t_start,
-                              sampling_rate=self.sampling_rate,
-                              **kwargs)
+                                copy=False, t_start=self.t_start,
+                                sampling_rate=self.sampling_rate,
+                                **kwargs)
         signal.segment = self.segment
 
         if hasattr(self, "lazy_shape"):
@@ -293,13 +294,12 @@ class BaseSignal(BaseNeo, pq.Quantity):
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
             signal.channel_index = ChannelIndex(
-                    index=np.arange(signal.shape[1]),
-                    channel_ids=np.hstack([self.channel_index.channel_ids,
-                                           other.channel_index.channel_ids]),
-                    channel_names=np.hstack([self.channel_index.channel_names,
-                                             other.channel_index.channel_names]))
+                index=np.arange(signal.shape[1]),
+                channel_ids=np.hstack([self.channel_index.channel_ids,
+                                       other.channel_index.channel_ids]),
+                channel_names=np.hstack([self.channel_index.channel_names,
+                                         other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
-

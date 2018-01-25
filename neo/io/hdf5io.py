@@ -71,7 +71,7 @@ class NeoHdf5IO(BaseIO):
          `Event` and `IrregularlySampledSignal` objects.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         self.merge_singles = merge_singles
 
         blocks = []
@@ -93,7 +93,6 @@ class NeoHdf5IO(BaseIO):
             attributes["index"] = int(attributes["index"])
         block = Block(**attributes)
 
-
         for name, child_node in node['segments'].items():
             if "Segment" in name:
                 block.segments.append(self._read_segment(child_node, parent=block))
@@ -101,7 +100,8 @@ class NeoHdf5IO(BaseIO):
         if len(node['recordingchannelgroups']) > 0:
             for name, child_node in node['recordingchannelgroups'].items():
                 if "RecordingChannelGroup" in name:
-                    block.channel_indexes.append(self._read_recordingchannelgroup(child_node, parent=block))
+                    block.channel_indexes.append(
+                        self._read_recordingchannelgroup(child_node, parent=block))
             self._resolve_channel_indexes(block)
         elif self.merge_singles:
             # if no RecordingChannelGroups are defined, merging
@@ -109,13 +109,13 @@ class NeoHdf5IO(BaseIO):
             for segment in block.segments:
                 if hasattr(segment, 'unmerged_analogsignals'):
                     segment.analogsignals.extend(
-                            self._merge_data_objects(segment.unmerged_analogsignals))
+                        self._merge_data_objects(segment.unmerged_analogsignals))
                     del segment.unmerged_analogsignals
                 if hasattr(segment, 'unmerged_irregularlysampledsignals'):
                     segment.irregularlysampledsignals.extend(
-                            self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
+                        self._merge_data_objects(segment.unmerged_irregularlysampledsignals))
                     del segment.unmerged_irregularlysampledsignals
-        
+
         return block
 
     def _read_segment(self, node, parent):
@@ -241,7 +241,7 @@ class NeoHdf5IO(BaseIO):
         channel_names = node["channel_names"].value
 
         if channel_indexes.size:
-            if len(node['recordingchannels']) :
+            if len(node['recordingchannels']):
                 raise MergeError("Cannot handle a RecordingChannelGroup which both has a "
                                  "'channel_indexes' attribute and contains "
                                  "RecordingChannel objects")
@@ -298,7 +298,8 @@ class NeoHdf5IO(BaseIO):
                 try:
                     combined_obj_ref = merged_objects[-1].annotations['object_ref']
                     merged_objects[-1] = merged_objects[-1].merge(obj)
-                    merged_objects[-1].annotations['object_ref'] = combined_obj_ref + "-" + obj.annotations['object_ref']
+                    merged_objects[-1].annotations['object_ref'] = combined_obj_ref + \
+                        "-" + obj.annotations['object_ref']
                 except MergeError:
                     merged_objects.append(obj)
             for obj in merged_objects:
@@ -330,7 +331,8 @@ class NeoHdf5IO(BaseIO):
         else:
             annotations = pickle.loads(node.attrs['annotations'])
         attributes.update(annotations)
-        attribute_names = list(attributes.keys())  # avoid "dictionary changed size during iteration" error
+        # avoid "dictionary changed size during iteration" error
+        attribute_names = list(attributes.keys())
         if sys.version_info.major > 2:
             for name in attribute_names:
                 if isinstance(attributes[name], (bytes, np.bytes_)):
@@ -345,7 +347,8 @@ class NeoHdf5IO(BaseIO):
         def disjoint_channel_indexes(channel_indexes):
             channel_indexes = channel_indexes[:]
             for ci1 in channel_indexes:
-                signal_group1 = set(tuple(x[1]) for x in ci1._channels)  # this works only on analogsignals
+                # this works only on analogsignals
+                signal_group1 = set(tuple(x[1]) for x in ci1._channels)
                 for ci2 in channel_indexes:                              # need to take irregularly sampled signals
                     signal_group2 = set(tuple(x[1]) for x in ci2._channels)  # into account too
                     if signal_group1 != signal_group2:
@@ -360,7 +363,8 @@ class NeoHdf5IO(BaseIO):
             ids = []
             by_segment = {}
             for (index, analogsignals, irregsignals) in ci._channels:
-                ids.append(index)  # note that what was called "index" in Neo 0.3/0.4 is "id" in Neo 0.5
+                # note that what was called "index" in Neo 0.3/0.4 is "id" in Neo 0.5
+                ids.append(index)
                 for signal_ref in analogsignals:
                     signal = self.object_refs[signal_ref]
                     segment_id = id(signal.segment)

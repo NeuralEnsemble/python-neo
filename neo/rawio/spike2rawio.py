@@ -18,14 +18,15 @@ This IO support old (<v6) and new files (>v7) of spike2
 Author: Samuel Garcia
 
 """
-from __future__ import  print_function, division, absolute_import
-#from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
+from __future__ import print_function, division, absolute_import
+# from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-        _event_channel_dtype)
+                        _event_channel_dtype)
 
 import numpy as np
 from collections import OrderedDict
+
 
 class Spike2RawIO(BaseRawIO):
     """
@@ -33,6 +34,7 @@ class Spike2RawIO(BaseRawIO):
     """
     extensions = ['smr']
     rawmode = 'one-file'
+
     def __init__(self, filename='', take_ideal_sampling_rate=False, ced_units=True):
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -57,7 +59,7 @@ class Spike2RawIO(BaseRawIO):
                 chan_info = read_as_dict(fid, channelHeaderDesciption1)
 
                 if chan_info['kind'] in [1, 6]:
-                    dt = [('scale', 'f4'),('offset', 'f4'),('unit', 'S6'), ]
+                    dt = [('scale', 'f4'), ('offset', 'f4'), ('unit', 'S6'), ]
                     chan_info.update(read_as_dict(fid, dt))
 
                 elif chan_info['kind'] in [7, 9]:
@@ -70,22 +72,23 @@ class Spike2RawIO(BaseRawIO):
 
                 if chan_info['kind'] in [1, 6, 7, 9]:
                     if info['system_id'] < 6:
-                        chan_info.update(read_as_dict(fid, [('divide' , 'i2')]))
-                    else :
-                        chan_info.update(read_as_dict(fid, [('interleave' , 'i2')]))
+                        chan_info.update(read_as_dict(fid, [('divide', 'i2')]))
+                    else:
+                        chan_info.update(read_as_dict(fid, [('interleave', 'i2')]))
 
                 chan_info['type'] = dict_kind[chan_info['kind']]
 
-                if chan_info['blocks']==0:
-                    chan_info['t_start'] = 0.#this means empty signals
+                if chan_info['blocks'] == 0:
+                    chan_info['t_start'] = 0.  # this means empty signals
                 else:
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
-                    chan_info['t_start'] = block_info['start_time'] * info['us_per_time'] * info['dtime_base']
+                    chan_info['t_start'] = block_info['start_time'] * \
+                        info['us_per_time'] * info['dtime_base']
 
                 self._channel_infos.append(chan_info)
 
-        #get data blocks index
+        # get data blocks index
         self._memmap = np.memmap(self.filename, dtype='u1', offset=0, mode='r')
         self._data_blocks = []
         for c, chan_info in enumerate(self._channel_infos):
@@ -93,23 +96,24 @@ class Spike2RawIO(BaseRawIO):
             ind = chan_info['firstblock']
             for b in range(chan_info['blocks']):
 
-                block_info = self._memmap[ind:ind+20].view(blockHeaderDesciption)[0]
+                block_info = self._memmap[ind:ind + 20].view(blockHeaderDesciption)[0]
                 data_blocks.append((ind, block_info['items'], 0))
                 ind = block_info['succ_block']
 
-            data_blocks = np.array(data_blocks, dtype=[('pos', 'int32' ), ('size', 'int32'), ('cumsum', 'int32')])
+            data_blocks = np.array(data_blocks, dtype=[(
+                'pos', 'int32'), ('size', 'int32'), ('cumsum', 'int32')])
             data_blocks['cumsum'][1:] = np.cumsum(data_blocks['size'][:-1])
 
-            data_blocks['pos'] += 20#20 is ths header size
+            data_blocks['pos'] += 20  # 20 is ths header size
 
             self._data_blocks.append(data_blocks)
 
-        #create typed channels
+        # create typed channels
         sig_channels = []
         unit_channels = []
         event_channels = []
 
-        all_signal_length = []#this is incredible but shape difer channel to channel!!!
+        all_signal_length = []  # this is incredible but shape difer channel to channel!!!
         self.internal_unit_ids = {}
         self._spike_sounts = {}
         for chan_id, chan_info in enumerate(self._channel_infos):
@@ -129,57 +133,57 @@ class Spike2RawIO(BaseRawIO):
             name = chan_info['title']
 
             if chan_info['kind'] in [1, 9]:
-                #AnalogSignal
+                # AnalogSignal
                 sig_size = np.sum(self._data_blocks[chan_id]['size'])
-                if sig_size==0:
+                if sig_size == 0:
                     continue
                 units = chan_info['unit']
-                if chan_info['kind'] ==1:#int16
-                    gain = chan_info['scale']/6553.6
+                if chan_info['kind'] == 1:  # int16
+                    gain = chan_info['scale'] / 6553.6
                     offset = chan_info['offset']
                     sig_dtype = 'int16'
-                elif chan_info['kind'] ==9:#float32
+                elif chan_info['kind'] == 9:  # float32
                     gain = 1.
                     offset = 0.
                     sig_dtype = 'int32'
                 group_id = 0
                 sig_channels.append((name, chan_id, sampling_rate, sig_dtype,
-                                                            units, gain, offset, group_id))
+                                     units, gain, offset, group_id))
 
                 all_signal_length.append(sig_size)
 
             elif chan_info['kind'] in [2, 3, 4, 5, 8]:
-                #Event
+                # Event
                 event_channels.append((name, chan_id, 'event'))
 
-            elif chan_info['kind'] in [6, 7]: #SpikeTrain with waveforms
+            elif chan_info['kind'] in [6, 7]:  # SpikeTrain with waveforms
                 wf_units = chan_info['unit']
                 if chan_info['kind'] == 6:
-                    wf_gain = chan_info['scale']/6553.6
+                    wf_gain = chan_info['scale'] / 6553.6
                     wf_offset = chan_info['offset']
-                    wf_left_sweep = chan_info['n_extra']//4
+                    wf_left_sweep = chan_info['n_extra'] // 4
                 elif chan_info['kind'] == 7:
                     wf_gain = 1.
                     wf_offset = 0.
-                    wf_left_sweep = chan_info['n_extra']//8
+                    wf_left_sweep = chan_info['n_extra'] // 8
                 wf_sampling_rate = sampling_rate
                 if self.ced_units:
-                    #this is a hudge pain because need
+                    # this is a hudge pain because need
                     # to jump over all blocks
                     nb_spike_by_ids = {}
                     data_blocks = self._data_blocks[chan_id]
                     dt = get_channel_dtype(chan_info)
                     for bl in range(data_blocks.size):
                         ind0 = data_blocks[bl]['pos']
-                        ind1 = data_blocks[bl]['size']*dt.itemsize + ind0
+                        ind1 = data_blocks[bl]['size'] * dt.itemsize + ind0
                         raw_data = self._memmap[ind0:ind1].view(dt)
                         marker = raw_data['marker'] & 255
                         for unit_id in np.unique(marker):
                             nb_spike = nb_spike_by_ids.get(unit_id, 0)
-                            nb_spike += np.sum(marker==unit_id)
+                            nb_spike += np.sum(marker == unit_id)
                             nb_spike_by_ids[unit_id] = nb_spike
                 else:
-                    #All spike from one channel are group in one SpikeTrain
+                    # All spike from one channel are group in one SpikeTrain
                     nb_spike_by_ids = {'all': data_blocks['size'].sum()}
                 for unit_id in sorted(nb_spike_by_ids.keys()):
                     unit_index = len(unit_channels)
@@ -187,16 +191,16 @@ class Spike2RawIO(BaseRawIO):
                     self._spike_sounts[unit_index] = nb_spike_by_ids[unit_id]
                     _id = "ch{}#{}".format(chan_id, unit_id)
                     unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
-                                    wf_left_sweep, wf_sampling_rate))
+                                          wf_left_sweep, wf_sampling_rate))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         print(sig_channels)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
-        if len(sig_channels)>0:
+        if len(sig_channels) > 0:
             sampling_rate = np.unique(sig_channels['sampling_rate'])
-            assert sampling_rate.size==1
+            assert sampling_rate.size == 1
             self._sampling_rate = float(sampling_rate[0])
             self._signal_length = min(all_signal_length)
 
@@ -204,16 +208,15 @@ class Spike2RawIO(BaseRawIO):
             all_kind = np.unique(all_kind)
             assert all_kind.size == 1, 'IO only support when all channel have the same dtype'
 
-            if all_kind[0] ==1:
+            if all_kind[0] == 1:
                 self._sig_dtype = np.dtype('int16')
-            elif all_kind[0] ==9:
+            elif all_kind[0] == 9:
                 self._sig_dtype = np.dtype('float32')
 
         self._time_factor = self._global_info['us_per_time'] * self._global_info['dtime_base']
 
-
-        #t_stop: best between events, spikes and signals
-        if len(sig_channels)>0:
+        # t_stop: best between events, spikes and signals
+        if len(sig_channels) > 0:
             t_stop_sig = self._signal_length / self._sampling_rate
         else:
             t_stop_sig = 0.
@@ -223,17 +226,17 @@ class Spike2RawIO(BaseRawIO):
             if chan_info['kind'] in [1, 9, 0]:
                 continue
             data_blocks = self._data_blocks[chan_id]
-            if data_blocks.size>0:
+            if data_blocks.size > 0:
                 dt = get_channel_dtype(chan_info)
                 ind0 = data_blocks[-1]['pos']
-                ind1 = data_blocks[-1]['size']*dt.itemsize + ind0
+                ind1 = data_blocks[-1]['size'] * dt.itemsize + ind0
                 raw_data = self._memmap[ind0:ind1].view(dt)
                 last_time = raw_data['tick'][-1] * self._time_factor
-                if last_time>t_stop_ev:
+                if last_time > t_stop_ev:
                     t_stop_ev = last_time
         self._t_stop = max(t_stop_sig, t_stop_ev)
 
-        #fille into header dict
+        # fille into header dict
         self.header = {}
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
@@ -291,9 +294,9 @@ class Spike2RawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
 
-        raw_signals = np.zeros((i_stop-i_start, len(channel_indexes)), dtype=dt)
+        raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
         for c, channel_index in enumerate(channel_indexes):
-            #NOTE: this actual way is slow because we run throught
+            # NOTE: this actual way is slow because we run throught
             # the file for each channel. The loop should be reversed.
             # But there is no garanty that channels shared the same data block
             # indexes. So this make the job too difficult.
@@ -301,29 +304,29 @@ class Spike2RawIO(BaseRawIO):
             chan_id = chan_header['id']
             data_blocks = self._data_blocks[chan_id]
 
-            #loop over data blocks and get chunks
+            # loop over data blocks and get chunks
             bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
             bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
             ind = 0
             for bl in range(bl0,  bl1):
                 ind0 = data_blocks[bl]['pos']
-                ind1 = data_blocks[bl]['size']*dt.itemsize + ind0
+                ind1 = data_blocks[bl]['size'] * dt.itemsize + ind0
                 data = self._memmap[ind0:ind1].view(dt)
-                if bl == bl1-1:
-                    #right border
-                    #be carfull that bl could be both bl0 and bl1!!
+                if bl == bl1 - 1:
+                    # right border
+                    # be carfull that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]['cumsum'])
                     data = data[:-border]
                 if bl == bl0:
-                    #left border
+                    # left border
                     border = i_start - data_blocks[bl]['cumsum']
                     data = data[border:]
-                raw_signals[ind:data.size+ind, c] = data
+                raw_signals[ind:data.size + ind, c] = data
                 ind += data.size
 
         return raw_signals
 
-    def _get_internal_timestamp_(self,chan_id, t_start, t_stop, other_field=None, marker_filter=None):
+    def _get_internal_timestamp_(self, chan_id, t_start, t_stop, other_field=None, marker_filter=None):
         chan_info = self._channel_infos[chan_id]
         data_blocks = self._data_blocks[chan_id]
         dt = get_channel_dtype(chan_info)
@@ -338,33 +341,33 @@ class Spike2RawIO(BaseRawIO):
         else:
             lim1 = int(t_stop / self._time_factor)
 
-        timestamps =[]
-        othervalues =[]
+        timestamps = []
+        othervalues = []
         for bl in range(data_blocks.size):
             ind0 = data_blocks[bl]['pos']
-            ind1 = data_blocks[bl]['size']*dt.itemsize + ind0
+            ind1 = data_blocks[bl]['size'] * dt.itemsize + ind0
             raw_data = self._memmap[ind0:ind1].view(dt)
             ts = raw_data['tick']
-            keep = (ts>=lim0) & (ts<=lim1)
+            keep = (ts >= lim0) & (ts <= lim1)
             if marker_filter is not None:
-                keep2 = (raw_data['marker']&255)==marker_filter
-                keep = keep&keep2
+                keep2 = (raw_data['marker'] & 255) == marker_filter
+                keep = keep & keep2
 
             timestamps.append(ts[keep])
             if other_field is not None:
                 othervalues.append(raw_data[other_field][keep])
-            if ts[-1]>lim1:
+            if ts[-1] > lim1:
                 break
 
-        if len(timestamps)>0:
+        if len(timestamps) > 0:
             timestamps = np.concatenate(timestamps)
         else:
             timestamps = np.zeros(0, dtype='int16')
 
-        if other_field is  None:
+        if other_field is None:
             return timestamps
         else:
-            if len(timestamps)>0:
+            if len(timestamps) > 0:
                 othervalues = np.concatenate(othervalues)
             else:
                 othervalues = np.zeros(0, dtype=dt.fields[other_field][0])
@@ -382,7 +385,8 @@ class Spike2RawIO(BaseRawIO):
         else:
             marker_filter = None
 
-        spike_timestamps = self._get_internal_timestamp_(chan_id, t_start, t_stop, marker_filter=marker_filter)
+        spike_timestamps = self._get_internal_timestamp_(
+            chan_id, t_start, t_stop, marker_filter=marker_filter)
 
         return spike_timestamps
 
@@ -401,7 +405,7 @@ class Spike2RawIO(BaseRawIO):
             marker_filter = None
 
         timestamps, waveforms = self._get_internal_timestamp_(chan_id, t_start, t_stop,
-                                                        other_field='waveform', marker_filter=marker_filter)
+                                                              other_field='waveform', marker_filter=marker_filter)
 
         waveforms = waveforms.reshape(timestamps.size, 1, -1)
         waveforms = np.moveaxis(waveforms, 2, 0)
@@ -410,20 +414,22 @@ class Spike2RawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_header = self.header['event_channels'][event_channel_index]
-        chan_id = int(event_header['id']) #because set to string in header
+        chan_id = int(event_header['id'])  # because set to string in header
         data_blocks = self._data_blocks[chan_id]
         nb_event = data_blocks['size'].sum()
         return nb_event
 
     def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         event_header = self.header['event_channels'][event_channel_index]
-        chan_id = int(event_header['id']) #because set to string in header
+        chan_id = int(event_header['id'])  # because set to string in header
         chan_info = self._channel_infos[chan_id]
 
-        if chan_info['kind']==5:
-            timestamps, labels = self._get_internal_timestamp_(chan_id, t_start, t_stop, other_field='marker')
-        elif chan_info['kind']==8:
-            timestamps, labels = self._get_internal_timestamp_(chan_id, t_start, t_stop, other_field='label')
+        if chan_info['kind'] == 5:
+            timestamps, labels = self._get_internal_timestamp_(
+                chan_id, t_start, t_stop, other_field='marker')
+        elif chan_info['kind'] == 8:
+            timestamps, labels = self._get_internal_timestamp_(
+                chan_id, t_start, t_stop, other_field='label')
         else:
             timestamps = self._get_internal_timestamp_(chan_id, t_start, t_stop, other_field=None)
             labels = np.zeros(timestamps.size, dtype='U')
@@ -439,14 +445,13 @@ class Spike2RawIO(BaseRawIO):
         return event_times
 
 
-
 def read_as_dict(fid, dtype):
     """
     Given a file descriptor (seek at the good place externally)
     and a numpy.dtype of the binary struct return a dict.
     Make conversion for strings.
     """
-    dt =np.dtype(dtype)
+    dt = np.dtype(dtype)
     h = np.fromstring(fid.read(dt.itemsize), dt)[0]
     info = OrderedDict()
     for k in dt.names:
@@ -454,7 +459,7 @@ def read_as_dict(fid, dtype):
 
         if dt[k].kind == 'S':
             v = v.decode('iso-8859-1')
-            if len(v)>0:
+            if len(v) > 0:
                 l = ord(v[0])
                 v = v[1:l + 1]
 
@@ -466,24 +471,24 @@ def get_channel_dtype(chan_info):
     """
     Get dtype by kind.
     """
-    if chan_info['kind'] == 1: #Raw signal
+    if chan_info['kind'] == 1:  # Raw signal
         dt = 'int16'
-    elif chan_info['kind'] in [2, 3, 4]: # Event data
+    elif chan_info['kind'] in [2, 3, 4]:  # Event data
         dt = [('tick', 'i4')]
-    elif chan_info['kind'] in [5]: # Marker data
+    elif chan_info['kind'] in [5]:  # Marker data
         dt = [('tick', 'i4'), ('marker', 'i4')]
-    elif chan_info['kind'] in [6]: # AdcMark data (waveform)
+    elif chan_info['kind'] in [6]:  # AdcMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-               #~ ('adc', 'S%d' % chan_info['n_extra'])]
-               ('waveform', 'int16', chan_info['n_extra']//2)]
-    elif chan_info['kind'] in [7]: #  RealMark data (waveform)
+              #~ ('adc', 'S%d' % chan_info['n_extra'])]
+              ('waveform', 'int16', chan_info['n_extra'] // 2)]
+    elif chan_info['kind'] in [7]:  # RealMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-               #~ ('real', 'S%d' % chan_info['n_extra'])]
-               ('waveform', 'float32', chan_info['n_extra']//4)]
-    elif chan_info['kind'] in [8]:# TextMark data
+              #~ ('real', 'S%d' % chan_info['n_extra'])]
+              ('waveform', 'float32', chan_info['n_extra'] // 4)]
+    elif chan_info['kind'] in [8]:  # TextMark data
         dt = [('tick', 'i4'), ('marker', 'i4'),
-               ('label', 'S%d' % chan_info['n_extra'])]
-    elif chan_info['kind'] == 9: #Float signal
+              ('label', 'S%d' % chan_info['n_extra'])]
+    elif chan_info['kind'] == 9:  # Float signal
         dt = 'float32'
     dt = np.dtype(dt)
     return dt
@@ -557,5 +562,3 @@ dict_kind = {
     8: 'TextMark',
     9: 'RealWave',
 }
-
-

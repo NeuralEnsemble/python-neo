@@ -1297,8 +1297,8 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_deep_copy_attributes(self):
         signal1 = self.train
-        new_t_start = -10*pq.s
-        new_t_stop = 10*pq.s
+        new_t_start = -10 * pq.s
+        new_t_stop = 10 * pq.s
         new_data = np.sort(np.random.uniform(new_t_start.magnitude,
                                              new_t_stop.magnitude,
                                              len(self.train))) * pq.ms
@@ -1308,6 +1308,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
                                                    t_stop=new_t_stop)
         signal1.annotate(new_annotation='for signal 1')
         self.assertTrue('new_annotation' not in signal1b.annotations)
+
 
 class TestAttributesAnnotations(unittest.TestCase):
     def test_set_universally_recommended_attributes(self):
@@ -1521,7 +1522,6 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(result.units, 1 * pq.s)
         self.assertIs(result.segment, train.segment)
         self.assertIs(result.unit, train.unit)
-
 
     def test__rescale_same_units(self):
         data = [3, 4, 5] * pq.ms

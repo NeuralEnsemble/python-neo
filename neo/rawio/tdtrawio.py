@@ -76,7 +76,8 @@ class TdtRawIO(BaseRawIO):
             if info_channel_groups is None:
                 info_channel_groups = _info_channel_groups
             else:
-                assert np.array_equal(info_channel_groups, _info_channel_groups), 'Channels differ across segments'
+                assert np.array_equal(info_channel_groups,
+                                      _info_channel_groups), 'Channels differ across segments'
 
         # TEV (mixed data)
         self._tev_datas = []
@@ -117,7 +118,8 @@ class TdtRawIO(BaseRawIO):
                         if file.endswith(".SortResult"):
                             sortresult_filename = os.path.join(path, 'sort', sortname, file)
                             # get new sortcode
-                            newsortcode = np.fromfile(sortresult_filename, 'int8')[1024:]  # first 1024 bytes are header
+                            newsortcode = np.fromfile(sortresult_filename, 'int8')[
+                                1024:]  # first 1024 bytes are header
                             # update the sort code with the info from this file
                             tsq['sortcode'][1:-1] = newsortcode
                             # print('sortcode updated')
@@ -143,8 +145,10 @@ class TdtRawIO(BaseRawIO):
         self._sigs_index = {seg_index: {} for seg_index in range(nb_segment)}
         self._sig_dtype_by_group = {}  # key = group_id
         self._sig_sample_per_chunk = {}  # key = group_id
-        self._sigs_lengths = {seg_index: {} for seg_index in range(nb_segment)}  # key = seg_index then group_id
-        self._sigs_t_start = {seg_index: {} for seg_index in range(nb_segment)}  # key = seg_index then group_id
+        self._sigs_lengths = {seg_index: {}
+                              for seg_index in range(nb_segment)}  # key = seg_index then group_id
+        self._sigs_t_start = {seg_index: {}
+                              for seg_index in range(nb_segment)}  # key = seg_index then group_id
 
         keep = info_channel_groups['TankEvType'] == EVTYPE_STREAM
         for group_id, info in enumerate(info_channel_groups[keep]):
@@ -195,7 +199,7 @@ class TdtRawIO(BaseRawIO):
 
                     # data buffer test if SEV file exists otherwise TEV
                     path = os.path.join(self.dirname, segment_name)
-                    sev_filename = os.path.join(path, tankname+'_'+segment_name+'_' +
+                    sev_filename = os.path.join(path, tankname + '_' + segment_name + '_' +
                                                 info['StoreName'].decode('ascii') + '_ch' + str(chan_id) + '.sev')
                     if os.path.exists(sev_filename):
                         data = np.memmap(sev_filename, mode='r', offset=0, dtype='uint8')
@@ -204,7 +208,7 @@ class TdtRawIO(BaseRawIO):
                     assert data is not None, 'no TEV nor SEV'
                     self._sigs_data_buf[seg_index][chan_index] = data
 
-                chan_name = '{} {}'.format(info['StoreName'], c+1)
+                chan_name = '{} {}'.format(info['StoreName'], c + 1)
                 sampling_rate = sampling_rate
                 units = 'V'  # WARNING this is not sur at all
                 gain = 1.
@@ -236,7 +240,7 @@ class TdtRawIO(BaseRawIO):
                     wf_units = 'V'
                     wf_gain = 1.
                     wf_offset = 0.
-                    wf_left_sweep = info['NumPoints']//2
+                    wf_left_sweep = info['NumPoints'] // 2
                     wf_sampling_rate = info['SampleFreq']
                     unit_channels.append((unit_name, '{}'.format(unit_id),
                                           wf_units, wf_gain, wf_offset,
@@ -303,8 +307,8 @@ class TdtRawIO(BaseRawIO):
         raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
 
         sample_per_chunk = self._sig_sample_per_chunk[group_id]
-        bl0 = i_start//sample_per_chunk
-        bl1 = int(np.ceil(i_stop/sample_per_chunk))
+        bl0 = i_start // sample_per_chunk
+        bl1 = int(np.ceil(i_stop / sample_per_chunk))
         chunk_nb_bytes = sample_per_chunk * dt.itemsize
 
         for c, channel_index in enumerate(channel_indexes):
@@ -318,7 +322,7 @@ class TdtRawIO(BaseRawIO):
                 ind1 = ind0 + chunk_nb_bytes
                 data = data_buf[ind0:ind1].view(dt)
 
-                if bl == bl1-1:
+                if bl == bl1 - 1:
                     # right border
                     # be careful that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop % sample_per_chunk)
@@ -328,7 +332,7 @@ class TdtRawIO(BaseRawIO):
                     border = i_start % sample_per_chunk
                     data = data[border:]
 
-                raw_signals[ind:data.size+ind, c] = data
+                raw_signals[ind:data.size + ind, c] = data
                 ind += data.size
 
         return raw_signals
@@ -353,14 +357,16 @@ class TdtRawIO(BaseRawIO):
     def _spike_count(self,  block_index, seg_index, unit_index):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, None, None)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name,
+                               chan_id, unit_id, None, None)
         nb_spike = np.sum(mask)
         return nb_spike
 
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self._get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
+        mask = self._get_mask(tsq, seg_index, EVTYPE_SNIP, store_name,
+                              chan_id, unit_id, t_start, t_stop)
         timestamps = tsq[mask]['timestamp']
         timestamps -= self._global_t_start
         return timestamps
@@ -373,7 +379,8 @@ class TdtRawIO(BaseRawIO):
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         store_name, chan_id, unit_id = self.internal_unit_ids[unit_index]
         tsq = self._tsq[seg_index]
-        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name, chan_id, unit_id, t_start, t_stop)
+        mask = self. _get_mask(tsq, seg_index, EVTYPE_SNIP, store_name,
+                               chan_id, unit_id, t_start, t_stop)
         nb_spike = np.sum(mask)
 
         data = self._tev_datas[seg_index]
@@ -479,28 +486,28 @@ tsq_dtype = [
     ('frequency', 'float32'),   # bytes 37-40
 ]
 
-EVTYPE_UNKNOWN  = int('00000000', 16)       # 0
-EVTYPE_STRON    = int('00000101', 16)       # 257
-EVTYPE_STROFF   = int('00000102', 16)       # 258
-EVTYPE_SCALAR   = int('00000201', 16)       # 513
-EVTYPE_STREAM   = int('00008101', 16)       # 33025
-EVTYPE_SNIP     = int('00008201', 16)       # 33281
-EVTYPE_MARK     = int('00008801', 16)       # 34817
-EVTYPE_HASDATA  = int('00008000', 16)       # 32768
-EVTYPE_UCF      = int('00000010', 16)       # 16
-EVTYPE_PHANTOM  = int('00000020', 16)       # 32
-EVTYPE_MASK     = int('0000FF0F', 16)       # 65295
+EVTYPE_UNKNOWN = int('00000000', 16)       # 0
+EVTYPE_STRON = int('00000101', 16)       # 257
+EVTYPE_STROFF = int('00000102', 16)       # 258
+EVTYPE_SCALAR = int('00000201', 16)       # 513
+EVTYPE_STREAM = int('00008101', 16)       # 33025
+EVTYPE_SNIP = int('00008201', 16)       # 33281
+EVTYPE_MARK = int('00008801', 16)       # 34817
+EVTYPE_HASDATA = int('00008000', 16)       # 32768
+EVTYPE_UCF = int('00000010', 16)       # 16
+EVTYPE_PHANTOM = int('00000020', 16)       # 32
+EVTYPE_MASK = int('0000FF0F', 16)       # 65295
 EVTYPE_INVALID_MASK = int('FFFF0000', 16)   # 4294901760
-EVMARK_STARTBLOCK   = int('0001', 16)       # 1
-EVMARK_STOPBLOCK    = int('0002', 16)       # 2
+EVMARK_STARTBLOCK = int('0001', 16)       # 1
+EVMARK_STOPBLOCK = int('0002', 16)       # 2
 
 
 data_formats = {
-        0: 'float32',
-        1: 'int32',
-        2: 'int16',
-        3: 'int8',
-        4: 'float64',
+    0: 'float32',
+    1: 'int32',
+    2: 'int16',
+    3: 'int8',
+    4: 'float64',
 }
 
 
@@ -508,7 +515,8 @@ def is_tdtblock(blockpath):
     """Is tha path a  TDT block (=neo.Segment) ?"""
     file_ext = list()
     if os.path.isdir(blockpath):
-        for file in os.listdir(blockpath):   # for every file, get extension, convert to lowercase and append
+        # for every file, get extension, convert to lowercase and append
+        for file in os.listdir(blockpath):
             file_ext.append(os.path.splitext(file)[1].lower())
 
     file_ext = set(file_ext)

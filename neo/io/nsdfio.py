@@ -84,7 +84,7 @@ class NSDFIO(BaseIO):
         for i, block in enumerate(blocks):
             self.write_block(block, name_pattern.format(i), writer, blocks_model)
 
-    def write_block(self, block = None, name='0', writer=None, parent=None):
+    def write_block(self, block=None, name='0', writer=None, parent=None):
         """
         Write a Block to the file
 
@@ -110,7 +110,6 @@ class NSDFIO(BaseIO):
 
         self._clean_nsdfio_annotations(block)
 
-
     def _write_block_children(self, block, block_model, writer):
         segments_model = nsdf.ModelComponent(name='segments', uid=uuid1().hex, parent=block_model)
         self._write_model_component(segments_model, writer)
@@ -119,15 +118,15 @@ class NSDFIO(BaseIO):
             self.write_segment(segment=segment, name=name_pattern.format(i),
                                writer=writer, parent=segments_model)
 
-        channel_indexes_model = nsdf.ModelComponent(name='channel_indexes', uid=uuid1().hex, parent=block_model)
+        channel_indexes_model = nsdf.ModelComponent(
+            name='channel_indexes', uid=uuid1().hex, parent=block_model)
         self._write_model_component(channel_indexes_model, writer)
         name_pattern = self._name_pattern(len(block.channel_indexes))
         for i, channelindex in enumerate(block.channel_indexes):
             self.write_channelindex(channelindex=channelindex, name=name_pattern.format(i),
                                     writer=writer, parent=channel_indexes_model)
 
-
-    def write_segment(self, segment = None, name='0', writer=None, parent=None):
+    def write_segment(self, segment=None, name='0', writer=None, parent=None):
         """
         Write a Segment to the file
 
@@ -157,7 +156,8 @@ class NSDFIO(BaseIO):
             self._clean_nsdfio_annotations(segment)
 
     def _write_segment_children(self, model, segment, writer):
-        analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
+        analogsignals_model = nsdf.ModelComponent(
+            name='analogsignals', uid=uuid1().hex, parent=model)
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(segment.analogsignals))
         for i, signal in enumerate(segment.analogsignals):
@@ -185,7 +185,8 @@ class NSDFIO(BaseIO):
         signal.annotations['nsdfio_uid'] = uid
 
         r_signal = np.swapaxes(signal, 0, 1)
-        channels_model, channels, source_ds = self._create_signal_data_sources(model, r_signal, uid, writer)
+        channels_model, channels, source_ds = self._create_signal_data_sources(
+            model, r_signal, uid, writer)
         self._write_signal_data(model, channels, r_signal, signal, source_ds, writer)
 
         self._write_model_component(model, writer)
@@ -213,7 +214,8 @@ class NSDFIO(BaseIO):
         self._write_channelindex_children(channelindex, model, writer)
 
     def _write_channelindex_children(self, channelindex, model, writer):
-        analogsignals_model = nsdf.ModelComponent(name='analogsignals', uid=uuid1().hex, parent=model)
+        analogsignals_model = nsdf.ModelComponent(
+            name='analogsignals', uid=uuid1().hex, parent=model)
         self._write_model_component(analogsignals_model, writer)
         name_pattern = self._name_pattern(len(channelindex.analogsignals))
         for i, signal in enumerate(channelindex.analogsignals):
@@ -337,7 +339,7 @@ class NSDFIO(BaseIO):
         :return: List of read blocks
         """
         assert not lazy, 'Do not support lazy'
-        
+
         reader = self._init_reading()
         blocks = []
 
@@ -357,7 +359,7 @@ class NSDFIO(BaseIO):
         :return: Read block
         """
         assert not lazy, 'Do not support lazy'
-        
+
         block = Block()
         group, reader = self._select_first_container(group, reader, 'block')
 
@@ -389,7 +391,7 @@ class NSDFIO(BaseIO):
         :return: Read segment
         """
         assert not lazy, 'Do not support lazy'
-        
+
         segment = Segment()
         group, reader = self._select_first_container(group, reader, 'segment')
 
@@ -418,7 +420,7 @@ class NSDFIO(BaseIO):
         :return: Read AnalogSignal
         """
         assert not lazy, 'Do not support lazy'
-        
+
         attrs = group.attrs
 
         if attrs.get('reference_to') is not None:
@@ -445,7 +447,7 @@ class NSDFIO(BaseIO):
         :return: Read ChannelIndex
         """
         assert not lazy, 'Do not support lazy'
-        
+
         attrs = group.attrs
 
         channelindex = self._create_channelindex(group)
