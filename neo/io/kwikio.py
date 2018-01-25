@@ -87,7 +87,7 @@ class KwikIO(BaseIO):
             raise KWIK_ERR
         BaseIO.__init__(self)
         self.filename = os.path.abspath(filename)
-        model = kwik.KwikModel(self.filename) # TODO this group is loaded twice
+        model = kwik.KwikModel(self.filename)  # TODO this group is loaded twice
         self.models = [kwik.KwikModel(self.filename, channel_group=grp)
                        for grp in model.channel_groups]
 
@@ -113,7 +113,7 @@ class KwikIO(BaseIO):
             "good", if None all is loaded.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         blk = Block()
         seg = Segment(file_origin=self.filename)
         blk.segments += [seg]
@@ -165,9 +165,9 @@ class KwikIO(BaseIO):
             SI units of the raw trace according to voltage_gain given to klusta
         """
         assert not lazy, 'Do not support lazy'
-        
-        arr = model.traces[:]*model.metadata['voltage_gain']
-        ana = AnalogSignal(arr, sampling_rate=model.sample_rate*pq.Hz,
+
+        arr = model.traces[:] * model.metadata['voltage_gain']
+        ana = AnalogSignal(arr, sampling_rate=model.sample_rate * pq.Hz,
                            units=units,
                            file_origin=model.metadata['raw_data_files'])
         return ana
@@ -192,8 +192,8 @@ class KwikIO(BaseIO):
             if ((not(cluster_id in model.cluster_ids))):
                 raise ValueError
         except ValueError:
-                print("Exception: cluster_id (%d) not found !! " % cluster_id)
-                return
+            print("Exception: cluster_id (%d) not found !! " % cluster_id)
+            return
         clusters = model.spike_clusters
         idx = np.argwhere(clusters == cluster_id)
         if get_waveforms:
@@ -205,7 +205,7 @@ class KwikIO(BaseIO):
             w = None
         sptr = SpikeTrain(times=model.spike_times[idx],
                           t_stop=model.duration, waveforms=w, units='s',
-                          sampling_rate=model.sample_rate*pq.Hz,
+                          sampling_rate=model.sample_rate * pq.Hz,
                           file_origin=self.filename,
                           **{'cluster_id': cluster_id})
         return sptr

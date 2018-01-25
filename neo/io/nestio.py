@@ -125,9 +125,9 @@ class NestIO(BaseIO):
         column_list_no_None = [c for c in column_list if c is not None]
         if len(np.unique(column_list_no_None)) < len(column_list_no_None):
             raise ValueError(
-                    'One or more columns have been specified to contain '
-                    'the same data. Columns were specified to %s.'
-                    '' % column_list_no_None)
+                'One or more columns have been specified to contain '
+                'the same data. Columns were specified to %s.'
+                '' % column_list_no_None)
 
         # extracting condition and sorting parameters for raw data loading
         (condition, condition_column,
@@ -138,17 +138,16 @@ class NestIO(BaseIO):
                                                             t_stop)
         # loading raw data columns
         data = self.avail_IOs['dat'].get_columns(
-                column_ids=column_ids,
-                condition=condition,
-                condition_column=condition_column,
-                sorting_columns=sorting_column)
+            column_ids=column_ids,
+            condition=condition,
+            condition_column=condition_column,
+            sorting_columns=sorting_column)
 
         sampling_period = self._check_input_sampling_period(sampling_period,
                                                             time_column,
                                                             time_unit,
                                                             data)
         analogsignal_list = []
-
 
         # extracting complete gid list for anasig generation
         if (gid_list == []) and id_column is not None:
@@ -157,8 +156,8 @@ class NestIO(BaseIO):
         # generate analogsignals for each neuron ID
         for i in gid_list:
             selected_ids = self._get_selected_ids(
-                    i, id_column, time_column, t_start, t_stop, time_unit,
-                    data)
+                i, id_column, time_column, t_start, t_stop, time_unit,
+                data)
 
             # extract starting time of analogsignal
             if (time_column is not None) and data.size:
@@ -171,16 +170,16 @@ class NestIO(BaseIO):
             # create one analogsignal per value column requested
             for v_id, value_column in enumerate(value_columns):
                 signal = data[
-                         selected_ids[0]:selected_ids[1], value_column]
+                    selected_ids[0]:selected_ids[1], value_column]
 
                 # create AnalogSignal objects and annotate them with
                 #  the neuron ID
                 analogsignal_list.append(AnalogSignal(
-                        signal * value_units[v_id],
-                        sampling_period=sampling_period,
-                        t_start=anasig_start_time,
-                        id=i,
-                        type=value_types[v_id]))
+                    signal * value_units[v_id],
+                    sampling_period=sampling_period,
+                    t_start=anasig_start_time,
+                    id=i,
+                    type=value_types[v_id]))
                 # check for correct length of analogsignal
                 assert (analogsignal_list[-1].t_stop ==
                         anasig_start_time + len(signal) * sampling_period)
@@ -224,10 +223,10 @@ class NestIO(BaseIO):
                                              gdf_id_list, t_start, t_stop)
 
         data = self.avail_IOs['gdf'].get_columns(
-                column_ids=column_ids,
-                condition=condition,
-                condition_column=condition_column,
-                sorting_columns=sorting_column)
+            column_ids=column_ids,
+            condition=condition,
+            condition_column=condition_column,
+            sorting_columns=sorting_column)
 
         # create a list of SpikeTrains for all neuron IDs in gdf_id_list
         # assign spike times to neuron IDs if id_column is given
@@ -243,9 +242,9 @@ class NestIO(BaseIO):
                 times = data[selected_ids[0]:selected_ids[1], time_column]
                 spiketrain_list.append(SpikeTrain(
 
-                        times, units=time_unit,
-                        t_start=t_start, t_stop=t_stop,
-                        id=nid, **args))
+                    times, units=time_unit,
+                    t_start=t_start, t_stop=t_stop,
+                    id=nid, **args))
 
         # if id_column is not given, all spike times are collected in one
         #  spike train with id=None
@@ -364,7 +363,7 @@ class NestIO(BaseIO):
         if sampling_period is None:
             if time_column is not None:
                 data_sampling = np.unique(
-                        np.diff(sorted(np.unique(data[:, 1]))))
+                    np.diff(sorted(np.unique(data[:, 1]))))
                 if len(data_sampling) > 1:
                     raise ValueError('Different sampling distances found in '
                                      'data set (%s)' % data_sampling)
@@ -399,7 +398,7 @@ class NestIO(BaseIO):
         curr_id = 0
         if ((gid_list != [None]) and (gid_list is not None)):
             if gid_list != []:
-                condition = lambda x: x in gid_list
+                def condition(x): return x in gid_list
                 condition_column = id_column
             sorting_column.append(curr_id)  # Sorting according to gids first
             curr_id += 1
@@ -443,12 +442,12 @@ class NestIO(BaseIO):
         if time_column is not None:
             id_shifts[0] = np.searchsorted(gid_data[:, 1],
                                            t_start.rescale(
-                                                   time_unit).magnitude,
-                                           side='left')
+                time_unit).magnitude,
+                side='left')
             id_shifts[1] = (np.searchsorted(gid_data[:, 1],
                                             t_stop.rescale(
-                                                    time_unit).magnitude,
-                                            side='left') - gid_data.shape[0])
+                time_unit).magnitude,
+                side='left') - gid_data.shape[0])
 
         selected_ids = gid_ids + id_shifts
         return selected_ids
@@ -459,7 +458,7 @@ class NestIO(BaseIO):
                    id_column_gdf=0, time_column_gdf=1, value_types=None,
                    value_units=None, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         seg = self.read_segment(gid_list, time_unit, t_start,
                                 t_stop, sampling_period, id_column_dat,
                                 time_column_dat, value_columns_dat,
@@ -518,7 +517,7 @@ class NestIO(BaseIO):
             each ID in gid_list.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         if isinstance(gid_list, tuple):
             if gid_list[0] > gid_list[1]:
                 raise ValueError('The second entry in gid_list must be '
@@ -538,24 +537,24 @@ class NestIO(BaseIO):
         # Load analogsignals and attach to Segment
         if 'dat' in self.avail_formats:
             seg.analogsignals = self.__read_analogsignals(
-                    gid_list,
-                    time_unit,
-                    t_start,
-                    t_stop,
-                    sampling_period=sampling_period,
-                    id_column=id_column_dat,
-                    time_column=time_column_dat,
-                    value_columns=value_columns_dat,
-                    value_types=value_types,
-                    value_units=value_units)
+                gid_list,
+                time_unit,
+                t_start,
+                t_stop,
+                sampling_period=sampling_period,
+                id_column=id_column_dat,
+                time_column=time_column_dat,
+                value_columns=value_columns_dat,
+                value_types=value_types,
+                value_units=value_units)
         if 'gdf' in self.avail_formats:
             seg.spiketrains = self.__read_spiketrains(
-                    gid_list,
-                    time_unit,
-                    t_start,
-                    t_stop,
-                    id_column=id_column_gdf,
-                    time_column=time_column_gdf)
+                gid_list,
+                time_unit,
+                t_start,
+                t_stop,
+                id_column=id_column_gdf,
+                time_column=time_column_gdf)
 
         return seg
 
@@ -601,7 +600,7 @@ class NestIO(BaseIO):
             corresponding to the gdf_id parameter.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         # __read_spiketrains() needs a list of IDs
         return self.__read_analogsignals([gid], time_unit,
                                          t_start, t_stop,
@@ -643,7 +642,7 @@ class NestIO(BaseIO):
             corresponding to the gdf_id parameter.
         """
         assert not lazy, 'Do not support lazy'
-        
+
         if (not isinstance(gdf_id, int)) and gdf_id is not None:
             raise ValueError('gdf_id has to be of type int or None.')
 
@@ -736,7 +735,7 @@ class ColumnIO:
         elif (condition is not None) and (condition_column is not None):
             condition_function = np.vectorize(condition)
             mask = condition_function(
-                    selected_data[
+                selected_data[
                     :, condition_column]).astype(bool)
 
             selected_data = selected_data[mask, :]

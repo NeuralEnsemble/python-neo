@@ -277,9 +277,9 @@ class BrainwareSrcIO(BaseIO):
 
         # create the Block and the contents all Blocks of from IO share
         self._blk = Block(file_origin=self._file_origin)
-        
+
         self._chx = ChannelIndex(file_origin=self._file_origin,
-                                          index=np.array([], dtype=np.int))
+                                 index=np.array([], dtype=np.int))
         self._seg0 = Segment(name='Comments', file_origin=self._file_origin)
         self._unit0 = Unit(name='UnassignedSpikes',
                            file_origin=self._file_origin,
@@ -338,7 +338,7 @@ class BrainwareSrcIO(BaseIO):
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
         assert not lazy, 'Do not support lazy'
-        
+
         if kargs:
             raise NotImplementedError('This method does not have any '
                                       'argument implemented yet')
@@ -522,7 +522,7 @@ class BrainwareSrcIO(BaseIO):
 
         times = np.array(times, dtype=np.float32)
         t_start = times.min()
-        times = pq.Quantity(times-t_start, units=pq.d).rescale(pq.s)
+        times = pq.Quantity(times - t_start, units=pq.d).rescale(pq.s)
 
         labels = np.array(labels)
         senders = np.array(senders)
@@ -900,7 +900,7 @@ class BrainwareSrcIO(BaseIO):
 
         # int32 -- SpikeTrain length in ms
         spiketrainlen = pq.Quantity(np.fromfile(self._fsrc, dtype=np.int32,
-                                    count=1)[0], units=pq.ms, copy=False)
+                                                count=1)[0], units=pq.ms, copy=False)
 
         segments = []
         for train in trains:
@@ -956,7 +956,8 @@ class BrainwareSrcIO(BaseIO):
 
         # create a channel_index for the numchannels
         self._chx.index = np.arange(numchannels)
-        self._chx.channel_names = np.array(['Chan{}'.format(i) for i in range(numchannels)], dtype='S')
+        self._chx.channel_names = np.array(['Chan{}'.format(i)
+                                            for i in range(numchannels)], dtype='S')
 
         # store what side of the head we are dealing with
         for segment in segments:
@@ -1549,7 +1550,7 @@ if __name__ == '__main__':
                                        make_all_directories)
     shortname = BrainwareSrcIO.__name__.lower().strip('io')
     local_test_dir = create_local_temp_dir(shortname)
-    url = url_for_tests+shortname
+    url = url_for_tests + shortname
     FILES_TO_TEST.remove('long_170s_1rep_1clust_ch2.src')
     make_all_directories(FILES_TO_TEST, local_test_dir)
     download_test_file(FILES_TO_TEST, local_test_dir, url)

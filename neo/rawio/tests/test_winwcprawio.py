@@ -14,6 +14,6 @@ class TestWinWcpRawIO(BaseTestRawIO, unittest.TestCase, ):
     entities_to_test = ['File_winwcp_1.wcp']
     files_to_download = entities_to_test
 
+
 if __name__ == "__main__":
     unittest.main()
-

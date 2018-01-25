@@ -21,7 +21,7 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 __test__ = False
 
-#url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 import os
@@ -29,14 +29,15 @@ import logging
 import unittest
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
-        download_test_file, create_local_temp_dir)
+                                   download_test_file, create_local_temp_dir)
 
 from neo.rawio.tests import rawio_compliance as compliance
+
 
 class BaseTestRawIO(object):
     '''
     This class make common tests for all IOs.
-    
+
     Basically download files from G-node portal.
     And test the IO is working.
 
@@ -61,7 +62,7 @@ class BaseTestRawIO(object):
         self.shortname = self.rawioclass.__name__.lower().replace('rawio', '')
         self.create_local_dir_if_not_exists()
         self.download_test_files_if_not_present()
-    
+
     def create_local_dir_if_not_exists(self):
         '''
         Create a local directory to store testing files and return it.
@@ -77,11 +78,11 @@ class BaseTestRawIO(object):
         url_for_tests is global at beginning of this file.
 
         ''' % self.rawioclass.__name__
-        
+
         if not self.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
 
-        url = url_for_tests+self.shortname
+        url = url_for_tests + self.shortname
         try:
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
@@ -101,50 +102,49 @@ class BaseTestRawIO(object):
         Get the path to a filename in the current temporary file directory
         '''
         return os.path.join(self.local_test_dir, filename)
-    
+
     def test_read_all(self):
-        #Read all file in self.entities_to_test 
-        
-        
+        # Read all file in self.entities_to_test
+
         for entity_name in self.entities_to_test:
             entity_name = self.get_filename_path(entity_name)
-            
+
             if self.rawioclass.rawmode.endswith('-file'):
                 reader = self.rawioclass(filename=entity_name)
             elif self.rawioclass.rawmode.endswith('-dir'):
                 reader = self.rawioclass(dirname=entity_name)
-            
+
             txt = reader.__repr__()
             assert 'nb_block' not in txt, 'Before parser_header() nb_block should be NOT known'
-            
+
             reader.parse_header()
-            
+
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
             #~ print(txt)
-            
+
             #
             txt = reader._repr_annotations()
             #~ reader.print_annotations()
-            
+
             #~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            #~ i_start=None, i_stop=None, channel_indexes=[1])
+            #~ i_start=None, i_stop=None, channel_indexes=[1])
             #~ import matplotlib.pyplot as plt
             #~ fig, ax = plt.subplots()
             #~ ax.plot(sigs[:, 0])
             #~ plt.show()
-            
+
             #~ nb_unit = reader.unit_channels_count()
             #~ for unit_index in range(nb_unit):
-                #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
-                                #~ unit_index=unit_index)
-                #~ if wfs is not None:
-                    #~ import matplotlib.pyplot as plt
-                    #~ fig, ax = plt.subplots()
-                    #~ ax.plot(wfs[:, 0, :50].T)
-                    #~ plt.show()
-            
-            #lanch a series of test compliance
+            #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
+            #~ unit_index=unit_index)
+            #~ if wfs is not None:
+            #~ import matplotlib.pyplot as plt
+            #~ fig, ax = plt.subplots()
+            #~ ax.plot(wfs[:, 0, :50].T)
+            #~ plt.show()
+
+            # lanch a series of test compliance
             compliance.header_is_total(reader)
             compliance.count_element(reader)
             compliance.read_analogsignals(reader)
@@ -152,18 +152,9 @@ class BaseTestRawIO(object):
             compliance.read_spike_waveforms(reader)
             compliance.read_events(reader)
             compliance.has_annotations(reader)
-            
-            
-            
-            
-            
-            #basic benchmark
+
+            # basic benchmark
             level = logging.getLogger().getEffectiveLevel()
             logging.getLogger().setLevel(logging.INFO)
             compliance.benchmark_speed_read_signals(reader)
             logging.getLogger().setLevel(level)
-            
-            
-            
-            
-

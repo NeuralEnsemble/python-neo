@@ -45,7 +45,7 @@ class IgorIO(BaseIO):
     is_readable = True   # This class can only read data
     is_writable = False  # write is not supported
     supported_objects = [Block, Segment, AnalogSignal]
-    readable_objects = [Block, Segment , AnalogSignal]
+    readable_objects = [Block, Segment, AnalogSignal]
     writeable_objects = []
     has_header = False
     is_streameable = False
@@ -53,7 +53,7 @@ class IgorIO(BaseIO):
     extensions = ['ibw', 'pxp']
     mode = 'file'
 
-    def __init__(self, filename=None, parse_notes=None) :
+    def __init__(self, filename=None, parse_notes=None):
         """
 
 
@@ -74,7 +74,7 @@ class IgorIO(BaseIO):
 
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         block = Block(file_origin=self.filename)
         block.segments.append(self.read_segment(lazy=lazy))
         block.segments[-1].block = block
@@ -82,7 +82,7 @@ class IgorIO(BaseIO):
 
     def read_segment(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         segment = Segment(file_origin=self.filename)
         segment.analogsignals.append(
             self.read_analogsignal(lazy=lazy))
@@ -91,7 +91,7 @@ class IgorIO(BaseIO):
 
     def read_analogsignal(self, path=None, lazy=False):
         assert not lazy, 'Do not support lazy'
-        
+
         if not HAVE_IGOR:
             raise Exception(("`igor` package not installed. "
                              "Try `pip install igor`"))
@@ -104,7 +104,7 @@ class IgorIO(BaseIO):
         elif self.extension == 'pxp':
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."
-            _,filesystem = pxp.load(self.filename)
+            _, filesystem = pxp.load(self.filename)
             path = path.split(':')
             location = filesystem['root']
             for element in path:
