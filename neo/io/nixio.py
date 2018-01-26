@@ -1026,8 +1026,6 @@ class NixIO(BaseIO):
 
         self._write_property(metadata, "t_start", spiketrain.t_start)
         self._write_property(metadata, "t_stop", spiketrain.t_stop)
-        # TODO: waveforms
-        # TODO: left_sweep
 
         if spiketrain.annotations:
             for k, v in spiketrain.annotations.items():
@@ -1035,6 +1033,34 @@ class NixIO(BaseIO):
 
         nixgroup.multi_tags.append(nixmt)
         nixgroup.data_arrays.append(timesda)
+
+        if spiketrain.waveforms is not None:
+            wfdata = list(wf.magnitude for wf in
+                          list(wfgroup for wfgroup in
+                               spiketrain.waveforms))
+            wfunits = units_to_string(spiketrain.waveforms.units)
+            wfda = nixblock.create_data_array(
+                "{}.waveforms".format(nix_name), "neo.waveforms",
+                data=wfdata
+            )
+            wfda.unit = wfunits
+            wfda.metadata = nixmt.metadata.create_section(
+                wfda.name, "neo.waveforms.metadata"
+            )
+            nixmt.create_feature(wfda, nix.LinkType.Indexed)
+            # TODO: Move time dimension first for PR #457
+            # https://github.com/NeuralEnsemble/python-neo/pull/457
+            wfda.append_set_dimension()
+            wfda.append_set_dimension()
+            wftime = wfda.append_sampled_dimension(
+                spiketrain.sampling_period.magnitude.item()
+            )
+            wftime.unit = units_to_string(spiketrain.sampling_period.units)
+            wftime.label = "time"
+
+        if spiketrain.left_sweep is not None:
+            self._write_property(wfda.metadata, "left_sweep",
+                                 spiketrain.left_sweep)
 
     def write_unit(self, neounit, nixchxsource):
         """
