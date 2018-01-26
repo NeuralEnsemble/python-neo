@@ -795,6 +795,10 @@ class NixIO(BaseIO):
         for spiketrain in segment.spiketrains:
             self.write_spiketrain(spiketrain, nixblock, nixgroup)
 
+        # TODO: Handle multiref in data objects
+        # multiref: Same object linked in multiple containers
+        # Example: The same AnalogSignal linked into multiple Segments
+
     def write_analogsignal(self, anasig, nixblock, nixgroup):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
@@ -819,8 +823,7 @@ class NixIO(BaseIO):
         nixdas = list()
         for idx, row in enumerate(data):
             daname = "{}.{}".format(nix_name, idx)
-            da = nixblock.create_data_array(daname,
-                                            "neo.analogsignal",
+            da = nixblock.create_data_array(daname, "neo.analogsignal",
                                             data=row)
             da.metadata = metadata
             da.definition = anasig.description
@@ -935,7 +938,6 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
 
         nixgroup.multi_tags.append(nixmt)
-        nixgroup.data_arrays.append(timesda)
 
     def write_epoch(self, epoch, nixblock, nixgroup):
         """
@@ -987,8 +989,6 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
 
         nixgroup.multi_tags.append(nixmt)
-        nixgroup.data_arrays.append(timesda)
-        nixgroup.data_arrays.append(durada)
 
     def write_spiketrain(self, spiketrain, nixblock, nixgroup):
         """
@@ -1032,7 +1032,6 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
 
         nixgroup.multi_tags.append(nixmt)
-        nixgroup.data_arrays.append(timesda)
 
         if spiketrain.waveforms is not None:
             wfdata = list(wf.magnitude for wf in
