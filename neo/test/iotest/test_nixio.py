@@ -890,12 +890,24 @@ class NixIOWriteTest(NixIOTest):
         blk = Block("blk1")
         signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
                               sampling_period=pq.Quantity(1, "ms"))
+        othersignal = IrregularlySampledSignal(name="i1", signal=[0, 0, 0],
+                                               units="mV", times=[1, 2, 3],
+                                               time_units="ms")
+        event = Event(name="Evee", times=[0.3, 0.42], units="year")
+        epoch = Epoch(name="epoche", times=[0.1, 0.2] * pq.min,
+                      durations=[0.5, 0.5] * pq.min)
+        st = SpikeTrain(name="the train of spikes", times=[0.1, 0.2, 10.3],
+                        t_stop=11, units="us")
 
         for idx in range(3):
             segname = "seg" + str(idx)
             seg = Segment(segname)
             blk.segments.append(seg)
             seg.analogsignals.append(signal)
+            seg.irregularlysampledsignals.append(othersignal)
+            seg.events.append(event)
+            seg.epochs.append(epoch)
+            seg.spiketrains.append(st)
 
         chidx = ChannelIndex([10, 20, 29])
         seg = blk.segments[0]
