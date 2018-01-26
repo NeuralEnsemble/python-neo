@@ -294,7 +294,7 @@ def read_spike_waveforms(reader):
                                                                t_start=None, t_stop=None)
                 if raw_waveforms is None:
                     continue
-                assert raw_waveforms.shape[0] == nb_spike
+                assert raw_waveforms.shape[1] == nb_spike
                 assert raw_waveforms.ndim == 3
 
                 for dt in ('float32', 'float64'):
