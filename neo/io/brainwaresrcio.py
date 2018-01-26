@@ -619,6 +619,7 @@ class BrainwareSrcIO(BaseIO):
         # get the maximum time
         t_stop = times[-1] * 2.
 
+        waveforms = np.moveaxis(waveforms, 2, 0)
         waveforms = pq.Quantity(waveforms, units=pq.mV, copy=False)
 
         train = SpikeTrain(times=times, copy=False,

@@ -92,7 +92,7 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 2)
-        self.assertEqual(block.segments[0].spiketrains[0].waveforms.shape[0],
+        self.assertEqual(block.segments[0].spiketrains[0].waveforms.shape[1],
                          block.segments[0].spiketrains[0].shape[0])
         self.assertGreater(len(block.segments[0].events), 0)
 

@@ -536,7 +536,6 @@ class BaseRawIO(object):
     def get_spike_raw_waveforms(self,  block_index=0, seg_index=0, unit_index=0,
                                 t_start=None, t_stop=None):
         wf = self._get_spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
-        wf = np.moveaxis(wf, 2, 0)
         return wf
 
     def rescale_waveforms_to_float(self, raw_waveforms, dtype='float32', unit_index=0):

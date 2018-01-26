@@ -258,6 +258,7 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen,
     t_stop = pq.Quantity(sweepLen, units=pq.ms, dtype=np.float32)
     trig2 = pq.Quantity(trig2, units=pq.ms, dtype=np.uint8)
     waveforms = pq.Quantity(shapes, dtype=np.int8, units=pq.mV)
+    waveforms = np.moveaxis(waveforms, 2, 0)
     sampling_period = pq.Quantity(ADperiod, units=pq.us)
 
     train = SpikeTrain(times=times, t_start=t_start, t_stop=t_stop,
@@ -268,6 +269,13 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen,
     train.annotations['side'] = side
     train.sampling_period = sampling_period
     return train
+
+def empty_waveform_dimension_correction(block):
+    for seg in block.segments:
+        for st in seg.spiketrains:
+            if st.waveforms is not None:
+                if 0 in st.waveforms.shape:
+                    st.waveforms =np.moveaxis(st.waveforms, 2, 0)
 
 
 class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
@@ -325,6 +333,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
             if not refname:
                 continue
             obj = self.read_file(filename=filename, readall=True)[0]
+            empty_waveform_dimension_correction(obj)
             refobj = proc_src(self.get_filename_path(refname))
             try:
                 assert_neo_object_is_compliant(obj)
