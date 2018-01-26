@@ -139,6 +139,8 @@ class NixIO(BaseIO):
         self._block_read_counter = 0
         self._neo_map = dict()
 
+        self._signal_map = dict()
+
     def __enter__(self):
         return self
 
@@ -674,6 +676,7 @@ class NixIO(BaseIO):
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
 
+        self._signal_map = dict()  # reset signal map
         # descend into Segments
         for seg in block.segments:
             self.write_segment(seg, nixblock)
@@ -682,8 +685,7 @@ class NixIO(BaseIO):
         for chx in block.channel_indexes:
             self.write_channelindex(chx, nixblock)
 
-        # self._link_nix_obj(nixblock, loc, containerstr)
-        # self._create_references(neoblock)
+        self._create_source_links(block, nixblock)
 
     def write_channelindex(self, chx, nixblock):
         """
@@ -857,6 +859,8 @@ class NixIO(BaseIO):
             for k, v in anasig.annotations.items():
                 self._write_property(metadata, k, v)
 
+        self._signal_map[nix_name] = nixdas
+
     def write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
         """
         Convert the provided ``irsig`` (IrregularlySampledSignal) to a list of
@@ -920,6 +924,8 @@ class NixIO(BaseIO):
             for k, v in irsig.annotations.items():
                 self._write_property(metadata, k, v)
 
+        self._signal_map[nix_name] = nixdas
+
     def write_event(self, event, nixblock, nixgroup):
         """
         Convert the provided Neo Event to a NIX MultiTag and write it to the
@@ -966,6 +972,11 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
 
         nixgroup.multi_tags.append(nixmt)
+
+        # reference all AnalogSignals and IrregularlySampledSignals in Group
+        for da in nixgroup.data_arrays:
+            if da.type in ("neo.analogsignal", "neo.irregularlysampledsignal"):
+                nixmt.references.append(da)
 
     def write_epoch(self, epoch, nixblock, nixgroup):
         """
@@ -1023,6 +1034,11 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
 
         nixgroup.multi_tags.append(nixmt)
+
+        # reference all AnalogSignals and IrregularlySampledSignals in Group
+        for da in nixgroup.data_arrays:
+            if da.type in ("neo.analogsignal", "neo.irregularlysampledsignal"):
+                nixmt.references.append(da)
 
     def write_spiketrain(self, spiketrain, nixblock, nixgroup):
         """
@@ -1151,44 +1167,40 @@ class NixIO(BaseIO):
             for ch in children:
                 write_func(ch, path)
 
-    def _create_references(self, block):
+    def _create_source_links(self, neoblock, nixblock):
         """
-        Create references between NIX objects according to the supplied Neo
-        Block.
-        MultiTags reference DataArrays of the same Group.
-        DataArrays reference ChannelIndexs as sources, based on Neo
-         RCG -> Signal relationships.
-        MultiTags (SpikeTrains) reference ChannelIndexs and Units as
-         sources, based on Neo RCG -> Unit -> SpikeTrain relationships.
+        Creates between objects in a NIX Block to store the references in the
+        Neo ChannelIndex and Unit objects.
+        Specifically:
+        - If a Neo ChannelIndex references a Neo AnalogSignal or
+        IrregularlySampledSignal, the corresponding signal DataArray will
+        reference the corresponding NIX Source object which represents the
+        Neo ChannelIndex.
+        - If a Neo Unit references a Neo SpikeTrain, the corresponding
+        MultiTag will reference the NIX Source objects which represent the
+        Neo Unit and its parent ChannelIndex.
 
-        :param block: A Neo Block that has already been converted and mapped to
-         NIX objects.
+        The two arguments must represent the same Block in each corresponding
+        format.
+
+        :param neoblock: A Neo Block object
+        :param nixblock: The corresponding NIX Block
         """
-        for seg in block.segments:
-            group = self._nix_map[seg.annotations["nix_name"]]
-            group_signals = self._get_contained_signals(group)
-            for mtag in group.multi_tags:
-                if mtag.type in ("neo.epoch", "neo.event"):
-                    mtag.references.extend([sig for sig in group_signals
-                                            if sig not in mtag.references])
-        for rcg in block.channel_indexes:
-            chidxsrc = self._nix_map[rcg.annotations["nix_name"]]
-            das = list(self._nix_map[sig.annotations["nix_name"]]
-                       for sig in rcg.analogsignals +
-                       rcg.irregularlysampledsignals)
-            # flatten nested lists
-            das = [da for dalist in das for da in dalist]
-            for da in das:
-                if chidxsrc not in da.sources:
-                    da.sources.append(chidxsrc)
-            for unit in rcg.units:
-                unitsource = self._nix_map[unit.annotations["nix_name"]]
+
+        for chx in neoblock.channel_indexes:
+            signames = [sig.annotations["nix_name"] for sig in
+                        chx.analogsignals + chx.irregularlysampledsignals]
+            chxsource = nixblock.sources[chx.annotations["nix_name"]]
+            for name in signames:
+                for da in self._signal_map[name]:
+                    da.sources.append(chxsource)
+
+            for unit in chx.units:
+                unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    stmtag = self._nix_map[st.annotations["nix_name"]]
-                    if chidxsrc not in stmtag.sources:
-                        stmtag.sources.append(chidxsrc)
-                    if unitsource not in stmtag.sources:
-                        stmtag.sources.append(unitsource)
+                    stmt = nixblock.multi_tags[st.annotations["nix_name"]]
+                    stmt.sources.append(chxsource)
+                    stmt.sources.append(unitsource)
 
     def _get_object_at(self, path):
         """
