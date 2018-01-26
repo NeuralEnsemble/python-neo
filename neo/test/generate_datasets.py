@@ -284,7 +284,8 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
             iseed = None
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
 
-    if 'waveforms' in kwargs:  # everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[1]
+    # everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[1]
+    if 'waveforms' in kwargs:
         if len(kwargs["times"]) != kwargs["waveforms"].shape[1]:
             if len(kwargs["times"]) < kwargs["waveforms"].shape[1]:
 
@@ -362,7 +363,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             # parent, don't create the object, we will import it from secondary
             # containers later
             if (cascade == 'block' and len(child._parent_objects) > 0 and
-                        obj_type != child._parent_objects[-1]):
+                obj_type != child._parent_objects[-1]):
                 continue
             getattr(obj, _container_name(childname)).append(child)
 

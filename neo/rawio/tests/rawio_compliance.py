@@ -10,15 +10,13 @@ All rules are listed as function so it should be easier to:
 
 """
 import time
+import logging
+import numpy as np
+from neo.rawio.baserawio import (_signal_channel_dtype, _unit_channel_dtype,
+                                 _event_channel_dtype, _common_sig_characteristics)
 
 if not hasattr(time, 'perf_counter'):
     time.perf_counter = time.time
-import logging
-
-import numpy as np
-
-from neo.rawio.baserawio import (_signal_channel_dtype, _unit_channel_dtype,
-                                 _event_channel_dtype, _common_sig_characteristics)
 
 
 def print_class(reader):
@@ -182,13 +180,15 @@ def read_analogsignals(reader):
         assert raw_chunk0.shape[1] == len(channel_indexes2)
 
         if unique_chan_name:
-            raw_chunk1 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+            raw_chunk1 = reader.get_analogsignal_chunk(block_index=block_index,
+                                                       seg_index=seg_index,
                                                        i_start=i_start, i_stop=i_stop,
                                                        channel_names=channel_names2)
             np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
 
         if unique_chan_id:
-            raw_chunk2 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
+            raw_chunk2 = reader.get_analogsignal_chunk(block_index=block_index,
+                                                       seg_index=seg_index,
                                                        i_start=i_start, i_stop=i_stop,
                                                        channel_ids=channel_ids2)
             np.testing.assert_array_equal(raw_chunk0, raw_chunk2)

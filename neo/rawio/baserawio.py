@@ -188,9 +188,12 @@ class BaseRawIO(object):
         Usage:
         raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
         raw_annotations['blocks'][block_index] = { 'nickname' : 'super block', 'segments' : ...}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = {'nickname': 'super channel'}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = {'nickname': 'super neuron'}
-        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = {'nickname': 'super trigger'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][channel_index] = \
+            {'nickname': 'super channel'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index] = \
+            {'nickname': 'super neuron'}
+        raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][ev_chan] = \
+            {'nickname': 'super trigger'}
 
         Theses annotations will be used at the neo.io API directly in objects.
 
@@ -609,7 +612,8 @@ class BaseRawIO(object):
                 'cache_path do not exists use "home" or "same_as_file" to make this auto'
 
         # the hash of the ressource (dir of file) is done with filename+datetime
-        # TODO make something more sofisticated when rawmode='one-dir' that use all filename and datetime
+        # TODO make something more sofisticated when rawmode='one-dir',
+        #  that use all filename and datetime
         d = dict(ressource_name=ressource_name, mtime=os.path.getmtime(ressource_name))
         hash = joblib.hash(d, hash_name='md5')
 

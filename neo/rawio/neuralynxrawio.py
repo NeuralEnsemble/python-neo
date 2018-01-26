@@ -103,14 +103,12 @@ class NeuralynxRawIO(BaseRawIO):
                 sig_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
                                      units, gain, offset, group_id))
                 self.ncs_filenames[chan_id] = filename
-                keys = ['DspFilterDelay_µs', 'recording_opened', 'FileType', 'DspDelayCompensation',
-                        'recording_closed',
+                keys = ['DspFilterDelay_µs', 'recording_opened', 'FileType',
+                        'DspDelayCompensation', 'recording_closed',
                         'DspLowCutFilterType', 'HardwareSubSystemName', 'DspLowCutNumTaps',
-                        'DSPLowCutFilterEnabled',
-                        'HardwareSubSystemType', 'DspHighCutNumTaps', 'ADMaxValue',
-                        'DspLowCutFrequency',
-                        'DSPHighCutFilterEnabled', 'RecordSize', 'InputRange',
-                        'DspHighCutFrequency',
+                        'DSPLowCutFilterEnabled', 'HardwareSubSystemType', 'DspHighCutNumTaps',
+                        'ADMaxValue',  'DspLowCutFrequency', 'DSPHighCutFilterEnabled',
+                        'RecordSize', 'InputRange', 'DspHighCutFrequency',
                         'input_inverted', 'NumADChannels', 'DspHighCutFilterType', ]
                 d = {k: info[k] for k in keys if k in info}
                 signal_annotations.append(d)
@@ -454,8 +452,8 @@ class NeuralynxRawIO(BaseRawIO):
 
                 if chan_id == chan_id0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + \
-                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = (subdata[-1]['timestamp'] +
+                           np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6))
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)

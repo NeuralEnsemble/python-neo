@@ -281,14 +281,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # using items() is orders of magnitude faster
         if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
                 hasattr(t_start, 'dimensionality') and
-                    t_start.dimensionality.items() == dim.items()):
+                t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
-                    t_stop.dimensionality.items() == dim.items()):
+                t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
             obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)

@@ -98,8 +98,8 @@ class PlexonRawIO(BaseRawIO):
             block_pos[bl_type][chan_id].append(pos)
             pos += length
 
-        self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-                                2 ** 32 + bl_header['TimeStamp']
+        self._last_timestamps = (bl_header['UpperByteOf5ByteTimestamp'] * \
+                                 2 ** 32 + bl_header['TimeStamp'])
 
         # ... and finalize them in self._data_blocks
         # for a faster acces depending on type (1, 4, 5)
@@ -119,8 +119,8 @@ class PlexonRawIO(BaseRawIO):
                 bl_header = np.array(block_headers[bl_type][chan_id], dtype=DataBlockHeader)
                 bl_pos = np.array(block_pos[bl_type][chan_id], dtype='int64')
 
-                timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-                             2 ** 32 + bl_header['TimeStamp']
+                timestamps = (bl_header['UpperByteOf5ByteTimestamp'] * \
+                              2 ** 32 + bl_header['TimeStamp'])
 
                 n1 = bl_header['NumberOfWaveforms']
                 n2 = bl_header['NumberOfWordsInWaveform']

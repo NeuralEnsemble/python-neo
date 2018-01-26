@@ -8,8 +8,7 @@ This code is based on:
     http://www.neuro.ki.se/broberger/
 
 and sonpy come from :
- - SON Library 2.0 for MATLAB, written by Malcolm Lidierth at
-    King's College London.
+ - SON Library 2.0 for MATLAB, written by Malcolm Lidierth at King's College London.
     See http://www.kcl.ac.uk/depsta/biomedical/cfnr/lidierth.html
 
 This IO support old (<v6) and new files (>v7) of spike2
@@ -83,8 +82,8 @@ class Spike2RawIO(BaseRawIO):
                 else:
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
-                    chan_info['t_start'] = block_info['start_time'] * \
-                                           info['us_per_time'] * info['dtime_base']
+                    chan_info['t_start'] = (block_info['start_time'] * \
+                                            info['us_per_time'] * info['dtime_base'])
 
                 self._channel_infos.append(chan_info)
 
@@ -461,8 +460,8 @@ def read_as_dict(fid, dtype):
         if dt[k].kind == 'S':
             v = v.decode('iso-8859-1')
             if len(v) > 0:
-                l = ord(v[0])
-                v = v[1:l + 1]
+                m = ord(v[0])
+                v = v[1:m + 1]
 
         info[k] = v
     return info

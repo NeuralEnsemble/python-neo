@@ -278,7 +278,8 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
 
-            # Read nsx data header(s) for nsxdef get_analogsignal_shape(self, block_index, seg_index):
+            # Read nsx data header(s) for nsxdef get_analogsignal_shape
+            # (self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
 
         # We can load only one for one class instance
@@ -777,8 +778,8 @@ class BlackrockRawIO(BaseRawIO):
 
             # data size = number of data points * (2bytes * number of channels)
             # use of `int` avoids overflow problem
-            data_size = int(dh['nb_data_points']) * \
-                        int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
+            channel_count = int(self.__nsx_basic_header[nsx_nb]['channel_count'])
+            data_size = int(dh['nb_data_points']) * channel_count * 2
             # define new offset (to possible next data block)
             offset = data_header[index]['offset_to_data_block'] + data_size
 
@@ -1463,7 +1464,8 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters  # Returns complete dictionary because then it does not need to be called so often
+        # Returns complete dictionary because then it does not need to be called so often
+        return nsx_parameters
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """

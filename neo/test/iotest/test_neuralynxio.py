@@ -5,20 +5,12 @@ Tests of neo.io.blackrockio
 
 # needed for python 3 compatibility
 from __future__ import absolute_import
-
-import os
-import sys
-import re
+import time
 import warnings
-
 import unittest
-
-import numpy as np
 import quantities as pq
-
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import *
-
 from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuralynxio import NeuralynxIO as NewNeuralynxIO
 from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
@@ -212,10 +204,6 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
 # All above must delete before merging to master
 # the purpose is to test Old and New NeuralynxIO
 
-
-import time
-
-
 def compare_old_and_new_neuralynxio():
     base = '/tmp/files_for_testing_neo/neuralynx/'
     dirname = base + 'Cheetah_v5.5.1/original_data/'
@@ -303,8 +291,7 @@ def compare_attributes(child1, child2):
             continue
         if type(child1) == SpikeTrain and attr_name == 'times':
             continue
-        unequal = child1.__getattribute__(attr_name) != \
-                  child2.__getattribute__(attr_name)
+        unequal = child1.__getattribute__(attr_name) != child2.__getattribute__(attr_name)
         if hasattr(unequal, 'any'):
             unequal = unequal.any()
         if unequal:
