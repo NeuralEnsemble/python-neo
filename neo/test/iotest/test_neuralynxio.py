@@ -244,7 +244,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(signal_group_mode='group-by-same-units')
         self.assertEqual(len(block.channel_indexes), 1)
 
-
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
     def test_ncs(self):
         for session in self.files_to_test[1:2]:  # in the long run this should include all files
@@ -268,6 +267,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
     def test_gap_handling_v551(self):
         dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
         block = nio.read_block(time_slices=None)
 
         # known gap values
@@ -292,12 +292,10 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
 
 import time
 
-
 def compare_old_and_new_neuralynxio():
     base = '/tmp/files_for_testing_neo/neuralynx/'
     dirname = base + 'Cheetah_v5.5.1/original_data/'
-    # ~ dirname = base+'Cheetah_v5.7.4/original_data/'
-
+    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
 
     t0 = time.perf_counter()
     newreader = NewNeuralynxIO(dirname)
@@ -377,8 +375,8 @@ def compare_attributes(child1, child2):
             continue
         if type(child1) == SpikeTrain and attr_name == 'times':
             continue
-        unequal = child1.__getattribute__(attr_name) != \
-                  child2.__getattribute__(attr_name)
+        unequal = child1.__getattribute__(attr_name) !=  child2.__getattribute__(attr_name)
+
         if hasattr(unequal, 'any'):
             unequal = unequal.any()
         if unequal:
@@ -392,4 +390,3 @@ def compare_attributes(child1, child2):
 if __name__ == '__main__':
     unittest.main()
     #~ compare_old_and_new_neuralynxio()
-

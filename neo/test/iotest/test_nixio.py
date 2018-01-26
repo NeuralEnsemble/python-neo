@@ -311,11 +311,11 @@ class NixIOTest(unittest.TestCase):
         nix_block_b.definition = cls.rsentence(3, 3)
 
         nix_block_a.metadata = nixfile.create_section(
-            nix_block_a.name, nix_block_a.name+".metadata"
+            nix_block_a.name, nix_block_a.name + ".metadata"
         )
 
         nix_block_b.metadata = nixfile.create_section(
-            nix_block_b.name, nix_block_b.name+".metadata"
+            nix_block_b.name, nix_block_b.name + ".metadata"
         )
 
         nix_blocks = [nix_block_a, nix_block_b]
@@ -326,7 +326,7 @@ class NixIOTest(unittest.TestCase):
                 group.definition = cls.rsentence(10, 15)
 
                 group_md = blk.metadata.create_section(group.name,
-                                                       group.name+".metadata")
+                                                       group.name + ".metadata")
                 group.metadata = group_md
 
         blk = nix_blocks[0]
@@ -340,7 +340,7 @@ class NixIOTest(unittest.TestCase):
             asig_name = "{}_asig{}".format(cls.rword(10), n)
             asig_definition = cls.rsentence(5, 5)
             asig_md = group.metadata.create_section(asig_name,
-                                                    asig_name+".metadata")
+                                                    asig_name + ".metadata")
             for idx in range(3):
                 da_asig = blk.create_data_array(
                     "{}.{}".format(asig_name, idx),
@@ -367,7 +367,7 @@ class NixIOTest(unittest.TestCase):
             isig_name = "{}_isig{}".format(cls.rword(10), n)
             isig_definition = cls.rsentence(12, 12)
             isig_md = group.metadata.create_section(isig_name,
-                                                    isig_name+".metadata")
+                                                    isig_name + ".metadata")
             isig_times = cls.rquant(200, 1, True)
             for idx in range(10):
                 da_isig = blk.create_data_array(
@@ -404,11 +404,11 @@ class NixIOTest(unittest.TestCase):
             group.multi_tags.append(mtag_st)
             mtag_st.definition = cls.rsentence(20, 30)
             mtag_st_md = group.metadata.create_section(
-                mtag_st.name, mtag_st.name+".metadata"
+                mtag_st.name, mtag_st.name + ".metadata"
             )
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property(
-                "t_stop", nix.Value(times[-1]+1.0)
+                "t_stop", nix.Value(times[-1] + 1.0)
             )
 
             waveforms = cls.rquant((10, 8, 5), 1)
@@ -426,7 +426,7 @@ class NixIOTest(unittest.TestCase):
                 wfname, "neo.waveforms.metadata"
             )
             wfda.metadata.create_property("left_sweep",
-                                          [nix.Value(20)]*5)
+                                          [nix.Value(20)] * 5)
             allspiketrains.append(mtag_st)
 
         # Epochs
@@ -452,7 +452,7 @@ class NixIOTest(unittest.TestCase):
                 epname, "neo.epoch", times_da
             )
             mtag_ep.metadata = group.metadata.create_section(
-                epname, epname+".metadata"
+                epname, epname + ".metadata"
             )
             group.multi_tags.append(mtag_ep)
             mtag_ep.definition = cls.rsentence(2)
@@ -478,7 +478,7 @@ class NixIOTest(unittest.TestCase):
                 evname, "neo.event", times_da
             )
             mtag_ev.metadata = group.metadata.create_section(
-                evname, evname+".metadata"
+                evname, evname + ".metadata"
             )
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
@@ -504,7 +504,7 @@ class NixIOTest(unittest.TestCase):
                 nixrc.name, "neo.channelindex.metadata"
             )
             nixrc.metadata.create_property("index", nix.Value(chan))
-            nixrc.metadata.create_property("channel_id", nix.Value(chan+1))
+            nixrc.metadata.create_property("channel_id", nix.Value(chan + 1))
             dims = tuple(map(nix.Value, cls.rquant(3, 1)))
             nixrc.metadata.create_property("coordinates", dims)
             nixrc.metadata.create_property("coordinates.units",
@@ -516,7 +516,7 @@ class NixIOTest(unittest.TestCase):
             unitname = "{}-unit{}".format(cls.rword(5), idx)
             nixunit = nixchx.create_source(unitname, "neo.unit")
             nixunit.metadata = nixchx.metadata.create_section(
-                unitname, unitname+".metadata"
+                unitname, unitname + ".metadata"
             )
             nixunit.definition = cls.rsentence(4, 10)
             for st in stsperunit[idx]:
@@ -574,7 +574,7 @@ class NixIOTest(unittest.TestCase):
         arr = np.random.random(shape)
         if incr:
             arr = np.array(np.cumsum(arr))
-        return arr*unit
+        return arr * unit
 
     @classmethod
     def create_all_annotated(cls):
@@ -721,7 +721,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        epoch = Epoch(times=[1, 1, 10, 3]*pq.ms, durations=[3, 3, 3, 1]*pq.ms,
+        epoch = Epoch(times=[1, 1, 10, 3] * pq.ms, durations=[3, 3, 3, 1] * pq.ms,
                       labels=np.array(["one", "two", "three", "four"]),
                       name="test epoch", description="an epoch for testing")
 
@@ -733,7 +733,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        event = Event(times=np.arange(0, 30, 10)*pq.s,
+        event = Event(times=np.arange(0, 30, 10) * pq.s,
                       labels=np.array(["0", "1", "2"]),
                       name="event name",
                       description="event description")
@@ -745,13 +745,13 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        spiketrain = SpikeTrain(times=[3, 4, 5]*pq.s, t_stop=10.0,
+        spiketrain = SpikeTrain(times=[3, 4, 5] * pq.s, t_stop=10.0,
                                 name="spikes!", description="sssssspikes")
         seg.spiketrains.append(spiketrain)
         self.write_and_compare([block])
 
         waveforms = self.rquant((3, 5, 10), pq.mV)
-        spiketrain = SpikeTrain(times=[1, 1.1, 1.2]*pq.ms, t_stop=1.5*pq.s,
+        spiketrain = SpikeTrain(times=[1, 1.1, 1.2] * pq.ms, t_stop=1.5 * pq.s,
                                 name="spikes with wf",
                                 description="spikes for waveform test",
                                 waveforms=waveforms)
@@ -759,7 +759,7 @@ class NixIOWriteTest(NixIOTest):
         seg.spiketrains.append(spiketrain)
         self.write_and_compare([block])
 
-        spiketrain.left_sweep = np.random.random(10)*pq.ms
+        spiketrain.left_sweep = np.random.random(10) * pq.ms
         self.write_and_compare([block])
 
     def test_metadata_structure_write(self):
@@ -823,7 +823,7 @@ class NixIOWriteTest(NixIOTest):
                     seg.events.append(Event(times=times))
                 for stidx in range(nspiketrains):
                     seg.spiketrains.append(SpikeTrain(times=times,
-                                                      t_stop=times[-1]+pq.s,
+                                                      t_stop=times[-1] + pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
                 chx = ChannelIndex(name="chx{}".format(chidx),
@@ -939,7 +939,7 @@ class NixIOReadTest(NixIOTest):
         nix_blocks = self.io.nix_file.blocks
         self.compare_blocks(neo_blocks, nix_blocks)
 
-    #def test_lazyload_fullcascade_read(self):
+    # def test_lazyload_fullcascade_read(self):
     #    neo_blocks = self.io.read_all_blocks(lazy=True)
     #    nix_blocks = self.io.nix_file.blocks
     #    # data objects should be empty
@@ -956,6 +956,7 @@ class NixIOReadTest(NixIOTest):
     #            for st in seg.spiketrains:
     #                self.assertEqual(len(st), 0)
     #    self.compare_blocks(neo_blocks, nix_blocks)
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOHashTest(NixIOTest):
@@ -1003,7 +1004,7 @@ class NixIOHashTest(NixIOTest):
                     "channel_names": lambda: self.rsentence(10).split(" "),
                     "coordinates": lambda: [(np.random.random() * pq.cm,
                                              np.random.random() * pq.cm,
-                                             np.random.random() * pq.cm)]*10,
+                                             np.random.random() * pq.cm)] * 10,
                     # annotations
                     self.rword(): self.rword,
                     self.rword(): lambda: self.rquant((10, 10), pq.mV)}
@@ -1196,6 +1197,6 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = NixIO
     read_and_write_is_bijective = False
 
+
 if __name__ == "__main__":
     unittest.main()
-

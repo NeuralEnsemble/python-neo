@@ -13,7 +13,7 @@ import logging
 logging.getLogger().setLevel(logging.INFO)
 
 
-class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase):
+class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'Cheetah_v5.5.1/original_data',

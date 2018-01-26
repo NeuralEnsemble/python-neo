@@ -80,9 +80,9 @@ class BaseIO(object):
     supported_objects = []
     readable_objects = []
     writeable_objects = []
-    
+
     support_lazy = False
-    
+
     read_params = {}
     write_params = {}
 

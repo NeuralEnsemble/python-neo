@@ -127,7 +127,7 @@ class BrainwareDamIO(BaseIO):
         with BrainWare
         '''
         assert not lazy, 'Do not support lazy'
-        
+
         # there are no keyargs implemented to so far.  If someone tries to pass
         # them they are expecting them to do something or making a mistake,
         # neither of which should pass silently
@@ -140,9 +140,9 @@ class BrainwareDamIO(BaseIO):
 
         # create the objects to store other objects
         chx = ChannelIndex(file_origin=self._filename,
-                                    channel_ids=np.array([1]),
-                                    index=np.array([0]),
-                                    channel_names=np.array(['Chan1'], dtype='S'))
+                           channel_ids=np.array([1]),
+                           index=np.array([0]),
+                           channel_names=np.array(['Chan1'], dtype='S'))
 
         # load objects into their containers
         block.channel_indexes.append(chx)
@@ -224,10 +224,10 @@ class BrainwareDamIO(BaseIO):
         # int16 * numpts -- the AnalogSignal itself
         signal = np.fromfile(fobject, dtype=np.int16, count=numpts)
 
-        sig = AnalogSignal(signal.astype(np.float)*pq.mV,
-                           t_start=t_start*pq.d,
+        sig = AnalogSignal(signal.astype(np.float) * pq.mV,
+                           t_start=t_start * pq.d,
                            file_origin=self._filename,
-                           sampling_period=1.*pq.s,
+                           sampling_period=1. * pq.s,
                            copy=False)
         # Note: setting the sampling_period to 1 s is arbitrary
 

@@ -20,8 +20,8 @@ Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+
+from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -255,10 +255,11 @@ class NeuralynxRawIO(BaseRawIO):
 
                 ev_ann = seg_annotations['events'][c]
                 ev_ann['file_origin'] = self.nev_filenames[chan_id]
-                # ~ ev_ann['marker_id'] =
-                # ~ ev_ann['nttl'] =
-                # ~ ev_ann['digital_marker'] =
-                # ~ ev_ann['analog_marker'] =
+
+                #~ ev_ann['marker_id'] =
+                #~ ev_ann['nttl'] =
+                #~ ev_ann['digital_marker'] =
+                #~ ev_ann['analog_marker'] =
 
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start
@@ -287,8 +288,7 @@ class NeuralynxRawIO(BaseRawIO):
             channel_indexes = slice(None)
         channel_ids = self.header['signal_channels'][channel_indexes]['id']
 
-        sigs_chunk = np.zeros(
-            (i_stop - i_start, len(channel_ids)), dtype='int16')
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
         for i, chan_id in enumerate(channel_ids):
             data = self._sigs_memmap[seg_index][chan_id]
             sub = data[block_start:block_stop]
@@ -307,8 +307,7 @@ class NeuralynxRawIO(BaseRawIO):
         nb_spike = int(data[keep].size)
         return nb_spike
 
-    def _get_spike_timestamps(self, block_index, seg_index, unit_index,
-                              t_start, t_stop):
+    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_id]
         ts = data['timestamp']
@@ -359,13 +358,12 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._nev_memmap[chan_id]
         ts0, ts1 = self._timestamp_limits[seg_index]
         ts = data['timestamp']
-        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
-               (data['ttl_input'] == ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) &\
+            (data['ttl_input'] == ttl_input)
         nb_event = int(data[keep].size)
         return nb_event
 
-    def _get_event_timestamps(self, block_index, seg_index,
-                              event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         event_id, ttl_input = self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
@@ -379,6 +377,7 @@ class NeuralynxRawIO(BaseRawIO):
         ts = data['timestamp']
         keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
                (data['ttl_input'] == ttl_input)
+
         subdata = data[keep]
         timestamps = subdata['timestamp']
         labels = subdata['event_string'].astype('U')
@@ -419,8 +418,8 @@ class NeuralynxRawIO(BaseRawIO):
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
         chan_id0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_id0]
-        data0 = np.memmap(
-            filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+
+        data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
 
         gap_indexes = None
         if self.use_cache:
@@ -434,7 +433,6 @@ class NeuralynxRawIO(BaseRawIO):
 
             # It should be that:
             # gap_indexes, = np.nonzero(deltas0!=good_delta)
-
             # but for a file I have found many deltas0==15999 deltas0==16000
             # I guess this is a round problem
             # So this is the same with a tolerance of 1 or 2 ticks
@@ -457,8 +455,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._timestamp_limits = []
         # create segment with subdata block/t_start/t_stop/length
         for chan_id, ncs_filename in self.ncs_filenames.items():
-            data = np.memmap(
-                ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
+            data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
             for seg_index in range(self._nb_segment):
@@ -475,8 +472,8 @@ class NeuralynxRawIO(BaseRawIO):
 
                 if chan_id == chan_id0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + np.uint64(
-                        BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] + \
+                        np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
@@ -577,7 +574,6 @@ def read_txt_header(filename):
             'Number of channel ids does not match channel names.'
     else:
         info['channel_names'] = [name] * len(info['channel_ids'])
-
     if 'version' in info:
         version = info['version'].replace('"', '')
         info['version'] = distutils.version.LooseVersion(version)

@@ -110,7 +110,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(unit.name, targ1)
 
         targ2 = get_fake_value('description', str,
-                               seed=seed+1, obj=Unit)
+                               seed=seed + 1, obj=Unit)
         self.assertEqual(unit.description, targ2)
 
         targ3 = get_fake_value('file_origin', str)

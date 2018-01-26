@@ -18,6 +18,6 @@ class TestMicromedRawIO(BaseTestRawIO, unittest.TestCase, ):
     files_to_download = ['File_micromed_1.TRC']
     entities_to_test = files_to_download
 
+
 if __name__ == "__main__":
     unittest.main()
-

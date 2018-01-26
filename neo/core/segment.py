@@ -103,11 +103,12 @@ class Segment(Container):
         '''
         Time when first signal begins.
         '''
-        t_starts = [sig.t_start for sig in self.analogsignals + self.spiketrains + self.irregularlysampledsignals]
+        t_starts = [sig.t_start for sig in self.analogsignals +
+                    self.spiketrains + self.irregularlysampledsignals]
         t_starts += [e.times[0] for e in self.epochs + self.events if len(e.times) > 0]
 
         # t_start is not defined if no children are present
-        if len(t_starts)==0:
+        if len(t_starts) == 0:
             return None
 
         t_start = min(t_starts)
@@ -119,11 +120,12 @@ class Segment(Container):
         '''
         Time when last signal ends.
         '''
-        t_stops = [sig.t_stop for sig in self.analogsignals +  self.spiketrains + self.irregularlysampledsignals]
+        t_stops = [sig.t_stop for sig in self.analogsignals +
+                   self.spiketrains + self.irregularlysampledsignals]
         t_stops += [e.times[-1] for e in self.epochs + self.events if len(e.times) > 0]
 
         # t_stop is not defined if no children are present
-        if len(t_stops)==0:
+        if len(t_stops) == 0:
             return None
 
         t_stop = max(t_stops)
@@ -247,5 +249,5 @@ class Segment(Container):
         seg.spiketrains = self.take_spiketrains_by_unit(unit_list)
         seg.analogsignals = \
             self.take_slice_of_analogsignalarray_by_unit(unit_list)
-        #TODO copy others attributes
+        # TODO copy others attributes
         return seg

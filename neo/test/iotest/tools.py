@@ -15,7 +15,6 @@ from neo.core import Block, Segment
 from neo.test.generate_datasets import generate_from_supported_objects
 
 
-
 def close_object_safe(obj):
     """
     Close an object safely, ignoring errors
@@ -90,7 +89,11 @@ def get_test_file_full_path(ioclass, filename=None,
         cleanup_test_file(ioclass, filename)
 
     return filename
-get_test_file_full_path.__test__ = False # prevent this being treated as a test if imported into a test file
+
+
+# prevent this being treated as a test if imported into a test file
+get_test_file_full_path.__test__ = False
+
 
 def create_generic_io_object(ioclass, filename=None, directory=None,
                              return_path=False, clean=False):

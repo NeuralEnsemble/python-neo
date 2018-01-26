@@ -123,7 +123,7 @@ class NeoMatlabIO(BaseIO):
                 seg.epochs{1} = epoch;
 
                 block.segments{s} = seg;
-                
+
             end
 
             save 'myblock.mat' block -V7
@@ -224,7 +224,7 @@ class NeoMatlabIO(BaseIO):
 
         """
         assert not lazy, 'Do not support lazy'
-        
+
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True, mat_dtype=True)
         if not 'block' in d:
@@ -282,14 +282,14 @@ class NeoMatlabIO(BaseIO):
             attrname, attrtype = attr[0], attr[1]
 
             #~ if attrname =='':
-                #~ struct['array'] = ob.magnitude
-                #~ struct['units'] = ob.dimensionality.string
-                #~ continue
+            #~ struct['array'] = ob.magnitude
+            #~ struct['units'] = ob.dimensionality.string
+            #~ continue
 
             if (hasattr(ob, '_quantity_attr') and
                     ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
-                struct[attrname+'_units'] = ob.dimensionality.string
+                struct[attrname + '_units'] = ob.dimensionality.string
                 continue
 
             if not(attrname in ob.annotations or hasattr(ob, attrname)):
@@ -314,9 +314,9 @@ class NeoMatlabIO(BaseIO):
         # check if hinerits Quantity
         #~ is_quantity = False
         #~ for attr in cl._necessary_attrs:
-            #~ if attr[0] == '' and attr[1] == pq.Quantity:
-                #~ is_quantity = True
-                #~ break
+        #~ if attr[0] == '' and attr[1] == pq.Quantity:
+        #~ is_quantity = True
+        #~ break
         #~ is_quantiy = hasattr(cl, '_quantity_attr')
 
         #~ if is_quantity:
@@ -387,7 +387,7 @@ class NeoMatlabIO(BaseIO):
                     item = item.astype(dt)
                 elif attrtype == pq.Quantity:
                     ndim = dict_attributes[attrname][1]
-                    units = str(getattr(struct, attrname+'_units'))
+                    units = str(getattr(struct, attrname + '_units'))
                     if ndim == 0:
                         item = pq.Quantity(item, units)
                     else:
