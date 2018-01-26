@@ -165,7 +165,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.channel_indexes), 1)
 
     def test_read_segment(self):
-
         dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
@@ -218,10 +217,9 @@ import time
 
 
 def compare_old_and_new_neuralynxio():
-
     base = '/tmp/files_for_testing_neo/neuralynx/'
     dirname = base + 'Cheetah_v5.5.1/original_data/'
-    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
+    # ~ dirname = base+'Cheetah_v5.7.4/original_data/'
 
     t0 = time.perf_counter()
     newreader = NewNeuralynxIO(dirname)
@@ -289,7 +287,7 @@ def compare_annotations(anno1, anno2):
         warnings.warn('Different numbers of annotations! {} != {'
                       '}\nSkipping further comparison of this '
                       'annotation list.'.format(
-                          anno1.keys(), anno2.keys()))
+            anno1.keys(), anno2.keys()))
         return
     assert anno1.keys() == anno2.keys()
     for key in anno1.keys():
@@ -306,7 +304,7 @@ def compare_attributes(child1, child2):
         if type(child1) == SpikeTrain and attr_name == 'times':
             continue
         unequal = child1.__getattribute__(attr_name) != \
-            child2.__getattribute__(attr_name)
+                  child2.__getattribute__(attr_name)
         if hasattr(unequal, 'any'):
             unequal = unequal.any()
         if unequal:
@@ -319,4 +317,4 @@ def compare_attributes(child1, child2):
 
 if __name__ == '__main__':
     unittest.main()
-    #~ compare_old_and_new_neuralynxio()
+    # ~ compare_old_and_new_neuralynxio()

@@ -90,10 +90,10 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
 
         # Check if digital input port events are equal
         nb_ev_chan = reader.event_channels_count()
-        #~ print(reader.header['event_channels'])
+        # print(reader.header['event_channels'])
         for ev_chan in range(nb_ev_chan):
             name = reader.header['event_channels']['name'][ev_chan]
-            #~ print(name)
+            # print(name)
             if name == 'digital_input_port':
                 all_timestamps, _, labels = reader.get_event_timestamps(
                     event_channel_index=ev_chan)

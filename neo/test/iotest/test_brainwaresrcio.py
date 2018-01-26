@@ -270,12 +270,13 @@ def proc_src_condition_unit_repetition(sweep, damaIndex, timeStamp, sweepLen,
     train.sampling_period = sampling_period
     return train
 
+
 def empty_waveform_dimension_correction(block):
     for seg in block.segments:
         for st in seg.spiketrains:
             if st.waveforms is not None:
                 if 0 in st.waveforms.shape:
-                    st.waveforms =np.moveaxis(st.waveforms, 2, 0)
+                    st.waveforms = np.moveaxis(st.waveforms, 2, 0)
 
 
 class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):

@@ -281,14 +281,14 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # using items() is orders of magnitude faster
         if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
                 hasattr(t_start, 'dimensionality') and
-                t_start.dimensionality.items() == dim.items()):
+                    t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
         if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
                 hasattr(t_stop, 'dimensionality') and
-                t_stop.dimensionality.items() == dim.items()):
+                    t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
             obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
@@ -432,7 +432,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         # sort the waveforms by the times
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
-            self.waveforms = self.waveforms[:,sort_indices,:]
+            self.waveforms = self.waveforms[:, sort_indices, :]
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -489,7 +489,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         '''
         obj = super(SpikeTrain, self).__getitem__(i)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
-            obj.waveforms = obj.waveforms.__getitem__([slice(None),i,slice(None)])
+            obj.waveforms = obj.waveforms.__getitem__([slice(None), i, slice(None)])
         return obj
 
     def __setitem__(self, i, value):
@@ -567,7 +567,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         new_st.t_start = max(_t_start, self.t_start)
         new_st.t_stop = min(_t_stop, self.t_stop)
         if self.waveforms is not None:
-            new_st.waveforms = self.waveforms[:,indices,:]
+            new_st.waveforms = self.waveforms[:, indices, :]
 
         return new_st
 
@@ -624,8 +624,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
                            sampling_rate=self.sampling_rate,
                            left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
-            wfs_stack = np.concatenate((self.waveforms, other.waveforms),axis=1)
-            wfs_stack = wfs_stack[:,sorting,:]
+            wfs_stack = np.concatenate((self.waveforms, other.waveforms), axis=1)
+            wfs_stack = wfs_stack[:, sorting, :]
             train.waveforms = wfs_stack
         train.segment = self.segment
         if train.segment is not None:

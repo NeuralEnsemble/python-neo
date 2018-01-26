@@ -84,7 +84,7 @@ class Spike2RawIO(BaseRawIO):
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
                     chan_info['t_start'] = block_info['start_time'] * \
-                        info['us_per_time'] * info['dtime_base']
+                                           info['us_per_time'] * info['dtime_base']
 
                 self._channel_infos.append(chan_info)
 
@@ -95,7 +95,6 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = []
             ind = chan_info['firstblock']
             for b in range(chan_info['blocks']):
-
                 block_info = self._memmap[ind:ind + 20].view(blockHeaderDesciption)[0]
                 data_blocks.append((ind, block_info['items'], 0))
                 ind = block_info['succ_block']
@@ -284,7 +283,7 @@ class Spike2RawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -308,7 +307,7 @@ class Spike2RawIO(BaseRawIO):
             bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
             bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
             ind = 0
-            for bl in range(bl0,  bl1):
+            for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']
                 ind1 = data_blocks[bl]['size'] * dt.itemsize + ind0
                 data = self._memmap[ind0:ind1].view(dt)
@@ -326,7 +325,8 @@ class Spike2RawIO(BaseRawIO):
 
         return raw_signals
 
-    def _get_internal_timestamp_(self, chan_id, t_start, t_stop, other_field=None, marker_filter=None):
+    def _get_internal_timestamp_(self, chan_id, t_start, t_stop, other_field=None,
+                                 marker_filter=None):
         chan_info = self._channel_infos[chan_id]
         data_blocks = self._data_blocks[chan_id]
         dt = get_channel_dtype(chan_info)
@@ -337,7 +337,7 @@ class Spike2RawIO(BaseRawIO):
             lim0 = int(t_start / self._time_factor)
 
         if t_stop is None:
-            lim1 = 2**32
+            lim1 = 2 ** 32
         else:
             lim1 = int(t_stop / self._time_factor)
 
@@ -373,10 +373,10 @@ class Spike2RawIO(BaseRawIO):
                 othervalues = np.zeros(0, dtype=dt.fields[other_field][0])
             return timestamps, othervalues
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         return self._spike_sounts[unit_index]
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         unit_header = self.header['unit_channels'][unit_index]
         chan_id, unit_id = self.internal_unit_ids[unit_index]
 
@@ -405,7 +405,8 @@ class Spike2RawIO(BaseRawIO):
             marker_filter = None
 
         timestamps, waveforms = self._get_internal_timestamp_(chan_id, t_start, t_stop,
-                                                              other_field='waveform', marker_filter=marker_filter)
+                                                              other_field='waveform',
+                                                              marker_filter=marker_filter)
 
         waveforms = waveforms.reshape(timestamps.size, 1, -1)
         waveforms = np.moveaxis(waveforms, 2, 0)
@@ -419,7 +420,7 @@ class Spike2RawIO(BaseRawIO):
         nb_event = data_blocks['size'].sum()
         return nb_event
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         event_header = self.header['event_channels'][event_channel_index]
         chan_id = int(event_header['id'])  # because set to string in header
         chan_info = self._channel_infos[chan_id]
@@ -479,11 +480,11 @@ def get_channel_dtype(chan_info):
         dt = [('tick', 'i4'), ('marker', 'i4')]
     elif chan_info['kind'] in [6]:  # AdcMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-              #~ ('adc', 'S%d' % chan_info['n_extra'])]
+              # ~ ('adc', 'S%d' % chan_info['n_extra'])]
               ('waveform', 'int16', chan_info['n_extra'] // 2)]
     elif chan_info['kind'] in [7]:  # RealMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-              #~ ('real', 'S%d' % chan_info['n_extra'])]
+              # ~ ('real', 'S%d' % chan_info['n_extra'])]
               ('waveform', 'float32', chan_info['n_extra'] // 4)]
     elif chan_info['kind'] in [8]:  # TextMark data
         dt = [('tick', 'i4'), ('marker', 'i4'),

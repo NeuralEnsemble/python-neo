@@ -328,7 +328,7 @@ class ExampleRawIO(BaseRawIO):
         # the main difference between spike channel and event channel
         # is that for here we have 3 numpy array timestamp, durations, labels
         # durations must be None for 'event'
-         # label must a dtype ='U'
+        # label must a dtype ='U'
 
         # in our IO event are directly coded in seconds
         seg_t_start = self._segment_t_start(block_index, seg_index)
