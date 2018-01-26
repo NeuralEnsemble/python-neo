@@ -795,10 +795,6 @@ class NixIO(BaseIO):
         for spiketrain in segment.spiketrains:
             self.write_spiketrain(spiketrain, nixblock, nixgroup)
 
-        # TODO: Handle multiref in data objects
-        # multiref: Same object linked in multiple containers
-        # Example: The same AnalogSignal linked into multiple Segments
-
     def write_analogsignal(self, anasig, nixblock, nixgroup):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
@@ -815,6 +811,19 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.analogsignal.{}".format(self._generate_nix_name())
             anasig.annotate(nix_name=nix_name)
+
+        if "{}.0".format(nix_name) in nixblock.data_arrays:
+            # AnalogSignal is in multiple Segments.
+            # Append DataArrays to Group and return.
+            dalist = list()
+            for idx in itertools.count():
+                daname = "{}.{}".format(nix_name, idx)
+                if daname in nixblock.data_arrays:
+                    dalist.append(nixblock.data_arrays[daname])
+                else:
+                    break
+            nixgroup.data_arrays.extend(dalist)
+            return
 
         data = np.transpose(anasig[:].magnitude)
         metadata = nixgroup.metadata.create_section(
@@ -867,6 +876,19 @@ class NixIO(BaseIO):
             )
             irsig.annotate(nix_name=nix_name)
 
+        if "{}.0".format(nix_name) in nixblock.data_arrays:
+            # IrregularlySampledSignal is in multiple Segments.
+            # Append DataArrays to Group and return.
+            dalist = list()
+            for idx in itertools.count():
+                daname = "{}.{}".format(nix_name, idx)
+                if daname in nixblock.data_arrays:
+                    dalist.append(nixblock.data_arrays[daname])
+                else:
+                    break
+            nixgroup.data_arrays.extend(dalist)
+            return
+
         data = np.transpose(irsig[:].magnitude)
         metadata = nixgroup.metadata.create_section(
             nix_name, "neo.irregularlysampledsignal.metadata"
@@ -913,6 +935,12 @@ class NixIO(BaseIO):
             nix_name = "neo.event.{}".format(self._generate_nix_name())
             event.annotate(nix_name=nix_name)
 
+        if nix_name in nixblock.multi_tags:
+            # Event is in multiple Segments. Append to Group and return.
+            mt = nixblock.multi_tags[nix_name]
+            nixgroup.multi_tags.append(mt)
+            return
+
         times = event.times.magnitude
         units = units_to_string(event.times.units)
         timesda = nixblock.create_data_array(
@@ -953,6 +981,12 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.epoch.{}".format(self._generate_nix_name())
             epoch.annotate(nix_name=nix_name)
+
+        if nix_name in nixblock.multi_tags:
+            # Epoch is in multiple Segments. Append to Group and return.
+            mt = nixblock.multi_tags[nix_name]
+            nixgroup.multi_tags.append(mt)
+            return
 
         times = epoch.times.magnitude
         tunits = units_to_string(epoch.times.units)
@@ -1004,6 +1038,12 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.spiketrain.{}".format(self._generate_nix_name())
             spiketrain.annotate(nix_name=nix_name)
+
+        if nix_name in nixblock.multi_tags:
+            # SpikeTrain is in multiple Segments. Append to Group and return.
+            mt = nixblock.multi_tags[nix_name]
+            nixgroup.multi_tags.append(mt)
+            return
 
         times = spiketrain.times.magnitude
         tunits = units_to_string(spiketrain.times.units)
