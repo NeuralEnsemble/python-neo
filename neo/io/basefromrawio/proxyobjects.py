@@ -217,7 +217,7 @@ class SpikeTrainProxy(BaseProxy):
     >>> proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_channel=0,
                         block_index=0, seg_index=0,)
     >>> sptr = proxy_sptr.load()
-    >>> slice_of_sptr = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
+    >>> slice_of_sptr = proxy_sptr.load(time_slice=(1.*pq.s, 2.*pq.s))
     
     '''
     
@@ -234,9 +234,9 @@ class SpikeTrainProxy(BaseProxy):
         self._seg_index = seg_index
         self._unit_index = unit_index
         
-        nb_sipike = self._rawio.spike_count(block_index=block_index, seg_index=seg_index, 
+        nb_spike = self._rawio.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
-        self.shape = (nb_sipike, )
+        self.shape = (nb_spike, )
         
         self.t_start = self._rawio.segment_t_start(block_index, seg_index) * pq.s
         self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
@@ -313,27 +313,125 @@ class SpikeTrainProxy(BaseProxy):
         
         return sptr
 
-
-class EventProxy(BaseProxy):
+class _EventOrEpoch(BaseProxy):
     _single_parent_objects = ('Segment',)
-    _necessary_attrs = ()
+    _quantity_attr = 'times'
     
-    def __init__(self, rawio=None, **kargs):
-        BaseProxy.__init__(self, rawio=rawio, **kargs)
+    def __init__(self, rawio=None, event_channel_index=None, block_index=0, seg_index=0):
         
-    def load(self):
-        pass
+        self._rawio = rawio
+        self._block_index = block_index
+        self._seg_index = seg_index
+        self._event_channel_index = event_channel_index
+        
+        nb_event = self._rawio.event_count(block_index=block_index, seg_index=seg_index, 
+                                        event_channel_index=event_channel_index)
+        self.shape = (nb_event, )
+        
+        self.t_start = self._rawio.segment_t_start(block_index, seg_index) * pq.s
+        self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
+
+        #both necessary attr and annotations
+        kargs = {}
+        for k in ('name', 'id'):
+            kargs[k] = self._rawio.header['event_channels'][event_channel_index][k]
+        ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
+        kargs.update(ann)
+        
+        BaseProxy.__init__(self, **kargs)
+
+    def load(self, time_slice=None, ):
+        '''
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire signal.
+        '''
+        
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
+        _t_start = t_start.rescale('s').magnitude
+        _t_stop = t_stop.rescale('s').magnitude
+
+        timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index, 
+                        seg_index=self._seg_index, event_channel_index=self._event_channel_index, 
+                        t_start=_t_start, t_stop=_t_stop)
+        
+        dtype = 'float64'
+        times = self._rawio.rescale_event_timestamp(timestamp, dtype=dtype)
+        units = 's'
+
+        if durations is not None:
+            durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype)
+        
+        #this should be remove when labesl will be unicode
+        labels = labels.astype('S')
+        
+        h = self._rawio.header['event_channels'][self._event_channel_index]
+        if h['type'] == b'event':
+            ret = Event(times=times, labels=labels, units='s', copy=False, 
+                name=self.name,  file_origin=self.file_origin,
+                description=self.description, **self.annotations)
+        elif h['type'] == b'epoch':
+            ret = Epoch(times=times, durations=durations, labels=labels,
+                units='s', copy=False,
+                name=self.name,  file_origin=self.file_origin,
+                description=self.description, **self.annotations)
+        
+        return ret
 
 
-class EpochProxy(BaseProxy):
-    _single_parent_objects = ('Segment',)
-    _necessary_attrs = ()
+class EventProxy(_EventOrEpoch):
+    '''
+    This object mimic Event except that it does not
+    have the times nor labels.
+    All other attributes and annotations are here.
     
-    def __init__(self, rawio=None, **kargs):
-        BaseProxy.__init__(self, rawio=rawio, **kargs)
-        
-    def load(self):
-        pass
+    The goal is to postpone the loading of data into memory
+    when reading a file with the new lazy load system based
+    on neo.rawio.
+    
+    This object must not be constructed directly but is given
+    neo.io when lazy=True instead of a true Event.
+    
+    The EventProxy is able to load:
+      * only a slice of time
+    
+    Usage:
+    >>> proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                        block_index=0, seg_index=0,)
+    >>> event = proxy_event.load()
+    >>> slice_of_event = proxy_event.load(time_slice=(1.*pq.s, 2.*pq.s))
+    
+    '''
+    _necessary_attrs = (('times', pq.Quantity, 1),
+                        ('labels', np.ndarray, 1, np.dtype('S')))
+
+
+class EpochProxy(_EventOrEpoch):
+    '''
+    This object mimic Epoch except that it does not
+    have the times nor labels nor durations.
+    All other attributes and annotations are here.
+    
+    The goal is to postpone the loading of data into memory
+    when reading a file with the new lazy load system based
+    on neo.rawio.
+    
+    This object must not be constructed directly but is given
+    neo.io when lazy=True instead of a true Epoch.
+    
+    The EpochProxy is able to load:
+      * only a slice of time
+    
+    Usage:
+    >>> proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=0,
+                        block_index=0, seg_index=0,)
+    >>> epoch = proxy_epoch.load()
+    >>> slice_of_epoch = proxy_epoch.load(time_slice=(1.*pq.s, 2.*pq.s))
+    
+    '''    
+    _necessary_attrs = (('times', pq.Quantity, 1),
+                        ('durations', pq.Quantity, 1),
+                        ('labels', np.ndarray, 1, np.dtype('S')))
 
 
 

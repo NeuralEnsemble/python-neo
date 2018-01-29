@@ -9,7 +9,8 @@ import unittest
 import numpy as np
 import quantities as pq
 from neo.rawio.examplerawio import ExampleRawIO
-from neo.io.basefromrawio.proxyobjects import AnalogSignalProxy, SpikeTrainProxy
+from neo.io.basefromrawio.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy, 
+                EventProxy, EpochProxy)
 
 from neo.core import (AnalogSignal, 
                       Epoch, Event, SpikeTrain)
@@ -18,12 +19,8 @@ from neo.core import (AnalogSignal,
 from neo.test.tools import (
                             assert_arrays_almost_equal,
                             assert_neo_object_is_compliant,
-                            #~ assert_same_sub_schema,
-                            #~ assert_objects_equivalent,
                             assert_same_attributes,
-                            #~ assert_same_sub_schema,
                             )
-
 
 
 class BaseProxyTest(unittest.TestCase):
@@ -94,6 +91,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.shape==(100000, 2)
         assert '(ch0,ch6)' in anasig.name
 
+
 class TestSpikeTrainProxy(BaseProxyTest):
     
     def test_SpikeTrainProxy(self):
@@ -147,7 +145,46 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert sptr.waveforms.shape == (6, 1, 50)
 
 
+class TestEventProxy(BaseProxyTest):
+    def test_EventProxy(self):
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                        block_index=0, seg_index=0)
+        
+        assert proxy_event.name=='Some events'
+        assert proxy_event.shape==(6,)
+        
+        #full load
+        full_event = proxy_event.load(time_slice=None)
+        assert isinstance(full_event, Event)
+        assert_same_attributes(proxy_event, full_event, exclude=('times', 'labels'))
+        assert full_event.shape==proxy_event.shape
+        
+        #slice time
+        event = proxy_event.load(time_slice=(1*pq.s, 2*pq.s))
+        assert event.shape == (2,)
+        assert event.labels.shape == (2,)
 
+
+
+class TestEpochProxy(BaseProxyTest):
+    def test_EpochProxy(self):
+        proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=1,
+                        block_index=0, seg_index=0)
+
+        assert proxy_epoch.name == 'Some epochs'
+        assert proxy_epoch.shape == (10,)
+        
+        #full load
+        full_epoch = proxy_epoch.load(time_slice=None)
+        assert isinstance(full_epoch, Epoch)
+        assert_same_attributes(proxy_epoch, full_epoch, exclude=('times', 'labels', 'durations'))
+        assert full_epoch.shape==proxy_epoch.shape
+        
+        #slice time
+        event = proxy_epoch.load(time_slice=(1*pq.s, 4*pq.s))
+        assert event.shape == (3,)
+        assert event.labels.shape == (3,)
+        assert event.durations.shape == (3,)
 
 
 if __name__ == "__main__":
