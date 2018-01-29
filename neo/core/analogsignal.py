@@ -55,9 +55,9 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True,
-                           t_start=0*pq.s, sampling_rate=None,
+                           t_start=0 * pq.s, sampling_rate=None,
                            sampling_period=None, name=None, file_origin=None,
-                           description=None, annotations=None, array_annotations=None,
+                           description=None, array_annotations=None, annotations=None,
                            channel_index=None, segment=None):
     '''
     A function to map AnalogSignal.__new__ to function that
@@ -232,7 +232,7 @@ class AnalogSignal(BaseSignal):
     def _array_finalize_spec(self, obj):
         '''
         Set default values for attributes specific to :class:`AnalogSignal`.
-        
+
         Common attributes are defined in
         :meth:`__array_finalize__` in :class:`basesignal.BaseSignal`),
         which is called every time a new signal is created
@@ -245,9 +245,9 @@ class AnalogSignal(BaseSignal):
     def __deepcopy__(self, memo):
         cls = self.__class__
         new_signal = cls(np.array(self), units=self.units, dtype=self.dtype,
-               t_start=self.t_start, sampling_rate=self.sampling_rate,
-               sampling_period=self.sampling_period, name=self.name,
-               file_origin=self.file_origin, description=self.description)
+                         t_start=self.t_start, sampling_rate=self.sampling_rate,
+                         sampling_period=self.sampling_period, name=self.name,
+                         file_origin=self.file_origin, description=self.description)
         new_signal.__dict__.update(self.__dict__)
         memo[id(self)] = new_signal
         for k, v in self.__dict__.items():
@@ -496,14 +496,14 @@ class AnalogSignal(BaseSignal):
     def splice(self, signal, copy=False):
         """
         Replace part of the current signal by a new piece of signal.
-        
+
         The new piece of signal will overwrite part of the current signal
         starting at the time given by the new piece's `t_start` attribute.
-        
+
         The signal to be spliced in must have the same physical dimensions,
         sampling rate, and number of channels as the current signal and
         fit within it.
-        
+
         If `copy` is False (the default), modify the current signal in place.
         If `copy` is True, return a new signal and leave the current one untouched.
         In this case, the new signal will not be linked to any parent objects.        

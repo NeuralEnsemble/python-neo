@@ -29,6 +29,7 @@ class testFilenameParser(unittest.TestCase):
 
     The test directory contains two basenames and some decoy files with
     malformed group numbers."""
+
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
                                     'files_for_testing_neo',
@@ -83,6 +84,7 @@ class testFilenameParser(unittest.TestCase):
 @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
+
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
                                     'files_for_testing_neo',
@@ -342,7 +344,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     files_to_test = [
         'test2/base',
         'test2/base2',
-        ]
+    ]
 
     # Will fetch from g-node if they don't already exist locally
     # How does it know to do this before any of the other tests?
@@ -367,7 +369,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         'test3/base1.fet.0',
         'test3/base1.fet.1',
         'test3/base1.fet.2'
-        ]
+    ]
 
 
 def delete_test_session(dirname=None):

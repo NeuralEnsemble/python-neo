@@ -71,7 +71,7 @@ class BaseSignal(DataObject):
         self.annotations = getattr(obj, 'annotations', {})
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
-        if not hasattr(self, 'array_annotations'):
+        if self.array_annotations is None:  # TODO: Is this required?
             self.array_annotations = {}
 
         # Globally recommended attributes
@@ -90,7 +90,7 @@ class BaseSignal(DataObject):
         This is called whenever a new signal is
         created from the constructor. See :meth:`__new__' in  
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
-        ''' 
+        '''
         if units is None:
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
@@ -107,7 +107,7 @@ class BaseSignal(DataObject):
         Doesn't get called in Python 3, :meth:`__getitem__` is called instead
         '''
         return self.__getitem__(slice(i, j))
-    
+
     def __ne__(self, other):
         '''
         Non-equality test (!=)
@@ -127,7 +127,7 @@ class BaseSignal(DataObject):
         new_signal.array_annotations = self.array_annotations
         return new_signal
 
-    def _get_required_attributes(self,signal,units):
+    def _get_required_attributes(self, signal, units):
         '''
         Return a list of the required attributes for a signal as a dictionary
         '''
@@ -159,7 +159,7 @@ class BaseSignal(DataObject):
                                  and "%s"' % (from_u._dimensionality,
                                               to_u._dimensionality))
             signal = cf * self.magnitude
-        required_attributes = self._get_required_attributes(signal,to_u)
+        required_attributes = self._get_required_attributes(signal, to_u)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.channel_index = self.channel_index
@@ -174,7 +174,7 @@ class BaseSignal(DataObject):
         Required attributes of the signal are used.
         '''
         # signal is the new signal
-        required_attributes = self._get_required_attributes(signal,self.units)
+        required_attributes = self._get_required_attributes(signal, self.units)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
@@ -187,13 +187,15 @@ class BaseSignal(DataObject):
         Copy the metadata from another signal.
         Required and recommended attributes of the signal are used.
         '''
-        all_attr = {self._recommended_attrs,self._necessary_attrs}
+        all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
             for attr in sub_at:
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
+
         # Note: Array annotations cannot be copied because they belong to their respective time series
+
 
     def __rsub__(self, other, *args):
         '''
@@ -253,7 +255,8 @@ class BaseSignal(DataObject):
                     raise MergeError("Cannot merge these two signals as the %s differ." % attr[0])
 
         if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to different segments.")
+            raise MergeError(
+                "Cannot merge these two signals as they belong to different segments.")
         if hasattr(self, "lazy_shape"):
             if hasattr(other, "lazy_shape"):
                 if self.lazy_shape[0] != other.lazy_shape[0]:
@@ -286,9 +289,9 @@ class BaseSignal(DataObject):
         kwargs['array_annotations'] = merged_array_annotations
 
         signal = self.__class__(stack, units=self.units, dtype=self.dtype,
-                              copy=False, t_start=self.t_start,
-                              sampling_rate=self.sampling_rate,
-                              **kwargs)
+                                copy=False, t_start=self.t_start,
+                                sampling_rate=self.sampling_rate,
+                                **kwargs)
         signal.segment = self.segment
 
         if hasattr(self, "lazy_shape"):
@@ -297,13 +300,12 @@ class BaseSignal(DataObject):
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
             signal.channel_index = ChannelIndex(
-                    index=np.arange(signal.shape[1]),
-                    channel_ids=np.hstack([self.channel_index.channel_ids,
-                                           other.channel_index.channel_ids]),
-                    channel_names=np.hstack([self.channel_index.channel_names,
-                                             other.channel_index.channel_names]))
+                index=np.arange(signal.shape[1]),
+                channel_ids=np.hstack([self.channel_index.channel_ids,
+                                       other.channel_index.channel_ids]),
+                channel_names=np.hstack([self.channel_index.channel_names,
+                                         other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
-

@@ -18,8 +18,8 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo, merge_annotations
 from neo.core.dataobject import DataObject
 
-
 PY_VER = sys.version_info[0]
+
 
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None, description=None,
                file_origin=None, array_annotations=None, annotations=None, segment=None):
@@ -128,7 +128,7 @@ class Epoch(DataObject):
         '''
         return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
                             self.name, self.file_origin, self.description, self.array_annotations,
-                            self.annotations, self.segment)      
+                            self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
@@ -141,7 +141,7 @@ class Epoch(DataObject):
         self.segment = getattr(obj, 'segment', None)
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
-        if not hasattr(self, 'array_annotations'):
+        if self.array_annotations is None:  # TODO: Is this needed?
             self.array_annotations = {}
 
     def __repr__(self):
@@ -215,7 +215,7 @@ class Epoch(DataObject):
         cls = self.__class__
         new_ep = cls(times=self.times, durations=self.durations,
                      labels=self.labels, units=self.units,
-                     name=self.name, description=self.description, 
+                     name=self.name, description=self.description,
                      file_origin=self.file_origin)
         new_ep.__dict__.update(self.__dict__)
         memo[id(self)] = new_ep

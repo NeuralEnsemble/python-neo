@@ -16,12 +16,12 @@ from neo.core import (AnalogSignal, Block,
                       Segment, SpikeTrain, Unit)
 
 
-#def finalize_block(block):
+# def finalize_block(block):
 #    populate_RecordingChannel(block)
 #    block.create_many_to_one_relationship()
 
-    # Special case this tricky many-to-many relationship
-    # we still need links from recordingchannel to analogsignal
+# Special case this tricky many-to-many relationship
+# we still need links from recordingchannel to analogsignal
 #    for chx in block.channel_indexes:
 #        for rc in chx.recordingchannels:
 #            rc.create_many_to_one_relationship()
@@ -72,7 +72,7 @@ from neo.core import (AnalogSignal, Block,
 #         recordingchannels[ind].channel_indexes.append(chx)
 
 
-#def iteritems(D):
+# def iteritems(D):
 #    try:
 #        return D.iteritems()  # Python 2
 #    except AttributeError:

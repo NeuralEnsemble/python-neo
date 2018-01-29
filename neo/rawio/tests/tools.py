@@ -15,8 +15,8 @@ try:
     from urllib import urlretrieve  # Py2
 except ImportError:
     from urllib.request import urlretrieve  # Py3
-    
-    
+
+
 def can_use_network():
     """
     Return True if network access is allowed
@@ -60,7 +60,7 @@ def download_test_file(filename, localdir, url):
         for ifilename in filename:
             download_test_file(ifilename, localdir, url)
         return
-    
+
     localfile = os.path.join(localdir, filename)
     distantfile = url + '/' + filename
 
@@ -88,5 +88,3 @@ def create_local_temp_dir(name, directory=None):
     if not os.path.exists(directory):
         os.mkdir(directory)
     return directory
-
-

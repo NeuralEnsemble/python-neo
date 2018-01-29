@@ -199,19 +199,19 @@ class TestBlock(unittest.TestCase):
 
         seed = blk.annotations['seed']
 
-        targ0 = get_fake_value('file_datetime', datetime, seed=seed+0)
+        targ0 = get_fake_value('file_datetime', datetime, seed=seed + 0)
         self.assertEqual(blk.file_datetime, targ0)
 
-        targ1 = get_fake_value('rec_datetime', datetime, seed=seed+1)
+        targ1 = get_fake_value('rec_datetime', datetime, seed=seed + 1)
         self.assertEqual(blk.rec_datetime, targ1)
 
-        targ2 = get_fake_value('index', int, seed=seed+2, obj=Block)
+        targ2 = get_fake_value('index', int, seed=seed + 2, obj=Block)
         self.assertEqual(blk.index, targ2)
 
-        targ3 = get_fake_value('name', str, seed=seed+3, obj=Block)
+        targ3 = get_fake_value('name', str, seed=seed + 3, obj=Block)
         self.assertEqual(blk.name, targ3)
 
-        targ4 = get_fake_value('description', str, seed=seed+4, obj=Block)
+        targ4 = get_fake_value('description', str, seed=seed + 4, obj=Block)
         self.assertEqual(blk.description, targ4)
 
         targ5 = get_fake_value('file_origin', str)
@@ -279,19 +279,19 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.blk1._parent_objects, ())
         self.assertEqual(self.blk1._parent_containers, ())
 
-        self.assertEqual(len(self.blk1._single_children), 2*self.nchildren)
+        self.assertEqual(len(self.blk1._single_children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         1*self.nchildren**3 + 4*self.nchildren**2)
-        self.assertEqual(len(self.blk1.container_children), 2*self.nchildren)
+                         1 * self.nchildren**3 + 4 * self.nchildren**2)
+        self.assertEqual(len(self.blk1.container_children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
-                         2*self.nchildren + 1*self.nchildren**2)
-        self.assertEqual(len(self.blk1.children), 2*self.nchildren)
+                         2 * self.nchildren + 1 * self.nchildren**2)
+        self.assertEqual(len(self.blk1.children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.children_recur),
-                         2*self.nchildren +
-                         5*self.nchildren**2 +
-                         1*self.nchildren**3)
+                         2 * self.nchildren +
+                         5 * self.nchildren**2 +
+                         1 * self.nchildren**3)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),
@@ -363,7 +363,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_annotation_single(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                 self.sigarrs1[1::2] +
+                self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2])
@@ -421,7 +421,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_multi(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                 self.sigarrs1[1::2] +
+                self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
@@ -543,7 +543,7 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_annotation_container(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
-                 self.sigarrs1[1::2] +
+                self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
@@ -618,7 +618,7 @@ class TestBlock(unittest.TestCase):
         data = self.targobj.children_recur
 
         targ = ([self.epcs1[1], self.evts1[1]] +
-                 self.sigarrs1[1::2] +
+                self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +

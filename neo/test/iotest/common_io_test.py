@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 __test__ = False
 
-#url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
 url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
@@ -41,7 +41,7 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_children_empty)
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
-        download_test_file, create_local_temp_dir)
+                                   download_test_file, create_local_temp_dir)
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
@@ -112,7 +112,8 @@ class BaseTestIO(object):
 
         The directory path is also written to self.local_test_dir
         '''
-        self.local_test_dir = create_local_temp_dir(self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
+        self.local_test_dir = create_local_temp_dir(
+            self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):
@@ -124,7 +125,7 @@ class BaseTestIO(object):
         if not self.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
 
-        url = url_for_tests+self.shortname
+        url = url_for_tests + self.shortname
         try:
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
@@ -497,7 +498,7 @@ class BaseTestIO(object):
         lazy_list = [False]
         if self.ioclass.support_lazy:
             lazy_list.append(True)
-        
+
         for lazy in lazy_list:
             for obj, path in self.iter_objects(lazy=lazy, return_path=True):
                 try:
@@ -541,9 +542,9 @@ class BaseTestIO(object):
 
         # This is for files presents at G-Node or generated
         for obj, path, ioobj in self.iter_objects(
-                                                  lazy=True,
-                                                  return_ioobj=True,
-                                                  return_path=True):
+                lazy=True,
+                return_ioobj=True,
+                return_path=True):
             try:
                 assert_lazy_sub_schema_can_be_loaded(obj, ioobj)
             # intercept exceptions and add more information

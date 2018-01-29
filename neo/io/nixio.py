@@ -1111,8 +1111,8 @@ class NixIO(BaseIO):
     @staticmethod
     def _get_contained_signals(obj):
         return list(
-             da for da in obj.data_arrays
-             if da.type in ["neo.analogsignal", "neo.irregularlysampledsignal"]
+            da for da in obj.data_arrays
+            if da.type in ["neo.analogsignal", "neo.irregularlysampledsignal"]
         )
 
     @staticmethod

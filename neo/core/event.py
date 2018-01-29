@@ -22,7 +22,7 @@ from neo.core.dataobject import DataObject
 PY_VER = sys.version_info[0]
 
 
-def _new_event(cls, signal, times = None, labels=None, units=None, name=None, 
+def _new_event(cls, signal, times=None, labels=None, units=None, name=None,
                file_origin=None, description=None, array_annotations=None,
                annotations=None, segment=None):
     '''
@@ -31,6 +31,7 @@ def _new_event(cls, signal, times = None, labels=None, units=None, name=None,
     '''
     e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
               description=description, array_annotations=array_annotations, **annotations)
+
     e.segment = segment
     return e
 
@@ -133,7 +134,7 @@ class Event(DataObject):
         self.segment = getattr(obj, 'segment', None)
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
-        if not hasattr(self, 'array_annotations'):
+        if self.array_annotations is None:  # TODO: Is this needed?
             self.array_annotations = {}
 
     def __repr__(self):
@@ -203,7 +204,7 @@ class Event(DataObject):
         cls = self.__class__
         new_ev = cls(times=self.times,
                      labels=self.labels, units=self.units,
-                     name=self.name, description=self.description, 
+                     name=self.name, description=self.description,
                      file_origin=self.file_origin)
         new_ev.__dict__.update(self.__dict__)
         memo[id(self)] = new_ev
