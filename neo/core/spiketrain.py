@@ -506,10 +506,12 @@ class SpikeTrain(DataObject):
         '''
         Get the item or slice :attr:`i`.
         '''
+        #if isinstance(i, int):
+        #    i = slice(i, i+1)
         obj = super(SpikeTrain, self).__getitem__(i)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
-        obj.array_annotations = self.array_annotations_at_index(i)
+        #obj.array_annotations = self.array_annotations_at_index(i)
         return obj
 
     def __setitem__(self, i, value):
