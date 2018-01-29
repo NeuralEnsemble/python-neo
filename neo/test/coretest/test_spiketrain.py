@@ -1219,9 +1219,14 @@ class TestMerge(unittest.TestCase):
         train3.segment = self.train1.segment
         result = train3.merge(self.train2)
         time_unit = result.units
-        expected = sorted(np.concatenate((train3.rescale(time_unit).times,
-                                          self.train2.rescale(
-                                              time_unit).times)))
+        print(self.train2.rescale(time_unit).times.array_annotations)
+        # TODO: sorted(np.concatenate(...)) creates a problem, telling array annotations do not exist
+        aa = train3.rescale(time_unit).times
+        bb = self.train2.rescale(time_unit).times
+        ax = np.concatenate((aa, bb))
+        print(ax.array_annotations)
+        #expected = ax.sort()
+        expected = sorted(ax)
         expected = expected * time_unit
         np.testing.assert_array_equal(result.rescale(time_unit), expected)
 
