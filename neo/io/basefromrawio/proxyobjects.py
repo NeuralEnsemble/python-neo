@@ -337,9 +337,10 @@ class EpochProxy(BaseProxy):
 
 
 
-unit_convert = {'Volts': 'V',  'volts': 'V','Volt': 'V', 'volt': 'V', ' Volt' : 'V','microV': 'V'}
+unit_convert = {'Volts': 'V',  'volts': 'V', 'Volt': 'V', 'volt': 'V', ' Volt': 'V', 'microV': 'V'}
+
 def ensure_signal_units(units):
-    #test units
+    # test units
     units = units.replace(' ', '')
     if units in unit_convert:
         units = unit_convert[units]
@@ -350,21 +351,29 @@ def ensure_signal_units(units):
         units = ''
     return units
 
+
 def check_annotations(annotations):
-    #force type to str for some keys
+    # force type to str for some keys
     # imposed for tests
     for k in ('name', 'description', 'file_origin'):
         if k in annotations:
             annotations[k] = str(annotations[k])
+
+    if 'coordinates' in annotations:
+        # some rawio expose some coordinates in annotations but is not standardized
+        #(x, y, z) or polar, at the moment it is more resonable to remove them
+        annotations.pop('coordinates')
+
     return annotations
+
 
 def ensure_second(v):
     if isinstance(v, float):
-        return v*pq.s
+        return v * pq.s
     elif isinstance(v, pq.Quantity):
         return v.rescale('s')
     elif isinstance(v, int):
-        return float(v)*pq.s
+        return float(v) * pq.s
 
 
 def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):

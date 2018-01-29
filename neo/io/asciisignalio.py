@@ -31,47 +31,47 @@ class AsciiSignalIO(BaseIO):
     Usage:
         >>> from neo import io
         >>> r = io.AsciiSignalIO(filename='File_asciisignal_2.txt')
-        >>> seg = r.read_segment(lazy=False, cascade=True)
+        >>> seg = r.read_segment()
         >>> print seg.analogsignals
         [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875 ...
 
     """
 
-    is_readable        = True
-    is_writable        = True
+    is_readable = True
+    is_writable = True
 
-    supported_objects  = [ Segment , AnalogSignal]
-    readable_objects   = [ Segment]
-    writeable_objects  = [Segment]
+    supported_objects = [Segment, AnalogSignal]
+    readable_objects = [Segment]
+    writeable_objects = [Segment]
 
-    has_header         = False
-    is_streameable     = False
+    has_header = False
+    is_streameable = False
 
-    read_params        = {
-                            Segment : [
-                                        ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
-                                        ('usecols' , { 'value' : None , 'type' : int } ),
-                                        ('skiprows' , { 'value' :0 } ),
-                                        ('timecolumn' , { 'value' : None, 'type' : int } ) ,
-                                        ('unit' , { 'value' : 'V', } ),
-                                        ('sampling_rate' , { 'value' : 1000., } ),
-                                        ('t_start' , { 'value' : 0., } ),
-                                        ('method' , { 'value' : 'homemade', 'possible' : ['genfromtxt' , 'csv' , 'homemade' ] }) ,
-                                        ]
-                            }
-    write_params       = {
-                            Segment : [
-                                        ('delimiter' , {'value' :  '\t', 'possible' : ['\t' , ' ' , ',' , ';'] }) ,
-                                        ('writetimecolumn' , { 'value' : True,  } ) ,
-                                        ]
-                            }
+    read_params = {
+        Segment: [
+            ('delimiter', {'value':  '\t', 'possible': ['\t', ' ', ',', ';']}),
+            ('usecols', {'value': None, 'type': int}),
+            ('skiprows', {'value': 0}),
+            ('timecolumn', {'value': None, 'type': int}),
+            ('unit', {'value': 'V', }),
+            ('sampling_rate', {'value': 1000., }),
+            ('t_start', {'value': 0., }),
+            ('method', {'value': 'homemade', 'possible': ['genfromtxt', 'csv', 'homemade']}),
+        ]
+    }
+    write_params = {
+        Segment: [
+            ('delimiter', {'value':  '\t', 'possible': ['\t', ' ', ',', ';']}),
+            ('writetimecolumn', {'value': True, }),
+        ]
+    }
 
-    name               = None
-    extensions          = [ 'txt' , 'asc', ]
+    name = None
+    extensions = ['txt', 'asc', ]
 
     mode = 'file'
 
-    def __init__(self , filename = None) :
+    def __init__(self, filename=None):
         """
         This class read/write AnalogSignal in a text file.
         Each signal is a column.
@@ -84,21 +84,20 @@ class AsciiSignalIO(BaseIO):
         self.filename = filename
 
     def read_segment(self,
-                                        lazy = False,
-                                        cascade = True,
-                                        delimiter = '\t',
-                                        usecols = None,
-                                        skiprows =0,
+                     lazy=False,
+                     delimiter='\t',
+                     usecols=None,
+                     skiprows=0,
 
-                                        timecolumn = None,
-                                        sampling_rate = 1.*pq.Hz,
-                                        t_start = 0.*pq.s,
+                     timecolumn=None,
+                     sampling_rate=1. * pq.Hz,
+                     t_start=0. * pq.s,
 
-                                        unit = pq.V,
+                     unit=pq.V,
 
-                                        method = 'genfromtxt',
+                     method='genfromtxt',
 
-                                        ):
+                     ):
         """
         Arguments:
             delimiter  :  columns delimiter in file  '\t' or one space or two space or ',' or ';'
@@ -117,81 +116,75 @@ class AsciiSignalIO(BaseIO):
                         'homemade' use a intuitive more robust but slow method
 
         """
-        seg = Segment(file_origin = os.path.basename(self.filename))
-        if not cascade:
-            return seg
+        assert not lazy, 'Do not support lazy'
 
-        if type(sampling_rate) == float or type(sampling_rate)==int:
+        seg = Segment(file_origin=os.path.basename(self.filename))
+
+        if type(sampling_rate) == float or type(sampling_rate) == int:
             # if not quantitities Hz by default
-            sampling_rate = sampling_rate*pq.Hz
+            sampling_rate = sampling_rate * pq.Hz
 
-        if type(t_start) == float or type(t_start)==int:
+        if type(t_start) == float or type(t_start) == int:
             # if not quantitities s by default
-            t_start = t_start*pq.s
+            t_start = t_start * pq.s
 
         unit = pq.Quantity(1, unit)
 
-
-
-        #loadtxt
-        if method == 'genfromtxt' :
+        # loadtxt
+        if method == 'genfromtxt':
             sig = np.genfromtxt(self.filename,
-                                        delimiter = delimiter,
-                                        usecols = usecols ,
-                                        skip_header = skiprows,
-                                        dtype = 'f')
-            if len(sig.shape) ==1:
+                                delimiter=delimiter,
+                                usecols=usecols,
+                                skip_header=skiprows,
+                                dtype='f')
+            if len(sig.shape) == 1:
                 sig = sig[:, np.newaxis]
-        elif method == 'csv' :
-            tab = [l for l in  csv.reader( file(self.filename,'rU') , delimiter = delimiter ) ]
+        elif method == 'csv':
+            tab = [l for l in csv.reader(file(self.filename, 'rU'), delimiter=delimiter)]
             tab = tab[skiprows:]
-            sig = np.array( tab , dtype = 'f')
-        elif method == 'homemade' :
-            fid = open(self.filename,'rU')
+            sig = np.array(tab, dtype='f')
+        elif method == 'homemade':
+            fid = open(self.filename, 'rU')
             for l in range(skiprows):
                 fid.readline()
-            tab = [ ]
+            tab = []
             for line in fid.readlines():
-                line = line.replace('\r','')
-                line = line.replace('\n','')
+                line = line.replace('\r', '')
+                line = line.replace('\n', '')
                 l = line.split(delimiter)
-                while '' in l :
+                while '' in l:
                     l.remove('')
                 tab.append(l)
-            sig = np.array( tab , dtype = 'f')
+            sig = np.array(tab, dtype='f')
 
         if timecolumn is not None:
-            sampling_rate = 1./np.mean(np.diff(sig[:,timecolumn])) * pq.Hz
-            t_start = sig[0,timecolumn] * pq.s
+            sampling_rate = 1. / np.mean(np.diff(sig[:, timecolumn])) * pq.Hz
+            t_start = sig[0, timecolumn] * pq.s
 
+        for i in range(sig.shape[1]):
+            if timecolumn == i:
+                continue
+            if usecols is not None and i not in usecols:
+                continue
 
-
-        for i in range(sig.shape[1]) :
-            if timecolumn == i : continue
-            if usecols is not None and i not in usecols: continue
-
-            if lazy:
-                signal = [ ]*unit
-            else:
-                signal = sig[:,i]*unit
+            signal = sig[:, i] * unit
 
             anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
                                   t_start=t_start, channel_index=i,
-                                  name='Column %d'%i)
-            if lazy:
-                anaSig.lazy_shape = sig.shape
-            seg.analogsignals.append( anaSig )
+                                  name='Column %d' % i)
+
+            seg.analogsignals.append(anaSig)
 
         seg.create_many_to_one_relationship()
         return seg
 
     def write_segment(self, segment,
-                                delimiter = '\t',
+                      delimiter='\t',
 
-                                skiprows =0,
-                                writetimecolumn = True,
+                      skiprows=0,
+                      writetimecolumn=True,
 
-                                ):
+                      ):
         """
         Write a segment and AnalogSignal in a text file.
 
@@ -202,13 +195,11 @@ class AsciiSignalIO(BaseIO):
         if skiprows:
             raise NotImplementedError('skiprows values other than 0 are not ' +
                                       'supported')
-        l = [ ]
+        l = []
         if writetimecolumn is not None:
             l.append(segment.analogsignals[0].times[:, np.newaxis])
         for anaSig in segment.analogsignals:
             l.append(anaSig.magnitude[:, np.newaxis])
         sigs = np.concatenate(l, axis=1)
-        #print sigs.shape
-        np.savetxt(self.filename , sigs , delimiter = delimiter)
-
-
+        # print sigs.shape
+        np.savetxt(self.filename, sigs, delimiter=delimiter)

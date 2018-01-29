@@ -8,7 +8,7 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from  neo.rawio.blackrockrawio import BlackrockRawIO
+from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 import numpy as np
@@ -41,13 +41,13 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         The function tests LFPs, spike times, and digital events on channels
         80-83 and spike waveforms on channel 82, unit 1.
         For details on the file contents, refer to FileSpec2.3.txt
-        
+
         Ported to the rawio API by Samuel Garcia.
         """
 
         # Load data from Matlab generated files
         ml = scipy.io.loadmat(self.get_filename_path('FileSpec2.3001.mat'))
-        
+
         lfp_ml = ml['lfp']  # (channel x time) LFP matrix
         ts_ml = ml['ts']  # spike time stamps
         elec_ml = ml['el']  # spike electrodes
@@ -60,14 +60,14 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         # BlackrockIO
         reader = BlackrockRawIO(filename=self.get_filename_path('FileSpec2.3001'))
         reader.parse_header()
-        
+
         # Check if analog data on channels 1-8 are equal
         self.assertGreater(reader.signal_channels_count(), 0)
         for c in range(0, 8):
             raw_sigs = reader.get_analogsignal_chunk(channel_indexes=[c])
             raw_sigs = raw_sigs.flatten()
             assert_equal(raw_sigs[:-1], lfp_ml[c, :])
-        
+
         # Check if spikes in channels are equal
         nb_unit = reader.unit_channels_count()
         for unit_index in range(nb_unit):
@@ -76,19 +76,18 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             channel_id, unit_id = unit_name.split('#')
             channel_id = int(channel_id.replace('ch', ''))
             unit_id = int(unit_id)
-            
+
             matlab_spikes = ts_ml[(elec_ml == channel_id) & (unit_ml == unit_id)]
-            
+
             io_spikes = reader.get_spike_timestamps(unit_index=unit_index)
             assert_equal(io_spikes, matlab_spikes)
 
             # Check waveforms of channel 1, unit 0
             if channel_id == 1 and unit_id == 0:
                 io_waveforms = reader.get_spike_raw_waveforms(unit_index=unit_index)
-                io_waveforms = io_waveforms[:, 0, :]#remove dim 1
+                io_waveforms = io_waveforms[:, 0, :]  # remove dim 1
                 assert_equal(io_waveforms, wf_ml)
-        
-        
+
         # Check if digital input port events are equal
         nb_ev_chan = reader.event_channels_count()
         #~ print(reader.header['event_channels'])
@@ -96,15 +95,14 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             name = reader.header['event_channels']['name'][ev_chan]
             #~ print(name)
             if name == 'digital_input_port':
-                all_timestamps, _, labels = reader.get_event_timestamps(event_channel_index=ev_chan)
-                
+                all_timestamps, _, labels = reader.get_event_timestamps(
+                    event_channel_index=ev_chan)
+
                 for label in np.unique(labels):
-                    python_digievents = all_timestamps[labels==label]
-                    matlab_digievents = mts_ml[mid_ml==int(label)]
+                    python_digievents = all_timestamps[labels == label]
+                    matlab_digievents = mts_ml[mid_ml == int(label)]
                     assert_equal(python_digievents, matlab_digievents)
 
-        
-    
+
 if __name__ == '__main__':
     unittest.main()
-

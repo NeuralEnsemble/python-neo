@@ -31,7 +31,7 @@ jobs:
 
       - restore-cache:
           keys:
-            - test-files
+            - test-files-f7905c85d1
 
       - run:
           name: install dependencies
@@ -50,14 +50,20 @@ jobs:
       - save_cache:
           paths:
             - ./files_for_testing_neo
-          key: test-files
+          key: test-files-f7905c85d1
 
       # run tests!
       - run:
           name: run tests
           command: |
             . venv/bin/activate
-            nosetests -v
+            nosetests -v --with-coverage --cover-package=neo
+
+      - run:
+          name: coveralls
+          command: |
+            . venv/bin/activate
+            coveralls || true  # a coveralls failure shouldn't cause a build failure
 
       - store_artifacts:
           path: test-reports
@@ -84,7 +90,7 @@ jobs:
 
       - restore-cache:
           keys:
-            - test-files
+            - test-files-f7905c85d1
 
       - run:
           name: install dependencies
@@ -104,14 +110,14 @@ jobs:
       - save_cache:
           paths:
             - ./files_for_testing_neo
-          key: test-files
+          key: test-files-f7905c85d1
 
       # run tests!
       - run:
           name: run tests
           command: |
             . venv2/bin/activate
-            nosetests -v
+            nosetests -v --with-coverage --cover-package=neo
 
       - store_artifacts:
           path: test-reports

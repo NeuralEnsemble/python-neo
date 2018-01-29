@@ -12,7 +12,6 @@ Classes:
 """
 
 
-
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
@@ -47,6 +46,8 @@ rawiolist = [
 ]
 
 import os
+
+
 def get_rawio_class(filename_or_dirname):
     """
     Return a neo.rawio class guess from file extention.
@@ -55,14 +56,10 @@ def get_rawio_class(filename_or_dirname):
     ext = ext[1:]
     possibles = []
     for rawio in rawiolist:
-        if any(ext.lower()== ext2.lower() for ext2  in rawio.extensions):
+        if any(ext.lower() == ext2.lower() for ext2 in rawio.extensions):
             possibles.append(rawio)
-    
-    if len(possibles)==1:
+
+    if len(possibles) == 1:
         return possibles[0]
     else:
         return None
-
-    
-    
-    
