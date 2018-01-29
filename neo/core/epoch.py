@@ -141,7 +141,9 @@ class Epoch(DataObject):
         self.segment = getattr(obj, 'segment', None)
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
-        if self.array_annotations is None:  # TODO: Is this needed?
+        # This ensures the attribute exists
+        # TODO: Why does this work?
+        if not hasattr(self, 'array_annotations'):
             self.array_annotations = {}
 
     def __repr__(self):
