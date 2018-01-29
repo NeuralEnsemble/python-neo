@@ -640,7 +640,10 @@ class SpikeTrain(DataObject):
         #keys.extend([key for key in other.array_annotations.keys() if key not in keys])
         for key in keys:
             try:
-                merged_array_annotations[key] = np.concatenate(self.array_annotations, other.array_annotations)[sorting]
+                self_ann = self.array_annotations[key]
+                other_ann = other.array_annotations[key]
+                arr_ann = np.concatenate([self_ann,  other_ann])
+                merged_array_annotations[key] = arr_ann[sorting]
             except KeyError:
                 continue
         #merged_array_annotations = np.concatenate(self.array_annotations, other.array_annotations)
@@ -657,8 +660,7 @@ class SpikeTrain(DataObject):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
-        # TODO: THIS!!!
-        kwargs.update(array_annotations={})
+
         train = SpikeTrain(stack, units=self.units, dtype=self.dtype,
                            copy=False, t_start=self.t_start,
                            t_stop=self.t_stop,
