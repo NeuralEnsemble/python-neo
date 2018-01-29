@@ -139,6 +139,10 @@ class Epoch(DataObject):
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
         self.segment = getattr(obj, 'segment', None)
+        # Add empty array annotations, because they cannot always be copied,
+        # but do not overwrite existing ones from slicing etc.
+        if not hasattr(self, 'array_annotations'):
+            self.array_annotations = {}
 
     def __repr__(self):
         '''
@@ -186,6 +190,16 @@ class Epoch(DataObject):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
+
+        # TODO: Possibly move this code elsewhere
+        merged_array_annotations = {}
+        for key in self.array_annotations.keys():
+            try:
+                merged_array_annotations[key] = np.hstack([self.array_annotations[key], other.array_annotations[key]])
+            except KeyError:
+                continue
+        kwargs['array_annotations'] = merged_array_annotations
+
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
     def _copy_data_complement(self, other):

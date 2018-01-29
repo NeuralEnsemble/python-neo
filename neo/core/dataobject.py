@@ -10,6 +10,64 @@ import numpy as np
 
 from neo.core.baseneo import BaseNeo, _check_annotations    # TODO: Deos this make sense? Should the _ be removed?
 
+def merge_annotation(a, b):
+    """
+    First attempt at a policy for merging annotations (intended for use with
+    parallel computations using MPI). This policy needs to be discussed
+    further, or we could allow the user to specify a policy.
+
+    Current policy:
+        For arrays or lists: concatenate
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: fail if the annotations are not equal
+    """
+    assert type(a) == type(b), 'type(%s) %s != type(%s) %s' % (a, type(a),
+                                                               b, type(b))
+    if isinstance(a, dict):
+        return merge_annotations(a, b)
+    elif isinstance(a, np.ndarray):  # concatenate b to a
+        return np.append(a, b)
+    elif isinstance(a, list):  # concatenate b to a
+        return a + b
+    elif isinstance(a, basestring):
+        if a == b:
+            return a
+        else:
+            return a + ";" + b
+    else:
+        assert a == b, '%s != %s' % (a, b)
+        return a
+
+
+def merge_annotations(A, B):
+    """
+    Merge two sets of annotations.
+
+    Merging follows these rules:
+    All keys that are in A or B, but not both, are kept.
+    For keys that are present in both:
+        For arrays or lists: concatenate
+        For dicts: merge recursively
+        For strings: concatenate with ';'
+        Otherwise: warn if the annotations are not equal
+    """
+    merged = {}
+    for name in A:
+        if name in B:
+            try:
+                merged[name] = merge_annotation(A[name], B[name])
+            except BaseException as exc:
+                #exc.args += ('key %s' % name,)
+                #raise
+                merged[name] = "MERGE CONFLICT"  # temporary hack
+        else:
+            merged[name] = A[name]
+    for name in B:
+        if name not in merged:
+            merged[name] = B[name]
+    logger.debug("Merging annotations: A=%s B=%s merged=%s", A, B, merged)
+    return merged
 
 # TODO: Add array annotations to all docstrings
 # TODO: Documentation

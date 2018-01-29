@@ -451,6 +451,15 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
+
+        # TODO: Possibly move this code elsewhere
+        merged_array_annotations = {}
+        for key in self.array_annotations.keys():
+            try:
+                merged_array_annotations[key] = np.append(self.array_annotations[key], other.array_annotations[key])
+            except KeyError:
+                continue
+        kwargs['array_annotations'] = merged_array_annotations
         signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
                                 copy=False, **kwargs)
         signal.segment = self.segment

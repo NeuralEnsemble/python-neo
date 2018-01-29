@@ -399,6 +399,10 @@ class SpikeTrain(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
+        # Add empty array annotations, because they cannot always be copied,
+        # but do not overwrite existing ones from slicing etc.
+        if not hasattr(self, 'array_annotations'):
+            self.array_annotations = {}
 
         # Note: Array annotations have to be changed when slicing or initializing an object,
         # copying them over in spite of changed data would result in unexpected behaviour
@@ -586,6 +590,8 @@ class SpikeTrain(DataObject):
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
 
+        new_st.array_annotations = self.array_annotations_at_index(indices)
+
         return new_st
 
     def merge(self, other):
@@ -625,6 +631,20 @@ class SpikeTrain(DataObject):
         sorting = np.argsort(stack)
         stack = stack[sorting]
         kwargs = {}
+        merged_array_annotations = self.array_annotations
+        # TODO: Probably move this code elsewhere
+        # IGNORE ANNOTATIONS ONLY IN ONE SPIKETRAIN     # TODO: Should this change?
+        keys = list(self.array_annotations.keys())
+        #keys.extend([key for key in other.array_annotations.keys() if key not in keys])
+        for key in keys:
+            try:
+                merged_array_annotations[key] = np.concatenate(self.array_annotations, other.array_annotations)[sorting]
+            except KeyError:
+                continue
+        #merged_array_annotations = np.concatenate(self.array_annotations, other.array_annotations)
+        #merged_array_annotations = merged_array_annotations[sorting]
+        kwargs['array_annotations'] = merged_array_annotations
+
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
             attr_other = getattr(other, name)
@@ -635,6 +655,8 @@ class SpikeTrain(DataObject):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
+        # TODO: THIS!!!
+        kwargs.update(array_annotations={})
         train = SpikeTrain(stack, units=self.units, dtype=self.dtype,
                            copy=False, t_start=self.t_start,
                            t_stop=self.t_stop,

@@ -69,6 +69,10 @@ class BaseSignal(DataObject):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
+        # Add empty array annotations, because they cannot always be copied,
+        # but do not overwrite existing ones from slicing etc.
+        if not hasattr(self, 'array_annotations'):
+            self.array_annotations = {}
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -271,6 +275,16 @@ class BaseSignal(DataObject):
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
         kwargs.update(merged_annotations)
+
+        # TODO: Possibly move this code elsewhere
+        merged_array_annotations = {}
+        for key in self.array_annotations.keys():
+            try:
+                merged_array_annotations[key] = np.append(self.array_annotations[key], other.array_annotations[key])
+            except KeyError:
+                continue
+        kwargs['array_annotations'] = merged_array_annotations
+
         signal = self.__class__(stack, units=self.units, dtype=self.dtype,
                               copy=False, t_start=self.t_start,
                               sampling_rate=self.sampling_rate,
