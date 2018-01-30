@@ -511,6 +511,10 @@ class SpikeTrain(DataObject):
         #if isinstance(i, int):
         #    i = slice(i, i+1)
         obj = super(SpikeTrain, self).__getitem__(i)
+        if not isinstance(obj, SpikeTrain):
+            obj = SpikeTrain(times=[obj.magnitude], t_stop=self.t_stop, units=self.units)
+            print('aaa')
+            obj._copy_data_complement(self)
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
         #obj.array_annotations = self.array_annotations_at_index(i)
