@@ -15,7 +15,7 @@ class TestNeuroScopeRawIO(BaseTestRawIO, unittest.TestCase, ):
                          'test1/test1.dat',
                          ]
     entities_to_test = ['test1/test1']
-    
+
+
 if __name__ == "__main__":
     unittest.main()
-

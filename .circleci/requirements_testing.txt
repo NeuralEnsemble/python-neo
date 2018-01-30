@@ -1,0 +1,11 @@
+scipy>=0.12.0
+h5py
+igor
+klusta
+tqdm
+nixio
+matplotlib
+ipython
+https://github.com/nsdf/nsdf/archive/0.1.tar.gz
+coverage
+coveralls

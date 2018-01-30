@@ -282,7 +282,6 @@ class BlackrockIO(BaseIO):
                 raise ValueError('Specified {} file {} could not be '
                                  'found.'.format(ext, ext_override))
 
-
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
         self.__nsx_header_reader = {
@@ -1659,7 +1658,7 @@ class BlackrockIO(BaseIO):
                     "".format(user_n_stops[start_stop_id]))
 
             if (user_n_stops[start_stop_id] < min_time
-                or user_n_starts[start_stop_id] > max_time):
+                    or user_n_starts[start_stop_id] > max_time):
                 user_n_stops.pop(start_stop_id)
                 user_n_starts.pop(start_stop_id)
                 self._print_verbose(
@@ -1668,7 +1667,6 @@ class BlackrockIO(BaseIO):
                     "file set: n_start and n_stop are ignored")
                 continue
             start_stop_id += 1
-
 
         # get intrinsic time settings of nsx files (incl. rec pauses)
         n_starts_files = []
@@ -1990,7 +1988,6 @@ class BlackrockIO(BaseIO):
             chidx.name = "ChannelIndex {0}".format(chidx.index)
         else:
             chidx.name = "ChannelIndex"
-
 
         if self._avail_files['nev']:
             channel_labels = self.__nev_params('channel_labels')

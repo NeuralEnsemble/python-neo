@@ -52,15 +52,15 @@ class ReadOldNeoHdf5IOTest(BaseTestIO, unittest.TestCase):
             self.assertEqual(len(segment.analogsignals), 2)
             as0 = segment.analogsignals[0]
             self.assertEqual(as0.shape, (1000, 4))
-            self.assertEqual(as0.sampling_rate, 1*kHz)
+            self.assertEqual(as0.sampling_rate, 1 * kHz)
             self.assertEqual(as0.units, mV)
             self.assertEqual(as0.segment, segment)
 
             self.assertEqual(len(segment.spiketrains), 4)
             st = segment.spiketrains[-1]
             self.assertEqual(st.units, ms)
-            self.assertEqual(st.t_stop, 1000*ms)
-            self.assertEqual(st.t_start, 0*ms)
+            self.assertEqual(st.t_stop, 1000 * ms)
+            self.assertEqual(st.t_start, 0 * ms)
             self.assertEqual(st.segment, segment)
 
             self.assertEqual(len(segment.events), 1)
@@ -85,7 +85,7 @@ class ReadOldNeoHdf5IOTest(BaseTestIO, unittest.TestCase):
             iss0 = segment.irregularlysampledsignals[0]
             self.assertEqual(iss0.shape, (3, 2))
             assert_array_equal(iss0.times,
-                               [0.01, 0.03, 0.12]*second)
+                               [0.01, 0.03, 0.12] * second)
             assert_array_equal(iss0.magnitude,
                                np.array([[4, 3],
                                          [5, 4],
@@ -96,7 +96,7 @@ class ReadOldNeoHdf5IOTest(BaseTestIO, unittest.TestCase):
             iss1 = segment.irregularlysampledsignals[1]
             self.assertEqual(iss1.shape, (3, 1))
             assert_array_equal(iss1.times,
-                               [0.02, 0.05, 0.15]*second)
+                               [0.02, 0.05, 0.15] * second)
             self.assertEqual(iss1.units, nA)
             assert_array_equal(iss1.magnitude,
                                np.array([[3], [4], [3]]))
@@ -111,15 +111,15 @@ class ReadOldNeoHdf5IOTest(BaseTestIO, unittest.TestCase):
             self.assertEqual(len(segment.analogsignals), 2)
             as0 = segment.analogsignals[0]
             self.assertEqual(as0.shape, (1000, 4))
-            self.assertEqual(as0.sampling_rate, 1*kHz)
+            self.assertEqual(as0.sampling_rate, 1 * kHz)
             self.assertEqual(as0.units, mV)
             self.assertEqual(as0.segment, segment)
 
             self.assertEqual(len(segment.spiketrains), 7)
             st = segment.spiketrains[-1]
             self.assertEqual(st.units, ms)
-            self.assertEqual(st.t_stop, 1000*ms)
-            self.assertEqual(st.t_start, 0*ms)
+            self.assertEqual(st.t_stop, 1000 * ms)
+            self.assertEqual(st.t_start, 0 * ms)
             self.assertEqual(st.segment, segment)
 
             self.assertEqual(len(segment.events), 0)

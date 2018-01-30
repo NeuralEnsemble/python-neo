@@ -381,7 +381,7 @@ class Test__get_fake_value(unittest.TestCase):
         name = 'name'
         datatype = str
         obj = 'Block'
-        targ = 'Block'+str(np.random.randint(100000))
+        targ = 'Block' + str(np.random.randint(100000))
 
         res = get_fake_value(name, datatype, seed=0, obj=obj)
         self.assertTrue(isinstance(res, str))
@@ -394,7 +394,7 @@ class Test__get_fake_value(unittest.TestCase):
         name = 'description'
         datatype = str
         obj = Segment
-        targ = 'test Segment '+str(np.random.randint(100000))
+        targ = 'test Segment ' + str(np.random.randint(100000))
 
         res = get_fake_value(name, datatype, seed=0, obj=obj)
         self.assertTrue(isinstance(res, str))
@@ -436,7 +436,7 @@ class Test__get_fake_value(unittest.TestCase):
     def test__datetime(self):
         name = 'test__datetime'
         datatype = datetime
-        targ = datetime.fromtimestamp(1000000000*np.random.random())
+        targ = datetime.fromtimestamp(1000000000 * np.random.random())
 
         res = get_fake_value(name, datatype, seed=0)
         self.assertTrue(isinstance(res, datetime))
@@ -451,7 +451,7 @@ class Test__get_fake_value(unittest.TestCase):
         units = np.random.choice(['nA', 'mA', 'A', 'mV', 'V'])
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = pq.Quantity(np.random.random(size)*1000, units=units)
+        targ = pq.Quantity(np.random.random(size) * 1000, units=units)
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
         self.assertTrue(isinstance(res, pq.Quantity))
@@ -467,7 +467,7 @@ class Test__get_fake_value(unittest.TestCase):
         size = []
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = pq.Quantity(np.random.random(size)*1000, units=units)
+        targ = pq.Quantity(np.random.random(size) * 1000, units=units)
 
         res = get_fake_value(name, datatype, dim=dim, seed=0, units=units)
         self.assertTrue(isinstance(res, np.ndarray))
@@ -481,7 +481,7 @@ class Test__get_fake_value(unittest.TestCase):
         size = []
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = np.random.random(size)*1000
+        targ = np.random.random(size) * 1000
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
         self.assertTrue(isinstance(res, np.ndarray))
@@ -495,7 +495,7 @@ class Test__get_fake_value(unittest.TestCase):
         size = []
         for i in range(int(dim)):
             size.append(np.random.randint(5) + 1)
-        targ = (np.random.random(size)*1000).tolist()
+        targ = (np.random.random(size) * 1000).tolist()
 
         res = get_fake_value(name, datatype, dim=dim, seed=0)
         self.assertTrue(isinstance(res, list))
