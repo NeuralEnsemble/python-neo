@@ -29,7 +29,7 @@ import quantities as pq
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.nixio import NixIO, string_types, create_quantity, units_to_string
+from neo.io.nixio import NixIO, create_quantity, units_to_string
 
 try:
     import nixio as nix
@@ -331,8 +331,9 @@ class NixIOTest(unittest.TestCase):
                 group = blk.create_group(cls.rword(), "neo.segment")
                 group.definition = cls.rsentence(10, 15)
 
-                group_md = blk.metadata.create_section(group.name,
-                                                       group.name + ".metadata")
+                group_md = blk.metadata.create_section(
+                    group.name, group.name + ".metadata"
+                )
                 group.metadata = group_md
 
         blk = nix_blocks[0]
@@ -644,7 +645,7 @@ class NixIOWriteTest(NixIOTest):
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
-        # self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
+        self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
         self.compare_blocks(blocks, self.reader.blocks)
 
     def test_block_write(self):
@@ -768,7 +769,8 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        epoch = Epoch(times=[1, 1, 10, 3] * pq.ms, durations=[3, 3, 3, 1] * pq.ms,
+        epoch = Epoch(times=[1, 1, 10, 3] * pq.ms,
+                      durations=[3, 3, 3, 1] * pq.ms,
                       labels=np.array(["one", "two", "three", "four"]),
                       name="test epoch", description="an epoch for testing")
 
@@ -975,7 +977,6 @@ class NixIOReadTest(NixIOTest):
     filename = "testfile_readtest.h5"
     nixfile = None
     nix_blocks = None
-    original_methods = dict()
 
     @classmethod
     def setUpClass(cls):
@@ -984,8 +985,6 @@ class NixIOReadTest(NixIOTest):
 
     def setUp(self):
         self.io = NixIO(self.filename, "ro")
-        self.original_methods["_read_cascade"] = self.io._read_cascade
-        self.original_methods["_update_maps"] = self.io._update_maps
 
     @classmethod
     def tearDownClass(cls):
@@ -997,27 +996,9 @@ class NixIOReadTest(NixIOTest):
         self.io.close()
 
     def test_all_read(self):
-        neo_blocks = self.io.read_all_blocks(lazy=False)
+        neo_blocks = self.io.read_all_blocks()
         nix_blocks = self.io.nix_file.blocks
         self.compare_blocks(neo_blocks, nix_blocks)
-
-    # def test_lazyload_fullcascade_read(self):
-    #    neo_blocks = self.io.read_all_blocks(lazy=True)
-    #    nix_blocks = self.io.nix_file.blocks
-    #    # data objects should be empty
-    #    for block in neo_blocks:
-    #       for seg in block.segments:
-    #            for asig in seg.analogsignals:
-    #                self.assertEqual(len(asig), 0)
-    #            for isig in seg.irregularlysampledsignals:
-    #                self.assertEqual(len(isig), 0)
-    #            for epoch in seg.epochs:
-    #                self.assertEqual(len(epoch), 0)
-    #            for event in seg.events:
-    #                self.assertEqual(len(event), 0)
-    #            for st in seg.spiketrains:
-    #                self.assertEqual(len(st), 0)
-    #    self.compare_blocks(neo_blocks, nix_blocks)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
