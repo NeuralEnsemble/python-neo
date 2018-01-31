@@ -7,7 +7,7 @@ BaseFromRaw implement a bridge between the new neo.rawio API
 and the neo.io legacy that give neo.core object.
 The neo.rawio API is more restricted and limited and do not cover tricky
 cases with asymetrical tree of neo object.
-But if a format is done in neo.rawio the neo.io is done for free 
+But if a format is done in neo.rawio the neo.io is done for free
 by inheritance of this class.
 
 
@@ -78,7 +78,7 @@ class BaseFromRaw(BaseIO):
 
         :param block_index: int default 0. In case of several block block_index can be specified.
 
-        :param lazy: False by default. 
+        :param lazy: False by default.
 
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
@@ -115,7 +115,7 @@ class BaseFromRaw(BaseIO):
         # ChannelIndex are plit in 2 parts:
         #  * some for AnalogSignals
         #  * some for Units
-        
+
         # ChannelIndex for AnalogSignals
         all_channels = self.header['signal_channels']
         channel_indexes_list = self.get_group_channel_indexes()
@@ -225,7 +225,7 @@ class BaseFromRaw(BaseIO):
 
         :param seg_index: int default 0. Index of segment.
 
-        :param lazy: False by default. 
+        :param lazy: False by default.
 
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
@@ -340,7 +340,7 @@ class BaseFromRaw(BaseIO):
                                               sampling_rate=sr, t_start=sig_t_start, **annotations)
                     seg.analogsignals.append(anasig)
 
-        # SpikeTrain and waveforms (optional)
+        #SpikeTrain and waveforms (optional)
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
@@ -488,7 +488,7 @@ def check_annotations(annotations):
 
     if 'coordinates' in annotations:
         # some rawio expose some coordinates in annotations but is not standardized
-        # (x, y, z) or polar, at the moment it is more resonable to remove them
+        #(x, y, z) or polar, at the moment it is more resonable to remove them
         annotations.pop('coordinates')
 
     return annotations
