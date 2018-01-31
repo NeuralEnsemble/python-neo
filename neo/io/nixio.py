@@ -148,18 +148,67 @@ class NixIO(BaseIO):
         self.close()
 
     def read_all_blocks(self):
-        blocks = list()
-        for blk in self.nix_file.blocks:
-            blocks.append(self.read_block(blk))
-        return blocks
+        return list(self._nix_to_neo_block(blk)
+                    for blk in self.nix_file.blocks)
 
-    def read_block(self, nixblock):
-        neoblock = self._block_to_neo(nixblock)
-        for group in nixblock.groups:
-            neoblock.segments.append(
-                self.read_segment(group)
-            )
-        return neoblock
+    def read_block(self, index=None, nixname=None, neoname=None):
+        """
+        Loads a Block from the NIX file along with all contained child objects
+        and returns the equivalent Neo Block.
+
+        The Block to read can be specified in one of three ways:
+        - Index (position) in the file
+        - Name of the NIX Block (see [...] for details on the naming)
+        - Name of the original Neo Block
+
+        If no arguments are specified, the first Block is returned and
+        consecutive calls to the function return the next Block in the file.
+        After all Blocks have been loaded this way, the function returns None.
+
+        If more than one argument is specified, the precedence order is:
+        index, nixname, neoname
+
+        Note that Neo objects can be anonymous or have non-unique names,
+        so specifying a Neo name may be ambiguous.
+
+        See also :meth:`NixIO.iter_blocks`.
+
+        :param index: The position of the Block to be loaded (creation order)
+        :param nixname: The name of the Block in NIX
+        :param neoname: The name of the original Neo Block
+        """
+        nix_block = None
+        if index is not None:
+            nix_block = self.nix_file.blocks[index]
+        elif nixname is not None:
+            nix_block = self.nix_file.blocks[nixname]
+        elif neoname is not None:
+            for blk in self.nix_file.blocks:
+                if ("neo_name" in blk.metadata
+                        and blk.metadata["neo_name"] == neoname):
+                    nix_block = blk
+                    break
+            else:
+                raise KeyError(
+                    "Block with Neo name '{}' does not exist".format(neoname)
+                )
+        else:
+            index = self._block_read_counter
+            if index > len(self.nix_file.blocks):
+                return None
+            nix_block = self.nix_file.blocks[index]
+
+        nix_block = self.nix_file.blocks[self._block_read_counter]
+        self._block_read_counter += 1
+        return self._nix_to_neo_block(nix_block)
+
+    def iter_blocks(self):
+        """
+        Returns an iterator which can be used to consecutively load and convert
+        all Blocks from the NIX File.
+        """
+        for blk in self.nix_file.blocks:
+            yield self._nix_to_neo_block(blk)
 
     def read_segment(self, nixgroup):
         neo_segment = self._group_to_neo(nixgroup)
@@ -250,7 +299,7 @@ class NixIO(BaseIO):
         neo_unit.channel_index = neo_parent
         return neo_unit
 
-    def _block_to_neo(self, nix_block):
+    def _nix_to_neo_block(self, nix_block):
         neo_attrs = self._nix_attr_to_neo(nix_block)
         neo_block = Block(**neo_attrs)
         neo_block.rec_datetime = datetime.fromtimestamp(
