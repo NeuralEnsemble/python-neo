@@ -190,7 +190,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                                   units_group_mode='all-in-one')
 
         self.assertEqual(len(block.segments), 2)
-        self.assertEqual(len(block.segments[0].analogsignals), 6)
+        self.assertEqual(len(block.segments[0].analogsignals), 96)
         self.assertEqual(len(block.channel_indexes[-1].units), 218)
         self.assertEqual(len(block.channel_indexes[-1].units),
                          len(block.segments[0].spiketrains))
