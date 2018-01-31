@@ -19,7 +19,7 @@ from numpy.testing import assert_array_equal
 from neo.test.tools import assert_arrays_equal, assert_file_contents_equal
 from neo.test.iotest.common_io_test import BaseTestIO
 
-#class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
+# class CommonTestPyNNNumpyIO(BaseTestIO, unittest.TestCase):
 #    ioclass = PyNNNumpyIO
 
 NCELLS = 5
@@ -40,6 +40,8 @@ def read_test_file(filename):
         except Exception:
             metadata[name] = value
     return data, metadata
+
+
 read_test_file.__test__ = False
 
 
@@ -54,7 +56,7 @@ class BaseTestPyNNIO(object):
         in_ = self.io_cls(self.test_file)
         write_test_file = "write_test.%s" % self.file_extension
         out = self.io_cls(write_test_file)
-        out.write_segment(in_.read_segment(lazy=False, cascade=True))
+        out.write_segment(in_.read_segment(lazy=False))
         assert_file_contents_equal(self.test_file, write_test_file)
         if os.path.exists(write_test_file):
             os.remove(write_test_file)
@@ -78,9 +80,9 @@ class BaseTestPyNNIO(object):
         data = np.empty((505, 2))
         for i in range(NCELLS):
             # signal
-            data[i*101:(i+1)*101, 0] = np.arange(i, i+101, dtype=float)
+            data[i * 101:(i + 1) * 101, 0] = np.arange(i, i + 101, dtype=float)
             # index
-            data[i*101:(i+1)*101, 1] = i*np.ones((101,), dtype=float)
+            data[i * 101:(i + 1) * 101, 1] = i * np.ones((101,), dtype=float)
         return data, metadata
     build_test_data.__test__ = False
 
@@ -93,7 +95,7 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
     def test_read_segment_containing_analogsignals_using_eager_cascade(self):
         # eager == not lazy
         io = self.io_cls(self.test_file)
-        segment = io.read_segment(lazy=False, cascade=True)
+        segment = io.read_segment(lazy=False)
         self.assertIsInstance(segment, Segment)
         self.assertEqual(len(segment.analogsignals), 1)
 
@@ -102,15 +104,15 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         self.assertEqual(as0.shape, (101, NCELLS))
         assert_array_equal(as0[:, 0],
                            AnalogSignal(np.arange(0, 101, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
+                                        sampling_period=0.1 * pq.ms,
+                                        t_start=0 * pq.s,
                                         units=pq.mV))
         as4 = as0[:, 4]
         self.assertIsInstance(as4, AnalogSignal)
         assert_array_equal(as4,
                            AnalogSignal(np.arange(4, 105, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
+                                        sampling_period=0.1 * pq.ms,
+                                        t_start=0 * pq.s,
                                         units=pq.mV))
         # test annotations (stuff from file metadata)
 
@@ -120,8 +122,8 @@ class BaseTestPyNNIO_Signals(BaseTestPyNNIO):
         self.assertIsInstance(sig, AnalogSignal)
         assert_array_equal(sig[:, 3],
                            AnalogSignal(np.arange(3, 104, dtype=float),
-                                        sampling_period=0.1*pq.ms,
-                                        t_start=0*pq.s,
+                                        sampling_period=0.1 * pq.ms,
+                                        t_start=0 * pq.s,
                                         units=pq.mV))
         # should test annotations: 'channel_index', etc.
 
@@ -137,22 +139,22 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
 
     def test_read_segment_containing_spiketrains_using_eager_cascade(self):
         io = self.io_cls(self.test_file)
-        segment = io.read_segment(lazy=False, cascade=True)
+        segment = io.read_segment(lazy=False)
         self.assertIsInstance(segment, Segment)
         self.assertEqual(len(segment.spiketrains), NCELLS)
         st0 = segment.spiketrains[0]
         self.assertIsInstance(st0, SpikeTrain)
         assert_arrays_equal(st0,
                             SpikeTrain(np.arange(0, 101, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=101*pq.ms,
+                                       t_start=0 * pq.s,
+                                       t_stop=101 * pq.ms,
                                        units=pq.ms))
         st4 = segment.spiketrains[4]
         self.assertIsInstance(st4, SpikeTrain)
         assert_arrays_equal(st4,
                             SpikeTrain(np.arange(4, 105, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=105*pq.ms,
+                                       t_start=0 * pq.s,
+                                       t_stop=105 * pq.ms,
                                        units=pq.ms))
         # test annotations (stuff from file metadata)
 
@@ -162,8 +164,8 @@ class BaseTestPyNNIO_Spikes(BaseTestPyNNIO):
         self.assertIsInstance(st3, SpikeTrain)
         assert_arrays_equal(st3,
                             SpikeTrain(np.arange(3, 104, dtype=float),
-                                       t_start=0*pq.s,
-                                       t_stop=104*pq.s,
+                                       t_start=0 * pq.s,
+                                       t_stop=104 * pq.s,
                                        units=pq.ms))
         # should test annotations: 'channel_index', etc.
 
