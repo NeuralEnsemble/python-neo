@@ -174,12 +174,12 @@ class TestChannelIndex(unittest.TestCase):
         #         self.assertEqual(unit.channel_indexes[0],
         #                          sigarr.channel_index[i])
 
-        targ2 = get_fake_value('name', str, seed=seed+4,
+        targ2 = get_fake_value('name', str, seed=seed + 4,
                                obj=ChannelIndex)
         self.assertEqual(chx.name, targ2)
 
         targ3 = get_fake_value('description', str,
-                               seed=seed+5, obj=ChannelIndex)
+                               seed=seed + 5, obj=ChannelIndex)
         self.assertEqual(chx.description, targ3)
 
         targ4 = get_fake_value('file_origin', str)
@@ -220,7 +220,8 @@ class TestChannelIndex(unittest.TestCase):
         blk.create_many_to_one_relationship()
 
         self.assertEqual(self.chx1._container_child_objects, ('Unit',))
-        self.assertEqual(self.chx1._data_child_objects, ('AnalogSignal', 'IrregularlySampledSignal'))
+        self.assertEqual(self.chx1._data_child_objects,
+                         ('AnalogSignal', 'IrregularlySampledSignal'))
         self.assertEqual(self.chx1._single_parent_objects, ('Block',))
         self.assertEqual(self.chx1._multi_child_objects, tuple())
         self.assertEqual(self.chx1._multi_parent_objects, ())
@@ -246,22 +247,21 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(self.chx1._parent_objects, ('Block',))
         self.assertEqual(self.chx1._parent_containers, ('block',))
 
-        self.assertEqual(len(self.chx1._single_children), 3*self.nchildren)
+        self.assertEqual(len(self.chx1._single_children), 3 * self.nchildren)
         self.assertEqual(len(self.chx1._multi_children), 0)
-        self.assertEqual(len(self.chx1.data_children), 2*self.nchildren)
+        self.assertEqual(len(self.chx1.data_children), 2 * self.nchildren)
         self.assertEqual(len(self.chx1.data_children_recur),
-                         2*self.nchildren + 1*self.nchildren**2)
-        self.assertEqual(len(self.chx1.container_children), 1*self.nchildren)
+                         2 * self.nchildren + 1 * self.nchildren**2)
+        self.assertEqual(len(self.chx1.container_children), 1 * self.nchildren)
         self.assertEqual(len(self.chx1.container_children_recur),
-                         1*self.nchildren)
-        self.assertEqual(len(self.chx1.children), 3*self.nchildren)
+                         1 * self.nchildren)
+        self.assertEqual(len(self.chx1.children), 3 * self.nchildren)
         self.assertEqual(len(self.chx1.children_recur),
-                         3*self.nchildren + 1*self.nchildren**2)
+                         3 * self.nchildren + 1 * self.nchildren**2)
 
         assert_same_sub_schema(list(self.chx1._single_children),
                                self.units1a + self.sigarrs1a + self.irrsig1a,
                                exclude=['channel_index'])
-
 
         assert_same_sub_schema(list(self.chx1.data_children), self.sigarrs1a + self.irrsig1a,
                                exclude=['channel_index'])
@@ -515,7 +515,6 @@ class TestChannelIndex(unittest.TestCase):
         targ = [self.trains1[0]]
         res0 = self.targobj.filter(name=self.trains1[0].name, container=True)
         assert_same_sub_schema(res0, targ)
-
 
     def test__filter_single_annotation_container_norecur(self):
         targ = [self.sigarrs1[1], self.irrsig1[1], self.units1[1]]

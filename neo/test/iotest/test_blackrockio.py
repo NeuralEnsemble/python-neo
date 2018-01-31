@@ -50,15 +50,14 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         'FileSpec2.3001.mat']
 
     ioclass = BlackrockIO
-    
+
     def test_load_waveforms(self):
         filename = self.get_filename_path('FileSpec2.3001')
         reader = BlackrockIO(filename=filename, verbose=False)
-        
+
         bl = reader.read_block(load_waveforms=True)
         assert_neo_object_is_compliant(bl)
-        
-        
+
     def test_inputs_V23(self):
         """
         Test various inputs to BlackrockIO.read_block with version 2.3 file
@@ -66,8 +65,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         """
         filename = self.get_filename_path('FileSpec2.3001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5,)
-        
-        
+
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(time_slices=None,  load_waveforms=False)
         lena = len(block.segments[0].analogsignals[0])
@@ -78,13 +76,13 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        #this raise error in read_block
+        # this raise error in read_block
         with self.assertRaises(ValueError):
             block = reader.read_block(time_slices=[buggy_slice])
-        
-        #but this is valid in read_segment because seg_index is specified
+
+        # but this is valid in read_segment because seg_index is specified
         seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
-        
+
         lenb = len(seg.analogsignals[0])
         numspb = len(seg.spiketrains[0])
 
@@ -103,7 +101,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         time_slice = (100 * ns5_unit, 200 * ns5_unit)
         block = reader.read_block(time_slices=[time_slice])
         lena = len(block.segments[0].analogsignals[0])
-        
+
         time_slice = (100 * ns5_unit, 200 * ns5_unit)
         block = reader.read_block(time_slices=[time_slice])
         lenb = len(block.segments[0].analogsignals[0])
@@ -114,19 +112,18 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(lena, 100)
 
         # test 4 Units
-        time_slices=[(0, 1000*pq.ms), (3000*pq.ms, 4000*pq.ms)]
+        time_slices = [(0, 1000 * pq.ms), (3000 * pq.ms, 4000 * pq.ms)]
         block = reader.read_block(time_slices=time_slices, load_waveforms=True,
-                    units_group_mode='all-in-one')
+                                  units_group_mode='all-in-one')
 
         self.assertEqual(len(block.segments), 2)
         self.assertEqual(len(block.segments[0].analogsignals), 10)
         self.assertEqual(len(block.channel_indexes[-1].units), 4)
-        self.assertEqual(len(block.channel_indexes[-1].units), 
-                    len(block.segments[0].spiketrains))
-        
+        self.assertEqual(len(block.channel_indexes[-1].units),
+                         len(block.segments[0].spiketrains))
+
         anasig = block.segments[0].analogsignals[0]
         self.assertIsNotNone(anasig.file_origin)
-        
 
 
 if __name__ == '__main__':

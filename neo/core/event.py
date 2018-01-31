@@ -10,6 +10,7 @@ This module defines :class:`Event`, an array of events.
 from __future__ import absolute_import, division, print_function
 
 import sys
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -18,7 +19,8 @@ from neo.core.baseneo import BaseNeo, merge_annotations
 
 PY_VER = sys.version_info[0]
 
-def _new_event(cls, signal, times = None, labels=None, units=None, name=None, 
+
+def _new_event(cls, signal, times=None, labels=None, units=None, name=None,
                file_origin=None, description=None,
                annotations=None, segment=None):
     '''
@@ -26,9 +28,10 @@ def _new_event(cls, signal, times = None, labels=None, units=None, name=None,
     does not do the unit checking. This is needed for pickle to work. 
     '''
     e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
-                 description=description, **annotations)
+              description=description, **annotations)
     e.segment = segment
     return e
+
 
 class Event(BaseNeo, pq.Quantity):
     '''
@@ -107,6 +110,7 @@ class Event(BaseNeo, pq.Quantity):
         '''
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
+
     def __reduce__(self):
         '''
         Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
@@ -176,6 +180,21 @@ class Event(BaseNeo, pq.Quantity):
         for attr in ("labels", "name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, getattr(other, attr, None))
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        new_ev = cls(times=self.times,
+                     labels=self.labels, units=self.units,
+                     name=self.name, description=self.description,
+                     file_origin=self.file_origin)
+        new_ev.__dict__.update(self.__dict__)
+        memo[id(self)] = new_ev
+        for k, v in self.__dict__.items():
+            try:
+                setattr(new_ev, k, deepcopy(v, memo))
+            except TypeError:
+                setattr(new_ev, k, v)
+        return new_ev
 
     def duplicate_with_new_data(self, signal):
         '''

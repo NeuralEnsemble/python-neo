@@ -81,9 +81,9 @@ Classes:
 
 import os.path
 
-#try to import the neuroshare library.
-#if it is present, use the neuroshareapiio to load neuroshare files
-#if it is not present, use the neurosharectypesio to load files
+# try to import the neuroshare library.
+# if it is present, use the neuroshareapiio to load neuroshare files
+# if it is not present, use the neurosharectypesio to load files
 try:
     import neuroshare as ns
 except ImportError as err:
@@ -96,7 +96,6 @@ else:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
     #print("neuroshare library successfully imported")
     #print("\n loading with API...")
-
 
 
 from neo.io.alphaomegaio import AlphaOmegaIO
@@ -138,41 +137,41 @@ from neo.io.winwcpio import WinWcpIO
 
 
 iolist = [
-          AlphaOmegaIO,
-          AsciiSignalIO,
-          AsciiSpikeTrainIO,
-          AxonIO,
-          BlackrockIO,
-          BrainVisionIO,
-          BrainwareDamIO,
-          BrainwareF32IO,
-          BrainwareSrcIO,
-          ElanIO,
-          #ElphyIO,
-          ExampleIO,
-          IgorIO,
-          KlustaKwikIO,
-          KwikIO,
-          MicromedIO,
-          NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
-          NeoHdf5IO,
-          NeoMatlabIO,
-          NestIO,
-          NeuralynxIO,
-          NeuroExplorerIO,
-          NeuroScopeIO,
-          NeuroshareIO,
-          NSDFIO,
-          PickleIO,
-          PlexonIO,
-          PyNNNumpyIO,
-          PyNNTextIO,
-          RawBinarySignalIO,
-          Spike2IO,
-          StimfitIO,
-          TdtIO,
-          WinEdrIO,
-          WinWcpIO
+    AlphaOmegaIO,
+    AsciiSignalIO,
+    AsciiSpikeTrainIO,
+    AxonIO,
+    BlackrockIO,
+    BrainVisionIO,
+    BrainwareDamIO,
+    BrainwareF32IO,
+    BrainwareSrcIO,
+    ElanIO,
+    # ElphyIO,
+    ExampleIO,
+    IgorIO,
+    KlustaKwikIO,
+    KwikIO,
+    MicromedIO,
+    NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
+    NeoHdf5IO,
+    NeoMatlabIO,
+    NestIO,
+    NeuralynxIO,
+    NeuroExplorerIO,
+    NeuroScopeIO,
+    NeuroshareIO,
+    NSDFIO,
+    PickleIO,
+    PlexonIO,
+    PyNNNumpyIO,
+    PyNNTextIO,
+    RawBinarySignalIO,
+    Spike2IO,
+    StimfitIO,
+    TdtIO,
+    WinEdrIO,
+    WinWcpIO
 ]
 
 
