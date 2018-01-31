@@ -210,14 +210,6 @@ class NixIO(BaseIO):
         for blk in self.nix_file.blocks:
             yield self._nix_to_neo_block(blk)
 
-    def read_segment(self, nixgroup):
-        neo_segment = self._group_to_neo(nixgroup)
-        # nix_parent = self._get_parent(path)
-        # neo_parent = self._neo_map.get(nix_parent.name)
-        # if neo_parent:
-        #     neo_segment.block = neo_parent
-        return neo_segment
-
     def read_channelindex(self, path, lazy=False):
         assert not lazy, 'Do not support lazy'
         nix_source = self._get_object_at(path)
@@ -305,10 +297,11 @@ class NixIO(BaseIO):
         neo_block.rec_datetime = datetime.fromtimestamp(
             nix_block.created_at
         )
-        self._neo_map[nix_block.name] = neo_block
+        neo_block.segments = list(self._nix_to_neo_segment(grp)
+                                  for grp in nix_block.groups)
         return neo_block
 
-    def _group_to_neo(self, nix_group):
+    def _nix_to_neo_segment(self, nix_group):
         neo_attrs = self._nix_attr_to_neo(nix_group)
         neo_segment = Segment(**neo_attrs)
         neo_segment.rec_datetime = datetime.fromtimestamp(
