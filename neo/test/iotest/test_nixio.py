@@ -319,10 +319,12 @@ class NixIOTest(unittest.TestCase):
         nix_block_a.metadata = nixfile.create_section(
             nix_block_a.name, nix_block_a.name + ".metadata"
         )
+        nix_block_a.metadata["neo_name"] = cls.rword(5)
 
         nix_block_b.metadata = nixfile.create_section(
             nix_block_b.name, nix_block_b.name + ".metadata"
         )
+        nix_block_b.metadata["neo_name"] = cls.rword(5)
 
         nix_blocks = [nix_block_a, nix_block_b]
 
@@ -999,6 +1001,33 @@ class NixIOReadTest(NixIOTest):
         neo_blocks = self.io.read_all_blocks()
         nix_blocks = self.io.nix_file.blocks
         self.compare_blocks(neo_blocks, nix_blocks)
+
+    def test_iter_read(self):
+        blocknames = [blk.name for blk in self.nixfile.blocks]
+        for blk, nixname in zip(self.io.iter_blocks(), blocknames):
+            self.assertEqual(blk.annotations["nix_name"], nixname)
+
+    def test_nix_name_read(self):
+        for nixblock in self.nixfile.blocks:
+            nixname = nixblock.name
+            neoblock = self.io.read_block(nixname=nixname)
+            self.assertEqual(neoblock.annotations["nix_name"], nixname)
+
+    def test_index_read(self):
+        for idx, nixblock in enumerate(self.nixfile.blocks):
+            neoblock = self.io.read_block(index=idx)
+            self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
+
+    def test_auto_index_read(self):
+        for nixblock in self.nixfile.blocks:
+            neoblock = self.io.read_block()  # don't specify index
+            self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
+
+    def test_neo_name_read(self):
+        for nixblock in self.nixfile.blocks:
+            neoname = nixblock.metadata["neo_name"]
+            neoblock = self.io.read_block(neoname=neoname)
+            self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
