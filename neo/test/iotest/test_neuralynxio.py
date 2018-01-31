@@ -69,19 +69,15 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
-        # play with time_slice
-        t_start, t_stop = 3 * pq.s, 4 * pq.s
-        block = nio.read_block(time_slices=[(t_start, t_stop)])
+        block = nio.read_block()
 
         # Everything put in one segment
-        self.assertEqual(len(block.segments), 1)
+        self.assertEqual(len(block.segments), 2)
         seg = block.segments[0]
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 2)
 
         self.assertEqual(seg.analogsignals[0].sampling_rate, 32. * pq.kHz)
-        self.assertEqual(seg.analogsignals[0].t_start, t_start)
-        self.assertEqual(seg.analogsignals[0].t_stop, t_stop)
         self.assertEqual(len(seg.spiketrains), 2)
 
         # Testing different parameter combinations
@@ -135,18 +131,14 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
-        t_start, t_stop = 3 * pq.s, 4 * pq.s
-        block = nio.read_block(time_slices=[(t_start, t_stop)])
+        block = nio.read_block()
 
         # Everything put in one segment
-        self.assertEqual(len(block.segments), 1)
         seg = block.segments[0]
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(seg.analogsignals[0].shape[-1], 5)
 
         self.assertEqual(seg.analogsignals[0].sampling_rate, 32 * pq.kHz)
-        self.assertAlmostEqual(seg.analogsignals[0].t_start, t_start, places=4)
-        self.assertAlmostEqual(seg.analogsignals[0].t_stop, t_stop, places=4)
         self.assertEqual(len(seg.spiketrains), 0)  # no nse files available
 
         # Testing different parameter combinations
@@ -196,7 +188,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         dirname = self.get_filename_path('Cheetah_v5.5.1/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
 
-        block = nio.read_block(time_slices=None)
+        block = nio.read_block()
 
         # known gap values
         n_gaps = 1
