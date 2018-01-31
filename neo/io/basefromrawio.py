@@ -120,12 +120,12 @@ class BaseFromRaw(BaseIO):
         all_channels = self.header['signal_channels']
         channel_indexes_list = self.get_group_channel_indexes()
         for channel_index in channel_indexes_list:
-            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_index,
-                                                signal_group_mode=signal_group_mode).items():
+            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                    channel_index, signal_group_mode=signal_group_mode).items():
                 chidx_annotations = {}
-                if signal_group_mode=="split-all":
+                if signal_group_mode == "split-all":
                     chidx_annotations = self.raw_annotations['signal_channels'][i]
-                elif signal_group_mode=="group-by-same-units":
+                elif signal_group_mode == "group-by-same-units":
                     for key in list(self.raw_annotations['signal_channels'][i].keys()):
                         chidx_annotations[key] = []
                     for j in ind_abs:

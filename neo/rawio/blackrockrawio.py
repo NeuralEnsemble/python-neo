@@ -433,14 +433,15 @@ class BlackrockRawIO(BaseRawIO):
                             sig_channels[c]['id'])
                         # filter type codes (extracted from blackrock manual)
                         chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
-                                                            get_idx] /1000. * pq.Hz
+                                                            get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
                         chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
                             get_idx]]
                         chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
                                                             get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
-                        chidx_ann['nev_lo_freq_type']=flt_type[neuevflt['lo_freq_type'][get_idx]]
+                        chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
+                            get_idx]]
             if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
                 # It does not matter which nsX file to ask for this info
                 k = list(self.__nsx_ext_header.keys())[0]
@@ -450,15 +451,15 @@ class BlackrockRawIO(BaseRawIO):
                         sig_channels[c]['id'])
                     chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
                                                'hi_freq_corner'][get_idx] / 1000. * pq.Hz
-                    chidx_ann['nsx_lo_freq_corner']=self.__nsx_ext_header[k][
+                    chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
                                                'lo_freq_corner'][get_idx] / 1000. * pq.Hz
-                    chidx_ann['nsx_hi_freq_order']=self.__nsx_ext_header[k][
+                    chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
                             'hi_freq_order'][get_idx]
-                    chidx_ann['nsx_lo_freq_order']=self.__nsx_ext_header[k][
+                    chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
                             'lo_freq_order'][get_idx]
-                    chidx_ann['nsx_hi_freq_type']=flt_type[
+                    chidx_ann['nsx_hi_freq_type'] = flt_type[
                             self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
-                    chidx_ann['nsx_lo_freq_type']=flt_type[
+                    chidx_ann['nsx_lo_freq_type'] = flt_type[
                             self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
 
         for seg_index in range(self._nb_segment):
