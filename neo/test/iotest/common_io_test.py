@@ -10,8 +10,9 @@ See BaseTestIO.
 
 The public URL is in url_for_tests.
 
-The private url for writing is
-ssh://gate.g-node.org/groups/neo/io_test_files/
+To deposite new testing files,  please create a account at
+gin.g-node.org and upload files at NeuralEnsemble/ephy_testing_data
+data repo.
 
 '''
 
@@ -20,7 +21,9 @@ from __future__ import absolute_import
 
 __test__ = False
 
-url_for_tests = "https://portal.g-node.org/neo/"
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
+
 
 import os
 from copy import copy
@@ -38,7 +41,7 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_children_empty)
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
-        download_test_file, create_local_temp_dir)
+                                   download_test_file, create_local_temp_dir)
 
 from neo.test.iotest.tools import (cleanup_test_file,
                                    close_object_safe, create_generic_io_object,
@@ -90,7 +93,7 @@ class BaseTestIO(object):
         '''
         self.files_to_test = copy(self.__class__.files_to_test)
         self.higher = self.ioclass.supported_objects[0]
-        self.shortname = self.ioclass.__name__.lower().strip('io')
+        self.shortname = self.ioclass.__name__.lower().rstrip('io')
         # these objects can both be written and read
         self.io_readandwrite = list(set(self.ioclass.readable_objects) &
                                     set(self.ioclass.writeable_objects))
@@ -102,9 +105,6 @@ class BaseTestIO(object):
         self.files_generated = []
         self.generate_files_for_io_able_to_write()
         self.files_to_test.extend(self.files_generated)
-        self.cascade_modes = [True]
-        if hasattr(self.ioclass, 'load_lazy_cascade'):
-            self.cascade_modes.append('lazy')
 
     def create_local_dir_if_not_exists(self):
         '''
@@ -112,7 +112,8 @@ class BaseTestIO(object):
 
         The directory path is also written to self.local_test_dir
         '''
-        self.local_test_dir = create_local_temp_dir(self.shortname)
+        self.local_test_dir = create_local_temp_dir(
+            self.shortname, directory=os.environ.get("NEO_TEST_FILE_DIR", None))
         return self.local_test_dir
 
     def download_test_files_if_not_present(self):
@@ -124,7 +125,7 @@ class BaseTestIO(object):
         if not self.use_network:
             raise unittest.SkipTest("Requires download of data from the web")
 
-        url = url_for_tests+self.shortname
+        url = url_for_tests + self.shortname
         try:
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
@@ -259,7 +260,7 @@ class BaseTestIO(object):
         return res
 
     def read_file(self, filename=None, return_path=False, clean=False,
-                  target=None, readall=False, cascade=True, lazy=False):
+                  target=None, readall=False, lazy=False):
         '''
         Read from the specified filename.
 
@@ -277,15 +278,14 @@ class BaseTestIO(object):
         read_segment, respectively.
         If target is a string, use 'read_'+target.
 
-        The cascade and lazy parameters are passed to the reader.  Defaults
-        are True and False, respectively.
+        The lazy parameter is passed to the reader.  Defaults is True.
 
         If readall is True, use the read_all_ method instead of the read_
         method. Default is False.
         '''
         ioobj, path = self.generic_io_object(filename=filename,
                                              return_path=True, clean=clean)
-        obj = read_generic(ioobj, target=target, cascade=cascade, lazy=lazy,
+        obj = read_generic(ioobj, target=target, lazy=lazy,
                            readall=readall, return_reader=False)
 
         if return_path:
@@ -369,7 +369,7 @@ class BaseTestIO(object):
 
     def iter_objects(self, target=None, return_path=False, return_ioobj=False,
                      return_reader=False, clean=False, readall=False,
-                     cascade=True, lazy=False):
+                     lazy=False):
         '''
         Iterate over objects read from the list of filenames in files_to_test.
 
@@ -394,8 +394,7 @@ class BaseTestIO(object):
         If clean is True, try to delete existing versions of the file
         before creating the io object.  Default is False.
 
-        The cascade and lazy parameters are passed to the reader.  Defaults
-        are True and False, respectively.
+        The lazy parameters is passed to the reader.  Defaults is True.
 
         If readall is True, use the read_all_ method instead of the read_
         method. Default is False.
@@ -408,7 +407,7 @@ class BaseTestIO(object):
                                  return_ioobj=return_ioobj,
                                  return_reader=return_reader,
                                  clean=clean, readall=readall,
-                                 cascade=cascade, lazy=lazy)
+                                 lazy=lazy)
 
     def generate_files_for_io_able_to_write(self):
         '''
@@ -446,35 +445,33 @@ class BaseTestIO(object):
         if not self.able_to_write_or_read(writeread=True):
             return
 
-        for cascade in self.cascade_modes:
-            ioobj1 = self.generic_io_object(clean=True)
+        ioobj1 = self.generic_io_object(clean=True)
 
-            if ioobj1 is None:
-                return
+        if ioobj1 is None:
+            return
 
-            ob1 = write_generic(ioobj1, target=self.higher)
-            close_object_safe(ioobj1)
+        ob1 = write_generic(ioobj1, target=self.higher)
+        close_object_safe(ioobj1)
 
-            ioobj2 = self.generic_io_object()
+        ioobj2 = self.generic_io_object()
 
-            # Read the highest supported object from the file
-            obj_reader = create_generic_reader(ioobj2, target=False)
-            ob2 = obj_reader(cascade=cascade)[0]
-            if self.higher == Segment:
-                ob2 = ob2.segments[0]
+        # Read the highest supported object from the file
+        obj_reader = create_generic_reader(ioobj2, target=False)
+        ob2 = obj_reader()[0]
+        if self.higher == Segment:
+            ob2 = ob2.segments[0]
 
-            # some formats (e.g. elphy) do not support double floating
-            # point spiketrains
-            try:
-                assert_same_sub_schema(ob1, ob2, True, 1e-8)
-                assert_neo_object_is_compliant(ob1)
-                assert_neo_object_is_compliant(ob2)
-            # intercept exceptions and add more information
-            except BaseException as exc:
-                exc.args += ('with cascade=%s ' % cascade,)
-                raise
+        # some formats (e.g. elphy) do not support double floating
+        # point spiketrains
+        try:
+            assert_same_sub_schema(ob1, ob2, True, 1e-8)
+            assert_neo_object_is_compliant(ob1)
+            assert_neo_object_is_compliant(ob2)
+        # intercept exceptions and add more information
+        except BaseException as exc:
+            raise
 
-            close_object_safe(ioobj2)
+        close_object_safe(ioobj2)
 
     def test_read_then_write(self):
         '''
@@ -495,39 +492,23 @@ class BaseTestIO(object):
         Reading %s files in `files_to_test` produces compliant objects.
 
         Compliance test: neo.test.tools.assert_neo_object_is_compliant for
-        all cascade and lazy modes
+        lazy mode.
         ''' % self.ioclass.__name__
         # This is for files presents at G-Node or generated
-        for cascade in self.cascade_modes:
-            for lazy in [True, False]:
-                for obj, path in self.iter_objects(cascade=cascade, lazy=lazy,
-                                                   return_path=True):
-                    try:
-                        # Check compliance of the block
-                        assert_neo_object_is_compliant(obj)
-                    # intercept exceptions and add more information
-                    except BaseException as exc:
-                        exc.args += ('from %s with cascade=%s and lazy=%s' %
-                                     (os.path.basename(path), cascade, lazy),)
-                        raise
+        lazy_list = [False]
+        if self.ioclass.support_lazy:
+            lazy_list.append(True)
 
-    def test_readed_with_cascade_is_compliant(self):
-        '''
-        Reading %s files in `files_to_test` with `cascade` is compliant.
-
-        A reader with cascade = False should return empty children.
-        ''' % self.ioclass.__name__
-        # This is for files presents at G-Node or generated
-        for obj, path in self.iter_objects(cascade=False, lazy=False,
-                                           return_path=True):
-            try:
-                # Check compliance of the block or segment
-                assert_neo_object_is_compliant(obj)
-                assert_children_empty(obj, self.ioclass)
-            # intercept exceptions and add more information
-            except BaseException as exc:
-                exc.args += ('from %s ' % os.path.basename(path),)
-                raise
+        for lazy in lazy_list:
+            for obj, path in self.iter_objects(lazy=lazy, return_path=True):
+                try:
+                    # Check compliance of the block
+                    assert_neo_object_is_compliant(obj)
+                # intercept exceptions and add more information
+                except BaseException as exc:
+                    exc.args += ('from %s with lazy=%s' %
+                                 (os.path.basename(path), lazy),)
+                    raise
 
     def test_readed_with_lazy_is_compliant(self):
         '''
@@ -539,15 +520,12 @@ class BaseTestIO(object):
         contain the lazy_shape attribute.
         ''' % self.ioclass.__name__
         # This is for files presents at G-Node or generated
-        for cascade in self.cascade_modes:
-            for obj, path in self.iter_objects(cascade=cascade, lazy=True,
-                                               return_path=True):
+        if self.ioclass.support_lazy:
+            for obj, path in self.iter_objects(lazy=True, return_path=True):
                 try:
                     assert_sub_schema_is_lazy_loaded(obj)
                 # intercept exceptions and add more information
                 except BaseException as exc:
-                    exc.args += ('from %s with cascade=%s ' %
-                                 (os.path.basename(path), cascade),)
                     raise
 
     def test_load_lazy_objects(self):
@@ -563,15 +541,12 @@ class BaseTestIO(object):
             return
 
         # This is for files presents at G-Node or generated
-        for cascade in self.cascade_modes:
-            for obj, path, ioobj in self.iter_objects(cascade=cascade,
-                                                      lazy=True,
-                                                      return_ioobj=True,
-                                                      return_path=True):
-                try:
-                    assert_lazy_sub_schema_can_be_loaded(obj, ioobj)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from %s with cascade=%s ' %
-                                 (os.path.basename(path), cascade),)
-                    raise
+        for obj, path, ioobj in self.iter_objects(
+                lazy=True,
+                return_ioobj=True,
+                return_path=True):
+            try:
+                assert_lazy_sub_schema_can_be_loaded(obj, ioobj)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                raise
