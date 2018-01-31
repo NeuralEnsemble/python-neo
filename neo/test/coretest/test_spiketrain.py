@@ -1289,8 +1289,8 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_deep_copy_attributes(self):
         signal1 = self.train
-        new_t_start = -10*pq.s
-        new_t_stop = 10*pq.s
+        new_t_start = -10 * pq.s
+        new_t_stop = 10 * pq.s
         new_data = np.sort(np.random.uniform(new_t_start.magnitude,
                                              new_t_stop.magnitude,
                                              len(self.train))) * pq.ms
@@ -1300,6 +1300,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
                                                    t_stop=new_t_stop)
         signal1.annotate(new_annotation='for signal 1')
         self.assertTrue('new_annotation' not in signal1b.annotations)
+
 
 class TestAttributesAnnotations(unittest.TestCase):
     def test_set_universally_recommended_attributes(self):
@@ -1514,7 +1515,6 @@ class TestChanging(unittest.TestCase):
         self.assertIs(result.segment, train.segment)
         self.assertIs(result.unit, train.unit)
 
-
     def test__rescale_same_units(self):
         data = [3, 4, 5] * pq.ms
         train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
@@ -1563,7 +1563,11 @@ class TestPropertiesMethods(unittest.TestCase):
 
     def test__repr(self):
         result = repr(self.train1)
-        targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
+        if np.__version__.split(".")[:2] > ['1', '13']:
+            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
+            targ = '<SpikeTrain(array([3., 4., 5.]) * ms, [0.5 ms, 10.0 ms])>'
+        else:
+            targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
         self.assertEqual(result, targ)
 
     def test__duration(self):

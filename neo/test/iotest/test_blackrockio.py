@@ -70,7 +70,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         to check for parsing errors.
         """
         filename = self.get_filename_path('FileSpec2.3001')
-        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5, )
+        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
 
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(time_slices=None, load_waveforms=False)
@@ -137,7 +137,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         to check for parsing errors.
         """
         filename = self.get_filename_path('blackrock_2_1/l101210-001')
-        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5, )
+        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
 
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(time_slices=None, load_waveforms=False)
@@ -216,7 +216,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                        {'nsx_to_load': 5, 'nev_override': '-'.join([dirname, '02'])}),
                       ('blackrock_2_1/l101210-001.mat', {'nsx_to_load': 2})]
         for index, param in enumerate(parameters):
-            # Load data from Matlab generated files
+            # Load data from matlab generated files
             ml = scipy.io.loadmat(
                 get_test_file_full_path(
                     ioclass=BlackrockIO,
@@ -248,7 +248,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 idx = chidx.analogsignals[0].annotations['channel_id']
                 # Get data of AnalogSignal without pq.units
                 anasig = np.squeeze(chidx.analogsignals[0].base[:].magnitude)
-                # Test for equality of first nonzero values of AnalogSignal and matlab file contents
+                # Test for equality of first nonzero values of AnalogSignal
+                #                                   and matlab file contents
                 # If not equal test if hardcoded gain is responsible for this
                 # See BlackrockRawIO ll. 1420 commit 77a645655605ae39eca2de3ee511f3b522f11bd7
                 j = 0
@@ -275,7 +276,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 # Compare waveforms
                 matlab_wf = wf_ml[np.nonzero(
                     np.logical_and(elec_ml == channelid, unit_ml == unitid)), :][0]
-                # Atleast_2d as correction for  waveforms that are saved in single dimension in SpikeTrain
+                # Atleast_2d as correction for waveforms that are saved
+                # in single dimension in SpikeTrain
                 # because only one waveform is available
                 assert_equal(np.atleast_2d(np.squeeze(st_i.waveforms).magnitude), matlab_wf)
 
@@ -283,7 +285,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 matlab_spikes = ts_ml[np.nonzero(
                     np.logical_and(elec_ml == channelid, unit_ml == unitid))]
                 # Going sure that unit is really seconds and not 1/30000 seconds
-                if (not st_i.units == pq.CompoundUnit("1.0/{0} * s".format(30000))) and st_i.units == pq.s:
+                if (not st_i.units == pq.CompoundUnit("1.0/{0} * s".format(30000))) and \
+                        st_i.units == pq.s:
                     st_i = np.round(st_i.base * 30000).astype(int)
                 assert_equal(st_i, matlab_spikes)
 
@@ -294,8 +297,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                     # Get all digital event IDs in this recording
                     marker_ids = set(ea_i.labels)
                     for marker_id in marker_ids:
-                        python_digievents = np.round(ea_i.times.base[
-                                                         ea_i.labels == marker_id] * 30000).astype(int)
+                        python_digievents = np.round(
+                            ea_i.times.base[ea_i.labels == marker_id] * 30000).astype(int)
                         matlab_digievents = mts_ml[
                             np.nonzero(mid_ml == int(marker_id))]
                         assert_equal(python_digievents, matlab_digievents)

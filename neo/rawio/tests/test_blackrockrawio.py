@@ -8,7 +8,7 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from  neo.rawio.blackrockrawio import BlackrockRawIO
+from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 import numpy as np
@@ -102,7 +102,9 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
             name = reader.header['event_channels']['name'][ev_chan]
             # ~ print(name)
             if name == 'digital_input_port':
-                all_timestamps, _, labels = reader.get_event_timestamps(event_channel_index=ev_chan)
+
+                all_timestamps, _, labels = reader.get_event_timestamps(
+                    event_channel_index=ev_chan)
 
                 for label in np.unique(labels):
                     python_digievents = all_timestamps[labels == label]
@@ -177,7 +179,8 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
                 name = reader.header['event_channels']['name'][ev_chan]
                 # ~ print(name)
                 if name == 'digital_input_port':
-                    all_timestamps, _, labels = reader.get_event_timestamps(event_channel_index=ev_chan)
+                    all_timestamps, _, labels = reader.get_event_timestamps(
+                        event_channel_index=ev_chan)
 
                     for label in np.unique(labels):
                         python_digievents = all_timestamps[labels == label]

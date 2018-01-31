@@ -21,6 +21,7 @@ class Test_unique_objs(unittest.TestCase):
     '''
     TestCase for unique_objs
     '''
+
     def test_some(self):
         a = 1
         b = np.array([3.14159265, 3.1415])
@@ -37,6 +38,7 @@ class TestContainerNeo(unittest.TestCase):
     '''
     TestCase to make sure basic initialization and methods work
     '''
+
     def test_init(self):
         '''test to make sure initialization works properly'''
         container = Container(name='a container', description='this is a test')
@@ -104,6 +106,7 @@ class Test_Container_merge(unittest.TestCase):
     '''
     TestCase to make sure merge method works
     '''
+
     def setUp(self):
         self.name1 = 'a container 1'
         self.name2 = 'a container 2'
