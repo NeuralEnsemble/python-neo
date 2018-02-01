@@ -194,32 +194,33 @@ class Spike2RawIO(BaseRawIO):
                                           wf_left_sweep, wf_sampling_rate))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        print(sig_channels)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         event_channels = np.array(event_channels, dtype=_event_channel_dtype)
 
         if len(sig_channels) > 0:
-            sampling_rate = np.unique(sig_channels['sampling_rate'])
-            assert sampling_rate.size == 1
-            self._sampling_rate = float(sampling_rate[0])
-            self._signal_length = min(all_signal_length)
+            # signal channel can different sampling_rate
+            # we group then by (sample_rate, dtype)
 
-            all_kind = [self._channel_infos[chan_id]['kind'] for chan_id in sig_channels['id']]
-            all_kind = np.unique(all_kind)
-            assert all_kind.size == 1, 'IO only support when all channel have the same dtype'
-
-            if all_kind[0] == 1:
-                self._sig_dtype = np.dtype('int16')
-            elif all_kind[0] == 9:
-                self._sig_dtype = np.dtype('float32')
+            all_signal_length = np.array(all_signal_length)
+            groups = {(s['sampling_rate'], s['dtype']) for s in sig_channels}
+            self._sampling_rates = {}
+            self._sig_dtypes = {}
+            self._signal_lengths = {}
+            for group_id, (sr, dt) in enumerate(groups):
+                mask = (sig_channels['sampling_rate'] == sr) & (sig_channels['dtype'] == dt)
+                sig_channels['group_id'][mask] = group_id
+                self._sampling_rates[group_id] = float(sr)
+                self._sig_dtypes[group_id] = np.dtype(dt)
+                self._signal_lengths[group_id] = min(all_signal_length[mask])
 
         self._time_factor = self._global_info['us_per_time'] * self._global_info['dtime_base']
 
         # t_stop: best between events, spikes and signals
         if len(sig_channels) > 0:
-            t_stop_sig = self._signal_length / self._sampling_rate
+            group_ids = self._signal_lengths.keys()
+            t_stop_sigs = [self._signal_lengths[g] / self._sampling_rates[g] for g in group_ids]
         else:
-            t_stop_sig = 0.
+            t_stop_sigs = [0.]
 
         t_stop_ev = 0.
         for chan_id, chan_info in enumerate(self._channel_infos):
@@ -234,7 +235,7 @@ class Spike2RawIO(BaseRawIO):
                 last_time = raw_data['tick'][-1] * self._time_factor
                 if last_time > t_stop_ev:
                     t_stop_ev = last_time
-        self._t_stop = max(t_stop_sig, t_stop_ev)
+        self._t_stop = max(t_stop_ev, *t_stop_sigs)
 
         # fille into header dict
         self.header = {}
@@ -279,7 +280,10 @@ class Spike2RawIO(BaseRawIO):
         return self._t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        return self._signal_length
+        if channel_indexes is None:
+            channel_indexes = np.arange(self.header['signal_channels'].size)
+        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+        return self._signal_lengths[group_id]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
@@ -288,11 +292,14 @@ class Spike2RawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._signal_length
+            i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
 
-        dt = self._sig_dtype
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
+
+        group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
+
+        dt = self._sig_dtypes[group_id]
 
         raw_signals = np.zeros((i_stop - i_start, len(channel_indexes)), dtype=dt)
         for c, channel_index in enumerate(channel_indexes):
@@ -405,7 +412,7 @@ class Spike2RawIO(BaseRawIO):
             marker_filter = None
 
         timestamps, waveforms = self._get_internal_timestamp_(chan_id, t_start, t_stop,
-                                                              other_field='waveform', marker_filter=marker_filter)
+                                                        other_field='waveform', marker_filter=marker_filter)
 
         waveforms = waveforms.reshape(timestamps.size, 1, -1)
 
@@ -478,11 +485,11 @@ def get_channel_dtype(chan_info):
         dt = [('tick', 'i4'), ('marker', 'i4')]
     elif chan_info['kind'] in [6]:  # AdcMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-              #~ ('adc', 'S%d' % chan_info['n_extra'])]
+              # ('adc', 'S%d' % chan_info['n_extra'])]
               ('waveform', 'int16', chan_info['n_extra'] // 2)]
     elif chan_info['kind'] in [7]:  # RealMark data (waveform)
         dt = [('tick', 'i4'), ('marker', 'i4'),
-              #~ ('real', 'S%d' % chan_info['n_extra'])]
+              # ('real', 'S%d' % chan_info['n_extra'])]
               ('waveform', 'float32', chan_info['n_extra'] // 4)]
     elif chan_info['kind'] in [8]:  # TextMark data
         dt = [('tick', 'i4'), ('marker', 'i4'),
