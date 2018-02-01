@@ -274,7 +274,7 @@ class AnalogSignal(BaseSignal):
         else:
             return None
 
-    def __getitem__(self, i):
+    def __getitem__(self, i):   # TODO: IN BASESIGNAL, ARRAYANNOTATIONS RICHTIG SLICEN
         '''
         Get the item or slice :attr:`i`.
         '''
