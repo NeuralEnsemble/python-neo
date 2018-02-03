@@ -151,7 +151,7 @@ class NixIO(BaseIO):
         return list(self._nix_to_neo_block(blk)
                     for blk in self.nix_file.blocks)
 
-    def read_block(self, index=None, nixname=None, neoname=None):
+    def read_block(self, index=None, nixname=None, neoname=None, lazy=False):
         """
         Loads a Block from the NIX file along with all contained child objects
         and returns the equivalent Neo Block.
@@ -177,6 +177,7 @@ class NixIO(BaseIO):
         :param nixname: The name of the Block in NIX
         :param neoname: The name of the original Neo Block
         """
+        assert not lazy, "Lazy loading not supported"
         nix_block = None
         if index is not None:
             nix_block = self.nix_file.blocks[index]
@@ -211,7 +212,7 @@ class NixIO(BaseIO):
             yield self._nix_to_neo_block(blk)
 
     def read_channelindex(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         nix_source = self._get_object_at(path)
         neo_rcg = self._source_chx_to_neo(nix_source)
         neo_rcg.path = path
@@ -250,11 +251,11 @@ class NixIO(BaseIO):
         return neo_signal
 
     def read_analogsignal(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         return self.read_signal(path, lazy)
 
     def read_irregularlysampledsignal(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         return self.read_signal(path, lazy)
 
     def read_eest(self, path, lazy=False):
@@ -268,19 +269,19 @@ class NixIO(BaseIO):
         return neo_eest
 
     def read_epoch(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
     def read_event(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
     def read_spiketrain(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
     def read_unit(self, path, lazy=False):
-        assert not lazy, 'Do not support lazy'
+        assert not lazy, "Lazy loading not supported"
         nix_source = self._get_object_at(path)
         neo_unit = self._source_unit_to_neo(nix_source)
         neo_unit.path = path
@@ -419,7 +420,7 @@ class NixIO(BaseIO):
             neo_signal.lazy_shape = lazy_shape
         return neo_signal
 
-    def _mtag_eest_to_neo(self, nix_mtag, lazy):
+    def _mtag_eest_to_neo(self, nix_mtag, lazy=False):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         neo_type = nix_mtag.type
 
