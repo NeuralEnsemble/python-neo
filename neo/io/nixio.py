@@ -308,6 +308,31 @@ class NixIO(BaseIO):
             nix_group.created_at
         )
         self._neo_map[nix_group.name] = neo_segment
+
+        # this will probably get all the DAs anyway, but if we change any part
+        # of the mapping to add other kinds of DataArrays to a group, such as
+        # MultiTag positions and extents, this filter will be necessary
+        dataarrays = list(filter(
+            lambda da: da.type in ("neo.analogsignal",
+                                   "neo.irregularlysampledsignal"),
+            nix_group.data_arrays))
+        dataarrays = self._group_signals(dataarrays)
+        for name, das in dataarrays.items():
+            if das[0].type == "neo.analogsignal":
+                neo_segment.analogsignals.append(self._signal_da_to_neo(das,
+                                                                        False))
+            elif das[0].type == "neo.irregularlysamplessignal":
+                neo_segment.irregularlysamplessignal.append(
+                    self._signal_da_to_neo(das)
+                )
+
+        for mtag in nix_group.multi_tags:
+            if mtag.type == "neo.event":
+                neo_segment.events.append(self._mtag_eest_to_neo(mtag))
+            elif mtag.type == "neo.epoch":
+                neo_segment.epochs.append(self._mtag_eest_to_neo(mtag))
+            elif mtag.type == "neo.spiketrain":
+                neo_segment.spiketrains.append(self._mtag_eest_to_neo(mtag))
         return neo_segment
 
     def _source_chx_to_neo(self, nix_source):
