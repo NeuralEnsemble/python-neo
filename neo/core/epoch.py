@@ -158,7 +158,7 @@ class Epoch(BaseNeo, pq.Quantity):
         '''
         if self.dimensionality == pq.quantity.validate_dimensionality(units):
             return self.copy()
-        obj = Epoch(times=self.times.rescale(units), durations=self.durations.rescale(units), labels=self.labels,
+        obj = Epoch(times=self.times.rescale(units), durations=self.durations, labels=self.labels,
                     units=units, name=self.name, file_origin=self.file_origin,
                     description=self.description,
                     **self.annotations)
