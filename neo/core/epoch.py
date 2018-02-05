@@ -160,7 +160,7 @@ class Epoch(BaseNeo, pq.Quantity):
             return self.copy()
         obj = Epoch(times=self.times.rescale(units), durations=self.durations.rescale(units), labels=self.labels,
                     units=units, name=self.name, file_origin=self.file_origin,
-                    description=self.description, array_annotations=self.array_annotations,
+                    description=self.description,
                     **self.annotations)
         obj.segment = self.segment
         return obj
