@@ -142,6 +142,19 @@ class Event(BaseNeo, pq.Quantity):
                                                                self.times)]
         return '<Event: %s>' % ', '.join(objs)
 
+    def rescale(self, units):
+        '''
+        Return a copy of the :class:`SpikeTrain` converted to the specified
+        units
+        '''
+        if self.dimensionality == pq.quantity.validate_dimensionality(units):
+            return self.copy()
+        obj = Event(times=self.times, labels=self.labels, units=units, name=self.name,
+                    description=self.description, file_origin=self.file_origin,
+                    **self.annotations)
+        obj.segment = self.segment
+        return obj
+
     @property
     def times(self):
         return pq.Quantity(self)
