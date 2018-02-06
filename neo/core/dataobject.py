@@ -9,6 +9,8 @@ import quantities as pq
 import numpy as np
 
 from neo.core.baseneo import BaseNeo, _check_annotations    # TODO: Deos this make sense? Should the _ be removed?
+from neo.core.basesignal import BaseSignal
+
 
 def merge_annotation(a, b):
     """
@@ -158,6 +160,16 @@ class DataObject(BaseNeo, pq.Quantity):
 
         array_annotations = self._check_array_annotations(array_annotations)
         self.array_annotations.update(array_annotations)
+
+    def rescale(self, units):
+        if isinstance(self, BaseSignal):
+            obj = self.duplicate_with_new_array(self.signal.rescale(units))
+        else:
+            obj = self.duplicate_with_new_data(self.times.rescale(units))
+
+        obj.array_annotations = self.array_annotations
+
+        return obj
 
     def array_annotations_at_index(self, index):  # TODO: Should they be sorted by key (current) or index?
 
