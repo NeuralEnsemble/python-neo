@@ -211,7 +211,7 @@ class NixIO(BaseIO):
         for blk in self.nix_file.blocks:
             yield self._nix_to_neo_block(blk)
 
-    def read_channelindex(self, path, lazy=False):
+    def _read_channelindex(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         nix_source = self._get_object_at(path)
         neo_rcg = self._source_chx_to_neo(nix_source)
@@ -223,7 +223,7 @@ class NixIO(BaseIO):
         neo_rcg.block = neo_parent
         return neo_rcg
 
-    def read_signal(self, path, lazy=False):
+    def _read_signal(self, path, lazy=False):
         nix_data_arrays = list()
         parent_group = self._get_parent(path)
         parent_container = parent_group.data_arrays
@@ -250,15 +250,15 @@ class NixIO(BaseIO):
             neo_signal.segment = neo_parent
         return neo_signal
 
-    def read_analogsignal(self, path, lazy=False):
+    def _read_analogsignal(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         return self.read_signal(path, lazy)
 
-    def read_irregularlysampledsignal(self, path, lazy=False):
+    def _read_irregularlysampledsignal(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         return self.read_signal(path, lazy)
 
-    def read_eest(self, path, lazy=False):
+    def _read_eest(self, path, lazy=False):
         nix_mtag = self._get_object_at(path)
         neo_eest = self._mtag_eest_to_neo(nix_mtag, lazy)
         neo_eest.path = path
@@ -268,19 +268,19 @@ class NixIO(BaseIO):
         neo_eest.segment = neo_parent
         return neo_eest
 
-    def read_epoch(self, path, lazy=False):
+    def _read_epoch(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
-    def read_event(self, path, lazy=False):
+    def _read_event(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
-    def read_spiketrain(self, path, lazy=False):
+    def _read_spiketrain(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         return self.read_eest(path, lazy)
 
-    def read_unit(self, path, lazy=False):
+    def _read_unit(self, path, lazy=False):
         assert not lazy, "Lazy loading not supported"
         nix_source = self._get_object_at(path)
         neo_unit = self._source_unit_to_neo(nix_source)
@@ -356,12 +356,16 @@ class NixIO(BaseIO):
                                                        coord_units)
         rcg = ChannelIndex(**neo_attrs)
         self._neo_map[nix_source.name] = rcg
+
+        # TODO: Create links to signals
         return rcg
 
     def _source_unit_to_neo(self, nix_unit):
         neo_attrs = self._nix_attr_to_neo(nix_unit)
         neo_unit = Unit(**neo_attrs)
         self._neo_map[nix_unit.name] = neo_unit
+
+        # TODO: Create links to spiketrains
         return neo_unit
 
     def _analogsignal_da_to_neo(self, nix_da_group):
@@ -754,15 +758,15 @@ class NixIO(BaseIO):
         self._signal_map = dict()  # reset signal map
         # descend into Segments
         for seg in block.segments:
-            self.write_segment(seg, nixblock)
+            self._write_segment(seg, nixblock)
 
         # descend into ChannelIndexes
         for chx in block.channel_indexes:
-            self.write_channelindex(chx, nixblock)
+            self._write_channelindex(chx, nixblock)
 
         self._create_source_links(block, nixblock)
 
-    def write_channelindex(self, chx, nixblock):
+    def _write_channelindex(self, chx, nixblock):
         """
         Convert the provided Neo ChannelIndex to a NIX Source and write it to
         the NIX file. For each index in the ChannelIndex object, a child
@@ -824,9 +828,9 @@ class NixIO(BaseIO):
 
         # Descend into Units
         for unit in chx.units:
-            self.write_unit(unit, nixsource)
+            self._write_unit(unit, nixsource)
 
-    def write_segment(self, segment, nixblock):
+    def _write_segment(self, segment, nixblock):
         """
         Convert the provided Neo Segment to a NIX Group and write it to the
         NIX file.
@@ -862,17 +866,17 @@ class NixIO(BaseIO):
 
         # write signals, events, epochs, and spiketrains
         for asig in segment.analogsignals:
-            self.write_analogsignal(asig, nixblock, nixgroup)
+            self._write_analogsignal(asig, nixblock, nixgroup)
         for isig in segment.irregularlysampledsignals:
-            self.write_irregularlysampledsignal(isig, nixblock, nixgroup)
+            self._write_irregularlysampledsignal(isig, nixblock, nixgroup)
         for event in segment.events:
-            self.write_event(event, nixblock, nixgroup)
+            self._write_event(event, nixblock, nixgroup)
         for epoch in segment.epochs:
-            self.write_epoch(epoch, nixblock, nixgroup)
+            self._write_epoch(epoch, nixblock, nixgroup)
         for spiketrain in segment.spiketrains:
-            self.write_spiketrain(spiketrain, nixblock, nixgroup)
+            self._write_spiketrain(spiketrain, nixblock, nixgroup)
 
-    def write_analogsignal(self, anasig, nixblock, nixgroup):
+    def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
         DataArray objects and write them to the NIX file. All DataArray objects
@@ -936,7 +940,7 @@ class NixIO(BaseIO):
 
         self._signal_map[nix_name] = nixdas
 
-    def write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
+    def _write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
         """
         Convert the provided ``irsig`` (IrregularlySampledSignal) to a list of
         NIX DataArray objects and write them to the NIX file at the location.
@@ -997,7 +1001,7 @@ class NixIO(BaseIO):
 
         self._signal_map[nix_name] = nixdas
 
-    def write_event(self, event, nixblock, nixgroup):
+    def _write_event(self, event, nixblock, nixgroup):
         """
         Convert the provided Neo Event to a NIX MultiTag and write it to the
         NIX file.
@@ -1049,7 +1053,7 @@ class NixIO(BaseIO):
             if da.type in ("neo.analogsignal", "neo.irregularlysampledsignal"):
                 nixmt.references.append(da)
 
-    def write_epoch(self, epoch, nixblock, nixgroup):
+    def _write_epoch(self, epoch, nixblock, nixgroup):
         """
         Convert the provided Neo Epoch to a NIX MultiTag and write it to the
         NIX file.
@@ -1111,7 +1115,7 @@ class NixIO(BaseIO):
             if da.type in ("neo.analogsignal", "neo.irregularlysampledsignal"):
                 nixmt.references.append(da)
 
-    def write_spiketrain(self, spiketrain, nixblock, nixgroup):
+    def _write_spiketrain(self, spiketrain, nixblock, nixgroup):
         """
         Convert the provided Neo SpikeTrain to a NIX MultiTag and write it to
         the NIX file.
@@ -1188,7 +1192,7 @@ class NixIO(BaseIO):
             self._write_property(wfda.metadata, "left_sweep",
                                  spiketrain.left_sweep)
 
-    def write_unit(self, neounit, nixchxsource):
+    def _write_unit(self, neounit, nixchxsource):
         """
         Convert the provided Neo Unit to a NIX Source and write it to the
         NIX file.
