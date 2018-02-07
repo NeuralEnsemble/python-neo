@@ -241,7 +241,7 @@ class NixIO(BaseIO):
                 "DataArray {} is not a member of signal group {}".format(
                     da.name, group_section.name
                 )
-        neo_signal = self._signal_da_to_neo(nix_data_arrays, lazy)
+        neo_signal = self._signal_da_to_neo(nix_data_arrays)
         neo_signal.path = path
         if self._find_lazy_loaded(neo_signal) is None:
             self._update_maps(neo_signal, lazy)
@@ -320,11 +320,12 @@ class NixIO(BaseIO):
         dataarrays = self._group_signals(dataarrays)
         for name, das in dataarrays.items():
             if das[0].type == "neo.analogsignal":
-                neo_segment.analogsignals.append(self._signal_da_to_neo(das,
-                                                                        False))
-            elif das[0].type == "neo.irregularlysamplessignal":
-                neo_segment.irregularlysamplessignal.append(
-                    self._signal_da_to_neo(das)
+                neo_segment.analogsignals.append(
+                    self._analogsignal_da_to_neo(das)
+                )
+            elif das[0].type == "neo.irregularlysampledsignal":
+                neo_segment.irregularlysampledsignals.append(
+                    self._irregularlysampledsignal_da_to_neo(das)
                 )
 
         for mtag in nix_group.multi_tags:
@@ -363,69 +364,67 @@ class NixIO(BaseIO):
         self._neo_map[nix_unit.name] = neo_unit
         return neo_unit
 
-    def _signal_da_to_neo(self, nix_da_group, lazy):
+    def _analogsignal_da_to_neo(self, nix_da_group):
         """
-        Convert a group of NIX DataArrays to a Neo signal. This method expects
-        a list of data arrays that all represent the same, multidimensional
-        Neo Signal object.
-        This returns either an AnalogSignal or IrregularlySampledSignal.
+        Convert a group of NIX DataArrays to a Neo AnalogSignal. This method
+        expects a list of data arrays that all represent the same,
+        multidimensional Neo AnalogSignal object.
 
         :param nix_da_group: a list of NIX DataArray objects
-        :return: a Neo Signal object
+        :return: a Neo AnalogSignal object
         """
         nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
-        neo_type = nix_da_group[0].type
         neo_attrs["nix_name"] = metadata.name  # use the common base name
 
         unit = nix_da_group[0].unit
-        if lazy:
-            signaldata = create_quantity(np.empty(0), unit)
-            lazy_shape = (len(nix_da_group[0]), len(nix_da_group))
-        else:
-            signaldata = np.array([d[:] for d in nix_da_group]).transpose()
-            signaldata = create_quantity(signaldata, unit)
-            lazy_shape = None
+        signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+        signaldata = create_quantity(signaldata, unit)
         timedim = self._get_time_dimension(nix_da_group[0])
-        if (neo_type == "neo.analogsignal" or
-                timedim.dimension_type == nix.DimensionType.Sample):
-            if lazy:
-                sampling_period = create_quantity(1, timedim.unit)
-                t_start = create_quantity(0, timedim.unit)
-            else:
-                sampling_period = create_quantity(timedim.sampling_interval,
-                                                  timedim.unit)
-                # t_start should have been added to neo_attrs via the NIX
-                # object's metadata. This may not be present since in older
-                # versions, we didn't store t_start in the metadata when it
-                # wasn't necessary, such as when the timedim.offset and unit
-                # did not require rescaling.
-                if "t_start" in neo_attrs:
-                    t_start = neo_attrs["t_start"]
-                    del neo_attrs["t_start"]
-                else:
-                    t_start = create_quantity(timedim.offset, timedim.unit)
-
-            neo_signal = AnalogSignal(
-                signal=signaldata, sampling_period=sampling_period,
-                t_start=t_start, **neo_attrs
-            )
-        elif (neo_type == "neo.irregularlysampledsignal"
-              or timedim.dimension_type == nix.DimensionType.Range):
-            if lazy:
-                times = create_quantity(np.empty(0), timedim.unit)
-            else:
-                times = create_quantity(timedim.ticks, timedim.unit)
-            neo_signal = IrregularlySampledSignal(
-                signal=signaldata, times=times, **neo_attrs
-            )
+        sampling_period = create_quantity(timedim.sampling_interval,
+                                          timedim.unit)
+        # t_start should have been added to neo_attrs via the NIX
+        # object's metadata. This may not be present since in older
+        # versions, we didn't store t_start in the metadata when it
+        # wasn't necessary, such as when the timedim.offset and unit
+        # did not require rescaling.
+        if "t_start" in neo_attrs:
+            t_start = neo_attrs["t_start"]
+            del neo_attrs["t_start"]
         else:
-            return None
-        for da in nix_da_group:
-            self._neo_map[da.name] = neo_signal
-        if lazy_shape:
-            neo_signal.lazy_shape = lazy_shape
+            t_start = create_quantity(timedim.offset, timedim.unit)
+
+        neo_signal = AnalogSignal(
+            signal=signaldata, sampling_period=sampling_period,
+            t_start=t_start, **neo_attrs
+        )
+        self._neo_map[neo_attrs["nix_name"]] = neo_signal
+        return neo_signal
+
+    def _irregularlysampledsignal_da_to_neo(self, nix_da_group):
+        """
+        Convert a group of NIX DataArrays to a Neo IrregularlySampledSignal.
+        This method expects a list of data arrays that all represent the same,
+        multidimensional Neo IrregularlySampledSignal object.
+
+        :param nix_da_group: a list of NIX DataArray objects
+        :return: a Neo IrregularlySampledSignal object
+        """
+        nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
+        neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
+        metadata = nix_da_group[0].metadata
+        neo_attrs["nix_name"] = metadata.name  # use the common base name
+
+        unit = nix_da_group[0].unit
+        signaldata = np.array([d[:] for d in nix_da_group]).transpose()
+        signaldata = create_quantity(signaldata, unit)
+        timedim = self._get_time_dimension(nix_da_group[0])
+        times = create_quantity(timedim.ticks, timedim.unit)
+        neo_signal = IrregularlySampledSignal(
+            signal=signaldata, times=times, **neo_attrs
+        )
+        self._neo_map[neo_attrs["nix_name"]] = neo_signal
         return neo_signal
 
     def _mtag_eest_to_neo(self, nix_mtag, lazy=False):
