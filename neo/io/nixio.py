@@ -985,10 +985,6 @@ class NixIO(BaseIO):
 
             timedim = da.append_range_dimension(irsig.times.magnitude)
             timedim.unit = units_to_string(irsig.times.units)
-            tstart = irsig.t_start
-            metadata["t_start"] = tstart.magnitude.item()
-            metadata.props["t_start"].unit = units_to_string(tstart.units)
-            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
             timedim.label = "time"
 
             nixdas.append(da)
