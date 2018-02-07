@@ -153,6 +153,7 @@ class NixIOTest(unittest.TestCase):
         self.compare_eests_mtags(neo_eests, nixgroup.multi_tags)
 
     def compare_signals_das(self, neosignals, data_arrays):
+        totalsignals = 0
         for sig in neosignals:
             dalist = list()
             nixname = sig.annotations["nix_name"]
@@ -160,8 +161,10 @@ class NixIOTest(unittest.TestCase):
                 if da.metadata.name == nixname:
                     dalist.append(da)
             _, nsig = np.shape(sig)
+            totalsignals += nsig
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
+        self.assertEqual(totalsignals, len(data_arrays))
 
     def compare_signal_dalist(self, neosig, nixdalist):
         """
