@@ -396,11 +396,15 @@ class NixIO(BaseIO):
             else:
                 sampling_period = create_quantity(timedim.sampling_interval,
                                                   timedim.unit)
+                # t_start should have been added to neo_attrs via the NIX
+                # object's metadata. This may not be present since in older
+                # versions, we didn't store t_start in the metadata when it
+                # wasn't necessary, such as when the timedim.offset and unit
+                # did not require rescaling.
                 if "t_start" in neo_attrs:
                     t_start = neo_attrs["t_start"]
                     del neo_attrs["t_start"]
                 else:
-                    # TODO: FIXME
                     t_start = create_quantity(timedim.offset, timedim.unit)
 
             neo_signal = AnalogSignal(
@@ -1564,6 +1568,16 @@ class NixIO(BaseIO):
 
     @staticmethod
     def _nix_attr_to_neo(nix_obj):
+        """
+        Reads common attributes and metadata from a NIX object and populates a
+        dictionary with Neo-compatible attributes and annotations.
+
+        Common attributes: neo_name, nix_name, description,
+                           file_datetime (if applicable).
+
+        Metadata: For properties that specify a 'unit', a Quantity object is
+                  created.
+        """
         neo_attrs = dict()
         neo_attrs["nix_name"] = nix_obj.name
         neo_attrs["description"] = stringify(nix_obj.definition)
