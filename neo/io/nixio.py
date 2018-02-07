@@ -431,62 +431,49 @@ class NixIO(BaseIO):
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         return neo_signal
 
-    def _mtag_eest_to_neo(self, nix_mtag, lazy=False):
+    def _nix_to_neo_event(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
-        neo_type = nix_mtag.type
-
         time_unit = nix_mtag.positions.unit
-        if lazy:
-            times = create_quantity(np.empty(0), time_unit)
-            lazy_shape = np.shape(nix_mtag.positions)
-        else:
-            times = create_quantity(nix_mtag.positions, time_unit)
-            lazy_shape = None
-        if neo_type == "neo.epoch":
-            if lazy:
-                durations = create_quantity(np.empty(0), nix_mtag.extents.unit)
-                labels = np.empty(0, dtype='S')
-            else:
-                durations = create_quantity(nix_mtag.extents,
-                                            nix_mtag.extents.unit)
-                labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                                  dtype="S")
-            eest = Epoch(times=times, durations=durations, labels=labels,
+        times = create_quantity(nix_mtag.positions, time_unit)
+        labels = np.array(nix_mtag.positions.dimensions[0].labels,
+                          dtype="S")
+        neoevent = Event(times=times, labels=labels, **neo_attrs)
+        self._neo_map[nix_mtag.name] = neoevent
+        return neoevent
+
+    def _nix_to_neo_epoch(self, nix_mtag):
+        neo_attrs = self._nix_attr_to_neo(nix_mtag)
+        time_unit = nix_mtag.positions.unit
+        times = create_quantity(nix_mtag.positions, time_unit)
+        durations = create_quantity(nix_mtag.extents,
+                                    nix_mtag.extents.unit)
+        labels = np.array(nix_mtag.positions.dimensions[0].labels,
+                          dtype="S")
+        neoepoch = Epoch(times=times, durations=durations, labels=labels,
                          **neo_attrs)
-        elif neo_type == "neo.event":
-            if lazy:
-                labels = np.empty(0, dtype='S')
-            else:
-                labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                                  dtype="S")
-            eest = Event(times=times, labels=labels, **neo_attrs)
-        elif neo_type == "neo.spiketrain":
-            eest = SpikeTrain(times=times, **neo_attrs)
-            if nix_mtag.features:
-                wfda = nix_mtag.features[0].data
-                wftime = self._get_time_dimension(wfda)
-                if lazy:
-                    eest.waveforms = create_quantity(np.empty((0, 0, 0)),
-                                                     wfda.unit)
-                    eest.sampling_period = create_quantity(1, wftime.unit)
-                    eest.left_sweep = create_quantity(0, wftime.unit)
-                else:
-                    eest.waveforms = create_quantity(wfda, wfda.unit)
-                    interval_units = wftime.unit
-                    eest.sampling_period = create_quantity(
-                        wftime.sampling_interval, interval_units
-                    )
-                    left_sweep_units = wftime.unit
-                    if "left_sweep" in wfda.metadata:
-                        eest.left_sweep = create_quantity(
-                            wfda.metadata["left_sweep"], left_sweep_units
-                        )
-        else:
-            return None
-        self._neo_map[nix_mtag.name] = eest
-        if lazy_shape:
-            eest.lazy_shape = lazy_shape
-        return eest
+        self._neo_map[nix_mtag.name] = neoepoch
+        return neoepoch
+
+    def _nix_to_neo_spiketrain(self, nix_mtag):
+        neo_attrs = self._nix_attr_to_neo(nix_mtag)
+        time_unit = nix_mtag.positions.unit
+        times = create_quantity(nix_mtag.positions, time_unit)
+        neospiketrain = SpikeTrain(times=times, **neo_attrs)
+        if nix_mtag.features:
+            wfda = nix_mtag.features[0].data
+            wftime = self._get_time_dimension(wfda)
+            neospiketrain.waveforms = create_quantity(wfda, wfda.unit)
+            interval_units = wftime.unit
+            neospiketrain.sampling_period = create_quantity(
+                wftime.sampling_interval, interval_units
+            )
+            left_sweep_units = wftime.unit
+            if "left_sweep" in wfda.metadata:
+                neospiketrain.left_sweep = create_quantity(
+                    wfda.metadata["left_sweep"], left_sweep_units
+                )
+        self._neo_map[nix_mtag.name] = neospiketrain
+        return neospiketrain
 
     def _read_cascade(self, nix_obj, path, cascade, lazy):
         neo_obj = self._neo_map[nix_obj.name]
