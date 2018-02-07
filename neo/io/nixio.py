@@ -377,12 +377,20 @@ class NixIO(BaseIO):
             # else error?
         return neochx
 
-    def _nix_to_neo_unit(self, nix_unit):
-        neo_attrs = self._nix_attr_to_neo(nix_unit)
-        neo_unit = Unit(**neo_attrs)
-        self._neo_map[nix_unit.name] = neo_unit
+        # descend into Sources
+        neochx.units = list(self._nix_to_neo_unit(src)
+                            for src in nix_source.sources
+                            if src.type == "neo.unit")
 
-        # TODO: Create links to spiketrains
+        return neochx
+
+    def _nix_to_neo_unit(self, nix_source):
+        neo_attrs = self._nix_attr_to_neo(nix_source)
+        neo_unit = Unit(**neo_attrs)
+        self._neo_map[nix_source.name] = neo_unit
+
+        # create references to SpikeTrains
+        neo_unit.spiketrains.extend(self._ref_map.get(nix_source.name, list()))
         return neo_unit
 
     def _nix_to_neo_analogsignal(self, nix_da_group):
@@ -502,6 +510,12 @@ class NixIO(BaseIO):
                     wfda.metadata["left_sweep"], left_sweep_units
                 )
         self._neo_map[nix_mtag.name] = neospiketrain
+
+        srcnames = list(src.name for src in nix_mtag.sources)
+        for n in srcnames:
+            if n not in self._ref_map:
+                self._ref_map[n] = list()
+            self._ref_map[n].append(neospiketrain)
         return neospiketrain
 
     def _read_cascade(self, nix_obj, path, cascade, lazy):
