@@ -137,7 +137,10 @@ class NixIO(BaseIO):
             filemd["neo.version"] = neover
         # TODO: Version check for existing files
         self._block_read_counter = 0
+
+        # helper maps
         self._neo_map = dict()
+        self._ref_map = dict()
 
         self._signal_map = dict()
 
@@ -300,6 +303,8 @@ class NixIO(BaseIO):
         )
         neo_block.segments = list(self._nix_to_neo_segment(grp)
                                   for grp in nix_block.groups)
+        neo_block.channel_indexes = list(self._nix_to_neo_channelindex(src)
+                                         for src in nix_block.sources)
         return neo_block
 
     def _nix_to_neo_segment(self, nix_group):
@@ -341,26 +346,36 @@ class NixIO(BaseIO):
 
     def _nix_to_neo_channelindex(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
-        chx = list(self._nix_attr_to_neo(c)
-                   for c in nix_source.sources
-                   if c.type == "neo.channelindex")
-        chan_names = list(c["neo_name"] for c in chx if "neo_name" in c)
-        chan_ids = list(c["channel_id"] for c in chx if "channel_id" in c)
+        channels = list(self._nix_attr_to_neo(c)
+                        for c in nix_source.sources
+                        if c.type == "neo.channelindex")
+        chan_names = list(c["neo_name"] for c in channels if "neo_name" in c)
+        chan_ids = list(c["channel_id"] for c in channels if "channel_id" in c)
         if chan_names:
             neo_attrs["channel_names"] = chan_names
         if chan_ids:
             neo_attrs["channel_ids"] = chan_ids
-        neo_attrs["index"] = np.array([c["index"] for c in chx])
-        if "coordinates" in chx[0]:
-            coord_units = chx[0]["coordinates.units"]
-            coord_values = list(c["coordinates"] for c in chx)
+        neo_attrs["index"] = np.array([c["index"] for c in channels])
+        if "coordinates" in channels[0]:
+            coord_units = channels[0]["coordinates.units"]
+            coord_values = list(c["coordinates"] for c in channels)
             neo_attrs["coordinates"] = create_quantity(coord_values,
                                                        coord_units)
-        rcg = ChannelIndex(**neo_attrs)
-        self._neo_map[nix_source.name] = rcg
+        neochx = ChannelIndex(**neo_attrs)
+        self._neo_map[nix_source.name] = neochx
 
-        # TODO: Create links to signals
-        return rcg
+        neochx.units = list(self._nix_to_neo_unit(src)
+                            for src in nix_source.sources
+                            if src.type == "neo.unit")
+
+        signals = self._ref_map.get(nix_source.name, list())
+        for sig in signals:
+            if isinstance(sig, AnalogSignal):
+                neochx.analogsignals.append(sig)
+            elif isinstance(sig, IrregularlySampledSignal):
+                neochx.irregularlysampledsignals.append(sig)
+            # else error?
+        return neochx
 
     def _nix_to_neo_unit(self, nix_unit):
         neo_attrs = self._nix_attr_to_neo(nix_unit)
@@ -406,6 +421,12 @@ class NixIO(BaseIO):
             t_start=t_start, **neo_attrs
         )
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
+        # all DAs reference the same sources
+        srcnames = list(src.name for src in nix_da_group[0].sources)
+        for n in srcnames:
+            if n not in self._ref_map:
+                self._ref_map[n] = list()
+            self._ref_map[n].append(neo_signal)
         return neo_signal
 
     def _nix_to_neo_irregularlysampledsignal(self, nix_da_group):
@@ -431,6 +452,12 @@ class NixIO(BaseIO):
             signal=signaldata, times=times, **neo_attrs
         )
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
+        # all DAs reference the same sources
+        srcnames = list(src.name for src in nix_da_group[0].sources)
+        for n in srcnames:
+            if n not in self._ref_map:
+                self._ref_map[n] = list()
+            self._ref_map[n].append(neo_signal)
         return neo_signal
 
     def _nix_to_neo_event(self, nix_mtag):
