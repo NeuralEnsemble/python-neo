@@ -45,6 +45,8 @@ class NixIOTest(unittest.TestCase):
             for idx, neoseg in enumerate(neoblock.segments):
                 nixgrp = nixblock.groups[neoseg.annotations["nix_name"]]
                 self.compare_segment_group(neoseg, nixgrp)
+            self.assertEqual(len(neoblock.channel_indexes),
+                             len(nixblock.sources))
             for idx, neochx in enumerate(neoblock.channel_indexes):
                 nixsrc = nixblock.sources[neochx.annotations["nix_name"]]
                 self.compare_chx_source(neochx, nixsrc)
