@@ -321,23 +321,25 @@ class NixIO(BaseIO):
         for name, das in dataarrays.items():
             if das[0].type == "neo.analogsignal":
                 neo_segment.analogsignals.append(
-                    self._analogsignal_da_to_neo(das)
+                    self._nix_to_neo_analogsignal(das)
                 )
             elif das[0].type == "neo.irregularlysampledsignal":
                 neo_segment.irregularlysampledsignals.append(
-                    self._irregularlysampledsignal_da_to_neo(das)
+                    self._nix_to_neo_irregularlysampledsignal(das)
                 )
 
         for mtag in nix_group.multi_tags:
             if mtag.type == "neo.event":
-                neo_segment.events.append(self._mtag_eest_to_neo(mtag))
+                neo_segment.events.append(self._nix_to_neo_event(mtag))
             elif mtag.type == "neo.epoch":
-                neo_segment.epochs.append(self._mtag_eest_to_neo(mtag))
+                neo_segment.epochs.append(self._nix_to_neo_epoch(mtag))
             elif mtag.type == "neo.spiketrain":
-                neo_segment.spiketrains.append(self._mtag_eest_to_neo(mtag))
+                neo_segment.spiketrains.append(
+                    self._nix_to_neo_spiketrain(mtag)
+                )
         return neo_segment
 
-    def _source_chx_to_neo(self, nix_source):
+    def _nix_to_neo_channelindex(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
         chx = list(self._nix_attr_to_neo(c)
                    for c in nix_source.sources
@@ -360,7 +362,7 @@ class NixIO(BaseIO):
         # TODO: Create links to signals
         return rcg
 
-    def _source_unit_to_neo(self, nix_unit):
+    def _nix_to_neo_unit(self, nix_unit):
         neo_attrs = self._nix_attr_to_neo(nix_unit)
         neo_unit = Unit(**neo_attrs)
         self._neo_map[nix_unit.name] = neo_unit
@@ -368,7 +370,7 @@ class NixIO(BaseIO):
         # TODO: Create links to spiketrains
         return neo_unit
 
-    def _analogsignal_da_to_neo(self, nix_da_group):
+    def _nix_to_neo_analogsignal(self, nix_da_group):
         """
         Convert a group of NIX DataArrays to a Neo AnalogSignal. This method
         expects a list of data arrays that all represent the same,
@@ -406,7 +408,7 @@ class NixIO(BaseIO):
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         return neo_signal
 
-    def _irregularlysampledsignal_da_to_neo(self, nix_da_group):
+    def _nix_to_neo_irregularlysampledsignal(self, nix_da_group):
         """
         Convert a group of NIX DataArrays to a Neo IrregularlySampledSignal.
         This method expects a list of data arrays that all represent the same,
