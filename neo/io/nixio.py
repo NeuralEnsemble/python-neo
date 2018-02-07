@@ -301,8 +301,11 @@ class NixIO(BaseIO):
         neo_block.rec_datetime = datetime.fromtimestamp(
             nix_block.created_at
         )
+
+        # descend into Groups
         neo_block.segments = list(self._nix_to_neo_segment(grp)
                                   for grp in nix_block.groups)
+        # descend into Sources
         neo_block.channel_indexes = list(self._nix_to_neo_channelindex(src)
                                          for src in nix_block.sources)
         return neo_block
@@ -323,6 +326,7 @@ class NixIO(BaseIO):
                                    "neo.irregularlysampledsignal"),
             nix_group.data_arrays))
         dataarrays = self._group_signals(dataarrays)
+        # descend into DataArrays
         for name, das in dataarrays.items():
             if das[0].type == "neo.analogsignal":
                 neo_segment.analogsignals.append(
@@ -333,6 +337,7 @@ class NixIO(BaseIO):
                     self._nix_to_neo_irregularlysampledsignal(das)
                 )
 
+        # descend into MultiTags
         for mtag in nix_group.multi_tags:
             if mtag.type == "neo.event":
                 neo_segment.events.append(self._nix_to_neo_event(mtag))
@@ -361,28 +366,24 @@ class NixIO(BaseIO):
             coord_values = list(c["coordinates"] for c in channels)
             neo_attrs["coordinates"] = create_quantity(coord_values,
                                                        coord_units)
-        neochx = ChannelIndex(**neo_attrs)
-        self._neo_map[nix_source.name] = neochx
+        neo_chx = ChannelIndex(**neo_attrs)
+        self._neo_map[nix_source.name] = neo_chx
 
-        neochx.units = list(self._nix_to_neo_unit(src)
-                            for src in nix_source.sources
-                            if src.type == "neo.unit")
-
+        # create references to Signals
         signals = self._ref_map.get(nix_source.name, list())
         for sig in signals:
             if isinstance(sig, AnalogSignal):
-                neochx.analogsignals.append(sig)
+                neo_chx.analogsignals.append(sig)
             elif isinstance(sig, IrregularlySampledSignal):
-                neochx.irregularlysampledsignals.append(sig)
+                neo_chx.irregularlysampledsignals.append(sig)
             # else error?
-        return neochx
 
         # descend into Sources
-        neochx.units = list(self._nix_to_neo_unit(src)
-                            for src in nix_source.sources
-                            if src.type == "neo.unit")
+        neo_chx.units = list(self._nix_to_neo_unit(src)
+                             for src in nix_source.sources
+                             if src.type == "neo.unit")
 
-        return neochx
+        return neo_chx
 
     def _nix_to_neo_unit(self, nix_source):
         neo_attrs = self._nix_attr_to_neo(nix_source)
@@ -474,9 +475,9 @@ class NixIO(BaseIO):
         times = create_quantity(nix_mtag.positions, time_unit)
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
                           dtype="S")
-        neoevent = Event(times=times, labels=labels, **neo_attrs)
-        self._neo_map[nix_mtag.name] = neoevent
-        return neoevent
+        neo_event = Event(times=times, labels=labels, **neo_attrs)
+        self._neo_map[nix_mtag.name] = neo_event
+        return neo_event
 
     def _nix_to_neo_epoch(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
@@ -486,37 +487,37 @@ class NixIO(BaseIO):
                                     nix_mtag.extents.unit)
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
                           dtype="S")
-        neoepoch = Epoch(times=times, durations=durations, labels=labels,
-                         **neo_attrs)
-        self._neo_map[nix_mtag.name] = neoepoch
-        return neoepoch
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
+                          **neo_attrs)
+        self._neo_map[nix_mtag.name] = neo_epoch
+        return neo_epoch
 
     def _nix_to_neo_spiketrain(self, nix_mtag):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
-        neospiketrain = SpikeTrain(times=times, **neo_attrs)
+        neo_spiketrain = SpikeTrain(times=times, **neo_attrs)
         if nix_mtag.features:
             wfda = nix_mtag.features[0].data
             wftime = self._get_time_dimension(wfda)
-            neospiketrain.waveforms = create_quantity(wfda, wfda.unit)
+            neo_spiketrain.waveforms = create_quantity(wfda, wfda.unit)
             interval_units = wftime.unit
-            neospiketrain.sampling_period = create_quantity(
+            neo_spiketrain.sampling_period = create_quantity(
                 wftime.sampling_interval, interval_units
             )
             left_sweep_units = wftime.unit
             if "left_sweep" in wfda.metadata:
-                neospiketrain.left_sweep = create_quantity(
+                neo_spiketrain.left_sweep = create_quantity(
                     wfda.metadata["left_sweep"], left_sweep_units
                 )
-        self._neo_map[nix_mtag.name] = neospiketrain
+        self._neo_map[nix_mtag.name] = neo_spiketrain
 
         srcnames = list(src.name for src in nix_mtag.sources)
         for n in srcnames:
             if n not in self._ref_map:
                 self._ref_map[n] = list()
-            self._ref_map[n].append(neospiketrain)
-        return neospiketrain
+            self._ref_map[n].append(neo_spiketrain)
+        return neo_spiketrain
 
     def _read_cascade(self, nix_obj, path, cascade, lazy):
         neo_obj = self._neo_map[nix_obj.name]
