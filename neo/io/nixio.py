@@ -233,6 +233,11 @@ class NixIO(BaseIO):
             # parent reference
             newchx.block = neo_block
 
+        # reset maps
+        self._neo_map = dict()
+        self._ref_map = dict()
+        self._signal_map = dict()
+
         return neo_block
 
     def _nix_to_neo_segment(self, nix_group):
