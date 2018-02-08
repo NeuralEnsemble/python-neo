@@ -510,10 +510,9 @@ class NixIOTest(unittest.TestCase):
             )
             nixrc.metadata.create_property("index", nix.Value(chan))
             nixrc.metadata.create_property("channel_id", nix.Value(chan + 1))
-            dims = tuple(map(nix.Value, cls.rquant(3, 1)))
-            nixrc.metadata.create_property("coordinates", dims)
-            nixrc.metadata.create_property("coordinates.units",
-                                           nix.Value("um"))
+            dims = tuple(map(nix.Value, cls.rquant(3, 3)))
+            coordprop = nixrc.metadata.create_property("coordinates", dims)
+            coordprop.unit = "pm"
 
         nunits = 1
         stsperunit = np.array_split(allspiketrains, nunits)
@@ -680,6 +679,8 @@ class NixIOWriteTest(NixIOTest):
 
         chx.channel_names = ["one", "two", "three", "five",
                              "eight", "xiii"]
+
+        chx.coordinates = self.rquant((6, 3), pq.um)
         self.write_and_compare([block])
 
     def test_signals_write(self):

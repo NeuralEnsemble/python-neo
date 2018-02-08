@@ -291,10 +291,7 @@ class NixIO(BaseIO):
             neo_attrs["channel_ids"] = chan_ids
         neo_attrs["index"] = np.array([c["index"] for c in channels])
         if "coordinates" in channels[0]:
-            coord_units = channels[0]["coordinates.units"]
-            coord_values = list(c["coordinates"] for c in channels)
-            neo_attrs["coordinates"] = create_quantity(coord_values,
-                                                       coord_units)
+            neo_attrs["coordinates"] = list(c["coordinates"] for c in channels)
         neo_chx = ChannelIndex(**neo_attrs)
         self._neo_map[nix_source.name] = neo_chx
 
@@ -552,12 +549,8 @@ class NixIO(BaseIO):
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
-                nixcoords = tuple(
-                    nix.Value(c.rescale(coordunits).magnitude.item())
-                    for c in coords
-                )
-                if "coordinates" in chanmd:
-                    del chanmd["coordinates"]
+                nixcoords = tuple(nix.Value(c.magnitude.item())
+                                  for c in coords)
                 chanprop = chanmd.create_property("coordinates", nixcoords)
                 chanprop.unit = coordunits
 
