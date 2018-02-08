@@ -118,16 +118,29 @@ class NixIO(BaseIO):
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
                              " 'ow' (Overwrite).".format(mode))
         self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
-        if self.nix_file.mode == nix.FileMode.Overwrite:
+
+        if self.nix_file.mode == nix.FileMode.ReadOnly:
+            self._file_version = '0.5.2'
+            if "neo" in self.nix_file.sections:
+                self._file_version = self.nix_file.sections["neo"]["version"]
+        elif self.nix_file.mode == nix.FileMode.ReadWrite:
+            if "neo" in self.nix_file.sections:
+                self._file_version = self.nix_file.sections["neo"]["version"]
+            else:
+                self._file_version = '0.5.2'
+                filemd = self.nix_file.create_section("neo", "neo.metadata")
+                filemd["version"] = self._file_version
+        else:
+            # new file
             filemd = self.nix_file.create_section("neo", "neo.metadata")
-            filemd["neo.version"] = neover
-        # TODO: Version check for existing files
+            filemd["version"] = neover
+            self._file_version = neover
+
         self._block_read_counter = 0
 
         # helper maps
         self._neo_map = dict()
         self._ref_map = dict()
-
         self._signal_map = dict()
 
     def __enter__(self):

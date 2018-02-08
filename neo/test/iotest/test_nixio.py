@@ -23,7 +23,7 @@ import quantities as pq
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.nixio import NixIO, create_quantity, units_to_string
+from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
 
 try:
     import nixio as nix
@@ -1075,6 +1075,56 @@ class NixIOContextTests(NixIOTest):
         self.assertEqual(blocks[0].annotations["nix_name"], name_one)
         self.assertEqual(blocks[1].annotations["nix_name"], name_two)
         os.remove(self.filename)
+
+
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
+class NixIOVerTests(NixIOTest):
+
+    filename = "ver_test.h5"
+
+    def test_new_file(self):
+        with NixIO(self.filename, "ow") as iofile:
+            self.assertEqual(iofile._file_version, neover)
+
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly)
+        filever = nixfile.sections["neo"]["version"]
+        self.assertEqual(filever, neover)
+        nixfile.close()
+
+    def test_oldfile_nover(self):
+        nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite)
+        nixfile.close()
+        with NixIO(self.filename, "ro") as iofile:
+            self.assertEqual(iofile._file_version, '0.5.2')  # compat version
+
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly)
+        self.assertNotIn("neo", nixfile.sections)
+        nixfile.close()
+
+        with NixIO(self.filename, "rw") as iofile:
+            self.assertEqual(iofile._file_version, '0.5.2')  # compat version
+
+        # section should have been created now
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly)
+        self.assertIn("neo", nixfile.sections)
+        self.assertEqual(nixfile.sections["neo"]["version"], '0.5.2')
+        nixfile.close()
+
+    def test_file_with_ver(self):
+        someversion = '0.100.10'
+        nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite)
+        filemd = nixfile.create_section("neo", "neo.metadata")
+        filemd["version"] = someversion
+        nixfile.close()
+
+        with NixIO(self.filename, "ro") as iofile:
+            self.assertEqual(iofile._file_version, someversion)
+
+        with NixIO(self.filename, "rw") as iofile:
+            self.assertEqual(iofile._file_version, someversion)
+
+        with NixIO(self.filename, "ow") as iofile:
+            self.assertEqual(iofile._file_version, neover)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
