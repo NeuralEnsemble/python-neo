@@ -12,8 +12,11 @@ Tests for NixIO
 """
 
 import os
+import shutil
 from collections import Iterable
 from datetime import datetime
+
+from tempfile import mkdtemp
 
 import unittest
 import string
@@ -35,8 +38,9 @@ except ImportError:
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOTest(unittest.TestCase):
 
-    filename = None
     io = None
+    tempdir = None
+    filename = None
 
     def compare_blocks(self, neoblocks, nixblocks):
         for neoblock, nixblock in zip(neoblocks, nixblocks):
@@ -630,7 +634,8 @@ class NixIOTest(unittest.TestCase):
 class NixIOWriteTest(NixIOTest):
 
     def setUp(self):
-        self.filename = "nixio_testfile_write.h5"
+        self.tempdir = mkdtemp(prefix="nixiotest")
+        self.filename = os.path.join(self.tempdir, "testnixio.nix")
         self.writer = NixIO(self.filename, "ow")
         self.io = self.writer
         self.reader = nix.File.open(self.filename,
@@ -640,7 +645,7 @@ class NixIOWriteTest(NixIOTest):
     def tearDown(self):
         self.writer.close()
         self.reader.close()
-        os.remove(self.filename)
+        shutil.rmtree(self.tempdir)
 
     def write_and_compare(self, blocks):
         self.writer.write_all_blocks(blocks)
@@ -977,12 +982,13 @@ class NixIOWriteTest(NixIOTest):
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
 
-    filename = "testfile_readtest.h5"
     nixfile = None
     nix_blocks = None
 
     @classmethod
     def setUpClass(cls):
+        cls.tempdir = mkdtemp(prefix="nixiotest")
+        cls.filename = os.path.join(cls.tempdir, "testnixio.nix")
         if HAVE_NIX:
             cls.nixfile = cls.create_full_nix_file(cls.filename)
 
@@ -993,7 +999,7 @@ class NixIOReadTest(NixIOTest):
     def tearDownClass(cls):
         if HAVE_NIX:
             cls.nixfile.close()
-            os.remove(cls.filename)
+        shutil.rmtree(cls.tempdir)
 
     def tearDown(self):
         self.io.close()
@@ -1039,7 +1045,12 @@ class NixIOReadTest(NixIOTest):
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOContextTests(NixIOTest):
 
-    filename = "context_test.h5"
+    def setUp(self):
+        self.tempdir = mkdtemp(prefix="nixiotest")
+        self.filename = os.path.join(self.tempdir, "testnixio.nix")
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
     def test_context_write(self):
         neoblock = Block(name=self.rword(), description=self.rsentence())
@@ -1058,7 +1069,6 @@ class NixIOContextTests(NixIOTest):
                                 backend="h5py")
         self.compare_blocks([neoblock], nixfile.blocks)
         nixfile.close()
-        os.remove(self.filename)
 
     def test_context_read(self):
         nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite,
@@ -1074,13 +1084,17 @@ class NixIOContextTests(NixIOTest):
 
         self.assertEqual(blocks[0].annotations["nix_name"], name_one)
         self.assertEqual(blocks[1].annotations["nix_name"], name_two)
-        os.remove(self.filename)
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOVerTests(NixIOTest):
 
-    filename = "ver_test.h5"
+    def setUp(self):
+        self.tempdir = mkdtemp(prefix="nixiotest")
+        self.filename = os.path.join(self.tempdir, "testnixio.nix")
+
+    def tearDown(self):
+        shutil.rmtree(self.tempdir)
 
     def test_new_file(self):
         with NixIO(self.filename, "ow") as iofile:
