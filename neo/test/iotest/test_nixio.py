@@ -1022,6 +1022,11 @@ class NixIOReadTest(NixIOTest):
             neoblock = self.io.read_block()  # don't specify index
             self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
 
+        # No more blocks - should return None
+        self.assertIs(self.io.read_block(), None)
+        self.assertIs(self.io.read_block(), None)
+        self.assertIs(self.io.read_block(), None)
+
     def test_neo_name_read(self):
         for nixblock in self.nixfile.blocks:
             neoname = nixblock.metadata["neo_name"]
