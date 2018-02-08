@@ -54,7 +54,7 @@ def stringify(value):
 
 def create_quantity(values, unitstr):
     if "*" in unitstr:
-        unit = pq.CompoundUnit(unitstr)
+        unit = pq.CompoundUnit(stringify(unitstr))
     else:
         unit = unitstr
     return pq.Quantity(values, unit)

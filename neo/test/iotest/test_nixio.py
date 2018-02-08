@@ -186,7 +186,7 @@ class NixIOTest(unittest.TestCase):
         for sig, da in zip(np.transpose(neosig),
                            sorted(nixdalist, key=lambda d: d.name)):
             self.compare_attr(neosig, da)
-            daquant = create_quantity(da[:], pq.CompoundUnit(da.unit))
+            daquant = create_quantity(da[:], da.unit)
             np.testing.assert_almost_equal(sig, daquant)
             nixunit = create_quantity(1, da.unit)
             self.assertEqual(neounit, nixunit)
@@ -733,7 +733,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        units = pq.CompoundUnit("1/30000 * V")
+        units = pq.CompoundUnit("1/30000*V")
         srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
         asig = AnalogSignal(signal=self.rquant((10, 3), units),
                             sampling_rate=srate)
