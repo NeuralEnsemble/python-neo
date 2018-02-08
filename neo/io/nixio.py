@@ -62,10 +62,9 @@ def create_quantity(values, unitstr):
 
 def units_to_string(pqunit):
     dim = str(pqunit.dimensionality)
-    scaling = pqunit.magnitude.item()
-    if scaling == 1:
-        return dim.strip("()") if dim.startswith("(") else dim
-    return "{} * {}".format(scaling, dim)
+    if dim.startswith("(") and dim.endswith(")"):
+        return dim.strip("()")
+    return dim
 
 
 def calculate_timestamp(dt):
@@ -93,17 +92,6 @@ class NixIO(BaseIO):
     mode = "file"
 
     nix_version = nix.__version__ if HAVE_NIX else "NIX NOT FOUND"
-
-    _container_map = {
-        "segments": "groups",
-        "analogsignals": "data_arrays",
-        "irregularlysampledsignals": "data_arrays",
-        "events": "multi_tags",
-        "epochs": "multi_tags",
-        "spiketrains": "multi_tags",
-        "channel_indexes": "sources",
-        "units": "sources"
-    }
 
     def __init__(self, filename, mode="rw"):
         """
@@ -196,7 +184,7 @@ class NixIO(BaseIO):
                 )
         else:
             index = self._block_read_counter
-            if index > len(self.nix_file.blocks):
+            if index >= len(self.nix_file.blocks):
                 return None
             nix_block = self.nix_file.blocks[index]
 
@@ -287,6 +275,7 @@ class NixIO(BaseIO):
                 neo_segment.spiketrains.append(newst)
                 # parent reference
                 newst.segment = neo_segment
+
         return neo_segment
 
     def _nix_to_neo_channelindex(self, nix_source):
@@ -508,7 +497,6 @@ class NixIO(BaseIO):
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
 
-        self._signal_map = dict()  # reset signal map
         # descend into Segments
         for seg in block.segments:
             self._write_segment(seg, nixblock)
@@ -533,13 +521,10 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.channelindex.{}".format(self._generate_nix_name())
             chx.annotate(nix_name=nix_name)
-        if nix_name in nixblock.sources:
-            nixsource = nixblock.sources[nix_name]
-        else:
-            nixsource = nixblock.create_source(nix_name, "neo.channelindex")
-            nixsource.metadata = nixblock.metadata.create_section(
-                nix_name, "neo.channelindex.metadata"
-            )
+        nixsource = nixblock.create_source(nix_name, "neo.channelindex")
+        nixsource.metadata = nixblock.metadata.create_section(
+            nix_name, "neo.channelindex.metadata"
+        )
 
         metadata = nixsource.metadata
         neoname = chx.name if chx.name is not None else ""
@@ -551,13 +536,10 @@ class NixIO(BaseIO):
 
         for idx, channel in enumerate(chx.index):
             channame = "{}.ChannelIndex{}".format(nix_name, idx)
-            if channame in nixsource.sources:
-                nixchan = nixsource.sources[channame]
-            else:
-                nixchan = nixsource.create_source(channame, "neo.channelindex")
-                nixchan.metadata = nixsource.metadata.create_section(
-                    nixchan.name, "neo.channelindex.metadata"
-                )
+            nixchan = nixsource.create_source(channame, "neo.channelindex")
+            nixchan.metadata = nixsource.metadata.create_section(
+                nixchan.name, "neo.channelindex.metadata"
+            )
             nixchan.definition = nixsource.definition
             chanmd = nixchan.metadata
             chanmd["index"] = nix.Value(int(channel))
@@ -596,13 +578,11 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.segment.{}".format(self._generate_nix_name())
             segment.annotate(nix_name=nix_name)
-        if nix_name in nixblock.groups:
-            nixgroup = nixblock.groups[nix_name]
-        else:
-            nixgroup = nixblock.create_group(nix_name, "neo.segment")
-            nixgroup.metadata = nixblock.metadata.create_section(
-                nix_name, "neo.segment.metadata"
-            )
+
+        nixgroup = nixblock.create_group(nix_name, "neo.segment")
+        nixgroup.metadata = nixblock.metadata.create_section(
+            nix_name, "neo.segment.metadata"
+        )
         metadata = nixgroup.metadata
         neoname = segment.name if segment.name is not None else ""
         metadata["neo_name"] = neoname
@@ -959,14 +939,11 @@ class NixIO(BaseIO):
         else:
             nix_name = "neo.unit.{}".format(self._generate_nix_name())
             neounit.annotate(nix_name=nix_name)
-        if nix_name in nixchxsource.sources:
-            nixunitsource = nixchxsource.sources[nix_name]
-        else:
-            nixunitsource = nixchxsource.create_source(nix_name,
-                                                       "neo.unit")
-            nixunitsource.metadata = nixchxsource.metadata.create_section(
-                nix_name, "neo.unit.metadata"
-            )
+        nixunitsource = nixchxsource.create_source(nix_name,
+                                                   "neo.unit")
+        nixunitsource.metadata = nixchxsource.metadata.create_section(
+            nix_name, "neo.unit.metadata"
+        )
         metadata = nixunitsource.metadata
         neoname = neounit.name if neounit.name is not None else ""
         metadata["neo_name"] = neoname
@@ -975,30 +952,10 @@ class NixIO(BaseIO):
             for k, v in neounit.annotations.items():
                 self._write_property(metadata, k, v)
 
-        # TODO: link spiketrains
-
-    def _write_cascade(self, neoobj, path=""):
-        if isinstance(neoobj, ChannelIndex):
-            containers = ["units"]
-            self.write_indices(neoobj, path)
-        elif isinstance(neoobj, Unit):
-            containers = []
-        else:
-            containers = getattr(neoobj, "_child_containers", [])
-        for neocontainer in containers:
-            if neocontainer == "channel_indexes":
-                neotype = "channelindex"
-            else:
-                neotype = neocontainer[:-1]
-            children = getattr(neoobj, neocontainer)
-            write_func = getattr(self, "write_" + neotype)
-            for ch in children:
-                write_func(ch, path)
-
     def _create_source_links(self, neoblock, nixblock):
         """
-        Creates between objects in a NIX Block to store the references in the
-        Neo ChannelIndex and Unit objects.
+        Creates references between objects in a NIX Block to store the
+        references in the Neo ChannelIndex and Unit objects.
         Specifically:
         - If a Neo ChannelIndex references a Neo AnalogSignal or
         IrregularlySampledSignal, the corresponding signal DataArray will
@@ -1158,8 +1115,9 @@ class NixIO(BaseIO):
                 self.nix_file and self.nix_file.is_open()):
             self.nix_file.close()
             self.nix_file = None
-            self._lazy_loaded = None
-            self._object_hashes = None
+            self._neo_map = None
+            self._ref_map = None
+            self._signal_map = None
             self._block_read_counter = None
 
     def __del__(self):

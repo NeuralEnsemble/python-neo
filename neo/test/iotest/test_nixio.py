@@ -732,6 +732,7 @@ class NixIOWriteTest(NixIOTest):
         asig = AnalogSignal(signal=self.rquant((10, 3), units),
                             sampling_rate=srate)
         seg.analogsignals.append(asig)
+
         self.write_and_compare([block])
 
         anotherblock = Block("ir signal block")
@@ -743,7 +744,7 @@ class NixIOWriteTest(NixIOTest):
             units=pq.CompoundUnit("10 * V / s")
         )
         seg.irregularlysampledsignals.append(irsig)
-        self.write_and_compare([anotherblock])
+        self.write_and_compare([block, anotherblock])
 
         block.segments[0].analogsignals.append(
             AnalogSignal(signal=[10.0, 1.0, 3.0], units=pq.S,
