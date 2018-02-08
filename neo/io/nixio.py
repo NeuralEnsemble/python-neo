@@ -220,11 +220,19 @@ class NixIO(BaseIO):
         )
 
         # descend into Groups
-        neo_block.segments = list(self._nix_to_neo_segment(grp)
-                                  for grp in nix_block.groups)
+        for grp in nix_block.groups:
+            newseg = self._nix_to_neo_segment(grp)
+            neo_block.segments.append(newseg)
+            # parent reference
+            newseg.block = neo_block
+
         # descend into Sources
-        neo_block.channel_indexes = list(self._nix_to_neo_channelindex(src)
-                                         for src in nix_block.sources)
+        for src in nix_block.sources:
+            newchx = self._nix_to_neo_channelindex(src)
+            neo_block.channel_indexes.append(newchx)
+            # parent reference
+            newchx.block = neo_block
+
         return neo_block
 
     def _nix_to_neo_segment(self, nix_group):
@@ -233,6 +241,7 @@ class NixIO(BaseIO):
         neo_segment.rec_datetime = datetime.fromtimestamp(
             nix_group.created_at
         )
+
         self._neo_map[nix_group.name] = neo_segment
 
         # this will probably get all the DAs anyway, but if we change any part
@@ -246,24 +255,33 @@ class NixIO(BaseIO):
         # descend into DataArrays
         for name, das in dataarrays.items():
             if das[0].type == "neo.analogsignal":
-                neo_segment.analogsignals.append(
-                    self._nix_to_neo_analogsignal(das)
-                )
+                newasig = self._nix_to_neo_analogsignal(das)
+                neo_segment.analogsignals.append(newasig)
+                # parent reference
+                newasig.segment = neo_segment
             elif das[0].type == "neo.irregularlysampledsignal":
-                neo_segment.irregularlysampledsignals.append(
-                    self._nix_to_neo_irregularlysampledsignal(das)
-                )
+                newisig = self._nix_to_neo_irregularlysampledsignal(das)
+                neo_segment.irregularlysampledsignals.append(newisig)
+                # parent reference
+                newisig.segment = neo_segment
 
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
             if mtag.type == "neo.event":
-                neo_segment.events.append(self._nix_to_neo_event(mtag))
+                newevent = self._nix_to_neo_event(mtag)
+                neo_segment.events.append(newevent)
+                # parent reference
+                newevent.segment = neo_segment
             elif mtag.type == "neo.epoch":
-                neo_segment.epochs.append(self._nix_to_neo_epoch(mtag))
+                newepoch = self._nix_to_neo_epoch(mtag)
+                neo_segment.epochs.append(newepoch)
+                # parent reference
+                newepoch.segment = neo_segment
             elif mtag.type == "neo.spiketrain":
-                neo_segment.spiketrains.append(
-                    self._nix_to_neo_spiketrain(mtag)
-                )
+                newst = self._nix_to_neo_spiketrain(mtag)
+                neo_segment.spiketrains.append(newst)
+                # parent reference
+                newst.segment = neo_segment
         return neo_segment
 
     def _nix_to_neo_channelindex(self, nix_source):
@@ -296,9 +314,12 @@ class NixIO(BaseIO):
             # else error?
 
         # descend into Sources
-        neo_chx.units = list(self._nix_to_neo_unit(src)
-                             for src in nix_source.sources
-                             if src.type == "neo.unit")
+        for src in nix_source.sources:
+            if src.type == "neo.unit":
+                newunit = self._nix_to_neo_unit(src)
+                neo_chx.units.append(newunit)
+                # parent reference
+                newunit.channel_index = neo_chx
 
         return neo_chx
 
