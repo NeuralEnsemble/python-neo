@@ -14,6 +14,10 @@ Author: Achilleas Koutsou
 
 This IO supports both writing and reading of NIX files. Reading is supported
 only if the NIX file was created using this IO.
+
+Details on how the Neo object tree is mapped to NIX, as well as details on
+behaviours specific to this IO, can be found on the wiki of the G-Node fork of
+Neo: https://github.com/G-Node/python-neo/wiki
 """
 
 from __future__ import absolute_import
