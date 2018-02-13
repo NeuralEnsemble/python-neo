@@ -228,12 +228,18 @@ class Epoch(DataObject):
                 setattr(new_ep, k, v)
         return new_ep
 
-    def duplicate_with_new_data(self, signal):
+    def duplicate_with_new_data(self, signal, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata
         but different data (times, durations)
         '''
-        new = self.__class__(times=signal)
+
+        if units is None:
+            units = self.units
+        else:
+            units = pq.quantity.validate_dimensionality(units)
+
+        new = self.__class__(times=signal, units=units)
         new._copy_data_complement(self)
         return new
 

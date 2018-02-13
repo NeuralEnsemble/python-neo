@@ -147,36 +147,54 @@ class BaseSignal(DataObject):
         Return a copy of the signal converted to the specified
         units
         '''
-        to_dims = pq.quantity.validate_dimensionality(units)
-        if self.dimensionality == to_dims:
-            to_u = self.units
-            signal = np.array(self)
-        else:
-            to_u = pq.Quantity(1.0, to_dims)
-            from_u = pq.Quantity(1.0, self.dimensionality)
-            try:
-                cf = pq.quantity.get_conversion_factor(from_u, to_u)
-            except AssertionError:
-                raise ValueError('Unable to convert between units of "%s" \
-                                 and "%s"' % (from_u._dimensionality,
-                                              to_u._dimensionality))
-            signal = cf * self.magnitude
-        required_attributes = self._get_required_attributes(signal, to_u)
-        new = self.__class__(**required_attributes)
-        new._copy_data_complement(self)
-        new.channel_index = self.channel_index
-        new.segment = self.segment
-        new.annotations.update(self.annotations)
-        new.array_annotations.update(self.array_annotations)
-        return new
 
-    def duplicate_with_new_array(self, signal):
+        # Use simpler functionality, if nothing will be changed
+        dim = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == dim:
+            return self.copy()
+        print(dim)
+        # TODO: Check why it does not work with units=dim (dimensionality)!!!
+        # TODO: Find out, how to validate units without altering them: Raised error in validate_dimensionality???
+        obj = self.duplicate_with_new_array(signal=self.view(pq.Quantity).rescale(dim), units=units)
+        obj.array_annotations = self.array_annotations
+        obj.segment = self.segment
+        return obj
+
+        # to_dims = pq.quantity.validate_dimensionality(units)
+        # if self.dimensionality == to_dims:
+        #     to_u = self.units
+        #     signal = np.array(self)
+        # else:
+        #     to_u = pq.Quantity(1.0, to_dims)
+        #     from_u = pq.Quantity(1.0, self.dimensionality)
+        #     try:
+        #         cf = pq.quantity.get_conversion_factor(from_u, to_u)
+        #     except AssertionError:
+        #         raise ValueError('Unable to convert between units of "%s" \
+        #                          and "%s"' % (from_u._dimensionality,
+        #                                       to_u._dimensionality))
+        #     signal = cf * self.magnitude
+        # required_attributes = self._get_required_attributes(signal, to_u)
+        # new = self.__class__(**required_attributes)
+        # new._copy_data_complement(self)
+        # new.channel_index = self.channel_index
+        # new.segment = self.segment
+        # new.annotations.update(self.annotations)
+        # new.array_annotations.update(self.array_annotations)
+        # return new
+
+    def duplicate_with_new_array(self, signal, units=None):
         '''
         Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
         '''
+        if units is None:
+            units = self.units
+        # else:
+        #     units = pq.quantity.validate_dimensionality(units)
+
         # signal is the new signal
-        required_attributes = self._get_required_attributes(signal, self.units)
+        required_attributes = self._get_required_attributes(signal, units)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)

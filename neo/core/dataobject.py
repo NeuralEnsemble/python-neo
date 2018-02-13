@@ -103,11 +103,13 @@ class DataObject(BaseNeo, pq.Quantity):
         self.array_annotations.update(array_annotations)
 
     def rescale(self, units):
+
+        # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
-        print("HERE")
         if self.dimensionality == dim:
             return self.copy()
-        obj = self.duplicate_with_new_data(signal=self.times.view(pq.Quantity).rescale(dim))
+
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=dim)
         obj.array_annotations = self.array_annotations
         obj.segment = self.segment
         return obj

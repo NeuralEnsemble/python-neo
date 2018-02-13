@@ -333,20 +333,23 @@ class SpikeTrain(DataObject):
         Return a copy of the :class:`SpikeTrain` converted to the specified
         units
         '''
-        if self.dimensionality == pq.quantity.validate_dimensionality(units):
-            return self.copy()
-        spikes = self.view(pq.Quantity)
-        obj = SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
-                         sampling_rate=self.sampling_rate,
-                         t_start=self.t_start, waveforms=self.waveforms,
-                         left_sweep=self.left_sweep, name=self.name,
-                         file_origin=self.file_origin,
-                         description=self.description,
-                         array_annotations=self.array_annotations,
-                         **self.annotations)
-        obj.segment = self.segment
+        obj = super(SpikeTrain, self).rescale(units)
         obj.unit = self.unit
         return obj
+        # if self.dimensionality == pq.quantity.validate_dimensionality(units):
+        #     return self.copy()
+        # spikes = self.view(pq.Quantity)
+        # obj = SpikeTrain(times=spikes, t_stop=self.t_stop, units=units,
+        #                  sampling_rate=self.sampling_rate,
+        #                  t_start=self.t_start, waveforms=self.waveforms,
+        #                  left_sweep=self.left_sweep, name=self.name,
+        #                  file_origin=self.file_origin,
+        #                  description=self.description,
+        #                  array_annotations=self.array_annotations,
+        #                  **self.annotations)
+        # obj.segment = self.segment
+        # obj.unit = self.unit
+        # return obj
 
     def __reduce__(self):
         '''
@@ -544,7 +547,7 @@ class SpikeTrain(DataObject):
             setattr(self, attr, attr_value)
 
     def duplicate_with_new_data(self, signal, t_start=None, t_stop=None,
-                                waveforms=None, deep_copy=True):
+                                waveforms=None, deep_copy=True, units=None):
         '''
         Create a new :class:`SpikeTrain` with the same metadata
         but different data (times, t_start, t_stop)
@@ -556,9 +559,13 @@ class SpikeTrain(DataObject):
             t_stop = self.t_stop
         if waveforms is None:
             waveforms = self.waveforms
+        if units is None:
+            units = self.units
+        else:
+            units = pq.quantity.validate_dimensionality(units)
 
         new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop,
-                                waveforms=waveforms, units=self.units)
+                                waveforms=waveforms, units=units)
         new_st._copy_data_complement(self, deep_copy=deep_copy)
 
         # overwriting t_start and t_stop with new values
