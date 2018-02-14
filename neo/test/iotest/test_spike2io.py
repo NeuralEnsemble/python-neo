@@ -21,7 +21,7 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         'File_spike2_2.smr',
         'File_spike2_3.smr',
         '130322-1LY.smr',  # this is for bug 182
-        'multi_sampling.smr',  # this is for bug 466
+        #~ 'multi_sampling.smr',  # this is for bug 466
     ]
     files_to_download = files_to_test
 
@@ -33,22 +33,26 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         """
         filename = self.get_filename_path('multi_sampling.smr')
         reader = Spike2IO(filename=filename)
-        seg = reader.read_segment(signal_group_mode = 'group-by-same-units')
+        bl = reader.read_block(signal_group_mode = 'group-by-same-units')
+        assert len(bl.segments) == 10
+        seg =bl.segments[0]
         
-        # 3 group_id
-        assert len(seg.analogsignals) == 3
+        # 7 group_id one per channel
+        assert len(seg.analogsignals) == 7
         
         # 1 channel for 1kHz
-        assert seg.analogsignals[0].shape == (135812, 1)
+        assert seg.analogsignals[0].shape == (14296, 1)
         assert seg.analogsignals[0].sampling_rate == 1000*pq.Hz
 
-        # 4  channel for 1kHz
-        assert seg.analogsignals[1].shape == (264846, 4)
-        assert seg.analogsignals[1].sampling_rate == 2000*pq.Hz
-
+        # 4  channel for 2kHz
+        for c in range(1, 5):
+            assert seg.analogsignals[c].shape == (28632, 1)
+            assert seg.analogsignals[c].sampling_rate == 2000*pq.Hz
+        
         # 2 channel for 10kHz
-        assert seg.analogsignals[2].shape == (1146180, 2)
-        assert seg.analogsignals[2].sampling_rate == 10000*pq.Hz
+        for c in range(5, 7):
+            assert seg.analogsignals[c].shape == (114618, 1)
+            assert seg.analogsignals[c].sampling_rate == 10000*pq.Hz
 
 
 
