@@ -52,15 +52,18 @@ class BCI2000RawIO(BaseRawIO):
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
-        
+
         # creating event channel for each state variable
         event_channels = []
         for st_ix, st_tup in enumerate(state_defs):
             event_channels.append((st_tup[0], 'ev_' + str(st_ix), 'event'))
         self.header['event_channels'] = np.array(event_channels, dtype=_event_channel_dtype)
-        
+
         # Add annotations.
-        self._generate_minimal_annotations()  # Generates basic annotations in nested dict self.raw_annotations
+
+        # Generates basic annotations in nested dict self.raw_annotations
+        self._generate_minimal_annotations()
+
         self.raw_annotations['blocks'][0].update({
             'file_info': file_info,
             'param_defs': param_defs
@@ -76,21 +79,27 @@ class BCI2000RawIO(BaseRawIO):
         import time
         time_formats = ['%a %b %d %H:%M:%S %Y', '%Y-%m-%dT%H:%M:%S']
         try:
-            self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'], time_formats[0]))
+            self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
+                                                          time_formats[0]))
         except:
-            self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'], time_formats[1]))
+            self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
+                                                          time_formats[1]))
 
         # Save variables to make it easier to load the binary data.
         self._read_info = {
             'header_len': file_info['HeaderLen'],
             'n_chans': file_info['SourceCh'],
-            'sample_dtype': {'int16': np.int16, 'int32': np.int32, 'float32': np.float32}.get(file_info['DataFormat']),
+            'sample_dtype': {
+                'int16': np.int16,
+                'int32': np.int32,
+                'float32': np.float32}.get(file_info['DataFormat']),
             'state_vec_len': file_info['StatevectorLen'],
             'sampling_rate': param_defs['SamplingRate']['value']
         }
         # Calculate the dtype for a single timestamp of data. This contains the data + statevector
-        self._read_info['line_dtype'] = [('raw_vector', self._read_info['sample_dtype'], self._read_info['n_chans']),
-                                         ('state_vector', np.uint8, self._read_info['state_vec_len'])]
+        self._read_info['line_dtype'] = [
+            ('raw_vector', self._read_info['sample_dtype'], self._read_info['n_chans']),
+            ('state_vector', np.uint8, self._read_info['state_vec_len'])]
         import os
         self._read_info['n_samps'] = int((os.stat(self.filename).st_size - file_info['HeaderLen'])
                                          / np.dtype(self._read_info['line_dtype']).itemsize)
@@ -107,10 +116,10 @@ class BCI2000RawIO(BaseRawIO):
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         return self._read_info['n_samps']
-    
+
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
-    
+
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if i_start is None:
             i_start = 0
@@ -124,19 +133,19 @@ class BCI2000RawIO(BaseRawIO):
     
     def _spike_count(self,  block_index, seg_index, unit_index):
         return 0
-    
+
     def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
         return None
-    
+
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
         return None
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         return None
-    
+
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._event_arrays_list[event_channel_index][0].shape[0]
-    
+
     def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
         # Return 3 numpy arrays: timestamp, durations, labels
         # durations must be None for 'event'
@@ -149,11 +158,11 @@ class BCI2000RawIO(BaseRawIO):
         if t_stop is not None:
             keep = np.logical_and(keep, ts <= t_stop)
         return ts[keep], dur[keep], labels[keep]
-    
+
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = (event_timestamps / float(self._read_info['sampling_rate'])).astype(dtype)
         return event_times
-    
+
     def _rescale_epoch_duration(self, raw_duration, dtype):
         durations = (raw_duration / float(self._read_info['sampling_rate'])).astype(dtype)
         return durations
@@ -164,7 +173,8 @@ class BCI2000RawIO(BaseRawIO):
             self._my_events = []
             for s_ix, sd in enumerate(self.raw_annotations['event_channels']):
                 ev_times = durs = vals = np.array([])
-                if sd['name'] not in ['SourceTime', 'StimulusTime']:  # Skip these big but mostly useless (?) states.
+                # Skip these big but mostly useless (?) states.
+                if sd['name'] not in ['SourceTime', 'StimulusTime']:
                     # Determine which bytes of self._memmap['state_vector'] are needed.
                     nbytes = int(np.ceil((sd['bitPos'] + sd['length']) / 8))
                     byte_slice = slice(sd['bytePos'], sd['bytePos'] + nbytes)
@@ -178,17 +188,20 @@ class BCI2000RawIO(BaseRawIO):
                     view_type = {1: np.int8, 2: np.int16, 4: np.int32, 8: np.int64}.get(n_max_bytes)
                     # Slice and mask the data
                     masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
-                    # Convert byte array to a vector of ints: pad to give even columns then view as larger int type
-                    state_vec = np.pad(masked_byte_array, (0, n_max_bytes - nbytes), 'constant').view(dtype=view_type)
+                    # Convert byte array to a vector of ints:
+                    # pad to give even columns then view as larger int type
+                    state_vec = np.pad(masked_byte_array,
+                                       (0, n_max_bytes - nbytes),
+                                       'constant').view(dtype=view_type)
                     state_vec = np.right_shift(state_vec, sd['bitPos'])[:, 0]
 
                     # In the state vector, find 'events' whenever the state changes
-                    st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # indices of events
+                    st_ch_ix = np.where(np.hstack((0, np.diff(state_vec))) != 0)[0]  # event inds
                     if len(st_ch_ix) > 0:
                         ev_times = st_ch_ix
                         durs = np.asarray([None] * len(st_ch_ix))
                         # np.hstack((np.diff(st_ch_ix), len(state_vec) - st_ch_ix[-1]))
-                        vals = np.char.mod('%d', state_vec[st_ch_ix])  # value associated with event. String'd for neo.
+                        vals = np.char.mod('%d', state_vec[st_ch_ix])  # event val, string'd
 
                 self._my_events.append([ev_times, durs, vals])
 
@@ -222,7 +235,8 @@ def parse_bci2000_header(filename):
 
     def parse_dimensions(param_list):
         num_els = param_list.pop(0)
-        # Sometimes the number of elements isn't given, but the list of element labels is wrapped with {}
+        # Sometimes the number of elements isn't given,
+        # but the list of element labels is wrapped with {}
         if num_els == '{':
             num_els = param_list.index('}')
             el_labels = [unquote(param_list.pop(0)) for x in range(num_els)]
@@ -252,9 +266,14 @@ def parse_bci2000_header(filename):
 
         # The next lines contain state vector definitions.
         temp = fid.readline().decode('utf8').strip()
-        assert temp == '[ State Vector Definition ]', "State definitions not found in header %s" % filename
+        assert temp == '[ State Vector Definition ]',\
+            "State definitions not found in header %s" % filename
         state_defs = []
-        state_def_dtype = [('name', 'a64'), ('length', int), ('startVal', int), ('bytePos', int), ('bitPos', int)]
+        state_def_dtype = [('name', 'a64'),
+                           ('length', int),
+                           ('startVal', int),
+                           ('bytePos', int),
+                           ('bitPos', int)]
         while True:
             temp = fid.readline().decode('utf8').strip()
             if len(temp) == 0 or temp[0] == '[':
@@ -264,8 +283,10 @@ def parse_bci2000_header(filename):
             state_defs.append((temp[0], int(temp[1]), int(temp[2]), int(temp[3]), int(temp[4])))
         state_defs = np.array(state_defs, dtype=state_def_dtype)
 
-        # The next lines contain parameter definitions. There are many, and their formatting can be complicated.
-        assert temp == '[ Parameter Definition ]', "Parameter definitions not found in header %s" % filename
+        # The next lines contain parameter definitions.
+        # There are many, and their formatting can be complicated.
+        assert temp == '[ Parameter Definition ]',\
+            "Parameter definitions not found in header %s" % filename
         param_defs = {}
         while True:
             temp = fid.readline().decode('utf8')
@@ -279,7 +300,8 @@ def parse_bci2000_header(filename):
             param_def = {'comment': temp[1].strip() if len(temp) > 1 else ''}
             # Parse the parameter definition. Generally it is sec:cat:name dtype name param_value+
             temp = temp[0].split()
-            param_def.update({'section_category_name': [unquote(x) for x in temp.pop(0).split(':')]})
+            param_def.update(
+                {'section_category_name': [unquote(x) for x in temp.pop(0).split(':')]})
             dtype = temp.pop(0)
             param_name = unquote(temp.pop(0).rstrip('='))
             # Parse the rest. Parse method depends on the dtype
@@ -295,7 +317,8 @@ def parse_bci2000_header(filename):
                 param_value = unquote(temp.pop(0))
             elif dtype.endswith('list'):  # e.g., intlist, stringlist, floatlist, list
                 dtype = dtype[:-4]
-                # The list parameter values will begin with either an int to specify the number of elements
+                # The list parameter values will begin with either
+                # an int to specify the number of elements
                 # or a list of labels surrounded by { }.
                 num_elements, element_labels = parse_dimensions(temp)  # This will pop off info.
                 param_def.update({'element_labels': element_labels})
@@ -305,13 +328,15 @@ def parse_bci2000_header(filename):
                 else:
                     param_value, units = np.nan, ''
                 temp = temp[num_elements:]
-                # Sometimes an element list will be a list of ints even though the element_type is '' (str)...
-                # This usually happens for known parameters, such as SourceChOffset, that can be dealt with
-                # explicitly later.
+                # Sometimes an element list will be a list of ints even though
+                # the element_type is '' (str)...
+                # This usually happens for known parameters, such as SourceChOffset,
+                # that can be dealt with explicitly later.
             elif dtype.endswith('matrix'):
                 dtype = dtype[:-6]
-                # The parameter values will be preceded by two dimension descriptors, first rows then columns
-                # Each dimension might be described by an int or a list of labels surrounded by {}
+                # The parameter values will be preceded by two dimension descriptors,
+                # first rows then columns. Each dimension might be described by an
+                # int or a list of labels surrounded by {}
                 n_rows, row_labels = parse_dimensions(temp)
                 n_cols, col_labels = parse_dimensions(temp)
                 param_def.update({'row_labels': row_labels, 'col_labels': col_labels})
@@ -333,7 +358,8 @@ def parse_bci2000_header(filename):
                 'dtype': dtype
             })
 
-            # At the end of the parameter definition, we might get default, min, max values for the parameter.
+            # At the end of the parameter definition, we might get
+            # default, min, max values for the parameter.
             temp.reverse()
             if len(temp):
                 param_def.update({'max_val': rescale_value(temp.pop(0), dtype)})

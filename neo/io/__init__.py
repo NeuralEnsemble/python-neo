@@ -18,6 +18,8 @@ Classes:
 
 .. autoclass:: neo.io.AxonIO
 
+.. autoclass:: neo.io.BCI2000IO
+
 .. autoclass:: neo.io.BlackrockIO
 
 .. autoclass:: neo.io.BrainVisionIO
@@ -30,8 +32,7 @@ Classes:
 
 .. autoclass:: neo.io.ElanIO
 
-..
-  .. autoclass:: neo.io.ElphyIO
+.. autoclass:: neo.io.ElphyIO
 
 .. autoclass:: neo.io.IgorIO
 
@@ -88,14 +89,14 @@ try:
     import neuroshare as ns
 except ImportError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
-    #print("\n neuroshare library not found, loading data with ctypes" )
-    #print("\n to use the API be sure to install the library found at:")
-    #print("\n www.http://pythonhosted.org/neuroshare/")
+    # print("\n neuroshare library not found, loading data with ctypes" )
+    # print("\n to use the API be sure to install the library found at:")
+    # print("\n www.http://pythonhosted.org/neuroshare/")
 
 else:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
-    #print("neuroshare library successfully imported")
-    #print("\n loading with API...")
+    # print("neuroshare library successfully imported")
+    # print("\n loading with API...")
 
 
 from neo.io.alphaomegaio import AlphaOmegaIO
@@ -110,7 +111,7 @@ from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
-#from neo.io.elphyio import ElphyIO
+# from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.klustakwikio import KlustaKwikIO
