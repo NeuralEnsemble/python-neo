@@ -29,7 +29,7 @@ class BCI2000RawIO(BaseRawIO):
 
     def _source_name(self):
         return self.filename
-    
+
     def _parse_header(self):
         file_info, state_defs, param_defs = parse_bci2000_header(self.filename)
 
@@ -47,7 +47,7 @@ class BCI2000RawIO(BaseRawIO):
             units = 'uV'
             gain = param_defs['SourceChGain']['value'][chan_ix]
             offset = param_defs['SourceChOffset']['value'][chan_ix]
-            group_id = 0 
+            group_id = 0
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -65,7 +65,7 @@ class BCI2000RawIO(BaseRawIO):
             'file_info': file_info,
             'param_defs': param_defs
         })
-        for ev_ix, ev_dict in enumerate(self.raw_annotations['event_channel']):
+        for ev_ix, ev_dict in enumerate(self.raw_annotations['event_channels']):
             ev_dict.update({
                 'length': state_defs[ev_ix][1],
                 'startVal': state_defs[ev_ix][2],
@@ -162,7 +162,7 @@ class BCI2000RawIO(BaseRawIO):
     def _event_arrays_list(self):
         if self._my_events is None:
             self._my_events = []
-            for s_ix, sd in enumerate(self.raw_annotations['event_channel']):
+            for s_ix, sd in enumerate(self.raw_annotations['event_channels']):
                 ev_times = durs = vals = np.array([])
                 if sd['name'] not in ['SourceTime', 'StimulusTime']:  # Skip these big but mostly useless (?) states.
                     # Determine which bytes of self._memmap['state_vector'] are needed.
