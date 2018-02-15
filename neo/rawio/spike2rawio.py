@@ -224,7 +224,6 @@ class Spike2RawIO(BaseRawIO):
             elif chan_info['kind'] in [2, 3, 4, 5, 8]:
                 # Event
                 event_channels.append((name, chan_id, 'event'))
-                pass
 
             elif chan_info['kind'] in [6, 7]:  # SpikeTrain with waveforms
                 wf_units = chan_info['unit']
@@ -237,6 +236,28 @@ class Spike2RawIO(BaseRawIO):
                     wf_offset = 0.
                     wf_left_sweep = chan_info['n_extra'] // 8
                 wf_sampling_rate = sampling_rate
+                if self.ced_units:
+                    # this is a hudge pain because need
+                    # to jump over all blocks
+                    data_blocks = self._all_data_blocks[chan_id]
+                    dt = get_channel_dtype(chan_info)
+                    unit_ids = set()
+                    for bl in range(data_blocks.size):
+                        ind0 = data_blocks[bl]['pos']
+                        ind1 = data_blocks[bl]['size'] * dt.itemsize + ind0
+                        raw_data = self._memmap[ind0:ind1].view(dt)
+                        marker = raw_data['marker'] & 255
+                        unit_ids.update(np.unique(marker))
+                    unit_ids = sorted(list(unit_ids))
+                else:
+                    # All spike from one channel are group in one SpikeTrain
+                    unit_ids = ['all']
+                for unit_id in unit_ids:
+                    unit_index = len(unit_channels)
+                    self.internal_unit_ids[unit_index] = (chan_id, unit_id)
+                    _id = "ch{}#{}".format(chan_id, unit_id)
+                    unit_channels.append((name, _id, wf_units, wf_gain, wf_offset,
+                                          wf_left_sweep, wf_sampling_rate))
         
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -307,7 +328,7 @@ class Spike2RawIO(BaseRawIO):
             i_start = 0
         if i_stop is None:
             i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
-        
+
         assert len(channel_indexes) == 1
         chan_index = channel_indexes[0]
         chan_id = self.header['signal_channels'][chan_index]['id']
@@ -336,14 +357,14 @@ class Spike2RawIO(BaseRawIO):
                     # right border
                     # be carfull that bl could be both bl0 and bl1!!
                     border = data.size - (i_stop - data_blocks[bl]['cumsum'])
-                    data = data[:-border]
+                    if border>0:
+                        data = data[:-border]
                 if bl == bl0:
                     # left border
                     border = i_start - data_blocks[bl]['cumsum']
                     data = data[border:]
                 raw_signals[ind:data.size + ind, c] = data
                 ind += data.size
-
         return raw_signals
     
     def _count_in_time_slice(self, seg_index, chan_id, lim0, lim1, marker_filter=None):

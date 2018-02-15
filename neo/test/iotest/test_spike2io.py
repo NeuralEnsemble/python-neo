@@ -48,12 +48,11 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         for c in range(1, 5):
             assert seg.analogsignals[c].shape == (28632, 1)
             assert seg.analogsignals[c].sampling_rate == 2000*pq.Hz
-        
+
         # 2 channel for 10kHz
         for c in range(5, 7):
             assert seg.analogsignals[c].shape == (114618, 1)
             assert seg.analogsignals[c].sampling_rate == 10000*pq.Hz
-
 
 
 if __name__ == "__main__":
