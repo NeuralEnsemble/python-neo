@@ -26,7 +26,7 @@ urllib.request.urlretrieve(distantfile, localfile)
 reader = neo.io.PlexonIO(filename='File_plexon_3.plx')
 
 
-bl = reader.read(cascade=True, lazy=False)[0]
+bl = reader.read(lazy=False)[0]
 for seg in bl.segments:
     print ("SEG: "+str(seg.file_origin))
     fig = pyplot.figure()

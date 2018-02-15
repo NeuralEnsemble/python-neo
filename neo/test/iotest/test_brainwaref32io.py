@@ -44,7 +44,7 @@ def proc_f32(filename):
              f32 file name = 'file1.f32'
     '''
 
-    filenameorig = os.path.basename(filename[:-12]+'.f32')
+    filenameorig = os.path.basename(filename[:-12] + '.f32')
 
     # create the objects to store other objects
     block = Block(file_origin=filenameorig)
