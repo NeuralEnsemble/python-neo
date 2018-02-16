@@ -300,15 +300,21 @@ class NixIO(BaseIO):
         channels = list(self._nix_attr_to_neo(c)
                         for c in nix_source.sources
                         if c.type == "neo.channelindex")
-        chan_names = list(c["neo_name"] for c in channels if "neo_name" in c)
-        chan_ids = list(c["channel_id"] for c in channels if "channel_id" in c)
-        if chan_names:
-            neo_attrs["channel_names"] = chan_names
-        if chan_ids:
-            neo_attrs["channel_ids"] = chan_ids
-        neo_attrs["index"] = np.array([c["index"] for c in channels])
-        if "coordinates" in channels[0]:
-            neo_attrs["coordinates"] = list(c["coordinates"] for c in channels)
+        neo_attrs["index"] = np.array([c["index"]
+                                       for c in channels])
+        if len(channels):
+            chan_names = list(c["neo_name"]
+                              for c in channels if "neo_name" in c)
+            chan_ids = list(c["channel_id"]
+                            for c in channels if "channel_id" in c)
+            if chan_names:
+                neo_attrs["channel_names"] = chan_names
+            if chan_ids:
+                neo_attrs["channel_ids"] = chan_ids
+            if "coordinates" in channels[0]:
+                neo_attrs["coordinates"] = list(c["coordinates"]
+                                                for c in channels)
+
         neo_chx = ChannelIndex(**neo_attrs)
         self._neo_map[nix_source.name] = neo_chx
 
