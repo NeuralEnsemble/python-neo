@@ -688,6 +688,11 @@ class NixIOWriteTest(NixIOTest):
         chx.coordinates = self.rquant((6, 3), pq.um)
         self.write_and_compare([block])
 
+        # add an empty channel index and check again
+        newchx = ChannelIndex(np.array([]))
+        block.channel_indexes.append(newchx)
+        self.write_and_compare([block])
+
     def test_signals_write(self):
         block = Block()
         seg = Segment()
