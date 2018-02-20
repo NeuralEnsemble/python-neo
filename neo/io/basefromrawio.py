@@ -7,7 +7,7 @@ BaseFromRaw implement a bridge between the new neo.rawio API
 and the neo.io legacy that give neo.core object.
 The neo.rawio API is more restricted and limited and do not cover tricky
 cases with asymetrical tree of neo object.
-But if a format is done in neo.rawio the neo.io is done for free 
+But if a format is done in neo.rawio the neo.io is done for free
 by inheritance of this class.
 
 
@@ -78,7 +78,7 @@ class BaseFromRaw(BaseIO):
 
         :param block_index: int default 0. In case of several block block_index can be specified.
 
-        :param lazy: False by default. 
+        :param lazy: False by default.
 
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
@@ -112,13 +112,22 @@ class BaseFromRaw(BaseIO):
         #  * some for AnalogSignals
         #  * some for Units
 
-        # ChannelIndex ofr AnalogSignals
+        # ChannelIndex for AnalogSignals
         all_channels = self.header['signal_channels']
         channel_indexes_list = self.get_group_channel_indexes()
         for channel_index in channel_indexes_list:
-            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_index,
-                                                                                signal_group_mode=signal_group_mode).items():
-                chidx_annotations = self.raw_annotations['signal_channels'][i]
+            for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                    channel_index, signal_group_mode=signal_group_mode).items():
+                chidx_annotations = {}
+                if signal_group_mode == "split-all":
+                    chidx_annotations = self.raw_annotations['signal_channels'][i]
+                elif signal_group_mode == "group-by-same-units":
+                    for key in list(self.raw_annotations['signal_channels'][i].keys()):
+                        chidx_annotations[key] = []
+                    for j in ind_abs:
+                        for key in list(self.raw_annotations['signal_channels'][i].keys()):
+                            chidx_annotations[key].append(self.raw_annotations[
+                                                              'signal_channels'][j][key])
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)
@@ -126,9 +135,10 @@ class BaseFromRaw(BaseIO):
                                         channel_names=all_channels[ind_abs]['name'].astype('S'),
                                         channel_ids=all_channels[ind_abs]['id'],
                                         name='Channel group {}'.format(i), **chidx_annotations)
+
                 bl.channel_indexes.append(neo_channel_index)
 
-        #ChannelIndex and Unit
+        # ChannelIndex and Unit
         # 2 case are possible in neo defifferent IO have choosen one or other:
         #  * All units are group in the same ChannelIndex and indexes are all channels : 'all-in-one'
         #  * Each units is assigned to one ChannelIndex : 'split-all'
@@ -185,7 +195,7 @@ class BaseFromRaw(BaseIO):
 
         :param seg_index: int default 0. Index of segment.
 
-        :param lazy: False by default. 
+        :param lazy: False by default.
 
         :param signal_group_mode: 'split-all' or 'group-by-same-units' (default depend IO):
         This control behavior for grouping channels in AnalogSignal.
