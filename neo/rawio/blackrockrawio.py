@@ -419,7 +419,6 @@ class BlackrockRawIO(BaseRawIO):
             if self._avail_files['nev']:
                 chidx_ann = self.raw_annotations['signal_channels'][c]
                 neuevwav = self.__nev_ext_header[b'NEUEVWAV']
-                neuevflt = self.__nev_ext_header[b'NEUEVFLT']
                 if sig_channels[c]['id'] in neuevwav['electrode_id']:
                     get_idx = list(neuevwav['electrode_id']).index(sig_channels[c]['id'])
                     chidx_ann['connector_ID'] = neuevwav['physical_connector'][get_idx]
@@ -433,6 +432,7 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
                     )[sig_channels[c]['id']] * self.__nev_params('waveform_time_unit')
                     if self.__nev_spec in ['2.2', '2.3']:
+                        neuevflt = self.__nev_ext_header[b'NEUEVFLT']
                         get_idx = list(
                             neuevflt['electrode_id']).index(
                             sig_channels[c]['id'])
