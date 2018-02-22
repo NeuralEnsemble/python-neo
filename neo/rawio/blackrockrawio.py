@@ -414,6 +414,59 @@ class BlackrockRawIO(BaseRawIO):
             unit_ann['description'] = 'Unit channel_id: {}, unit_id: {}, unit_tag: {}'.format(
                 channel_id, unit_id, unit_ann['unit_tag'])
 
+        flt_type = {0: 'None', 1: 'Butterworth'}
+        for c in range(sig_channels.size):
+            if self._avail_files['nev']:
+                chidx_ann = self.raw_annotations['signal_channels'][c]
+                neuevwav = self.__nev_ext_header[b'NEUEVWAV']
+                neuevflt = self.__nev_ext_header[b'NEUEVFLT']
+                if sig_channels[c]['id'] in neuevwav['electrode_id']:
+                    get_idx = list(neuevwav['electrode_id']).index(sig_channels[c]['id'])
+                    chidx_ann['connector_ID'] = neuevwav['physical_connector'][get_idx]
+                    chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
+                    chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
+                    chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
+                                                            get_idx] * pq.uV
+                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
+                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
+                    chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
+                    chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
+                    )[sig_channels[c]['id']] * self.__nev_params('waveform_time_unit')
+                    if self.__nev_spec in ['2.2', '2.3']:
+                        get_idx = list(
+                            neuevflt['electrode_id']).index(
+                            sig_channels[c]['id'])
+                        # filter type codes (extracted from blackrock manual)
+                        chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
+                                                            get_idx] / 1000. * pq.Hz
+                        chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
+                        chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
+                            get_idx]]
+                        chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
+                                                            get_idx] / 1000. * pq.Hz
+                        chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
+                        chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
+                            get_idx]]
+            if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+                # It does not matter which nsX file to ask for this info
+                k = list(self.__nsx_ext_header.keys())[0]
+                if sig_channels[c]['id'] in self.__nsx_ext_header[k]['electrode_id']:
+                    get_idx = list(
+                        self.__nsx_ext_header[k]['electrode_id']).index(
+                        sig_channels[c]['id'])
+                    chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
+                                               'hi_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
+                                               'lo_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
+                            'hi_freq_order'][get_idx]
+                    chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
+                            'lo_freq_order'][get_idx]
+                    chidx_ann['nsx_hi_freq_type'] = flt_type[
+                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
+                    chidx_ann['nsx_lo_freq_type'] = flt_type[
+                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
+
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]
             seg_ann['file_origin'] = self.filename
@@ -429,7 +482,7 @@ class BlackrockRawIO(BaseRawIO):
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                     c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
-                anasig_an['file_origin'] = self.filename + '.ns' + str(self.nsx_to_load)
+                anasig_an['file_origin'] = self._filenames['nsx'] + '.ns' + str(self.nsx_to_load)
                 anasig_an['nsx'] = self.nsx_to_load
                 chidx_ann = self.raw_annotations['signal_channels'][c]
                 chidx_ann['description'] = 'Container for Units and AnalogSignals of ' \
@@ -441,8 +494,8 @@ class BlackrockRawIO(BaseRawIO):
                 unit_ann = self.raw_annotations['unit_channels'][c]
                 st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
-                    channel_id, unit_id)
-                st_ann['file_origin'] = self.filename + '.nev'
+                        channel_id, unit_id)
+                st_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
             if self._avail_files['nev']:
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
@@ -450,6 +503,7 @@ class BlackrockRawIO(BaseRawIO):
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
+                    ev_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
     def _source_name(self):
         return self.filename
