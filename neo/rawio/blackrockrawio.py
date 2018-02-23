@@ -173,12 +173,8 @@ class BlackrockRawIO(BaseRawIO):
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
 
-        if not self._avail_files['nev']:
-            if self._avail_nsx:
-                pass
-                #    raise NotImplementedError(".nev file is currently required for loading.")
-            else:
-                raise ValueError("No Blackrock files found in specified path")
+        if not self._avail_files['nev'] and not self._avail_nsx:
+            raise ValueError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
