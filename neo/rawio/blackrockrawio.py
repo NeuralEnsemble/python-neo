@@ -174,7 +174,7 @@ class BlackrockRawIO(BaseRawIO):
                     self._avail_nsx.append(int(ext[-1]))
 
         if not self._avail_files['nev'] and not self._avail_nsx:
-            raise ValueError("No Blackrock files found in specified path")
+            raise IOError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
@@ -294,7 +294,7 @@ class BlackrockRawIO(BaseRawIO):
                 not self._avail_files['nev']:
             # Because rescaling to volts requires information from nev file (dig_factor)
             # Remove if raw loading becomes possible
-            raise ValueError("For loading Blackrock file version 2.1 .nev files are required!")
+            raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
 
         if self.nsx_to_load is not None:
             spec = self.__nsx_spec[self.nsx_to_load]
