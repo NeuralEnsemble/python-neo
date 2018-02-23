@@ -72,6 +72,10 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         filename = self.get_filename_path('FileSpec2.3001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
 
+        # Assert IOError is raised when no Blackrock files are available
+        with self.assertRaises(IOError):
+            reader2 = BlackrockIO(filename='nonexistent')
+
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(load_waveforms=False)
         lena = len(block.segments[0].analogsignals[0])
@@ -115,6 +119,12 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         """
         filename = self.get_filename_path('blackrock_2_1/l101210-001')
         reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load=5)
+
+        # Assert IOError is raised when no Blackrock files are available
+        with self.assertRaises(IOError):
+            reader2 = BlackrockIO(filename='nonexistent')
+        with self.assertRaises(IOError):
+            reader2 = BlackrockIO(filename=filename, nev_override='nonexistent')
 
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(load_waveforms=False)
