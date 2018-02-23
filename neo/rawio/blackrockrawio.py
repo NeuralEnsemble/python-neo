@@ -352,14 +352,16 @@ class BlackrockRawIO(BaseRawIO):
                     max_nev_time = 0
                     for k, data in self.nev_data.items():
                         if data.size > 0:
-                            t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                            t = data[-1]['timestamp'] / self.__nev_basic_header[
+                                'timestamp_resolution']
                             max_nev_time = max(max_nev_time, t)
                     if max_nev_time > t_stop:
                         t_stop = max_nev_time
                     min_nev_time = max_nev_time
                     for k, data in self.nev_data.items():
                         if data.size > 0:
-                            t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                            t = data[0]['timestamp'] / self.__nev_basic_header[
+                                'timestamp_resolution']
                             min_nev_time = min(min_nev_time, t)
                     if min_nev_time < t_start:
                         t_start = min_nev_time
