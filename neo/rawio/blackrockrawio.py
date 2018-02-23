@@ -175,7 +175,8 @@ class BlackrockRawIO(BaseRawIO):
 
         if not self._avail_files['nev']:
             if self._avail_nsx:
-                raise NotImplementedError(".nev file is currently required for loading.")
+                pass
+                #    raise NotImplementedError(".nev file is currently required for loading.")
             else:
                 raise ValueError("No Blackrock files found in specified path")
 
@@ -292,6 +293,13 @@ class BlackrockRawIO(BaseRawIO):
         if self.nsx_to_load is None and len(self._avail_nsx) > 0:
             self.nsx_to_load = max(self._avail_nsx)
 
+        if self.nsx_to_load is not None and \
+            self.__nsx_spec[self.nsx_to_load] == '2.1' and \
+                not self._avail_files['nev']:
+            # Because rescaling to volts requires information from nev file (dig_factor)
+            # Remove if raw loading becomes possible
+            raise ValueError("For loading Blackrock file version 2.1 .nev files are required!")
+
         if self.nsx_to_load is not None:
             spec = self.__nsx_spec[self.nsx_to_load]
             self.nsx_data = self.__nsx_data_reader[spec](self.nsx_to_load)
@@ -344,22 +352,22 @@ class BlackrockRawIO(BaseRawIO):
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
                         sig_sampling_rate
                 t_stop = t_start + length / sig_sampling_rate
-                max_nev_time = 0
-                for k, data in self.nev_data.items():
-                    if data.size > 0:
-                        t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                        max_nev_time = max(max_nev_time, t)
-                if max_nev_time > t_stop:
-                    t_stop = max_nev_time
-                min_nev_time = max_nev_time
-                for k, data in self.nev_data.items():
-                    if data.size > 0:
-                        t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                        min_nev_time = min(min_nev_time, t)
-                if min_nev_time < t_start:
-                    self._seg_t_starts.append(min_nev_time)
-                else:
-                    self._seg_t_starts.append(t_start)
+                if self._avail_files['nev']:
+                    max_nev_time = 0
+                    for k, data in self.nev_data.items():
+                        if data.size > 0:
+                            t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                            max_nev_time = max(max_nev_time, t)
+                    if max_nev_time > t_stop:
+                        t_stop = max_nev_time
+                    min_nev_time = max_nev_time
+                    for k, data in self.nev_data.items():
+                        if data.size > 0:
+                            t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
+                            min_nev_time = min(min_nev_time, t)
+                    if min_nev_time < t_start:
+                        t_start = min_nev_time
+                self._seg_t_starts.append(t_start)
                 self._seg_t_stops.append(float(t_stop))
                 self._sigs_t_starts.append(float(t_start))
 
@@ -422,8 +430,8 @@ class BlackrockRawIO(BaseRawIO):
 
         flt_type = {0: 'None', 1: 'Butterworth'}
         for c in range(sig_channels.size):
+            chidx_ann = self.raw_annotations['signal_channels'][c]
             if self._avail_files['nev']:
-                chidx_ann = self.raw_annotations['signal_channels'][c]
                 neuevwav = self.__nev_ext_header[b'NEUEVWAV']
                 if sig_channels[c]['id'] in neuevwav['electrode_id']:
                     get_idx = list(neuevwav['electrode_id']).index(sig_channels[c]['id'])
@@ -453,7 +461,7 @@ class BlackrockRawIO(BaseRawIO):
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
-            if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+            if self.__nsx_spec[self.nsx_to_load] in ['2.2', '2.3'] and self.__nsx_ext_header:
                 # It does not matter which nsX file to ask for this info
                 k = list(self.__nsx_ext_header.keys())[0]
                 if sig_channels[c]['id'] in self.__nsx_ext_header[k]['electrode_id']:
