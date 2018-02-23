@@ -62,6 +62,7 @@ from __future__ import absolute_import, division, print_function
 import datetime
 import os
 import re
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -292,9 +293,10 @@ class BlackrockRawIO(BaseRawIO):
         if self.nsx_to_load is not None and \
             self.__nsx_spec[self.nsx_to_load] == '2.1' and \
                 not self._avail_files['nev']:
+            pass
             # Because rescaling to volts requires information from nev file (dig_factor)
             # Remove if raw loading becomes possible
-            raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
+            # raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
 
         if self.nsx_to_load is not None:
             spec = self.__nsx_spec[self.nsx_to_load]
@@ -330,9 +332,14 @@ class BlackrockRawIO(BaseRawIO):
                 sig_dtype = 'int16'
                 # max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
                 # dangarous situation so cast to float everyone
-                gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) /\
-                    (float(chan['max_digital_val']) - float(chan['min_digital_val']))
-                offset = -float(chan['min_digital_val']) * gain + float(chan['min_analog_val'])
+                if np.isnan(float(chan['min_analog_val'])):
+                    gain = 1
+                    offset = 0
+                else:
+                    gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) /\
+                        (float(chan['max_digital_val']) - float(chan['min_digital_val']))
+                    offset = -float(chan['min_digital_val'])\
+                        * gain + float(chan['min_analog_val'])
                 group_id = 0
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype,
                                      units, gain, offset, group_id,))
@@ -1505,7 +1512,7 @@ class BlackrockRawIO(BaseRawIO):
                     df = 152592.547
                 dig_factor.append(df)
             else:
-                dig_factor.append(None)
+                dig_factor.append(float('nan'))
 
             if elid < 129:
                 labels.append('chan%i' % elid)
@@ -1518,13 +1525,19 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
             self.__nsx_basic_header[nsx_nb]['channel_count']
 
+        if np.isnan(dig_factor[0]):
+            units = ''
+            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+        else:
+            units = 'uV'
+
         nsx_parameters = {
             'nb_data_points': int(
                 (self.__get_file_size(filename) - bytes_in_headers) /
                 (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'labels': labels,
             'units': np.array(
-                ['uV'] *
+                [units] *
                 self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),

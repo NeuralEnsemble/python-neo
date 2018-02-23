@@ -123,8 +123,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # Assert IOError is raised when no Blackrock files are available
         with self.assertRaises(IOError):
             reader2 = BlackrockIO(filename='nonexistent')
-        with self.assertRaises(IOError):
-            reader2 = BlackrockIO(filename=filename, nev_override='nonexistent')
+        # with self.assertRaises(IOError):
+        #     reader2 = BlackrockIO(filename=filename, nev_override='nonexistent')
 
         # Load data to maximum extent, one None is not given as list
         block = reader.read_block(load_waveforms=False)
