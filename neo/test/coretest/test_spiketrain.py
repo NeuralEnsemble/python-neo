@@ -1656,7 +1656,6 @@ class TestPropertiesMethods(unittest.TestCase):
         self.assertEqual(result1.units, self.train1.units)
         self.assertEqual(result1.dtype, self.train1.dtype)
 
-
     def test__children(self):
         segment = Segment(name='seg1')
         segment.spiketrains = [self.train1]
