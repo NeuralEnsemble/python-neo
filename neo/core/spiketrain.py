@@ -639,9 +639,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def times(self):
         '''
-        Returns the :class:`SpikeTrain` without modification or copying.
+        Returns the :class:`SpikeTrain` as a :class:'Quantity' array.
         '''
-        return self
+        return pq.Quantity(self)
 
     @property
     def duration(self):

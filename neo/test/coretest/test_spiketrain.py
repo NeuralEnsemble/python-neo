@@ -230,27 +230,18 @@ class TestConstructor(unittest.TestCase):
     def result_spike_check(self, train, st_out, t_start_out, t_stop_out,
                            dtype, units):
         assert_arrays_equal(train, st_out)
-        assert_arrays_equal(train, train.times)
         assert_neo_object_is_compliant(train)
 
         self.assertEqual(train.t_start, t_start_out)
-        self.assertEqual(train.t_start, train.times.t_start)
         self.assertEqual(train.t_stop, t_stop_out)
-        self.assertEqual(train.t_stop, train.times.t_stop)
 
         self.assertEqual(train.units, units)
-        self.assertEqual(train.units, train.times.units)
         self.assertEqual(train.t_start.units, units)
-        self.assertEqual(train.t_start.units, train.times.t_start.units)
         self.assertEqual(train.t_stop.units, units)
-        self.assertEqual(train.t_stop.units, train.times.t_stop.units)
 
         self.assertEqual(train.dtype, dtype)
-        self.assertEqual(train.dtype, train.times.dtype)
         self.assertEqual(train.t_stop.dtype, dtype)
-        self.assertEqual(train.t_stop.dtype, train.times.t_stop.dtype)
         self.assertEqual(train.t_start.dtype, dtype)
-        self.assertEqual(train.t_start.dtype, train.times.t_start.dtype)
 
     def test__create_minimal(self):
         t_start = 0.0
