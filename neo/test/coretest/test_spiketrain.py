@@ -230,16 +230,19 @@ class TestConstructor(unittest.TestCase):
     def result_spike_check(self, train, st_out, t_start_out, t_stop_out,
                            dtype, units):
         assert_arrays_equal(train, st_out)
+        assert_arrays_equal(train, train.times)
         assert_neo_object_is_compliant(train)
 
         self.assertEqual(train.t_start, t_start_out)
         self.assertEqual(train.t_stop, t_stop_out)
 
         self.assertEqual(train.units, units)
+        self.assertEqual(train.units, train.times.units)
         self.assertEqual(train.t_start.units, units)
         self.assertEqual(train.t_stop.units, units)
 
         self.assertEqual(train.dtype, dtype)
+        self.assertEqual(train.dtype, train.times.dtype)
         self.assertEqual(train.t_stop.dtype, dtype)
         self.assertEqual(train.t_start.dtype, dtype)
 
@@ -1644,6 +1647,15 @@ class TestPropertiesMethods(unittest.TestCase):
         self.assertEqual(result2, None)
         self.assertEqual(result3, None)
         self.assertEqual(result4, None)
+
+    def test__times(self):
+        result1 = self.train1.times
+        self.assertIsInstance(result1, pq.Quantity)
+        self.assertTrue((result1 == self.train1).all)
+        self.assertEqual(len(result1), len(self.train1))
+        self.assertEqual(result1.units, self.train1.units)
+        self.assertEqual(result1.dtype, self.train1.dtype)
+
 
     def test__children(self):
         segment = Segment(name='seg1')
