@@ -155,7 +155,7 @@ class BaseSignal(DataObject):
         print(dim)
         # TODO: Check why it does not work with units=dim (dimensionality)!!!
         # TODO: Find out, how to validate units without altering them: Raised error in validate_dimensionality???
-        obj = self.duplicate_with_new_array(signal=self.view(pq.Quantity).rescale(dim), units=units)
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
         obj.array_annotations = self.array_annotations
         obj.segment = self.segment
         return obj
@@ -183,7 +183,7 @@ class BaseSignal(DataObject):
         # new.array_annotations.update(self.array_annotations)
         # return new
 
-    def duplicate_with_new_array(self, signal, units=None):
+    def duplicate_with_new_data(self, signal, units=None):
         '''
         Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
