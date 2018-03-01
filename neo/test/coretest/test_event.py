@@ -445,7 +445,6 @@ class TestEventFunctions(unittest.TestCase):
         print("epoch.magnitude : " + str(epoch.durations.magnitude))
         print("np.array([7.0, 11.0, 22.0]) : " + str(np.array([7.0, 11.0, 22.0])))
         assert_array_equal(epoch.durations.magnitude, np.array([7.0, 11.0, 22.0]))
-        # self.assertEqual(np.array([7.0, 11.0, 22.0]),  np.array([7.0, 11.0, 22.0]))
         self.assertEqual(str(type(epoch).__name__), 'Epoch')
         pass
 
