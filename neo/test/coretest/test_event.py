@@ -437,13 +437,15 @@ class TestEventFunctions(unittest.TestCase):
 
     def test_event_to_epoch(self):
         seg = Segment(name="test")
+        # event = Event(times=np.array([5.0, 12.0, 23.0, 45.0]), units="ms", labels=np.array(["A", "B", "C", "D"]))
         event = Event(times=np.array([5.0, 12.0, 23.0, 45.0]), units="ms", labels=np.array(["A", "B", "C", "D"]))
         print("event : " + str(event))
         event.segment = seg
         epoch = event.to_epoch()
-        print("epoch.magnitude : " + str(epoch.magnitude))
-        print("np.array([7.0, 11.0, 22.0]) : " + np.array([7.0, 11.0, 22.0]))
-        assert_array_equal(epoch.magnitude, np.array([7.0, 11.0, 22.0]))
+        print("epoch.magnitude : " + str(epoch.durations.magnitude))
+        print("np.array([7.0, 11.0, 22.0]) : " + str(np.array([7.0, 11.0, 22.0])))
+        assert_array_equal(epoch.durations.magnitude, np.array([7.0, 11.0, 22.0]))
+        # self.assertEqual(np.array([7.0, 11.0, 22.0]),  np.array([7.0, 11.0, 22.0]))
         self.assertEqual(str(type(epoch).__name__), 'Epoch')
         pass
 

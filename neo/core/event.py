@@ -222,21 +222,31 @@ class Event(BaseNeo, pq.Quantity):
         """
         return self.view(pq.Quantity)
 
-    def to_epoch(self):
-        """
-        Transform Events into an array of Epoch 
-        """
+    # def to_epoch(self):
+    #     """
+    #     Transform Events into an array of Epoch 
+    #     """
+    #     from neo.core import Epoch, Event, Segment
+
+    #     i = 0
+    #     duration = []
+    #     for t in self.times:
+    #         if i==0 :
+    #             duration.append(self.times[i])
+    #         else :
+    #             duration.append(self.times[i] - self.times[i-1])
+    #         i+=1
+
+    #     epc = Epoch(times=self.times, durations=duration, labels=self.labels)
+    #     return epc
+
+    def to_epoch(self, durations=None):
         from neo.core import Epoch, Event, Segment
-
-        i = 0
-        duration = []
-        for t in self.times:
-            if i==0 :
-                duration.append(self.times[i])
-            else :
-                duration.append(self.times[i] - self.times[i-1])
-            i+=1
-
-        epc = Epoch(times=self.times, durations=duration, labels=self.labels)
-
-        return epc
+        if durations is None:
+            times = self.times[:-1]
+            durations = np.diff(self.times)[:-1]
+            labels = self.labels[:-1]
+        else:
+            times = self.times
+            labels = self.labels
+        return Epoch(time=times, durations=durations, labels=labels)
