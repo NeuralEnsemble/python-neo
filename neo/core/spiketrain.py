@@ -54,6 +54,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     certain that the dtype and units are the same
     '''
 
+    if t_start > t_stop:
+        raise ValueError("t_stop (%s) is before t_start (%s)" % (t_stop, t_start))
+
     if not value.size:
         return
 

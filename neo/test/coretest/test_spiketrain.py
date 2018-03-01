@@ -142,6 +142,12 @@ class Testcheck_time_in_range(unittest.TestCase):
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=False)
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=True)
 
+    def test__check_time_in_range_empty_array_invalid_t_stop(self):
+        value = np.array([])
+        t_start = 6 * pq.s
+        t_stop = 4 * pq.s
+        self.assertRaises(ValueError, _check_time_in_range, value, t_start=t_start, t_stop=t_stop)
+
     def test__check_time_in_range_exact(self):
         value = np.array([0., 5., 10.]) * pq.s
         t_start = 0. * pq.s
