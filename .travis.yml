@@ -13,6 +13,5 @@ install:
 # command to run tests, e.g. python setup.py test
 script:
   nosetests --with-coverage --cover-package=neo
-  assert_array_equal(epoch.magnitude, np.array([7.0, 11.0, 22.0]))
 after_success:
   coveralls
