@@ -185,8 +185,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :right_sweep: (quantity scalar) Time from the trigger times of the
             spikes to the end of the waveforms, read-only.
             (:attr:`left_sweep` + :attr:`spike_duration`)
-        :times: (:class:`SpikeTrain`) Returns the :class:`SpikeTrain` without
-            modification or copying.
+        :times: (quantity array 1D) Returns the :class:`SpikeTrain` as a quantity array.
 
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
@@ -639,9 +638,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def times(self):
         '''
-        Returns the :class:`SpikeTrain` without modification or copying.
+        Returns the :class:`SpikeTrain` as a quantity array.
         '''
-        return self
+        return pq.Quantity(self)
 
     @property
     def duration(self):

@@ -234,23 +234,17 @@ class TestConstructor(unittest.TestCase):
         assert_neo_object_is_compliant(train)
 
         self.assertEqual(train.t_start, t_start_out)
-        self.assertEqual(train.t_start, train.times.t_start)
         self.assertEqual(train.t_stop, t_stop_out)
-        self.assertEqual(train.t_stop, train.times.t_stop)
 
         self.assertEqual(train.units, units)
         self.assertEqual(train.units, train.times.units)
         self.assertEqual(train.t_start.units, units)
-        self.assertEqual(train.t_start.units, train.times.t_start.units)
         self.assertEqual(train.t_stop.units, units)
-        self.assertEqual(train.t_stop.units, train.times.t_stop.units)
 
         self.assertEqual(train.dtype, dtype)
         self.assertEqual(train.dtype, train.times.dtype)
         self.assertEqual(train.t_stop.dtype, dtype)
-        self.assertEqual(train.t_stop.dtype, train.times.t_stop.dtype)
         self.assertEqual(train.t_start.dtype, dtype)
-        self.assertEqual(train.t_start.dtype, train.times.t_start.dtype)
 
     def test__create_minimal(self):
         t_start = 0.0
@@ -1653,6 +1647,14 @@ class TestPropertiesMethods(unittest.TestCase):
         self.assertEqual(result2, None)
         self.assertEqual(result3, None)
         self.assertEqual(result4, None)
+
+    def test__times(self):
+        result1 = self.train1.times
+        self.assertIsInstance(result1, pq.Quantity)
+        self.assertTrue((result1 == self.train1).all)
+        self.assertEqual(len(result1), len(self.train1))
+        self.assertEqual(result1.units, self.train1.units)
+        self.assertEqual(result1.dtype, self.train1.dtype)
 
     def test__children(self):
         segment = Segment(name='seg1')
