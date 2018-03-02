@@ -243,9 +243,14 @@ class Event(BaseNeo, pq.Quantity):
     def to_epoch(self, durations=None):
         from neo.core import Epoch, Event, Segment
         if durations is None:
-            times = self.times[:]
-            durations = np.diff(self.times)[:]
-            labels = self.labels[:]
+            # times = self.times[:]
+            # durations = np.diff(self.times)[:]
+            # labels = self.labels[:]
+            
+            times = self.times[:-1]
+            durations = np.diff(self.times)
+            # labels = self.labels[:-1]
+            labels = np.array(["{}-{}".format(a, b) for a, b in zip(self.labels[:-1], self.labels[1:])])
         else:
             times = self.times
             labels = self.labels
