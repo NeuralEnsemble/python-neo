@@ -109,7 +109,7 @@ class KlustaKwikIO(BaseIO):
         if not HAVE_MLAB:
             raise MLAB_ERR
         BaseIO.__init__(self)
-        #self.filename = os.path.normpath(filename)
+        # self.filename = os.path.normpath(filename)
         self.filename, self.basename = os.path.split(os.path.abspath(filename))
         self.sampling_rate = float(sampling_rate)
 

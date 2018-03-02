@@ -58,13 +58,13 @@ class testFilenameParser(unittest.TestCase):
 
         # this test is in flux, should probably have it default to
         # basename = os.path.split(dirname)[1] when dirname is a directory
-        #~ dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
-        #~ kio = KlustaKwikIO(filename=dirname)
-        #~ fetfiles = kio._fp.read_filenames('fet')
+        # dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
+        # kio = KlustaKwikIO(filename=dirname)
+        # fetfiles = kio._fp.read_filenames('fet')
 
-        #~ # It will just choose one of the two basenames, depending on which
-        #~ # is first, so just assert that it did something without error.
-        #~ self.assertNotEqual(len(fetfiles), 0)
+        # It will just choose one of the two basenames, depending on which
+        # is first, so just assert that it did something without error.
+        # self.assertNotEqual(len(fetfiles), 0)
 
     def test3(self):
         """Tests that files can be loaded by basename2"""
