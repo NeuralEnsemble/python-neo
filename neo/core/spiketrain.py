@@ -54,6 +54,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     certain that the dtype and units are the same
     '''
 
+    if t_start > t_stop:
+        raise ValueError("t_stop (%s) is before t_start (%s)" % (t_stop, t_start))
+
     if not value.size:
         return
 
@@ -217,8 +220,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         constructor, but not when slicing.
         '''
         if len(times) != 0 and waveforms is not None and len(times) != \
-                waveforms.shape[
-                    0]:  # len(times)!=0 has been used to workaround a bug occuring during neo import)
+                waveforms.shape[0]:
+            # len(times)!=0 has been used to workaround a bug occuring during neo import
             raise ValueError(
                 "the number of waveforms should be equal to the number of spikes")
 

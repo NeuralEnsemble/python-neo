@@ -142,6 +142,12 @@ class Testcheck_time_in_range(unittest.TestCase):
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=False)
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=True)
 
+    def test__check_time_in_range_empty_array_invalid_t_stop(self):
+        value = np.array([])
+        t_start = 6 * pq.s
+        t_stop = 4 * pq.s
+        self.assertRaises(ValueError, _check_time_in_range, value, t_start=t_start, t_stop=t_stop)
+
     def test__check_time_in_range_exact(self):
         value = np.array([0., 5., 10.]) * pq.s
         t_start = 0. * pq.s
@@ -1558,7 +1564,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__repr(self):
         result = repr(self.train1)
         if np.__version__.split(".")[:2] > ['1', '13']:
-            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
+            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode  # nopep8
             targ = '<SpikeTrain(array([3., 4., 5.]) * ms, [0.5 ms, 10.0 ms])>'
         else:
             targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
