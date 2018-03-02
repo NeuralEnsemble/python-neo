@@ -194,7 +194,7 @@ class KlustaKwikIO(BaseIO):
     # Helper hidden functions for reading
     def _load_spike_times(self, fetfilename):
         """Reads and returns the spike times and features"""
-        with open(fetfilename, mode='r', encoding='utf8') as f:
+        with open(fetfilename, mode='r') as f:
 
             # Number of clustering features is integer on first line
             nbFeatures = int(f.readline().strip())
@@ -391,8 +391,8 @@ class KlustaKwikIO(BaseIO):
             shutil.copyfile(clufilename, clufilename + '~')
 
         # create file handles
-        self._fetfilehandles[id_group] = open(fetfilename, mode='w', encoding='utf8')
-        self._clufilehandles[id_group] = open(clufilename, mode='w', encoding='utf8')
+        self._fetfilehandles[id_group] = open(fetfilename, mode='w')
+        self._clufilehandles[id_group] = open(clufilename, mode='w')
 
         # write out first line
         # self._fetfilehandles[id_group].write("0\n") # Number of features
