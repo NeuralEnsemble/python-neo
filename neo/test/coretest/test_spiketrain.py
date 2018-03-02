@@ -142,6 +142,12 @@ class Testcheck_time_in_range(unittest.TestCase):
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=False)
         _check_time_in_range(value, t_start=t_start, t_stop=t_stop, view=True)
 
+    def test__check_time_in_range_empty_array_invalid_t_stop(self):
+        value = np.array([])
+        t_start = 6 * pq.s
+        t_stop = 4 * pq.s
+        self.assertRaises(ValueError, _check_time_in_range, value, t_start=t_start, t_stop=t_stop)
+
     def test__check_time_in_range_exact(self):
         value = np.array([0., 5., 10.]) * pq.s
         t_start = 0. * pq.s
@@ -234,23 +240,17 @@ class TestConstructor(unittest.TestCase):
         assert_neo_object_is_compliant(train)
 
         self.assertEqual(train.t_start, t_start_out)
-        self.assertEqual(train.t_start, train.times.t_start)
         self.assertEqual(train.t_stop, t_stop_out)
-        self.assertEqual(train.t_stop, train.times.t_stop)
 
         self.assertEqual(train.units, units)
         self.assertEqual(train.units, train.times.units)
         self.assertEqual(train.t_start.units, units)
-        self.assertEqual(train.t_start.units, train.times.t_start.units)
         self.assertEqual(train.t_stop.units, units)
-        self.assertEqual(train.t_stop.units, train.times.t_stop.units)
 
         self.assertEqual(train.dtype, dtype)
         self.assertEqual(train.dtype, train.times.dtype)
         self.assertEqual(train.t_stop.dtype, dtype)
-        self.assertEqual(train.t_stop.dtype, train.times.t_stop.dtype)
         self.assertEqual(train.t_start.dtype, dtype)
-        self.assertEqual(train.t_start.dtype, train.times.t_start.dtype)
 
     def test__create_minimal(self):
         t_start = 0.0
@@ -1564,7 +1564,7 @@ class TestPropertiesMethods(unittest.TestCase):
     def test__repr(self):
         result = repr(self.train1)
         if np.__version__.split(".")[:2] > ['1', '13']:
-            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
+            # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many-changes-to-array-printing-disableable-with-the-new-legacy-printing-mode  # nopep8
             targ = '<SpikeTrain(array([3., 4., 5.]) * ms, [0.5 ms, 10.0 ms])>'
         else:
             targ = '<SpikeTrain(array([ 3.,  4.,  5.]) * ms, [0.5 ms, 10.0 ms])>'
@@ -1653,6 +1653,14 @@ class TestPropertiesMethods(unittest.TestCase):
         self.assertEqual(result2, None)
         self.assertEqual(result3, None)
         self.assertEqual(result4, None)
+
+    def test__times(self):
+        result1 = self.train1.times
+        self.assertIsInstance(result1, pq.Quantity)
+        self.assertTrue((result1 == self.train1).all)
+        self.assertEqual(len(result1), len(self.train1))
+        self.assertEqual(result1.units, self.train1.units)
+        self.assertEqual(result1.dtype, self.train1.dtype)
 
     def test__children(self):
         segment = Segment(name='seg1')

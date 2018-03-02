@@ -195,7 +195,7 @@ class KwikIO(BaseIO):
             print("Exception: cluster_id (%d) not found !! " % cluster_id)
             return
         clusters = model.spike_clusters
-        idx = np.argwhere(clusters == cluster_id)
+        idx = np.nonzero(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
             # klusta: num_spikes, samples_per_spike, num_chans = w.shape
