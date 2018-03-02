@@ -15,7 +15,7 @@
 import os
 import sys
 
-import distutils.version.LooseVersion as LooseVersion
+from distutils.version import LooseVersion
 
 with open("../../neo/version.py") as fp:
     d = {}
