@@ -72,6 +72,12 @@ and all contributions are welcomed - see the :doc:`developers_guide` for more in
 `Source code <https://github.com/NeuralEnsemble/python-neo>`_ is on GitHub.
 
 
+Citation
+--------
+
+.. include:: ../../CITATION.txt
+
+
 .. _OpenElectrophy: https://github.com/OpenElectrophy/OpenElectrophy
 .. _Elephant: http://neuralensemble.org/elephant
 .. _G-node: http://www.g-node.org/
