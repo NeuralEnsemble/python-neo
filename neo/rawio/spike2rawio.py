@@ -366,6 +366,7 @@ class Spike2RawIO(BaseRawIO):
                 ind += data.size
         return raw_signals
 
+
     def _count_in_time_slice(self, seg_index, chan_id, lim0, lim1, marker_filter=None):
         # count event or spike in time slice
         data_blocks = self._all_data_blocks[chan_id]
