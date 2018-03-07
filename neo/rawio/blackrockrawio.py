@@ -116,7 +116,7 @@ class BlackrockRawIO(BaseRawIO):
         >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
         >>> reader.parse_header()
 
-            Inspect a set of file consisting of files FileSpec2.3001.ns5 and 
+            Inspect a set of file consisting of files FileSpec2.3001.ns5 and
             FileSpec2.3001.nev
 
         >>> print(reader)
@@ -336,7 +336,7 @@ class BlackrockRawIO(BaseRawIO):
                     t_start = 0.
                 else:
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
-                        sig_sampling_rate
+                        self.__nsx_basic_header[self.nsx_to_load]['timestamp_resolution']
                 t_stop = t_start + length / sig_sampling_rate
                 max_nev_time = 0
                 for k, data in self.nev_data.items():
@@ -372,7 +372,7 @@ class BlackrockRawIO(BaseRawIO):
                 if data.size > 0:
                     t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
                     min_nev_time = min(min_nev_time, t)
-            self._sigs_t_starts = [min_nev_time]
+            self._sigs_t_starts = [None]
             self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
 
         # finalize header
@@ -519,7 +519,6 @@ class BlackrockRawIO(BaseRawIO):
         return memmap_data.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        # same as segment starts
         return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
