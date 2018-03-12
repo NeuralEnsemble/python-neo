@@ -47,14 +47,19 @@ on).
     
 To download and install manually, download:
 
-    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.2.zip
-
-Then::
-
-    $ unzip neo-0.5.2.zip
-    $ cd neo-0.5.2
-    $ python setup.py install
+    |neo_github_url|
     
+
+Then:
+
+.. parsed-literal::
+    
+    $ unzip neo-|release|.zip
+    $ cd neo-|release|
+    $ python setup.py install
+
+
+
 or::
 
     $ python3 setup.py install

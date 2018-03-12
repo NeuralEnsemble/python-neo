@@ -1,21 +1,21 @@
 To cite Neo in publications, please use:
 
-Garcia S., Guarino D., Jaillet F., Jennings T.R., Pröpper R., Rautenberg P.L.,
-Rodgers C., Sobolev A.,Wachtler T., Yger P. and Davison A.P. (2014)
-Neo: an object model for handling electrophysiology data in multiple formats.
-Frontiers in Neuroinformatics 8:10: doi:10.3389/fninf.2014.00010
+    Garcia S., Guarino D., Jaillet F., Jennings T.R., Pröpper R., Rautenberg P.L.,
+    Rodgers C., Sobolev A.,Wachtler T., Yger P. and Davison A.P. (2014)
+    Neo: an object model for handling electrophysiology data in multiple formats.
+    Frontiers in Neuroinformatics 8:10: doi:10.3389/fninf.2014.00010
 
-A BibTeX entry for LaTeX users is
+A BibTeX entry for LaTeX users is::
 
-@article{neo09,
- author = {Garcia S. and Guarino D. and Jaillet F. and Jennings T.R. and Pröpper R. and
-           Rautenberg P.L. and Rodgers C. and Sobolev A. and Wachtler T. and Yger P.
-           and Davison A.P.},
- doi = {10.3389/fninf.2014.00010},
- full_text = {http://www.frontiersin.org/Journal/10.3389/fninf.2014.00010/abstract},
- journal = {Frontiers in Neuroinformatics},
- month = {February},
- title = {Neo: an object model for handling electrophysiology data in multiple formats},
- volume = {8:10},
- year = {2014}
-}
+    @article{neo09,
+        author = {Garcia S. and Guarino D. and Jaillet F. and Jennings T.R. and Pröpper R. and
+                  Rautenberg P.L. and Rodgers C. and Sobolev A. and Wachtler T. and Yger P.
+                  and Davison A.P.},
+        doi = {10.3389/fninf.2014.00010},
+        full_text = {http://www.frontiersin.org/Journal/10.3389/fninf.2014.00010/abstract},
+        journal = {Frontiers in Neuroinformatics},
+        month = {February},
+        title = {Neo: an object model for handling electrophysiology data in multiple formats},
+        volume = {8:10},
+        year = {2014}
+    }

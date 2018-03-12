@@ -473,6 +473,10 @@ class BlackrockRawIO(BaseRawIO):
                     get_idx = list(
                         self.__nsx_ext_header[k]['electrode_id']).index(
                         sig_channels[c]['id'])
+                    chidx_ann['connector_ID'] = self.__nsx_ext_header[k]['physical_connector'][
+                        get_idx]
+                    chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
+                        get_idx]
                     chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
                                                'hi_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
