@@ -153,7 +153,7 @@ class Epoch(BaseNeo, pq.Quantity):
 
     def rescale(self, units):
         '''
-        Return a copy of the :class:`SpikeTrain` converted to the specified
+        Return a copy of the :class:`Epoch` converted to the specified
         units
         '''
         if self.dimensionality == pq.quantity.validate_dimensionality(units):
