@@ -447,13 +447,17 @@ class BlackrockRawIO(BaseRawIO):
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
-            if self.__nev_spec in ['2.2', '2.3'] and self.__nsx_ext_header:
+            if self.__nsx_spec[self.nsx_to_load] in ['2.2', '2.3'] and self.__nsx_ext_header:
                 # It does not matter which nsX file to ask for this info
                 k = list(self.__nsx_ext_header.keys())[0]
                 if sig_channels[c]['id'] in self.__nsx_ext_header[k]['electrode_id']:
                     get_idx = list(
                         self.__nsx_ext_header[k]['electrode_id']).index(
                         sig_channels[c]['id'])
+                    chidx_ann['connector_ID'] = self.__nsx_ext_header[k]['physical_connector'][
+                        get_idx]
+                    chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
+                        get_idx]
                     chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
                                                'hi_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
