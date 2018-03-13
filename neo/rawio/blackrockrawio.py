@@ -381,6 +381,7 @@ class BlackrockRawIO(BaseRawIO):
                     min_nev_time = min(min_nev_time, t)
             self._sigs_t_starts = [None]
             self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
+        print(self._nb_segment)
 
         # finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -957,11 +958,18 @@ class BlackrockRawIO(BaseRawIO):
 
         nev_ext_header = {}
         for packet_id in ext_header_variants.keys():
+            print(packet_id)
             mask = (raw_ext_header['packet_id'] == packet_id)
             dt2 = self.__nev_ext_header_types()[packet_id][
                 ext_header_variants[packet_id]]
 
             nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
+
+        print(nev_ext_header)
+        print(nev_ext_header[b'ECOMMENT'])
+        print(nev_ext_header[b'CCOMMENT'])
+        print(nev_ext_header[b'MAPFILE'])
+        print(nev_ext_header[b'ARRAYNME'])
         return nev_basic_header, nev_ext_header
 
     def __read_nev_header_variant_a(self):
@@ -1041,6 +1049,7 @@ class BlackrockRawIO(BaseRawIO):
         for k, v in nev_data_masks.items():
             mask = masks[k][v]
             data[k] = (raw_data.view(types[k][nev_data_types[k]])[mask], event_segment_ids[mask])
+
         return data
 
     def __get_reset_event_mask(self, raw_event_data, masks, nev_data_masks):
@@ -1048,8 +1057,9 @@ class BlackrockRawIO(BaseRawIO):
         Extract mask for reset comment events in 2.3 .nev file
         """
         restart_mask = np.logical_and(masks['Comments'][nev_data_masks['Comments']],
-                                      raw_event_data['value']==
+                                      raw_event_data['value'] ==
                                       b'\x00\x00\x00\x00\x00\x00critical load restart')
+        # TODO: Fix hardcoded number of bytes
         return restart_mask
 
 
