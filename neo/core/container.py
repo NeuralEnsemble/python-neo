@@ -56,27 +56,27 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         targdict += [kwargs]
 
     if not targdict:
-        return []
+        results = data
 
     # if multiple dicts are provided, apply each filter sequentially
-    if not hasattr(targdict, 'keys'):
+    elif not hasattr(targdict, 'keys'):
         # for performance reasons, only do the object filtering on the first
         # iteration
         results = filterdata(data, targdict=targdict[0], objects=objects)
         for targ in targdict[1:]:
             results = filterdata(results, targdict=targ)
         return results
-
-    # do the actual filtering
-    results = []
-    for key, value in sorted(targdict.items()):
-        for obj in data:
-            if (hasattr(obj, key) and getattr(obj, key) == value and
-                    all([obj is not res for res in results])):
-                results.append(obj)
-            elif (key in obj.annotations and obj.annotations[key] == value and
-                    all([obj is not res for res in results])):
-                results.append(obj)
+    else:
+        # do the actual filtering
+        results = []
+        for key, value in sorted(targdict.items()):
+            for obj in data:
+                if (hasattr(obj, key) and getattr(obj, key) == value and
+                        all([obj is not res for res in results])):
+                    results.append(obj)
+                elif (key in obj.annotations and obj.annotations[key] == value and
+                        all([obj is not res for res in results])):
+                    results.append(obj)
 
     # keep only objects of the correct classes
     if objects:

@@ -318,6 +318,17 @@ class TestSegment(unittest.TestCase):
 
     def test__filter_none(self):
         targ = []
+        # collecting all data objects in target block
+        targ.extend(self.targobj.analogsignals)
+        targ.extend(self.targobj.epochs)
+        targ.extend(self.targobj.events)
+        targ.extend(self.targobj.irregularlysampledsignals)
+        targ.extend(self.targobj.spiketrains)
+
+
+        # for unit in self.targobj.units:
+        #     targ.extend(unit.spiketrains)
+
 
         res0 = self.targobj.filter()
         res1 = self.targobj.filter({})
@@ -417,9 +428,9 @@ class TestSegment(unittest.TestCase):
     def test__filter_multi_nores(self):
         targ = []
 
-        res0 = self.targobj.filter([{'j': 0}, {}])
-        res1 = self.targobj.filter({}, ttype=0)
-        res2 = self.targobj.filter([{}], ttype=0)
+        res0 = self.targobj.filter([{'j': 5}, {}])
+        res1 = self.targobj.filter({}, ttype=6)
+        res2 = self.targobj.filter([{}], ttype=6)
         res3 = self.targobj.filter({'name': self.epcs1a[1].name}, j=0)
         res4 = self.targobj.filter(targdict={'name': self.epcs1a[1].name},
                                    j=0)
@@ -473,6 +484,20 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(res3, targ)
         assert_same_sub_schema(res4, targ)
         assert_same_sub_schema(res5, targ)
+
+    def test__filter_no_annotation_but_object(self):
+        targ = self.targobj.spiketrains
+        res = self.targobj.filter(objects=SpikeTrain)
+        assert_same_sub_schema(res, targ)
+
+        targ = self.targobj.analogsignals
+        res = self.targobj.filter(objects=AnalogSignal)
+        assert_same_sub_schema(res, targ)
+
+        targ = self.targobj.analogsignals + self.targobj.spiketrains
+        res = self.targobj.filter(objects=[AnalogSignal, SpikeTrain])
+        assert_same_sub_schema(res, targ)
+        assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
         targ = [self.epcs1a[1]]
@@ -617,7 +642,7 @@ class TestSegment(unittest.TestCase):
 
         targ = []
 
-        res0 = filterdata(data, [{'j': 0}, {}])
+        res0 = filterdata(data, [{'j': 5}, {}])
         res1 = filterdata(data, {}, ttype=0)
         res2 = filterdata(data, [{}], ttype=0)
         res3 = filterdata(data, {'name': self.epcs1a[1].name}, j=0)
