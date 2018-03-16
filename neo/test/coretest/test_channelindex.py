@@ -458,11 +458,11 @@ class TestChannelIndex(unittest.TestCase):
         res = self.targobj.filter(objects=AnalogSignal)
         assert_same_sub_schema(res, targ)
 
-        targ = self.targobj.analogsignals
+        targ = []
+        targ.extend(self.targobj.analogsignals)
         for unit in self.targobj.units:
             targ.extend(unit.spiketrains)
         res = self.targobj.filter(objects=[AnalogSignal, SpikeTrain])
-        assert_same_sub_schema(res, targ)
         assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
