@@ -474,7 +474,7 @@ class Container(BaseNeo):
                 continue
             if append:
                 target = getattr(child, parent_name)
-                if not self in target:
+                if self not in target:
                     target.append(self)
                 continue
             setattr(child, parent_name, [self])

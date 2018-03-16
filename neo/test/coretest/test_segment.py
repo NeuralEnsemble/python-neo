@@ -325,11 +325,6 @@ class TestSegment(unittest.TestCase):
         targ.extend(self.targobj.irregularlysampledsignals)
         targ.extend(self.targobj.spiketrains)
 
-
-        # for unit in self.targobj.units:
-        #     targ.extend(unit.spiketrains)
-
-
         res0 = self.targobj.filter()
         res1 = self.targobj.filter({})
         res2 = self.targobj.filter([])
