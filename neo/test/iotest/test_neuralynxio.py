@@ -6,9 +6,7 @@ Tests of neo.io.blackrockio
 # needed for python 3 compatibility
 from __future__ import absolute_import
 
-import os
-import sys
-import re
+import time
 import warnings
 
 import unittest
@@ -236,7 +234,9 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         block = nio.read_block(signal_group_mode='group-by-same-units')
         self.assertEqual(len(block.channel_indexes), 1)
 
+
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
+
     def test_ncs(self):
         for session in self.files_to_test[1:2]:  # in the long run this should include all files
             dirname = self.get_filename_path(session)
@@ -282,12 +282,10 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.channel_indexes[-1].units[0].spiketrains), n_gaps + 1)
 
 
-import time
-
 def compare_old_and_new_neuralynxio():
     base = '/tmp/files_for_testing_neo/neuralynx/'
     dirname = base + 'Cheetah_v5.5.1/original_data/'
-    #~ dirname = base+'Cheetah_v5.7.4/original_data/'
+    # ~ dirname = base+'Cheetah_v5.7.4/original_data/'
 
     t0 = time.perf_counter()
     newreader = NewNeuralynxIO(dirname)
@@ -339,7 +337,8 @@ def compare_neo_content(bl1, bl2):
         children2 = bl2.list_children_by_class(objtype)
 
         if len(children1) != len(children2):
-            warnings.warn('Number of {} is different in both blocks ({} != {}). Skipping comparison'
+            warnings.warn('Number of {} is different in both blocks ({} != {}).'
+                          ' Skipping comparison'
                           ''.format(objtype, len(children1), len(children2)))
             continue
 
@@ -367,7 +366,7 @@ def compare_attributes(child1, child2):
             continue
         if type(child1) == SpikeTrain and attr_name == 'times':
             continue
-        unequal = child1.__getattribute__(attr_name) !=  child2.__getattribute__(attr_name)
+        unequal = child1.__getattribute__(attr_name) != child2.__getattribute__(attr_name)
 
         if hasattr(unequal, 'any'):
             unequal = unequal.any()
@@ -381,4 +380,4 @@ def compare_attributes(child1, child2):
 
 if __name__ == '__main__':
     unittest.main()
-    #~ compare_old_and_new_neuralynxio()
+    # ~ compare_old_and_new_neuralynxio()
