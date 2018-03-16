@@ -241,10 +241,10 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
         for session in self.files_to_test[1:2]:  # in the long run this should include all files
             dirname = self.get_filename_path(session)
             nio = NeuralynxIO(dirname=dirname, use_cache=False)
-            block = nio.read_block(time_slices=None)
+            block = nio.read_block()
 
-            for anasig in block.segments[0].analogsignals:
-                chid = anasig.channel_index.annotations['channel_id']
+            for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
+                chid = anasig.channel_index.annotations['channel_id'][anasig_id]
                 filename = nio.ncs_filenames[chid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')
                 plain_data = np.loadtxt(filename)[:, 5:].flatten()  # first columns are meta info
@@ -272,7 +272,7 @@ class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
     def test_gap_handling_v563(self):
         dirname = self.get_filename_path('Cheetah_v5.6.3/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
-        block = nio.read_block(time_slices=None)
+        block = nio.read_block()
 
         # known gap values
         n_gaps = 1
