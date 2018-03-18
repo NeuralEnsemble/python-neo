@@ -31,6 +31,9 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     be a list of dictionaries, in which case the filters are applied
     sequentially.  If targdict and kwargs are both supplied, the
     targdict filters are applied first, followed by the kwarg filters.
+    A targdict of None or {} and objects = None corresponds to no filters
+    applied, therefore returning all child objects.
+    Default targdict and objects is None.
 
 
     objects (optional) should be the name of a Neo object type,
@@ -379,6 +382,8 @@ class Container(BaseNeo):
         be a list of dictionaries, in which case the filters are applied
         sequentially.  If targdict and kwargs are both supplied, the
         targdict filters are applied first, followed by the kwarg filters.
+        A targdict of None or {} corresponds to no filters applied, therefore
+        returning all child objects. Default targdict is None.
 
         If data is True (default), include data objects.
         If container is True (default False), include container objects.
@@ -387,14 +392,17 @@ class Container(BaseNeo):
 
         objects (optional) should be the name of a Neo object type,
         a neo object class, or a list of one or both of these.  If specified,
-        only these objects will be returned.  Note that if recursive is True,
-        containers not in objects will still be descended into.
-        This overrides data and container.
+        only these objects will be returned. If not specified any type of
+        object is  returned. Default is None.
+        Note that if recursive is True, containers not in objects will still
+        be descended into. This overrides data and container.
 
 
         Examples::
 
             >>> obj.filter(name="Vm")
+            >>> obj.filter(objects=neo.SpikeTrain)
+            >>> obj.filter(targdict={'myannotation':3})
         """
         # if objects are specified, get the classes
         if objects:
