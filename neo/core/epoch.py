@@ -120,7 +120,7 @@ class Epoch(BaseNeo, pq.Quantity):
 
     def __reduce__(self):
         '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        Map the __new__ function onto _new_epoch, so that pickle
         works
         '''
         return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
