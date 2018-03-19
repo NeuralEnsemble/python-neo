@@ -194,7 +194,7 @@ class AxonRawIO(BaseRawIO):
                 offset -= info['listADCInfo'][chan_id]['fSignalOffset']
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, offset, gain, group_id))
+                                 sig_dtype, units, gain, offset,  group_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -451,7 +451,8 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX', b'axoscope']:
+            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX',
+                                                                    b'axoscope', b'Clampfit']:
                 #goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart != -1:
