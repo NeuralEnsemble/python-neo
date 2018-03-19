@@ -538,12 +538,14 @@ class TestDuplicateWithNewData(unittest.TestCase):
                                    np.asarray(signal1.durations), 1e-12)
 
 
-class TestEventFunctions(unittest.TestCase):
+class TestEpochFunctions(unittest.TestCase):
 
     def test__pickle(self):
 
-        epoch1 = Epoch(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
-                       units='s')
+        epoch1 = Epoch(np.arange(0, 30, 10) * pq.s,
+                       durations=[1, 2, 3] * pq.s,
+                       labels=np.array(['t0', 't1', 't2'], dtype='S'),
+                       units='s', annotation1="foo", annotation2="bar")
         fobj = open('./pickle', 'wb')
         pickle.dump(epoch1, fobj)
         fobj.close()
@@ -556,6 +558,8 @@ class TestEventFunctions(unittest.TestCase):
 
         fobj.close()
         assert_array_equal(epoch1.times, epoch2.times)
+        self.assertEqual(epoch2.annotations, epoch1.annotations)
+
         os.remove('./pickle')
 
 
