@@ -149,6 +149,9 @@ class AnalogSignal(BaseSignal):
         Otherwise an :class:`AnalogSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`t_start`
         is changed if the start index along dimension 1 is greater than 1.
+        Note that slicing an :class:`AnalogSignal` may give a different
+        result to slicing the underlying NumPy array since signals
+        are always two-dimensional.
 
     *Operations available on this object*:
         == != + * /

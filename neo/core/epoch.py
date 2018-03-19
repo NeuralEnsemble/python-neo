@@ -21,14 +21,16 @@ from neo.core.dataobject import DataObject
 PY_VER = sys.version_info[0]
 
 
-def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None, description=None,
-               file_origin=None, array_annotations=None, annotations=None, segment=None):
+def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
+               description=None, file_origin=None, array_annotations=None,
+               annotations=None, segment=None):
     '''
     A function to map epoch.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
-              description=description, array_annotations=array_annotations,  **annotations)
+    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name,
+              file_origin=file_origin, description=description,
+              array_annotations=array_annotations,  **annotations)
     e.segment = segment
     return e
 
@@ -160,6 +162,16 @@ class Epoch(DataObject):
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
+    def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
+        obj = Epoch(times=super(Epoch, self).__getitem__(i))
+        obj._copy_data_complement(self)
+        obj.durations = self.durations[i]
+        obj.labels = self.labels[i]
+        return obj
+
     @property
     def times(self):
         return pq.Quantity(self)
@@ -197,7 +209,8 @@ class Epoch(DataObject):
         merged_array_annotations = {}
         for key in self.array_annotations.keys():
             try:
-                merged_array_annotations[key] = np.hstack([self.array_annotations[key], other.array_annotations[key]])
+                merged_array_annotations[key] = np.hstack([self.array_annotations[key],
+                                                           other.array_annotations[key]])
             except KeyError:
                 continue
         kwargs['array_annotations'] = merged_array_annotations
@@ -208,7 +221,8 @@ class Epoch(DataObject):
         '''
         Copy the metadata from another :class:`Epoch`.
         '''
-        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
+        # Note: Array annotations cannot be copied
+        # because they are linked to their respective timestamps
         for attr in ("labels", "durations", "name", "file_origin",
                      "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
@@ -258,9 +272,9 @@ class Epoch(DataObject):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-
         new_epc = self[indices]
         new_epc.durations = self.durations[indices]
         new_epc.labels = self.labels[indices]
         new_epc.array_annotations = self.array_annotations_at_index(indices)
+
         return new_epc
