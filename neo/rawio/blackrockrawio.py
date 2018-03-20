@@ -1100,15 +1100,31 @@ class BlackrockRawIO(BaseRawIO):
         Ensure matching ids of segments detected in nsx and nev file for version 2.3
         """
         if self.__nev_spec == '2.3':
-            non_empty_nsx_segments = {k:v for k,v in self.__nsx_data_header[nsx_nb].items()
-                                      if v['nb_data_points'] > 1}
+            nev_relevant_nsx_segments = {}
+            last_k = list(self.__nsx_data_header[nsx_nb].keys())[0]
+            for k, v in self.__nsx_data_header[nsx_nb].items():
+                old_ts = self.__nsx_data_header[nsx_nb][last_k]['timestamp'] + \
+                        self.__nsx_data_header[nsx_nb][last_k]['nb_data_points'] * \
+                        self.__nsx_basic_header[nsx_nb]['period']
+                print(old_ts)
+                print(v['timestamp'])
+                last_k = k
+
+                # Nonempty segments that were created by pressing 'Reset'
+                # When pressing 'Pause' time just goes on, so no need for finding segment in nev
+                if v['nb_data_points'] > 1 and not v['timestamp'] > old_ts:
+                    nev_relevant_nsx_segments[k] = v
+
+
+            # nev_relevant_nsx_segments = {k:v for k,v in self.__nsx_data_header[nsx_nb].items()
+            #                           if v['nb_data_points'] > 1 and not v['timestamp'] > self.__nsx_data_header[nsx_nb][k-1]['timestamp'] + self.__nsx_data_header[nsx_nb][k]['nb_data_points'] * self.__nsx_basic_header['period']}
             # consistency check: same number of segments for nsx and nev data
-            assert self._nb_segment_nev == len(non_empty_nsx_segments), \
+            assert self._nb_segment_nev == len(nev_relevant_nsx_segments), \
                 ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
                  'ns{0} file.'.format(self.nsx_to_load, self._nb_segment_nev, self._nb_segment))
 
             new_nev_segment_id_mapping = dict(zip(range(self._nb_segment_nev),
-                                                  sorted(list(non_empty_nsx_segments))))
+                                                  sorted(list(nev_relevant_nsx_segments))))
 
             def vec_translate(a, my_dict):
                 return np.vectorize(my_dict.__getitem__)(a)
