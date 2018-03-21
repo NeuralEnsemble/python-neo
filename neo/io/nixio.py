@@ -47,6 +47,8 @@ try:
 except NameError:
     string_types = str
 
+EMPTYANNOTATION = "EMPTYLIST"
+
 
 def stringify(value):
     if value is None:
@@ -1033,13 +1035,23 @@ class NixIO(BaseIO):
         elif isinstance(v, Iterable):
             values = []
             unit = None
-            if hasattr(v, "ndim") and v.ndim == 0:
+            definition = None
+            if len(v) == 0:
+                # empty list can't be saved in NIX property
+                # but we can store an empty string and use the
+                # definition to signify that it should be restored
+                # as an iterable (list)
+                values = ""
+                definition = EMPTYANNOTATION
+            elif hasattr(v, "ndim") and v.ndim == 0:
                 values = v.item()
                 if isinstance(v, pq.Quantity):
                     unit = str(v.dimensionality)
             else:
                 for item in v:
-                    if isinstance(item, pq.Quantity):
+                    if isinstance(item, string_types):
+                        item = nix.Value(item)
+                    elif isinstance(item, pq.Quantity):
                         unit = str(item.dimensionality)
                         item = nix.Value(item.magnitude.item())
                     elif isinstance(item, Iterable):
@@ -1052,6 +1064,8 @@ class NixIO(BaseIO):
                     values.append(item)
             section[name] = values
             section.props[name].unit = unit
+            if definition:
+                section.props[name].definition = definition
         elif type(v).__module__ == "numpy":
             section[name] = nix.Value(v.item())
         else:
@@ -1075,15 +1089,15 @@ class NixIO(BaseIO):
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.props:
-                values = prop.values
-                values = list(v.value for v in values)
+                values = list(v.value for v in prop.values)
                 if prop.unit:
                     units = prop.unit
                     values = create_quantity(values, units)
                 if len(values) == 1:
-                    neo_attrs[prop.name] = values[0]
-                else:
-                    neo_attrs[prop.name] = values
+                    values = values[0]
+                if values == "" and prop.definition == EMPTYANNOTATION:
+                    values = list()
+                neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
 
         if "file_datetime" in neo_attrs:
