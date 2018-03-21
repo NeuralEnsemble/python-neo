@@ -983,6 +983,39 @@ class NixIOWriteTest(NixIOTest):
         writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
 
+        # empty string
+        writeprop(section, "emptystring", "")
+        self.assertEqual("", section["emptystring"])
+
+    def test_annotations_special_cases(self):
+        # Special cases for annotations: empty list, list of strings,
+        # multidimensional lists/arrays
+        # These are handled differently on read, so we test them on a block
+        # instead of just checking the property writer method
+        # empty value
+
+        # empty list
+        wblock = Block("block with empty list", an_empty_list=list())
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="block with empty list")
+        self.assertEqual(rblock.annotations["an_empty_list"], list())
+
+        # empty tuple (gets read out as list)
+        wblock = Block("block with empty tuple", an_empty_tuple=tuple())
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="block with empty tuple")
+        self.assertEqual(rblock.annotations["an_empty_tuple"], list())
+
+        # list of strings
+        losval = ["one", "two", "one million"]
+        wblock = Block("block with list of strings",
+                       los=losval)
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="block with list of strings")
+        self.assertEqual(rblock.annotations["los"], losval)
+
+        # TODO: multi dimensional value (GH Issue #501)
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
