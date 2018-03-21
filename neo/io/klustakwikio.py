@@ -52,10 +52,10 @@ Assuming N1 spikes (spike1...spikeN1), N2 electrodes (e1...eN2) and
 N3 coefficients (c1...cN3), this file looks like:
 
 nbDimensions
-c1_e1_spike1   c2_e1_spike1  ... cN3_e1_spike1   c1_e2_spike1  ... cN3_eN2_spike1   timestamp_spike1
-c1_e1_spike2   c2_e1_spike2  ... cN3_e1_spike2   c1_e2_spike2  ... cN3_eN2_spike2   timestamp_spike2
+c1_e1_spk1   c2_e1_spk1  ... cN3_e1_spk1   c1_e2_spk1  ... cN3_eN2_spk1   timestamp_spk1
+c1_e1_spk2   c2_e1_spk2  ... cN3_e1_spk2   c1_e2_spk2  ... cN3_eN2_spk2   timestamp_spk2
 ...
-c1_e1_spikeN1  c2_e1_spikeN1 ... cN3_e1_spikeN1  c1_e2_spikeN1 ... cN3_eN2_spikeN1  timestamp_spikeN1
+c1_e1_spkN1  c2_e1_spkN1 ... cN3_e1_spkN1  c1_e2_spkN1 ... cN3_eN2_spkN1  timestamp_spkN1
 
 The timestamp is expressed in multiples of the sampling interval. For
 instance, for a 20kHz recording (50 microsecond sampling interval), a
