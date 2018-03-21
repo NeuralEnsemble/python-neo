@@ -61,8 +61,8 @@ def generate_block(n_segments=3, n_channels=4, n_units=3,
     block.create_many_to_one_relationship()
     return block
 
-block = generate_block()
 
+block = generate_block()
 
 # In this example, we treat each segment in turn, averaging over the channels
 # in each:
