@@ -6,7 +6,7 @@
 Neo is a Python package for working with electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, Igor Pro, and support for
-writing to a subset of these formats plus non-proprietary formats including Klustakwik and HDF5.
+writing to a subset of these formats plus non-proprietary formats including Kiwk and HDF5.
 
 The goal of Neo is to improve interoperability between Python tools for
 analyzing, visualizing and generating electrophysiology data, by providing a common,

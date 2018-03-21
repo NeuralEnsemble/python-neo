@@ -4,11 +4,32 @@ Neo 0.6.0 release notes
 
 DD MM 2018
 
+This is a draft.
+
+Major changes:
+  * introduce neo.rawio: a low level reader for various data format
+  * Test on CircleCI for all IOs
+  * change file repo at https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+
+  
+All changes:
+  * Add `time_index()` and `splice()` methods to `AnalogSignal`  
+  * IO fix and improvement: Blackrock, TDT, Axon, SPike2, Brainvision, Neuralynx
+  * Implements `__deepcopy__` for all data classes 
+  * New IO : BCI2000
+  * pep8 
+  * Implement `__getitem__` for Epoch 
+  * Remove mutated copy of `AnalogSignal.splice()`
   * remove cascade support from all IOs
   * remove lazy loading axcept for IOs based on rawio
+  * add time_slice in read_segment() for IO that inherits rawio
+  * Made SpikeTrain.times return Quantity instead of SpikeTrain, KwikIO
+  * Raise a `ValueError` if `t_stop` is earlier than `t_start` when creating an empty `SpikeTrain` Core bug
+  * [MRG] Change filter behaviour to return all objects if no filter parameters are specified
+  * Fix pickling/unpickling of Event (#492) 
 
-
-
-
-
-
+  
+  
+Depreciate IO:
+    * klustakwikio
+    * PyNNTextIO ?
