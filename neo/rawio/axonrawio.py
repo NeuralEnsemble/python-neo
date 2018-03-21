@@ -450,12 +450,13 @@ def parse_axon_soup(filename):
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
             for key in [b'AXENGN', b'clampex', b'Clampex',
-                            b'CLAMPEX', b'axoscope', b'Clampfit']:
+                b'CLAMPEX', b'axoscope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart != -1:
                     break
-            assert goodstart != -1, 'This file does not contain clampex, axoscope or clampfit in the header'
+            assert goodstart != -1, \
+                'This file does not contain clampex, axoscope or clampfit in the header'
             big_string = big_string[goodstart:]
             strings = big_string.split(b'\x00')
 
