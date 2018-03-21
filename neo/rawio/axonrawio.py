@@ -194,7 +194,7 @@ class AxonRawIO(BaseRawIO):
                 offset -= info['listADCInfo'][chan_id]['fSignalOffset']
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, offset, gain, group_id))
+                                 sig_dtype, units, gain, offset,  group_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -321,8 +321,6 @@ class AxonRawIO(BaseRawIO):
         nSam = int(info['protocol'][
             'lNumSamplesPerEpisode'] / nADC)  # Number of samples per episode
         nEpi = info['lActualEpisodes']  # Actual number of episodes
-
-        #~ print('read_raw_protocol', nEpi, nDAC)
 
         # Make a list of segments with analog signals with just holding levels
         # List of segments relates to number of episodes, as for recorded data
@@ -451,12 +449,14 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX', b'axoscope']:
-                #goodstart = big_string.lower().find(key)
+            for key in [b'AXENGN', b'clampex', b'Clampex',
+                b'CLAMPEX', b'axoscope', b'Clampfit']:
+                # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart != -1:
                     break
-            assert goodstart != -1, 'This file does not contain clampex, axoscope or clampfit in the header'
+            assert goodstart != -1, \
+                'This file does not contain clampex, axoscope or clampfit in the header'
             big_string = big_string[goodstart:]
             strings = big_string.split(b'\x00')
 
