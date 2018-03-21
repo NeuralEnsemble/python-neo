@@ -15,7 +15,7 @@ class ElanIO(ElanRawIO, BaseFromRaw):
     https://elan.lyon.inserm.fr
     """
     _prefered_signal_group_mode = 'split-all'
-    #_prefered_signal_group_mode = 'group-by-same-units'
+    # _prefered_signal_group_mode = 'group-by-same-units'
 
     def __init__(self, filename):
         ElanRawIO.__init__(self, filename=filename)

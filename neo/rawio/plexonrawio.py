@@ -46,7 +46,7 @@ class PlexonRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        #global header
+        # global header
         with open(self.filename, 'rb') as fid:
             offset0 = 0
             global_header = read_as_dict(fid, GlobalHeader, offset=offset0)
@@ -101,12 +101,12 @@ class PlexonRawIO(BaseRawIO):
         self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
             2 ** 32 + bl_header['TimeStamp']
 
-        #... and finalize them in self._data_blocks
+        # ... and finalize them in self._data_blocks
         # for a faster acces depending on type (1, 4, 5)
         self._data_blocks = {}
         dt_base = [('pos', 'int64'), ('timestamp', 'int64'), ('size', 'int64')]
         dtype_by_bltype = {
-            #Spikes and waveforms
+            # Spikes and waveforms
             1: np.dtype(dt_base + [('unit_id', 'uint16'), ('n1', 'uint16'), ('n2', 'uint16'), ]),
             # Events
             4: np.dtype(dt_base + [('label', 'uint16'), ]),

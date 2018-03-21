@@ -111,7 +111,7 @@ class WinEdrRawIO(BaseRawIO):
 
     def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
         # WARNING check if id or index for signals (in the old IO it was ids
-        #~ raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
+        # ~ raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
 
