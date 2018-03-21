@@ -233,6 +233,18 @@ class NixIO(BaseIO):
             # parent reference
             newseg.block = neo_block
 
+        # find free floating (Groupless) signals and spiketrains
+        blockdas = self._group_signals(nix_block.data_arrays)
+        for name, das in blockdas.items():
+            if name not in self._neo_map:
+                if das[0].type == "neo.analogsignal":
+                    self._nix_to_neo_analogsignal(das)
+                elif das[0].type == "neo.irregularlysampledsignal":
+                    self._nix_to_neo_irregularlysampledsignal(das)
+        for mt in nix_block.multi_tags:
+            if mt.type == "neo.spiketrain" and mt.name not in self._neo_map:
+                self._nix_to_neo_spiketrain(mt)
+
         # descend into Sources
         for src in nix_block.sources:
             newchx = self._nix_to_neo_channelindex(src)

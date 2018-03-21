@@ -111,8 +111,7 @@ class NixIOTest(unittest.TestCase):
                                 if da.type == "neo.analogsignal" and
                                 nixchx in da.sources))
 
-            self.assertEqual(len(neoasigs), len(nixasigs),
-                             neochx.analogsignals)
+            self.assertEqual(len(neoasigs), len(nixasigs))
 
             # IrregularlySampledSignals referencing CHX
             neoisigs = list(sig.annotations["nix_name"] for sig in
@@ -948,8 +947,10 @@ class NixIOWriteTest(NixIOTest):
         othersignal = IrregularlySampledSignal(name="i1", signal=[0, 0, 0],
                                                units="mV", times=[1, 2, 3],
                                                time_units="ms")
-        st = SpikeTrain(name="the train of spikes", times=[0.1, 0.2, 10.3],
-                        t_stop=11, units="us")
+        sta = SpikeTrain(name="the train of spikes", times=[0.1, 0.2, 10.3],
+                         t_stop=11, units="us")
+        stb = SpikeTrain(name="the train of spikes b", times=[1.1, 2.2, 10.1],
+                         t_stop=100, units="ms")
 
         chidx = ChannelIndex([8, 13, 21])
         blk.channel_indexes.append(chidx)
@@ -958,10 +959,18 @@ class NixIOWriteTest(NixIOTest):
 
         unit = Unit()
         chidx.units.append(unit)
-        unit.spiketrains.append(st)
+        unit.spiketrains.extend([sta, stb])
         self.writer.write_block(blk)
 
         self.compare_blocks([blk], self.reader.blocks)
+
+        self.writer.close()
+        reader = NixIO(self.filename, "ro")
+        blk = reader.read_block(neoname="segmentless block")
+        chx = blk.channel_indexes[0]
+        self.assertEqual(len(chx.analogsignals), 1)
+        self.assertEqual(len(chx.irregularlysampledsignals), 1)
+        self.assertEqual(len(chx.units[0].spiketrains), 2)
 
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test",
