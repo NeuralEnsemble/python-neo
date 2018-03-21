@@ -19,7 +19,7 @@ else:
 
 from neo.core.channelindex import ChannelIndex
 from neo.core.container import filterdata
-from neo.core import Block, Segment, SpikeTrain
+from neo.core import Block, Segment, SpikeTrain, AnalogSignal
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal,
                             assert_same_sub_schema)
@@ -290,6 +290,11 @@ class TestChannelIndex(unittest.TestCase):
 
     def test__filter_none(self):
         targ = []
+        # collecting all data objects in target block
+        targ.extend(self.targobj.analogsignals)
+        targ.extend(self.targobj.irregularlysampledsignals)
+        for unit in self.targobj.units:
+            targ.extend(unit.spiketrains)
 
         res1 = self.targobj.filter()
         res2 = self.targobj.filter({})
@@ -388,8 +393,8 @@ class TestChannelIndex(unittest.TestCase):
 
         name0 = self.sigarrs2[0].name
         res0 = self.targobj.filter([{'j': 5}, {}])
-        res1 = self.targobj.filter({}, j=0)
-        res2 = self.targobj.filter([{}], i=0)
+        res1 = self.targobj.filter({}, j=5)
+        res2 = self.targobj.filter([{}], i=5)
         res3 = self.targobj.filter({'name': name0}, j=1)
         res4 = self.targobj.filter(targdict={'name': name0}, j=1)
         res5 = self.targobj.filter(name=name0, targdict={'j': 1})
@@ -441,6 +446,24 @@ class TestChannelIndex(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
+
+    def test__filter_no_annotation_but_object(self):
+        targ = []
+        for unit in self.targobj.units:
+            targ.extend(unit.spiketrains)
+        res = self.targobj.filter(objects=SpikeTrain)
+        assert_same_sub_schema(res, targ)
+
+        targ = self.targobj.analogsignals
+        res = self.targobj.filter(objects=AnalogSignal)
+        assert_same_sub_schema(res, targ)
+
+        targ = []
+        targ.extend(self.targobj.analogsignals)
+        for unit in self.targobj.units:
+            targ.extend(unit.spiketrains)
+        res = self.targobj.filter(objects=[AnalogSignal, SpikeTrain])
+        assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
         targ = [self.trains1[1], self.trains1[3]]
@@ -579,9 +602,9 @@ class TestChannelIndex(unittest.TestCase):
 
         name1 = self.sigarrs1a[0].name
         name2 = self.sigarrs2[0].name
-        res0 = filterdata(data, [{'j': 0}, {}])
-        res1 = filterdata(data, {}, i=0)
-        res2 = filterdata(data, [{}], i=0)
+        res0 = filterdata(data, [{'j': 5}, {}])
+        res1 = filterdata(data, {}, i=5)
+        res2 = filterdata(data, [{}], i=5)
         res3 = filterdata(data, name=name1, targdict={'j': 1})
         res4 = filterdata(data, {'name': name1}, j=1)
         res5 = filterdata(data, targdict={'name': name1}, j=1)
