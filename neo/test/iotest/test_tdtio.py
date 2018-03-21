@@ -5,20 +5,14 @@ Tests of neo.io.tdtio
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division
-
-import sys
-
 import unittest
-
 from neo.io import TdtIO
 from neo.test.iotest.common_io_test import BaseTestIO
-
 from neo.test.iotest.tools import get_test_file_full_path
-
 import numpy as np
 
 
-class TestTdtIOIO(BaseTestIO, unittest.TestCase, ):
+class TestTdtIO(BaseTestIO, unittest.TestCase, ):
     ioclass = TdtIO
     files_to_test = ['aep_05']
     files_to_download = ['aep_05/Block-1/aep_05_Block-1.Tbk',
@@ -31,10 +25,10 @@ class TestTdtIOIO(BaseTestIO, unittest.TestCase, ):
                          'aep_05/Block-2/aep_05_Block-2.tev',
                          'aep_05/Block-2/aep_05_Block-2.tsq',
 
-                         #~ 'aep_05/Block-3/aep_05_Block-3.Tbk',
-                         #~ 'aep_05/Block-3/aep_05_Block-3.Tdx',
-                         #~ 'aep_05/Block-3/aep_05_Block-3.tev',
-                         #~ 'aep_05/Block-3/aep_05_Block-3.tsq',
+                         # ~ 'aep_05/Block-3/aep_05_Block-3.Tbk',
+                         # ~ 'aep_05/Block-3/aep_05_Block-3.Tdx',
+                         # ~ 'aep_05/Block-3/aep_05_Block-3.tev',
+                         # ~ 'aep_05/Block-3/aep_05_Block-3.tsq',
                          ]
 
     def test_signal_group_mode(self):
@@ -53,7 +47,7 @@ class TestTdtIOIO(BaseTestIO, unittest.TestCase, ):
             assert len(seg.analogsignals) == 3
             i = 0
             for anasig in seg.analogsignals:
-                #print(anasig.shape, anasig.sampling_rate)
+                # print(anasig.shape, anasig.sampling_rate)
                 assert anasig.shape[1] == nb_sigs_by_group[i]
                 i += 1
 
@@ -63,7 +57,7 @@ class TestTdtIOIO(BaseTestIO, unittest.TestCase, ):
         for seg in bl.segments:
             assert len(seg.analogsignals) == np.sum(nb_sigs_by_group)
             for anasig in seg.analogsignals:
-                #print(anasig.shape, anasig.sampling_rate)
+                # print(anasig.shape, anasig.sampling_rate)
                 assert anasig.shape[1] == 1
 
 

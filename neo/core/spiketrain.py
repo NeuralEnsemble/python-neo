@@ -54,6 +54,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     certain that the dtype and units are the same
     '''
 
+    if t_start > t_stop:
+        raise ValueError("t_stop (%s) is before t_start (%s)" % (t_stop, t_start))
+
     if not value.size:
         return
 
@@ -185,8 +188,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         :right_sweep: (quantity scalar) Time from the trigger times of the
             spikes to the end of the waveforms, read-only.
             (:attr:`left_sweep` + :attr:`spike_duration`)
-        :times: (:class:`SpikeTrain`) Returns the :class:`SpikeTrain` without
-            modification or copying.
+        :times: (quantity array 1D) Returns the :class:`SpikeTrain` as a quantity array.
 
     *Slicing*:
         :class:`SpikeTrain` objects can be sliced. When this occurs, a new
@@ -218,8 +220,8 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         constructor, but not when slicing.
         '''
         if len(times) != 0 and waveforms is not None and len(times) != \
-                waveforms.shape[
-                    0]:  # len(times)!=0 has been used to workaround a bug occuring during neo import)
+                waveforms.shape[0]:
+            # len(times)!=0 has been used to workaround a bug occuring during neo import
             raise ValueError(
                 "the number of waveforms should be equal to the number of spikes")
 
@@ -639,9 +641,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
     @property
     def times(self):
         '''
-        Returns the :class:`SpikeTrain` without modification or copying.
+        Returns the :class:`SpikeTrain` as a quantity array.
         '''
-        return self
+        return pq.Quantity(self)
 
     @property
     def duration(self):

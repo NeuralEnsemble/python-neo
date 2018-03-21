@@ -393,26 +393,89 @@ class BlackrockRawIO(BaseRawIO):
         # with previous BlackrockIO version
         self._generate_minimal_annotations()
         block_ann = self.raw_annotations['blocks'][0]
+        block_ann['description'] = 'Block of data from Blackrock file set.'
         block_ann['file_origin'] = self.filename
         block_ann['name'] = "Blackrock Data Block"
         block_ann['rec_datetime'] = rec_datetime
         block_ann['avail_file_set'] = [k for k, v in self._avail_files.items() if v]
         block_ann['avail_nsx'] = self._avail_nsx
         block_ann['avail_nev'] = self._avail_files['nev']
-#        block_ann['avail_sif'] = self._avail_files['sif']  #  'sif' and 'ccf' files not yet supported
-#        block_ann['avail_ccf'] = self._avail_files['ccf']
+        #  'sif' and 'ccf' files not yet supported
+        # block_ann['avail_sif'] = self._avail_files['sif']
+        # block_ann['avail_ccf'] = self._avail_files['ccf']
         block_ann['rec_pauses'] = False
 
         for c in range(unit_channels.size):
             unit_ann = self.raw_annotations['unit_channels'][c]
+            channel_id, unit_id = self.internal_unit_ids[c]
             unit_ann['channel_id'] = self.internal_unit_ids[c][0]
             unit_ann['unit_id'] = self.internal_unit_ids[c][1]
             unit_ann['unit_tag'] = {0: 'unclassified', 255: 'noise'}.get(unit_id, str(unit_id))
+            unit_ann['description'] = 'Unit channel_id: {}, unit_id: {}, unit_tag: {}'.format(
+                channel_id, unit_id, unit_ann['unit_tag'])
+
+        flt_type = {0: 'None', 1: 'Butterworth'}
+        for c in range(sig_channels.size):
+            if self._avail_files['nev']:
+                chidx_ann = self.raw_annotations['signal_channels'][c]
+                neuevwav = self.__nev_ext_header[b'NEUEVWAV']
+                if sig_channels[c]['id'] in neuevwav['electrode_id']:
+                    get_idx = list(neuevwav['electrode_id']).index(sig_channels[c]['id'])
+                    chidx_ann['connector_ID'] = neuevwav['physical_connector'][get_idx]
+                    chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
+                    chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
+                    chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
+                                                            get_idx] * pq.uV
+                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
+                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
+                    chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
+                    chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
+                    )[sig_channels[c]['id']] * self.__nev_params('waveform_time_unit')
+                    if self.__nev_spec in ['2.2', '2.3']:
+                        neuevflt = self.__nev_ext_header[b'NEUEVFLT']
+                        get_idx = list(
+                            neuevflt['electrode_id']).index(
+                            sig_channels[c]['id'])
+                        # filter type codes (extracted from blackrock manual)
+                        chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
+                                                            get_idx] / 1000. * pq.Hz
+                        chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
+                        chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
+                            get_idx]]
+                        chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
+                                                            get_idx] / 1000. * pq.Hz
+                        chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
+                        chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
+                            get_idx]]
+            if self.__nsx_spec[self.nsx_to_load] in ['2.2', '2.3'] and self.__nsx_ext_header:
+                # It does not matter which nsX file to ask for this info
+                k = list(self.__nsx_ext_header.keys())[0]
+                if sig_channels[c]['id'] in self.__nsx_ext_header[k]['electrode_id']:
+                    get_idx = list(
+                        self.__nsx_ext_header[k]['electrode_id']).index(
+                        sig_channels[c]['id'])
+                    chidx_ann['connector_ID'] = self.__nsx_ext_header[k]['physical_connector'][
+                        get_idx]
+                    chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
+                        get_idx]
+                    chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
+                                               'hi_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
+                                               'lo_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
+                            'hi_freq_order'][get_idx]
+                    chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
+                            'lo_freq_order'][get_idx]
+                    chidx_ann['nsx_hi_freq_type'] = flt_type[
+                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
+                    chidx_ann['nsx_lo_freq_type'] = flt_type[
+                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
 
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]
             seg_ann['file_origin'] = self.filename
             seg_ann['name'] = "Segment {}".format(seg_index)
+            seg_ann['description'] = "Segment containing data from t_start to t_stop"
             if seg_index == 0:
                 # if more than 1 segment means pause
                 # so datetime is valide only for seg_index=0
@@ -423,7 +486,11 @@ class BlackrockRawIO(BaseRawIO):
                 desc = "AnalogSignal {} from channel_id: {}, label: {}, nsx: {}".format(
                     c, sig_channels['id'][c], sig_channels['name'][c], self.nsx_to_load)
                 anasig_an['description'] = desc
-                anasig_an['file_origin'] = self.filename + '.ns' + str(self.nsx_to_load)
+                anasig_an['file_origin'] = self._filenames['nsx'] + '.ns' + str(self.nsx_to_load)
+                anasig_an['nsx'] = self.nsx_to_load
+                chidx_ann = self.raw_annotations['signal_channels'][c]
+                chidx_ann['description'] = 'Container for Units and AnalogSignals of ' \
+                                           'one recording channel across segments.'
 
             for c in range(unit_channels.size):
                 channel_id, unit_id = self.internal_unit_ids[c]
@@ -431,8 +498,8 @@ class BlackrockRawIO(BaseRawIO):
                 unit_ann = self.raw_annotations['unit_channels'][c]
                 st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
-                    channel_id, unit_id)
-                st_ann['file_origin'] = self.filename + '.nev'
+                        channel_id, unit_id)
+                st_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
             if self._avail_files['nev']:
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
@@ -440,6 +507,7 @@ class BlackrockRawIO(BaseRawIO):
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
+                    ev_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
     def _source_name(self):
         return self.filename

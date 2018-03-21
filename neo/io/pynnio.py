@@ -48,6 +48,12 @@ class BasePyNNIO(BaseIO):
     writeable_objects = supported_objects
     mode = 'file'
 
+    def __init__(self, filename=None, **kargs):
+        BaseIO.__init__(self, filename, *kargs)
+        warnings.warn("PyNNTextIO and PyNNNumpyIO will be removed in Neo 0.7.0. " +
+                      "Please contact the Neo developers if this will cause you problems.",
+                      DeprecationWarning)
+
     def _read_file_contents(self):
         raise NotImplementedError
 

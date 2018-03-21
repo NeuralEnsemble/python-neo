@@ -24,10 +24,10 @@ def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
                name=None, description=None, file_origin=None, annotations=None, segment=None):
     '''
     A function to map epoch.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
-              description=description, **annotations)
+    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name,
+              file_origin=file_origin, description=description, **annotations)
     e.segment = segment
     return e
 
@@ -120,7 +120,7 @@ class Epoch(BaseNeo, pq.Quantity):
 
     def __reduce__(self):
         '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        Map the __new__ function onto _new_epoch, so that pickle
         works
         '''
         return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
@@ -151,6 +151,7 @@ class Epoch(BaseNeo, pq.Quantity):
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
+
     def rescale(self, units):
         '''
         Return a copy of the :class:`Epoch` converted to the specified
@@ -163,6 +164,17 @@ class Epoch(BaseNeo, pq.Quantity):
                     description=self.description,
                     **self.annotations)
         obj.segment = self.segment
+
+        return obj
+
+    def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
+        obj = Epoch(times=super(Epoch, self).__getitem__(i))
+        obj._copy_data_complement(self)
+        obj.durations = self.durations[i]
+        obj.labels = self.labels[i]
         return obj
 
     @property
@@ -246,10 +258,7 @@ class Epoch(BaseNeo, pq.Quantity):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-
         new_epc = self[indices]
-        new_epc.durations = self.durations[indices]
-        new_epc.labels = self.labels[indices]
         return new_epc
 
     def as_array(self, units=None):
