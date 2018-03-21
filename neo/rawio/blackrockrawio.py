@@ -62,6 +62,7 @@ from __future__ import absolute_import, division, print_function
 import datetime
 import os
 import re
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -172,6 +173,9 @@ class BlackrockRawIO(BaseRawIO):
                 self._avail_files[ext] = True
                 if ext.startswith('ns'):
                     self._avail_nsx.append(int(ext[-1]))
+
+        if not self._avail_files['nev'] and not self._avail_nsx:
+            raise IOError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
@@ -286,6 +290,14 @@ class BlackrockRawIO(BaseRawIO):
         if self.nsx_to_load is None and len(self._avail_nsx) > 0:
             self.nsx_to_load = max(self._avail_nsx)
 
+        if self.nsx_to_load is not None and \
+            self.__nsx_spec[self.nsx_to_load] == '2.1' and \
+                not self._avail_files['nev']:
+            pass
+            # Because rescaling to volts requires information from nev file (dig_factor)
+            # Remove if raw loading becomes possible
+            # raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
+
         if self.nsx_to_load is not None:
             spec = self.__nsx_spec[self.nsx_to_load]
             self.nsx_data = self.__nsx_data_reader[spec](self.nsx_to_load)
@@ -320,9 +332,14 @@ class BlackrockRawIO(BaseRawIO):
                 sig_dtype = 'int16'
                 # max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
                 # dangarous situation so cast to float everyone
-                gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) /\
-                    (float(chan['max_digital_val']) - float(chan['min_digital_val']))
-                offset = -float(chan['min_digital_val']) * gain + float(chan['min_analog_val'])
+                if np.isnan(float(chan['min_analog_val'])):
+                    gain = 1
+                    offset = 0
+                else:
+                    gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) /\
+                        (float(chan['max_digital_val']) - float(chan['min_digital_val']))
+                    offset = -float(chan['min_digital_val'])\
+                        * gain + float(chan['min_analog_val'])
                 group_id = 0
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype,
                                      units, gain, offset, group_id,))
@@ -338,22 +355,24 @@ class BlackrockRawIO(BaseRawIO):
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
                         sig_sampling_rate
                 t_stop = t_start + length / sig_sampling_rate
-                max_nev_time = 0
-                for k, data in self.nev_data.items():
-                    if data.size > 0:
-                        t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                        max_nev_time = max(max_nev_time, t)
-                if max_nev_time > t_stop:
-                    t_stop = max_nev_time
-                min_nev_time = max_nev_time
-                for k, data in self.nev_data.items():
-                    if data.size > 0:
-                        t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                        min_nev_time = min(min_nev_time, t)
-                if min_nev_time < t_start:
-                    self._seg_t_starts.append(min_nev_time)
-                else:
-                    self._seg_t_starts.append(t_start)
+                if self._avail_files['nev']:
+                    max_nev_time = 0
+                    for k, data in self.nev_data.items():
+                        if data.size > 0:
+                            t = data[-1]['timestamp'] / self.__nev_basic_header[
+                                'timestamp_resolution']
+                            max_nev_time = max(max_nev_time, t)
+                    if max_nev_time > t_stop:
+                        t_stop = max_nev_time
+                    min_nev_time = max_nev_time
+                    for k, data in self.nev_data.items():
+                        if data.size > 0:
+                            t = data[0]['timestamp'] / self.__nev_basic_header[
+                                'timestamp_resolution']
+                            min_nev_time = min(min_nev_time, t)
+                    if min_nev_time < t_start:
+                        t_start = min_nev_time
+                self._seg_t_starts.append(t_start)
                 self._seg_t_stops.append(float(t_stop))
                 self._sigs_t_starts.append(float(t_start))
 
@@ -416,8 +435,8 @@ class BlackrockRawIO(BaseRawIO):
 
         flt_type = {0: 'None', 1: 'Butterworth'}
         for c in range(sig_channels.size):
+            chidx_ann = self.raw_annotations['signal_channels'][c]
             if self._avail_files['nev']:
-                chidx_ann = self.raw_annotations['signal_channels'][c]
                 neuevwav = self.__nev_ext_header[b'NEUEVWAV']
                 if sig_channels[c]['id'] in neuevwav['electrode_id']:
                     get_idx = list(neuevwav['electrode_id']).index(sig_channels[c]['id'])
@@ -1497,7 +1516,7 @@ class BlackrockRawIO(BaseRawIO):
                     df = 152592.547
                 dig_factor.append(df)
             else:
-                dig_factor.append(None)
+                dig_factor.append(float('nan'))
 
             if elid < 129:
                 labels.append('chan%i' % elid)
@@ -1510,13 +1529,19 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
             self.__nsx_basic_header[nsx_nb]['channel_count']
 
+        if np.isnan(dig_factor[0]):
+            units = ''
+            warnings.warn("Cannot rescale to voltage, raw data will be returned.", UserWarning)
+        else:
+            units = 'uV'
+
         nsx_parameters = {
             'nb_data_points': int(
                 (self.__get_file_size(filename) - bytes_in_headers) /
                 (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'labels': labels,
             'units': np.array(
-                ['uV'] *
+                [units] *
                 self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),
