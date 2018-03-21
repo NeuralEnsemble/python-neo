@@ -938,6 +938,31 @@ class NixIOWriteTest(NixIOTest):
         self.writer.write_block(blk)
         self.compare_blocks([blk], self.reader.blocks)
 
+    def test_no_segment_write(self):
+        # Tests storing AnalogSignal, IrregularlySampledSignal, and SpikeTrain
+        # objects in the secondary (ChannelIndex) substructure without them
+        # being attached to a Segment.
+        blk = Block("segmentless block")
+        signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
+                              sampling_period=pq.Quantity(1, "ms"))
+        othersignal = IrregularlySampledSignal(name="i1", signal=[0, 0, 0],
+                                               units="mV", times=[1, 2, 3],
+                                               time_units="ms")
+        st = SpikeTrain(name="the train of spikes", times=[0.1, 0.2, 10.3],
+                        t_stop=11, units="us")
+
+        chidx = ChannelIndex([8, 13, 21])
+        blk.channel_indexes.append(chidx)
+        chidx.analogsignals.append(signal)
+        chidx.irregularlysampledsignals.append(othersignal)
+
+        unit = Unit()
+        chidx.units.append(unit)
+        unit.spiketrains.append(st)
+        self.writer.write_block(blk)
+
+        self.compare_blocks([blk], self.reader.blocks)
+
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test",
                                                   "Test")
