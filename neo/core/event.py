@@ -22,16 +22,15 @@ from neo.core.dataobject import DataObject
 PY_VER = sys.version_info[0]
 
 
-def _new_event(cls, signal, times=None, labels=None, units=None, name=None,
+def _new_event(cls, times=None, labels=None, units=None, name=None,
                file_origin=None, description=None, array_annotations=None,
                annotations=None, segment=None):
     '''
     A function to map Event.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
+    e = Event(times=times, labels=labels, units=units, name=name, file_origin=file_origin,
               description=description, array_annotations=array_annotations, **annotations)
-
     e.segment = segment
     return e
 
@@ -117,10 +116,10 @@ class Event(DataObject):
 
     def __reduce__(self):
         '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        Map the __new__ function onto _new_event, so that pickle
         works
         '''
-        return _new_event, (self.__class__, self.times, np.array(self), self.labels, self.units,
+        return _new_event, (self.__class__, np.array(self), self.labels, self.units,
                             self.name, self.file_origin, self.description, self.array_annotations,
                             self.annotations, self.segment)
 
