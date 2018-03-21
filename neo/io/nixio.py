@@ -644,7 +644,7 @@ class NixIO(BaseIO):
             nix_name = "neo.analogsignal.{}".format(self._generate_nix_name())
             anasig.annotate(nix_name=nix_name)
 
-        if "{}.0".format(nix_name) in nixblock.data_arrays:
+        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
             # AnalogSignal is in multiple Segments.
             # Append DataArrays to Group and return.
             dalist = list()
@@ -658,9 +658,9 @@ class NixIO(BaseIO):
             return
 
         data = np.transpose(anasig[:].magnitude)
-        metadata = nixgroup.metadata.create_section(
-            nix_name, "neo.analogsignal.metadata"
-        )
+        parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
+        metadata = parentmd.create_section(nix_name,
+                                           "neo.analogsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
             daname = "{}.{}".format(nix_name, idx)
@@ -681,7 +681,8 @@ class NixIO(BaseIO):
             timedim.label = "time"
 
             nixdas.append(da)
-            nixgroup.data_arrays.append(da)
+            if nixgroup:
+                nixgroup.data_arrays.append(da)
 
         neoname = anasig.name if anasig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -710,7 +711,7 @@ class NixIO(BaseIO):
             )
             irsig.annotate(nix_name=nix_name)
 
-        if "{}.0".format(nix_name) in nixblock.data_arrays:
+        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
             # IrregularlySampledSignal is in multiple Segments.
             # Append DataArrays to Group and return.
             dalist = list()
@@ -724,7 +725,8 @@ class NixIO(BaseIO):
             return
 
         data = np.transpose(irsig[:].magnitude)
-        metadata = nixgroup.metadata.create_section(
+        parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
+        metadata = parentmd.create_section(
             nix_name, "neo.irregularlysampledsignal.metadata"
         )
         nixdas = list()
@@ -742,7 +744,8 @@ class NixIO(BaseIO):
             timedim.label = "time"
 
             nixdas.append(da)
-            nixgroup.data_arrays.append(da)
+            if nixgroup:
+                nixgroup.data_arrays.append(da)
 
         neoname = irsig.name if irsig.name is not None else ""
         metadata["neo_name"] = neoname
@@ -881,7 +884,7 @@ class NixIO(BaseIO):
             nix_name = "neo.spiketrain.{}".format(self._generate_nix_name())
             spiketrain.annotate(nix_name=nix_name)
 
-        if nix_name in nixblock.multi_tags:
+        if nix_name in nixblock.multi_tags and nixgroup:
             # SpikeTrain is in multiple Segments. Append to Group and return.
             mt = nixblock.multi_tags[nix_name]
             nixgroup.multi_tags.append(mt)
@@ -897,9 +900,9 @@ class NixIO(BaseIO):
         nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
                                           positions=timesda)
 
-        nixmt.metadata = nixgroup.metadata.create_section(
-            nix_name, "neo.spiketrain.metadata"
-        )
+        parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
+        nixmt.metadata = parentmd.create_section(nix_name,
+                                                 "neo.spiketrain.metadata")
         metadata = nixmt.metadata
 
         neoname = spiketrain.name if spiketrain.name is not None else ""
@@ -913,7 +916,8 @@ class NixIO(BaseIO):
             for k, v in spiketrain.annotations.items():
                 self._write_property(metadata, k, v)
 
-        nixgroup.multi_tags.append(nixmt)
+        if nixgroup:
+            nixgroup.multi_tags.append(nixmt)
 
         if spiketrain.waveforms is not None:
             wfdata = list(wf.magnitude for wf in
@@ -985,6 +989,10 @@ class NixIO(BaseIO):
 
         The two arguments must represent the same Block in each corresponding
         format.
+
+        Neo objects that have not been converted yet (i.e., AnalogSignal,
+        IrregularlySampledSignal, or SpikeTrain objects that are not attached
+        to a Segment) are created on the nixblock.
 
         :param neoblock: A Neo Block object
         :param nixblock: The corresponding NIX Block
