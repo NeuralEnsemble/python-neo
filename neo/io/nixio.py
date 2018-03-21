@@ -999,8 +999,15 @@ class NixIO(BaseIO):
         """
 
         for chx in neoblock.channel_indexes:
-            signames = [sig.annotations["nix_name"] for sig in
-                        chx.analogsignals + chx.irregularlysampledsignals]
+            signames = []
+            for asig in chx.analogsignals:
+                if "nix_name" not in asig.annotations:
+                    self._write_analogsignal(asig, nixblock, None)
+                signames.append(asig.annotations["nix_name"])
+            for isig in chx.irregularlysampledsignals:
+                if "nix_name" not in isig.annotations:
+                    self._write_irregularlysampledsignal(isig, nixblock, None)
+                signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
             for name in signames:
                 for da in self._signal_map[name]:
@@ -1009,6 +1016,8 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
+                    if "nix_name" not in st.annotations:
+                        self._write_spiketrain(st, nixblock, None)
                     stmt = nixblock.multi_tags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
                     stmt.sources.append(unitsource)
