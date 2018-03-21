@@ -187,11 +187,6 @@ Relationship:
 
 For more details, see the :doc:`api_reference`.
 
-
-
-
-
-
 Initialization
 ==============
 
@@ -199,7 +194,8 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`. Note : neo annotations differ from the new *__annotations__* introduced in python 3.6.
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`. 
+      Note : Neo annotations are not the same as the *__annotations__* attribute introduced in Python 3.6.
 
 Example: SpikeTrain
 -------------------
@@ -255,5 +251,3 @@ limitations on the data types of annotations: they must be "simple" types or
 containers (lists, dicts, tuples, NumPy arrays) of simple types, where the simple types
 are ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and
 ``datetime``.
-
-See :ref:`specific_annotations`

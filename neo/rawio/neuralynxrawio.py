@@ -6,8 +6,8 @@ This IO supports NCS, NEV, NSE and NTT file formats.
 
 NCS contains signals for one channel
 NEV contains events
-NSE contains spikes and waveforms for mono electrode
-NTT contains spikes and waveforms for tetrode
+NSE contains spikes and waveforms for mono electrodes
+NTT contains spikes and waveforms for tetrodes
 
 
 NCS can contains gaps that can be detected in inregularity

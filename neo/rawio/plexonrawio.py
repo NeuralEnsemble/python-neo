@@ -12,9 +12,9 @@ Other versions have not been tested.
 This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/software-downloads
 
-This IO has been rewritten in 2017 and this was a hudge pain because
-the underlying file format is really unefficient (for not saying stupid).
-The rewritte is now based on numpy dtype and not on python struct.
+This IO was rewritten in 2017 and this was a huge pain because
+the underlying file format is really inefficient.
+The rewrite is now based on numpy dtype and not on Python struct.
 This should be faster.
 If one day, somebody use it, consider to offer me a beer.
 

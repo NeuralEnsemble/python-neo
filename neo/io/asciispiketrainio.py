@@ -22,7 +22,7 @@ from neo.core import Segment, SpikeTrain
 class AsciiSpikeTrainIO(BaseIO):
     """
 
-    Classe for reading/writing SpikeTrains in a text file.
+    Class for reading/writing SpikeTrains in a text file.
     Each Spiketrain is a line.
 
     Usage:

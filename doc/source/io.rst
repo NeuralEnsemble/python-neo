@@ -114,12 +114,13 @@ Lazy option
 
 In some cases you may not want to load everything in memory because it could be too big.
 For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
-but all the metadata will be loaded. lazy_shape attribute is added to all object that inherit Quantitities
-or numpy.ndarray (AnalogSignal, AnalogSignalArray, SpikeTrain)  and to object that have array like attributes (EpochArray, EventArray)
-In that cases, lazy_shape is a tuple that have the same shape with lazy=False. To known if a class support this lazy mode use ``ClassIO.support_lazy``
+but all the metadata will be loaded. The *lazy_shape* attribute is added to all array-like objects
+(AnalogSignal, AnalogSignalArray, SpikeTrain, Epoch, Event).
+In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
+To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.
 
-Example lazy::
+Example of lazy loading::
 
     >>> seg = reader.read_segment(lazy=False)
     >>> print(seg.analogsignals[0].shape)  # this is (N, M)

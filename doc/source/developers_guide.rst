@@ -38,11 +38,9 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 2.6, 2.7, 3.3-3.5
+    * Python_ 2.7, 3.4 or later
     * numpy_ >= 1.7.1
     * quantities_ >= 0.9.0
-    * if using Python 2.6, unittest2_ >= 0.5.1
-    * Setuptools >= 0.7
     * nose_ >= 0.11.1 (for running tests)
     * Sphinx_ >= 0.6.4 (for building documentation)
     * (optional) tox_ >= 0.9 (makes it easier to test with multiple Python versions)
@@ -102,7 +100,7 @@ on your system::
 
     $ cd neo/test
 
-With Python 2.7 or 3.3::
+With Python 2.7 or 3.x::
 
     $ python -m unittest discover
     $ python3 -m unittest discover
@@ -244,8 +242,7 @@ Making a release
 
 Add a section in :file:`/doc/source/whatisnew.rst` for the release.
 
-First check that the version string (in :file:`neo/version.py`,
-:file:`setup.py`, :file:`doc/conf.py` and :file:`doc/install.rst`) is correct.
+First check that the version string (in :file:`neo/version.py`) is correct.
 
 To build a source package::
 

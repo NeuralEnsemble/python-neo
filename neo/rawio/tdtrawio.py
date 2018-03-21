@@ -18,7 +18,7 @@ In a directory there are several files:
   * ./sort/ can contain offline spikesorting label for spike
      and can be use place of TEV.
 
-Units in this IO are not garanty.
+Units in this IO are not guaranteed.
 
 Author: Samuel Garcia, SummitKwan, Chadwick Boulay
 

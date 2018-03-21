@@ -6,7 +6,12 @@ electrophysiological data files.
 Note that if the package dependency is not satisfied for one io, it does not
 raise an error but a warning.
 
-neo.io.iolist provides a list of succesfully imported io classes.
+:attr:`neo.io.iolist` provides a list of successfully imported io classes.
+
+Functions:
+
+.. autofunction:: neo.io.get_io
+
 
 Classes:
 
