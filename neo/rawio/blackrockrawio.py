@@ -1115,9 +1115,10 @@ class BlackrockRawIO(BaseRawIO):
                 if v['nb_data_points'] > 1 and not v['timestamp'] > old_ts:
                     nev_relevant_nsx_segments[k] = v
 
-
             # nev_relevant_nsx_segments = {k:v for k,v in self.__nsx_data_header[nsx_nb].items()
-            #                           if v['nb_data_points'] > 1 and not v['timestamp'] > self.__nsx_data_header[nsx_nb][k-1]['timestamp'] + self.__nsx_data_header[nsx_nb][k]['nb_data_points'] * self.__nsx_basic_header['period']}
+            #                           if v['nb_data_points'] > 1 and not v['timestamp'] >
+            # self.__nsx_data_header[nsx_nb][k-1]['timestamp'] + self.__nsx_data_header[
+            # nsx_nb][k]['nb_data_points'] * self.__nsx_basic_header['period']}
             # consistency check: same number of segments for nsx and nev data
             assert self._nb_segment_nev == len(nev_relevant_nsx_segments), \
                 ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
