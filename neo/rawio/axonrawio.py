@@ -322,8 +322,6 @@ class AxonRawIO(BaseRawIO):
             'lNumSamplesPerEpisode'] / nADC)  # Number of samples per episode
         nEpi = info['lActualEpisodes']  # Actual number of episodes
 
-        #~ print('read_raw_protocol', nEpi, nDAC)
-
         # Make a list of segments with analog signals with just holding levels
         # List of segments relates to number of episodes, as for recorded data
         sigs_by_segments = []
@@ -451,9 +449,9 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX',
-                                                                    b'axoscope', b'Clampfit']:
-                #goodstart = big_string.lower().find(key)
+            for key in [b'AXENGN', b'clampex', b'Clampex',
+                            b'CLAMPEX', b'axoscope', b'Clampfit']:
+                # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart != -1:
                     break
