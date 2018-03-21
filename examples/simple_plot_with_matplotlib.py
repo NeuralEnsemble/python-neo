@@ -33,11 +33,12 @@ for seg in bl.segments:
     ax1 = fig.add_subplot(2, 1, 1)
     ax2 = fig.add_subplot(2, 1, 2)
     ax1.set_title(seg.file_origin)
+    ax1.set_ylabel('arbitrary units')
     mint = 0 * pq.s
     maxt = np.inf * pq.s
     for i, asig in enumerate(seg.analogsignals):
-        times = asig.times.rescale('s').magnitude        
-        asig = asig.rescale('mV').magnitude
+        times = asig.times.rescale('s').magnitude
+        asig = asig.magnitude
         ax1.plot(times, asig)
 
     trains = [st.rescale('s').magnitude for st in seg.spiketrains]
