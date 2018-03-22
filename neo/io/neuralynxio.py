@@ -18,6 +18,15 @@ from neo.rawio.neuralynxrawio import NeuralynxRawIO
 
 
 class NeuralynxIO(NeuralynxRawIO, BaseFromRaw):
+    """
+    Class for reading data from Neuralynx files.
+    This IO supports NCS, NEV, NSE and NTT file formats.
+
+    NCS contains signals for one channel
+    NEV contains events
+    NSE contains spikes and waveforms for mono electrodes
+    NTT contains spikes and waveforms for tetrodes
+    """
     _prefered_signal_group_mode = 'group-by-same-units'
     mode = 'dir'
 

@@ -10,36 +10,35 @@ IO developers' guide
 Guidelines for IO implementation
 ================================
 
-Since neo 0.6 there is 2 way for contributing to neo with a new IO:
-  * At old legacy neo.io level: the reader/writter will deal directly with neo objects
-  * In neo.rawio level read only: the reader render raw buffer from the file and provide
-    some internal header for the scale/units/name/...
+There are two ways to add a new IO module:
+  * By directly adding a new IO class in a module within :mod:`neo.io`: the reader/writer will deal directly with Neo objects
+  * By adding a RawIO class in a module within :mod:`neo.rawio`: the reader should work with raw buffers from the file and provide
+    some internal headers for the scale/units/name/... 
+    You can then generate an IO module simply by inheriting from your RawIO class and from :class:`neo.io.BaseFromRaw`
 
-For read only classes, we encourage to write a neo.rawio because it allow slice reading.
+For read only classes, we encourage you to write a :class:`RawIO` class because it allows slice reading,
+and is generally much quicker and easier (although only for reading) than implementing a full IO class.
 For read/write classes you can mix the two levels neo.rawio for reading and neo.io for writing.
 
-Recipe to develop an IO module for a new data format at neo.rawio:
+Recipe to develop an IO module for a new data format:
     1. Fully understand the object model. See :doc:`core`. If in doubt ask the `mailing list`_.
     2. Fully understand :mod:`neo.io.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
     3. Copy/paste ``examplerawio.py`` and choose clear file and class names for your IO.
-    4. implement all methods that have a neo.rawio.basrawio **raise(NotImplementedError)** return None when the object is not supported (spike/waveform)
+    4. implement all methods that **raise(NotImplementedError)** in :mod:`neo.rawio.baserawio`. Return None when the object is not supported (spike/waveform)
     5. Write good docstrings. List dependencies, including minimum version numbers.
-    6. Add your class to :mod:`neo.rawio.__init__`. Keep the import inside try/except for dependency reasons.
-    7. Create a class in neo/io/
-    8. Add your class to :mod:`neo.io.__init__`. Keep the import inside try/except for dependency reasons.
-    9. Create a account at gin.g-node.org and deposite files in NeuralEnsemble/ephy_testing_data.
-    10. Write tests in ``neo/rawio/test_xxxxxrawio.py``. You must at least pass the standard tests (inherited from :class:`BaseTestRawIO`). See test_examplerawio.py
-    11. Write a similar test in ``neo.tests/iotests/test_xxxxxio.py``. See test_exampleio.py
-    12. Commit or send a patch only if all tests pass.
-    13. Ask for wine to a user.
+    6. Add your class to :mod:`neo.rawio.__init__`. Keep imports inside ``try/except`` for dependency reasons.
+    7. Create a class in :file:`neo/io/`
+    8. Add your class to :mod:`neo.io.__init__`. Keep imports inside ``try/except`` for dependency reasons.
+    9. Create an account at https://gin.g-node.org and deposit files in :file:`NeuralEnsemble/ephy_testing_data`.
+    10. Write tests in :file:`neo/rawio/test_xxxxxrawio.py`. You must at least pass the standard tests (inherited from :class:`BaseTestRawIO`). See :file:`test_examplerawio.py`
+    11. Write a similar test in :file:`neo.tests/iotests/test_xxxxxio.py`. See :file:`test_exampleio.py`
+    12. Make a pull request when all tests pass.
 
 Miscellaneous
 =============
 
-    * If your IO supports several version of a format (like ABF1, ABF2), upload to gin.g-node.org test file repository all file version possible. (for utest coverage).
+    * If your IO supports several versions of a format (like ABF1, ABF2), upload to the gin.g-node.org test file repository all file versions possible. (for test coverage).
     * :py:func:`neo.core.Block.create_many_to_one_relationship` offers a utility to complete the hierachy when all one-to-many relationships have been created.
-    * :py:func:`neo.io.tools.populate_RecordingChannel` offers a utility to
-      create inside a :class:`Block` all :class:`RecordingChannel` objects and links to :class:`AnalogSignal`, :class:`SpikeTrain`, ...
     * In the docstring, explain where you obtained the file format specification if it is a closed one.
     * If your IO is based on a database mapper, keep in mind that the returned object MUST be detached,
       because this object can be written to another url for copying.
@@ -49,21 +48,21 @@ Tests
 =====
 
 :py:class:`neo.rawio.tests.common_rawio_test.BaseTestRawIO` and :py:class:`neo.test.io.commun_io_test.BaseTestIO` provide standard tests.
-To use these you need to upload some sample data files at the `gin-gnode`_. They will be publicly accessible for testing Neo.
+To use these you need to upload some sample data files at `gin-gnode`_. They will be publicly accessible for testing Neo.
 These tests:
 
   * check the compliance with the schema: hierachy, attribute types, ...
-  * For IO able to both write and read data, it compares a generated dataset with the same data after a write/read cycle.
+  * For IO modules able to both write and read data, it compares a generated dataset with the same data after a write/read cycle.
 
-The test scripts download all files from the `gin-gnode`_ and store them locally in ``/tmp/files_for_tests/``.
+The test scripts download all files from `gin-gnode`_ and stores them locally in ``/tmp/files_for_tests/``.
 Subsequent test runs use the previously downloaded files, rather than trying to download them each time.
 
-Each test must have at least one class that inherits ``BaseTestRawIO`` and that have 3 attributes:
-  * rawioclass: the class
-  * entities_to_test: a list of file (or directoris) to be tested one by one
-  * files_to_download: a list of file to download (sometime biger than entities_to_test)
+Each test must have at least one class that inherits ``BaseTestRawIO`` and that has 3 attributes:
+  * ``rawioclass``: the class
+  * ``entities_to_test``: a list of files (or directories) to be tested one by one
+  * ``files_to_download``: a list of files to download (sometimes bigger than ``entities_to_test``)
 
-Here is an example test script taken from the distribution: ``test_axonrawio.py``:
+Here is an example test script taken from the distribution: :file:`test_axonrawio.py`:
 
 .. literalinclude:: ../../neo/rawio/tests/test_axonrawio.py
 
@@ -72,7 +71,7 @@ Logging
 =======
 
 All IO classes by default have logging using the standard :mod:`logging` module: already set up.
-The logger name is the same as the full qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
+The logger name is the same as the fully qualified class name, e.g. :class:`neo.io.hdf5io.NeoHdf5IO`.
 The :attr:`class.logger` attribute holds the logger for easy access.
 
 There are generally 3 types of situations in which an IO class should use a logger
