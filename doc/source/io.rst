@@ -109,8 +109,8 @@ All IOs have a read() method that returns a list of :class:`Block` objects (repr
     neo.core.Segment
 
 
-Lazy option
-===========
+Lazy option (deprecated)
+========================
 
 In some cases you may not want to load everything in memory because it could be too big.
 For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
@@ -119,6 +119,8 @@ but all the metadata will be loaded. The *lazy_shape* attribute is added to all 
 In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.
+The lazy option will be removed in future neo versions. Similar functionality will be
+implemented using ProxyObjects.
 
 Example of lazy loading::
 
