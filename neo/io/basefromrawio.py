@@ -90,7 +90,8 @@ class BaseFromRaw(BaseIO):
         :param units_group_mode: 'split-all' or 'all-in-one'(default depend IO)
         This control behavior for grouping Unit in ChannelIndex:
             * 'split-all': each neo.Unit is assigned to a new neo.ChannelIndex
-            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex (global spike sorting for instance)
+            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex
+              (global spike sorting for instance)
 
         :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
 
@@ -137,9 +138,9 @@ class BaseFromRaw(BaseIO):
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)
+                ch_names = all_channels[ind_abs]['name'].astype('S')
                 neo_channel_index = ChannelIndex(index=ind_within,
-                                                 channel_names=all_channels[ind_abs]['name'].astype(
-                                                     'S'),
+                                                 channel_names=ch_names,
                                                  channel_ids=all_channels[ind_abs]['id'],
                                                  name='Channel group {}'.format(i),
                                                  **chidx_annotations)
@@ -148,8 +149,8 @@ class BaseFromRaw(BaseIO):
 
         # ChannelIndex and Unit
         # 2 case are possible in neo defifferent IO have choosen one or other:
-        #  * All units are group in the same ChannelIndex and indexes are all channels : 'all-in-one'
-        #  * Each units is assigned to one ChannelIndex : 'split-all'
+        #  * All units are group in the same ChannelIndex and indexes are all channels: 'all-in-one'
+        #  * Each units is assigned to one ChannelIndex: 'split-all'
         # This is kept for compatibility
         unit_channels = self.header['unit_channels']
         if units_group_mode == 'all-in-one':
@@ -293,11 +294,14 @@ class BaseFromRaw(BaseIO):
                                                              seg_index=seg_index, i_start=i_start,
                                                              i_stop=i_stop,
                                                              channel_indexes=channel_indexes)
-                    float_signal = self.rescale_signal_raw_to_float(raw_signal, dtype='float32',
-                                                                    channel_indexes=channel_indexes)
+                    float_signal = self.rescale_signal_raw_to_float(
+                        raw_signal,
+                        dtype='float32',
+                        channel_indexes=channel_indexes)
 
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_indexes,
-                                                                                    signal_group_mode=signal_group_mode).items():
+                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        channel_indexes,
+                        signal_group_mode=signal_group_mode).items():
                     units = np.unique(signal_channels[ind_abs]['units'])
                     assert len(units) == 1
                     units = ensure_signal_units(units[0])
@@ -474,7 +478,8 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
+        logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
+                        'instead'.format(units))
         units = ''
     return units
 
