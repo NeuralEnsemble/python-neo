@@ -297,10 +297,13 @@ class BaseFromRaw(BaseIO):
                             annotations['name'] = signal_channels['name'][chan_index]
                     else:
                         # when channel are grouped by same unit
-                        # annotations are empty...
+                        # annotations have channel_names and channel_ids array
+                        # this will be moved in array annotations soon
                         annotations = {}
                         annotations['name'] = 'Channel bundle ({}) '.format(
                             ','.join(signal_channels[ind_abs]['name']))
+                        annotations['channel_names'] = signal_channels[ind_abs]['name']
+                        annotations['channel_ids'] = signal_channels[ind_abs]['id']
                     annotations = check_annotations(annotations)
                     if lazy:
                         anasig = AnalogSignal(np.array([]), units=units,  copy=False,
