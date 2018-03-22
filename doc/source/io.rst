@@ -33,7 +33,7 @@ Depending on the file format, i.e. if it is streamable or not, the whole :class:
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
 A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
-:class:`AnalogSignal`, :class:`AnaloSignalArray`, :class:`EpochArray`, :class:`EventArray`
+:class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`Epoch`, :class:`Event`
 (basically, all the different Neo objects).
 
 Depending on the file format, these objects can sometimes be loaded separately, without the need to load the whole file.
@@ -115,7 +115,7 @@ Lazy option
 In some cases you may not want to load everything in memory because it could be too big.
 For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
 but all the metadata will be loaded. The *lazy_shape* attribute is added to all array-like objects
-(AnalogSignal, AnalogSignalArray, SpikeTrain, Epoch, Event).
+(AnalogSignal, IrregularlySampledSignal, SpikeTrain, Epoch, Event).
 In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.

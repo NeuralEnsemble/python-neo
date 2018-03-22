@@ -59,7 +59,7 @@ Subsequent test runs use the previously downloaded files, rather than trying to 
 
 Each test must have at least one class that inherits ``BaseTestRawIO`` and that has 3 attributes:
   * ``rawioclass``: the class
-  * ``entities_to_test``: a list of files (or directoris) to be tested one by one
+  * ``entities_to_test``: a list of files (or directories) to be tested one by one
   * ``files_to_download``: a list of files to download (sometimes bigger than ``entities_to_test``)
 
 Here is an example test script taken from the distribution: :file:`test_axonrawio.py`:
