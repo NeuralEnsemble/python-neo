@@ -1122,7 +1122,10 @@ class BlackrockRawIO(BaseRawIO):
         Ensure matching ids of segments detected in nsx and nev file for version 2.3
         """
         if self.__nev_spec == '2.3':
+            nonempty_nsx_segments = {}
+            list_nonempty_nsx_segments = []
             nev_relevant_nsx_segments = {}
+            relevant_segs = self._nb_segment_nev
             last_k = list(self.__nsx_data_header[nsx_nb].keys())[0]
             for k, v in self.__nsx_data_header[nsx_nb].items():
                 old_ts = self.__nsx_data_header[nsx_nb][last_k]['timestamp'] + \
@@ -1134,8 +1137,13 @@ class BlackrockRawIO(BaseRawIO):
 
                 # Nonempty segments that were created by pressing 'Reset'
                 # When pressing 'Pause' time just goes on, so no need for finding segment in nev
-                if v['nb_data_points'] > 1 and not v['timestamp'] > old_ts:
-                    nev_relevant_nsx_segments[k] = v
+                if v['nb_data_points'] > 1:
+
+                    nonempty_nsx_segments[k] = v
+                    list_nonempty_nsx_segments.append(v)
+
+                    if not v['timestamp'] > old_ts:
+                        nev_relevant_nsx_segments[k] = v
 
             # nev_relevant_nsx_segments = {k:v for k,v in self.__nsx_data_header[nsx_nb].items()
             #                           if v['nb_data_points'] > 1 and not v['timestamp'] >
@@ -1146,14 +1154,51 @@ class BlackrockRawIO(BaseRawIO):
                 ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
                  'ns{0} file.'.format(self.nsx_to_load, self._nb_segment_nev, self._nb_segment))
 
-            new_nev_segment_id_mapping = dict(zip(range(self._nb_segment_nev),
-                                                  sorted(list(nev_relevant_nsx_segments))))
+            # TODO: Edit ev_ids so that pause segments are accounted for
+            # //XXX Problem: empty dataheaders need to be ignored!
+            # //Also need to exclude reset segments!!!
+
+            print(self.__nsx_data_header)
+            for k, (data, ev_ids) in self.nev_data.items():
+                add = 0
+                for i, ts in enumerate(data['timestamp']):
+                    # If spike is actually in next nsX segment
+                    #print(ev_ids[i])
+                    ev_ids[i] += add
+                    nev_stamp = ts * self.__nsx_basic_header[self.nsx_to_load]['timestamp_resolution'] /\
+                    self.__nev_basic_header['timestamp_resolution']
+                    if ev_ids[i] < len(list_nonempty_nsx_segments) - 1:
+                        next_nsx_stamp = list_nonempty_nsx_segments[ev_ids[i]+1]['timestamp']
+                        last_current_nsx_time = list_nonempty_nsx_segments[ev_ids[i]]['timestamp'] + \
+                                list_nonempty_nsx_segments[ev_ids[i]]['nb_data_points'] * \
+                                self.__nsx_basic_header[nsx_nb]['period']
+                    print("TS: ", ts)
+                    print("NSXEND: ", last_current_nsx_time)
+                    print("NSXNEXT: ", next_nsx_stamp)
+                    #print(len(nonempty_nsx_segments))
+                    print(ev_ids[i])
+                    print(ev_ids[i] < len(list_nonempty_nsx_segments) - 1)
+                    print(ts > next_nsx_stamp)
+                    print(next_nsx_stamp > last_current_nsx_time)
+                    if ev_ids[i] < len(list_nonempty_nsx_segments) - 1 and ts > next_nsx_stamp\
+                            and next_nsx_stamp > last_current_nsx_time:
+                                        add += 1
+                                        relevant_segs += 1
+                                        print("ADD", add)
+
+
+            new_nev_segment_id_mapping = dict(zip(range(relevant_segs),
+                                                  sorted(list(nonempty_nsx_segments))))
+            print(new_nev_segment_id_mapping)
 
             def vec_translate(a, my_dict):
                 return np.vectorize(my_dict.__getitem__)(a)
 
             # replacing event ids by matched event ids in place
             for k, (data, ev_ids) in self.nev_data.items():
+                print("TS")
+                print(data['timestamp'])
+                print(ev_ids)
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
