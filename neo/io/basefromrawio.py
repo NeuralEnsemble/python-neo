@@ -149,7 +149,8 @@ class BaseFromRaw(BaseIO):
 
         # ChannelIndex and Unit
         # 2 case are possible in neo defifferent IO have choosen one or other:
-        #  * All units are group in the same ChannelIndex and indexes are all channels: 'all-in-one'
+        #  * All units are grouped in the same ChannelIndex and indexes are all channels:
+        #    'all-in-one'
         #  * Each units is assigned to one ChannelIndex: 'split-all'
         # This is kept for compatibility
         unit_channels = self.header['unit_channels']
