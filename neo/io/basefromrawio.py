@@ -16,6 +16,7 @@ by inheritance of this class.
 from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
+import warnings
 import collections
 import logging
 import numpy as np
@@ -94,6 +95,11 @@ class BaseFromRaw(BaseIO):
         :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
 
         """
+
+        if lazy:
+            warnings.warn(
+                "Lazy is deprecated and will be replaced by ProxyObject functionality.",
+                DeprecationWarning)
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -210,6 +216,11 @@ class BaseFromRaw(BaseIO):
             All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
         """
 
+        if lazy:
+            warnings.warn(
+                "Lazy is deprecated and will be replaced by ProxyObject functionality.",
+                DeprecationWarning)
+
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
 
@@ -318,7 +329,7 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
-                raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index, 
+                raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index,
                                     seg_index=seg_index, unit_index=unit_index,
                                     t_start=t_start_, t_stop=t_stop_)
                 float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
