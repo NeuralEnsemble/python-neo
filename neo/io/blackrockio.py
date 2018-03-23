@@ -11,7 +11,7 @@ class BlackrockIO(BlackrockRawIO, BaseFromRaw):
     """
     name = 'Blackrock IO'
     description = "This IO reads .nev/.nsX files of the Blackrock " + \
-        "(Cerebus) recording system."
+                  "(Cerebus) recording system."
 
     _prefered_signal_group_mode = 'split-all'
 

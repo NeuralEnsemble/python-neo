@@ -21,6 +21,7 @@ import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
+
 try:
     import matplotlib.mlab as mlab
 except ImportError as err:
@@ -29,7 +30,6 @@ except ImportError as err:
 else:
     HAVE_MLAB = True
     MLAB_ERR = None
-
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -195,7 +195,6 @@ class KlustaKwikIO(BaseIO):
     def _load_spike_times(self, fetfilename):
         """Reads and returns the spike times and features"""
         with open(fetfilename, mode='r') as f:
-
             # Number of clustering features is integer on first line
             nbFeatures = int(f.readline().strip())
 

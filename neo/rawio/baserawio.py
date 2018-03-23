@@ -40,7 +40,7 @@ or vector can be store somewhere (near the fiel, /tmp, any path)
 
 """
 
-#from __future__ import unicode_literals, print_function, division, absolute_import
+# from __future__ import unicode_literals, print_function, division, absolute_import
 from __future__ import print_function, division, absolute_import
 
 import logging
@@ -52,15 +52,14 @@ from neo import logging_handler
 
 try:
     import joblib
+
     HAVE_JOBLIB = True
 except ImportError:
     HAVE_JOBLIB = False
 
-
 possible_raw_modes = ['one-file', 'multi-file', 'one-dir', ]  # 'multi-dir', 'url', 'other'
 
 error_header = 'Header is not read yet, do parse_header() first'
-
 
 _signal_channel_dtype = [
     ('name', 'U64'),
@@ -73,8 +72,7 @@ _signal_channel_dtype = [
     ('group_id', 'int64'),
 ]
 
-_common_sig_characteristics = ['sampling_rate',  'dtype', 'group_id']
-
+_common_sig_characteristics = ['sampling_rate', 'dtype', 'group_id']
 
 _unit_channel_dtype = [
     ('name', 'U64'),
@@ -86,7 +84,6 @@ _unit_channel_dtype = [
     ('wf_left_sweep', 'int64'),
     ('wf_sampling_rate', 'float64'),
 ]
-
 
 _event_channel_dtype = [
     ('name', 'U64'),
@@ -107,7 +104,7 @@ class BaseRawIO(object):
 
     rawmode = None  # one key in possible_raw_modes
 
-    def __init__(self, use_cache=False,  cache_path='same_as_resource', **kargs):
+    def __init__(self, use_cache=False, cache_path='same_as_resource', **kargs):
         """
 
         When rawmode=='one-file' kargs MUST contains 'filename' the filename
@@ -261,7 +258,7 @@ class BaseRawIO(object):
 
         self.raw_annotations = a
 
-    def _raw_annotate(self, obj_name, chan_index=0,   block_index=0, seg_index=0, **kargs):
+    def _raw_annotate(self, obj_name, chan_index=0, block_index=0, seg_index=0, **kargs):
         """
         Annotate a object in the list/dict tree annotations.
         """
@@ -284,7 +281,7 @@ class BaseRawIO(object):
             bl_a = self.raw_annotations['blocks'][block_index]
             txt += '*Block {}\n'.format(block_index)
             for k, v in bl_a.items():
-                if k in ('segments', ):
+                if k in ('segments',):
                     continue
                 txt += '  -{}: {}\n'.format(k, v)
             for seg_index in range(self.segment_count(block_index)):
@@ -363,13 +360,13 @@ class BaseRawIO(object):
         If all channels have the same characteristics them
         `get_analogsignal_chunk` can be call wihtout restriction.
         If not then **channel_indexes** must be specified
-        in `get_analogsignal_chunk` and only channels with same 
+        in `get_analogsignal_chunk` and only channels with same
         caracteristics can be read at the same time.
 
-        This is usefull for some IO  than 
+        This is usefull for some IO  than
         have internally several signals channels familly.
 
-        For many RawIO all channels have the same 
+        For many RawIO all channels have the same
         sampling_rate/size/t_start. In that cases, internal flag
         **self._several_channel_groups will be set to False, so
         `get_analogsignal_chunk(..)` won't suffer in performance.
@@ -393,17 +390,17 @@ class BaseRawIO(object):
         """
         Usefull for few IOs (TdtrawIO, NeuroExplorerRawIO, ...).
 
-        Check is a set a signal channel_indexes share common 
+        Check is a set a signal channel_indexes share common
         characteristics (**sampling_rate/t_start/size**)
         Usefull only when RawIO propose differents channels groups
         with differents sampling_rate for instance.
         """
-        #~ print('_check_common_characteristics', channel_indexes)
+        # ~ print('_check_common_characteristics', channel_indexes)
 
-        assert channel_indexes is not None,\
+        assert channel_indexes is not None, \
             'You must specify channel_indexes'
         characteristics = self.header['signal_channels'][_common_sig_characteristics]
-        #~ print(characteristics[channel_indexes])
+        # ~ print(characteristics[channel_indexes])
         assert np.unique(characteristics[channel_indexes]).size == 1, \
             'This channel set have differents characteristics'
 
@@ -418,7 +415,7 @@ class BaseRawIO(object):
             unique_characteristics = np.unique(characteristics)
             channel_indexes_list = []
             for e in unique_characteristics:
-                channel_indexes,  = np.nonzero(characteristics == e)
+                channel_indexes, = np.nonzero(characteristics == e)
                 channel_indexes_list.append(channel_indexes)
             return channel_indexes_list
         else:
@@ -430,7 +427,7 @@ class BaseRawIO(object):
         Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
-        channel_indexes,  = np.nonzero(np.in1d(ch['name'], channel_names))
+        channel_indexes, = np.nonzero(np.in1d(ch['name'], channel_names))
         assert len(channel_indexes) == len(channel_names), 'not match'
         return channel_indexes
 
@@ -440,7 +437,7 @@ class BaseRawIO(object):
         Based on self.header['signal_channels']
         """
         ch = self.header['signal_channels']
-        channel_indexes,  = np.nonzero(np.in1d(ch['id'], channel_ids))
+        channel_indexes, = np.nonzero(np.in1d(ch['id'], channel_ids))
         assert len(channel_indexes) == len(channel_ids), 'not match'
         return channel_indexes
 
@@ -486,11 +483,11 @@ class BaseRawIO(object):
             self._check_common_characteristics(channel_indexes)
 
         raw_chunk = self._get_analogsignal_chunk(
-            block_index, seg_index,  i_start, i_stop, channel_indexes)
+            block_index, seg_index, i_start, i_stop, channel_indexes)
 
         return raw_chunk
 
-    def rescale_signal_raw_to_float(self, raw_signal,  dtype='float32',
+    def rescale_signal_raw_to_float(self, raw_signal, dtype='float32',
                                     channel_indexes=None, channel_names=None, channel_ids=None):
 
         channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids)
@@ -510,10 +507,10 @@ class BaseRawIO(object):
         return float_signal
 
     # spiketrain and unit zone
-    def spike_count(self,  block_index=0, seg_index=0, unit_index=0):
+    def spike_count(self, block_index=0, seg_index=0, unit_index=0):
         return self._spike_count(block_index, seg_index, unit_index)
 
-    def get_spike_timestamps(self,  block_index=0, seg_index=0, unit_index=0,
+    def get_spike_timestamps(self, block_index=0, seg_index=0, unit_index=0,
                              t_start=None, t_stop=None):
         """
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
@@ -533,7 +530,7 @@ class BaseRawIO(object):
         return self._rescale_spike_timestamp(spike_timestamps, dtype)
 
     # spiketrain waveform zone
-    def get_spike_raw_waveforms(self,  block_index=0, seg_index=0, unit_index=0,
+    def get_spike_raw_waveforms(self, block_index=0, seg_index=0, unit_index=0,
                                 t_start=None, t_stop=None):
         wf = self._get_spike_raw_waveforms(block_index, seg_index, unit_index, t_start, t_stop)
         return wf
@@ -552,10 +549,10 @@ class BaseRawIO(object):
         return float_waveforms
 
     # event and epoch zone
-    def event_count(self,  block_index=0, seg_index=0, event_channel_index=0):
+    def event_count(self, block_index=0, seg_index=0, event_channel_index=0):
         return self._event_count(block_index, seg_index, event_channel_index)
 
-    def get_event_timestamps(self,  block_index=0, seg_index=0, event_channel_index=0,
+    def get_event_timestamps(self, block_index=0, seg_index=0, event_channel_index=0,
                              t_start=None, t_stop=None):
         """
         The timestamp is as close to the format itself. Sometimes float/int32/int64.
@@ -592,7 +589,7 @@ class BaseRawIO(object):
         elif self.rawmode == 'one-dir':
             ressource_name = self.dirname
         else:
-            raise(NotImlementedError)
+            raise (NotImlementedError)
 
         if cache_path == 'home':
             if sys.platform.startswith('win'):
@@ -608,7 +605,7 @@ class BaseRawIO(object):
         elif cache_path == 'same_as_resource':
             dirname = os.path.dirname(ressource_name)
         else:
-            assert os.path.exists(cache_path),\
+            assert os.path.exists(cache_path), \
                 'cache_path do not exists use "home" or "same_as_file" to make this auto'
 
         # the hash of the ressource (dir of file) is done with filename+datetime
@@ -642,56 +639,56 @@ class BaseRawIO(object):
     # Functions to be implement in IO below here
 
     def _parse_header(self):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
         # must call
         # self._generate_empty_annotations()
 
     def _source_name(self):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     def _segment_t_start(self, block_index, seg_index):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     def _segment_t_stop(self, block_index, seg_index):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     ###
     # signal and channel zone
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
-        raise(NotImplementedError)
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+        raise (NotImplementedError)
 
     ###
     # spiketrain and unit zone
-    def _spike_count(self,  block_index, seg_index, unit_index):
-        raise(NotImplementedError)
+    def _spike_count(self, block_index, seg_index, unit_index):
+        raise (NotImplementedError)
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
-        raise(NotImplementedError)
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
+        raise (NotImplementedError)
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     ###
     # spike waveforms zone
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     ###
     # event and epoch zone
     def _event_count(self, block_index, seg_index, event_channel_index):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
-        raise(NotImplementedError)
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
+        raise (NotImplementedError)
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        raise(NotImplementedError)
+        raise (NotImplementedError)

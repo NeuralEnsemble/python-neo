@@ -40,16 +40,16 @@ class BrainVisionRawIO(BaseRawIO):
         binary_filename = self.filename.replace(bname, vhdr_header['Common Infos']['DataFile'])
 
         assert vhdr_header['Common Infos'][
-            'DataFormat'] == 'BINARY', NotImplementedError
+                   'DataFormat'] == 'BINARY', NotImplementedError
         assert vhdr_header['Common Infos'][
-            'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
+                   'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
 
         nb_channel = int(vhdr_header['Common Infos']['NumberOfChannels'])
         sr = 1.e6 / float(vhdr_header['Common Infos']['SamplingInterval'])
         self._sampling_rate = sr
 
         fmt = vhdr_header['Binary Infos']['BinaryFormat']
-        fmts = {'INT_16': np.int16,  'INT_32': np.int32, 'IEEE_FLOAT_32': np.float32, }
+        fmts = {'INT_16': np.int16, 'INT_32': np.int32, 'IEEE_FLOAT_32': np.float32, }
 
         assert fmt in fmts, NotImplementedError
         sig_dtype = fmts[fmt]
@@ -88,7 +88,7 @@ class BrainVisionRawIO(BaseRawIO):
         ev_labels = []
         for i in range(len(all_info)):
             ev_type, ev_label, pos, size, channel = all_info[
-                'Mk%d' % (i + 1,)].split(',')[:5]
+                                                        'Mk%d' % (i + 1,)].split(',')[:5]
             ev_types.append(ev_type)
             ev_timestamps.append(int(pos))
             ev_labels.append(ev_label)
@@ -140,14 +140,14 @@ class BrainVisionRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
     ###
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         return 0
 
     ###
@@ -156,7 +156,7 @@ class BrainVisionRawIO(BaseRawIO):
         all_timestamps, all_label = self._raw_events[event_channel_index]
         return all_timestamps.size
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         timestamps, labels = self._raw_events[event_channel_index]
 
         if t_start is not None:
@@ -173,7 +173,7 @@ class BrainVisionRawIO(BaseRawIO):
 
         return timestamps, durations, labels
 
-        raise(NotImplementedError)
+        raise (NotImplementedError)
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
         event_times = event_timestamps.astype(dtype) / self._sampling_rate

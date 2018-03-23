@@ -76,6 +76,7 @@ try:
     file
 except NameError:
     import io
+
     file = io.BufferedReader
 
 # note neo.core need only numpy and quantities
@@ -324,9 +325,9 @@ class AlphaOmegaIO(BaseIO):
                                    [list_chan[ind_chan]]['m_Name'],
                                    file_origin=os.path.basename(self.filename),
                                    units=pq.dimensionless)
-# todo apibreak: create ChannelIndex for each signals
-#                ana_sig.channel_index = \
-#                            file_blocks[list_chan[ind_chan]]['m_numChannel']
+            # todo apibreak: create ChannelIndex for each signals
+            #                ana_sig.channel_index = \
+            #                            file_blocks[list_chan[ind_chan]]['m_numChannel']
             ana_sig.annotate(channel_name=file_blocks[list_chan[ind_chan]]['m_Name'])
             ana_sig.annotate(channel_type=file_blocks[list_chan[ind_chan]]['type_subblock'])
             seg.analogsignals.append(ana_sig)
@@ -455,8 +456,8 @@ Type1_Boards = [  # WARNING: needs to be checked
     ('m_ScaleFactor', 'f'),
     ('m_DapTime', 'f'),
     ('m_nameBoard', max_string_len)]
-#('m_DiscMaxValue','h'), # WARNING: should this exist?
-#('m_DiscMinValue','h') # WARNING: should this exist?
+# ('m_DiscMaxValue','h'), # WARNING: should this exist?
+# ('m_DiscMinValue','h') # WARNING: should this exist?
 
 Type2_DefBlocksChannels = [
     # common parameters for all types of channels

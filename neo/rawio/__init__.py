@@ -11,7 +11,6 @@ Classes:
 
 """
 
-
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
@@ -26,7 +25,6 @@ from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
-
 
 rawiolist = [
     AxonRawIO,

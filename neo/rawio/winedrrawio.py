@@ -49,7 +49,7 @@ class WinEdrRawIO(BaseRawIO):
                 header[key] = val
 
         self._raw_signals = np.memmap(self.filename, dtype='int16', mode='r',
-                                      shape=(header['NP'] // header['NC'], header['NC'], ),
+                                      shape=(header['NP'] // header['NC'], header['NC'],),
                                       offset=header['NBH'])
 
         DT = header['DT']
@@ -109,7 +109,7 @@ class WinEdrRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         # WARNING check if id or index for signals (in the old IO it was ids
         # ~ raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         if channel_indexes is None:

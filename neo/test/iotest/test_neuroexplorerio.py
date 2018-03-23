@@ -26,7 +26,8 @@ class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
 
     def test_signal_group_mode(self):
         filename = get_test_file_full_path(ioclass=NeuroExplorerIO,
-                                           filename='File_neuroexplorer_1.nex', directory=self.local_test_dir,
+                                           filename='File_neuroexplorer_1.nex',
+                                           directory=self.local_test_dir,
                                            clean=False)
 
         # test that 2 signals are rendered with 2 sampling_rate
@@ -39,8 +40,8 @@ class TestNeuroExplorerIO(BaseTestIO, unittest.TestCase, ):
             anasig1 = seg.analogsignals[1]
             assert anasig0.sampling_rate != anasig1.sampling_rate
             assert anasig0.shape != anasig1.shape
-            #~ for anasig in seg.analogsignals:
-            #~ print(anasig.shape, anasig.sampling_rate)
+            # ~ for anasig in seg.analogsignals:
+            # ~ print(anasig.shape, anasig.sampling_rate)
 
 
 if __name__ == "__main__":

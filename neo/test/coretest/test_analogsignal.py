@@ -154,7 +154,7 @@ class TestAnalogSignalConstructor(unittest.TestCase):
         # This one is universally recommended and handled by BaseNeo
         self.assertEqual(signal.file_origin, 'crack.txt')
 
-    # signal must be 1D - should raise Exception if not 1D
+        # signal must be 1D - should raise Exception if not 1D
 
 
 class TestAnalogSignalProperties(unittest.TestCase):
@@ -281,10 +281,10 @@ class TestAnalogSignalProperties(unittest.TestCase):
         for i, signal in enumerate(self.signals):
             prepr = repr(signal)
             targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % \
-                (repr(self.data[i].reshape(-1, 1)),
-                 self.t_start[i],
-                 self.t_start[i] + len(self.data[i]) / self.rates[i],
-                 self.rates[i])
+                   (repr(self.data[i].reshape(-1, 1)),
+                    self.t_start[i],
+                    self.t_start[i] + len(self.data[i]) / self.rates[i],
+                    self.rates[i])
             self.assertEqual(prepr, targ)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
@@ -292,7 +292,8 @@ class TestAnalogSignalProperties(unittest.TestCase):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
             targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n' %
-                     (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode, signal.dtype)) +
+                     (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
+                      signal.dtype)) +
                     ('annotations: %s\n' % signal.annotations) +
                     ('sampling rate: {}\n'.format(signal.sampling_rate)) +
                     ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
@@ -389,15 +390,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                               name="test")
         self.assertEqual(signal.shape, (100, n))
         signal.channel_index = ChannelIndex(index=np.arange(n, dtype=int),
-                                            channel_names=["channel{0}".format(i) for i in range(n)])
+                                            channel_names=["channel{0}".format(i) for i in
+                                                           range(n)])
         signal.channel_index.analogsignals.append(signal)
         odd_channels = signal[:, 1::2]
         self.assertEqual(odd_channels.shape, (100, n // 2))
         assert_array_equal(odd_channels.channel_index.index, np.arange(n // 2, dtype=int))
         assert_array_equal(odd_channels.channel_index.channel_names, [
-                           "channel{0}".format(i) for i in range(1, n, 2)])
+            "channel{0}".format(i) for i in range(1, n, 2)])
         assert_array_equal(signal.channel_index.channel_names, [
-                           "channel{0}".format(i) for i in range(n)])
+            "channel{0}".format(i) for i in range(n)])
         self.assertEqual(odd_channels.channel_index.analogsignals[0].name, signal.name)
 
     def test__copy_should_let_access_to_parents_objects(self):

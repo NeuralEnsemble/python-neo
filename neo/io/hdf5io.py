@@ -11,6 +11,7 @@ import logging
 import pickle
 import numpy as np
 import quantities as pq
+
 try:
     import h5py
 except ImportError as err:
@@ -299,7 +300,8 @@ class NeoHdf5IO(BaseIO):
                     combined_obj_ref = merged_objects[-1].annotations['object_ref']
                     merged_objects[-1] = merged_objects[-1].merge(obj)
                     merged_objects[-1].annotations['object_ref'] = combined_obj_ref + \
-                        "-" + obj.annotations['object_ref']
+                                                                   "-" + obj.annotations[
+                                                                       'object_ref']
                 except MergeError:
                     merged_objects.append(obj)
             for obj in merged_objects:
@@ -349,7 +351,7 @@ class NeoHdf5IO(BaseIO):
             for ci1 in channel_indexes:
                 # this works only on analogsignals
                 signal_group1 = set(tuple(x[1]) for x in ci1._channels)
-                for ci2 in channel_indexes:                              # need to take irregularly sampled signals
+                for ci2 in channel_indexes:  # need to take irregularly sampled signals
                     signal_group2 = set(tuple(x[1]) for x in ci2._channels)  # into account too
                     if signal_group1 != signal_group2:
                         if signal_group2.issubset(signal_group1):
@@ -398,8 +400,9 @@ class NeoHdf5IO(BaseIO):
                         merged_signals = self._merge_data_objects(segment_data['analogsignals'])
                         assert len(merged_signals) == 1
                         merged_signals[0].channel_index = ci
-                        merged_signals[0].annotations['object_ref'] = "-".join(obj.annotations['object_ref']
-                                                                               for obj in segment_data['analogsignals'])
+                        merged_signals[0].annotations['object_ref'] = "-".join(
+                            obj.annotations['object_ref']
+                            for obj in segment_data['analogsignals'])
                         segment.analogsignals.extend(merged_signals)
                         ci.analogsignals = merged_signals
 
@@ -407,8 +410,9 @@ class NeoHdf5IO(BaseIO):
                         merged_signals = self._merge_data_objects(segment_data['irregsignals'])
                         assert len(merged_signals) == 1
                         merged_signals[0].channel_index = ci
-                        merged_signals[0].annotations['object_ref'] = "-".join(obj.annotations['object_ref']
-                                                                               for obj in segment_data['irregsignals'])
+                        merged_signals[0].annotations['object_ref'] = "-".join(
+                            obj.annotations['object_ref']
+                            for obj in segment_data['irregsignals'])
                         segment.irregularlysampledsignals.extend(merged_signals)
                         ci.irregularlysampledsignals = merged_signals
             else:

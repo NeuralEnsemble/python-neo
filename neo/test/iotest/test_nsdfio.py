@@ -16,7 +16,8 @@ import unittest
 from neo.io.nsdfio import HAVE_NSDF, NSDFIO
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.core import AnalogSignal, Segment, Block, ChannelIndex
-from neo.test.tools import assert_same_attributes, assert_same_annotations, assert_neo_object_is_compliant
+from neo.test.tools import assert_same_attributes, assert_same_annotations, \
+    assert_neo_object_is_compliant
 
 
 @unittest.skipUnless(HAVE_NSDF, "Requires NSDF")
@@ -66,8 +67,10 @@ class NSDFIOTest(unittest.TestCase):
         for i in range(3):
             block.segments.append(self.create_segment(block, name='Segment #{}'.format(i)))
         for i in range(3):
-            block.channel_indexes.append(self.create_channelindex(block, name='ChannelIndex #{}'.format(i),
-                                                                  analogsignals=[seg.analogsignals[i] for seg in block.segments]))
+            block.channel_indexes.append(
+                self.create_channelindex(block, name='ChannelIndex #{}'.format(i),
+                                         analogsignals=[seg.analogsignals[i] for seg in
+                                                        block.segments]))
 
     def create_segment(self, parent=None, name='Segment'):
         segment = Segment()
@@ -231,7 +234,8 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         assert object1.__class__.__name__ == object2.__class__.__name__
         assert object2.file_origin == self.filename
         assert_same_attributes(object1, object2, exclude=[
-                               'file_origin', 'file_datetime'] + exclude_attr)
+                                                             'file_origin',
+                                                             'file_datetime'] + exclude_attr)
         assert_same_annotations(object1, object2)
 
 

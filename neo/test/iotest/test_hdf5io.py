@@ -4,13 +4,14 @@ Tests of neo.io.hdf5io_new
 
 """
 
-
 import unittest
 import numpy as np
 from numpy.testing import assert_array_equal
 from quantities import kHz, mV, ms, second, nA
+
 try:
     import h5py
+
     HAVE_H5PY = True
 except ImportError:
     HAVE_H5PY = False
@@ -48,7 +49,6 @@ class ReadOldNeoHdf5IOTest(BaseTestIO, unittest.TestCase):
         self.assertEqual(block0.annotations["foo"], "bar")
         self.assertEqual(len(block0.segments), 3)
         for segment in block0.segments:
-
             self.assertEqual(len(segment.analogsignals), 2)
             as0 = segment.analogsignals[0]
             self.assertEqual(as0.shape, (1000, 4))

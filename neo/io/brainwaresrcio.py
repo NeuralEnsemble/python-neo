@@ -427,7 +427,7 @@ class BrainwareSrcIO(BaseIO):
                 # even the official reference files have invalid keys
                 # when using the official reference reader matlab
                 # scripts
-                self.logger.warning('unknown ID: %s',  seqid)
+                self.logger.warning('unknown ID: %s', seqid)
                 return []
 
         try:
@@ -1548,6 +1548,7 @@ if __name__ == '__main__':
                                        download_test_file,
                                        get_test_file_full_path,
                                        make_all_directories)
+
     shortname = BrainwareSrcIO.__name__.lower().strip('io')
     local_test_dir = create_local_temp_dir(shortname)
     url = url_for_tests + shortname

@@ -25,7 +25,6 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
     ]
     files_to_download = files_to_test
 
-
     def test_multi_sampling(self):
         """
         Some file can have several sampling_rate.
@@ -33,26 +32,26 @@ class TestSpike2IO(BaseTestIO, unittest.TestCase, ):
         """
         filename = self.get_filename_path('multi_sampling.smr')
         reader = Spike2IO(filename=filename)
-        bl = reader.read_block(signal_group_mode = 'group-by-same-units')
+        bl = reader.read_block(signal_group_mode='group-by-same-units')
         assert len(bl.segments) == 10
-        seg =bl.segments[0]
-        
+        seg = bl.segments[0]
+
         # 7 group_id one per channel
         assert len(seg.analogsignals) == 7
-        
+
         # 1 channel for 1kHz
         assert seg.analogsignals[0].shape == (14296, 1)
-        assert seg.analogsignals[0].sampling_rate == 1000*pq.Hz
+        assert seg.analogsignals[0].sampling_rate == 1000 * pq.Hz
 
         # 4  channel for 2kHz
         for c in range(1, 5):
             assert seg.analogsignals[c].shape == (28632, 1)
-            assert seg.analogsignals[c].sampling_rate == 2000*pq.Hz
+            assert seg.analogsignals[c].sampling_rate == 2000 * pq.Hz
 
         # 2 channel for 10kHz
         for c in range(5, 7):
             assert seg.analogsignals[c].shape == (114618, 1)
-            assert seg.analogsignals[c].sampling_rate == 10000*pq.Hz
+            assert seg.analogsignals[c].sampling_rate == 10000 * pq.Hz
 
 
 if __name__ == "__main__":
