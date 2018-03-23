@@ -6,8 +6,8 @@ This IO supports NCS, NEV, NSE and NTT file formats.
 
 NCS contains signals for one channel
 NEV contains events
-NSE contains spikes and waveforms for mono electrode
-NTT contains spikes and waveforms for tetrode
+NSE contains spikes and waveforms for mono electrodes
+NTT contains spikes and waveforms for tetrodes
 
 
 NCS can contains gaps that can be detected in inregularity
@@ -21,7 +21,8 @@ from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype,
+                        _unit_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -256,10 +257,10 @@ class NeuralynxRawIO(BaseRawIO):
                 ev_ann = seg_annotations['events'][c]
                 ev_ann['file_origin'] = self.nev_filenames[chan_id]
 
-                #~ ev_ann['marker_id'] =
-                #~ ev_ann['nttl'] =
-                #~ ev_ann['digital_marker'] =
-                #~ ev_ann['analog_marker'] =
+                # ~ ev_ann['marker_id'] =
+                # ~ ev_ann['nttl'] =
+                # ~ ev_ann['digital_marker'] =
+                # ~ ev_ann['analog_marker'] =
 
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start

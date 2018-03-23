@@ -33,7 +33,7 @@ Depending on the file format, i.e. if it is streamable or not, the whole :class:
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
 A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
-:class:`AnalogSignal`, :class:`AnaloSignalArray`, :class:`EpochArray`, :class:`EventArray`
+:class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`Epoch`, :class:`Event`
 (basically, all the different Neo objects).
 
 Depending on the file format, these objects can sometimes be loaded separately, without the need to load the whole file.
@@ -109,60 +109,26 @@ All IOs have a read() method that returns a list of :class:`Block` objects (repr
     neo.core.Segment
 
 
-Lazy and cascade options
+Lazy option (deprecated)
 ========================
 
 In some cases you may not want to load everything in memory because it could be too big.
-For this scenario, two options are available:
+For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
+but all the metadata will be loaded. The *lazy_shape* attribute is added to all array-like objects
+(AnalogSignal, IrregularlySampledSignal, SpikeTrain, Epoch, Event).
+In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
+To know if a class supports lazy mode use ``ClassIO.support_lazy``.
+By default (if not specified), ``lazy=False``, i.e. all data is loaded.
+The lazy option will be removed in future Neo versions. Similar functionality will be
+implemented using proxy objects.
 
-  * ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero, but all the metadata will be loaded. lazy_shape attribute is added to all object that
-    inheritate Quantitities or numpy.ndarray (AnalogSignal, AnalogSignalArray, SpikeTrain)  and to object that have array like attributes (EpochArray, EventArray)
-    In that cases, lazy_shape is a tuple that have the same shape with lazy=False.
-  * ``cascade=True/False``. With ``cascade=False`` only one object is read (and *one_to_many* and *many_to_many* relationship are not read).
-
-By default (if they are not specified), ``lazy=False`` and ``cascade=True``, i.e. all data is loaded.
-
-Example cascade::
-
-    >>> seg = reader.read_segment( cascade=True)
-    >>> print(len(seg.analogsignals))  # this is N
-    >>> seg = reader.read_segment(cascade=False)
-    >>> print(len(seg.analogsignals))  # this is zero
-
-Example lazy::
+Example of lazy loading::
 
     >>> seg = reader.read_segment(lazy=False)
-    >>> print(seg.analogsignals[0].shape)  # this is N
+    >>> print(seg.analogsignals[0].shape)  # this is (N, M)
     >>> seg = reader.read_segment(lazy=True)
-    >>> print(seg.analogsignals[0].shape)  # this is zero, the AnalogSignal is empty
-    >>> print(seg.analogsignals[0].lazy_shape)  # this is N
-
-Some IOs support advanced forms of lazy loading, cascading or both (these features are currently limited to the HDF5 IO, which supports both forms).
-
-* For lazy loading, these IOs have a :meth:`load_lazy_object` method that takes a single parameter: a data object previously loaded by the same IO
-  in lazy mode. It returns the fully loaded object, without links to container objects (Segment etc.). Continuing the lazy example above::
-
-    >>> lazy_sig = seg.analogsignals[0]  # Empty signal
-    >>> full_sig = reader.load_lazy_object(lazy_sig)
-    >>> print(lazy_sig.lazy_shape, full_sig.shape)  # Identical
-    >>> print(lazy_sig.segment)  # Has the link to the object "seg"
-    >>> print(full_sig.segment)  # Does not have the link: None
-
-* For lazy cascading, IOs have a :meth:`load_lazy_cascade` method. This method is not called directly when interacting with the IO, but its
-  presence can be used to check if an IO supports lazy cascading. To use lazy cascading, the cascade parameter is set to ``'lazy'``::
-
-    >>> block = reader.read(cascade='lazy')
-
-  You do not have to do anything else, lazy cascading is now active for the object you just loaded. You can interact with the object in the same way
-  as if it was loaded with ``cascade=True``. However, only the objects that are actually accessed are loaded as soon as they are needed::
-
-    >>> print(block.channelindexes[0].name)  # The first ChannelIndex is loaded
-    >>> print(block.segments[0].analogsignals[1])  # The first Segment and its second AnalogSignal are loaded
-
-  Once an object has been loaded with lazy cascading, it stays in memory::
-
-    >>> print(block.segments[0].analogsignals[0])  # The first Segment is already in memory, its first AnalogSignal is loaded
-
+    >>> print(seg.analogsignals[0].shape)  # this is 0, the AnalogSignal is empty
+    >>> print(seg.analogsignals[0].lazy_shape)  # this is (N, M)
 
 .. _neo_io_API:
 
@@ -177,7 +143,6 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
     - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
-    - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports.
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 

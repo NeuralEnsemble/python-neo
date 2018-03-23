@@ -12,9 +12,9 @@ Other versions have not been tested.
 This IO is developed thanks to the header file downloadable from:
 http://www.plexon.com/software-downloads
 
-This IO has been rewritten in 2017 and this was a hudge pain because
-the underlying file format is really unefficient (for not saying stupid).
-The rewritte is now based on numpy dtype and not on python struct.
+This IO was rewritten in 2017 and this was a huge pain because
+the underlying file format is really inefficient.
+The rewrite is now based on numpy dtype and not on Python struct.
 This should be faster.
 If one day, somebody use it, consider to offer me a beer.
 
@@ -46,7 +46,7 @@ class PlexonRawIO(BaseRawIO):
 
     def _parse_header(self):
 
-        #global header
+        # global header
         with open(self.filename, 'rb') as fid:
             offset0 = 0
             global_header = read_as_dict(fid, GlobalHeader, offset=offset0)
@@ -101,12 +101,12 @@ class PlexonRawIO(BaseRawIO):
         self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
             2 ** 32 + bl_header['TimeStamp']
 
-        #... and finalize them in self._data_blocks
+        # ... and finalize them in self._data_blocks
         # for a faster acces depending on type (1, 4, 5)
         self._data_blocks = {}
         dt_base = [('pos', 'int64'), ('timestamp', 'int64'), ('size', 'int64')]
         dtype_by_bltype = {
-            #Spikes and waveforms
+            # Spikes and waveforms
             1: np.dtype(dt_base + [('unit_id', 'uint16'), ('n1', 'uint16'), ('n2', 'uint16'), ]),
             # Events
             4: np.dtype(dt_base + [('label', 'uint16'), ]),

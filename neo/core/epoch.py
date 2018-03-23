@@ -151,6 +151,22 @@ class Epoch(BaseNeo, pq.Quantity):
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
+
+    def rescale(self, units):
+        '''
+        Return a copy of the :class:`Epoch` converted to the specified
+        units
+        '''
+        if self.dimensionality == pq.quantity.validate_dimensionality(units):
+            return self.copy()
+        obj = Epoch(times=self.times.rescale(units), durations=self.durations, labels=self.labels,
+                    units=units, name=self.name, file_origin=self.file_origin,
+                    description=self.description,
+                    **self.annotations)
+        obj.segment = self.segment
+
+        return obj
+
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.

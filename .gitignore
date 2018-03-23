@@ -13,6 +13,8 @@
 .settings
 *.tmp*
 .idea
+*.swp
+*.swo
 
 # Compiled source #
 ###################

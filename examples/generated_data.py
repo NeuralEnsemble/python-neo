@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 import neo
 
 
-def generate_block(n_segments=3, n_channels=8, n_units=3,
+def generate_block(n_segments=3, n_channels=4, n_units=3,
                    data_samples=1000, feature_samples=100):
     """
     Generate a block with a single recording channel group and a number of
@@ -21,53 +21,48 @@ def generate_block(n_segments=3, n_channels=8, n_units=3,
     """
     feature_len = feature_samples / data_samples
 
-    # Create container and grouping objects
-    segments = [neo.Segment(index=i) for i in range(n_segments)]
-
-    chx = neo.ChannelIndex(index =1, name='T0')
-
-    for i in range(n_channels):
-        rc = neo.RecordingChannel(name='C%d' % i, index=i)
-        rc.channelindexes = [chx]
-        chx.recordingchannels.append(rc)
-
-    units = [neo.Unit('U%d' % i) for i in range(n_units)]
-    chx.units = units
-
+    # Create Block to contain all generated data
     block = neo.Block()
-    block.segments = segments
-    block.channel_indexes = [chx]
+
+    # Create multiple Segments
+    block.segments = [neo.Segment(index=i) for i in range(n_segments)]
+    # Create multiple ChannelIndexes
+    block.channel_indexes = [neo.ChannelIndex(name='C%d' % i, index=i) for i in range(n_channels)]
+
+    # Attach multiple Units to each ChannelIndex
+    for channel_idx in block.channel_indexes:
+        channel_idx.units = [neo.Unit('U%d' % i) for i in range(n_units)]
 
     # Create synthetic data
-    for seg in segments:
+    for seg in block.segments:
         feature_pos = np.random.randint(0, data_samples - feature_samples)
 
         # Analog signals: Noise with a single sinewave feature
         wave = 3 * np.sin(np.linspace(0, 2 * np.pi, feature_samples))
-        for rc in chx.recordingchannels:
+        for channel_idx in block.channel_indexes:
             sig = np.random.randn(data_samples)
             sig[feature_pos:feature_pos + feature_samples] += wave
 
             signal = neo.AnalogSignal(sig * pq.mV, sampling_rate=1 * pq.kHz)
             seg.analogsignals.append(signal)
-            rc.analogsignals.append(signal)
+            channel_idx.analogsignals.append(signal)
 
-        # Spike trains: Random spike times with elevated rate in short period
-        feature_time = feature_pos / data_samples
-        for u in units:
-            random_spikes = np.random.rand(20)
-            feature_spikes = np.random.rand(5) * feature_len + feature_time
-            spikes = np.hstack([random_spikes, feature_spikes])
+            # Spike trains: Random spike times with elevated rate in short period
+            feature_time = feature_pos / data_samples
+            for u in channel_idx.units:
+                random_spikes = np.random.rand(20)
+                feature_spikes = np.random.rand(5) * feature_len + feature_time
+                spikes = np.hstack([random_spikes, feature_spikes])
 
-            train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
-            seg.spiketrains.append(train)
-            u.spiketrains.append(train)
+                train = neo.SpikeTrain(spikes * pq.s, 1 * pq.s)
+                seg.spiketrains.append(train)
+                u.spiketrains.append(train)
 
     block.create_many_to_one_relationship()
     return block
 
-block = generate_block()
 
+block = generate_block()
 
 # In this example, we treat each segment in turn, averaging over the channels
 # in each:
@@ -86,22 +81,21 @@ for seg in block.segments:
 # averaging over trials. For example, perhaps you wish to see which physical
 # location produces the strongest response, and each stimulus was the same:
 
-# We assume that our block has only 1 ChannelIndex and each
-# RecordingChannel only has 1 AnalogSignal.
-chx = block.channel_indexes[0]
-for rc in chx.recordingchannels:
-    print("Analysing channel %d: %s" % (rc.index, rc.name))
+# There are multiple ChannelIndex objects connected to the block, each
+# corresponding to a a physical electrode
+for channel_idx in block.channel_indexes:
+    print("Analysing channel %d: %s" % (channel_idx.index, channel_idx.name))
 
-    siglist = rc.analogsignals
+    siglist = channel_idx.analogsignals
     time_points = siglist[0].times
     avg = np.mean(siglist, axis=0)  # Average over signals of RecordingChannel
 
     plt.figure()
     plt.plot(time_points, avg)
-    plt.title("Average response on channel %d" % rc.index)
+    plt.title("Average response on channel %d" % channel_idx.index)
 
 # There are three ways to access the spike train data: by Segment,
-# by RecordingChannel or by Unit.
+# by ChannelIndex or by Unit.
 
 # By Segment. In this example, each Segment represents data from one trial,
 # and we want a peristimulus time histogram (PSTH) for each trial from all
