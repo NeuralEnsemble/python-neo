@@ -1124,31 +1124,13 @@ class BlackrockRawIO(BaseRawIO):
         if self.__nev_spec == '2.3':
             nonempty_nsx_segments = {}
             list_nonempty_nsx_segments = []
-            nev_relevant_nsx_segments = {}
-            relevant_segs = self._nb_segment_nev
-            last_k = list(self.__nsx_data_header[nsx_nb].keys())[0]
-            for k, v in self.__nsx_data_header[nsx_nb].items():
-                old_ts = self.__nsx_data_header[nsx_nb][last_k]['timestamp'] + \
-                        self.__nsx_data_header[nsx_nb][last_k]['nb_data_points'] * \
-                        self.__nsx_basic_header[nsx_nb]['period']
-                print(old_ts)
-                print(v['timestamp'])
-                last_k = k
+            nb_possible_nev_segments = self._nb_segment_nev
 
-                # Nonempty segments that were created by pressing 'Reset'
-                # When pressing 'Pause' time just goes on, so no need for finding segment in nev
+            for k, v in sorted(self.__nsx_data_header[nsx_nb].items()):
+                # Nonempty segments in nsX that need to be distinguishable in nev data
                 if v['nb_data_points'] > 1:
-
                     nonempty_nsx_segments[k] = v
                     list_nonempty_nsx_segments.append(v)
-
-                    if not v['timestamp'] > old_ts:
-                        nev_relevant_nsx_segments[k] = v
-
-            # consistency check: same number of segments for nsx and nev data
-            assert self._nb_segment_nev == len(nev_relevant_nsx_segments), \
-                ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
-                 'ns{0} file.'.format(self.nsx_to_load, self._nb_segment_nev, self._nb_segment))
 
             for k, (data, ev_ids) in self.nev_data.items():
                 add = 0
@@ -1161,8 +1143,8 @@ class BlackrockRawIO(BaseRawIO):
                     # If a next segment exists, check if spikes actually belong to that
                     if ev_ids[i] < len(list_nonempty_nsx_segments) - 1:
                         next_nsx_stamp = list_nonempty_nsx_segments[ev_ids[i]+1]['timestamp']
-                        end_of_current_nsx_seg = list_nonempty_nsx_segments[ev_ids[i]]['timestamp'
-                            ] + list_nonempty_nsx_segments[ev_ids[i]][
+                        end_of_current_nsx_seg = list_nonempty_nsx_segments[ev_ids[i]][
+                            'timestamp'] + list_nonempty_nsx_segments[ev_ids[i]][
                             'nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
 
                         # If spike is actually in next nsX segment,
@@ -1170,9 +1152,15 @@ class BlackrockRawIO(BaseRawIO):
                         # and increment number of segments in nev
                         if nev_stamp > next_nsx_stamp > end_of_current_nsx_seg:
                             add += 1
-                            relevant_segs += 1
+                            # TODO: Make sure that spikes are always in one single list
+                            nb_possible_nev_segments += 1
 
-            new_nev_segment_id_mapping = dict(zip(range(relevant_segs),
+            # consistency check: same number of segments for nsx and nev data
+            assert nb_possible_nev_segments == len(nonempty_nsx_segments), \
+                ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
+                 'ns{0} file.'.format(self.nsx_to_load, self._nb_segment_nev, self._nb_segment))
+
+            new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments),
                                                   sorted(list(nonempty_nsx_segments))))
             print(new_nev_segment_id_mapping)
 
