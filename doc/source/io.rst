@@ -120,7 +120,7 @@ In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.
 The lazy option will be removed in future Neo versions. Similar functionality will be
-implemented using ProxyObjects.
+implemented using proxy objects.
 
 Example of lazy loading::
 
