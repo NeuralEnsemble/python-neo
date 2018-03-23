@@ -8,9 +8,8 @@ import logging
 
 logging_handler = logging.StreamHandler()
 
-
 from neo.core import *
-#~ import neo.rawio
+# ~ import neo.rawio
 from neo.io import *
 
 from neo.version import version as __version__

@@ -23,16 +23,15 @@ try:
     import neuroshare as ns
 except ImportError as err:
     print(err)
-    #print('\n neuroshare library not found, loading data will not work!' )
-    #print('\n be sure to install the library found at:')
-    #print('\n www.http://pythonhosted.org/neuroshare/')
+    # print('\n neuroshare library not found, loading data will not work!' )
+    # print('\n be sure to install the library found at:')
+    # print('\n www.http://pythonhosted.org/neuroshare/')
 
 else:
     pass
-    #print('neuroshare library successfully imported')
+    # print('neuroshare library successfully imported')
 
-
-#import BaseIO
+# import BaseIO
 from neo.io.baseio import BaseIO
 
 # import objects from neo.core
@@ -41,7 +40,6 @@ from neo.core import Segment, AnalogSignal, SpikeTrain, Event, Epoch
 
 # create an object based on BaseIO
 class NeuroshareapiIO(BaseIO):
-
     # setting some class parameters
     is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
@@ -54,14 +52,13 @@ class NeuroshareapiIO(BaseIO):
     # This class is not able to write objects
     writeable_objects = []
 
-
-#    # This is for GUI stuff : a definition for parameters when reading.
-#    # This dict should be keyed by object (`Block`). Each entry is a list
-#    # of tuple. The first entry in each tuple is the parameter name. The
-#    # second entry is a dict with keys 'value' (for default value),
-#    # and 'label' (for a descriptive name).
-#    # Note that if the highest-level object requires parameters,
-#    # common_io_test will be skipped.
+    #    # This is for GUI stuff : a definition for parameters when reading.
+    #    # This dict should be keyed by object (`Block`). Each entry is a list
+    #    # of tuple. The first entry in each tuple is the parameter name. The
+    #    # second entry is a dict with keys 'value' (for default value),
+    #    # and 'label' (for a descriptive name).
+    #    # Note that if the highest-level object requires parameters,
+    #    # common_io_test will be skipped.
     read_params = {
         Segment: [
             ("segment_duration", {"value": 0., "label": "Segment size (s.)"}),
@@ -72,7 +69,7 @@ class NeuroshareapiIO(BaseIO):
             #                {"value" : 3, "label" : "Num of spiketrains"}),
         ],
     }
-#
+    #
     # do not supported write so no GUI stuff
     write_params = None
 
@@ -87,7 +84,7 @@ class NeuroshareapiIO(BaseIO):
         """
         Arguments:
             filename : the filename
-        The init function will run automatically upon calling of the class, as 
+        The init function will run automatically upon calling of the class, as
         in: test = MultichannelIO(filename = filetoberead.mcd), therefore the first
         operations with the file are set here, so that the user doesn't have to
         remember to use another method, than the ones defined in the NEO library
@@ -131,7 +128,7 @@ class NeuroshareapiIO(BaseIO):
             # segment
             for entity in self.fd.entities:
                 # if entity is analog and not the digital line recording
-                #(stored as analog in neuroshare files)
+                # (stored as analog in neuroshare files)
                 if entity.entity_type == analogID and entity.label[0:4] != "digi":
                     # get the electrode number
                     self.metadata["elecChannels"].append(entity.label[-4:])
@@ -161,20 +158,20 @@ class NeuroshareapiIO(BaseIO):
                     self.metadata["spkChanId"].append(entity.id)
                     self.metadata["num_spkChans"] += 1
 
-    # function to create a block and read in a segment
-#    def create_block(self,
-#
-#                     ):
-#
-#        blk=Block(name = self.fileName+"_segment:",
-#                  file_datetime = str(self.metadata_raw["Time_Day"])+"/"+
-#                                  str(self.metadata_raw["Time_Month"])+"/"+
-#                                  str(self.metadata_raw["Time_Year"])+"_"+
-#                                  str(self.metadata_raw["Time_Hour"])+":"+
-#                                  str(self.metadata_raw["Time_Min"]))
-#
-#        blk.rec_datetime = blk.file_datetime
-#        return blk
+                    # function to create a block and read in a segment
+                #    def create_block(self,
+                #
+                #                     ):
+                #
+                #        blk=Block(name = self.fileName+"_segment:",
+                #                  file_datetime = str(self.metadata_raw["Time_Day"])+"/"+
+                #                                  str(self.metadata_raw["Time_Month"])+"/"+
+                #                                  str(self.metadata_raw["Time_Year"])+"_"+
+                #                                  str(self.metadata_raw["Time_Hour"])+":"+
+                #                                  str(self.metadata_raw["Time_Min"]))
+                #
+                #        blk.rec_datetime = blk.file_datetime
+                #        return blk
 
     # create function to read segment
     def read_segment(self,
@@ -227,7 +224,7 @@ class NeuroshareapiIO(BaseIO):
             # create event object for each trigger/bit found
             eva = self.read_eventarray(channel_index=self.metadata["triggersId"][i],
                                        segment_duration=segment_duration,
-                                       t_start=t_start,)
+                                       t_start=t_start, )
             # add event object to segment
             seg.eventarrays += [eva]
         # read epochs (digital events with duration)
@@ -235,7 +232,7 @@ class NeuroshareapiIO(BaseIO):
             # create event object for each trigger/bit found
             epa = self.read_epocharray(channel_index=self.metadata["digiEpochId"][i],
                                        segment_duration=segment_duration,
-                                       t_start=t_start,)
+                                       t_start=t_start, )
             # add event object to segment
             seg.epocharrays += [epa]
         # read nested spiketrain
@@ -372,7 +369,7 @@ class NeuroshareapiIO(BaseIO):
         # get the last index to read, using segment duration and t_start
         endat = trigEntity.get_index_by_time(
             float(segment_duration + t_start), -1)  # -1 means last index before time
-        #numIndx = endat-startat
+        # numIndx = endat-startat
         # run through specified intervals in entity
         for i in range(startat, endat + 1, 1):  # trigEntity.item_count):
             # get in which digital bit was the trigger detected
@@ -386,7 +383,7 @@ class NeuroshareapiIO(BaseIO):
             if onOrOff == 1:
                 # append the time stamp to them empty list
                 tempTimeStamp.append(tempData)
-            # create an event array
+                # create an event array
         eva = Event(labels=np.array(tempNames, dtype="S"),
                     times=np.array(tempTimeStamp) * pq.s,
                     file_origin=self.filename,

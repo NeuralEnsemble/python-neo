@@ -415,7 +415,6 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
 
 class TestEventFunctions(unittest.TestCase):
-
     def test__pickle(self):
 
         event1 = Event(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),

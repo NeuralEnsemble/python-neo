@@ -539,7 +539,6 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
 
 class TestEpochFunctions(unittest.TestCase):
-
     def test__pickle(self):
 
         epoch1 = Epoch(np.arange(0, 30, 10) * pq.s,

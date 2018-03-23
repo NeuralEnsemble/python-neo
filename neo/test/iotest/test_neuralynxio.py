@@ -236,7 +236,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):
-
     def test_ncs(self):
         for session in self.files_to_test[1:2]:  # in the long run this should include all files
             dirname = self.get_filename_path(session)

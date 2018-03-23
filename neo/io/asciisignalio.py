@@ -49,7 +49,7 @@ class AsciiSignalIO(BaseIO):
 
     read_params = {
         Segment: [
-            ('delimiter', {'value':  '\t', 'possible': ['\t', ' ', ',', ';']}),
+            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
             ('usecols', {'value': None, 'type': int}),
             ('skiprows', {'value': 0}),
             ('timecolumn', {'value': None, 'type': int}),
@@ -61,7 +61,7 @@ class AsciiSignalIO(BaseIO):
     }
     write_params = {
         Segment: [
-            ('delimiter', {'value':  '\t', 'possible': ['\t', ' ', ',', ';']}),
+            ('delimiter', {'value': '\t', 'possible': ['\t', ' ', ',', ';']}),
             ('writetimecolumn', {'value': True, }),
         ]
     }

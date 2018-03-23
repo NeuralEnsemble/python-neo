@@ -94,7 +94,7 @@ class NeuroExplorerRawIO(BaseRawIO):
                 gain = entity_header['ADtoMV']
                 offset = entity_header['MVOffset']
                 group_id = 0
-                sig_channels.append((name, _id, sampling_rate, dtype,  units,
+                sig_channels.append((name, _id, sampling_rate, dtype, units,
                                      gain, offset, group_id))
                 self._sig_lengths.append(entity_header['NPointsWave'])
                 # sig t_start is the first timestamp if datablock
@@ -146,29 +146,29 @@ class NeuroExplorerRawIO(BaseRawIO):
         assert len(channel_indexes) == 1, 'only one channel by one channel'
         return self._sig_t_starts[channel_indexes[0]]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert len(channel_indexes) == 1, 'only one channel by one channel'
         channel_index = channel_indexes[0]
         entity_index = int(self.header['signal_channels'][channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
         nb_sample = entity_header['NPointsWave']
-        #offset = entity_header['offset']
-        #timestamps = self._memmap[offset:offset+n*4].view('int32')
-        #offset2 = entity_header['offset'] + n*4
-        #fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
+        # offset = entity_header['offset']
+        # timestamps = self._memmap[offset:offset+n*4].view('int32')
+        # offset2 = entity_header['offset'] + n*4
+        # fragment_starts = self._memmap[offset2:offset2+n*4].view('int32')
         offset3 = entity_header['offset'] + n * 4 + n * 4
         raw_signal = self._memmap[offset3:offset3 + nb_sample * 2].view('int16')
         raw_signal = raw_signal[slice(i_start, i_stop), None]  # 2D for compliance
         return raw_signal
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         nb_spike = entity_header['n']
         return nb_spike
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         entity_index = int(self.header['unit_channels'][unit_index]['id'])
         entity_header = self._entity_headers[entity_index]
         n = entity_header['n']
@@ -210,7 +210,7 @@ class NeuroExplorerRawIO(BaseRawIO):
         nb_event = entity_header['n']
         return nb_event
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         entity_index = int(self.header['event_channels'][event_channel_index]['id'])
         entity_header = self._entity_headers[entity_index]
 

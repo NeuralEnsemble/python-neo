@@ -3,9 +3,9 @@
 Reading from neuroscope format files.
 Ref: http://neuroscope.sourceforge.net/
 
-It is an old format from Buzsaki's lab 
+It is an old format from Buzsaki's lab
 
-Some old open datasets from spike sorting 
+Some old open datasets from spike sorting
 are still using this format.
 
 This only the signals.
@@ -46,24 +46,25 @@ class NeuroScopeRawIO(BaseRawIO):
         nb_channel = int(acq.find('nChannels').text)
         self._sampling_rate = float(acq.find('samplingRate').text)
         voltage_range = float(acq.find('voltageRange').text)
-        #offset = int(acq.find('offset').text)
+        # offset = int(acq.find('offset').text)
         amplification = float(acq.find('amplification').text)
 
         # find groups for channels
         channel_group = {}
-        for grp_index, xml_chx in enumerate(root.find('anatomicalDescription').find('channelGroups').findall('group')):
+        for grp_index, xml_chx in enumerate(
+                root.find('anatomicalDescription').find('channelGroups').findall('group')):
             for xml_rc in xml_chx:
                 channel_group[int(xml_rc.text)] = grp_index
 
         if nbits == 16:
             sig_dtype = 'int16'
-            gain = voltage_range / (2**16) / amplification / 1000.
-        #~ elif nbits==32:
+            gain = voltage_range / (2 ** 16) / amplification / 1000.
+            # ~ elif nbits==32:
             # Not sure if it is int or float
-            #~ dt = 'int32'
-            #~ gain  = voltage_range/2**32/amplification
+            # ~ dt = 'int32'
+            # ~ gain  = voltage_range/2**32/amplification
         else:
-            raise(NotImplementedError)
+            raise (NotImplementedError)
 
         self._raw_signals = np.memmap(filename + '.dat', dtype=sig_dtype,
                                       mode='r', offset=0).reshape(-1, nb_channel)
@@ -111,7 +112,7 @@ class NeuroScopeRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]

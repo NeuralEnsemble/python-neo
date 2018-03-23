@@ -30,7 +30,6 @@ import io
 
 
 class ElanRawIO(BaseRawIO):
-
     extensions = ['eeg']
     rawmode = 'one-file'
 
@@ -56,7 +55,7 @@ class ElanRawIO(BaseRawIO):
             r1 = re.findall('(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
             r2 = re.findall('(\d+):(\d+):(\d+)', l)
             r3 = re.findall('(\d+)-(\d+)-(\d+)', l)
-            YY, MM, DD, hh, mm, ss = (None, ) * 6
+            YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -128,7 +127,7 @@ class ElanRawIO(BaseRawIO):
             chan_id = c
 
             gain = (chan_info['max_physic'] - chan_info['min_physic']) / \
-                (chan_info['max_logic'] - chan_info['min_logic'])
+                   (chan_info['max_logic'] - chan_info['min_logic'])
             offset = - chan_info['min_logic'] * gain + chan_info['min_physic']
             gourp_id = 0
             sig_channels.append((chan_name, chan_id, self._sampling_rate, sig_dtype,
@@ -200,19 +199,19 @@ class ElanRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes=None):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         return 0
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_event_timestamps.size
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         timestamp = self._raw_event_timestamps
         labels = self._event_labels
         durations = None

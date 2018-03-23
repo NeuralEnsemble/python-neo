@@ -108,8 +108,8 @@ def merge_annotations(A, B):
             try:
                 merged[name] = merge_annotation(A[name], B[name])
             except BaseException as exc:
-                #exc.args += ('key %s' % name,)
-                #raise
+                # exc.args += ('key %s' % name,)
+                # raise
                 merged[name] = "MERGE CONFLICT"  # temporary hack
         else:
             merged[name] = A[name]

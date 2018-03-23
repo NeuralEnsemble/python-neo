@@ -78,7 +78,7 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
                         all([obj is not res for res in results])):
                     results.append(obj)
                 elif (key in obj.annotations and obj.annotations[key] == value and
-                        all([obj is not res for res in results])):
+                          all([obj is not res for res in results])):
                     results.append(obj)
 
     # keep only objects of the correct classes
@@ -460,7 +460,7 @@ class Container(BaseNeo):
         parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
             if (hasattr(child, parent_name) and
-                    getattr(child, parent_name) is None or force):
+                        getattr(child, parent_name) is None or force):
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
@@ -528,7 +528,7 @@ class Container(BaseNeo):
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
-                          self._multi_child_containers):
+                              self._multi_child_containers):
             lookup = dict((obj.name, obj) for obj in getattr(self, container))
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):

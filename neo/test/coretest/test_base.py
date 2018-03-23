@@ -24,11 +24,11 @@ from neo.core.baseneo import (BaseNeo, _check_annotations,
                               merge_annotations, merge_annotation)
 from neo.test.tools import assert_arrays_equal
 
-
 if sys.version_info[0] >= 3:
     _bytes = bytes
 
     long = int
+
 
     def bytes(s):
         return _bytes(s, encoding='ascii')
@@ -1069,15 +1069,19 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
 
     def test_my_class(self):
         '''test to make sure user defined class type data is rejected'''
+
         class Foo(object):
             pass
+
         value = Foo()
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
     def test_my_class_list(self):
         '''test to make sure user defined class type data is rejected'''
+
         class Foo(object):
             pass
+
         value = [Foo(), Foo(), Foo()]
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
