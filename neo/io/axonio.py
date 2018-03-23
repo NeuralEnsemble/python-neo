@@ -8,6 +8,14 @@ import quantities as pq
 
 
 class AxonIO(AxonRawIO, BaseFromRaw):
+    """
+    Class for reading data from pCLAMP and AxoScope
+    files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
+
+    - abf = Axon binary file
+    - atf is a text file based format from axon that could be
+      read by AsciiIO (but this file is less efficient.)
+    """
     _prefered_signal_group_mode = 'split-all'
 
     def __init__(self, filename):

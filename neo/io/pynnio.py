@@ -188,7 +188,7 @@ class BasePyNNIO(BaseIO):
 
 class PyNNNumpyIO(BasePyNNIO):
     """
-    Reads/writes data from/to PyNN NumpyBinaryFile format
+    (DEPRECATED) Reads/writes data from/to PyNN NumpyBinaryFile format
     """
     name = "PyNN NumpyBinaryFile"
     extensions = ['npz']
@@ -218,7 +218,7 @@ class PyNNNumpyIO(BasePyNNIO):
 
 class PyNNTextIO(BasePyNNIO):
     """
-    Reads/writes data from/to PyNN StandardTextFile format
+    (DEPRECATED) Reads/writes data from/to PyNN StandardTextFile format
     """
     name = "PyNN StandardTextFile"
     extensions = ['v', 'ras', 'gsyn']

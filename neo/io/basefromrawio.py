@@ -16,6 +16,7 @@ by inheritance of this class.
 from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
+import warnings
 import collections
 import logging
 import numpy as np
@@ -89,11 +90,17 @@ class BaseFromRaw(BaseIO):
         :param units_group_mode: 'split-all' or 'all-in-one'(default depend IO)
         This control behavior for grouping Unit in ChannelIndex:
             * 'split-all': each neo.Unit is assigned to a new neo.ChannelIndex
-            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex (global spike sorting for instance)
+            * 'all-in-one': all neo.Unit are grouped in the same neo.ChannelIndex
+              (global spike sorting for instance)
 
         :param load_waveforms: False by default. Control SpikeTrains.waveforms is None or not.
 
         """
+
+        if lazy:
+            warnings.warn(
+                "Lazy is deprecated and will be replaced by ProxyObject functionality.",
+                DeprecationWarning)
 
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
@@ -131,17 +138,20 @@ class BaseFromRaw(BaseIO):
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)
+                ch_names = all_channels[ind_abs]['name'].astype('S')
                 neo_channel_index = ChannelIndex(index=ind_within,
-                                        channel_names=all_channels[ind_abs]['name'].astype('S'),
-                                        channel_ids=all_channels[ind_abs]['id'],
-                                        name='Channel group {}'.format(i), **chidx_annotations)
+                                                 channel_names=ch_names,
+                                                 channel_ids=all_channels[ind_abs]['id'],
+                                                 name='Channel group {}'.format(i),
+                                                 **chidx_annotations)
 
                 bl.channel_indexes.append(neo_channel_index)
 
         # ChannelIndex and Unit
         # 2 case are possible in neo defifferent IO have choosen one or other:
-        #  * All units are group in the same ChannelIndex and indexes are all channels : 'all-in-one'
-        #  * Each units is assigned to one ChannelIndex : 'split-all'
+        #  * All units are grouped in the same ChannelIndex and indexes are all channels:
+        #    'all-in-one'
+        #  * Each units is assigned to one ChannelIndex: 'split-all'
         # This is kept for compatibility
         unit_channels = self.header['unit_channels']
         if units_group_mode == 'all-in-one':
@@ -210,6 +220,11 @@ class BaseFromRaw(BaseIO):
             All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
         """
 
+        if lazy:
+            warnings.warn(
+                "Lazy is deprecated and will be replaced by ProxyObject functionality.",
+                DeprecationWarning)
+
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
 
@@ -277,13 +292,17 @@ class BaseFromRaw(BaseIO):
                         i_start = None
 
                     raw_signal = self.get_analogsignal_chunk(block_index=block_index,
-                                            seg_index=seg_index, i_start=i_start, i_stop=i_stop,
-                                            channel_indexes=channel_indexes)
-                    float_signal = self.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
-                                                                    channel_indexes=channel_indexes)
+                                                             seg_index=seg_index, i_start=i_start,
+                                                             i_stop=i_stop,
+                                                             channel_indexes=channel_indexes)
+                    float_signal = self.rescale_signal_raw_to_float(
+                        raw_signal,
+                        dtype='float32',
+                        channel_indexes=channel_indexes)
 
-                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(channel_indexes,
-                                                                            signal_group_mode=signal_group_mode).items():
+                for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
+                        channel_indexes,
+                        signal_group_mode=signal_group_mode).items():
                     units = np.unique(signal_channels[ind_abs]['units'])
                     assert len(units) == 1
                     units = ensure_signal_units(units[0])
@@ -291,23 +310,27 @@ class BaseFromRaw(BaseIO):
                     if signal_group_mode == 'split-all':
                         # in that case annotations by channel is OK
                         chan_index = ind_abs[0]
-                        d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals'][chan_index]
+                        d = self.raw_annotations['blocks'][block_index]['segments'][seg_index][
+                            'signals'][chan_index]
                         annotations = dict(d)
                         if 'name' not in annotations:
                             annotations['name'] = signal_channels['name'][chan_index]
                     else:
                         # when channel are grouped by same unit
-                        # annotations are empty...
+                        # annotations have channel_names and channel_ids array
+                        # this will be moved in array annotations soon
                         annotations = {}
                         annotations['name'] = 'Channel bundle ({}) '.format(
                             ','.join(signal_channels[ind_abs]['name']))
+                        annotations['channel_names'] = signal_channels[ind_abs]['name']
+                        annotations['channel_ids'] = signal_channels[ind_abs]['id']
                     annotations = check_annotations(annotations)
                     if lazy:
-                        anasig = AnalogSignal(np.array([]), units=units,  copy=False,
+                        anasig = AnalogSignal(np.array([]), units=units, copy=False,
                                               sampling_rate=sr, t_start=sig_t_start, **annotations)
                         anasig.lazy_shape = (sig_size, len(ind_within))
                     else:
-                        anasig = AnalogSignal(float_signal[:, ind_within], units=units,  copy=False,
+                        anasig = AnalogSignal(float_signal[:, ind_within], units=units, copy=False,
                                               sampling_rate=sr, t_start=sig_t_start, **annotations)
                     seg.analogsignals.append(anasig)
 
@@ -315,9 +338,10 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             if not lazy and load_waveforms:
-                raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index, 
-                                    seg_index=seg_index, unit_index=unit_index,
-                                    t_start=t_start_, t_stop=t_stop_)
+                raw_waveforms = self.get_spike_raw_waveforms(block_index=block_index,
+                                                             seg_index=seg_index,
+                                                             unit_index=unit_index,
+                                                             t_start=t_start_, t_stop=t_stop_)
                 float_waveforms = self.rescale_waveforms_to_float(raw_waveforms, dtype='float32',
                                                                   unit_index=unit_index)
                 wf_units = ensure_signal_units(unit_channels['wf_units'][unit_index])
@@ -335,7 +359,8 @@ class BaseFromRaw(BaseIO):
                 wf_left_sweep = None
                 wf_sampling_rate = None
 
-            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
+            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][
+                unit_index]
             annotations = dict(d)
             if 'name' not in annotations:
                 annotations['name'] = unit_channels['name'][c]
@@ -343,13 +368,14 @@ class BaseFromRaw(BaseIO):
 
             if not lazy:
                 spike_timestamp = self.get_spike_timestamps(block_index=block_index,
-                                seg_index=seg_index, unit_index=unit_index,
-                                t_start=t_start_, t_stop=t_stop_)
+                                                            seg_index=seg_index,
+                                                            unit_index=unit_index,
+                                                            t_start=t_start_, t_stop=t_stop_)
                 spike_times = self.rescale_spike_timestamp(spike_timestamp, 'float64')
                 sptr = SpikeTrain(spike_times, units='s', copy=False,
-                                    t_start=seg_t_start, t_stop=seg_t_stop,
-                                    waveforms=waveforms, left_sweep=wf_left_sweep,
-                                    sampling_rate=wf_sampling_rate, **annotations)
+                                  t_start=seg_t_start, t_stop=seg_t_stop,
+                                  waveforms=waveforms, left_sweep=wf_left_sweep,
+                                  sampling_rate=wf_sampling_rate, **annotations)
             else:
                 nb = self.spike_count(block_index=block_index, seg_index=seg_index,
                                       unit_index=unit_index)
@@ -363,9 +389,10 @@ class BaseFromRaw(BaseIO):
         event_channels = self.header['event_channels']
         for chan_ind in range(len(event_channels)):
             if not lazy:
-                ev_timestamp, ev_raw_durations, ev_labels = self.get_event_timestamps(block_index=block_index,
-                                        seg_index=seg_index, event_channel_index=chan_ind,
-                                        t_start=t_start_, t_stop=t_stop_)
+                ev_timestamp, ev_raw_durations, ev_labels = self.get_event_timestamps(
+                    block_index=block_index,
+                    seg_index=seg_index, event_channel_index=chan_ind,
+                    t_start=t_start_, t_stop=t_stop_)
                 ev_times = self.rescale_event_timestamp(ev_timestamp, 'float64') * pq.s
                 if ev_raw_durations is None:
                     ev_durations = None
@@ -380,7 +407,8 @@ class BaseFromRaw(BaseIO):
                 ev_labels = np.array([], dtype='S')
                 ev_durations = np.array([]) * pq.s
 
-            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][chan_ind]
+            d = self.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][
+                chan_ind]
             annotations = dict(d)
             if 'name' not in annotations:
                 annotations['name'] = event_channels['name'][chan_ind]
@@ -404,7 +432,7 @@ class BaseFromRaw(BaseIO):
         return seg
 
     def _make_signal_channel_subgroups(self, channel_indexes,
-                                                signal_group_mode='group-by-same-units'):
+                                       signal_group_mode='group-by-same-units'):
         """
         For some RawIO channel are already splitted in groups.
         But in any cases, channel need to be splitted again in sub groups
@@ -435,12 +463,12 @@ class BaseFromRaw(BaseIO):
                 ind_abs = channel_indexes[ind_within]
                 groups[i] = (ind_within, ind_abs)
         else:
-            raise(NotImplementedError)
+            raise (NotImplementedError)
         return groups
 
 
-unit_convert = {'Volts': 'V',  'volts': 'V', 'Volt': 'V',
-                                'volt': 'V', ' Volt': 'V', 'microV': 'V'}
+unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
+                'volt': 'V', ' Volt': 'V', 'microV': 'V'}
 
 
 def ensure_signal_units(units):
@@ -451,7 +479,8 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
+        logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
+                        'instead'.format(units))
         units = ''
     return units
 
@@ -465,7 +494,7 @@ def check_annotations(annotations):
 
     if 'coordinates' in annotations:
         # some rawio expose some coordinates in annotations but is not standardized
-        #(x, y, z) or polar, at the moment it is more resonable to remove them
+        # (x, y, z) or polar, at the moment it is more resonable to remove them
         annotations.pop('coordinates')
 
     return annotations

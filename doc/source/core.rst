@@ -73,6 +73,10 @@ and an array, giving you access to all of the methods available for those object
 For example, you can pass a :py:class:`SpikeTrain` directly to the :py:func:`numpy.histogram`
 function, or an :py:class:`AnalogSignal` directly to the :py:func:`numpy.std` function.
 
+If you want to get a numpy.ndarray you use magnitude and rescale from quantities::
+
+   >>> np_sig = neo_analogsignal.rescale('mV').magnitude
+   >>> np_times = neo_analogsignal.times.rescale('s').magnitude
 
 Relationships between objects
 =============================
@@ -80,17 +84,17 @@ Relationships between objects
 Container objects like :py:class:`Block` or :py:class:`Segment` are gateways to
 access other objects. For example, a :class:`Block` can access a :class:`Segment`
 with::
-     
+
     >>> bl = Block()
     >>> bl.segments
     # gives a list of segments
 
 A :class:`Segment` can access the :class:`AnalogSignal` objects that it contains with::
-    
+
     >>> seg = Segment()
     >>> seg.analogsignals
     # gives a list of AnalogSignals
-    
+
 In the :ref:`neo_diagram` below, these *one to many* relationships are represented by cyan arrows.
 In general, an object can access its children with an attribute *childname+s* in lower case, e.g.
 
@@ -127,7 +131,7 @@ In some cases, a one-to-many relationship is sufficient. Here is a simple exampl
 
     from neo import Block, ChannelIndex
     bl = Block()
-    
+
     # the four tetrodes
     for i in range(4):
         chx = ChannelIndex(name='Tetrode %d' % i,
@@ -183,11 +187,6 @@ Relationship:
 
 For more details, see the :doc:`api_reference`.
 
-    
-
-
-
-
 Initialization
 ==============
 
@@ -195,7 +194,8 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`. 
+      Note : Neo annotations are not the same as the *__annotations__* attribute introduced in Python 3.6.
 
 Example: SpikeTrain
 -------------------
@@ -231,7 +231,7 @@ Finally, let's consider "additional arguments". These are the ones you define fo
     >>> st = neo.SpikeTrain(times=[3, 4, 5], units='sec', t_stop=10.0, rat_name='Fred')
     >>> print(st.annotations)
     {'rat_name': 'Fred'}
-    
+
 Because ``rat_name`` is not part of the Neo object model, it is placed in the dict :py:attr:`annotations`. This dict can be modified as necessary by your code.
 
 Annotations
@@ -248,8 +248,6 @@ possessed by all Neo core objects, e.g.::
 
 Since annotations may be written to a file or database, there are some
 limitations on the data types of annotations: they must be "simple" types or
-containers (lists, dicts, NumPy arrays) of simple types, where the simple types
+containers (lists, dicts, tuples, NumPy arrays) of simple types, where the simple types
 are ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and
 ``datetime``.
-
-See :ref:`specific_annotations`

@@ -2,13 +2,41 @@
 Neo 0.6.0 release notes
 =======================
 
-DD MM 2018
+XXth March 2018
 
-  * remove cascade support from all IOs
-  * remove lazy loading axcept for IOs based on rawio
+This is a draft.
+
+Major changes:
+  * Introduced :mod:`neo.rawio`: a low-level reader for various data formats
+  * Added continuous integration for all IOs using CircleCI
+    (previously only :mod:`neo.core` was tested, using Travis CI)
+  * Moved the test file repository to https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+    - this makes it easier for people to contribute new files for testing.
+
+Other important changes:
+  * Added :func:`time_index()` and :func:`splice()` methods to :class:`AnalogSignal`
+  * IO fixes and improvements: Blackrock, TDT, Axon, Spike2, Brainvision, Neuralynx
+  * Implemented `__deepcopy__` for all data classes
+  * New IO: BCI2000
+  * Lots of PEP8 fixes!
+  * Implemented `__getitem__` for :class:`Epoch`
+  * Removed "cascade" support from all IOs
+  * Removed lazy loading except for IOs based on rawio
+  * Marked lazy option as deprecated
+  * Added :func:`time_slice` in read_segment() for IOs based on rawio
+  * Made :attr:`SpikeTrain.times` return a :class:`Quantity` instead of a :class:`SpikeTrain`
+  * Raise a :class:`ValueError` if ``t_stop`` is earlier than ``t_start`` when creating an empty :class:`SpikeTrain`
+  * Changed filter behaviour to return all objects if no filter parameters are specified
+  * Fix pickling/unpickling of :class:`Events`
+
+Deprecated IO classes:
+    * :class:`KlustaKwikIO` (use :class:`KwikIO` instead)
+    * :class:`PyNNTextIO`, :class:`PyNNNumpyIO`
+
+(Full `list of closed issues`_)
+
+Thanks to Björn Müller, Andrew Davison, Achilleas Koutsou, Chadwick Boulay, Julia Sprenger,
+ Matthieu Senoville, Michael Denker and especially Samuel Garcia for their contributions to this release.
 
 
-
-
-
-
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.6.0+is%3Aclosed
