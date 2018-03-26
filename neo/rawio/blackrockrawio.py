@@ -63,6 +63,7 @@ import datetime
 import os
 import re
 import warnings
+import time
 
 import numpy as np
 import quantities as pq
@@ -399,6 +400,34 @@ class BlackrockRawIO(BaseRawIO):
                     min_nev_time = min(min_nev_time, t)
             self._sigs_t_starts = [None]
             self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
+
+            # Not working at all!!!
+            time_a = time.time()
+            max_nev_times = {}
+            min_nev_times = {}
+            for k, (data, ev_ids) in self.nev_data.items():
+                print(ev_ids)
+                for i in np.unique(ev_ids):
+                    #print(data)
+                    mask = (ev_ids == i)
+                    curr_data = data[mask]
+                    if curr_data.size > 0:
+                        print(curr_data[:]['timestamp'])
+                        print("TEEEST", max(curr_data['timestamp']))
+                        if max(curr_data['timestamp']) >= max_nev_times.get(i, 0):
+                            max_nev_times[i] = max(curr_data['timestamp'])
+                        elif min(curr_data['timestamp']) <= min_nev_times.get(i,
+                                                                            max_nev_times[i]):
+                            min_nev_times[i] = min(curr_data['timestamp'])
+                print(time.time() - time_a) # About 23 ms for the whole block
+
+            self._sigs_t_starts = [None]
+            resolution = self.__nev_basic_header['timestamp_resolution']
+            self._seg_t_starts, self._seg_t_stops = [v / resolution for k, v in
+                                                     sorted(min_nev_times.items())],\
+                                                    [v / resolution for k, v in
+                                                     sorted(max_nev_times.items())]
+        self._nb_segment = len(self._seg_t_starts)
         print(self._nb_segment)
 
         # finalize header
@@ -1121,6 +1150,10 @@ class BlackrockRawIO(BaseRawIO):
         """
         Ensure matching ids of segments detected in nsx and nev file for version 2.3
         """
+        if not self._avail_nsx:
+            warnings.warn("No nsX available so it cannot be checked whether "
+                          "the segments in nev are all correct", UserWarning)
+            return
         if self.__nev_spec == '2.3':
             nonempty_nsx_segments = {}
             list_nonempty_nsx_segments = []
