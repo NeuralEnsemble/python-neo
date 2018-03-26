@@ -37,11 +37,9 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
-
 from neo.io.baseio import BaseIO
 from neo.core import (Block, Segment, AnalogSignal, Event, Epoch, SpikeTrain,
                       objectnames, class_by_name)
-
 
 classname_lower_to_upper = {}
 for k in objectnames:
@@ -281,24 +279,24 @@ class NeoMatlabIO(BaseIO):
         for i, attr in enumerate(ob._all_attrs):
             attrname, attrtype = attr[0], attr[1]
 
-            #~ if attrname =='':
-            #~ struct['array'] = ob.magnitude
-            #~ struct['units'] = ob.dimensionality.string
-            #~ continue
+            # ~ if attrname =='':
+            # ~ struct['array'] = ob.magnitude
+            # ~ struct['units'] = ob.dimensionality.string
+            # ~ continue
 
             if (hasattr(ob, '_quantity_attr') and
-                    ob._quantity_attr == attrname):
+                        ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
 
-            if not(attrname in ob.annotations or hasattr(ob, attrname)):
+            if not (attrname in ob.annotations or hasattr(ob, attrname)):
                 continue
             if getattr(ob, attrname) is None:
                 continue
 
             if attrtype == pq.Quantity:
-                #ndim = attr[2]
+                # ndim = attr[2]
                 struct[attrname] = getattr(ob, attrname).magnitude
                 struct[attrname + '_units'] = getattr(
                     ob, attrname).dimensionality.string
@@ -312,18 +310,18 @@ class NeoMatlabIO(BaseIO):
     def create_ob_from_struct(self, struct, classname):
         cl = class_by_name[classname]
         # check if hinerits Quantity
-        #~ is_quantity = False
-        #~ for attr in cl._necessary_attrs:
-        #~ if attr[0] == '' and attr[1] == pq.Quantity:
-        #~ is_quantity = True
-        #~ break
-        #~ is_quantiy = hasattr(cl, '_quantity_attr')
+        # ~ is_quantity = False
+        # ~ for attr in cl._necessary_attrs:
+        # ~ if attr[0] == '' and attr[1] == pq.Quantity:
+        # ~ is_quantity = True
+        # ~ break
+        # ~ is_quantiy = hasattr(cl, '_quantity_attr')
 
-        #~ if is_quantity:
+        # ~ if is_quantity:
         if hasattr(cl, '_quantity_attr'):
             quantity_attr = cl._quantity_attr
             arr = getattr(struct, quantity_attr)
-            #~ data_complement = dict(units=str(struct.units))
+            # ~ data_complement = dict(units=str(struct.units))
             data_complement = dict(units=str(
                 getattr(struct, quantity_attr + '_units')))
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
@@ -366,7 +364,7 @@ class NeoMatlabIO(BaseIO):
                 # linked with another field
                 continue
             if (hasattr(cl, '_quantity_attr') and
-                    cl._quantity_attr == attrname):
+                        cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)

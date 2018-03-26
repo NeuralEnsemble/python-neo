@@ -147,7 +147,7 @@ class TestAnalogSignalArrayConstructor(unittest.TestCase):
         data[3, 0] = 99 * pq.mV
         self.assertEqual(signal[3, 0], 99000 * pq.uV)
 
-    # signal must not be 1D - should raise Exception if 1D
+        # signal must not be 1D - should raise Exception if 1D
 
 
 class TestAnalogSignalArrayProperties(unittest.TestCase):
@@ -221,10 +221,10 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
         for i, signal in enumerate(self.signals):
             prepr = repr(signal)
             targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % \
-                (repr(self.data[i]),
-                 self.t_start[i],
-                 self.t_start[i] + len(self.data[i]) / self.rates[i],
-                 self.rates[i])
+                   (repr(self.data[i]),
+                    self.t_start[i],
+                    self.t_start[i] + len(self.data[i]) / self.rates[i],
+                    self.rates[i])
             self.assertEqual(prepr, targ)
 
 
@@ -387,7 +387,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1.min(), 0 * pq.nA)
         self.assertEqual(self.signal1.mean(), 27 * pq.nA)
         self.assertEqual(self.signal1.std(), self.signal1.magnitude.std() * pq.nA)
-        self.assertEqual(self.signal1.var(), self.signal1.magnitude.var() * pq.nA**2)
+        self.assertEqual(self.signal1.var(), self.signal1.magnitude.var() * pq.nA ** 2)
 
     def test__rescale_same(self):
         result = self.signal1.copy()
@@ -541,7 +541,6 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         t2 = 4 * pq.s + 10.0 * pq.ms
 
         for t_start, t_stop in [(t1, None), (None, None), (None, t2)]:
-
             t_start_targ = t1 if t_start is not None else self.signal2.t_start
             t_stop_targ = t2 if t_stop is not None else self.signal2.t_stop
 

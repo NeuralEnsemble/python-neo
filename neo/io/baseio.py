@@ -143,56 +143,56 @@ class BaseIO(object):
 
     ######## All individual read methods #######################
     def read_block(self, **kargs):
-        assert(Block in self.readable_objects), read_error
+        assert (Block in self.readable_objects), read_error
 
     def read_segment(self, **kargs):
-        assert(Segment in self.readable_objects), read_error
+        assert (Segment in self.readable_objects), read_error
 
     def read_unit(self, **kargs):
-        assert(Unit in self.readable_objects), read_error
+        assert (Unit in self.readable_objects), read_error
 
     def read_spiketrain(self, **kargs):
-        assert(SpikeTrain in self.readable_objects), read_error
+        assert (SpikeTrain in self.readable_objects), read_error
 
     def read_analogsignal(self, **kargs):
-        assert(AnalogSignal in self.readable_objects), read_error
+        assert (AnalogSignal in self.readable_objects), read_error
 
     def read_irregularlysampledsignal(self, **kargs):
-        assert(IrregularlySampledSignal in self.readable_objects), read_error
+        assert (IrregularlySampledSignal in self.readable_objects), read_error
 
     def read_channelindex(self, **kargs):
-        assert(ChannelIndex in self.readable_objects), read_error
+        assert (ChannelIndex in self.readable_objects), read_error
 
     def read_event(self, **kargs):
-        assert(Event in self.readable_objects), read_error
+        assert (Event in self.readable_objects), read_error
 
     def read_epoch(self, **kargs):
-        assert(Epoch in self.readable_objects), read_error
+        assert (Epoch in self.readable_objects), read_error
 
     ######## All individual write methods #######################
     def write_block(self, bl, **kargs):
-        assert(Block in self.writeable_objects), write_error
+        assert (Block in self.writeable_objects), write_error
 
     def write_segment(self, seg, **kargs):
-        assert(Segment in self.writeable_objects), write_error
+        assert (Segment in self.writeable_objects), write_error
 
     def write_unit(self, ut, **kargs):
-        assert(Unit in self.writeable_objects), write_error
+        assert (Unit in self.writeable_objects), write_error
 
     def write_spiketrain(self, sptr, **kargs):
-        assert(SpikeTrain in self.writeable_objects), write_error
+        assert (SpikeTrain in self.writeable_objects), write_error
 
-    def write_analogsignal(self, anasig,  **kargs):
-        assert(AnalogSignal in self.writeable_objects), write_error
+    def write_analogsignal(self, anasig, **kargs):
+        assert (AnalogSignal in self.writeable_objects), write_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
-        assert(IrregularlySampledSignal in self.writeable_objects), write_error
+        assert (IrregularlySampledSignal in self.writeable_objects), write_error
 
     def write_channelindex(self, chx, **kargs):
-        assert(ChannelIndex in self.writeable_objects), write_error
+        assert (ChannelIndex in self.writeable_objects), write_error
 
     def write_event(self, ev, **kargs):
-        assert(Event in self.writeable_objects), write_error
+        assert (Event in self.writeable_objects), write_error
 
     def write_epoch(self, ep, **kargs):
-        assert(Epoch in self.writeable_objects), write_error
+        assert (Epoch in self.writeable_objects), write_error

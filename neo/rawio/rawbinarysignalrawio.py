@@ -99,7 +99,7 @@ class RawBinarySignalRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]

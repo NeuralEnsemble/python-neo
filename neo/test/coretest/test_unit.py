@@ -535,20 +535,20 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
         assert_same_sub_schema(res5, targ)
 
-    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    # def test__pretty(self):
-    #     res = pretty(self.unit1)
-    #     ann = get_annotations()
-    #     ann['seed'] = self.seed1
-    #     ann = pretty(ann).replace('\n ', '\n  ')
-    #     targ = ("Unit with " +
-    #             ("%s spiketrains\n" % len(self.trains1a)) +
-    #             ("name: '%s'\ndescription: '%s'\n" % (self.unit1.name,
-    #                                                   self.unit1.description)
-    #              ) +
-    #             ("annotations: %s" % ann))
-    #
-    #     self.assertEqual(res, targ)
+        # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+        # def test__pretty(self):
+        #     res = pretty(self.unit1)
+        #     ann = get_annotations()
+        #     ann['seed'] = self.seed1
+        #     ann = pretty(ann).replace('\n ', '\n  ')
+        #     targ = ("Unit with " +
+        #             ("%s spiketrains\n" % len(self.trains1a)) +
+        #             ("name: '%s'\ndescription: '%s'\n" % (self.unit1.name,
+        #                                                   self.unit1.description)
+        #              ) +
+        #             ("annotations: %s" % ann))
+        #
+        #     self.assertEqual(res, targ)
 
 
 if __name__ == "__main__":

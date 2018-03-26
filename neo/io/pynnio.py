@@ -27,7 +27,6 @@ try:
 except NameError:
     PY2 = False
 
-
 UNITS_MAP = {
     'spikes': pq.ms,
     'v': pq.mV,
@@ -72,7 +71,8 @@ class BasePyNNIO(BaseIO):
     def _extract_signals(self, data, metadata):
 
         arr = numpy.vstack(self._extract_array(data, channel_index)
-                           for channel_index in range(metadata['first_index'], metadata['last_index'] + 1))
+                           for channel_index in
+                           range(metadata['first_index'], metadata['last_index'] + 1))
         if len(arr) > 0:
             signal = AnalogSignal(arr.T,
                                   units=self._determine_units(metadata),

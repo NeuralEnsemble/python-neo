@@ -30,6 +30,7 @@ from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
 
 try:
     import nixio as nix
+
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
@@ -37,7 +38,6 @@ except ImportError:
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOTest(unittest.TestCase):
-
     io = None
     tempdir = None
     filename = None
@@ -417,7 +417,7 @@ class NixIOTest(unittest.TestCase):
                 mtag_st.name, mtag_st.name + ".metadata"
             )
             mtag_st.metadata = mtag_st_md
-            mtag_st_md.create_property("t_stop", nix.Value(times[-1]+1.0))
+            mtag_st_md.create_property("t_stop", nix.Value(times[-1] + 1.0))
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -631,7 +631,6 @@ class NixIOTest(unittest.TestCase):
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOWriteTest(NixIOTest):
-
     def setUp(self):
         self.tempdir = mkdtemp(prefix="nixiotest")
         self.filename = os.path.join(self.tempdir, "testnixio.nix")
@@ -1053,7 +1052,6 @@ class NixIOWriteTest(NixIOTest):
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
-
     nixfile = None
     nix_blocks = None
 
@@ -1116,7 +1114,6 @@ class NixIOReadTest(NixIOTest):
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOContextTests(NixIOTest):
-
     def setUp(self):
         self.tempdir = mkdtemp(prefix="nixiotest")
         self.filename = os.path.join(self.tempdir, "testnixio.nix")
@@ -1160,7 +1157,6 @@ class NixIOContextTests(NixIOTest):
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOVerTests(NixIOTest):
-
     def setUp(self):
         self.tempdir = mkdtemp(prefix="nixiotest")
         self.filename = os.path.join(self.tempdir, "testnixio.nix")
@@ -1215,7 +1211,6 @@ class NixIOVerTests(NixIOTest):
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class CommonTests(BaseTestIO, unittest.TestCase):
-
     ioclass = NixIO
     read_and_write_is_bijective = False
 

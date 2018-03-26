@@ -251,13 +251,13 @@ class TestChannelIndex(unittest.TestCase):
         self.assertEqual(len(self.chx1._multi_children), 0)
         self.assertEqual(len(self.chx1.data_children), 2 * self.nchildren)
         self.assertEqual(len(self.chx1.data_children_recur),
-                         2 * self.nchildren + 1 * self.nchildren**2)
+                         2 * self.nchildren + 1 * self.nchildren ** 2)
         self.assertEqual(len(self.chx1.container_children), 1 * self.nchildren)
         self.assertEqual(len(self.chx1.container_children_recur),
                          1 * self.nchildren)
         self.assertEqual(len(self.chx1.children), 3 * self.nchildren)
         self.assertEqual(len(self.chx1.children_recur),
-                         3 * self.nchildren + 1 * self.nchildren**2)
+                         3 * self.nchildren + 1 * self.nchildren ** 2)
 
         assert_same_sub_schema(list(self.chx1._single_children),
                                self.units1a + self.sigarrs1a + self.irrsig1a,
@@ -662,24 +662,24 @@ class TestChannelIndex(unittest.TestCase):
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
 
-    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    # def test__pretty(self):
-    #     res = pretty(self.chx1)
-    #     ann = get_annotations()
-    #     ann['seed'] = self.seed1
-    #     ann = pretty(ann).replace('\n ', '\n  ')
-    #     targ = ("ChannelIndex with " +
-    #             ("%s units, %s analogsignals, %s irregularlysampledsignals\n" %
-    #              (len(self.units1a),
-    #               len(self.irrsig1a),
-    #               len(self.sigarrs1a),
-    #               )) +
-    #             ("name: '%s'\ndescription: '%s'\n" % (self.chx1.name,
-    #                                                   self.chx1.description)
-    #              ) +
-    #             ("annotations: %s" % ann))
-    #
-    #     self.assertEqual(res, targ)
+        # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+        # def test__pretty(self):
+        #     res = pretty(self.chx1)
+        #     ann = get_annotations()
+        #     ann['seed'] = self.seed1
+        #     ann = pretty(ann).replace('\n ', '\n  ')
+        #     targ = ("ChannelIndex with " +
+        #             ("%s units, %s analogsignals, %s irregularlysampledsignals\n" %
+        #              (len(self.units1a),
+        #               len(self.irrsig1a),
+        #               len(self.sigarrs1a),
+        #               )) +
+        #             ("name: '%s'\ndescription: '%s'\n" % (self.chx1.name,
+        #                                                   self.chx1.description)
+        #              ) +
+        #             ("annotations: %s" % ann))
+        #
+        #     self.assertEqual(res, targ)
 
 
 if __name__ == '__main__':

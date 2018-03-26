@@ -23,7 +23,6 @@ from neo.core import (AnalogSignal,
 
 from neo.core.baseneo import _container_name
 
-
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
                     datetime.fromtimestamp(424242424), None]
 
@@ -41,7 +40,7 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
                                               supported_objects=objects, **kws)
             bl.segments.append(seg)
 
-    #if RecordingChannel in objects:
+    # if RecordingChannel in objects:
     #    populate_RecordingChannel(bl)
 
     bl.create_many_to_one_relationship()
@@ -51,12 +50,12 @@ def generate_one_simple_block(block_name='block_0', nb_segment=3,
 def generate_one_simple_segment(seg_name='segment 0',
                                 supported_objects=[],
                                 nb_analogsignal=4,
-                                t_start=0.*pq.s,
-                                sampling_rate=10*pq.kHz,
-                                duration=6.*pq.s,
+                                t_start=0. * pq.s,
+                                sampling_rate=10 * pq.kHz,
+                                duration=6. * pq.s,
 
                                 nb_spiketrain=6,
-                                spikerate_range=[.5*pq.Hz, 12*pq.Hz],
+                                spikerate_range=[.5 * pq.Hz, 12 * pq.Hz],
 
                                 event_types={'stim': ['a', 'b',
                                                       'c', 'd'],
@@ -83,34 +82,34 @@ def generate_one_simple_segment(seg_name='segment 0',
     if AnalogSignal in supported_objects:
         for a in range(nb_analogsignal):
             anasig = AnalogSignal(rand(int(sampling_rate * duration)),
-                                       sampling_rate=sampling_rate, t_start=t_start,
-                                       units=pq.mV, channel_index=a,
-                                       name='sig %d for segment %s' % (a, seg.name))
+                                  sampling_rate=sampling_rate, t_start=t_start,
+                                  units=pq.mV, channel_index=a,
+                                  name='sig %d for segment %s' % (a, seg.name))
             seg.analogsignals.append(anasig)
 
     if SpikeTrain in supported_objects:
         for s in range(nb_spiketrain):
-            spikerate = rand()*np.diff(spikerate_range)
+            spikerate = rand() * np.diff(spikerate_range)
             spikerate += spikerate_range[0].magnitude
-            #spikedata = rand(int((spikerate*duration).simplified))*duration
-            #sptr = SpikeTrain(spikedata,
+            # spikedata = rand(int((spikerate*duration).simplified))*duration
+            # sptr = SpikeTrain(spikedata,
             #                  t_start=t_start, t_stop=t_start+duration)
             #                  #, name = 'spiketrain %d'%s)
-            spikes = rand(int((spikerate*duration).simplified))
+            spikes = rand(int((spikerate * duration).simplified))
             spikes.sort()  # spikes are supposed to be an ascending sequence
-            sptr = SpikeTrain(spikes*duration,
-                              t_start=t_start, t_stop=t_start+duration)
+            sptr = SpikeTrain(spikes * duration,
+                              t_start=t_start, t_stop=t_start + duration)
             sptr.annotations['channel_index'] = s
             seg.spiketrains.append(sptr)
 
     if Event in supported_objects:
         for name, labels in event_types.items():
-            evt_size = rand()*np.diff(event_size_range)
+            evt_size = rand() * np.diff(event_size_range)
             evt_size += event_size_range[0]
             evt_size = int(evt_size)
             labels = np.array(labels, dtype='S')
-            labels = labels[(rand(evt_size)*len(labels)).astype('i')]
-            evt = Event(times=rand(evt_size)*duration, labels=labels)
+            labels = labels[(rand(evt_size) * len(labels)).astype('i')]
+            evt = Event(times=rand(evt_size) * duration, labels=labels)
             seg.events.append(evt)
 
     if Epoch in supported_objects:
@@ -120,12 +119,12 @@ def generate_one_simple_segment(seg_name='segment 0',
             durations = []
             while t < duration:
                 times.append(t)
-                dur = rand()*np.diff(epoch_duration_range)
+                dur = rand() * np.diff(epoch_duration_range)
                 dur += epoch_duration_range[0]
                 durations.append(dur)
-                t = t+dur
+                t = t + dur
             labels = np.array(labels, dtype='S')
-            labels = labels[(rand(len(times))*len(labels)).astype('i')]
+            labels = labels[(rand(len(times)) * len(labels)).astype('i')]
             epc = Epoch(times=pq.Quantity(times, units=pq.s),
                         durations=pq.Quantity([x[0] for x in durations],
                                               units=pq.s),
@@ -140,7 +139,7 @@ def generate_one_simple_segment(seg_name='segment 0',
 
 
 def generate_from_supported_objects(supported_objects):
-    #~ create_many_to_one_relationship
+    # ~ create_many_to_one_relationship
     if not supported_objects:
         raise ValueError('No objects specified')
     objects = supported_objects
@@ -149,12 +148,12 @@ def generate_from_supported_objects(supported_objects):
 
         # Chris we do not create RC and RCG if it is not in objects
         # there is a test in generate_one_simple_block so I removed
-        #finalize_block(higher)
+        # finalize_block(higher)
 
     elif Segment in objects:
         higher = generate_one_simple_segment(supported_objects=objects)
     else:
-        #TODO
+        # TODO
         return None
 
     higher.create_many_to_one_relationship()
@@ -194,8 +193,8 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         return np.random.randint(100)
     if datatype == float:
         return 1000. * np.random.random()
-    if datatype == datetime:      
-        return datetime.fromtimestamp(1000000000*np.random.random())
+    if datatype == datetime:
+        return datetime.fromtimestamp(1000000000 * np.random.random())
 
     if (name in ['t_start', 't_stop', 'sampling_rate'] and
             (datatype != pq.Quantity or dim)):
@@ -219,27 +218,27 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
     if name == 'sampling_rate':
         data = np.array(10000.0)
     elif name == 't_start':
-        data = np.array(0.0)   
+        data = np.array(0.0)
     elif name == 't_stop':
-        data = np.array(1.0)   
+        data = np.array(1.0)
     elif n and name == 'channel_indexes':
-        data = np.arange(n)    
+        data = np.arange(n)
     elif n and name == 'channel_names':
-        data = np.array(["ch%d" % i for i in range(n)])      
+        data = np.array(["ch%d" % i for i in range(n)])
     elif n and obj == 'AnalogSignal':
         if name == 'signal':
             size = []
             for _ in range(int(dim)):
                 size.append(np.random.randint(5) + 1)
             size[1] = n
-            data = np.random.random(size)*1000.        
+            data = np.random.random(size) * 1000.
     else:
         size = []
         for _ in range(int(dim)):
-            if shape is None :
+            if shape is None:
                 if name == "times":
                     size.append(5)
-                else :
+                else:
                     size.append(np.random.randint(5) + 1)
             else:
                 size.append(shape)
@@ -249,7 +248,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
             data *= 1000.
     if np.dtype(dtype) != np.float64:
         data = data.astype(dtype)
-        
+
     if datatype == np.ndarray:
         return data
     if datatype == list:
@@ -273,7 +272,8 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     If annotate is True (default), also add annotations to the values.
     """
 
-    if hasattr(cls, 'lower'):  # is this a test that cls is a string? better to use isinstance(cls, basestring), no?
+    if hasattr(cls,
+               'lower'):  # is this a test that cls is a string? better to use isinstance(cls, basestring), no?
         cls = class_by_name[cls]
 
     kwargs = {}  # assign attributes
@@ -283,22 +283,22 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
         else:
             iseed = None
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
-    
-    if 'waveforms' in kwargs :   #everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[0]
-        if len(kwargs["times"]) != kwargs["waveforms"].shape[0] :
-            if len(kwargs["times"]) < kwargs["waveforms"].shape[0] :
-                
+
+    if 'waveforms' in kwargs:  # everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[0]
+        if len(kwargs["times"]) != kwargs["waveforms"].shape[0]:
+            if len(kwargs["times"]) < kwargs["waveforms"].shape[0]:
+
                 dif = kwargs["waveforms"].shape[0] - len(kwargs["times"])
 
-                new_times =[]
-                for i in kwargs["times"].magnitude :
+                new_times = []
+                for i in kwargs["times"].magnitude:
                     new_times.append(i)
 
                 np.random.seed(0)
                 new_times = np.concatenate([new_times, np.random.random(dif)])
                 kwargs["times"] = pq.Quantity(new_times, units=pq.ms)
-            else :
-                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]] 
+            else:
+                kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]]
 
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
@@ -351,7 +351,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         # we create a few of each class
         for j in range(n):
             if seed is not None:
-                iseed = 10*seed+100*i+1000*j
+                iseed = 10 * seed + 100 * i + 1000 * j
             else:
                 iseed = None
             child = fake_neo(obj_type=childname, cascade=cascade,
@@ -362,7 +362,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             # parent, don't create the object, we will import it from secondary
             # containers later
             if (cascade == 'block' and len(child._parent_objects) > 0 and
-                    obj_type != child._parent_objects[-1]):
+                        obj_type != child._parent_objects[-1]):
                 continue
             getattr(obj, _container_name(childname)).append(child)
 
@@ -377,7 +377,7 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             for j, unit in enumerate(chx.units):
                 for k, train in enumerate(unit.spiketrains):
                     obj.segments[k].spiketrains.append(train)
-    #elif obj_type == 'ChannelIndex':
+    # elif obj_type == 'ChannelIndex':
     #    inds = []
     #    names = []
     #    chinds = np.array([unit.channel_indexes[0] for unit in obj.units])

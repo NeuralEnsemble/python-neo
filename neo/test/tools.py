@@ -24,7 +24,7 @@ def assert_arrays_equal(a, b, dtype=False):
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a, b)
-    #assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
+    # assert a.dtype == b.dtype, "%s and %s not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
     try:
@@ -56,7 +56,7 @@ def assert_arrays_almost_equal(a, b, threshold, dtype=False):
     assert isinstance(a, np.ndarray), "a is a %s" % type(a)
     assert isinstance(b, np.ndarray), "b is a %s" % type(b)
     assert a.shape == b.shape, "%s != %s" % (a, b)
-    #assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a, b,
+    # assert a.dtype == b.dtype, "%s and %b not same dtype %s %s" % (a, b,
     #                                                               a.dtype,
     #                                                               b.dtype)
     if a.dtype.kind in ['f', 'c', 'i']:
@@ -81,6 +81,7 @@ def assert_file_contents_equal(a, b):
     '''
     Assert that two files have the same size and hash.
     '''
+
     def generate_error_message(a, b):
         '''
         This creates the error message for the assertion error
@@ -110,17 +111,17 @@ def assert_neo_object_is_compliant(ob):
     # test presence of necessary attributes
     for ioattr in ob._necessary_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
-        #~ if attrname != '':
+        # ~ if attrname != '':
         if not hasattr(ob, '_quantity_attr'):
             assert hasattr(ob, attrname), '%s neo obect does not have %s' % \
-                (classname, attrname)
+                                          (classname, attrname)
 
     # test attributes types
     for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
 
         if (hasattr(ob, '_quantity_attr') and
-                ob._quantity_attr == attrname and
+                    ob._quantity_attr == attrname and
                 (attrtype == pq.Quantity or attrtype == np.ndarray)):
             # object inherits from Quantity (AnalogSignal, SpikeTrain, ...)
             ndim = ioattr[2]
@@ -141,7 +142,7 @@ def assert_neo_object_is_compliant(ob):
                     (attrname, classname, type(obattr), attrtype)
                 if attrtype == pq.Quantity or attrtype == np.ndarray:
                     ndim = ioattr[2]
-                    assert obattr.ndim == ndim,  \
+                    assert obattr.ndim == ndim, \
                         '%s.%s dimension is %d should be %d' % \
                         (classname, attrname, obattr.ndim, ndim)
                 if attrtype == np.ndarray:
@@ -274,7 +275,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
         if ioattr[0] in exclude:
             continue
         attrname, attrtype = ioattr[0], ioattr[1]
-        #~ if attrname =='':
+        # ~ if attrname =='':
         if hasattr(ob1, '_quantity_attr') and ob1._quantity_attr == attrname:
             # object is hinerited from Quantity (AnalogSignal, SpikeTrain, ...)
             try:
@@ -317,8 +318,8 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
             # Compare magnitudes
             mag1 = getattr(ob1, attrname).magnitude
             mag2 = getattr(ob2, attrname).magnitude
-            #print "2. ob1(%s) %s:%s\n   ob2(%s) %s:%s" % \
-                #(ob1,attrname,mag1,ob2,attrname,mag2)
+            # print "2. ob1(%s) %s:%s\n   ob2(%s) %s:%s" % \
+            # (ob1,attrname,mag1,ob2,attrname,mag2)
             try:
                 assert_arrays_almost_equal(mag1, mag2,
                                            threshold=threshold,
@@ -346,7 +347,7 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10,
                 exc.args += ('from %s of %s' % (attrname, classname),)
                 raise
         else:
-            #~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
+            # ~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
             assert getattr(ob1, attrname) == getattr(ob2, attrname), \
                 'Attribute %s.%s are not the same %s %s %s %s' % \
                 (classname, attrname,
@@ -412,8 +413,8 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
     for ioattr in ob._all_attrs:
         attrname, attrtype = ioattr[0], ioattr[1]
-        #~ print 'xdsd', classname, attrname
-        #~ if attrname == '':
+        # ~ print 'xdsd', classname, attrname
+        # ~ if attrname == '':
         if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
             assert ob.size == 0, \
                 'Lazy loaded error %s.size = %s' % (classname, ob.size)
@@ -424,7 +425,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
 
         if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
             continue
-        #~ print 'hjkjh'
+        # ~ print 'hjkjh'
         if (attrtype == pq.Quantity or attrtype == np.ndarray):
 
             # FIXME: it is a workaround for recordingChannelGroup.channel_names
@@ -433,15 +434,15 @@ def assert_sub_schema_is_lazy_loaded(ob):
                 continue
 
             ndim = ioattr[2]
-            #~ print 'ndim', ndim
-            #~ print getattr(ob, attrname).size
+            # ~ print 'ndim', ndim
+            # ~ print getattr(ob, attrname).size
             if ndim >= 1:
                 assert getattr(ob, attrname).size == 0, \
                     'Lazy loaded error %s.%s.size = %s' % \
                     (classname, attrname, getattr(ob, attrname).size)
-                assert hasattr(ob,  'lazy_shape'), \
-                    'Lazy loaded error ' +\
-                    '%s should have lazy_shape attribute ' % classname +\
+                assert hasattr(ob, 'lazy_shape'), \
+                    'Lazy loaded error ' + \
+                    '%s should have lazy_shape attribute ' % classname + \
                     'because of %s attribute' % attrname
 
 
@@ -469,8 +470,8 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
                 classname
         else:
             assert ob.lazy_shape == \
-                getattr(new_load, lazy_shape_arrays[classname]).shape, \
-                'Shape of loaded object %s not equal to lazy shape' %\
+                   getattr(new_load, lazy_shape_arrays[classname]).shape, \
+                'Shape of loaded object %s not equal to lazy shape' % \
                 classname
         return
 
@@ -493,6 +494,7 @@ def assert_objects_equivalent(obj1, obj2):
     Compares two NEO objects by looping over the attributes and annotations
     and asserting their hashes. No relationships involved.
     '''
+
     def assert_attr(obj1, obj2, attr_name):
         '''
         Assert a single attribute and annotation are the same
@@ -502,7 +504,8 @@ def assert_objects_equivalent(obj1, obj2):
         assert hasattr(obj2, attr_name)
         attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
         assert attr1 == attr2, "Attribute %s for class %s is not equal." % \
-            (attr_name, obj1.__class__.__name__)
+                               (attr_name, obj1.__class__.__name__)
+
     obj_type = obj1.__class__.__name__
     assert obj_type == obj2.__class__.__name__
     for ioattr in obj1._necessary_attrs:

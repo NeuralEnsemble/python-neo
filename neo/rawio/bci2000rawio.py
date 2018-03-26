@@ -9,6 +9,7 @@ from .baserawio import BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _e
 
 import numpy as np
 import re
+
 try:
     from urllib.parse import unquote
 except ImportError:
@@ -39,7 +40,7 @@ class BCI2000RawIO(BaseRawIO):
 
         sig_channels = []
         for chan_ix in range(file_info['SourceCh']):
-            ch_name = param_defs['ChannelNames']['value'][chan_ix]\
+            ch_name = param_defs['ChannelNames']['value'][chan_ix] \
                 if 'ChannelNames' in param_defs else 'ch' + str(chan_ix)
             chan_id = chan_ix + 1
             sr = param_defs['SamplingRate']['value']  # Hz
@@ -130,11 +131,11 @@ class BCI2000RawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = np.arange(self.header['signal_channels'].size)
         return self._memmap['raw_vector'][i_start:i_stop, channel_indexes]
-    
-    def _spike_count(self,  block_index, seg_index, unit_index):
+
+    def _spike_count(self, block_index, seg_index, unit_index):
         return 0
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         return None
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
@@ -146,7 +147,7 @@ class BCI2000RawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._event_arrays_list[event_channel_index][0].shape[0]
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # Return 3 numpy arrays: timestamp, durations, labels
         # durations must be None for 'event'
         # label must a dtype ='U'
@@ -209,7 +210,6 @@ class BCI2000RawIO(BaseRawIO):
 
 
 def parse_bci2000_header(filename):
-
     # typically we want parameter values in Hz, seconds, or microvolts.
     scales_dict = {
         'hz': 1, 'khz': 1000, 'mhz': 1000000,
@@ -266,7 +266,7 @@ def parse_bci2000_header(filename):
 
         # The next lines contain state vector definitions.
         temp = fid.readline().decode('utf8').strip()
-        assert temp == '[ State Vector Definition ]',\
+        assert temp == '[ State Vector Definition ]', \
             "State definitions not found in header %s" % filename
         state_defs = []
         state_def_dtype = [('name', 'a64'),
@@ -285,7 +285,7 @@ def parse_bci2000_header(filename):
 
         # The next lines contain parameter definitions.
         # There are many, and their formatting can be complicated.
-        assert temp == '[ Parameter Definition ]',\
+        assert temp == '[ Parameter Definition ]', \
             "Parameter definitions not found in header %s" % filename
         param_defs = {}
         while True:
@@ -369,6 +369,6 @@ def parse_bci2000_header(filename):
                 param_def.update({'default_val': rescale_value(temp.pop(0), dtype)})
 
             param_defs.update({param_name: param_def})
-        # End parameter block
+            # End parameter block
     # Outdent to close file
     return file_info, state_defs, param_defs

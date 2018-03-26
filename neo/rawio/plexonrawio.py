@@ -99,7 +99,7 @@ class PlexonRawIO(BaseRawIO):
             pos += length
 
         self._last_timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-            2 ** 32 + bl_header['TimeStamp']
+                                2 ** 32 + bl_header['TimeStamp']
 
         # ... and finalize them in self._data_blocks
         # for a faster acces depending on type (1, 4, 5)
@@ -120,7 +120,7 @@ class PlexonRawIO(BaseRawIO):
                 bl_pos = np.array(block_pos[bl_type][chan_id], dtype='int64')
 
                 timestamps = bl_header['UpperByteOf5ByteTimestamp'] * \
-                    2 ** 32 + bl_header['TimeStamp']
+                             2 ** 32 + bl_header['TimeStamp']
 
                 n1 = bl_header['NumberOfWaveforms']
                 n2 = bl_header['NumberOfWordsInWaveform']
@@ -256,7 +256,7 @@ class PlexonRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -276,7 +276,7 @@ class PlexonRawIO(BaseRawIO):
             bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
             bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
             ind = 0
-            for bl in range(bl0,  bl1):
+            for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']
                 ind1 = data_blocks[bl]['size'] + ind0
                 data = self._memmap[ind0:ind1].view('int16')
@@ -311,13 +311,13 @@ class PlexonRawIO(BaseRawIO):
 
         return keep
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data_block = self._data_blocks[1][chan_id]
         nb_spike = np.sum(data_block['unit_id'] == unit_id)
         return nb_spike
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data_block = self._data_blocks[1][chan_id]
 
@@ -359,7 +359,7 @@ class PlexonRawIO(BaseRawIO):
         nb_event = self._data_blocks[4][chan_id].size
         return nb_event
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         chan_id = int(self.header['event_channels'][event_channel_index]['id'])
         data_block = self._data_blocks[4][chan_id]
         keep = self._get_internal_mask(data_block, t_start, t_stop)
