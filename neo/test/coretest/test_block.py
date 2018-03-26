@@ -283,15 +283,15 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         1 * self.nchildren**3 + 4 * self.nchildren**2)
+                         1 * self.nchildren ** 3 + 4 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.container_children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
-                         2 * self.nchildren + 1 * self.nchildren**2)
+                         2 * self.nchildren + 1 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.children_recur),
                          2 * self.nchildren +
-                         5 * self.nchildren**2 +
-                         1 * self.nchildren**3)
+                         5 * self.nchildren ** 2 +
+                         1 * self.nchildren ** 3)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),

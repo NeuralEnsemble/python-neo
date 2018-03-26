@@ -42,7 +42,7 @@ class BaseTestRawIO(object):
     And test the IO is working.
 
     '''
-    #~ __test__ = False
+    # ~ __test__ = False
 
     # all IO test need to modify this:
     rawioclass = None  # the IOclass to be tested
@@ -89,6 +89,7 @@ class BaseTestRawIO(object):
                                self.local_test_dir, url)
         except IOError as exc:
             raise unittest.SkipTest(exc)
+
     download_test_files_if_not_present.__test__ = False
 
     def cleanup_file(self, path):
@@ -121,28 +122,28 @@ class BaseTestRawIO(object):
 
             txt = reader.__repr__()
             assert 'nb_block' in txt, 'After parser_header() nb_block should be known'
-            #~ print(txt)
+            # ~ print(txt)
 
             #
             txt = reader._repr_annotations()
-            #~ reader.print_annotations()
+            # ~ reader.print_annotations()
 
-            #~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
-            #~ i_start=None, i_stop=None, channel_indexes=[1])
-            #~ import matplotlib.pyplot as plt
-            #~ fig, ax = plt.subplots()
-            #~ ax.plot(sigs[:, 0])
-            #~ plt.show()
+            # ~ sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
+            # ~ i_start=None, i_stop=None, channel_indexes=[1])
+            # ~ import matplotlib.pyplot as plt
+            # ~ fig, ax = plt.subplots()
+            # ~ ax.plot(sigs[:, 0])
+            # ~ plt.show()
 
-            #~ nb_unit = reader.unit_channels_count()
-            #~ for unit_index in range(nb_unit):
-            #~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
-            #~ unit_index=unit_index)
-            #~ if wfs is not None:
-            #~ import matplotlib.pyplot as plt
-            #~ fig, ax = plt.subplots()
-            #~ ax.plot(wfs[:, 0, :50].T)
-            #~ plt.show()
+            # ~ nb_unit = reader.unit_channels_count()
+            # ~ for unit_index in range(nb_unit):
+            # ~ wfs = reader.spike_raw_waveforms(block_index=0, seg_index=0,
+            # ~ unit_index=unit_index)
+            # ~ if wfs is not None:
+            # ~ import matplotlib.pyplot as plt
+            # ~ fig, ax = plt.subplots()
+            # ~ ax.plot(wfs[:, 0, :50].T)
+            # ~ plt.show()
 
             # lanch a series of test compliance
             compliance.header_is_total(reader)

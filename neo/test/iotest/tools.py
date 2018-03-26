@@ -239,7 +239,7 @@ def iter_generic_readers(ioclass, filenames, directory=None, target=None,
         if not return_path and not return_ioobj:
             yield res
         else:
-            res = (res, )
+            res = (res,)
 
         if return_path:
             res = res + (path,)
@@ -345,7 +345,7 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
         if not return_path and not return_ioobj and not return_reader:
             yield obj
         else:
-            obj = (obj, )
+            obj = (obj,)
 
         if return_path:
             obj = obj + (path,)

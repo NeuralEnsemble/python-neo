@@ -316,11 +316,11 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         pp.text("{cls} with {channels} channels of length {length}; "
                 "units {units}; datatype {dtype} ".format(
-                    cls=self.__class__.__name__,
-                    channels=self.shape[1],
-                    length=self.shape[0],
-                    units=self.units.dimensionality.string,
-                    dtype=self.dtype))
+            cls=self.__class__.__name__,
+            channels=self.shape[1],
+            length=self.shape[0],
+            units=self.units.dimensionality.string,
+            dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -329,6 +329,7 @@ class IrregularlySampledSignal(BaseSignal):
             pp.breakable()
             with pp.group(indent=1):
                 pp.text(line)
+
         for line in ["sample times: {0}".format(self.times)]:
             _pp(line)
 

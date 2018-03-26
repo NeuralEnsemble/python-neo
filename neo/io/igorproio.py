@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading data created by IGOR Pro 
+Class for reading data created by IGOR Pro
 (WaveMetrics, Inc., Portland, OR, USA)
 
 Depends on: igor (https://pypi.python.org/pypi/igor/)
@@ -18,9 +18,11 @@ import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
+
 try:
     import igor.binarywave as bw
     import igor.packed as pxp
+
     HAVE_IGOR = True
 except ImportError:
     HAVE_IGOR = False
@@ -28,8 +30,8 @@ except ImportError:
 
 class IgorIO(BaseIO):
     """
-    Class for reading Igor Binary Waves (.ibw) 
-    or Packed Experiment (.pxp) files written by WaveMetrics’ 
+    Class for reading Igor Binary Waves (.ibw)
+    or Packed Experiment (.pxp) files written by WaveMetrics’
     IGOR Pro software.
 
     It requires the `igor` Python package by W. Trevor King.
@@ -42,7 +44,7 @@ class IgorIO(BaseIO):
 
     """
 
-    is_readable = True   # This class can only read data
+    is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
     supported_objects = [Block, Segment, AnalogSignal]
     readable_objects = [Block, Segment, AnalogSignal]
@@ -159,7 +161,7 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
         kvsep - character which separates the key and value within an item
 
     Returns:
-        a function which takes the string to be parsed as the sole argument 
+        a function which takes the string to be parsed as the sole argument
         and returns a dict.
 
     Example:
@@ -168,7 +170,9 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
         >>> parse("a:2;b:3")
         {'a': 2, 'b': 3}
     """
+
     def parser(s):
         items = s.split(itemsep)
         return dict(item.split(kvsep, 1) for item in items if item)
+
     return parser

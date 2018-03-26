@@ -103,7 +103,6 @@ else:
     # print("neuroshare library successfully imported")
     # print("\n loading with API...")
 
-
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
@@ -141,7 +140,6 @@ from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
-
 
 iolist = [
     AlphaOmegaIO,

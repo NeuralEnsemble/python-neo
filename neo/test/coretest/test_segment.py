@@ -196,7 +196,7 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(len(seg.epochs), self.nchildren)
         self.assertEqual(len(seg.events), self.nchildren)
 
-        self.assertEqual(len(seg.spiketrains), self.nchildren**2)
+        self.assertEqual(len(seg.spiketrains), self.nchildren ** 2)
 
     def test__creation(self):
         self.check_creation(self.seg1)
@@ -282,10 +282,10 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(self.seg1._parent_objects, ('Block',))
         self.assertEqual(self.seg1._parent_containers, ('block',))
 
-        totchildren = (self.nchildren * 2 +   # epoch/event
-                       self.nchildren +     # analogsignal
-                       self.nchildren**2 +  # spiketrain
-                       self.nchildren)      # irregsignal
+        totchildren = (self.nchildren * 2 +  # epoch/event
+                       self.nchildren +  # analogsignal
+                       self.nchildren ** 2 +  # spiketrain
+                       self.nchildren)  # irregsignal
         self.assertEqual(len(self.seg1._single_children), totchildren)
         self.assertEqual(len(self.seg1.data_children), totchildren)
         self.assertEqual(len(self.seg1.children), totchildren)
@@ -312,7 +312,7 @@ class TestSegment(unittest.TestCase):
     def test__size(self):
         targ1 = {"epochs": self.nchildren, "events": self.nchildren,
                  "irregularlysampledsignals": self.nchildren,
-                 "spiketrains": self.nchildren**2,
+                 "spiketrains": self.nchildren ** 2,
                  "analogsignals": self.nchildren}
         self.assertEqual(self.targobj.size, targ1)
 
@@ -779,7 +779,7 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(result21, [self.trains1a[0]])
         assert_same_sub_schema(result22, [self.trains1a[1]])
 
-# to remove
+    # to remove
     # def test_segment_take_analogsignal_by_unit(self):
     #     result1 = self.seg1.take_analogsignal_by_unit()
     #     result21 = self.seg1.take_analogsignal_by_unit([self.unit1])
@@ -802,7 +802,7 @@ class TestSegment(unittest.TestCase):
     #     assert_same_sub_schema(result21, [self.sigs1a[0]])
     #     assert_same_sub_schema(result22, [self.sigs1a[1]])
 
-# commenting out temporarily
+    # commenting out temporarily
     # def test_seg_take_slice_of_analogsignalarray_by_unit(self):
     #     seg = self.seg1
     #     result1 = seg.take_slice_of_analogsignalarray_by_unit()

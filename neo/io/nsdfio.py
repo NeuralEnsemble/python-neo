@@ -244,7 +244,7 @@ class NSDFIO(BaseIO):
         return '{{:0{}d}}'.format(self._number_of_digits(max(how_many_items - 1, 0)))
 
     def _clean_nsdfio_annotations(self, object):
-        nsdfio_annotations = ('nsdfio_uid', )
+        nsdfio_annotations = ('nsdfio_uid',)
 
         for key in nsdfio_annotations:
             object.annotations.pop(key, None)
@@ -510,8 +510,8 @@ class NSDFIO(BaseIO):
 
     def _create_analogsignal(self, data_group, group, t_start, uid, reader):
         # for lazy
-        #data_shape = data_group.shape
-        #data_shape = (data_shape[1], data_shape[0])
+        # data_shape = data_group.shape
+        # data_shape = (data_shape[1], data_shape[0])
         dataobj = reader.get_uniform_data(uid, 'signal')
         data = self._read_signal_data(dataobj, group)
         signal = self._create_normal_analogsignal(data, dataobj, uid, t_start)

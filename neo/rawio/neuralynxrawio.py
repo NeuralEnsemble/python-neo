@@ -308,7 +308,7 @@ class NeuralynxRawIO(BaseRawIO):
         nb_spike = int(data[keep].size)
         return nb_spike
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_id]
         ts = data['timestamp']
@@ -359,12 +359,12 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._nev_memmap[chan_id]
         ts0, ts1 = self._timestamp_limits[seg_index]
         ts = data['timestamp']
-        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) &\
-            (data['ttl_input'] == ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
+               (data['ttl_input'] == ttl_input)
         nb_event = int(data[keep].size)
         return nb_event
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         event_id, ttl_input = self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
@@ -474,7 +474,7 @@ class NeuralynxRawIO(BaseRawIO):
                 if chan_id == chan_id0:
                     ts0 = subdata[0]['timestamp']
                     ts1 = subdata[-1]['timestamp'] + \
-                        np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)

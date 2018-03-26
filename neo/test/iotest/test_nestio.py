@@ -786,10 +786,11 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
         condition_column = 0
 
         def condition_function(x): return x > 10
+
         result = self.testIO.get_columns(condition=condition_function,
                                          condition_column=0)
         selected_ids = np.where(condition_function(self.testIO.data[:,
-                                                                    condition_column]))[0]
+                                                   condition_column]))[0]
         expected = self.testIO.data[selected_ids, :]
 
         np.testing.assert_array_equal(result, expected)

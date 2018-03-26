@@ -68,7 +68,6 @@ import time
 import numpy as np
 import quantities as pq
 
-
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
@@ -292,7 +291,7 @@ class BlackrockRawIO(BaseRawIO):
             self.nsx_to_load = max(self._avail_nsx)
 
         if self.nsx_to_load is not None and \
-            self.__nsx_spec[self.nsx_to_load] == '2.1' and \
+                        self.__nsx_spec[self.nsx_to_load] == '2.1' and \
                 not self._avail_files['nev']:
             pass
             # Because rescaling to volts requires information from nev file (dig_factor)
@@ -340,10 +339,10 @@ class BlackrockRawIO(BaseRawIO):
                     gain = 1
                     offset = 0
                 else:
-                    gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) /\
-                        (float(chan['max_digital_val']) - float(chan['min_digital_val']))
-                    offset = -float(chan['min_digital_val'])\
-                        * gain + float(chan['min_analog_val'])
+                    gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) / \
+                           (float(chan['max_digital_val']) - float(chan['min_digital_val']))
+                    offset = -float(chan['min_digital_val']) \
+                             * gain + float(chan['min_analog_val'])
                 group_id = 0
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype,
                                      units, gain, offset, group_id,))
@@ -358,6 +357,7 @@ class BlackrockRawIO(BaseRawIO):
                 else:
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
                         self.__nsx_basic_header[self.nsx_to_load]['timestamp_resolution']
+
                 t_stop = t_start + length / sig_sampling_rate
 
                 if self._avail_files['nev']:
@@ -493,12 +493,12 @@ class BlackrockRawIO(BaseRawIO):
                             sig_channels[c]['id'])
                         # filter type codes (extracted from blackrock manual)
                         chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
-                                                            get_idx] / 1000. * pq.Hz
+                                                              get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
                         chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
                             get_idx]]
                         chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
-                                                            get_idx] / 1000. * pq.Hz
+                                                              get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
@@ -514,17 +514,17 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
                         get_idx]
                     chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
-                                               'hi_freq_corner'][get_idx] / 1000. * pq.Hz
+                                                          'hi_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
-                                               'lo_freq_corner'][get_idx] / 1000. * pq.Hz
+                                                          'lo_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
-                            'hi_freq_order'][get_idx]
+                        'hi_freq_order'][get_idx]
                     chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
-                            'lo_freq_order'][get_idx]
+                        'lo_freq_order'][get_idx]
                     chidx_ann['nsx_hi_freq_type'] = flt_type[
-                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
                     chidx_ann['nsx_lo_freq_type'] = flt_type[
-                            self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
+                        self.__nsx_ext_header[k]['hi_freq_type'][get_idx]]
 
         for seg_index in range(self._nb_segment):
             seg_ann = block_ann['segments'][seg_index]
@@ -553,7 +553,7 @@ class BlackrockRawIO(BaseRawIO):
                 unit_ann = self.raw_annotations['unit_channels'][c]
                 st_ann.update(unit_ann)
                 st_ann['description'] = 'SpikeTrain channel_id: {}, unit_id: {}'.format(
-                        channel_id, unit_id)
+                    channel_id, unit_id)
                 st_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
             if self._avail_files['nev']:
@@ -589,7 +589,7 @@ class BlackrockRawIO(BaseRawIO):
         sig_chunk = memmap_data[i_start:i_stop, channel_indexes]
         return sig_chunk
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
         all_spikes = self.nev_data['Spikes'][0]
@@ -600,12 +600,12 @@ class BlackrockRawIO(BaseRawIO):
         else:
             # must clip in time time range
             timestamp = all_spikes[mask]['timestamp']
-            sl = self._get_timestamp_slice(timestamp, seg_index,  None, None)
+            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
             timestamp = timestamp[sl]
             nb = timestamp.size
         return nb
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
         all_spikes, event_segment_ids = self.nev_data['Spikes']
@@ -616,7 +616,7 @@ class BlackrockRawIO(BaseRawIO):
         unit_spikes = all_spikes[mask]
 
         timestamp = unit_spikes['timestamp']
-        sl = self._get_timestamp_slice(timestamp, seg_index,  t_start, t_stop)
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
         timestamp = timestamp[sl]
 
         return timestamp
@@ -665,7 +665,7 @@ class BlackrockRawIO(BaseRawIO):
         waveforms = waveforms.reshape(int(unit_spikes.size), 1, int(wf_size))
 
         timestamp = unit_spikes['timestamp']
-        sl = self._get_timestamp_slice(timestamp, seg_index,  t_start, t_stop)
+        sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
         waveforms = waveforms[sl]
 
         return waveforms
@@ -681,8 +681,8 @@ class BlackrockRawIO(BaseRawIO):
             nb = int(np.sum(mask))
         else:
             # must clip in time time range
-            timestamp = events_data[mask]['timestamp']
-            sl = self._get_timestamp_slice(timestamp, seg_index,  None, None)
+            timestamp = events_data[ev_dict['mask']]['timestamp']
+            sl = self._get_timestamp_slice(timestamp, seg_index, None, None)
             timestamp = timestamp[sl]
             nb = timestamp.size
         return nb
@@ -906,7 +906,7 @@ class BlackrockRawIO(BaseRawIO):
             # data size = number of data points * (2bytes * number of channels)
             # use of `int` avoids overflow problem
             data_size = int(dh['nb_data_points']) * \
-                int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
+                        int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
             # define new offset (to possible next data block)
             offset = data_header[index]['offset_to_data_block'] + data_size
 
@@ -1441,7 +1441,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('video_frame_nb', 'uint32'),
                     ('video_elapsed_time', 'uint32'),
                     ('video_source_id', 'uint32'),
-                    ('unused', 'int8', (data_size - 20, ))]},
+                    ('unused', 'int8', (data_size - 20,))]},
             'TrackingEvents': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1450,13 +1450,13 @@ class BlackrockRawIO(BaseRawIO):
                     ('node_id', 'uint16'),
                     ('node_count', 'uint16'),
                     ('point_count', 'uint16'),
-                    ('tracking_points', 'uint16', ((data_size - 14) // 2, ))]},
+                    ('tracking_points', 'uint16', ((data_size - 14) // 2,))]},
             'ButtonTrigger': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('trigger_type', 'uint16'),
-                    ('unused', 'int8', (data_size - 8, ))]},
+                    ('unused', 'int8', (data_size - 8,))]},
             'ConfigEvent': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -1683,8 +1683,8 @@ class BlackrockRawIO(BaseRawIO):
         filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
 
         bytes_in_headers = self.__nsx_basic_header[nsx_nb].dtype.itemsize + \
-            self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
-            self.__nsx_basic_header[nsx_nb]['channel_count']
+                           self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
+                           self.__nsx_basic_header[nsx_nb]['channel_count']
 
         if np.isnan(dig_factor[0]):
             units = ''
@@ -1713,7 +1713,7 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters       # Returns complete dictionary because then it does not need to be called so often
+        return nsx_parameters  # Returns complete dictionary because then it does not need to be called so often
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """

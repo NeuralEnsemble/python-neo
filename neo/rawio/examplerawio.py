@@ -13,18 +13,18 @@ Rules for creating a new class:
     * code hard! The main difficulty **is _parse_header()**.
       In short you have a create a mandatory dict than
       contains channel informations::
-      
+
             self.header = {}
             self.header['nb_block'] = 2
             self.header['nb_segment'] = [2, 3]
             self.header['signal_channels'] = sig_channels
             self.header['unit_channels'] = unit_channels
-            self.header['event_channels'] = event_channels    
-    
+            self.header['event_channels'] = event_channels
+
   2. Step 2: RawIO test:
     * create a file in neo/rawio/tests with the same name with "test_" prefix
     * copy paste neo/rawio/tests/test_examplerawio.py and do the same
-  
+
   3. Step 3 : Create the neo.io class with the wrapper
     * Create a file in neo/io/ that endith with "io.py"
     * Create a that hinerits bot yrou RawIO class and BaseFromRaw class
@@ -75,7 +75,7 @@ class ExampleRawIO(BaseRawIO):
         >>> print(r)
         >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
                             i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64', 
+        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
                             channel_indexes=[0, 3, 6])
         >>> spike_timestamp = reader.spike_timestamps(unit_index=0, t_start=None, t_stop=None)
         >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
@@ -121,13 +121,13 @@ class ExampleRawIO(BaseRawIO):
             sr = 10000.  # Hz
             dtype = 'int16'
             units = 'uV'
-            gain = 1000. / 2**16
+            gain = 1000. / 2 ** 16
             offset = 0.
             # group_id isonly for special cases when channel have diferents
             # sampling rate for instance. See TdtIO for that.
             # Here this is the general case :all channel have the same characteritics
             group_id = 0
-            sig_channels.append((ch_name, chan_id, sr, dtype,  units, gain, offset, group_id))
+            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # creating units channels
@@ -141,7 +141,7 @@ class ExampleRawIO(BaseRawIO):
             unit_name = 'unit{}'.format(c)
             unit_id = '#{}'.format(c)
             wf_units = 'uV'
-            wf_gain = 1000. / 2**16
+            wf_gain = 1000. / 2 ** 16
             wf_offset = 0.
             wf_left_sweep = 20
             wf_sampling_rate = 10000.
@@ -229,7 +229,7 @@ class ExampleRawIO(BaseRawIO):
         # this is not always the case
         return self._segment_t_start(block_index, seg_index)
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         # this must return a signal chunk limited with
         # i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel) or a list or numpy.array
@@ -258,14 +258,14 @@ class ExampleRawIO(BaseRawIO):
         raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
         return raw_signals
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         # Must return the nb of spike for given (block_index, seg_index, unit_index)
         # we are lucky:  our units have all the same nb of spikes!!
         # it is not always the case
         nb_spikes = 20
         return nb_spikes
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         # In our IO, timstamp are internally coded 'int64' and they
         # represent the index of the signals 10kHz
         # we are lucky: spikes have the same discharge in all segments!!
@@ -310,7 +310,7 @@ class ExampleRawIO(BaseRawIO):
         # we 20 spikes with a sweep of 50 (5ms)
 
         np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2**4, high=2**4, size=20 * 50, dtype='int16')
+        waveforms = np.random.randint(low=-2 ** 4, high=2 ** 4, size=20 * 50, dtype='int16')
         waveforms = waveforms.reshape(20, 1, 50)
         return waveforms
 
@@ -324,11 +324,11 @@ class ExampleRawIO(BaseRawIO):
             # epoch channel
             return 10
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # the main difference between spike channel and event channel
         # is that for here we have 3 numpy array timestamp, durations, labels
         # durations must be None for 'event'
-         # label must a dtype ='U'
+        # label must a dtype ='U'
 
         # in our IO event are directly coded in seconds
         seg_t_start = self._segment_t_start(block_index, seg_index)
@@ -338,7 +338,7 @@ class ExampleRawIO(BaseRawIO):
             labels = np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12')
         elif event_channel_index == 1:
             timestamp = np.arange(0, 10, dtype='float64') + .5 + seg_t_start
-            durations = np.ones((10),  dtype='float64') * .25
+            durations = np.ones((10), dtype='float64') * .25
             labels = np.array(['zoneX'] * 5 + ['zoneZ'] * 5, dtype='U12')
 
         if t_start is not None:

@@ -38,6 +38,7 @@ from ..version import version as neover
 
 try:
     import nixio as nix
+
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
@@ -194,7 +195,7 @@ class NixIO(BaseIO):
         elif neoname is not None:
             for blk in self.nix_file.blocks:
                 if ("neo_name" in blk.metadata
-                        and blk.metadata["neo_name"] == neoname):
+                    and blk.metadata["neo_name"] == neoname):
                     nix_block = blk
                     break
             else:
@@ -339,7 +340,7 @@ class NixIO(BaseIO):
                 neo_chx.analogsignals.append(sig)
             elif isinstance(sig, IrregularlySampledSignal):
                 neo_chx.irregularlysampledsignals.append(sig)
-            # else error?
+                # else error?
 
         # descend into Sources
         for src in nix_source.sources:
