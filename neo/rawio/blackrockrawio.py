@@ -427,8 +427,8 @@ class BlackrockRawIO(BaseRawIO):
                                                      sorted(min_nev_times.items())],\
                                                     [v / resolution for k, v in
                                                      sorted(max_nev_times.items())]
-        self._nb_segment = len(self._seg_t_starts)
-        print(self._nb_segment)
+            self._nb_segment = len(self._seg_t_starts)
+        # print(self._nb_segment)
 
         # finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
