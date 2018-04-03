@@ -12,7 +12,7 @@ from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.basefromrawio.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy, 
                 EventProxy, EpochProxy)
 
-from neo.core import (AnalogSignal, 
+from neo.core import (Segment, AnalogSignal, 
                       Epoch, Event, SpikeTrain)
 
 
@@ -186,6 +186,32 @@ class TestEpochProxy(BaseProxyTest):
         assert event.labels.shape == (3,)
         assert event.durations.shape == (3,)
 
+
+class TestSegmentWithProxy(BaseProxyTest):
+    def test_segment_with_proxy(self):
+        seg = Segment()
+        
+        proxy_anasig = AnalogSignalProxy(rawio=self.reader,
+                        global_channel_indexes=None,
+                        block_index=0, seg_index=0,)
+        seg.analogsignals.append(proxy_anasig)
+        
+        proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+                        block_index=0, seg_index=0)
+        seg.spiketrains.append(proxy_sptr)
+
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                        block_index=0, seg_index=0)
+        seg.events.append(proxy_event)
+
+        proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=1,
+                        block_index=0, seg_index=0)
+        seg.epochs.append(proxy_epoch)
+
+        
+        
+    
+    
 
 if __name__ == "__main__":
     unittest.main()
