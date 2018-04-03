@@ -84,6 +84,7 @@ class BaseTestPyNNIO(object):
             # index
             data[i * 101:(i + 1) * 101, 1] = i * np.ones((101,), dtype=float)
         return data, metadata
+
     build_test_data.__test__ = False
 
 
@@ -189,6 +190,7 @@ class BaseTestPyNNNumpyIO(object):
                 "%s, %s, (505, 2)" % (data.shape, data1.shape)
             assert (data == data1).all()
             assert metadata["n"] == 505
+
     write_test_file.__test__ = False
 
 
@@ -204,6 +206,7 @@ class BaseTestPyNNTextIO(object):
             np.savetxt(f, data)
         if check:
             raise NotImplementedError
+
     write_test_file.__test__ = False
 
 

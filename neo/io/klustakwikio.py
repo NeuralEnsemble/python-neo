@@ -21,6 +21,7 @@ import shutil
 
 # note neo.core need only numpy and quantitie
 import numpy as np
+
 try:
     import matplotlib.mlab as mlab
 except ImportError as err:
@@ -29,7 +30,6 @@ except ImportError as err:
 else:
     HAVE_MLAB = True
     MLAB_ERR = None
-
 
 # I need to subclass BaseIO
 from neo.io.baseio import BaseIO
@@ -52,10 +52,10 @@ Assuming N1 spikes (spike1...spikeN1), N2 electrodes (e1...eN2) and
 N3 coefficients (c1...cN3), this file looks like:
 
 nbDimensions
-c1_e1_spike1   c2_e1_spike1  ... cN3_e1_spike1   c1_e2_spike1  ... cN3_eN2_spike1   timestamp_spike1
-c1_e1_spike2   c2_e1_spike2  ... cN3_e1_spike2   c1_e2_spike2  ... cN3_eN2_spike2   timestamp_spike2
+c1_e1_spk1   c2_e1_spk1  ... cN3_e1_spk1   c1_e2_spk1  ... cN3_eN2_spk1   timestamp_spk1
+c1_e1_spk2   c2_e1_spk2  ... cN3_e1_spk2   c1_e2_spk2  ... cN3_eN2_spk2   timestamp_spk2
 ...
-c1_e1_spikeN1  c2_e1_spikeN1 ... cN3_e1_spikeN1  c1_e2_spikeN1 ... cN3_eN2_spikeN1  timestamp_spikeN1
+c1_e1_spkN1  c2_e1_spkN1 ... cN3_e1_spkN1  c1_e2_spkN1 ... cN3_eN2_spkN1  timestamp_spkN1
 
 The timestamp is expressed in multiples of the sampling interval. For
 instance, for a 20kHz recording (50 microsecond sampling interval), a
@@ -109,7 +109,7 @@ class KlustaKwikIO(BaseIO):
         if not HAVE_MLAB:
             raise MLAB_ERR
         BaseIO.__init__(self)
-        #self.filename = os.path.normpath(filename)
+        # self.filename = os.path.normpath(filename)
         self.filename, self.basename = os.path.split(os.path.abspath(filename))
         self.sampling_rate = float(sampling_rate)
 
@@ -194,36 +194,32 @@ class KlustaKwikIO(BaseIO):
     # Helper hidden functions for reading
     def _load_spike_times(self, fetfilename):
         """Reads and returns the spike times and features"""
-        f = file(fetfilename, 'r')
+        with open(fetfilename, mode='r') as f:
+            # Number of clustering features is integer on first line
+            nbFeatures = int(f.readline().strip())
 
-        # Number of clustering features is integer on first line
-        nbFeatures = int(f.readline().strip())
+            # Each subsequent line consists of nbFeatures values, followed by
+            # the spike time in samples.
+            names = ['fet%d' % n for n in range(nbFeatures)]
+            names.append('spike_time')
 
-        # Each subsequent line consists of nbFeatures values, followed by
-        # the spike time in samples.
-        names = ['fet%d' % n for n in xrange(nbFeatures)]
-        names.append('spike_time')
-
-        # Load into recarray
-        data = mlab.csv2rec(f, names=names, skiprows=1, delimiter=' ')
-        f.close()
+            # Load into recarray
+            data = mlab.csv2rec(f, names=names, skiprows=1, delimiter=' ')
 
         # get features
-        features = np.array([data['fet%d' % n] for n in xrange(nbFeatures)])
+        features = np.array([data['fet%d' % n] for n in range(nbFeatures)])
 
         # Return the spike_time column
         return data['spike_time'], features.transpose()
 
     def _load_unit_id(self, clufilename):
         """Reads and return the cluster ids as int32"""
-        f = file(clufilename, 'r')
+        with open(clufilename, mode='r') as f:
+            # Number of clusters on this tetrode is integer on first line
+            nbClusters = int(f.readline().strip())
 
-        # Number of clusters on this tetrode is integer on first line
-        nbClusters = int(f.readline().strip())
-
-        # Read each cluster name as a string
-        cluster_names = f.readlines()
-        f.close()
+            # Read each cluster name as a string
+            cluster_names = f.readlines()
 
         # Convert names to integers
         # I think the spec requires cluster names to be integers, but
@@ -394,8 +390,8 @@ class KlustaKwikIO(BaseIO):
             shutil.copyfile(clufilename, clufilename + '~')
 
         # create file handles
-        self._fetfilehandles[id_group] = file(fetfilename, 'w')
-        self._clufilehandles[id_group] = file(clufilename, 'w')
+        self._fetfilehandles[id_group] = open(fetfilename, mode='w')
+        self._clufilehandles[id_group] = open(clufilename, mode='w')
 
         # write out first line
         # self._fetfilehandles[id_group].write("0\n") # Number of features

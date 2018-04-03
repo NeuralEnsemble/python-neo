@@ -31,6 +31,9 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
     be a list of dictionaries, in which case the filters are applied
     sequentially.  If targdict and kwargs are both supplied, the
     targdict filters are applied first, followed by the kwarg filters.
+    A targdict of None or {} and objects = None corresponds to no filters
+    applied, therefore returning all child objects.
+    Default targdict and objects is None.
 
 
     objects (optional) should be the name of a Neo object type,
@@ -56,27 +59,27 @@ def filterdata(data, targdict=None, objects=None, **kwargs):
         targdict += [kwargs]
 
     if not targdict:
-        return []
+        results = data
 
     # if multiple dicts are provided, apply each filter sequentially
-    if not hasattr(targdict, 'keys'):
+    elif not hasattr(targdict, 'keys'):
         # for performance reasons, only do the object filtering on the first
         # iteration
         results = filterdata(data, targdict=targdict[0], objects=objects)
         for targ in targdict[1:]:
             results = filterdata(results, targdict=targ)
         return results
-
-    # do the actual filtering
-    results = []
-    for key, value in sorted(targdict.items()):
-        for obj in data:
-            if (hasattr(obj, key) and getattr(obj, key) == value and
-                    all([obj is not res for res in results])):
-                results.append(obj)
-            elif (key in obj.annotations and obj.annotations[key] == value and
-                    all([obj is not res for res in results])):
-                results.append(obj)
+    else:
+        # do the actual filtering
+        results = []
+        for key, value in sorted(targdict.items()):
+            for obj in data:
+                if (hasattr(obj, key) and getattr(obj, key) == value and
+                        all([obj is not res for res in results])):
+                    results.append(obj)
+                elif (key in obj.annotations and obj.annotations[key] == value and
+                          all([obj is not res for res in results])):
+                    results.append(obj)
 
     # keep only objects of the correct classes
     if objects:
@@ -379,6 +382,8 @@ class Container(BaseNeo):
         be a list of dictionaries, in which case the filters are applied
         sequentially.  If targdict and kwargs are both supplied, the
         targdict filters are applied first, followed by the kwarg filters.
+        A targdict of None or {} corresponds to no filters applied, therefore
+        returning all child objects. Default targdict is None.
 
         If data is True (default), include data objects.
         If container is True (default False), include container objects.
@@ -387,14 +392,17 @@ class Container(BaseNeo):
 
         objects (optional) should be the name of a Neo object type,
         a neo object class, or a list of one or both of these.  If specified,
-        only these objects will be returned.  Note that if recursive is True,
-        containers not in objects will still be descended into.
-        This overrides data and container.
+        only these objects will be returned. If not specified any type of
+        object is  returned. Default is None.
+        Note that if recursive is True, containers not in objects will still
+        be descended into. This overrides data and container.
 
 
         Examples::
 
             >>> obj.filter(name="Vm")
+            >>> obj.filter(objects=neo.SpikeTrain)
+            >>> obj.filter(targdict={'myannotation':3})
         """
         # if objects are specified, get the classes
         if objects:
@@ -452,7 +460,7 @@ class Container(BaseNeo):
         parent_name = _reference_name(self.__class__.__name__)
         for child in self._single_children:
             if (hasattr(child, parent_name) and
-                    getattr(child, parent_name) is None or force):
+                        getattr(child, parent_name) is None or force):
                 setattr(child, parent_name, self)
         if recursive:
             for child in self.container_children:
@@ -474,7 +482,7 @@ class Container(BaseNeo):
                 continue
             if append:
                 target = getattr(child, parent_name)
-                if not self in target:
+                if self not in target:
                     target.append(self)
                 continue
             setattr(child, parent_name, [self])
@@ -520,7 +528,7 @@ class Container(BaseNeo):
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
-                          self._multi_child_containers):
+                              self._multi_child_containers):
             lookup = dict((obj.name, obj) for obj in getattr(self, container))
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):

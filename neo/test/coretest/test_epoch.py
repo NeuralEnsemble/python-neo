@@ -497,6 +497,28 @@ class TestEpoch(unittest.TestCase):
         self.assertIsInstance(epc_as_q, pq.Quantity)
         assert_array_equal(times * pq.ms, epc_as_q)
 
+    def test_getitem(self):
+        times = [2, 3, 4, 5]
+        durations = [0.1, 0.2, 0.3, 0.4]
+        labels = ["A", "B", "C", "D"]
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels)
+        single_epoch = epc[2]
+        self.assertIsInstance(single_epoch, Epoch)
+        assert_array_equal(single_epoch.times, np.array([4.0]))
+        assert_array_equal(single_epoch.durations, np.array([0.3]))
+        assert_array_equal(single_epoch.labels, np.array(["C"]))
+
+    def test_slice(self):
+        times = [2, 3, 4, 5]
+        durations = [0.1, 0.2, 0.3, 0.4]
+        labels = ["A", "B", "C", "D"]
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels)
+        single_epoch = epc[1:3]
+        self.assertIsInstance(single_epoch, Epoch)
+        assert_array_equal(single_epoch.times, np.array([3.0, 4.0]))
+        assert_array_equal(single_epoch.durations, np.array([0.2, 0.3]))
+        assert_array_equal(single_epoch.labels, np.array(["B", "C"]))
+
 
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
@@ -516,12 +538,13 @@ class TestDuplicateWithNewData(unittest.TestCase):
                                    np.asarray(signal1.durations), 1e-12)
 
 
-class TestEventFunctions(unittest.TestCase):
-
+class TestEpochFunctions(unittest.TestCase):
     def test__pickle(self):
 
-        epoch1 = Epoch(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
-                       units='s')
+        epoch1 = Epoch(np.arange(0, 30, 10) * pq.s,
+                       durations=[1, 2, 3] * pq.s,
+                       labels=np.array(['t0', 't1', 't2'], dtype='S'),
+                       units='s', annotation1="foo", annotation2="bar")
         fobj = open('./pickle', 'wb')
         pickle.dump(epoch1, fobj)
         fobj.close()
@@ -534,6 +557,8 @@ class TestEventFunctions(unittest.TestCase):
 
         fobj.close()
         assert_array_equal(epoch1.times, epoch2.times)
+        self.assertEqual(epoch2.annotations, epoch1.annotations)
+
         os.remove('./pickle')
 
 

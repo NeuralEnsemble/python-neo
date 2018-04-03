@@ -9,6 +9,7 @@ from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 import logging
+
 logging.getLogger().setLevel(logging.INFO)
 
 
@@ -16,6 +17,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NeuralynxRawIO
     entities_to_test = [
         'Cheetah_v5.5.1/original_data',
+        'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
     ]
     files_to_download = [
@@ -32,6 +34,19 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/plain_data/Tet3b.txt',
         'Cheetah_v5.5.1/plain_data/Events.txt',
         'Cheetah_v5.5.1/README.txt',
+        'Cheetah_v5.6.3/original_data/CheetahLogFile.txt',
+        'Cheetah_v5.6.3/original_data/CheetahLostADRecords.txt',
+        'Cheetah_v5.6.3/original_data/Events.nev',
+        'Cheetah_v5.6.3/original_data/CSC1.ncs',
+        'Cheetah_v5.6.3/original_data/CSC2.ncs',
+        'Cheetah_v5.6.3/original_data/TT1.ntt',
+        'Cheetah_v5.6.3/original_data/TT2.ntt',
+        'Cheetah_v5.6.3/original_data/VT1.nvt',
+        'Cheetah_v5.6.3/plain_data/Events.txt',
+        'Cheetah_v5.6.3/plain_data/CSC1.txt',
+        'Cheetah_v5.6.3/plain_data/CSC2.txt',
+        'Cheetah_v5.6.3/plain_data/TT1.txt',
+        'Cheetah_v5.6.3/plain_data/TT2.txt',
         'Cheetah_v5.7.4/original_data/CSC1.ncs',
         'Cheetah_v5.7.4/original_data/CSC2.ncs',
         'Cheetah_v5.7.4/original_data/CSC3.ncs',

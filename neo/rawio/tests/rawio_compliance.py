@@ -10,12 +10,12 @@ All rules are listed as function so it should be easier to:
 
 """
 import time
+
 if not hasattr(time, 'perf_counter'):
     time.perf_counter = time.time
 import logging
 
 import numpy as np
-
 
 from neo.rawio.baserawio import (_signal_channel_dtype, _unit_channel_dtype,
                                  _event_channel_dtype, _common_sig_characteristics)
@@ -115,8 +115,10 @@ def iter_over_sig_chunks(reader, channel_indexes, chunksize=1024):
             for i in range(nb):
                 i_start = i * chunksize
                 i_stop = min((i + 1) * chunksize, sig_size)
-                raw_chunk = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                                                          i_start=i_start, i_stop=i_stop, channel_indexes=channel_indexes)
+                raw_chunk = reader.get_analogsignal_chunk(block_index=block_index,
+                                                          seg_index=seg_index,
+                                                          i_start=i_start, i_stop=i_stop,
+                                                          channel_indexes=channel_indexes)
                 yield raw_chunk
 
 
@@ -140,7 +142,7 @@ def read_analogsignals(reader):
     for channel_indexes in channel_indexes_list:
         for raw_chunk in iter_over_sig_chunks(reader, channel_indexes, chunksize=1024):
             assert raw_chunk.ndim == 2
-            #~ pass
+            # ~ pass
 
     for channel_indexes in channel_indexes_list:
         sr = reader.get_signal_sampling_rate(channel_indexes=channel_indexes)
@@ -173,19 +175,22 @@ def read_analogsignals(reader):
         channel_ids2 = signal_ids[::2]
 
         raw_chunk0 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                                                   i_start=i_start, i_stop=i_stop,  channel_indexes=channel_indexes2)
+                                                   i_start=i_start, i_stop=i_stop,
+                                                   channel_indexes=channel_indexes2)
         assert raw_chunk0.ndim == 2
         assert raw_chunk0.shape[0] == i_stop
         assert raw_chunk0.shape[1] == len(channel_indexes2)
 
         if unique_chan_name:
             raw_chunk1 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                                                       i_start=i_start, i_stop=i_stop,  channel_names=channel_names2)
+                                                       i_start=i_start, i_stop=i_stop,
+                                                       channel_names=channel_names2)
             np.testing.assert_array_equal(raw_chunk0, raw_chunk1)
 
         if unique_chan_id:
             raw_chunk2 = reader.get_analogsignal_chunk(block_index=block_index, seg_index=seg_index,
-                                                       i_start=i_start, i_stop=i_stop,  channel_ids=channel_ids2)
+                                                       i_start=i_start, i_stop=i_stop,
+                                                       channel_ids=channel_ids2)
             np.testing.assert_array_equal(raw_chunk0, raw_chunk2)
 
         # convert to float32/float64
@@ -231,8 +236,10 @@ def benchmark_speed_read_signals(reader):
             nb_samples += raw_chunk.shape[0]
         t1 = time.perf_counter()
         speed = (nb_samples * nb_sig) / (t1 - t0) / 1e6
-        logging.info('{} read ({}signals x {}samples) in {:0.3f} s so speed {:0.3f} MSPS from {}'.format(print_class(reader),
-                                                                                                         nb_sig, nb_samples, t1 - t0, speed, reader.source_name()))
+        logging.info(
+            '{} read ({}signals x {}samples) in {:0.3f} s so speed {:0.3f} MSPS from {}'.format(
+                print_class(reader),
+                nb_sig, nb_samples, t1 - t0, speed, reader.source_name()))
 
 
 def read_spike_times(reader):
@@ -252,8 +259,10 @@ def read_spike_times(reader):
                 if nb_spike == 0:
                     continue
 
-                spike_timestamp = reader.get_spike_timestamps(block_index=block_index, seg_index=seg_index,
-                                                              unit_index=unit_index, t_start=None, t_stop=None)
+                spike_timestamp = reader.get_spike_timestamps(block_index=block_index,
+                                                              seg_index=seg_index,
+                                                              unit_index=unit_index, t_start=None,
+                                                              t_stop=None)
                 assert spike_timestamp.shape[0] == nb_spike, 'nb_spike {} != {}'.format(
                     spike_timestamp.shape[0], nb_spike)
 
@@ -265,8 +274,10 @@ def read_spike_times(reader):
                     t_start = spike_times[1] - 0.001
                     t_stop = spike_times[1] + 0.001
 
-                    spike_timestamp2 = reader.get_spike_timestamps(block_index=block_index, seg_index=seg_index,
-                                                                   unit_index=unit_index, t_start=t_start, t_stop=t_stop)
+                    spike_timestamp2 = reader.get_spike_timestamps(block_index=block_index,
+                                                                   seg_index=seg_index,
+                                                                   unit_index=unit_index,
+                                                                   t_start=t_start, t_stop=t_stop)
                     assert spike_timestamp2.shape[0] == 1
 
                     spike_times2 = reader.rescale_spike_timestamp(spike_timestamp2, 'float64')
@@ -290,7 +301,8 @@ def read_spike_waveforms(reader):
                     continue
 
                 raw_waveforms = reader.get_spike_raw_waveforms(block_index=block_index,
-                                                               seg_index=seg_index, unit_index=unit_index,
+                                                               seg_index=seg_index,
+                                                               unit_index=unit_index,
                                                                t_start=None, t_stop=None)
                 if raw_waveforms is None:
                     continue
@@ -320,8 +332,9 @@ def read_events(reader):
                 if nb_event == 0:
                     continue
 
-                ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(block_index=block_index, seg_index=seg_index,
-                                                                                     event_channel_index=ev_chan)
+                ev_timestamps, ev_durations, ev_labels = reader.get_event_timestamps(
+                    block_index=block_index, seg_index=seg_index,
+                    event_channel_index=ev_chan)
                 assert ev_timestamps.shape[0] == nb_event, 'Wrong shape {}, {}'.format(
                     ev_timestamps.shape[0], nb_event)
                 if ev_durations is not None:

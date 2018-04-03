@@ -6,7 +6,12 @@ electrophysiological data files.
 Note that if the package dependency is not satisfied for one io, it does not
 raise an error but a warning.
 
-neo.io.iolist provides a list of succesfully imported io classes.
+:attr:`neo.io.iolist` provides a list of successfully imported io classes.
+
+Functions:
+
+.. autofunction:: neo.io.get_io
+
 
 Classes:
 
@@ -17,6 +22,8 @@ Classes:
 .. autoclass:: neo.io.AsciiSpikeTrainIO
 
 .. autoclass:: neo.io.AxonIO
+
+.. autoclass:: neo.io.BCI2000IO
 
 .. autoclass:: neo.io.BlackrockIO
 
@@ -30,8 +37,7 @@ Classes:
 
 .. autoclass:: neo.io.ElanIO
 
-..
-  .. autoclass:: neo.io.ElphyIO
+.. autoclass:: neo.io.ElphyIO
 
 .. autoclass:: neo.io.IgorIO
 
@@ -88,15 +94,14 @@ try:
     import neuroshare as ns
 except ImportError as err:
     from neo.io.neurosharectypesio import NeurosharectypesIO as NeuroshareIO
-    #print("\n neuroshare library not found, loading data with ctypes" )
-    #print("\n to use the API be sure to install the library found at:")
-    #print("\n www.http://pythonhosted.org/neuroshare/")
+    # print("\n neuroshare library not found, loading data with ctypes" )
+    # print("\n to use the API be sure to install the library found at:")
+    # print("\n www.http://pythonhosted.org/neuroshare/")
 
 else:
     from neo.io.neuroshareapiio import NeuroshareapiIO as NeuroshareIO
-    #print("neuroshare library successfully imported")
-    #print("\n loading with API...")
-
+    # print("neuroshare library successfully imported")
+    # print("\n loading with API...")
 
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
@@ -104,12 +109,13 @@ from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
+from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
 from neo.io.brainwaref32io import BrainwareF32IO
 from neo.io.brainwaresrcio import BrainwareSrcIO
 from neo.io.elanio import ElanIO
-#from neo.io.elphyio import ElphyIO
+# from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
 from neo.io.klustakwikio import KlustaKwikIO
@@ -135,12 +141,12 @@ from neo.io.tdtio import TdtIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
-
 iolist = [
     AlphaOmegaIO,
     AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxonIO,
+    BCI2000IO,
     BlackrockIO,
     BrainVisionIO,
     BrainwareDamIO,

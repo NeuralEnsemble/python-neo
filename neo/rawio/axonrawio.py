@@ -51,7 +51,6 @@ import numpy as np
 
 
 class AxonRawIO(BaseRawIO):
-
     extensions = ['abf']
     rawmode = 'one-file'
 
@@ -73,12 +72,12 @@ class AxonRawIO(BaseRawIO):
         if version < 2.:
             nbchannel = info['nADCNumChannels']
             head_offset = info['lDataSectionPtr'] * BLOCKSIZE + info[
-                'nNumPointsIgnored'] * sig_dtype.itemsize
+                                                                    'nNumPointsIgnored'] * sig_dtype.itemsize
             totalsize = info['lActualAcqLength']
         elif version >= 2.:
             nbchannel = info['sections']['ADCSection']['llNumEntries']
             head_offset = info['sections']['DataSection'][
-                'uBlockIndex'] * BLOCKSIZE
+                              'uBlockIndex'] * BLOCKSIZE
             totalsize = info['sections']['DataSection']['llNumEntries']
 
         self._raw_data = np.memmap(self.filename, dtype=sig_dtype, mode='r',
@@ -103,7 +102,7 @@ class AxonRawIO(BaseRawIO):
             nbepisod = info['sections']['SynchArraySection'][
                 'llNumEntries']
             offset_episode = info['sections']['SynchArraySection'][
-                'uBlockIndex'] * BLOCKSIZE
+                                 'uBlockIndex'] * BLOCKSIZE
         if nbepisod > 0:
             episode_array = np.memmap(
                 self.filename, [('offset', 'i4'), ('len', 'i4')], 'r',
@@ -119,7 +118,7 @@ class AxonRawIO(BaseRawIO):
                                         nbchannel * 1.e-6)
         elif version >= 2.:
             self._sampling_rate = 1.e6 / \
-                info['protocol']['fADCSequenceInterval']
+                                  info['protocol']['fADCSequenceInterval']
 
         # one sweep = one segment
         nb_segment = episode_array.size
@@ -161,13 +160,13 @@ class AxonRawIO(BaseRawIO):
         for chan_index, chan_id in enumerate(channel_ids):
             if version < 2.:
                 name = info['sADCChannelName'][chan_id].replace(b' ', b'')
-                units = info['sADCUnits'][chan_id].replace(b'\xb5', b'u').\
+                units = info['sADCUnits'][chan_id].replace(b'\xb5', b'u'). \
                     replace(b' ', b'').decode('utf-8')  # \xb5 is µ
                 adc_num = info['nADCPtoLChannelMap'][chan_id]
             elif version >= 2.:
                 ADCInfo = info['listADCInfo'][chan_id]
                 name = ADCInfo['ADCChNames'].replace(b' ', b'')
-                units = ADCInfo['ADCChUnits'].replace(b'\xb5', b'u').\
+                units = ADCInfo['ADCChUnits'].replace(b'\xb5', b'u'). \
                     replace(b' ', b'').decode('utf-8')
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
@@ -194,7 +193,7 @@ class AxonRawIO(BaseRawIO):
                 offset -= info['listADCInfo'][chan_id]['fSignalOffset']
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, offset, gain, group_id))
+                                 sig_dtype, units, gain, offset, group_id))
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
@@ -256,7 +255,7 @@ class AxonRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         t_stop = self._t_starts[seg_index] + \
-            self._raw_signals[seg_index].shape[0] / self._sampling_rate
+                 self._raw_signals[seg_index].shape[0] / self._sampling_rate
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
@@ -266,7 +265,7 @@ class AxonRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._t_starts[seg_index]
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(None)
         raw_signals = self._raw_signals[seg_index][slice(i_start, i_stop), channel_indexes]
@@ -275,7 +274,7 @@ class AxonRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         return self._raw_ev_timestamps.size
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # In ABF timstamps are not attached too any particular segment
         # so each segmetn acees all event
         timestamp = self._raw_ev_timestamps
@@ -319,10 +318,8 @@ class AxonRawIO(BaseRawIO):
         nDAC = info['sections']['DACSection'][
             'llNumEntries']  # Number of DAC channels
         nSam = int(info['protocol'][
-            'lNumSamplesPerEpisode'] / nADC)  # Number of samples per episode
+                       'lNumSamplesPerEpisode'] / nADC)  # Number of samples per episode
         nEpi = info['lActualEpisodes']  # Actual number of episodes
-
-        #~ print('read_raw_protocol', nEpi, nDAC)
 
         # Make a list of segments with analog signals with just holding levels
         # List of segments relates to number of episodes, as for recorded data
@@ -335,21 +332,21 @@ class AxonRawIO(BaseRawIO):
                 # If there are epoch infos for this DAC
                 if DACNum in info['dictEpochInfoPerDAC']:
                     # Save last sample index
-                    i_last = int(nSam * 15625 / 10**6)
+                    i_last = int(nSam * 15625 / 10 ** 6)
                     # TODO guess for first holding
                     # Go over EpochInfoPerDAC and change the analog signal
                     # according to the epochs
                     epochInfo = info['dictEpochInfoPerDAC'][DACNum]
                     for epochNum, epoch in epochInfo.items():
                         i_begin = i_last
-                        i_end = i_last + epoch['lEpochInitDuration'] +\
-                            epoch['lEpochDurationInc'] * epiNum
+                        i_end = i_last + epoch['lEpochInitDuration'] + \
+                                epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
-                        sig[i_begin:i_end] = np.ones((dif)) *\
-                            (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] *
-                             epiNum)
-                        i_last += epoch['lEpochInitDuration'] +\
-                            epoch['lEpochDurationInc'] * epiNum
+                        sig[i_begin:i_end] = np.ones((dif)) * \
+                                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] *
+                                              epiNum)
+                        i_last += epoch['lEpochInitDuration'] + \
+                                  epoch['lEpochDurationInc'] * epiNum
                 signals.append(sig)
             sigs_by_segments.append(signals)
 
@@ -357,7 +354,7 @@ class AxonRawIO(BaseRawIO):
         sig_units = []
         for DACNum in range(nDAC):
             name = info['listDACInfo'][DACNum]['DACChNames'].decode("utf-8")
-            units = info['listDACInfo'][DACNum]['DACChUnits'].\
+            units = info['listDACInfo'][DACNum]['DACChUnits']. \
                 replace(b'\xb5', b'u').decode('utf-8')  # \xb5 is µ
             sig_names.append(name)
             sig_units.append(units)
@@ -406,11 +403,11 @@ def parse_axon_soup(filename):
         # correction of version number and starttime
         if f_file_signature == b'ABF ':
             header['lFileStartTime'] += header[
-                'nFileStartMillisecs'] * .001
+                                            'nFileStartMillisecs'] * .001
         elif f_file_signature == b'ABF2':
             n = header['fFileVersionNumber']
-            header['fFileVersionNumber'] = n[3] + 0.1 * n[2] +\
-                0.01 * n[1] + 0.001 * n[0]
+            header['fFileVersionNumber'] = n[3] + 0.1 * n[2] + \
+                                           0.01 * n[1] + 0.001 * n[0]
             header['lFileStartTime'] = header['uFileStartTimeMS'] * .001
 
         if header['fFileVersionNumber'] < 2.:
@@ -429,7 +426,7 @@ def parse_axon_soup(filename):
             header['listTag'] = listTag
             # protocol name formatting
             header['sProtocolPath'] = clean_string(header['sProtocolPath'])
-            header['sProtocolPath'] = header['sProtocolPath'].\
+            header['sProtocolPath'] = header['sProtocolPath']. \
                 replace(b'\\', b'/')
 
         elif header['fFileVersionNumber'] >= 2.:
@@ -438,7 +435,7 @@ def parse_axon_soup(filename):
             # sections
             sections = {}
             for s, sectionName in enumerate(sectionNames):
-                uBlockIndex, uBytes, llNumEntries =\
+                uBlockIndex, uBytes, llNumEntries = \
                     f.read_f('IIl', offset=76 + s * 16)
                 sections[sectionName] = {}
                 sections[sectionName]['uBlockIndex'] = uBlockIndex
@@ -451,12 +448,14 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex', b'CLAMPEX', b'axoscope']:
-                #goodstart = big_string.lower().find(key)
+            for key in [b'AXENGN', b'clampex', b'Clampex',
+                        b'CLAMPEX', b'axoscope', b'Clampfit']:
+                # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(key)
                 if goodstart != -1:
                     break
-            assert goodstart != -1, 'This file does not contain clampex, axoscope or clampfit in the header'
+            assert goodstart != -1, \
+                'This file does not contain clampex, axoscope or clampfit in the header'
             big_string = big_string[goodstart:]
             strings = big_string.split(b'\x00')
 
@@ -552,7 +551,7 @@ def parse_axon_soup(filename):
                 if DACNum not in header['dictEpochInfoPerDAC']:
                     header['dictEpochInfoPerDAC'][DACNum] = {}
 
-                header['dictEpochInfoPerDAC'][DACNum][EpochNum] =\
+                header['dictEpochInfoPerDAC'][DACNum][EpochNum] = \
                     EpochInfoPerDAC
 
         # date and time
@@ -650,7 +649,6 @@ headerDescriptionV1 = [
     ('sProtocolPath', 4898, '384s'),
 ]
 
-
 headerDescriptionV2 = [
     ('fFileSignature', 0, '4s'),
     ('fFileVersionNumber', 4, '4b'),
@@ -672,7 +670,6 @@ headerDescriptionV2 = [
     ('uProtocolPathIndex', 72, 'I'),
 ]
 
-
 sectionNames = [
     'ProtocolSection',
     'ADCSection',
@@ -693,7 +690,6 @@ sectionNames = [
     'AnnotationSection',
     'StatsSection',
 ]
-
 
 protocolInfoDescription = [
     ('nOperationMode', 'h'),

@@ -673,8 +673,8 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
             filename='0gid-1time-1256-0.gdf',
             directory=self.local_test_dir, clean=False)
         r = NestIO(filenames=filename)
-        seg = r.read_segment(gid_list=[], t_start=400. * pq.ms,
-                             t_stop=1. * pq.ms)
+        seg = r.read_segment(gid_list=[], t_start=400.4 * pq.ms,
+                             t_stop=400.5 * pq.ms)
         for st in seg.spiketrains:
             self.assertEqual(st.size, 0)
 
@@ -689,7 +689,7 @@ class TestNestIO_Spiketrains(BaseTestIO, unittest.TestCase):
             directory=self.local_test_dir, clean=False)
         r = NestIO(filenames=filename)
         st = r.read_spiketrain(gdf_id=0, t_start=400. * pq.ms,
-                               t_stop=1. * pq.ms)
+                               t_stop=410. * pq.ms)
         self.assertEqual(st.size, 0)
 
 
@@ -786,10 +786,11 @@ class TestColumnIO(BaseTestIO, unittest.TestCase):
         condition_column = 0
 
         def condition_function(x): return x > 10
+
         result = self.testIO.get_columns(condition=condition_function,
                                          condition_column=0)
         selected_ids = np.where(condition_function(self.testIO.data[:,
-                                                                    condition_column]))[0]
+                                                   condition_column]))[0]
         expected = self.testIO.data[selected_ids, :]
 
         np.testing.assert_array_equal(result, expected)

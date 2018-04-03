@@ -415,11 +415,10 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
 
 class TestEventFunctions(unittest.TestCase):
-
     def test__pickle(self):
 
         event1 = Event(np.arange(0, 30, 10) * pq.s, labels=np.array(['t0', 't1', 't2'], dtype='S'),
-                       units='s')
+                       units='s', annotation1="foo", annotation2="bar")
         fobj = open('./pickle', 'wb')
         pickle.dump(event1, fobj)
         fobj.close()
@@ -433,6 +432,7 @@ class TestEventFunctions(unittest.TestCase):
         fobj.close()
         assert_array_equal(event1.times, event2.times)
         os.remove('./pickle')
+        self.assertEqual(event2.annotations, event1.annotations)
 
 
 if __name__ == "__main__":

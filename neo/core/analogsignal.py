@@ -148,6 +148,9 @@ class AnalogSignal(BaseSignal):
         Otherwise an :class:`AnalogSignal` (actually a view) is
         returned, with the same metadata, except that :attr:`t_start`
         is changed if the start index along dimension 1 is greater than 1.
+        Note that slicing an :class:`AnalogSignal` may give a different
+        result to slicing the underlying NumPy array since signals
+        are always two-dimensional.
 
     *Operations available on this object*:
         == != + * /
@@ -411,7 +414,7 @@ class AnalogSignal(BaseSignal):
         Equality test (==)
         '''
         if (self.t_start != other.t_start or
-                self.sampling_rate != other.sampling_rate):
+                    self.sampling_rate != other.sampling_rate):
             return False
         return super(AnalogSignal, self).__eq__(other)
 
@@ -424,7 +427,7 @@ class AnalogSignal(BaseSignal):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
                     raise ValueError("Inconsistent values of %s" % attr)
-            # how to handle name and annotations?
+                    # how to handle name and annotations?
 
     def _repr_pretty_(self, pp, cycle):
         '''
@@ -432,11 +435,11 @@ class AnalogSignal(BaseSignal):
         '''
         pp.text("{cls} with {channels} channels of length {length}; "
                 "units {units}; datatype {dtype} ".format(
-                    cls=self.__class__.__name__,
-                    channels=self.shape[1],
-                    length=self.shape[0],
-                    units=self.units.dimensionality.string,
-                    dtype=self.dtype))
+            cls=self.__class__.__name__,
+            channels=self.shape[1],
+            length=self.shape[0],
+            units=self.units.dimensionality.string,
+            dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -445,6 +448,7 @@ class AnalogSignal(BaseSignal):
             pp.breakable()
             with pp.group(indent=1):
                 pp.text(line)
+
         for line in ["sampling rate: {0}".format(self.sampling_rate),
                      "time: {0} to {1}".format(self.t_start, self.t_stop)
                      ]:

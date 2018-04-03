@@ -20,7 +20,6 @@ try:
 except ImportError:
     from urllib.request import urlretrieve  # Py3
 
-
 from neo.io import NeuroshareIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
@@ -40,18 +39,22 @@ class TestNeuroshareIO(unittest.TestCase, BaseTestIO):
                 urlretrieve(distantfile, localfile)
             if platform.architecture()[0].startswith('64'):
                 self.dllname = os.path.join(
-                    tempfile.gettempdir(), 'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll')
+                    tempfile.gettempdir(),
+                    'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll')
                 if not os.path.exists(self.dllname):
                     zip = zipfile.ZipFile(localfile)
                     zip.extract(
-                        'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll', path=tempfile.gettempdir())
+                        'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary64.dll',
+                        path=tempfile.gettempdir())
             else:
                 self.dllname = os.path.join(
-                    tempfile.gettempdir(), 'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll')
+                    tempfile.gettempdir(),
+                    'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll')
                 if not os.path.exists(self.dllname):
                     zip = zipfile.ZipFile(localfile)
                     zip.extract(
-                        'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll', path=tempfile.gettempdir())
+                        'Matlab/Matlab-Import-Filter/Matlab_Interface/nsMCDLibrary.dll',
+                        path=tempfile.gettempdir())
 
         elif sys.platform.startswith('linux'):
             if platform.architecture()[0].startswith('64'):

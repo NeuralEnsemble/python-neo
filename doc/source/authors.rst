@@ -37,6 +37,7 @@ and may not be the current affiliation of a contributor.
 * Rick Gerkin [15]
 * Matthieu Sénoville [2]
 * Chadwick Boulay [16]
+* Björn Müller [13]
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1

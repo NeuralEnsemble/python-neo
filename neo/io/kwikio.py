@@ -189,13 +189,13 @@ class KwikIO(BaseIO):
             A KwikModel object obtained by klusta.kwik.KwikModel(fname)
         """
         try:
-            if ((not(cluster_id in model.cluster_ids))):
+            if ((not (cluster_id in model.cluster_ids))):
                 raise ValueError
         except ValueError:
             print("Exception: cluster_id (%d) not found !! " % cluster_id)
             return
         clusters = model.spike_clusters
-        idx = np.argwhere(clusters == cluster_id)
+        idx = np.nonzero(clusters == cluster_id)
         if get_waveforms:
             w = model.all_waveforms[idx]
             # klusta: num_spikes, samples_per_spike, num_chans = w.shape

@@ -14,6 +14,7 @@ from neo.test.iotest.common_io_test import BaseTestIO
 import quantities as pq
 import numpy as np
 
+
 # This run standart tests, this is mandatory for all IO
 
 
@@ -58,7 +59,6 @@ class Specific_TestExampleIO(unittest.TestCase):
         r = ExampleIO(filename=None)
         bl = r.read_block(lazy=True)
         assert len(bl.list_units) == 3
-        #~ print(len(bl.channel_indexes))
         assert len(bl.channel_indexes) == 1 + 3  # signals grouped + units
 
     def test_read_segment_with_time_slice(self):
@@ -85,21 +85,6 @@ class Specific_TestExampleIO(unittest.TestCase):
         assert event_full.size > event_slice.size
         assert np.all(event_slice.times >= t_start)
         assert np.all(event_slice.times <= t_stop)
-
-    def test_read_block_with_time_slices(self):
-        r = ExampleIO(filename=None)
-        bl = r.read_block(time_slices=None)
-        real_segments = bl.segments
-        assert len(real_segments) == 2
-
-        time_slices = [(1, 3), (4, 5), (16, 21), (21.5, 22.)]
-        bl = r.read_block(time_slices=time_slices)
-        sliced_segments = bl.segments
-        assert len(sliced_segments) == len(time_slices)
-
-        with self.assertRaises(ValueError):
-            buggy_time_slices = [(11, 14)]
-            bl = r.read_block(time_slices=buggy_time_slices)
 
 
 if __name__ == "__main__":

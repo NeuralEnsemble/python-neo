@@ -27,7 +27,6 @@ try:
 except NameError:
     PY2 = False
 
-
 UNITS_MAP = {
     'spikes': pq.ms,
     'v': pq.mV,
@@ -48,6 +47,12 @@ class BasePyNNIO(BaseIO):
     writeable_objects = supported_objects
     mode = 'file'
 
+    def __init__(self, filename=None, **kargs):
+        BaseIO.__init__(self, filename, *kargs)
+        warnings.warn("PyNNTextIO and PyNNNumpyIO will be removed in Neo 0.7.0. " +
+                      "Please contact the Neo developers if this will cause you problems.",
+                      DeprecationWarning)
+
     def _read_file_contents(self):
         raise NotImplementedError
 
@@ -66,7 +71,8 @@ class BasePyNNIO(BaseIO):
     def _extract_signals(self, data, metadata):
 
         arr = numpy.vstack(self._extract_array(data, channel_index)
-                           for channel_index in range(metadata['first_index'], metadata['last_index'] + 1))
+                           for channel_index in
+                           range(metadata['first_index'], metadata['last_index'] + 1))
         if len(arr) > 0:
             signal = AnalogSignal(arr.T,
                                   units=self._determine_units(metadata),
@@ -182,7 +188,7 @@ class BasePyNNIO(BaseIO):
 
 class PyNNNumpyIO(BasePyNNIO):
     """
-    Reads/writes data from/to PyNN NumpyBinaryFile format
+    (DEPRECATED) Reads/writes data from/to PyNN NumpyBinaryFile format
     """
     name = "PyNN NumpyBinaryFile"
     extensions = ['npz']
@@ -212,7 +218,7 @@ class PyNNNumpyIO(BasePyNNIO):
 
 class PyNNTextIO(BasePyNNIO):
     """
-    Reads/writes data from/to PyNN StandardTextFile format
+    (DEPRECATED) Reads/writes data from/to PyNN StandardTextFile format
     """
     name = "PyNN StandardTextFile"
     extensions = ['v', 'ras', 'gsyn']

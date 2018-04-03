@@ -435,7 +435,9 @@ class EpochProxy(_EventOrEpoch):
 
 
 
-unit_convert = {'Volts': 'V',  'volts': 'V', 'Volt': 'V', 'volt': 'V', ' Volt': 'V', 'microV': 'V'}
+unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
+                'volt': 'V', ' Volt': 'V', 'microV': 'V'}
+
 
 def ensure_signal_units(units):
     # test units
@@ -445,7 +447,8 @@ def ensure_signal_units(units):
     try:
         units = pq.Quantity(1, units)
     except:
-        logging.warning('Units "{}" not understand use dimentionless instead'.format(units))
+        logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
+                        'instead'.format(units))
         units = ''
     return units
 
@@ -459,7 +462,7 @@ def check_annotations(annotations):
 
     if 'coordinates' in annotations:
         # some rawio expose some coordinates in annotations but is not standardized
-        #(x, y, z) or polar, at the moment it is more resonable to remove them
+        # (x, y, z) or polar, at the moment it is more resonable to remove them
         annotations.pop('coordinates')
 
     return annotations

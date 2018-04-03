@@ -139,7 +139,7 @@ class MicromedRawIO(BaseRawIO):
 
                 keep = (rawevent['start'] >= rawevent['start'][0]) & (
                     rawevent['start'] < self._raw_signals.shape[0]) & (
-                    rawevent['start'] != 0)
+                           rawevent['start'] != 0)
                 rawevent = rawevent[keep]
                 self._raw_events.append(rawevent)
 
@@ -188,20 +188,20 @@ class MicromedRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if channel_indexes is None:
             channel_indexes = slice(channel_indexes)
         raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
         return raw_signals
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         return 0
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         n = self._raw_events[event_channel_index].size
         return n
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
 
         raw_event = self._raw_events[event_channel_index]
 

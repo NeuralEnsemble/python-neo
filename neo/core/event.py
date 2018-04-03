@@ -20,14 +20,14 @@ from neo.core.baseneo import BaseNeo, merge_annotations
 PY_VER = sys.version_info[0]
 
 
-def _new_event(cls, signal, times=None, labels=None, units=None, name=None,
+def _new_event(cls, times=None, labels=None, units=None, name=None,
                file_origin=None, description=None,
                annotations=None, segment=None):
     '''
     A function to map Event.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Event(signal=signal, times=times, labels=labels, units=units, name=name, file_origin=file_origin,
+    e = Event(times=times, labels=labels, units=units, name=name, file_origin=file_origin,
               description=description, **annotations)
     e.segment = segment
     return e
@@ -113,10 +113,10 @@ class Event(BaseNeo, pq.Quantity):
 
     def __reduce__(self):
         '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        Map the __new__ function onto _new_event, so that pickle
         works
         '''
-        return _new_event, (self.__class__, self.times, np.array(self), self.labels, self.units,
+        return _new_event, (self.__class__, np.array(self), self.labels, self.units,
                             self.name, self.file_origin, self.description,
                             self.annotations, self.segment)
 
@@ -141,6 +141,19 @@ class Event(BaseNeo, pq.Quantity):
         objs = ['%s@%s' % (label, time) for label, time in zip(labels,
                                                                self.times)]
         return '<Event: %s>' % ', '.join(objs)
+
+    def rescale(self, units):
+        '''
+        Return a copy of the :class:`Event` converted to the specified
+        units
+        '''
+        if self.dimensionality == pq.quantity.validate_dimensionality(units):
+            return self.copy()
+        obj = Event(times=self.times, labels=self.labels, units=units, name=self.name,
+                    description=self.description, file_origin=self.file_origin,
+                    **self.annotations)
+        obj.segment = self.segment
+        return obj
 
     @property
     def times(self):

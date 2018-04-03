@@ -6,13 +6,13 @@ This IO supports NCS, NEV, NSE and NTT file formats.
 
 NCS contains signals for one channel
 NEV contains events
-NSE contains spikes and waveforms for mono electrode
-NTT contains spikes and waveforms for tetrode
+NSE contains spikes and waveforms for mono electrodes
+NTT contains spikes and waveforms for tetrodes
 
 
 NCS can contains gaps that can be detected in inregularity
 in timestamps of data blocks. Each gap lead to one new segment.
-NCVS files need to be read entirly to detect that gaps.... too bad....
+NCS files need to be read entirely to detect that gaps.... too bad....
 
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
@@ -21,8 +21,8 @@ from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 
-from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
-                        _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype,
+                        _unit_channel_dtype, _event_channel_dtype)
 
 import numpy as np
 import os
@@ -31,9 +31,8 @@ import distutils.version
 import datetime
 from collections import OrderedDict
 
-
 BLOCK_SIZE = 512  # nb sample per signal block
-HEADER_SIZE = 2**14  # file have a txt header of 16kB
+HEADER_SIZE = 2 ** 14  # file have a txt header of 16kB
 
 
 class NeuralynxRawIO(BaseRawIO):
@@ -90,70 +89,94 @@ class NeuralynxRawIO(BaseRawIO):
 
             # All file have more or less the same header structure
             info = read_txt_header(filename)
-            chan_name = info['channel_name']
-            chan_id = info['channel_id']
+            chan_names = info['channel_names']
+            chan_ids = info['channel_ids']
 
-            if ext == 'ncs':
-                # a signal channels
-                units = 'uV'
-                gain = info['bit_to_microVolt']
-                if info['input_inverted']:
-                    gain *= -1
-                offset = 0.
-                group_id = 0
-                sig_channels.append((chan_name, chan_id, info['sampling_rate'], 'int16',
-                                     units, gain, offset, group_id))
-                self.ncs_filenames[chan_id] = filename
-                keys = ['DspFilterDelay_µs', 'recording_opened', 'FileType',  'DspDelayCompensation', 'recording_closed',
-                        'DspLowCutFilterType', 'HardwareSubSystemName',  'DspLowCutNumTaps', 'DSPLowCutFilterEnabled',
-                        'HardwareSubSystemType', 'DspHighCutNumTaps', 'ADMaxValue', 'DspLowCutFrequency',
-                        'DSPHighCutFilterEnabled', 'RecordSize', 'InputRange', 'DspHighCutFrequency',
-                        'input_inverted', 'NumADChannels', 'DspHighCutFilterType', ]
-                d = {k: info[k] for k in keys if k in info}
-                signal_annotations.append(d)
-
-            elif ext in ('nse', 'ntt'):
-                # nse and ntt are pretty similar execept for the wavform shape
-                # a file can contain several unit_id (so several unit channel)
-                assert chan_id not in self.nse_ntt_filenames
-                self.nse_ntt_filenames[chan_id] = filename, 'Several nse or ntt files have the same unit_id!!!'
-
-                dtype = get_nse_or_ntt_dtype(info, ext)
-                data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
-                self._spike_memmap[chan_id] = data
-
-                unit_ids = np.unique(data['unit_id'])
-                for unit_id in unit_ids:
-                    # a spike channel for each (chan_id, unit_id)
-                    self.internal_unit_ids.append((chan_id, unit_id))
-
-                    unit_name = "ch{}#{}".format(chan_id, unit_id)
-                    unit_id = '{}'.format(unit_id)
-                    wf_units = 'uV'
-                    wf_gain = info['bit_to_microVolt']
+            for idx, chan_id in enumerate(chan_ids):
+                chan_name = chan_names[idx]
+                if ext == 'ncs':
+                    # a signal channels
+                    units = 'uV'
+                    gain = info['bit_to_microVolt'][idx]
                     if info['input_inverted']:
-                        wf_gain *= -1
-                    wf_offset = 0.
-                    wf_left_sweep = -1  # DONT KNOWN
-                    wf_sampling_rate = info['sampling_rate']
-                    unit_channels.append((unit_name, '{}'.format(unit_id), wf_units, wf_gain, wf_offset,
-                                          wf_left_sweep, wf_sampling_rate))
-                    unit_annotations.append(dict(file_origin=filename))
+                        gain *= -1
+                    offset = 0.
+                    group_id = 0
+                    sig_channels.append((chan_name, chan_id, info['sampling_rate'],
+                                         'int16', units, gain, offset, group_id))
+                    self.ncs_filenames[chan_id] = filename
+                    keys = [
+                        'DspFilterDelay_µs',
+                        'recording_opened',
+                        'FileType',
+                        'DspDelayCompensation',
+                        'recording_closed',
+                        'DspLowCutFilterType',
+                        'HardwareSubSystemName',
+                        'DspLowCutNumTaps',
+                        'DSPLowCutFilterEnabled',
+                        'HardwareSubSystemType',
+                        'DspHighCutNumTaps',
+                        'ADMaxValue',
+                        'DspLowCutFrequency',
+                        'DSPHighCutFilterEnabled',
+                        'RecordSize',
+                        'InputRange',
+                        'DspHighCutFrequency',
+                        'input_inverted',
+                        'NumADChannels',
+                        'DspHighCutFilterType',
+                    ]
+                    d = {k: info[k] for k in keys if k in info}
+                    signal_annotations.append(d)
 
-            elif ext == 'nev':
-                # an event channel
-                # each ('event_id',  'ttl_input') give a new event channel
-                self.nev_filenames[chan_id] = filename
-                data = np.memmap(filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
-                internal_ids = np.unique(data[['event_id', 'ttl_input']]).tolist()
-                for internal_event_id in internal_ids:
-                    if internal_event_id not in self.internal_event_ids:
-                        event_id, ttl_input = internal_event_id
-                        name = '{} event_id={} ttl={}'.format(chan_name, event_id, ttl_input)
-                        event_channels.append((name, chan_id, 'event'))
-                        self.internal_event_ids.append(internal_event_id)
+                elif ext in ('nse', 'ntt'):
+                    # nse and ntt are pretty similar except for the wavform shape
+                    # a file can contain several unit_id (so several unit channel)
+                    assert chan_id not in self.nse_ntt_filenames, \
+                        'Several nse or ntt files have the same unit_id!!!'
+                    self.nse_ntt_filenames[chan_id] = filename
 
-                self._nev_memmap[chan_id] = data
+                    dtype = get_nse_or_ntt_dtype(info, ext)
+                    data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
+                    self._spike_memmap[chan_id] = data
+
+                    unit_ids = np.unique(data['unit_id'])
+                    for unit_id in unit_ids:
+                        # a spike channel for each (chan_id, unit_id)
+                        self.internal_unit_ids.append((chan_id, unit_id))
+
+                        unit_name = "ch{}#{}".format(chan_id, unit_id)
+                        unit_id = '{}'.format(unit_id)
+                        wf_units = 'uV'
+                        wf_gain = info['bit_to_microVolt'][idx]
+                        if info['input_inverted']:
+                            wf_gain *= -1
+                        wf_offset = 0.
+                        wf_left_sweep = -1  # NOT KNOWN
+                        wf_sampling_rate = info['sampling_rate']
+                        unit_channels.append(
+                            (unit_name, '{}'.format(unit_id), wf_units, wf_gain,
+                             wf_offset, wf_left_sweep, wf_sampling_rate))
+                        unit_annotations.append(dict(file_origin=filename))
+
+                elif ext == 'nev':
+                    # an event channel
+                    # each ('event_id',  'ttl_input') give a new event channel
+                    self.nev_filenames[chan_id] = filename
+                    data = np.memmap(
+                        filename, dtype=nev_dtype, mode='r', offset=HEADER_SIZE)
+                    internal_ids = np.unique(
+                        data[['event_id', 'ttl_input']]).tolist()
+                    for internal_event_id in internal_ids:
+                        if internal_event_id not in self.internal_event_ids:
+                            event_id, ttl_input = internal_event_id
+                            name = '{} event_id={} ttl={}'.format(
+                                chan_name, event_id, ttl_input)
+                            event_channels.append((name, chan_id, 'event'))
+                            self.internal_event_ids.append(internal_event_id)
+
+                    self._nev_memmap[chan_id] = data
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -233,10 +256,11 @@ class NeuralynxRawIO(BaseRawIO):
 
                 ev_ann = seg_annotations['events'][c]
                 ev_ann['file_origin'] = self.nev_filenames[chan_id]
-                #~ ev_ann['marker_id'] =
-                #~ ev_ann['nttl'] =
-                #~ ev_ann['digital_marker'] =
-                #~ ev_ann['analog_marker'] =
+
+                # ~ ev_ann['marker_id'] =
+                # ~ ev_ann['nttl'] =
+                # ~ ev_ann['digital_marker'] =
+                # ~ ev_ann['analog_marker'] =
 
     def _segment_t_start(self, block_index, seg_index):
         return self._seg_t_starts[seg_index] - self.global_t_start
@@ -250,7 +274,7 @@ class NeuralynxRawIO(BaseRawIO):
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return self._sigs_t_start[seg_index] - self.global_t_start
 
-    def _get_analogsignal_chunk(self, block_index, seg_index,  i_start, i_stop, channel_indexes):
+    def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         if i_start is None:
             i_start = 0
         if i_stop is None:
@@ -273,7 +297,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         return sigs_chunk
 
-    def _spike_count(self,  block_index, seg_index, unit_index):
+    def _spike_count(self, block_index, seg_index, unit_index):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_id]
         ts = data['timestamp']
@@ -284,7 +308,7 @@ class NeuralynxRawIO(BaseRawIO):
         nb_spike = int(data[keep].size)
         return nb_spike
 
-    def _get_spike_timestamps(self,  block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_id]
         ts = data['timestamp']
@@ -305,7 +329,8 @@ class NeuralynxRawIO(BaseRawIO):
         spike_times -= self.global_t_start
         return spike_times
 
-    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
+    def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
+                                 t_start, t_stop):
         chan_id, unit_id = self.internal_unit_ids[unit_index]
         data = self._spike_memmap[chan_id]
         ts = data['timestamp']
@@ -334,12 +359,12 @@ class NeuralynxRawIO(BaseRawIO):
         data = self._nev_memmap[chan_id]
         ts0, ts1 = self._timestamp_limits[seg_index]
         ts = data['timestamp']
-        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) &\
-            (data['ttl_input'] == ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
+               (data['ttl_input'] == ttl_input)
         nb_event = int(data[keep].size)
         return nb_event
 
-    def _get_event_timestamps(self,  block_index, seg_index, event_channel_index, t_start, t_stop):
+    def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         event_id, ttl_input = self.internal_event_ids[event_channel_index]
         chan_id = self.header['event_channels'][event_channel_index]['id']
         data = self._nev_memmap[chan_id]
@@ -351,8 +376,9 @@ class NeuralynxRawIO(BaseRawIO):
             ts1 = int((t_stop + self.global_t_start) * 1e6)
 
         ts = data['timestamp']
-        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) &\
-            (data['ttl_input'] == ttl_input)
+        keep = (ts >= ts0) & (ts <= ts1) & (data['event_id'] == event_id) & \
+               (data['ttl_input'] == ttl_input)
+
         subdata = data[keep]
         timestamps = subdata['timestamp']
         labels = subdata['event_string'].astype('U')
@@ -393,6 +419,7 @@ class NeuralynxRawIO(BaseRawIO):
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
         chan_id0 = list(ncs_filenames.keys())[0]
         filename0 = ncs_filenames[chan_id0]
+
         data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
 
         gap_indexes = None
@@ -406,8 +433,7 @@ class NeuralynxRawIO(BaseRawIO):
             deltas0 = np.diff(timestamps0)
 
             # It should be that:
-            #gap_indexes, = np.nonzero(deltas0!=good_delta)
-
+            # gap_indexes, = np.nonzero(deltas0!=good_delta)
             # but for a file I have found many deltas0==15999 deltas0==16000
             # I guess this is a round problem
             # So this is the same with a tolerance of 1 or 2 ticks
@@ -437,9 +463,10 @@ class NeuralynxRawIO(BaseRawIO):
                 i0 = gap_bounds[seg_index]
                 i1 = gap_bounds[seg_index + 1]
 
-                assert data[i0]['timestamp'] == data0[i0]['timestamp'], 'ncs files do not have the same gaps'
-                assert data[i1 - 1]['timestamp'] == data0[i1 -
-                                                          1]['timestamp'], 'ncs files do not have the same gaps'
+                assert data[i0]['timestamp'] == data0[i0][
+                    'timestamp'], 'ncs files do not have the same gaps'
+                assert data[i1 - 1]['timestamp'] == data0[i1 - 1][
+                    'timestamp'], 'ncs files do not have the same gaps'
 
                 subdata = data[i0:i1]
                 self._sigs_memmap[seg_index][chan_id] = subdata
@@ -447,7 +474,7 @@ class NeuralynxRawIO(BaseRawIO):
                 if chan_id == chan_id0:
                     ts0 = subdata[0]['timestamp']
                     ts1 = subdata[-1]['timestamp'] + \
-                        np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
@@ -459,7 +486,7 @@ class NeuralynxRawIO(BaseRawIO):
 
 # keys in
 txt_header_keys = [
-    ('AcqEntName', 'channel_name', None),  # used
+    ('AcqEntName', 'channel_names', None),  # used
     ('FileType', '', None),
     ('FileVersion', '', None),
     ('RecordSize', '', None),
@@ -467,9 +494,9 @@ txt_header_keys = [
     ('HardwareSubSystemType', '', None),
     ('SamplingFrequency', 'sampling_rate', float),  # used
     ('ADMaxValue', '', None),
-    ('ADBitVolts', 'bit_to_microVolt', float),  # used
+    ('ADBitVolts', 'bit_to_microVolt', None),  # used
     ('NumADChannels', '', None),
-    ('ADChannel', 'channel_id', int),  # used
+    ('ADChannel', 'channel_ids', None),  # used
     ('InputRange', '', None),
     ('InputInverted', 'input_inverted', bool),  # used
     ('DSPLowCutFilterEnabled', '', None),
@@ -489,14 +516,7 @@ txt_header_keys = [
     ('MinRetriggerSamples', '', None),
     ('SpikeRetriggerTime', '', None),
     ('DualThresholding', '', None),
-    ('Feature Peak 0', '', None),
-    ('Feature Valley 1', '', None),
-    ('Feature Energy 2', '', None),
-    ('Feature Height 3', '', None),
-    ('Feature NthSample 4', '', None),
-    ('Feature NthSample 5', '', None),
-    ('Feature NthSample 6', '', None),
-    ('Feature NthSample 7', '', None),
+    ('Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
     ('CheetahRev', 'version', None),  # used  possibilty 1 for version
@@ -506,7 +526,7 @@ txt_header_keys = [
     ('TimeClosed', '', None),
     ('ApplicationName Cheetah', 'version', None),  # used  possibilty 2 for version
     ('AcquisitionSystem', '', None),
-    ('ReferenceChannel',  '', None),
+    ('ReferenceChannel', '', None),
 ]
 
 
@@ -524,21 +544,58 @@ def read_txt_header(filename):
     # find keys
     info = OrderedDict()
     for k1, k2, type_ in txt_header_keys:
-        pattern = '-' + k1 + ' (\S+)'
-        r = re.findall(pattern, txt_header)
-        if len(r) == 1:
+        pattern = '-(?P<name>' + k1 + ') (?P<value>[\S ]*)'
+        matches = re.findall(pattern, txt_header)
+        for match in matches:
             if k2 == '':
-                k2 = k1
-            info[k2] = r[0]
+                name = match[0]
+            else:
+                name = k2
+            value = match[1].rstrip(' ')
             if type_ is not None:
-                info[k2] = type_(info[k2])
+                value = type_(value)
+            info[name] = value
 
-    # some conversions
-    if 'bit_to_microVolt' in info:
-        info['bit_to_microVolt'] = info['bit_to_microVolt'] * 1e6
+    # if channel_ids or s not in info then the filename is used
+    name = os.path.splitext(os.path.basename(filename))[0]
+
+    # convert channel ids
+    if 'channel_ids' in info:
+        chid_entries = re.findall('\w+', info['channel_ids'])
+        info['channel_ids'] = [int(c) for c in chid_entries]
+    else:
+        info['channel_ids'] = [name]
+
+    # convert channel names
+    if 'channel_names' in info:
+        name_entries = re.findall('\w+', info['channel_names'])
+        if len(name_entries) == 1:
+            info['channel_names'] = name_entries * len(info['channel_ids'])
+        assert len(info['channel_names']) == len(info['channel_ids']), \
+            'Number of channel ids does not match channel names.'
+    else:
+        info['channel_names'] = [name] * len(info['channel_ids'])
     if 'version' in info:
         version = info['version'].replace('"', '')
         info['version'] = distutils.version.LooseVersion(version)
+
+    # convert bit_to_microvolt
+    if 'bit_to_microVolt' in info:
+        btm_entries = re.findall('\S+', info['bit_to_microVolt'])
+        if len(btm_entries) == 1:
+            btm_entries = btm_entries * len(info['channel_ids'])
+        info['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
+        assert len(info['bit_to_microVolt']) == len(info['channel_ids']), \
+            'Number of channel ids does not match bit_to_microVolt conversion factors.'
+
+    if 'InputRange' in info:
+        ir_entries = re.findall('\w+', info['InputRange'])
+        if len(ir_entries) == 1:
+            info['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
+        else:
+            info['InputRange'] = [int(e) for e in ir_entries]
+        assert len(info['InputRange']) == len(chid_entries), \
+            'Number of channel ids does not match input range values.'
 
     # filename and datetime
     if info['version'] <= distutils.version.LooseVersion('5.6.4'):
@@ -557,31 +614,16 @@ def read_txt_header(filename):
     dt1 = re.search(datetime1_regex, txt_header).groupdict()
     dt2 = re.search(datetime2_regex, txt_header).groupdict()
 
-    info['recording_opened'] = datetime.datetime.strptime(dt1['date'] + ' ' + dt1['time'],
-                                                          datetimeformat)
-    info['recording_closed'] = datetime.datetime.strptime(dt2['date'] + ' ' + dt2['time'],
-                                                          datetimeformat)
-
-    # if channel_id or channel_name not in info then the filename is used
-    name = os.path.splitext(os.path.basename(filename))[0]
-    if 'channel_name' not in info:
-        info['channel_name'] = name
-    if 'channel_id' not in info:
-        info['channel_id'] = name
-
-    #~ for k, v in info.items():
-        #~ print(' ', k, ':', v)
+    info['recording_opened'] = datetime.datetime.strptime(
+        dt1['date'] + ' ' + dt1['time'], datetimeformat)
+    info['recording_closed'] = datetime.datetime.strptime(
+        dt2['date'] + ' ' + dt2['time'], datetimeformat)
 
     return info
 
 
-ncs_dtype = [
-    ('timestamp', 'uint64'),
-    ('channel_id', 'uint32'),
-    ('sample_rate', 'uint32'),
-    ('nb_valid', 'uint32'),
-    ('samples', 'int16', (BLOCK_SIZE,))
-]
+ncs_dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('sample_rate', 'uint32'),
+             ('nb_valid', 'uint32'), ('samples', 'int16', (BLOCK_SIZE,))]
 
 nev_dtype = [
     ('reserved', '<i2'),
@@ -603,11 +645,7 @@ def get_nse_or_ntt_dtype(info, ext):
     For NSE and NTT the dtype depend on the header.
 
     """
-    dtype = [
-        ('timestamp', 'uint64'),
-        ('channel_id', 'uint32'),
-        ('unit_id', 'uint32'),
-    ]
+    dtype = [('timestamp', 'uint64'), ('channel_id', 'uint32'), ('unit_id', 'uint32')]
 
     # count feature
     nb_feature = 0

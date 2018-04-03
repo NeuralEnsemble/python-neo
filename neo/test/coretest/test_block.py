@@ -22,7 +22,7 @@ else:
 
 from neo.core.block import Block
 from neo.core.container import filterdata
-from neo.core import SpikeTrain, Unit
+from neo.core import SpikeTrain, Unit, AnalogSignal
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_same_sub_schema)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values,
@@ -283,15 +283,15 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         1 * self.nchildren**3 + 4 * self.nchildren**2)
+                         1 * self.nchildren ** 3 + 4 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.container_children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
-                         2 * self.nchildren + 1 * self.nchildren**2)
+                         2 * self.nchildren + 1 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.children_recur),
                          2 * self.nchildren +
-                         5 * self.nchildren**2 +
-                         1 * self.nchildren**3)
+                         5 * self.nchildren ** 2 +
+                         1 * self.nchildren ** 3)
 
         self.assertEqual(self.blk1._multi_children, ())
         assert_same_sub_schema(list(self.blk1._single_children),
@@ -338,6 +338,13 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_none(self):
         targ = []
+        # collecting all data objects in target block
+        for seg in self.targobj.segments:
+            targ.extend(seg.analogsignals)
+            targ.extend(seg.epochs)
+            targ.extend(seg.events)
+            targ.extend(seg.irregularlysampledsignals)
+            targ.extend(seg.spiketrains)
 
         res1 = self.targobj.filter()
         res2 = self.targobj.filter({})
@@ -441,8 +448,8 @@ class TestBlock(unittest.TestCase):
 
         name0 = self.sigarrs2[0].name
         res0 = self.targobj.filter([{'j': 5}, {}])
-        res1 = self.targobj.filter({}, j=0)
-        res2 = self.targobj.filter([{}], i=0)
+        res1 = self.targobj.filter({}, j=5)
+        res2 = self.targobj.filter([{}], i=6)
         res3 = self.targobj.filter({'name': name0}, j=1)
         res4 = self.targobj.filter(targdict={'name': name0}, j=1)
         res5 = self.targobj.filter(name=name0, targdict={'j': 1})
@@ -494,6 +501,26 @@ class TestBlock(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
         assert_same_sub_schema(res2, targ)
+
+    def test__filter_no_annotation_but_object(self):
+        targ = []
+        for seg in self.targobj.segments:
+            targ.extend(seg.spiketrains)
+        res = self.targobj.filter(objects=SpikeTrain)
+        assert_same_sub_schema(res, targ)
+
+        targ = []
+        for seg in self.targobj.segments:
+            targ.extend(seg.analogsignals)
+        res = self.targobj.filter(objects=AnalogSignal)
+        assert_same_sub_schema(res, targ)
+
+        targ = []
+        for seg in self.targobj.segments:
+            targ.extend(seg.analogsignals)
+            targ.extend(seg.spiketrains)
+        res = self.targobj.filter(objects=[AnalogSignal, SpikeTrain])
+        assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
         targ = self.trains1[1::2]
@@ -643,9 +670,9 @@ class TestBlock(unittest.TestCase):
 
         name1 = self.sigarrs1[0].name
         name2 = self.sigarrs2[0].name
-        res0 = filterdata(data, [{'j': 0}, {}])
-        res1 = filterdata(data, {}, i=0)
-        res2 = filterdata(data, [{}], i=0)
+        res0 = filterdata(data, [{'j': 5}, {}])
+        res1 = filterdata(data, {}, i=5)
+        res2 = filterdata(data, [{}], i=5)
         res3 = filterdata(data, name=name1, targdict={'j': 1})
         res4 = filterdata(data, {'name': name1}, j=1)
         res5 = filterdata(data, targdict={'name': name1}, j=1)

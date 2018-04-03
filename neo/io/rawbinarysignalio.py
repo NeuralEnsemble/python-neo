@@ -19,7 +19,6 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Segment, AnalogSignal
 
-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 
@@ -54,7 +53,8 @@ class RawBinarySignalIO(RawBinarySignalRawIO, BaseFromRaw):
     def __init__(self, filename, dtype='int16', sampling_rate=10000.,
                  nb_channel=2, signal_gain=1., signal_offset=0., bytesoffset=0):
         RawBinarySignalRawIO.__init__(self, filename=filename, dtype=dtype,
-                                      sampling_rate=sampling_rate, nb_channel=nb_channel, signal_gain=signal_gain,
+                                      sampling_rate=sampling_rate, nb_channel=nb_channel,
+                                      signal_gain=signal_gain,
                                       signal_offset=signal_offset, bytesoffset=bytesoffset)
         BaseFromRaw.__init__(self, filename)
 
