@@ -1165,28 +1165,26 @@ class BlackrockRawIO(BaseRawIO):
                     nonempty_nsx_segments[k] = v
                     list_nonempty_nsx_segments.append(v)
 
+            # TODO: What if spike is outside of segments?
+            # Account for paused segments
+            # This increases nev event segment ids if from the nsx an additional segment is found
+            # If one new segment, i.e. that could not be determined from the nev was found,
+            # all following ids need to be increased to account for the additional segment before
             for k, (data, ev_ids) in self.nev_data.items():
-                add = 0
-                for i, ts in enumerate(data['timestamp']):
-                    ev_ids[i] += add
-                    nev_stamp = ts * (self.__nsx_basic_header[self.nsx_to_load][
-                                          'timestamp_resolution'] /
-                                      self.__nev_basic_header['timestamp_resolution'])
+                add = 0  # Contains the value by how much the ids need to be increased
+                # Check all nonempty nsX segments
+                for i, seg in enumerate(list_nonempty_nsx_segments[:-1]):
+                    # Last timestamp in this nsX segment
+                    end_of_current_nsx_seg = seg['timestamp'] + seg['nb_data_points'] * \
+                                             self.__nsx_basic_header[nsx_nb]['period']
+                    mask = [(ev_ids == i) & (data['timestamp'] > end_of_current_nsx_seg)]
 
-                    # If a next segment exists, check if spikes actually belong to that
-                    if ev_ids[i] < len(list_nonempty_nsx_segments) - 1:
-                        next_nsx_stamp = list_nonempty_nsx_segments[ev_ids[i]+1]['timestamp']
-                        end_of_current_nsx_seg = list_nonempty_nsx_segments[ev_ids[i]][
-                            'timestamp'] + list_nonempty_nsx_segments[ev_ids[i]][
-                            'nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
-
-                        # If spike is actually in next nsX segment,
-                        # increment all following segment ids
-                        # and increment number of segments in nev
-                        if nev_stamp > next_nsx_stamp > end_of_current_nsx_seg:
-                            add += 1
-                            # TODO: Make sure that spikes are always in one single list
-                            nb_possible_nev_segments += 1
+                    # If some nev data are outside this nsX segment, increase their segment ids
+                    # Also more possible segments then
+                    if len(data[mask]) > 0:
+                        add += 1
+                        nb_possible_nev_segments += 1
+                        ev_ids[mask] += add
 
             # consistency check: same number of segments for nsx and nev data
             assert nb_possible_nev_segments == len(nonempty_nsx_segments), \
