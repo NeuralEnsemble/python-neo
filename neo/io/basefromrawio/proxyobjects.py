@@ -2,7 +2,7 @@
 """
 Here a list of proxy object that can be used when lazy=True at neo.io level.
 
-This idea is to be able to postpone that real in memory loading 
+This idea is to be able to postpone that real in memory loading
 for objects that contains big data (AnalogSIgnal, SpikeTrain, Event, Epoch).
 
 The implementation rely on neo.rawio, so it will available only for neo.io that
@@ -16,51 +16,53 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo
 
 
-from neo.core import (AnalogSignal, 
+from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
 
 
 class BaseProxy(BaseNeo):
     def __init__(self, **kargs):
-        #this for py27 str vs py3 str in neo attributes ompatibility
+        # this for py27 str vs py3 str in neo attributes ompatibility
         kargs = check_annotations(kargs)
         if 'file_origin' not in kargs:
             kargs['file_origin'] = self._rawio.source_name()
         BaseNeo.__init__(self, **kargs)
 
+
 class AnalogSignalProxy(BaseProxy):
     '''
     This object mimic AnalogSignal except that it does not
     have the signals array itself. All attributes and annotations are here.
-    
+
     The goal is to postpone the loading of data into memory
     when reading a file with the new lazy load system based
     on neo.rawio.
-    
+
     This object must not be constructed directly but is given
     neo.io when lazy=True instead of a true AnalogSignal.
-    
+
     The AnalogSignalProxy is able to load:
       * only a slice of time
       * only a subset of channels
       * have an internal raw magnitude identic to the file (int16) with
         a pq.CompoundUnit().
-    
+
     Usage:
-    >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader, global_channel_indexes=None,
-                        block_index=0, seg_index=0,)
+    >>> proxy_anasig = AnalogSignalProxy(rawio=self.reader,
+                                                                global_channel_indexes=None,
+                                                                block_index=0,
+                                                                seg_index=0)
     >>> anasig = proxy_anasig.load()
     >>> slice_of_anasig = proxy_anasig.load(time_slice=(1.*pq.s, 2.*pq.s))
     >>> some_channel_of_anasig = proxy_anasig.load(channel_indexes=[0,5,10])
-    
+
     '''
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _necessary_attrs = (('sampling_rate', pq.Quantity, 0),
                                     ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
-    
+
     def __init__(self, rawio=None, global_channel_indexes=None, block_index=0, seg_index=0):
-        
         self._rawio = rawio
         self._block_index = block_index
         self._seg_index = seg_index
@@ -69,44 +71,59 @@ class AnalogSignalProxy(BaseProxy):
         total_nb_chan = self._rawio.header['signal_channels'].size
         self._global_channel_indexes = np.arange(total_nb_chan)[global_channel_indexes]
         self._nb_chan = self._global_channel_indexes.size
-        
+
         sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
-        
-        assert np.unique(sig_chans['units']).size==1, 'Channel do not have same units'
-        assert np.unique(sig_chans['dtype']).size==1, 'Channel do not have same dtype'
-        assert np.unique(sig_chans['sampling_rate']).size==1, 'Channel do not have same sampling_rate'
-        
+
+        assert np.unique(sig_chans['units']).size == 1, 'Channel do not have same units'
+        assert np.unique(sig_chans['dtype']).size == 1, 'Channel do not have same dtype'
+        assert np.unique(sig_chans['sampling_rate']).size == 1, \
+                    'Channel do not have same sampling_rate'
+
         self.units = ensure_signal_units(sig_chans['units'][0])
         self.dtype = sig_chans['dtype'][0]
         self.sampling_rate = sig_chans['sampling_rate'][0] * pq.Hz
-        sigs_size = self._rawio.get_signal_size(block_index=block_index, seg_index=seg_index, 
-                                                            channel_indexes=self._global_channel_indexes)
+        sigs_size = self._rawio.get_signal_size(block_index=block_index, seg_index=seg_index,
+                                        channel_indexes=self._global_channel_indexes)
         self.shape = (sigs_size, self._nb_chan)
-        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index, self._global_channel_indexes) * pq.s
-        
-        #magnitude_mode='raw' is supported only if all offset=0
-        #and all gain are the same
+        self.t_start = self._rawio.get_signal_t_start(block_index, seg_index,
+                                    self._global_channel_indexes) * pq.s
+
+        # magnitude_mode='raw' is supported only if all offset=0
+        # and all gain are the same
         support_raw_magnitude = np.all(sig_chans['gain']==sig_chans['gain'][0]) and \
                                                     np.all(sig_chans['offset']==0.)
         if support_raw_magnitude:
-            self._raw_units = pq.CompoundUnit('{}*{}'.format(sig_chans['gain'][0], sig_chans['units'][0]))
+            str_units = ensure_signal_units(sig_chans['units'][0]).units.dimensionality.string
+            self._raw_units = pq.CompoundUnit('{}*{}'.format(sig_chans['gain'][0], support_raw_magnitude))
         else:
             self._raw_units = None
 
-        #both necessary attr and annotations
+        # both necessary attr and annotations
         kargs = {}
         kargs['name'] = self._make_name(None)
-        #TODO array annotations here
-        
+        if len(sig_chans)==1:
+            # when only one channel raw_annotations are set to standart annotations
+            d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index][
+                'signals'][self._global_channel_indexes[0]]
+            kargs.update(d)
+        else:
+            # annotations have channel_names and channel_ids array
+            # TODO this will be moved in array annotations soon
+            kargs['channel_names'] = sig_chans['name']
+            kargs['channel_ids'] = sig_chans['id']
+
         BaseProxy.__init__(self, **kargs)
-    
+
     def _make_name(self, channel_indexes):
         sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
         if channel_indexes is not None:
             sig_chans = sig_chans[channel_indexes]
-        name = 'Channel bundle ({}) '.format(','.join(sig_chans['name']))
+        if len(sig_chans)==1:
+            name = sig_chans['name'][0]
+        else:
+            name = 'Channel bundle ({}) '.format(','.join(sig_chans['name']))
         return name
-    
+
     @property
     def duration(self):
         '''Signal duration'''
@@ -116,7 +133,7 @@ class AnalogSignalProxy(BaseProxy):
     def t_stop(self):
         '''Time when signal ends'''
         return self.t_start + self.duration
-    
+
     def load(self, time_slice=None, channel_indexes=None, magnitude_mode='rescaled'):
         '''
         *Args*:
@@ -133,12 +150,12 @@ class AnalogSignalProxy(BaseProxy):
                 postpone the scaling when needed and having an internal dtype=int16
                 but it less intuitive when you don't know so well quantities.
         '''
-        
+
         if channel_indexes is None:
             channel_indexes = slice(None)
-        
+
         sr = self.sampling_rate
-        
+
         if time_slice is None:
             i_start, i_stop = None, None
             sig_t_start = self.t_start
@@ -162,11 +179,11 @@ class AnalogSignalProxy(BaseProxy):
                 t_stop = ensure_second(t_stop)
                 assert t_start<=t_stop<=self.t_stop, 't_stop is outside'
                 i_stop = int((t_stop-self.t_start).magnitude * sr.magnitude)
-        
+
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
                     channel_indexes=self._global_channel_indexes[channel_indexes])
-        
+
         #if slice in channel so the name change
         #and also array_annotations
         #TODO later: implement array_annotations slice here
@@ -174,23 +191,23 @@ class AnalogSignalProxy(BaseProxy):
             name = self._make_name(channel_indexes)
         else:
             name = self.name
-        
+
         if magnitude_mode=='raw':
             assert self._raw_units is not None,\
                     'raw magnitude is not support gain are not the same for all channel'
             sig = raw_signal
             units = self._raw_units
-            
+
         elif magnitude_mode=='rescaled':
             sig = self._rawio.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
                                             channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
-        
+
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
                     sampling_rate=self.sampling_rate, name=name,
                     file_origin=self.file_origin, description=self.description,
                     **self.annotations)
-        
+
         return anasig
 
 
@@ -199,66 +216,65 @@ class SpikeTrainProxy(BaseProxy):
     This object mimic SpikeTrain except that it does not
     have the spike time nor waveforms.
     All attributes and annotations are here.
-    
+
     The goal is to postpone the loading of data into memory
     when reading a file with the new lazy load system based
     on neo.rawio.
-    
+
     This object must not be constructed directly but is given
     neo.io when lazy=True instead of a true SpikeTrain.
-    
+
     The SpikeTrainProxy is able to load:
       * only a slice of time
       * load wveforms or not.
       * have an internal raw magnitude identic to the file (generally the ticks
         of clock in int64) or the rescale to seconds.
-    
+
     Usage:
     >>> proxy_sptr = SpikeTrainProxy(rawio=self.reader, unit_channel=0,
                         block_index=0, seg_index=0,)
     >>> sptr = proxy_sptr.load()
     >>> slice_of_sptr = proxy_sptr.load(time_slice=(1.*pq.s, 2.*pq.s))
-    
+
     '''
-    
+
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('t_start', pq.Quantity, 0),
                                     ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ()    
-    
+
     def __init__(self, rawio=None, unit_index=None, block_index=0, seg_index=0):
-        
+
         self._rawio = rawio
         self._block_index = block_index
         self._seg_index = seg_index
         self._unit_index = unit_index
-        
+
         nb_spike = self._rawio.spike_count(block_index=block_index, seg_index=seg_index, 
                                         unit_index=unit_index)
         self.shape = (nb_spike, )
-        
+
         self.t_start = self._rawio.segment_t_start(block_index, seg_index) * pq.s
         self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
-        
+
         #both necessary attr and annotations
         kargs = {}
         for k in ('name', 'id'):
             kargs[k] = self._rawio.header['unit_channels'][unit_index][k]
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
         kargs.update(ann)
-        
-        #TODO waveforms
+
         h = self._rawio.header['unit_channels'][unit_index]
         wf_sampling_rate = h['wf_sampling_rate']
         if not np.isnan(wf_sampling_rate) and wf_sampling_rate>0:
             self.sampling_rate = wf_sampling_rate * pq.Hz
             self.left_sweep = (h['wf_left_sweep']/self.sampling_rate).rescale('s')
-            self._wf_units = h['wf_units']
+            self._wf_units = ensure_signal_units(h['wf_units'])
         else:
             self.sampling_rate = None
             self.left_sweep = None
-            
+
         BaseProxy.__init__(self, **kargs)
     
     def load(self, time_slice=None, magnitude_mode='rescaled', load_waveforms=False):
@@ -310,13 +326,14 @@ class SpikeTrainProxy(BaseProxy):
                 t_start=t_start, copy=False, sampling_rate=self.sampling_rate,
                 waveforms=waveforms, left_sweep=self.left_sweep, name=self.name, 
                 file_origin=self.file_origin, description=self.description, **self.annotations)
-        
+
         return sptr
+
 
 class _EventOrEpoch(BaseProxy):
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    
+
     def __init__(self, rawio=None, event_channel_index=None, block_index=0, seg_index=0):
         
         self._rawio = rawio
@@ -337,7 +354,7 @@ class _EventOrEpoch(BaseProxy):
             kargs[k] = self._rawio.header['event_channels'][event_channel_index][k]
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
         kargs.update(ann)
-        
+
         BaseProxy.__init__(self, **kargs)
 
     def load(self, time_slice=None, ):
@@ -354,17 +371,17 @@ class _EventOrEpoch(BaseProxy):
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index, 
                         seg_index=self._seg_index, event_channel_index=self._event_channel_index, 
                         t_start=_t_start, t_stop=_t_stop)
-        
+
         dtype = 'float64'
         times = self._rawio.rescale_event_timestamp(timestamp, dtype=dtype)
         units = 's'
 
         if durations is not None:
-            durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype)
-        
+            durations = self._rawio.rescale_epoch_duration(durations, dtype=dtype) * pq.s
+
         #this should be remove when labesl will be unicode
         labels = labels.astype('S')
-        
+
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':
             ret = Event(times=times, labels=labels, units='s', copy=False, 
@@ -375,7 +392,7 @@ class _EventOrEpoch(BaseProxy):
                 units='s', copy=False,
                 name=self.name,  file_origin=self.file_origin,
                 description=self.description, **self.annotations)
-        
+
         return ret
 
 
@@ -384,23 +401,23 @@ class EventProxy(_EventOrEpoch):
     This object mimic Event except that it does not
     have the times nor labels.
     All other attributes and annotations are here.
-    
+
     The goal is to postpone the loading of data into memory
     when reading a file with the new lazy load system based
     on neo.rawio.
-    
+
     This object must not be constructed directly but is given
     neo.io when lazy=True instead of a true Event.
-    
+
     The EventProxy is able to load:
       * only a slice of time
-    
+
     Usage:
     >>> proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
                         block_index=0, seg_index=0,)
     >>> event = proxy_event.load()
     >>> slice_of_event = proxy_event.load(time_slice=(1.*pq.s, 2.*pq.s))
-    
+
     '''
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
@@ -411,28 +428,31 @@ class EpochProxy(_EventOrEpoch):
     This object mimic Epoch except that it does not
     have the times nor labels nor durations.
     All other attributes and annotations are here.
-    
+
     The goal is to postpone the loading of data into memory
     when reading a file with the new lazy load system based
     on neo.rawio.
-    
+
     This object must not be constructed directly but is given
     neo.io when lazy=True instead of a true Epoch.
-    
+
     The EpochProxy is able to load:
       * only a slice of time
-    
+
     Usage:
     >>> proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=0,
                         block_index=0, seg_index=0,)
     >>> epoch = proxy_epoch.load()
     >>> slice_of_epoch = proxy_epoch.load(time_slice=(1.*pq.s, 2.*pq.s))
-    
+
     '''    
     _necessary_attrs = (('times', pq.Quantity, 1),
                         ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
+
+proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy, 
+                            EpochProxy]
 
 
 unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
@@ -482,13 +502,13 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):
         t_start, t_stop = None, None
     else:
         t_start, t_stop = time_slice
-    
+
     if t_start is None:
         t_start = seg_t_start
     t_start = ensure_second(t_start)
-    
+
     if t_stop is None:
         t_stop = seg_t_stop
     t_stop = ensure_second(t_stop)
-    
+
     return (t_start, t_stop)

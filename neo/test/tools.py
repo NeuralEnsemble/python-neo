@@ -12,7 +12,8 @@ import quantities as pq
 import neo
 from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
-
+from neo.core.container import Container
+from neo.io.basefromrawio import proxyobjectlist
 
 def assert_arrays_equal(a, b, dtype=False):
     '''
@@ -397,99 +398,26 @@ def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10,
 
 def assert_sub_schema_is_lazy_loaded(ob):
     '''
-    This is util for testing lazy load. All object must load with ndarray.size
-    or Quantity.size ==0
+    This is util for testing lazy load. All data object must be in proxyobjectlist.
     '''
     classname = ob.__class__.__name__
 
-    for container in getattr(ob, '_single_child_containers', []):
-        if not hasattr(ob, container):
-            continue
-        sub = getattr(ob, container)
-        for i, child in enumerate(sub):
-            try:
-                assert_sub_schema_is_lazy_loaded(child)
-            # intercept exceptions and add more information
-            except BaseException as exc:
-                exc.args += ('from %s %s of %s' % (container, i, classname),)
-                raise
-
-    for ioattr in ob._all_attrs:
-        attrname, attrtype = ioattr[0], ioattr[1]
-        # ~ print 'xdsd', classname, attrname
-        # ~ if attrname == '':
-        if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
-            assert ob.size == 0, \
-                'Lazy loaded error %s.size = %s' % (classname, ob.size)
-            assert hasattr(ob, 'lazy_shape'), \
-                'Lazy loaded error, %s should have lazy_shape attribute' % \
-                classname
-            continue
-
-        if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
-            continue
-        # ~ print 'hjkjh'
-        if (attrtype == pq.Quantity or attrtype == np.ndarray):
-
-            # FIXME: it is a workaround for recordingChannelGroup.channel_names
-            # which is nupy.array but allowed to be loaded when lazy == True
-            if ob.__class__ == neo.ChannelIndex:
+    if isinstance(ob, Container):
+        for container in getattr(ob, '_single_child_containers', []):
+            if not hasattr(ob, container):
                 continue
-
-            ndim = ioattr[2]
-            # ~ print 'ndim', ndim
-            # ~ print getattr(ob, attrname).size
-            if ndim >= 1:
-                assert getattr(ob, attrname).size == 0, \
-                    'Lazy loaded error %s.%s.size = %s' % \
-                    (classname, attrname, getattr(ob, attrname).size)
-                assert hasattr(ob, 'lazy_shape'), \
-                    'Lazy loaded error ' + \
-                    '%s should have lazy_shape attribute ' % classname + \
-                    'because of %s attribute' % attrname
-
-
-lazy_shape_arrays = {'SpikeTrain': 'times',
-                     'AnalogSignal': 'signal',
-                     'Event': 'times', 'Epoch': 'times'}
-
-
-def assert_lazy_sub_schema_can_be_loaded(ob, io):
-    '''
-    This is util for testing lazy load. All object must load with ndarray.size
-    or Quantity.size ==0
-    '''
-    classname = ob.__class__.__name__
-
-    if classname in lazy_shape_arrays:
-        new_load = io.load_lazy_object(ob)
-        assert hasattr(ob, 'lazy_shape'), \
-            'Object %s was not lazy loaded' % classname
-        assert not hasattr(new_load, 'lazy_shape'), \
-            'Newly loaded object from %s was also lazy loaded' % classname
-        if hasattr(ob, '_quantity_attr'):
-            assert ob.lazy_shape == new_load.shape, \
-                'Shape of loaded object %sis not equal to lazy shape' % \
-                classname
-        else:
-            assert ob.lazy_shape == \
-                   getattr(new_load, lazy_shape_arrays[classname]).shape, \
-                'Shape of loaded object %s not equal to lazy shape' % \
-                classname
-        return
-
-    for container in getattr(ob, '_single_child_containers', []):
-        if not hasattr(ob, container):
-            continue
-        sub = getattr(ob, container)
-        for i, child in enumerate(sub):
-            try:
-                assert_lazy_sub_schema_can_be_loaded(child, io)
-            # intercept exceptions and add more information
-            except BaseException as exc:
-                exc.args += ('from of %s %s of %s' %
-                             (container, i, classname),)
-                raise
+            sub = getattr(ob, container)
+            for i, child in enumerate(sub):
+                try:
+                    assert_sub_schema_is_lazy_loaded(child)
+                # intercept exceptions and add more information
+                except BaseException as exc:
+                    exc.args += ('from %s %s of %s' % (container, i, classname),)
+                    raise
+    else:
+        assert ob.__class__ in proxyobjectlist, 'Data object must lazy %' % classname
+        loaded_ob = ob.load()
+        assert_neo_object_is_compliant(loaded_ob)
 
 
 def assert_objects_equivalent(obj1, obj2):
