@@ -408,8 +408,7 @@ class BlackrockRawIO(BaseRawIO):
             for k, (data, ev_ids) in self.nev_data.items():
                 print(ev_ids)
                 for i in np.unique(ev_ids):
-                    #print(data)
-                    mask = (ev_ids == i)
+                    mask = [ev_ids == i]
                     curr_data = data[mask]
                     if curr_data.size > 0:
                         print(curr_data[:]['timestamp'])
@@ -1155,37 +1154,75 @@ class BlackrockRawIO(BaseRawIO):
                           "the segments in nev are all correct", UserWarning)
             return
         if self.__nev_spec == '2.3':
+            # TODO: Set earlier for self and find out values!!!
+            # TODO: Is it even used correctly here? Is it only starting offset? Or start and stop?
+            nsx_offset = {2: 0, 6: 82}[self.nsx_to_load]
+            nsx_period = self.__nsx_basic_header[self.nsx_to_load]['period']
             nonempty_nsx_segments = {}
             list_nonempty_nsx_segments = []
             nb_possible_nev_segments = self._nb_segment_nev
 
             for k, v in sorted(self.__nsx_data_header[nsx_nb].items()):
                 # Nonempty segments in nsX that need to be distinguishable in nev data
-                if v['nb_data_points'] > 1:
+                # print("TIMESTAMP", v['timestamp'])
+                # XXX 100 is more or less arbitrary!!! Read from available files
+                # (Sometimes 1, sometimes 96)
+                if v['nb_data_points'] > 100:
+                    # print(v['nb_data_points'])
                     nonempty_nsx_segments[k] = v
                     list_nonempty_nsx_segments.append(v)
+            # print(nb_possible_nev_segments)
 
-            # TODO: What if spike is outside of segments?
+            # TODO: Move this to own method
             # Account for paused segments
             # This increases nev event segment ids if from the nsx an additional segment is found
             # If one new segment, i.e. that could not be determined from the nev was found,
             # all following ids need to be increased to account for the additional segment before
             for k, (data, ev_ids) in self.nev_data.items():
+                # print("EVIDS", ev_ids)
                 add = 0  # Contains the value by how much the ids need to be increased
                 # Check all nonempty nsX segments
-                for i, seg in enumerate(list_nonempty_nsx_segments[:-1]):
+                for i, seg in enumerate(list_nonempty_nsx_segments[:]):
                     # Last timestamp in this nsX segment
-                    end_of_current_nsx_seg = seg['timestamp'] + seg['nb_data_points'] * \
-                                             self.__nsx_basic_header[nsx_nb]['period']
-                    mask = [(ev_ids == i) & (data['timestamp'] > end_of_current_nsx_seg)]
+                    end_of_current_nsx_seg = seg['timestamp'] + \
+                                seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
+                                # - nsx_offset
+                    mask = [(ev_ids == i) & (data['timestamp'] > end_of_current_nsx_seg +
+                                             nsx_period)]
+
+                    # Exclude reset segments, because they need to be correct
+                    # or it will fail later with incorrect number of segments
+                    # XXX This is a workaround for the case that spikes occur a few milliseconds
+                    # outside of the segment due to the reset
+                    # if i < len(list_nonempty_nsx_segments) - 1 and \
+                    #         list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 1:
+                    #     continue
+
+                    # Raise error if spikes do not fit any segment
+                    mask_outside = [(ev_ids == i) & (data['timestamp'] < seg['timestamp'] -
+                                                     nsx_offset - nsx_period)]
+                    if len(data[mask_outside]) > 0:
+                        # print(data[mask_outside])
+                        # print(seg['timestamp'])
+                        raise ValueError("Spikes outside any segment")
 
                     # If some nev data are outside this nsX segment, increase their segment ids
+                    # and the ids of all following segments
                     # Also more possible segments then
                     if len(data[mask]) > 0:
+                        if i == len(list_nonempty_nsx_segments) - 1:
+                            # print(data[mask][:]['timestamp'])
+                            # print("SEG: ", end_of_current_nsx_seg)
+                            raise ValueError("Spikes outside any segment")
+                        # print("LATER", data[mask][:]['timestamp'])
+                        # print(end_of_current_nsx_seg)
                         add += 1
                         nb_possible_nev_segments += 1
-                        ev_ids[mask] += add
+                        ev_ids[ev_ids > i] += 1
+                        ev_ids[mask] += 1
+                        # print(ev_ids)
 
+            # TODO: Correct output
             # consistency check: same number of segments for nsx and nev data
             assert nb_possible_nev_segments == len(nonempty_nsx_segments), \
                 ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
@@ -1200,9 +1237,9 @@ class BlackrockRawIO(BaseRawIO):
 
             # replacing event ids by matched event ids in place
             for k, (data, ev_ids) in self.nev_data.items():
-                print("TS")
-                print(data['timestamp'])
-                print(ev_ids)
+                # print("TS")
+                # print(data['timestamp'])
+                # print(ev_ids)
                 if len(ev_ids):
                     ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
