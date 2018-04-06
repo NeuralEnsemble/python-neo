@@ -354,6 +354,9 @@ class BlackrockRawIO(BaseRawIO):
             self._seg_t_starts, self._seg_t_stops = [], []
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
+                if length < 2:
+                    self.nsx_data.pop(data_bl)
+                    continue
                 if self.__nsx_data_header[self.nsx_to_load] is None:
                     t_start = 0.
                 else:
@@ -382,8 +385,19 @@ class BlackrockRawIO(BaseRawIO):
                     if min_nev_time < t_start:
                         t_start = min_nev_time
                 self._seg_t_starts.append(t_start)
+                print(self._seg_t_starts)
                 self._seg_t_stops.append(float(t_stop))
+                print(self._seg_t_stops)
                 self._sigs_t_starts.append(float(t_start))
+
+            # Reorder nsX segments
+            for i in range(self._nb_segment):
+                try:
+                    self.nsx_data[i]
+                except KeyError:
+                    self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
+                                     self.nsx_data.items()}
+            self._nb_segment -= 2
 
         else:
             # When only nev is available, only segments that are documented in nev can be detected
@@ -1195,7 +1209,7 @@ class BlackrockRawIO(BaseRawIO):
                                       len(nonempty_nsx_segments)))
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments),
-                                                  sorted(list(nonempty_nsx_segments))))
+                                                  range(len(list_nonempty_nsx_segments))))
 
             # def vec_translate(a, my_dict):
             #     return np.vectorize(my_dict.__getitem__)(a)
