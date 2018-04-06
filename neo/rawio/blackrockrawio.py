@@ -388,9 +388,7 @@ class BlackrockRawIO(BaseRawIO):
                     if min_nev_time < t_start:
                         t_start = min_nev_time
                 self._seg_t_starts.append(t_start)
-                print(self._seg_t_starts)
                 self._seg_t_stops.append(float(t_stop))
-                print(self._seg_t_stops)
                 self._sigs_t_starts.append(float(t_start))
 
             # Remap segments so they are a range again
@@ -400,10 +398,12 @@ class BlackrockRawIO(BaseRawIO):
                 except KeyError:
                     self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
                                      self.nsx_data.items()}
-            for k, (data, ev_ids) in self.nev_data.items():
-                for i in range(self._nb_segment):
-                    if i not in ev_ids:
-                        ev_ids[ev_ids > i] -= 1
+
+            if self._avail_files['nev']:
+                for k, (data, ev_ids) in self.nev_data.items():
+                    for i in range(self._nb_segment):
+                        if i not in ev_ids:
+                            ev_ids[ev_ids > i] -= 1
             self._nb_segment -= nb_empty_segments
 
         else:
@@ -1156,7 +1156,7 @@ class BlackrockRawIO(BaseRawIO):
         if self.__nev_spec == '2.3':
             # TODO: Set earlier for 'self' and find out values!!!
             # TODO: Is it even used correctly here? Is it only starting offset? Or start and stop?
-            nsx_offset = {2: 0, 6: 82}[self.nsx_to_load]
+            nsx_offset = {2: 0, 5: 82, 6: 82}[self.nsx_to_load]
             # Multiples of 1/30.000s that pass between two nsX samples
             nsx_period = self.__nsx_basic_header[self.nsx_to_load]['period']
             # NSX segments needed as dict and list
@@ -1202,6 +1202,8 @@ class BlackrockRawIO(BaseRawIO):
                     # Also if this was found, more segments are possible in nev then
                     if len(data[mask_after_seg]) > 0:
                         if i == len(list_nonempty_nsx_segments) - 1:
+                        #     print(data[mask_after_seg]['timestamp'])
+                        #     print(end_of_current_nsx_seg, nsx_period)
                             raise ValueError("Spikes outside any segment")
                         elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
                             raise ValueError("Some segments in nsX cannot be detected in nev")
