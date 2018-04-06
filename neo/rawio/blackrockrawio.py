@@ -352,9 +352,12 @@ class BlackrockRawIO(BaseRawIO):
             # t_start/t_stop for segment are given by nsx limits or nev limits
             self._sigs_t_starts = []
             self._seg_t_starts, self._seg_t_stops = [], []
+            nb_empty_segments = 0
             for data_bl in range(self._nb_segment):
                 length = self.nsx_data[data_bl].shape[0]
+                # Discard empty segments
                 if length < 2:
+                    nb_empty_segments += 1
                     self.nsx_data.pop(data_bl)
                     continue
                 if self.__nsx_data_header[self.nsx_to_load] is None:
@@ -390,14 +393,18 @@ class BlackrockRawIO(BaseRawIO):
                 print(self._seg_t_stops)
                 self._sigs_t_starts.append(float(t_start))
 
-            # Reorder nsX segments
+            # Remap segments so they are a range again
             for i in range(self._nb_segment):
                 try:
                     self.nsx_data[i]
                 except KeyError:
                     self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
                                      self.nsx_data.items()}
-            self._nb_segment -= 2
+            for k, (data, ev_ids) in self.nev_data.items():
+                for i in range(self._nb_segment):
+                    if i not in ev_ids:
+                        ev_ids[ev_ids > i] -= 1
+            self._nb_segment -= nb_empty_segments
 
         else:
             # When only nev is available, only segments that are documented in nev can be detected
@@ -1209,7 +1216,7 @@ class BlackrockRawIO(BaseRawIO):
                                       len(nonempty_nsx_segments)))
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments),
-                                                  range(len(list_nonempty_nsx_segments))))
+                                                  sorted(list(nonempty_nsx_segments))))
 
             # def vec_translate(a, my_dict):
             #     return np.vectorize(my_dict.__getitem__)(a)
