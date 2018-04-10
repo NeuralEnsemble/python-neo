@@ -34,6 +34,10 @@ class WinWcpRawIO(BaseRawIO):
 
     def _parse_header(self):
         SECTORSIZE = 512
+        
+        # only one memmap for all segment to avoid
+        # "error: [Errno 24] Too many open files"
+        self._memmap = np.memmap(self.filename, dtype='uint8', mode='r')
 
         with open(self.filename, 'rb') as fid:
 
@@ -57,7 +61,6 @@ class WinWcpRawIO(BaseRawIO):
             all_sampling_interval = []
             # loop for record number
             for seg_index in range(header['NR']):
-                # print 'record ',i
                 offset = 1024 + seg_index * (SECTORSIZE * header['NBD'] + 1024)
 
                 # read analysis zone
@@ -67,11 +70,12 @@ class WinWcpRawIO(BaseRawIO):
                 NP = (SECTORSIZE * header['NBD']) // 2
                 NP = NP - NP % header['NC']
                 NP = NP // header['NC']
-
-                self._raw_signals[seg_index] = np.memmap(self.filename, dtype='int16', mode='r',
-                                                         shape=(NP, header['NC'],),
-                                                         offset=offset + header['NBA'] * SECTORSIZE)
-
+                NC = header['NC']
+                ind0 = offset + header['NBA'] * SECTORSIZE
+                ind1 = ind0 + NP * NC * 2
+                sigs = self._memmap[ind0:ind1].view('int16').reshape(NP, NC)
+                self._raw_signals[seg_index] = sigs
+                
                 all_sampling_interval.append(analysisHeader['SamplingInterval'])
 
         assert np.unique(all_sampling_interval).size == 1
