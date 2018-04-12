@@ -1158,7 +1158,9 @@ class BlackrockRawIO(BaseRawIO):
             # TODO: Is it even used correctly here? Is it only starting offset? Or start and stop?
             # XXX These offsets are chosen based on available files,
             # they are not certain to be true for all files. Only 2, 5 and 6 are observed values
-            nsx_offset = {1: 0, 2: 0, 3: 0, 4: 0, 5: 82, 6: 82}[self.nsx_to_load]
+            # nsx_offset = {1: 0, 2: 0, 3: 0, 4: 0, 5: 82, 6: 82}[self.nsx_to_load]
+            # NSX offset is timestamp of the first segment, because all files start at 0 + offset
+            nsx_offset = self.__nsx_data_header[nsx_nb][0]['timestamp']
             # Multiples of 1/30.000s that pass between two nsX samples
             nsx_period = self.__nsx_basic_header[self.nsx_to_load]['period']
             # NSX segments needed as dict and list
