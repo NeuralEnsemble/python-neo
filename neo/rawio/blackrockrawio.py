@@ -1156,7 +1156,9 @@ class BlackrockRawIO(BaseRawIO):
         if self.__nev_spec == '2.3':
             # TODO: Set earlier for 'self' and find out values!!!
             # TODO: Is it even used correctly here? Is it only starting offset? Or start and stop?
-            nsx_offset = {2: 0, 5: 82, 6: 82}[self.nsx_to_load]
+            # XXX These offsets are chosen based on available files,
+            # they are not certain to be true for all files. Only 2, 5 and 6 are observed values
+            nsx_offset = {1: 0, 2: 0, 3: 0, 4: 0, 5: 82, 6: 82}[self.nsx_to_load]
             # Multiples of 1/30.000s that pass between two nsX samples
             nsx_period = self.__nsx_basic_header[self.nsx_to_load]['period']
             # NSX segments needed as dict and list
@@ -1187,26 +1189,42 @@ class BlackrockRawIO(BaseRawIO):
                                 # - nsx_offset
 
                     mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
-                                                         end_of_current_nsx_seg + nsx_period)]
+                                                       end_of_current_nsx_seg + nsx_period)]
 
-                    # Raise error if spikes do not fit any segment (+- 1 sampling 'tick')
+                    # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
+                    # Spike should belong to segment before
                     mask_outside = [(ev_ids == i) & (data['timestamp'] < seg['timestamp'] -
                                                      nsx_offset - nsx_period)]
                     if len(data[mask_outside]) > 0:
-                        raise ValueError("Spikes outside any segment")
+                        warnings.warn("Spikes outside any segment. Detected on segment #{}".
+                                      format(i))
+                        ev_ids[mask_outside] -= 1
 
                     # If some nev data are outside of this nsX segment, increase their segment ids
                     # and the ids of all following segments. They are checked for the next nsX
                     # segment then. If they do not fit any of them,
-                    # an error will be raised (see above)
-                    # Also if this was found, more segments are possible in nev then
+                    # a warning will be shown indicating, how far outside the segment spikes are
+                    # If they fit the next segment, more segments are possible in nev,
+                    # because a new one has been discovered
                     if len(data[mask_after_seg]) > 0:
+                        # Warning if spikes are after last segment
                         if i == len(list_nonempty_nsx_segments) - 1:
-                        #     print(data[mask_after_seg]['timestamp'])
-                        #     print(end_of_current_nsx_seg, nsx_period)
-                            raise ValueError("Spikes outside any segment")
+                            timestamp_resolution = self.__nsx_params[self.__nsx_spec[
+                                self.nsx_to_load]]('timestamp_resolution', self.nsx_to_load)
+                            time_after_seg = (data[mask_after_seg]['timestamp'][-1] -
+                                              end_of_current_nsx_seg) / timestamp_resolution
+                            warnings.warn("Spikes {}s after last segment.".format(time_after_seg))
+                            # Break out of loop because it's the last iteration
+                            # and the spikes should stay connected to last segment
+                            break
+
+                        # If reset and no segment detected in nev, then these segments cannot be
+                        # distinguished in nev, which is a big problem
+                        # XXX 96 is an arbitrary number based on observations in available files
                         elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
                             raise ValueError("Some segments in nsX cannot be detected in nev")
+
+                        # Actual processing if no problem has occurred
                         nb_possible_nev_segments += 1
                         ev_ids[ev_ids > i] += 1
                         ev_ids[mask_after_seg] += 1
