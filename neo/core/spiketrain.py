@@ -327,6 +327,9 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         BaseNeo.__init__(self, name=name, file_origin=file_origin,
                          description=description, **annotations)
 
+    def _repr_pretty_(self, pp, cycle):
+        super(SpikeTrain, self)._repr_pretty_(pp, cycle)
+
     def rescale(self, units):
         '''
         Return a copy of the :class:`SpikeTrain` converted to the specified
