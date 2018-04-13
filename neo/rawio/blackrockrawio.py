@@ -1172,8 +1172,6 @@ class BlackrockRawIO(BaseRawIO):
             # Nonempty segments are those containing at least 2 samples
             # These have to be able to be mapped to nev
             for k, v in sorted(self.__nsx_data_header[nsx_nb].items()):
-                # print(v['timestamp'])
-                # print((v['timestamp'] + v['nb_data_points'])*self.__nsx_basic_header[nsx_nb]['period']/30000)
                 if v['nb_data_points'] > 1:
                     nonempty_nsx_segments[k] = v
                     list_nonempty_nsx_segments.append(v)
@@ -1188,9 +1186,10 @@ class BlackrockRawIO(BaseRawIO):
                 for i, seg in enumerate(list_nonempty_nsx_segments[:]):
 
                     # Last timestamp in this nsX segment
+                    # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = seg['timestamp'] + \
                                 seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
-                                # - nsx_offset
+                                #- nsx_offset
 
                     mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
                                                        end_of_current_nsx_seg + nsx_period)]
