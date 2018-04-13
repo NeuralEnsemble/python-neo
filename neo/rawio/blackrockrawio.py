@@ -1225,7 +1225,14 @@ class BlackrockRawIO(BaseRawIO):
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
                         elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
-                            raise ValueError("Some segments in nsX cannot be detected in nev")
+                            # print((data[ev_ids == i]['timestamp']).shape)
+                            # print(data[ev_ids == i]['timestamp'])
+                            # print(data[mask_after_seg]['timestamp'])
+                            # # print(end_of_current_nsx_seg)
+                            # print((data[ev_ids == i]['timestamp']).shape)
+                            # print(data[mask_after_seg]['timestamp'].shape)
+                            if len(data[ev_ids == i]) != len(data[mask_after_seg]):
+                                raise ValueError("Some segments in nsX cannot be detected in nev")
 
                         # Actual processing if no problem has occurred
                         nb_possible_nev_segments += 1
