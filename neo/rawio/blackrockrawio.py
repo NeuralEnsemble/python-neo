@@ -1172,6 +1172,8 @@ class BlackrockRawIO(BaseRawIO):
             # Nonempty segments are those containing at least 2 samples
             # These have to be able to be mapped to nev
             for k, v in sorted(self.__nsx_data_header[nsx_nb].items()):
+                # print(v['timestamp'])
+                # print((v['timestamp'] + v['nb_data_points'])*self.__nsx_basic_header[nsx_nb]['period']/30000)
                 if v['nb_data_points'] > 1:
                     nonempty_nsx_segments[k] = v
                     list_nonempty_nsx_segments.append(v)
@@ -1195,7 +1197,7 @@ class BlackrockRawIO(BaseRawIO):
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = [(ev_ids == i) & (data['timestamp'] < seg['timestamp'] -
+                    mask_outside = [(ev_ids == i) & (data['timestamp'] < int(seg['timestamp']) -
                                                      nsx_offset - nsx_period)]
                     if len(data[mask_outside]) > 0:
                         warnings.warn("Spikes outside any segment. Detected on segment #{}".
