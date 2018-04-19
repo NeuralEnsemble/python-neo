@@ -326,7 +326,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
     def extract_for_epoch(self, epoch):
         """
         Checks self (which is the instance, neo.AnalogSignal or neo.SpikeTrain) for
-        specified neo.Epoch and returns signals for respetive epochs within neo.Epoch
+        specified neo.Epoch and returns signals for respective epochs within neo.Epoch
 
         Arguments:
         epoch; a created neo.Epoch
