@@ -91,7 +91,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment, ChannelIndex, RecordingChannel,
+from neo.core import (Block, Segment, ChannelIndex,
                       AnalogSignal, Event, SpikeTrain)
 
 
@@ -3727,7 +3727,6 @@ class ElphyIO(BaseIO):
     It enables reading:
     - :class:`Block`
     - :class:`Segment`
-    - :class:`RecordingChannel`
     - :class:`ChannelIndex`
     - :class:`Event`
     - :class:`SpikeTrain`
@@ -4237,16 +4236,14 @@ class ElphyIO(BaseIO):
 
     def read_recordingchannel(self, episode, chl):
         """
-        Internal method used to return a :class:`RecordingChannel` label.
+        Internal method used to return a :class:`ChannelIndex` label.
 
         Parameters:
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment.
             chl : electrode number.
         """
-        channel = RecordingChannel(
-            name="episode %s, electrodes %s" % (episode, chl)
-        )
+        channel = ChannelIndex(name="episode %s, electrodes %s" % (episode, chl), index=[0])
         return channel
 
     def read_event(self, episode, evt):
