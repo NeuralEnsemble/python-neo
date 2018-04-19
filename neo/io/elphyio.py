@@ -1662,7 +1662,7 @@ def read_from_char(data, type_char):
     to the specified character type.
     """
     n_bytes = type_dict[type_char]
-    ascii = data.read(n_bytes) if isinstance(data, file) else data
+    ascii = data.read(n_bytes) if hasattr(data, 'read') else data
     if type_char != 'ext':
         try:
             value = struct.unpack('<%s' % type_char, ascii)[0]
@@ -2417,7 +2417,7 @@ class DAC2Layout(ElphyLayout):
             return False
 
     def set_episode_blocks(self):
-        self.episode_blocks = [k for k in self.blocks if k.identifier.startswith('B_Ep')]
+        self.episode_blocks = [k for k in self.blocks if str(k.identifier).startswith('B_Ep')]
 
     def set_info_block(self):
         # in fact the file info are contained into a single sub-block with an USR identifier
@@ -3391,6 +3391,8 @@ class ElphyFile(object):
         length, title = struct.unpack('<B15s', self.file.read(16))
         self.file.seek(0)
         title = title[0:length]
+        if hasattr(title,'decode'):
+            title=title.decode()
         if not title in factories:
             title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
         return title
@@ -3415,6 +3417,8 @@ class ElphyFile(object):
         useful to build the file layout depending
         on header title.
         """
+        if hasattr(self.nomenclature, 'decode'):
+            self.nomenclature = self.nomenclature.decode()
         return factories[self.nomenclature](self)
 
     def write(self, data):
