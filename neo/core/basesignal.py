@@ -303,3 +303,65 @@ class BaseSignal(BaseNeo, pq.Quantity):
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
         return signal
+
+    @staticmethod
+    def _rescale_epoch_times(a_signal, times_of_an_epoch):
+        """
+        Checks epoch.times.units against signal.times.units
+        
+        Arguments:
+        a_signal
+        times_of_an_epoch; epc.times or epc.durations of the created epoch, epc.
+
+        Returns:
+        same times_of_an_epoch if units are the same
+        or
+        rescaled (to signal.times.units) times_of_an_epoch if units are different.
+        """
+        if times_of_an_epoch.units is not a_signal.times.units:
+            return times_of_an_epoch.rescale(a_signal.times.units)
+        else:
+            return times_of_an_epoch
+
+    def extract_for_epoch(self, epoch):
+        """
+        Checks self (which is the instance, neo.AnalogSignal or neo.SpikeTrain) for
+        specified neo.Epoch and returns signals for respetive epochs within neo.Epoch
+
+        Arguments:
+        epoch; a created neo.Epoch
+
+        Returns:
+        signal from start of an epoch to stop (start+duration).
+        This is done for respective epoch. Therefore if there are three epochs within
+        the epoch neo object (in the argument) then it returns a list of three signals.
+        But if there's only one epoch it returns just the signal (not a list).
+
+        Usage:
+           >>> import neo
+           >>> import quantities as pq
+           >>> import numpy as np
+           >>> sigarr = neo.AnalogSignal([[1], [2], [3], [4], [5], [6]], units='mV',
+                                         sampling_rate=1*pq.Hz)
+           >>> epc = neo.Epoch(times=np.array([0, 3000])*pq.ms, durations=[1000, 2000]*pq.ms,
+                               labels=np.array(['btn0', 'btn1'], dtype='S'))
+           >>> epochsignals = sigarr.extract_for_epoch(epc)
+           >>> epochsignals
+           [<AnalogSignal(array([[1]]) * mV, [0.0 s, 1.0 s], sampling rate: 1.0 Hz)>,
+            <AnalogSignal(array([], shape=(0, 1), dtype=int64) * mV, [3.0 s, 3.0 s],
+            sampling rate: 1.0 Hz)>]
+           >>> len(epochsignals)
+           2
+           >>> epochsignals[0]
+           <AnalogSignal(array([[1]]) * mV, [0.0 s, 1.0 s], sampling rate: 1.0 Hz)>
+
+        """
+        extractions = []
+        for epc in epoch:
+            t_start = self._rescale_epoch_times(self, epc.times)
+            t_stop = self._rescale_epoch_times(self, epc.durations)
+            extractions.append(self.time_slice(t_start, t_stop))
+        if len(extractions)==1:
+            return extractions[0]
+        else:
+            return extractions
