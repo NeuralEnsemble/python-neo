@@ -2696,7 +2696,7 @@ class DAC2Layout(ElphyLayout):
         block = self.episode_block(episode)
         k_sampling = np.array(block.ks_block.k_sampling)
         evt_channels = np.where(k_sampling == 0)[0]
-        if not channel in evt_channels:
+        if channel not in evt_channels:
             return super(DAC2Layout, self).get_signal(episode, channel)
         else:
             k_sampling[channel - 1] = -1
@@ -2866,8 +2866,8 @@ class DAC2Layout(ElphyLayout):
         else:
             wf_samples = 0
             t_start = 0
-        return ElphySpikeTrain(self, episode, electrode_id, x_unit, n_events, wf_sampling_frequency,
-                               wf_samples, x_unit_wf, y_unit_wf, t_start)
+        return ElphySpikeTrain(self, episode, electrode_id, x_unit, n_events,
+                               wf_sampling_frequency, wf_samples, x_unit_wf, y_unit_wf, t_start)
 
     def get_spiketrain_data(self, episode, electrode_id):
         """
@@ -3399,7 +3399,7 @@ class ElphyFile(object):
         title = title[0:length]
         if hasattr(title, 'decode'):
             title = title.decode()
-        if not title in factories:
+        if title not in factories:
             title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
         return title
 
@@ -3814,7 +3814,7 @@ class ElphyIO(BaseIO):
 
         # create a segment containing all analog,
         # tag and event channels for the episode
-        if self.elphy_file.n_episodes == None:
+        if self.elphy_file.n_episodes is None:
             print("File '%s' appears to have no episodes" % (self.filename))
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
