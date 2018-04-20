@@ -1231,6 +1231,8 @@ class BlackrockRawIO(BaseRawIO):
                             # # print(end_of_current_nsx_seg)
                             # print((data[ev_ids == i]['timestamp']).shape)
                             # print(data[mask_after_seg]['timestamp'].shape)
+                            # If not all definitely belong to the next segment,
+                            # then it cannot be distinguished where some belong
                             if len(data[ev_ids == i]) != len(data[mask_after_seg]):
                                 raise ValueError("Some segments in nsX cannot be detected in nev")
 
