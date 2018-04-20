@@ -269,6 +269,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
                         # Note: analog input events are not yet supported
 
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
+    def test_segment_detection(self):
+
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()
