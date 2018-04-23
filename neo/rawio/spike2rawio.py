@@ -588,6 +588,7 @@ def get_sample_interval(info, chan_info):
                            info['us_per_time'] * info['dtime_base'])
     return sample_interval
 
+
 # headers structures :
 headerDescription = [
     ('system_id', 'i2'),
