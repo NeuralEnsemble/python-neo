@@ -309,14 +309,21 @@ class Spike2RawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] * self._time_factor
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _check_channel_indexes(self, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
         assert len(channel_indexes) == 1
+        return channel_indexes
+
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
         sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]['size'])
         return sig_size
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes) == 1
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
         return self._sig_t_starts[chan_id][seg_index] * self._time_factor
 
@@ -326,7 +333,7 @@ class Spike2RawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
 
-        assert len(channel_indexes) == 1
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_index = channel_indexes[0]
         chan_id = self.header['signal_channels'][chan_index]['id']
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
