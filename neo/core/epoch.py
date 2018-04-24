@@ -151,6 +151,9 @@ class Epoch(BaseNeo, pq.Quantity):
                 label, time, dur in zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
+    def _repr_pretty_(self, pp, cycle):
+        super(Epoch, self)._repr_pretty_(pp, cycle)
+
     def rescale(self, units):
         '''
         Return a copy of the :class:`Epoch` converted to the specified

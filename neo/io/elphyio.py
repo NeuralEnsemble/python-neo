@@ -91,7 +91,7 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 
 # to import from core
-from neo.core import (Block, Segment, ChannelIndex, RecordingChannel,
+from neo.core import (Block, Segment, ChannelIndex,
                       AnalogSignal, Event, SpikeTrain)
 
 
@@ -187,7 +187,7 @@ class ElphySignal(BaseSignal):
 
     def __str__(self):
         return "%s ep_%s ch_%s [%s, %s]" % (
-        self.layout.file.name, self.episode, self.channel, self.x_unit, self.y_unit)
+            self.layout.file.name, self.episode, self.channel, self.x_unit, self.y_unit)
 
     def __repr__(self):
         return self.__str__()
@@ -220,14 +220,15 @@ class ElphyTag(BaseSignal):
 
     """
 
-    def __init__(self, layout, episode, number, x_unit, sampling_frequency, start, stop, name=None):
+    def __init__(self, layout, episode, number, x_unit, sampling_frequency, start, stop,
+                 name=None):
         super(ElphyTag, self).__init__(layout, episode, sampling_frequency, start, stop, name)
         self.number = number
         self.units = [x_unit, None]
 
     def __str__(self):
         return "%s : ep_%s tag_ch_%s [%s]" % (
-        self.layout.file.name, self.episode, self.number, self.x_unit)
+            self.layout.file.name, self.episode, self.number, self.x_unit)
 
     def __repr__(self):
         return self.__str__()
@@ -280,7 +281,7 @@ class ElphyEvent(object):
 
     def __str__(self):
         return "%s : ep_%s evt_ch_%s [%s]" % (
-        self.layout.file.name, self.episode, self.number, self.x_unit)
+            self.layout.file.name, self.episode, self.number, self.x_unit)
 
     def __repr__(self):
         return self.__str__()
@@ -320,8 +321,8 @@ class ElphySpikeTrain(ElphyEvent):
     ``waveforms`` : a property triggering waveforms extraction.
     """
 
-    def __init__(self, layout, episode, number, x_unit, n_events, wf_sampling_frequency, wf_samples,
-                 unit_x_wf, unit_y_wf, t_start, name=None):
+    def __init__(self, layout, episode, number, x_unit, n_events, wf_sampling_frequency,
+                 wf_samples, unit_x_wf, unit_y_wf, t_start, name=None):
         super(ElphySpikeTrain, self).__init__(layout, episode, number, x_unit, n_events, name)
         self.wf_samples = wf_samples
         self.wf_sampling_frequency = wf_sampling_frequency
@@ -350,7 +351,8 @@ class ElphySpikeTrain(ElphyEvent):
 
     @property
     def waveforms(self):
-        return self.layout.get_waveform_data(self.episode, self.number) if self.wf_samples else None
+        return self.layout.get_waveform_data(self.episode, self.number) if self.wf_samples \
+            else None
 
 
 # --------------------------------------------------------
@@ -436,7 +438,7 @@ class ElphyBlock(BaseBlock):
 
     def __repr__(self):
         return "%s : size = %s, start = %s, end = %s" % (
-        self.identifier, self.size, self.start, self.end)
+            self.identifier, self.size, self.start, self.end)
 
     def add_sub_block(self, block):
         """
@@ -1186,7 +1188,8 @@ class DAC2GSMainBlock(ElphyBlock):
         else:
             self.n_samples = self.nbpt
 
-        self.ep_size = self.preSeqI + self.postSeqI + self.n_samples * self.sample_size * self.n_channels
+        self.ep_size = (self.preSeqI + self.postSeqI + self.n_samples * self.sample_size *
+                        self.n_channels)
         self.n_episodes = self.dat_length / self.ep_size if (self.n_samples != 0) else 0
 
 
@@ -1463,7 +1466,8 @@ class DAC2EpSubBlock(ElphyBlock):
     ``dY_wf`` and ``Y0_wf``: the scale factors necessary to retrieve the actual
     values relative to waveform samples.
 
-    ``x_unit_wf`` and ``y_unit_wf``: the unit of x and y coordinates for all waveforms in an episode.
+    ``x_unit_wf`` and ``y_unit_wf``: the unit of x and y coordinates for all waveforms in an
+    episode.
     """
 
     def __init__(self, layout, identifier, start, size, fixed_length=None, size_format="l",
@@ -1475,8 +1479,8 @@ class DAC2EpSubBlock(ElphyBlock):
         n_channels, nbpt, tpData, l_xu, x_unit, dX, X0 = struct.unpack(
             '<BiBB10sdd', fileobj.read(33))
         continuous, tag_mode, tag_shift = struct.unpack('<?BB', fileobj.read(3))
-        DxuSpk, X0uSpk, nbSpk, DyuSpk, Y0uSpk, l_xuspk, unitXSpk, l_yuspk, unitYSpk = struct.unpack(
-            '<ddiddB10sB10s', fileobj.read(58))
+        DxuSpk, X0uSpk, nbSpk, DyuSpk, Y0uSpk, l_xuspk, unitXSpk, l_yuspk, unitYSpk = \
+            struct.unpack('<ddiddB10sB10s', fileobj.read(58))
         cyber_time, pc_time = struct.unpack('<dI', fileobj.read(12))
         # necessary properties to reconstruct
         # signals stored into the file
@@ -1662,7 +1666,7 @@ def read_from_char(data, type_char):
     to the specified character type.
     """
     n_bytes = type_dict[type_char]
-    ascii = data.read(n_bytes) if isinstance(data, file) else data
+    ascii = data.read(n_bytes) if hasattr(data, 'read') else data
     if type_char != 'ext':
         try:
             value = struct.unpack('<%s' % type_char, ascii)[0]
@@ -2417,7 +2421,7 @@ class DAC2Layout(ElphyLayout):
             return False
 
     def set_episode_blocks(self):
-        self.episode_blocks = [k for k in self.blocks if k.identifier.startswith('B_Ep')]
+        self.episode_blocks = [k for k in self.blocks if str(k.identifier).startswith('B_Ep')]
 
     def set_info_block(self):
         # in fact the file info are contained into a single sub-block with an USR identifier
@@ -2692,7 +2696,7 @@ class DAC2Layout(ElphyLayout):
         block = self.episode_block(episode)
         k_sampling = np.array(block.ks_block.k_sampling)
         evt_channels = np.where(k_sampling == 0)[0]
-        if not channel in evt_channels:
+        if channel not in evt_channels:
             return super(DAC2Layout, self).get_signal(episode, channel)
         else:
             k_sampling[channel - 1] = -1
@@ -2792,7 +2796,8 @@ class DAC2Layout(ElphyLayout):
         """
         Return times stored as a 4-bytes integer
         in the specified spike channel.
-        NB: it is meant for Blackrock-type, having an additional byte for each event time as spike sorting label.
+        NB: it is meant for Blackrock-type, having an additional byte for each event time as spike
+        sorting label.
             These additiona bytes are appended trailing the times.
         """
         # to load the requested spikes for the specified episode and event channel:
@@ -2802,7 +2807,8 @@ class DAC2Layout(ElphyLayout):
         # RDATA(h?dI) REVT(NbVeV:I, NbEv:256I ... spike data are 4byte integers
         rspk_header = 4 * (rspk_block.size - rspk_block.data_size - 2 + len(rspk_block.n_events))
         pre_events = np.sum(rspk_block.n_events[0:evt_channel - 1], dtype=int, axis=0)
-        # the real start is after header, preceeding events (which are 4byte) and preceeding labels (1byte)
+        # the real start is after header, preceeding events (which are 4byte) and preceeding
+        # labels (1byte)
         start = rspk_header + (4 * pre_events) + pre_events
         end = start + 4 * rspk_block.n_events[evt_channel - 1]
         raw = self.load_bytes([rspk_block], dtype='<i1', start=start,
@@ -2860,8 +2866,8 @@ class DAC2Layout(ElphyLayout):
         else:
             wf_samples = 0
             t_start = 0
-        return ElphySpikeTrain(self, episode, electrode_id, x_unit, n_events, wf_sampling_frequency,
-                               wf_samples, x_unit_wf, y_unit_wf, t_start)
+        return ElphySpikeTrain(self, episode, electrode_id, x_unit, n_events,
+                               wf_sampling_frequency, wf_samples, x_unit_wf, y_unit_wf, t_start)
 
     def get_spiketrain_data(self, episode, electrode_id):
         """
@@ -3391,7 +3397,9 @@ class ElphyFile(object):
         length, title = struct.unpack('<B15s', self.file.read(16))
         self.file.seek(0)
         title = title[0:length]
-        if not title in factories:
+        if hasattr(title, 'decode'):
+            title = title.decode()
+        if title not in factories:
             title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
         return title
 
@@ -3415,6 +3423,8 @@ class ElphyFile(object):
         useful to build the file layout depending
         on header title.
         """
+        if hasattr(self.nomenclature, 'decode'):
+            self.nomenclature = self.nomenclature.decode()
         return factories[self.nomenclature](self)
 
     def write(self, data):
@@ -3500,7 +3510,7 @@ class ElphyFile(object):
                     sub_offset += sub_block.size
                 # set up some properties of some DAC2Layout sub-blocks
                 if isinstance(sub_block, (
-                DAC2EpSubBlock, DAC2AdcSubBlock, DAC2KSampSubBlock, DAC2KTypeSubBlock)):
+                        DAC2EpSubBlock, DAC2AdcSubBlock, DAC2KSampSubBlock, DAC2KTypeSubBlock)):
                     block.set_episode_block()
                     block.set_channel_block()
                     block.set_sub_sampling_block()
@@ -3517,8 +3527,8 @@ class ElphyFile(object):
 
             # set up as soon as possible the shortcut
             # to the main block of a DAC2GSLayout
-            if not detect_main and isinstance(layout, DAC2GSLayout) and isinstance(block,
-                                                                                   DAC2GSMainBlock):
+            if (not detect_main and isinstance(layout, DAC2GSLayout)
+                    and isinstance(block, DAC2GSMainBlock)):
                 layout.set_main_block()
                 detect_main = True
 
@@ -3531,7 +3541,7 @@ class ElphyFile(object):
         # to episodes, only available for DAC2Layout
         # and also DAC2GSLayout if not continuous
         if isinstance(layout, DAC2Layout) or (
-            isinstance(layout, DAC2GSLayout) and not layout.is_continuous()):
+                isinstance(layout, DAC2GSLayout) and not layout.is_continuous()):
             layout.set_episode_blocks()
 
         layout.set_data_blocks()
@@ -3727,7 +3737,6 @@ class ElphyIO(BaseIO):
     It enables reading:
     - :class:`Block`
     - :class:`Segment`
-    - :class:`RecordingChannel`
     - :class:`ChannelIndex`
     - :class:`Event`
     - :class:`SpikeTrain`
@@ -3805,7 +3814,7 @@ class ElphyIO(BaseIO):
 
         # create a segment containing all analog,
         # tag and event channels for the episode
-        if self.elphy_file.n_episodes == None:
+        if self.elphy_file.n_episodes is None:
             print("File '%s' appears to have no episodes" % (self.filename))
             return block
         for episode in range(1, self.elphy_file.n_episodes + 1):
@@ -3867,20 +3876,23 @@ class ElphyIO(BaseIO):
             serialized_analog_data = ''
             serialized_spike_data = ''
             # AnalogSignals
-            # Neo signalarrays are 2D numpy array where each row is an array of samples for a channel:
+            # Neo signalarrays are 2D numpy array where each row is an array of samples for a
+            #  channel:
             # signalarray A = [[  1,  2,  3,  4 ],
             #                  [  5,  6,  7,  8 ]]
             # signalarray B = [[  9, 10, 11, 12 ],
             #                  [ 13, 14, 15, 16 ]]
             # Neo Segments can have more than one signalarray.
-            # To be converted in Elphy analog channels they need to be all in a 2D array, not in several 2D arrays.
+            # To be converted in Elphy analog channels they need to be all in a 2D array, not in
+            #  several 2D arrays.
             # Concatenate all analogsignalarrays into one and then flatten it.
             # Elphy RDATA blocks contain Fortran styled samples:
             # 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 4, 8, 12, 16
             # AnalogSignalArrays -> analogsignals
             # get the first to have analogsignals with the right shape
             # Annotations for analogsignals array come as a list of int being source ids
-            # here, put each source id on a separate dict entry in order to have a matching afterwards
+            # here, put each source id on a separate dict entry in order to have a matching
+            #  afterwards
             idx = 0
             annotations = dict()
             # get all the others
@@ -3902,7 +3914,8 @@ class ElphyIO(BaseIO):
                     analogsignals = asigar  # first time
             # collect and reshape all analogsignals
             if isinstance(analogsignals, np.ndarray):
-                # transpose matrix since in Neo channels are column-wise while in Elphy are row-wise
+                # transpose matrix since in Neo channels are column-wise while in Elphy are
+                #  row-wise
                 analogsignals = analogsignals.T
                 # get dimensions
                 nbchan, nbpt = analogsignals.shape
@@ -3934,8 +3947,10 @@ class ElphyIO(BaseIO):
                 # print "write_block() - train:", train
                 fake, annotations = self.get_annotations_dict(
                     annotations, "spiketrain", train.annotations.items(), '', idx)
-                # annotations.update( dict( [("spiketrain-"+str(idx),train.annotations['source_id'])] ) )
-                # print "write_block() - train[%s].annotation['source_id']:%s" % (idx,train.annotations['source_id'])
+                # annotations.update( dict( [("spiketrain-"+str(idx),
+                # train.annotations['source_id'])] ) )
+                # print "write_block() - train[%s].annotation['source_id']:%s"
+                # "" % (idx,train.annotations['source_id'])
                 # total number of events format + blackrock sorting mark (0 for neo)
                 spiketrain_data_fmt += str(train.size) + "i" + str(train.size) + "B"
                 # get starting time
@@ -4021,7 +4036,8 @@ class ElphyIO(BaseIO):
             Ep_chr = self.get_serialized(data_format, data_values)
             Ep_sub = self.get_serialized_subblock('Ep', Ep_chr)
             # 'Adc'
-            # Then, one or more (nbchan) Analog/Digital Channel will be, having their fixed data format
+            # Then, one or more (nbchan) Analog/Digital Channel will be, having their fixed data
+            # format
             data_format = "<B10sdd"
             # when Ep.tpdata is an integer type, Dyu nad Y0u are parameters such that
             # for an adc value j, the real value is y = Dyu*j + Y0u
@@ -4126,8 +4142,8 @@ class ElphyIO(BaseIO):
     def get_serialized_block(self, ident, data):
         """
         Generic Block Header
-        This function (without needing a layout and the rest) creates a binary serialized version of
-        the block containing the format string and the actual data for the following
+        This function (without needing a layout and the rest) creates a binary serialized version
+        of the block containing the format string and the actual data for the following
         Elphy Block Header structure:
         size: longint   // 4-byte integer
         ident: string[XXX]; // a Pascal variable-length string
@@ -4146,8 +4162,8 @@ class ElphyIO(BaseIO):
     def get_serialized_subblock(self, ident, data):
         """
         Generic Sub-Block Header
-        This function (without needing a layout and the rest) creates a binary serialized version of
-        the block containing the format string and the actual data for the following
+        This function (without needing a layout and the rest) creates a binary serialized version
+        of the block containing the format string and the actual data for the following
         Elphy Sub-Block Header structure:
         id: string[XXX]; // a Pascal variable-length string
         size1: word      // 2-byte unsigned integer
@@ -4237,21 +4253,20 @@ class ElphyIO(BaseIO):
 
     def read_recordingchannel(self, episode, chl):
         """
-        Internal method used to return a :class:`RecordingChannel` label.
+        Internal method used to return a :class:`ChannelIndex` label.
 
         Parameters:
             elphy_file : is the elphy object.
             episode : number of elphy episode, roughly corresponding to a segment.
             chl : electrode number.
         """
-        channel = RecordingChannel(
-            name="episode %s, electrodes %s" % (episode, chl)
-        )
+        channel = ChannelIndex(name="episode %s, electrodes %s" % (episode, chl), index=[0])
         return channel
 
     def read_event(self, episode, evt):
         """
-        Internal method used to return a list of elphy :class:`EventArray` acquired from event channels.
+        Internal method used to return a list of elphy :class:`EventArray` acquired from event
+        channels.
 
         Parameters:
             elphy_file : is the elphy object.

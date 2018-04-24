@@ -445,18 +445,23 @@ def parse_axon_soup(filename):
 
             # strings sections
             # hack for reading channels names and units
+            # this section is not very detailed and so the code
+            # not very robust. The idea is to remove the first
+            # part by find ing one of th fowoling KEY
+            # unfortunatly the later part contains a the file
+            # taht can contain by accident also one of theses keys...
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
             for key in [b'AXENGN', b'clampex', b'Clampex',
-                        b'CLAMPEX', b'axoscope', b'Clampfit']:
+                        b'CLAMPEX', b'axoscope', b'AxoScope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
-                goodstart = big_string.find(key)
+                goodstart = big_string.find(b'\x00'+key)
                 if goodstart != -1:
                     break
             assert goodstart != -1, \
                 'This file does not contain clampex, axoscope or clampfit in the header'
-            big_string = big_string[goodstart:]
+            big_string = big_string[goodstart+1:]
             strings = big_string.split(b'\x00')
 
             # ADC sections
