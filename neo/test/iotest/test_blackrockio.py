@@ -317,14 +317,16 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4020)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 3981)
 
-
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_segment_detection_pause(self):
 
-        filename = self.get_filename_path('segment/PauseSpikesOutside/pause_spikes_outside_seg')
+        filename_outside = self.get_filename_path(
+            'segment/PauseSpikesOutside/pause_spikes_outside_seg')
+        filename_correct = self.get_filename_path('segment/PauseCorrect/pause_correct')
 
         with warnings.catch_warnings(record=True) as w:
-            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+            reader = BlackrockIO(filename=filename_outside, nsx_to_load=2,
+                                 nsx_override=filename_correct)
             self.assertGreaterEqual(len(w), 1)
             self.assertEqual(w[-1].category, UserWarning)
             self.assertSequenceEqual(str(w[-1].message), 'Spikes 0.0776s after last segment.')
@@ -354,8 +356,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
 
-        filename = self.get_filename_path('segment/PauseCorrect/pause_correct')
-        reader = BlackrockIO(filename=filename, nsx_to_load=2)
+        reader = BlackrockIO(filename=filename_correct, nsx_to_load=2)
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
         self.assertEqual(len(block.segments), 2)
@@ -380,8 +381,6 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
-
-
 
 
 if __name__ == '__main__':
