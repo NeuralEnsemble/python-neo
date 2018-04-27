@@ -417,8 +417,6 @@ class BlackrockRawIO(BaseRawIO):
             max_nev_times = {}
             min_nev_times = {}
 
-            #TODO: Check for Julias method
-
             # Find maximal and minimal time for each nev segment
             for k, (data, ev_ids) in self.nev_data.items():
                 for i in np.unique(ev_ids):
@@ -1114,7 +1112,6 @@ class BlackrockRawIO(BaseRawIO):
                                       b'\x00\x00\x00\x00\x00\x00critical load restart')
         # TODO: Fix hardcoded number of bytes
         return restart_mask
-
 
     def __get_event_segment_ids(self, raw_event_data, masks, nev_data_masks):
         """
