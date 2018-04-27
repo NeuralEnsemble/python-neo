@@ -391,16 +391,15 @@ class BlackrockRawIO(BaseRawIO):
                 self._seg_t_stops.append(float(t_stop))
                 self._sigs_t_starts.append(float(t_start))
 
-            # Remap segments so they are a range again
+            # Keys need to be increasing from 0 to maximum in steps of 1
+            # To ensure this after removing empty segments, some keys need to be changed
             for i in range(self._nb_segment):
                 # If this key does not exist, reduce all following keys by 1,
                 # so the keys become a range starting from 0
-                try:
-                    self.nsx_data[i]
-                except KeyError:
+                if i not in self.nsx_data:
                     self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
                                      self.nsx_data.items()}
-            # Also remap nev data to make segments fit a range
+            # Also remap nev data, ev_ids are the equivalent to keys above
             if self._avail_files['nev']:
                 for k, (data, ev_ids) in self.nev_data.items():
                     for i in range(self._nb_segment):
@@ -408,7 +407,7 @@ class BlackrockRawIO(BaseRawIO):
                         # to make them a range starting from 0
                         if i not in ev_ids:
                             ev_ids[ev_ids > i] -= 1
-            
+
             # Empty segments were discarded, thus there may be less segments now
             self._nb_segment -= nb_empty_segments
 
@@ -417,6 +416,8 @@ class BlackrockRawIO(BaseRawIO):
 
             max_nev_times = {}
             min_nev_times = {}
+
+            #TODO: Check for Julias method
 
             # Find maximal and minimal time for each nev segment
             for k, (data, ev_ids) in self.nev_data.items():
