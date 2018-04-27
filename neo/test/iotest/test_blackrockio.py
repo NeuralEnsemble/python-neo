@@ -7,6 +7,7 @@ Tests of neo.io.blackrockio
 from __future__ import absolute_import
 
 import unittest
+import warnings
 
 from numpy.testing import assert_equal
 
@@ -53,7 +54,15 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         'blackrock_2_1/l101210-001.ns2',
         'blackrock_2_1/l101210-001.ns5',
         'blackrock_2_1/l101210-001.nev',
-        'blackrock_2_1/l101210-001-02.nev']
+        'blackrock_2_1/l101210-001-02.nev',
+        'segment/PauseCorrect/pause_correct.nev',
+        'segment/PauseCorrect/pause_correct.ns2',
+        'segment/PauseSpikesOutside/pause_spikes_outside_seg.nev',
+        'segment/PauseSpikesOutside/pause_spikes_outside_seg.ns2',
+        'segment/ResetCorrect/reset.nev',
+        'segment/ResetCorrect/reset.ns2',
+        'segment/ResetFail/reset_fail.nev',
+        'segment/ResetFail/reset_fail.ns2']
 
     ioclass = BlackrockIO
 
@@ -270,9 +279,109 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                         # Note: analog input events are not yet supported
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
-    def test_segment_detection(self):
+    def test_segment_detection_reset(self):
 
-        pass
+        filename = self.get_filename_path('segment/ResetFail/reset_fail')
+        with self.assertRaises(AssertionError):
+            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+
+        filename = self.get_filename_path('segment/ResetCorrect/reset')
+
+        with warnings.catch_warnings(record=True) as w:
+            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+            self.assertGreaterEqual(len(w), 1)
+            self.assertEqual(w[-1].category, UserWarning)
+            self.assertSequenceEqual(str(w[-1].message),
+                    "Detected 1 undocumented segments within nev data after timestamps [5451].")
+
+        block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
+
+        self.assertEqual(len(block.segments), 2)
+
+        self.assertEqual(block.segments[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].t_stop, 4.02)
+        self.assertEqual(block.segments[1].t_start, 0.0032)
+        self.assertEqual(block.segments[1].t_stop, 3.9842)
+        self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].analogsignals[0].t_stop, 4.02)
+        self.assertEqual(block.segments[1].analogsignals[0].t_start, 0.0032)
+        self.assertEqual(block.segments[1].analogsignals[0].t_stop, 3.9842)
+        self.assertEqual(block.segments[0].spiketrains[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].spiketrains[0].t_stop, 4.02)
+        self.assertEqual(block.segments[1].spiketrains[0].t_start, 0.0032)
+        self.assertEqual(block.segments[1].spiketrains[0].t_stop, 3.9842)
+
+        self.assertEqual(len(block.segments[0].analogsignals),
+                         len(block.segments[1].analogsignals))
+
+        self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4020)
+        self.assertEqual(len(block.segments[1].analogsignals[0][:]), 3981)
+
+
+    @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
+    def test_segment_detection_pause(self):
+
+        filename = self.get_filename_path('segment/PauseSpikesOutside/pause_spikes_outside_seg')
+
+        with warnings.catch_warnings(record=True) as w:
+            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+            self.assertGreaterEqual(len(w), 1)
+            self.assertEqual(w[-1].category, UserWarning)
+            self.assertSequenceEqual(str(w[-1].message), 'Spikes 0.0776s after last segment.')
+
+        block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
+
+        self.assertEqual(len(block.segments), 2)
+
+        self.assertEqual(block.segments[0].t_start, 0.0)
+        self.assertAlmostEqual(block.segments[0].t_stop.magnitude, 15.83916667)
+        self.assertEqual(block.segments[1].t_start.magnitude, 31.0087)
+        self.assertEqual(block.segments[1].t_stop.magnitude, 35.0863)
+        self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].analogsignals[0].t_stop, 4.0)
+        self.assertEqual(block.segments[1].analogsignals[0].t_start, 31.0087)
+        self.assertAlmostEqual(block.segments[1].analogsignals[0].t_stop.magnitude, 35.0087,
+                               places=6)
+        self.assertEqual(block.segments[0].spiketrains[0].t_start, 0.0)
+        self.assertAlmostEqual(block.segments[0].spiketrains[0].t_stop.magnitude, 15.83916667,
+                               places=8)
+        self.assertEqual(block.segments[1].spiketrains[0].t_start, 31.0087)
+        self.assertEqual(block.segments[1].spiketrains[0].t_stop, 35.0863)
+
+        self.assertEqual(len(block.segments[0].analogsignals),
+                         len(block.segments[1].analogsignals))
+
+        self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
+        self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
+
+        filename = self.get_filename_path('segment/PauseCorrect/pause_correct')
+        reader = BlackrockIO(filename=filename, nsx_to_load=2)
+        block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
+
+        self.assertEqual(len(block.segments), 2)
+
+        self.assertEqual(block.segments[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].t_stop, 4.0)
+        self.assertEqual(block.segments[1].t_start, 31.0087)
+        self.assertAlmostEqual(block.segments[1].t_stop.magnitude, 35.0087, places=6)
+        self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].analogsignals[0].t_stop, 4.0)
+        self.assertEqual(block.segments[1].analogsignals[0].t_start, 31.0087)
+        self.assertAlmostEqual(block.segments[1].analogsignals[0].t_stop.magnitude, 35.0087,
+                               places=6)
+        self.assertEqual(block.segments[0].spiketrains[0].t_start, 0.0)
+        self.assertEqual(block.segments[0].spiketrains[0].t_stop, 4.0)
+        self.assertEqual(block.segments[1].spiketrains[0].t_start, 31.0087)
+        self.assertAlmostEqual(block.segments[1].spiketrains[0].t_stop.magnitude, 35.0087,
+                               places=6)
+
+        self.assertEqual(len(block.segments[0].analogsignals),
+                         len(block.segments[1].analogsignals))
+
+        self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
+        self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
+
+
 
 
 if __name__ == '__main__':
