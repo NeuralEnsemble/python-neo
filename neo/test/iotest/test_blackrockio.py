@@ -280,15 +280,21 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_segment_detection_reset(self):
+        """
+        This test makes sure segments are detected correctly when reset was used during recording.
+        """
 
-        filename = self.get_filename_path('segment/ResetFail/reset_fail')
+        filename_fail = self.get_filename_path('segment/ResetFail/reset_fail')
+        filename_correct = self.get_filename_path('segment/ResetCorrect/reset')
+
+        # This fails, because in the nev there is no way to separate two segments
         with self.assertRaises(AssertionError):
-            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+            reader = BlackrockIO(filename=filename_fail, nsx_to_load=2, nsx_override=filename_correct)
 
-        filename = self.get_filename_path('segment/ResetCorrect/reset')
-
+        # The correct file will issue a warning because a reset has occurred
+        # and could be detected, but was not explicitly documented in the file
         with warnings.catch_warnings(record=True) as w:
-            reader = BlackrockIO(filename=filename, nsx_to_load=2)
+            reader = BlackrockIO(filename=filename_correct, nsx_to_load=2)
             self.assertGreaterEqual(len(w), 1)
             self.assertEqual(w[-1].category, UserWarning)
             self.assertSequenceEqual(str(w[-1].message),
@@ -296,10 +302,13 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
+        # 1 Segment at the beginning and 1 after reset
         self.assertEqual(len(block.segments), 2)
-
+        # Checking all times are correct as read from file itself
+        # (taking neo calculations into account)
         self.assertEqual(block.segments[0].t_start, 0.0)
         self.assertEqual(block.segments[0].t_stop, 4.02)
+        # Clock is reset to 0
         self.assertEqual(block.segments[1].t_start, 0.0032)
         self.assertEqual(block.segments[1].t_stop, 3.9842)
         self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
@@ -311,35 +320,58 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(block.segments[1].spiketrains[0].t_start, 0.0032)
         self.assertEqual(block.segments[1].spiketrains[0].t_stop, 3.9842)
 
+        # Each segment must have the same number of analogsignals
         self.assertEqual(len(block.segments[0].analogsignals),
                          len(block.segments[1].analogsignals))
 
+        # Length of analogsignals as created
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4020)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 3981)
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_segment_detection_pause(self):
+        """
+        This test makes sure segments are detected correctly when pause was used during recording.
+        """
 
         filename_outside = self.get_filename_path(
             'segment/PauseSpikesOutside/pause_spikes_outside_seg')
         filename_correct = self.get_filename_path('segment/PauseCorrect/pause_correct')
 
+        # This issues a warning, because there are spikes a long time after the last segment
+        # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
             reader = BlackrockIO(filename=filename_outside, nsx_to_load=2,
                                  nsx_override=filename_correct)
-            self.assertGreaterEqual(len(w), 1)
+            self.assertGreaterEqual(len(w), 2)
+
+            # Check that warnings are correct
+            self.assertEqual(w[-2].category, UserWarning)
+            self.assertSequenceEqual(str(w[-2].message),
+                                     'Spikes outside any segment. Detected on segment #1')
             self.assertEqual(w[-1].category, UserWarning)
             self.assertSequenceEqual(str(w[-1].message), 'Spikes 0.0776s after last segment.')
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
+        # 2 segments
         self.assertEqual(len(block.segments), 2)
 
+        # Checking all times are correct as read from file itself
+        # (taking neo calculations into account)
         self.assertEqual(block.segments[0].t_start, 0.0)
+        # This value is so high, because a spike occurred right before the second segment
+        # And thus is added to the first segment
+        # This is not normal behavior and occurs because of the way the files were cut
+        # into test files
         self.assertAlmostEqual(block.segments[0].t_stop.magnitude, 15.83916667)
+        # Clock is not reset
         self.assertEqual(block.segments[1].t_start.magnitude, 31.0087)
+        # Segment time is longer here as well because of spikes after second segment
         self.assertEqual(block.segments[1].t_stop.magnitude, 35.0863)
         self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
+        # The Analogsignal is only 4 seconds long, as opposed to the segment
+        # whose length is caused by the additional spike
         self.assertEqual(block.segments[0].analogsignals[0].t_stop, 4.0)
         self.assertEqual(block.segments[1].analogsignals[0].t_start, 31.0087)
         self.assertAlmostEqual(block.segments[1].analogsignals[0].t_stop.magnitude, 35.0087,
@@ -350,18 +382,25 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertEqual(block.segments[1].spiketrains[0].t_start, 31.0087)
         self.assertEqual(block.segments[1].spiketrains[0].t_stop, 35.0863)
 
+        # Each segment has same number of analogsignals
         self.assertEqual(len(block.segments[0].analogsignals),
                          len(block.segments[1].analogsignals))
 
+        # Analogsignals have exactly 4000 samples
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
 
+        # This case is correct, no spikes outside segment or anything
         reader = BlackrockIO(filename=filename_correct, nsx_to_load=2)
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
+        # 2 segments
         self.assertEqual(len(block.segments), 2)
 
+        # Checking all times are correct as read from file itself
+        # (taking neo calculations into account)
         self.assertEqual(block.segments[0].t_start, 0.0)
+        # Now segment time is only 4 seconds, because there were no additional spikes
         self.assertEqual(block.segments[0].t_stop, 4.0)
         self.assertEqual(block.segments[1].t_start, 31.0087)
         self.assertAlmostEqual(block.segments[1].t_stop.magnitude, 35.0087, places=6)
@@ -376,9 +415,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         self.assertAlmostEqual(block.segments[1].spiketrains[0].t_stop.magnitude, 35.0087,
                                places=6)
 
+        # Each segment has same number of analogsignals
         self.assertEqual(len(block.segments[0].analogsignals),
                          len(block.segments[1].analogsignals))
 
+        # ns2 was created in such a way that all analogsignals have 4000 samples
         self.assertEqual(len(block.segments[0].analogsignals[0][:]), 4000)
         self.assertEqual(len(block.segments[1].analogsignals[0][:]), 4000)
 
