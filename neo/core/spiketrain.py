@@ -330,6 +330,9 @@ class SpikeTrain(DataObject):
                             description=description, array_annotations=array_annotations,
                             **annotations)
 
+    def _repr_pretty_(self, pp, cycle):
+        super(SpikeTrain, self)._repr_pretty_(pp, cycle)
+
     def rescale(self, units):
         '''
         Return a copy of the :class:`SpikeTrain` converted to the specified

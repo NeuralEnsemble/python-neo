@@ -12,12 +12,12 @@ extras_require = {
     'igorproio': ['igor'],
     'kwikio': ['scipy', 'klusta'],
     'neomatlabio': ['scipy>=0.12.0'],
-    'nixio': ['nixio'],
+    'nixio': ['nixio>=1.4.3'],
     'stimfitio': ['stfio'],
 }
 
 if os.environ.get('TRAVIS') == 'true' and \
-    os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
+        os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
     install_requires.append('unittest2>=0.5.1')
 
 with open("neo/version.py") as fp:
@@ -26,19 +26,22 @@ with open("neo/version.py") as fp:
     neo_version = d['version']
 
 setup(
-    name = "neo",
-    version = neo_version,
-    packages = ['neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest', 
-                'neo.rawio', 'neo.rawio.tests'],
+    name="neo",
+    version=neo_version,
+    packages=[
+        'neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest',
+        'neo.rawio', 'neo.rawio.tests'],
     install_requires=install_requires,
     extras_require=extras_require,
-    author = "Neo authors and contributors",
-    author_email = "samuel.garcia@cnrs.fr",
-    description = "Neo is a package for representing electrophysiology data in Python, together with support for reading a wide range of neurophysiology file formats",
-    long_description = long_description,
-    license = "BSD-3-Clause",
+    author="Neo authors and contributors",
+    author_email="samuel.garcia@cnrs.fr",
+    description="Neo is a package for representing electrophysiology data in "
+                "Python, together with support for reading a wide range of "
+                "neurophysiology file formats",
+    long_description=long_description,
+    license="BSD-3-Clause",
     url='http://neuralensemble.org/neo',
-    classifiers = [
+    classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',

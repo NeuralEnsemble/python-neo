@@ -86,7 +86,7 @@ class Spike2RawIO(BaseRawIO):
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
                     chan_info['t_start'] = block_info['start_time'] * \
-                                           info['us_per_time'] * info['dtime_base']
+                        info['us_per_time'] * info['dtime_base']
 
                 self._channel_infos.append(chan_info)
 
@@ -95,7 +95,7 @@ class Spike2RawIO(BaseRawIO):
         self._memmap = np.memmap(self.filename, dtype='u1', offset=0, mode='r')
         self._all_data_blocks = {}
         self._by_seg_data_blocks = {}
-        for c, chan_info in enumerate(self._channel_infos):
+        for chan_id, chan_info in enumerate(self._channel_infos):
             data_blocks = []
             ind = chan_info['firstblock']
             for b in range(chan_info['blocks']):
@@ -109,23 +109,24 @@ class Spike2RawIO(BaseRawIO):
                 ('start_time', 'int32'), ('end_time', 'int32')])
             data_blocks['pos'] += 20  # 20 is ths header size
 
-            self._all_data_blocks[c] = data_blocks
-            self._by_seg_data_blocks[c] = []
+            self._all_data_blocks[chan_id] = data_blocks
+            self._by_seg_data_blocks[chan_id] = []
 
         # For all signal channel detect gaps between data block (pause in rec) so new Segment.
         # then check that all channel have the same gaps.
         # this part is tricky because we need to check that all channel have same pause.
         all_gaps_block_ind = {}
-        for c, chan_info in enumerate(self._channel_infos):
+        for chan_id, chan_info in enumerate(self._channel_infos):
             if chan_info['kind'] in [1, 9]:
-                data_blocks = self._all_data_blocks[c]
+                data_blocks = self._all_data_blocks[chan_id]
                 sig_size = np.sum(self._all_data_blocks[chan_id]['size'])
                 if sig_size > 0:
-                    sample_interval = chan_info['divide'] * info['time_per_adc']
+                    interval = get_sample_interval(info, chan_info) / self._time_factor
                     # detect gaps
-                    inter_block_sizes = data_blocks['start_time'][1:] - data_blocks['end_time'][:-1]
-                    gaps_block_ind, = np.nonzero(inter_block_sizes > sample_interval)
-                    all_gaps_block_ind[c] = gaps_block_ind
+                    inter_block_sizes = data_blocks['start_time'][1:] - \
+                        data_blocks['end_time'][:-1]
+                    gaps_block_ind, = np.nonzero(inter_block_sizes > interval)
+                    all_gaps_block_ind[chan_id] = gaps_block_ind
 
         # find t_start/t_stop for each seg based on gaps indexe
         self._sig_t_starts = {}
@@ -195,12 +196,7 @@ class Spike2RawIO(BaseRawIO):
                 if self.take_ideal_sampling_rate:
                     sampling_rate = info['ideal_rate']
                 else:
-                    if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
-                        sample_interval = (chan_info['divide'] * info['us_per_time'] *
-                                           info['time_per_adc']) * 1e-6
-                    else:
-                        sample_interval = (chan_info['l_chan_dvd'] *
-                                           info['us_per_time'] * info['dtime_base'])
+                    sample_interval = get_sample_interval(info, chan_info)
                     sampling_rate = (1. / sample_interval)
 
             name = chan_info['title']
@@ -313,14 +309,21 @@ class Spike2RawIO(BaseRawIO):
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index] * self._time_factor
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+    def _check_channel_indexes(self, channel_indexes):
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
         assert len(channel_indexes) == 1
+        return channel_indexes
+
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
         sig_size = np.sum(self._by_seg_data_blocks[chan_id][seg_index]['size'])
         return sig_size
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        assert len(channel_indexes) == 1
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_id = self.header['signal_channels'][channel_indexes[0]]['id']
         return self._sig_t_starts[chan_id][seg_index] * self._time_factor
 
@@ -330,7 +333,7 @@ class Spike2RawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
 
-        assert len(channel_indexes) == 1
+        channel_indexes = self._check_channel_indexes(channel_indexes)
         chan_index = channel_indexes[0]
         chan_id = self.header['signal_channels'][chan_index]['id']
         group_id = self.header['signal_channels'][channel_indexes[0]]['group_id']
@@ -571,6 +574,19 @@ def get_channel_dtype(chan_info):
         dt = 'float32'
     dt = np.dtype(dt)
     return dt
+
+
+def get_sample_interval(info, chan_info):
+    """
+    Get sample interval for one channel
+    """
+    if info['system_id'] in [1, 2, 3, 4, 5]:  # Before version 5
+        sample_interval = (chan_info['divide'] * info['us_per_time'] *
+                           info['time_per_adc']) * 1e-6
+    else:
+        sample_interval = (chan_info['l_chan_dvd'] *
+                           info['us_per_time'] * info['dtime_base'])
+    return sample_interval
 
 
 # headers structures :

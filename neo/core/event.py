@@ -151,6 +151,9 @@ class Event(DataObject):
                                                                self.times)]
         return '<Event: %s>' % ', '.join(objs)
 
+    def _repr_pretty_(self, pp, cycle):
+        super(Event, self)._repr_pretty_(pp, cycle)
+
     def rescale(self, units):
         '''
         Return a copy of the :class:`Event` converted to the specified
