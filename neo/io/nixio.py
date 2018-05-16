@@ -195,7 +195,7 @@ class NixIO(BaseIO):
         elif neoname is not None:
             for blk in self.nix_file.blocks:
                 if ("neo_name" in blk.metadata
-                    and blk.metadata["neo_name"] == neoname):
+                        and blk.metadata["neo_name"] == neoname):
                     nix_block = blk
                     break
             else:
@@ -1014,11 +1014,13 @@ class NixIO(BaseIO):
         for chx in neoblock.channel_indexes:
             signames = []
             for asig in chx.analogsignals:
-                if "nix_name" not in asig.annotations:
+                if not ("nix_name" in asig.annotations and
+                        asig.annotations["nix_name"] in self._signal_map):
                     self._write_analogsignal(asig, nixblock, None)
                 signames.append(asig.annotations["nix_name"])
             for isig in chx.irregularlysampledsignals:
-                if "nix_name" not in isig.annotations:
+                if not ("nix_name" in isig.annotations and
+                        isig.annotations["nix_name"] in self._signal_map):
                     self._write_irregularlysampledsignal(isig, nixblock, None)
                 signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
@@ -1029,7 +1031,8 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    if "nix_name" not in st.annotations:
+                    if not ("nix_name" in st.annotations and
+                            st.annotations["nix_name"] in nixblock.multi_tags):
                         self._write_spiketrain(st, nixblock, None)
                     stmt = nixblock.multi_tags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
