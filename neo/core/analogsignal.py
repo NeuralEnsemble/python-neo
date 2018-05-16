@@ -2,8 +2,8 @@
 '''
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
-:class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which 
-derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which 
+:class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which
+derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
 in turn inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -490,6 +490,7 @@ class AnalogSignal(BaseSignal):
         # sliced data
         obj = super(AnalogSignal, self).__getitem__(np.arange(i, j, 1))
         obj.t_start = self.t_start + i * self.sampling_period
+        obj._copy_data_complement(self)
 
         return obj
 
@@ -506,7 +507,7 @@ class AnalogSignal(BaseSignal):
 
         If `copy` is False (the default), modify the current signal in place.
         If `copy` is True, return a new signal and leave the current one untouched.
-        In this case, the new signal will not be linked to any parent objects.        
+        In this case, the new signal will not be linked to any parent objects.
         """
         if signal.t_start < self.t_start:
             raise ValueError("Cannot splice earlier than the start of the signal")

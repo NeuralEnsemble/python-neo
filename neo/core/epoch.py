@@ -218,8 +218,12 @@ class Epoch(BaseNeo, pq.Quantity):
         Copy the metadata from another :class:`Epoch`.
         '''
         for attr in ("labels", "durations", "name", "file_origin",
-                     "description", "annotations"):
+                     "description"):
             setattr(self, attr, getattr(other, attr, None))
+        self._copy_annotations(other)
+
+    def _copy_annotations(self, other):
+        self.annotations = deepcopy(other.annotations)
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -261,6 +265,7 @@ class Epoch(BaseNeo, pq.Quantity):
 
         indices = (self >= _t_start) & (self <= _t_stop)
         new_epc = self[indices]
+        new_epc._copy_annotations(self)
         return new_epc
 
     def as_array(self, units=None):

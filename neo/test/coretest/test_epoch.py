@@ -274,6 +274,19 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
 
+    def test__time_slice_deepcopy_annotations(self):
+        params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        epc = Epoch(times=[10, 20, 30] * pq.s, durations=[10, 5, 7] * pq.ms,
+                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'), **params)
+
+        result = epc.time_slice(10 * pq.s, 20 * pq.s)
+        epc.annotate(test0='y2', test2=False)
+        epc.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(result.annotations['test0'], epc.annotations['test0'])
+        self.assertNotEqual(result.annotations['test1'], epc.annotations['test1'])
+        self.assertNotEqual(result.annotations['test2'], epc.annotations['test2'])
+
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=[20, 40, 60] * pq.ns,

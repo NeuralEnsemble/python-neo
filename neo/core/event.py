@@ -195,7 +195,7 @@ class Event(BaseNeo, pq.Quantity):
         '''
         for attr in ("labels", "name", "file_origin", "description",
                      "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
+            setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -237,6 +237,7 @@ class Event(BaseNeo, pq.Quantity):
 
         indices = (self >= _t_start) & (self <= _t_stop)
         new_evt = self[indices]
+        new_evt._copy_data_complement(self)
 
         return new_evt
 

@@ -574,7 +574,7 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         new_st.t_stop = min(_t_stop, self.t_stop)
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
-
+        new_st._copy_data_complement(self, deep_copy=True)
         return new_st
 
     def merge(self, other):

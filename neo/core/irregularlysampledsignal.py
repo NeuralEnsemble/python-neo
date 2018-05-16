@@ -4,8 +4,8 @@ This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
-which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
-and from :class:`quantities.Quantity`, which in turn inherits from 
+which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`,
+and from :class:`quantities.Quantity`, which in turn inherits from
 :class:`numpy.ndarray`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -401,6 +401,7 @@ class IrregularlySampledSignal(BaseSignal):
             count += 1
 
         new_st = self[id_start:id_stop]
+        new_st.annotations = deepcopy(self.annotations)
 
         return new_st
 

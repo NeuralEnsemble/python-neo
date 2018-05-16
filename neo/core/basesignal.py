@@ -10,7 +10,7 @@ Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
 In brief:
-* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist. 
+* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist.
 Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
@@ -19,6 +19,7 @@ can be created.
 from __future__ import absolute_import, division, print_function
 
 import logging
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -37,9 +38,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
     This class contains all common methods of both child classes.
     It uses the following child class attributes:
 
-        :_necessary_attrs: a list of the attributes that the class must have. 
+        :_necessary_attrs: a list of the attributes that the class must have.
 
-        :_recommended_attrs: a list of the attributes that the class may 
+        :_recommended_attrs: a list of the attributes that the class may
         optionally have.
     '''
 
@@ -58,9 +59,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
         User-specified values are only relevant for construction from
         constructor, and these are set in __new__ in the child object.
-        Then they are just copied over here. Default values for the 
+        Then they are just copied over here. Default values for the
         specific attributes for subclasses (:class:`AnalogSignal`
-        and :class:`IrregularlySampledSignal`) are set in 
+        and :class:`IrregularlySampledSignal`) are set in
         :meth:`_array_finalize_spec`
         '''
         super(BaseSignal, self).__array_finalize__(obj)
@@ -83,7 +84,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
         '''
         Check that units are present, and rescale the signal if necessary.
         This is called whenever a new signal is
-        created from the constructor. See :meth:`__new__' in  
+        created from the constructor. See :meth:`__new__' in
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
         '''
         if units is None:
@@ -182,7 +183,7 @@ class BaseSignal(BaseNeo, pq.Quantity):
             for attr in sub_at:
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
-        setattr(self, 'annotations', getattr(other, 'annotations', None))
+        setattr(self, 'annotations', deepcopy(getattr(other, 'annotations', None)))
 
     def __rsub__(self, other, *args):
         '''

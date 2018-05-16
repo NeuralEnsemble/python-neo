@@ -406,6 +406,18 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
 
+    def test_time_slice_deepcopy_annotations(self):
+        params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.signal1.annotate(**params1)
+        result = self.signal1.time_slice(None,None)
+        params2 = {'test0': 'y2', 'test2': False}
+        self.signal1.annotate(**params2)
+        self.signal1.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(self.signal1.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.signal1.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.signal1.annotations['test2'], result.annotations['test2'])
+
     def test_time_slice_out_of_boundries(self):
         targdataquant = self.data1quant
         targtimequant = self.time1quant

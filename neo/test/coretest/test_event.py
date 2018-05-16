@@ -134,6 +134,19 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(evt.annotations['test1'], result.annotations['test1'])
         self.assertEqual(evt.annotations['test2'], result.annotations['test2'])
 
+    def tests_time_slice_deepcopy_annotations(self):
+        params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms,
+                    name='test', description='tester',
+                    file_origin='test.file', **params)
+        result = evt.time_slice(t_start=2.0, t_stop=3.0)
+        evt.annotate(test0='y2', test2=False)
+        evt.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(evt.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(evt.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(evt.annotations['test2'], result.annotations['test2'])
+
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
         evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms,

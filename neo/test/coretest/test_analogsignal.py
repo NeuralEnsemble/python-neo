@@ -346,6 +346,18 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.segment, self.signal1.segment)
         self.assertEqual(result.channel_index, self.signal1.channel_index)
 
+    def test_time_slice_deepcopy_annotations(self):
+        params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.signal1.annotate(**params1)
+        result = self.signal1.time_slice(None,None)
+        params2 = {'test0': 'y2', 'test2': False}
+        self.signal1.annotate(**params2)
+        self.signal1.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(self.signal1.annotations['test0'],result.annotations['test0'])
+        self.assertNotEqual(self.signal1.annotations['test1'],result.annotations['test1'])
+        self.assertNotEqual(self.signal1.annotations['test2'],result.annotations['test2'])
+
     def test__slice_should_change_sampling_period(self):
         result1 = self.signal1[:2, 0]
         result2 = self.signal1[::2, 0]

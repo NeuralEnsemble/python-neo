@@ -1018,6 +1018,23 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_start, result.t_start)
         self.assertEqual(t_stop, result.t_stop)
 
+    def test_time_slice_deepcopy_annotations(self):
+        params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.train1.annotate(**params1)
+        # time_slice spike train, keep sliced spike times
+        t_start = 0.00012 * pq.s
+        t_stop = 0.0035 * pq.s
+        result = self.train1.time_slice(t_start, t_stop)
+
+        params2 = {'test0': 'y2', 'test2': False}
+        self.train1.annotate(**params2)
+        self.train1.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(self.train1.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.train1.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.train1.annotations['test2'], result.annotations['test2'])
+
+
     def test_time_slice_matching_ends(self):
         # time_slice spike train, keep sliced spike times
         t_start = 0.1 * pq.ms
