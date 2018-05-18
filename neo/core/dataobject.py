@@ -108,8 +108,11 @@ class DataObject(BaseNeo, pq.Quantity):
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:
             return self.copy()
-
-        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=dim)
+        # The following are from BaseSignal.rescale, where I had the same implementation:
+        # TODO: Check why it does not work with units=dim (dimensionality)!!!
+        # TODO: Find out, how to validate units without altering them:
+        # Raised error in validate_dimensionality???
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
         obj.array_annotations = self.array_annotations
         obj.segment = self.segment
         return obj
