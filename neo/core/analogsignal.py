@@ -302,16 +302,15 @@ class AnalogSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
-                    obj.array_annotations = self.array_annotations_at_index(k)
                 if self.channel_index:
                     obj.channel_index = self.channel_index.__getitem__(k)
+                obj.array_annotations = self.array_annotations_at_index(k)
         elif isinstance(i, slice):
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
             obj.array_annotations = self.array_annotations
         else:
             raise IndexError("index should be an integer, tuple or slice")
-        # obj.array_annotations = self.array_annotations
         return obj
 
     def __setitem__(self, i, value):

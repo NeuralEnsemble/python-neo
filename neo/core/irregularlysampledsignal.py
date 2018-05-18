@@ -243,11 +243,12 @@ class IrregularlySampledSignal(BaseSignal):
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
                     # add if channel_index
+                obj.array_annotations = self.array_annotations_at_index(k)
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
+            obj.array_annotations = self.array_annotations
         else:
             raise IndexError("index should be an integer, tuple or slice")
-        obj.array_annotations = self.array_annotations
         return obj
 
     @property
