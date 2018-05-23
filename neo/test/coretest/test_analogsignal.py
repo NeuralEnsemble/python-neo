@@ -241,7 +241,7 @@ class TestAnalogSignalProperties(unittest.TestCase):
         signal1 = self.signals[1]
         signal2 = self.signals[2]
         data2 = self.data[2]
-        signal1b = signal1.duplicate_with_new_array(data2)
+        signal1b = signal1.duplicate_with_new_data(data2)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(signal2 / 1000.), 1e-12)
         self.assertEqual(signal1b.t_start, signal1.t_start)
