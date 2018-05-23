@@ -197,7 +197,8 @@ class Event(DataObject):
         merged_array_annotations = {}
         for key in self.array_annotations.keys():
             try:
-                merged_array_annotations[key] = np.hstack([self.array_annotations[key], other.array_annotations[key]])
+                merged_array_annotations[key] = np.hstack([self.array_annotations[key],
+                                                           other.array_annotations[key]])
             except KeyError:
                 continue
         kwargs['array_annotations'] = merged_array_annotations

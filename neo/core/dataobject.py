@@ -87,6 +87,7 @@ class DataObject(BaseNeo, pq.Quantity):
 
         return value
 
+    # TODO: Is it fine to allow them unpacked here and not elsewhere
     def array_annotate(self, **array_annotations):
 
         """
