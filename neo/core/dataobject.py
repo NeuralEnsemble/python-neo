@@ -43,7 +43,7 @@ class DataObject(BaseNeo, pq.Quantity):
         if isinstance(value, dict):
             for key in value.keys():
                 if isinstance(value[key], dict):
-                    raise ValueError("Dicts are not allowed as array annotations")  # TODO: Is this really the case?
+                    raise ValueError("Nested dicts are not allowed as array annotations")  # TODO: Is this really the case?
                 value[key] = self._check_array_annotations(value[key])
 
         elif value is None:
@@ -102,21 +102,6 @@ class DataObject(BaseNeo, pq.Quantity):
         array_annotations = self._check_array_annotations(array_annotations)
         self.array_annotations.update(array_annotations)
 
-    def rescale(self, units):
-
-        # Use simpler functionality, if nothing will be changed
-        dim = pq.quantity.validate_dimensionality(units)
-        if self.dimensionality == dim:
-            return self.copy()
-        # The following are from BaseSignal.rescale, where I had the same implementation:
-        # TODO: Check why it does not work with units=dim (dimensionality)!!!
-        # TODO: Find out, how to validate units without altering them:
-        # Raised error in validate_dimensionality???
-        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
-        obj.array_annotations = self.array_annotations
-        obj.segment = self.segment
-        return obj
-
     def array_annotations_at_index(self, index):  # TODO: Should they be sorted by key (current) or index?
 
         """
@@ -138,6 +123,21 @@ class DataObject(BaseNeo, pq.Quantity):
             index_annotations[ann] = self.array_annotations[ann][index]
 
         return index_annotations
+
+    def rescale(self, units):
+
+        # Use simpler functionality, if nothing will be changed
+        dim = pq.quantity.validate_dimensionality(units)
+        if self.dimensionality == dim:
+            return self.copy()
+        # The following are from BaseSignal.rescale, where I had the same implementation:
+        # TODO: Check why it does not work with units=dim (dimensionality)!!!
+        # TODO: Find out, how to validate units without altering them:
+        # Raised error in validate_dimensionality???
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
+        obj.array_annotations = self.array_annotations
+        obj.segment = self.segment
+        return obj
 
     def as_array(self, units=None):
         """

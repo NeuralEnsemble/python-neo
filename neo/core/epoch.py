@@ -170,12 +170,8 @@ class Epoch(DataObject):
         Return a copy of the :class:`Epoch` converted to the specified
         units
         '''
-        if self.dimensionality == pq.quantity.validate_dimensionality(units):
-            return self.copy()
-        obj = Epoch(times=self.times.rescale(units), durations=self.durations, labels=self.labels,
-                    units=units, name=self.name, file_origin=self.file_origin,
-                    description=self.description,
-                    **self.annotations)
+
+        obj = super(Epoch, self).rescale(units)
         obj.segment = self.segment
 
         return obj
@@ -188,6 +184,10 @@ class Epoch(DataObject):
         obj._copy_data_complement(self)
         obj.durations = self.durations[i]
         obj.labels = self.labels[i]
+        try:
+            obj.array_annotate(**self.array_annotations_at_index(i))
+        except AttributeError:  # If Quantity was returned, not Epoch
+            pass
         return obj
 
     @property

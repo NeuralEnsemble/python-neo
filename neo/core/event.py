@@ -159,11 +159,7 @@ class Event(DataObject):
         Return a copy of the :class:`Event` converted to the specified
         units
         '''
-        if self.dimensionality == pq.quantity.validate_dimensionality(units):
-            return self.copy()
-        obj = Event(times=self.times, labels=self.labels, units=units, name=self.name,
-                    description=self.description, file_origin=self.file_origin,
-                    **self.annotations)
+        obj = super(Event, self).rescale(units)
         obj.segment = self.segment
         return obj
 
@@ -231,6 +227,14 @@ class Event(DataObject):
             except TypeError:
                 setattr(new_ev, k, v)
         return new_ev
+
+    def __getitem__(self, i):
+        obj = super(Event, self).__getitem__(i)
+        try:
+            obj.array_annotate(**self.array_annotations_at_index(i))
+        except AttributeError:  # If Quantity was returned, not Event
+            pass
+        return obj
 
     def duplicate_with_new_data(self, signal, units=None):
         '''
