@@ -283,7 +283,8 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
 
-            # Read nsx data header(s) for nsxdef get_analogsignal_shape(self, block_index, seg_index):
+            # Read nsx data header(s)
+            # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
 
         # We can load only one for one class instance
@@ -291,7 +292,7 @@ class BlackrockRawIO(BaseRawIO):
             self.nsx_to_load = max(self._avail_nsx)
 
         if self.nsx_to_load is not None and \
-                        self.__nsx_spec[self.nsx_to_load] == '2.1' and \
+                self.__nsx_spec[self.nsx_to_load] == '2.1' and \
                 not self._avail_files['nev']:
             pass
             # Because rescaling to volts requires information from nev file (dig_factor)
@@ -519,10 +520,10 @@ class BlackrockRawIO(BaseRawIO):
                         get_idx]
                     chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
                         get_idx]
-                    chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
-                                                          'hi_freq_corner'][get_idx] / 1000. * pq.Hz
-                    chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
-                                                          'lo_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_hi_freq_corner'] = \
+                        self.__nsx_ext_header[k]['hi_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_lo_freq_corner'] = \
+                        self.__nsx_ext_header[k]['lo_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
                         'hi_freq_order'][get_idx]
                     chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
@@ -1128,12 +1129,14 @@ class BlackrockRawIO(BaseRawIO):
 
             # consistency check for monotone increasing time stamps
             # explicitely converting to int to allow for negative diff values
-            jump_ids = np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
+            jump_ids = \
+                np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
             overlap = np.isin(jump_ids, reset_ev_ids)
             if not all(overlap):
                 # additional resets occurred without a reset event being stored
                 additional_ids = jump_ids[np.invert(overlap)]
-                warnings.warn('Detected {} undocumented segments within nev data after timestamps {}.'
+                warnings.warn('Detected {} undocumented segments within '
+                              'nev data after timestamps {}.'
                               ''.format(len(additional_ids), additional_ids))
                 reset_ev_ids = sorted(np.unique(np.concatenate((reset_ev_ids, jump_ids))))
 
@@ -1193,7 +1196,6 @@ class BlackrockRawIO(BaseRawIO):
                     # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = seg['timestamp'] + \
                                 seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
-                                #- nsx_offset
 
                     mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
                                                        end_of_current_nsx_seg + nsx_period)]
@@ -1766,7 +1768,8 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters  # Returns complete dictionary because then it does not need to be called so often
+        # Returns complete dictionary because then it does not need to be called so often
+        return nsx_parameters
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """
