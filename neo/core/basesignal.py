@@ -98,9 +98,15 @@ class BaseSignal(DataObject):
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
             # could improve this test, what if units is a string?
-            if units != signal.units:
+            # This test should be safe now
+            if pq.quantity.validate_dimensionality(units) != signal.dimensionality:
                 signal = signal.rescale(units)
         return signal
+
+    def rescale(self, units):
+        obj = super(BaseSignal, self).rescale(units)
+        obj.channel_index = self.channel_index
+        return obj
 
     def __getslice__(self, i, j):
         '''
@@ -174,7 +180,6 @@ class BaseSignal(DataObject):
         setattr(self, 'annotations', getattr(other, 'annotations', None))
 
         # Note: Array annotations cannot be copied because they belong to their respective time series
-
 
     def __rsub__(self, other, *args):
         '''
