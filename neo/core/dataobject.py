@@ -5,6 +5,8 @@ used by all :module:`neo.core` classes that can contain data (i.e. are not conta
 It contains basic functionality that is shared among all those data objects.
 
 """
+import copy
+
 import quantities as pq
 import numpy as np
 
@@ -121,7 +123,8 @@ class DataObject(BaseNeo, pq.Quantity):
         # Use what is given as an index to determine the corresponding annotations,
         # if not possible, numpy raises an Error
         for ann in self.array_annotations.keys():
-            index_annotations[ann] = self.array_annotations[ann][index]
+            # NO deepcopy, because someone might want to alter the actual object using this
+            index_annotations[ann] = self.array_annotations[ann][index].copy()
 
         return index_annotations
 
@@ -136,7 +139,8 @@ class DataObject(BaseNeo, pq.Quantity):
         # TODO: Find out, how to validate units without altering them:
         # Raised error in validate_dimensionality???
         obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
-        obj.array_annotations = self.array_annotations
+        # Expected behavior is deepcopy, so trying this
+        obj.array_annotations = copy.deepcopy(self.array_annotations)
         obj.segment = self.segment
         return obj
 

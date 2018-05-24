@@ -243,10 +243,10 @@ class IrregularlySampledSignal(BaseSignal):
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)
                     # add if channel_index
-                obj.array_annotations = self.array_annotations_at_index(k)
+                obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
-            obj.array_annotations = self.array_annotations
+            obj.array_annotations = deepcopy(self.array_annotations)
         else:
             raise IndexError("index should be an integer, tuple or slice")
         return obj
@@ -409,7 +409,7 @@ class IrregularlySampledSignal(BaseSignal):
         new_st = self[id_start:id_stop]
 
         # Note: Array annotations can simply be copied over, because the number of traces is kept the same
-        new_st.array_annotations = self.array_annotations
+        new_st.array_annotations = deepcopy(self.array_annotations)
 
         return new_st
 
@@ -458,10 +458,11 @@ class IrregularlySampledSignal(BaseSignal):
         merged_array_annotations = {}
         for key in self.array_annotations.keys():
             try:
-                merged_array_annotations[key] = np.append(self.array_annotations[key], other.array_annotations[key])
+                merged_array_annotations[key] = np.append(self.array_annotations[key],
+                                                          other.array_annotations[key])
             except KeyError:
                 continue
-        kwargs['array_annotations'] = merged_array_annotations
+        kwargs['array_annotations'] = deepcopy(merged_array_annotations)
         signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
                                 copy=False, **kwargs)
         signal.segment = self.segment

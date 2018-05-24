@@ -185,7 +185,7 @@ class Epoch(DataObject):
         obj.durations = self.durations[i]
         obj.labels = self.labels[i]
         try:
-            obj.array_annotate(**self.array_annotations_at_index(i))
+            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not Epoch
             pass
         return obj
@@ -231,7 +231,7 @@ class Epoch(DataObject):
                                                            other.array_annotations[key]])
             except KeyError:
                 continue
-        kwargs['array_annotations'] = merged_array_annotations
+        kwargs['array_annotations'] = deepcopy(merged_array_annotations)
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
@@ -293,6 +293,6 @@ class Epoch(DataObject):
         new_epc = self[indices]
         new_epc.durations = self.durations[indices]
         new_epc.labels = self.labels[indices]
-        new_epc.array_annotations = self.array_annotations_at_index(indices)
+        new_epc.array_annotations = deepcopy(self.array_annotations_at_index(indices))
 
         return new_epc

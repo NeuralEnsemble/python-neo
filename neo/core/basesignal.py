@@ -18,6 +18,7 @@ can be created.
 # needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import copy
 import logging
 
 import numpy as np
@@ -132,7 +133,7 @@ class BaseSignal(DataObject):
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         # _copy_data_complement can't always copy array annotations, so this needs to be done locally
-        new_signal.array_annotations = self.array_annotations
+        new_signal.array_annotations = copy.deepcopy(self.array_annotations)
         return new_signal
 
     def _get_required_attributes(self, signal, units):

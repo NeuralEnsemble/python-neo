@@ -443,7 +443,7 @@ class SpikeTrain(DataObject):
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
-        self.array_annotations = self.array_annotations_at_index(sort_indices)
+        self.array_annotations = copy.deepcopy(self.array_annotations_at_index(sort_indices))
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -475,7 +475,7 @@ class SpikeTrain(DataObject):
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
                           description=self.description,
-                          array_annotations=self.array_annotations,
+                          array_annotations=copy.deepcopy(self.array_annotations),
                           **self.annotations)
 
     def __sub__(self, time):
@@ -495,7 +495,7 @@ class SpikeTrain(DataObject):
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
                           description=self.description,
-                          array_annotations=self.array_annotations,
+                          array_annotations=copy.deepcopy(self.array_annotations),
                           **self.annotations)
 
     def __getitem__(self, i):
@@ -506,7 +506,7 @@ class SpikeTrain(DataObject):
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
         try:
-            obj.array_annotate(**self.array_annotations_at_index(i))
+            obj.array_annotate(**copy.deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not SpikeTrain
             pass
         return obj
@@ -593,7 +593,7 @@ class SpikeTrain(DataObject):
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
 
-        new_st.array_annotations = self.array_annotations_at_index(indices)
+        new_st.array_annotations = copy.deepcopy(self.array_annotations_at_index(indices))
 
         return new_st
 
@@ -634,21 +634,21 @@ class SpikeTrain(DataObject):
         sorting = np.argsort(stack)
         stack = stack[sorting]
         kwargs = {}
-        merged_array_annotations = self.array_annotations
+        # TODO: Check this again (wh is this next line here?) + copy??
+        merged_array_annotations = {}
         # TODO: Probably move this code elsewhere
         # IGNORE ANNOTATIONS ONLY IN ONE SPIKETRAIN     # TODO: Should this change?
         keys = list(self.array_annotations.keys())
-        #keys.extend([key for key in other.array_annotations.keys() if key not in keys])
         for key in keys:
             try:
-                self_ann = self.array_annotations[key]
-                other_ann = other.array_annotations[key]
+                # TODO: Array annotations copy or not???
+                self_ann = copy.deepcopy(self.array_annotations[key])
+                other_ann = copy.deepcopy(other.array_annotations[key])
                 arr_ann = np.concatenate([self_ann,  other_ann])
                 merged_array_annotations[key] = arr_ann[sorting]
             except KeyError:
                 continue
-        #merged_array_annotations = np.concatenate(self.array_annotations, other.array_annotations)
-        #merged_array_annotations = merged_array_annotations[sorting]
+
         kwargs['array_annotations'] = merged_array_annotations
 
         for name in ("name", "description", "file_origin"):

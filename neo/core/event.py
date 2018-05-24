@@ -201,7 +201,7 @@ class Event(DataObject):
                                                            other.array_annotations[key]])
             except KeyError:
                 continue
-        kwargs['array_annotations'] = merged_array_annotations
+        kwargs['array_annotations'] = deepcopy(merged_array_annotations)
 
         return Event(times=times, labels=labels, **kwargs)
 
@@ -232,7 +232,7 @@ class Event(DataObject):
     def __getitem__(self, i):
         obj = super(Event, self).__getitem__(i)
         try:
-            obj.array_annotate(**self.array_annotations_at_index(i))
+            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not Event
             pass
         return obj
@@ -268,6 +268,6 @@ class Event(DataObject):
         indices = (self >= _t_start) & (self <= _t_stop)
         new_evt = self[indices]
 
-        new_evt.array_annotations = self.array_annotations_at_index(indices)
+        new_evt.array_annotations = deepcopy(self.array_annotations_at_index(indices))
 
         return new_evt
