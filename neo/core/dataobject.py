@@ -124,7 +124,7 @@ class DataObject(BaseNeo, pq.Quantity):
         # if not possible, numpy raises an Error
         for ann in self.array_annotations.keys():
             # NO deepcopy, because someone might want to alter the actual object using this
-            index_annotations[ann] = self.array_annotations[ann][index].copy()
+            index_annotations[ann] = self.array_annotations[ann][index]
 
         return index_annotations
 
