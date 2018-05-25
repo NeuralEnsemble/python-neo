@@ -132,7 +132,9 @@ class BaseSignal(DataObject):
         f = getattr(super(BaseSignal, self), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
-        # _copy_data_complement can't always copy array annotations, so this needs to be done locally
+        # TODO: If e.g. adding another signal, what is supposed to happen with array annotations?
+        # _Copy_data_complement can't always copy array annotations,
+        # so this needs to be done locally
         new_signal.array_annotations = copy.deepcopy(self.array_annotations)
         return new_signal
 
