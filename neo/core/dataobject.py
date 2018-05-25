@@ -144,6 +144,12 @@ class DataObject(BaseNeo, pq.Quantity):
         obj.segment = self.segment
         return obj
 
+    # Needed to implement this so array annotations are copied as well, ONLY WHEN copying 1:1
+    def copy(self, **kwargs):
+        obj = super(DataObject, self).copy(**kwargs)
+        obj.array_annotations = self.array_annotations
+        return obj
+
     def as_array(self, units=None):
         """
         Return the object's data as a plain NumPy array.
