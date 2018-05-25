@@ -304,7 +304,7 @@ class AnalogSignal(BaseSignal):
                     obj = obj.reshape(-1, 1)
                 if self.channel_index:
                     obj.channel_index = self.channel_index.__getitem__(k)
-                obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
+                obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
