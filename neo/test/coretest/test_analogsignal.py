@@ -595,7 +595,36 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
 
     def test_array_annotations_getitem(self):
-        pass
+        data = np.arange(15).reshape(5, 3)*pq.mV
+        arr_ann1 = [10, 15, 20]
+        arr_ann2 = ['abc', 'def', 'ghi']
+        arr_anns = {'index': arr_ann1, 'label': arr_ann2}
+        signal = AnalogSignal(data, sampling_rate=30000*pq.Hz, array_annotations=arr_anns)
+        # data2 = np.arange(15)*2*pq.mV
+        # signal2 = AnalogSignal(data2, sampling_rate=30000*pq.Hz)
+        # r = signal.merge(signal2)
+
+        # A time slice of all signals is selected, so all array annotations need to remain
+        result1 = signal[0:2]
+        self.assertTrue((result1.array_annotations['index'] == arr_ann1).all())
+        self.assertTrue((result1.array_annotations['label'] == arr_ann2).all())
+
+        # Only elements from signal with index 2 are selected,
+        # so only those array_annotations should be returned
+        result2 = signal[1:2, 2]
+        self.assertTrue((result2.array_annotations['index'] == [20]).all())
+        self.assertTrue((result2.array_annotations['label'] == ['ghi']).all())
+        # Because comparison of list with single element to scalar is possible,
+        # we need to make sure that array_annotations remain arrays
+        self.assertIsInstance(result2.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result2.array_annotations['label'], np.ndarray)
+
+        # Signals 0 and 1 are selected completely,
+        # so their respective array_annotations should be returned
+        result3 = signal[:, 0:2]
+        self.assertTrue((result3.array_annotations['index'] == [10, 15]).all())
+        self.assertTrue((result3.array_annotations['label'] == ['abc', 'def']).all())
+
 
 class TestAnalogSignalEquality(unittest.TestCase):
     def test__signals_with_different_data_complement_should_be_not_equal(self):
@@ -667,7 +696,8 @@ class TestAnalogSignalCombination(unittest.TestCase):
     def test__add_two_consistent_signals_should_preserve_data_complement(self):
         data2 = np.arange(10.0, 20.0)
         data2quant = data2 * pq.mV
-        signal2 = AnalogSignal(data2quant, sampling_rate=1 * pq.kHz)
+        signal2 = AnalogSignal(data2quant, sampling_rate=1 * pq.kHz,
+                               array_annotations={'abc': [1]})
         assert_neo_object_is_compliant(signal2)
 
         result = self.signal1 + signal2
