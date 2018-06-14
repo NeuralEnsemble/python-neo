@@ -199,7 +199,7 @@ class NixIO(BaseIO):
         elif neoname is not None:
             for blk in self.nix_file.blocks:
                 if ("neo_name" in blk.metadata
-                    and blk.metadata["neo_name"] == neoname):
+                        and blk.metadata["neo_name"] == neoname):
                     nix_block = blk
                     break
             else:
