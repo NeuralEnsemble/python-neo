@@ -31,7 +31,8 @@ from neo.test.tools import (assert_arrays_almost_equal,
                             assert_same_sub_schema,
                             assert_objects_equivalent,
                             assert_same_attributes,
-                            assert_same_sub_schema)
+                            assert_same_sub_schema,
+                            assert_arrays_equal)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values,
                                         fake_neo, TEST_ANNOTATIONS)
 
@@ -606,14 +607,14 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
         # A time slice of all signals is selected, so all array annotations need to remain
         result1 = signal[0:2]
-        self.assertTrue((result1.array_annotations['index'] == arr_ann1).all())
-        self.assertTrue((result1.array_annotations['label'] == arr_ann2).all())
+        assert_arrays_equal(result1.array_annotations['index'], np.array(arr_ann1))
+        assert_arrays_equal(result1.array_annotations['label'], np.array(arr_ann2))
 
         # Only elements from signal with index 2 are selected,
         # so only those array_annotations should be returned
         result2 = signal[1:2, 2]
-        self.assertTrue((result2.array_annotations['index'] == [20]).all())
-        self.assertTrue((result2.array_annotations['label'] == ['ghi']).all())
+        assert_arrays_equal(result2.array_annotations['index'], np.array([20]))
+        assert_arrays_equal(result2.array_annotations['label'], np.array(['ghi']))
         # Because comparison of list with single element to scalar is possible,
         # we need to make sure that array_annotations remain arrays
         self.assertIsInstance(result2.array_annotations['index'], np.ndarray)
@@ -622,8 +623,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         # Signals 0 and 1 are selected completely,
         # so their respective array_annotations should be returned
         result3 = signal[:, 0:2]
-        self.assertTrue((result3.array_annotations['index'] == [10, 15]).all())
-        self.assertTrue((result3.array_annotations['label'] == ['abc', 'def']).all())
+        assert_arrays_equal(result3.array_annotations['index'], np.array([10, 15]))
+        assert_arrays_equal(result3.array_annotations['label'], np.array(['abc', 'def']))
 
 
 class TestAnalogSignalEquality(unittest.TestCase):
