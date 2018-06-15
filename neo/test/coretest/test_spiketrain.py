@@ -767,6 +767,8 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(train2.waveforms, None)
         self.assertEqual(train1.left_sweep, None)
         self.assertEqual(train2.left_sweep, None)
+        self.assertEqual(train1.array_annotations, {})
+        self.assertEqual(train2.array_annotations, {})
 
     def test_default_tstart(self):
         # t start defaults to zero
@@ -816,7 +818,7 @@ class TestSorting(unittest.TestCase):
     def test_sort(self):
         waveforms = np.array([[[0., 1.]], [[2., 3.]], [[4., 5.]]]) * pq.mV
         train = SpikeTrain([3, 4, 5] * pq.s, waveforms=waveforms, name='n',
-                           t_stop=10.0)
+                           t_stop=10.0, array_annotations={'a': np.arange(3)})
         assert_neo_object_is_compliant(train)
         train.sort()
         assert_neo_object_is_compliant(train)
@@ -824,9 +826,10 @@ class TestSorting(unittest.TestCase):
         assert_arrays_equal(train.waveforms, waveforms)
         self.assertEqual(train.name, 'n')
         self.assertEqual(train.t_stop, 10.0 * pq.s)
+        assert_arrays_equal(train.array_annotations['a'], np.arange(3))
 
         train = SpikeTrain([3, 5, 4] * pq.s, waveforms=waveforms, name='n',
-                           t_stop=10.0)
+                           t_stop=10.0, array_annotations={'a': np.arange(3)})
         assert_neo_object_is_compliant(train)
         train.sort()
         assert_neo_object_is_compliant(train)
@@ -835,7 +838,7 @@ class TestSorting(unittest.TestCase):
         self.assertEqual(train.name, 'n')
         self.assertEqual(train.t_start, 0.0 * pq.s)
         self.assertEqual(train.t_stop, 10.0 * pq.s)
-
+        assert_arrays_equal(train.array_annotations['a'], np.array([0, 2, 1]))
 
 class TestSlice(unittest.TestCase):
     def setUp(self):
@@ -847,8 +850,10 @@ class TestSlice(unittest.TestCase):
                                      [4.1, 5.1]]]) * pq.mV
         self.data1 = np.array([3, 4, 5])
         self.data1quant = self.data1 * pq.s
+        self.arr_ann = {'index': np.arange(1, 4), 'label': ['abc', 'def', 'ghi']}
         self.train1 = SpikeTrain(self.data1quant, waveforms=self.waveforms1,
-                                 name='n', arb='arbb', t_stop=10.0)
+                                 name='n', arb='arbb', t_stop=10.0,
+                                 array_annotations=self.arr_ann)
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -874,6 +879,12 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(self.train1.waveforms[1:2], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
+        # Also array annotations should be updated
+        assert_arrays_equal(result.array_annotations['index'], np.array([2]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['def']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_slice_to_end(self):
         # slice spike train, keep sliced spike times
         result = self.train1[1:]
@@ -896,6 +907,12 @@ class TestSlice(unittest.TestCase):
         # except we update the waveforms
         assert_arrays_equal(self.train1.waveforms[1:], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
+
+        # Also array annotations should be updated
+        assert_arrays_equal(result.array_annotations['index'], np.array([2, 3]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['def', 'ghi']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
 
     def test_slice_from_beginning(self):
         # slice spike train, keep sliced spike times
@@ -920,6 +937,12 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(self.train1.waveforms[:2], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
+        # Also array annotations should be updated
+        assert_arrays_equal(result.array_annotations['index'], np.array([1, 2]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['abc', 'def']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_slice_negative_idxs(self):
         # slice spike train, keep sliced spike times
         result = self.train1[:-1]
@@ -943,6 +966,12 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(self.train1.waveforms[:-1], result.waveforms)
         assert_arrays_equal(targwaveforms, result.waveforms)
 
+        # Also array annotations should be updated
+        assert_arrays_equal(result.array_annotations['index'], np.array([1, 2]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['abc', 'def']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
 
 class TestTimeSlice(unittest.TestCase):
     def setUp(self):
@@ -960,8 +989,9 @@ class TestTimeSlice(unittest.TestCase):
                                      [10.1, 11.1]]]) * pq.mV
         self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data1quant = self.data1 * pq.ms
+        self.arr_ann = {'index': np.arange(1, 7), 'label': ['a', 'b', 'c', 'd', 'e', 'f']}
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
-                                 waveforms=self.waveforms1)
+                                 waveforms=self.waveforms1, array_annotations=self.arr_ann)
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -993,6 +1023,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_start, result.t_start)
         self.assertEqual(t_stop, result.t_stop)
 
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array([2, 3, 4]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['b', 'c', 'd']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_time_slice_differnt_units(self):
         # time_slice spike train, keep sliced spike times
         t_start = 0.00012 * pq.s
@@ -1018,6 +1054,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_start, result.t_start)
         self.assertEqual(t_stop, result.t_stop)
 
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array([2, 3, 4]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['b', 'c', 'd']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_time_slice_matching_ends(self):
         # time_slice spike train, keep sliced spike times
         t_start = 0.1 * pq.ms
@@ -1035,6 +1077,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.dtype, result.dtype)
         self.assertEqual(t_start, result.t_start)
         self.assertEqual(t_stop, result.t_stop)
+
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array(self.arr_ann['index']))
+        assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
 
     def test_time_slice_out_of_boundries(self):
         self.train1.t_start = 0.1 * pq.ms
@@ -1056,6 +1104,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.dtype, result.dtype)
         self.assertEqual(self.train1.t_start, result.t_start)
         self.assertEqual(self.train1.t_stop, result.t_stop)
+
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array(self.arr_ann['index']))
+        assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
 
     def test_time_slice_empty(self):
         waveforms = np.array([[[]]]) * pq.mV
@@ -1104,6 +1158,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(t_start, result.t_start)
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array([3, 4, 5, 6]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['c', 'd', 'e', 'f']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_time_slice_none_start(self):
         # time_slice spike train, keep sliced spike times
         t_stop = 1 * pq.ms
@@ -1125,6 +1185,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_start, result.t_start)
         self.assertEqual(t_stop, result.t_stop)
 
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array([1, 2]))
+        assert_arrays_equal(result.array_annotations['label'], np.array(['a', 'b']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
     def test_time_slice_none_both(self):
         self.train1.t_start = 0.1 * pq.ms
         assert_neo_object_is_compliant(self.train1)
@@ -1144,6 +1210,12 @@ class TestTimeSlice(unittest.TestCase):
         self.assertEqual(self.train1.t_start, result.t_start)
         self.assertEqual(self.train1.t_stop, result.t_stop)
 
+        # Array annotations should be updated according to time slice
+        assert_arrays_equal(result.array_annotations['index'], np.array(self.arr_ann['index']))
+        assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
+        self.assertIsInstance(result.array_annotations['index'], np.ndarray)
+        self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+
 
 class TestMerge(unittest.TestCase):
     def setUp(self):
@@ -1161,8 +1233,9 @@ class TestMerge(unittest.TestCase):
                                      [10.1, 11.1]]]) * pq.mV
         self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data1quant = self.data1 * pq.ms
+        self.arr_ann1 = {'index': np.arange(1, 7), 'label': ['a', 'b', 'c', 'd', 'e', 'f']}
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
-                                 waveforms=self.waveforms1)
+                                 waveforms=self.waveforms1, array_annotations=self.arr_ann1)
 
         self.waveforms2 = np.array([[[0., 1.],
                                      [0.1, 1.1]],
@@ -1178,8 +1251,9 @@ class TestMerge(unittest.TestCase):
                                      [10.1, 11.1]]]) * pq.mV
         self.data2 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.data2quant = self.data1 * pq.ms
+        self.arr_ann2 = {'index': np.arange(101, 107), 'label2': ['g', 'h', 'i', 'j', 'k', 'l']}
         self.train2 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
-                                 waveforms=self.waveforms1)
+                                 waveforms=self.waveforms1, array_annotations=self.arr_ann2)
 
         self.segment = Segment()
         self.segment.spiketrains.extend([self.train1, self.train2])
@@ -1197,6 +1271,12 @@ class TestMerge(unittest.TestCase):
         result = self.train1.merge(self.train2)
         assert_neo_object_is_compliant(result)
 
+        # Make sure array annotations are merged correctly
+        self.assertTrue('label' not in result.array_annotations)
+        self.assertTrue('label2' not in result.array_annotations)
+        assert_arrays_equal(result.array_annotations['index'],
+                         np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+
     def test_merge_with_waveforms(self):
         result = self.train1.merge(self.train2)
         assert_neo_object_is_compliant(result)
@@ -1213,10 +1293,17 @@ class TestMerge(unittest.TestCase):
                                           self.train2.times)))
         np.testing.assert_array_equal(result, expected)
 
+        # Make sure array annotations are merged correctly
+        self.assertTrue('label' not in result.array_annotations)
+        self.assertTrue('label2' not in result.array_annotations)
+        assert_arrays_equal(result.array_annotations['index'],
+                         np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+
     def test_rescaling_units(self):
         train3 = self.train1.duplicate_with_new_data(
             self.train1.times.magnitude * pq.microsecond)
         train3.segment = self.train1.segment
+        train3.array_annotate(**self.arr_ann1)
         result = train3.merge(self.train2)
         time_unit = result.units
         expected = sorted(np.concatenate((train3.rescale(time_unit).times,
@@ -1224,6 +1311,12 @@ class TestMerge(unittest.TestCase):
                                               time_unit).times)))
         expected = expected * time_unit
         np.testing.assert_array_equal(result.rescale(time_unit), expected)
+
+        # Make sure array annotations are merged correctly
+        self.assertTrue('label' not in result.array_annotations)
+        self.assertTrue('label2' not in result.array_annotations)
+        assert_arrays_equal(result.array_annotations['index'],
+                         np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
 
     def test_sampling_rate(self):
         result = self.train1.merge(self.train2)
@@ -1251,6 +1344,7 @@ class TestMerge(unittest.TestCase):
             self.train2.merge(train3)
 
 
+# TODO: HIER WEITER
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
         self.waveforms = np.array([[[0., 1.],
