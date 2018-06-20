@@ -1361,8 +1361,9 @@ class TestDuplicateWithNewData(unittest.TestCase):
                                     [10.1, 11.1]]]) * pq.mV
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.dataquant = self.data * pq.ms
+        self.arr_ann = {'index': np.arange(6)}
         self.train = SpikeTrain(self.dataquant, t_stop=10.0 * pq.ms,
-                                waveforms=self.waveforms)
+                                waveforms=self.waveforms, array_annotations=self.arr_ann)
 
     def test_duplicate_with_new_data(self):
         signal1 = self.train
@@ -1380,6 +1381,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.assertEqual(signal1b.t_start, new_t_start)
         self.assertEqual(signal1b.t_stop, new_t_stop)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
+        self.assertEqual(signal1b.array_annotations, {})
 
     def test_deep_copy_attributes(self):
         signal1 = self.train
@@ -1421,6 +1423,20 @@ class TestAttributesAnnotations(unittest.TestCase):
         train = SpikeTrain([3, 4, 5] * pq.s, t_stop=11.1, ratname='Phillippe')
         assert_neo_object_is_compliant(train)
         self.assertEqual(train.annotations, {'ratname': 'Phillippe'})
+
+    def test_array_annotations(self):
+        train = SpikeTrain([3, 4, 5] * pq.s, t_stop=11.1)
+        assert_neo_object_is_compliant(train)
+        self.assertEqual(train.array_annotations, {})
+
+        train = SpikeTrain([3, 4, 5] * pq.s, t_stop=11.1,
+                           array_annotations={'ratnames': ['L', 'N', 'E']})
+        assert_neo_object_is_compliant(train)
+        assert_arrays_equal(train.array_annotations['ratnames'], np.array(['L', 'N', 'E']))
+
+        train.array_annotate(index=[1, 2, 3])
+        assert_neo_object_is_compliant(train)
+        assert_arrays_equal(train.array_annotations['index'], np.arange(1, 4))
 
 
 class TestChanging(unittest.TestCase):
