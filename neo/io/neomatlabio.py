@@ -327,6 +327,12 @@ class NeoMatlabIO(BaseIO):
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
                 # put fake value for now, put correct value later
                 data_complement["sampling_rate"] = 0 * pq.kHz
+            try:
+                len(arr)
+            except TypeError:
+                # strange scipy.io behavior: if len is 1 we get a float
+                arr = np.array(arr)
+                arr = arr.reshape((-1,)) # new view with one dimension
             if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_stop"] = arr.max()
@@ -345,18 +351,23 @@ class NeoMatlabIO(BaseIO):
         for attrname in struct._fieldnames:
             # check children
             if attrname in getattr(ob, '_single_child_containers', []):
+                child_struct = getattr(struct, attrname)
                 try:
-                    for c in range(len(getattr(struct, attrname))):
-                        child = self.create_ob_from_struct(
-                            getattr(struct, attrname)[c],
-                            classname_lower_to_upper[attrname[:-1]])
-                        getattr(ob, attrname.lower()).append(child)
+                    # try must only surround len() or other errors are captured
+                    child_len = len(child_struct)
                 except TypeError:
                     # strange scipy.io behavior: if len is 1 there is no len()
                     child = self.create_ob_from_struct(
-                        getattr(struct, attrname),
+                        child_struct,
                         classname_lower_to_upper[attrname[:-1]])
                     getattr(ob, attrname.lower()).append(child)
+                else:
+                    for c in range(child_len):
+                        child = self.create_ob_from_struct(
+                            child_struct[c],
+                            classname_lower_to_upper[attrname[:-1]])
+                        getattr(ob, attrname.lower()).append(child)
+                    
                 continue
 
             # attributes
