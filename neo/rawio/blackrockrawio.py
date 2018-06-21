@@ -63,7 +63,6 @@ import datetime
 import os
 import re
 import warnings
-import time
 
 import numpy as np
 import quantities as pq
