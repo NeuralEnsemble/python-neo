@@ -149,7 +149,8 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s, sampling_rate=100*pq.Hz)
+                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s, 
+                                              sampling_rate=100*pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
                     sptr = neo.SpikeTrain(rand(40)*pq.ms, t_start=0*pq.ms, t_stop=10*pq.ms)
@@ -225,7 +226,7 @@ class NeoMatlabIO(BaseIO):
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True, mat_dtype=True)
-        if not 'block' in d:
+        if 'block' not in d:
             self.logger.exception('No block in ' + self.filename)
             return None
 
@@ -285,7 +286,7 @@ class NeoMatlabIO(BaseIO):
             # ~ continue
 
             if (hasattr(ob, '_quantity_attr') and
-                        ob._quantity_attr == attrname):
+                ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
@@ -332,7 +333,7 @@ class NeoMatlabIO(BaseIO):
             except TypeError:
                 # strange scipy.io behavior: if len is 1 we get a float
                 arr = np.array(arr)
-                arr = arr.reshape((-1,)) # new view with one dimension
+                arr = arr.reshape((-1,))  # new view with one dimension
             if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_stop"] = arr.max()
@@ -367,7 +368,6 @@ class NeoMatlabIO(BaseIO):
                             child_struct[c],
                             classname_lower_to_upper[attrname[:-1]])
                         getattr(ob, attrname.lower()).append(child)
-                    
                 continue
 
             # attributes
@@ -375,7 +375,7 @@ class NeoMatlabIO(BaseIO):
                 # linked with another field
                 continue
             if (hasattr(cl, '_quantity_attr') and
-                        cl._quantity_attr == attrname):
+                cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)
