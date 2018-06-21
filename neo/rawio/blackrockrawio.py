@@ -1230,12 +1230,6 @@ class BlackrockRawIO(BaseRawIO):
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
                         elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
-                            # print((data[ev_ids == i]['timestamp']).shape)
-                            # print(data[ev_ids == i]['timestamp'])
-                            # print(data[mask_after_seg]['timestamp'])
-                            # # print(end_of_current_nsx_seg)
-                            # print((data[ev_ids == i]['timestamp']).shape)
-                            # print(data[mask_after_seg]['timestamp'].shape)
                             # If not all definitely belong to the next segment,
                             # then it cannot be distinguished where some belong
                             if len(data[ev_ids == i]) != len(data[mask_after_seg]):
@@ -1254,9 +1248,6 @@ class BlackrockRawIO(BaseRawIO):
 
             new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments),
                                                   sorted(list(nonempty_nsx_segments))))
-
-            # def vec_translate(a, my_dict):
-            #     return np.vectorize(my_dict.__getitem__)(a)
 
             # replacing event ids by matched event ids in place
             for k, (data, ev_ids) in self.nev_data.items():
