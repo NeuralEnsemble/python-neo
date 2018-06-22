@@ -12,9 +12,9 @@ import shutil
 import tempfile
 
 try:
-    from urllib import urlretrieve  # Py2
+    from urllib2 import urlopen
 except ImportError:
-    from urllib.request import urlretrieve  # Py3
+    from urllib.request import urlopen
 
 
 def can_use_network():
@@ -66,7 +66,9 @@ def download_test_file(filename, localdir, url):
 
     if not os.path.exists(localfile):
         logging.info('Downloading %s here %s', distantfile, localfile)
-        urlretrieve(distantfile, localfile)
+        dist = urlopen(distantfile)
+        with open(localfile, 'wb') as f:
+            f.write(dist.read())
 
 
 def create_local_temp_dir(name, directory=None):
