@@ -58,11 +58,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         'segment/PauseCorrect/pause_correct.nev',
         'segment/PauseCorrect/pause_correct.ns2',
         'segment/PauseSpikesOutside/pause_spikes_outside_seg.nev',
-        'segment/PauseSpikesOutside/pause_spikes_outside_seg.ns2',
         'segment/ResetCorrect/reset.nev',
         'segment/ResetCorrect/reset.ns2',
-        'segment/ResetFail/reset_fail.nev',
-        'segment/ResetFail/reset_fail.ns2']
+        'segment/ResetFail/reset_fail.nev']
 
     ioclass = BlackrockIO
 
