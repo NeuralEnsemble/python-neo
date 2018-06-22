@@ -698,8 +698,8 @@ class BlackrockRawIO(BaseRawIO):
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
         mask = ev_dict['mask'] & (event_segment_ids == seg_index)
 
-        timestamp = events_data[ev_dict['mask']]['timestamp']
-        labels = events_data[ev_dict['mask']][ev_dict['field']]
+        timestamp = events_data[mask]['timestamp']
+        labels = events_data[mask][ev_dict['field']]
 
         # time clip
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
