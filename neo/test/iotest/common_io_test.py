@@ -130,7 +130,7 @@ class BaseTestIO(object):
             download_test_file(self.files_to_download,
                                self.local_test_dir, url)
         except IOError as exc:
-            raise unittest.TestCase.failureException()
+            raise unittest.TestCase.failureException(exc)
 
     download_test_files_if_not_present.__test__ = False
 
