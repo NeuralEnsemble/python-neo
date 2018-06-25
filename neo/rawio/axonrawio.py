@@ -170,27 +170,31 @@ class AxonRawIO(BaseRawIO):
                     replace(b' ', b'').decode('utf-8')
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
-
-            if version < 2.:
-                gain = info['fADCRange']
-                gain /= info['fInstrumentScaleFactor'][chan_id]
-                gain /= info['fSignalGain'][chan_id]
-                gain /= info['fADCProgrammableGain'][chan_id]
-                gain /= info['lADCResolution']
-                if info['nTelegraphEnable'][chan_id]:
-                    gain /= info['fTelegraphAdditGain'][chan_id]
-                offset = info['fInstrumentOffset'][chan_id]
-                offset -= info['fSignalOffset'][chan_id]
-            elif version >= 2.:
-                gain = info['protocol']['fADCRange']
-                gain /= info['listADCInfo'][chan_id]['fInstrumentScaleFactor']
-                gain /= info['listADCInfo'][chan_id]['fSignalGain']
-                gain /= info['listADCInfo'][chan_id]['fADCProgrammableGain']
-                gain /= info['protocol']['lADCResolution']
-                if info['listADCInfo'][chan_id]['nTelegraphEnable']:
-                    gain /= info['listADCInfo'][chan_id]['fTelegraphAdditGain']
-                offset = info['listADCInfo'][chan_id]['fInstrumentOffset']
-                offset -= info['listADCInfo'][chan_id]['fSignalOffset']
+            
+            if info['nDataFormat'] == 0 :
+                # int16 gain/offset
+                if version < 2.:
+                    gain = info['fADCRange']
+                    gain /= info['fInstrumentScaleFactor'][chan_id]
+                    gain /= info['fSignalGain'][chan_id]
+                    gain /= info['fADCProgrammableGain'][chan_id]
+                    gain /= info['lADCResolution']
+                    if info['nTelegraphEnable'][chan_id]:
+                        gain /= info['fTelegraphAdditGain'][chan_id]
+                    offset = info['fInstrumentOffset'][chan_id]
+                    offset -= info['fSignalOffset'][chan_id]
+                elif version >= 2.:
+                    gain = info['protocol']['fADCRange']
+                    gain /= info['listADCInfo'][chan_id]['fInstrumentScaleFactor']
+                    gain /= info['listADCInfo'][chan_id]['fSignalGain']
+                    gain /= info['listADCInfo'][chan_id]['fADCProgrammableGain']
+                    gain /= info['protocol']['lADCResolution']
+                    if info['listADCInfo'][chan_id]['nTelegraphEnable']:
+                        gain /= info['listADCInfo'][chan_id]['fTelegraphAdditGain']
+                    offset = info['listADCInfo'][chan_id]['fInstrumentOffset']
+                    offset -= info['listADCInfo'][chan_id]['fSignalOffset']
+            else:
+                gain, offset = 1., 0.
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
                                  sig_dtype, units, gain, offset, group_id))
