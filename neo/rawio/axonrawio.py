@@ -72,7 +72,7 @@ class AxonRawIO(BaseRawIO):
         if version < 2.:
             nbchannel = info['nADCNumChannels']
             head_offset = info['lDataSectionPtr'] * BLOCKSIZE + info[
-                                                                    'nNumPointsIgnored'] * sig_dtype.itemsize
+                                                'nNumPointsIgnored'] * sig_dtype.itemsize
             totalsize = info['lActualAcqLength']
         elif version >= 2.:
             nbchannel = info['sections']['ADCSection']['llNumEntries']
@@ -170,8 +170,8 @@ class AxonRawIO(BaseRawIO):
                     replace(b' ', b'').decode('utf-8')
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
-            
-            if info['nDataFormat'] == 0 :
+
+            if info['nDataFormat'] == 0:
                 # int16 gain/offset
                 if version < 2.:
                     gain = info['fADCRange']
@@ -344,13 +344,12 @@ class AxonRawIO(BaseRawIO):
                     for epochNum, epoch in epochInfo.items():
                         i_begin = i_last
                         i_end = i_last + epoch['lEpochInitDuration'] + \
-                                epoch['lEpochDurationInc'] * epiNum
+                            epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
                         sig[i_begin:i_end] = np.ones((dif)) * \
-                                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] *
-                                              epiNum)
+                            (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] * epiNum)
                         i_last += epoch['lEpochInitDuration'] + \
-                                  epoch['lEpochDurationInc'] * epiNum
+                            epoch['lEpochDurationInc'] * epiNum
                 signals.append(sig)
             sigs_by_segments.append(signals)
 
@@ -411,7 +410,7 @@ def parse_axon_soup(filename):
         elif f_file_signature == b'ABF2':
             n = header['fFileVersionNumber']
             header['fFileVersionNumber'] = n[3] + 0.1 * n[2] + \
-                                           0.01 * n[1] + 0.001 * n[0]
+                0.01 * n[1] + 0.001 * n[0]
             header['lFileStartTime'] = header['uFileStartTimeMS'] * .001
 
         if header['fFileVersionNumber'] < 2.:
