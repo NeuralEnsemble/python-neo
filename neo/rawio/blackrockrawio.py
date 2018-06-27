@@ -368,6 +368,7 @@ class BlackrockRawIO(BaseRawIO):
                 else:
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
                         self.__nsx_basic_header[self.nsx_to_load]['timestamp_resolution']
+                self._sigs_t_starts.append(t_start)
 
                 t_stop = t_start + length / sig_sampling_rate
 
@@ -392,7 +393,6 @@ class BlackrockRawIO(BaseRawIO):
                         t_start = min_nev_time
                 self._seg_t_starts.append(t_start)
                 self._seg_t_stops.append(float(t_stop))
-                self._sigs_t_starts.append(float(t_start))
 
             # Keys need to be increasing from 0 to maximum in steps of 1
             # To ensure this after removing empty segments, some keys need to be changed
