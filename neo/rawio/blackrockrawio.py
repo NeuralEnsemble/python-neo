@@ -359,6 +359,9 @@ class BlackrockRawIO(BaseRawIO):
                 if length < 2:
                     nb_empty_segments += 1
                     self.nsx_data.pop(data_bl)
+                    # TODO: CHECK WHAT HAPPENS HERE AND IF -1 IS CORRECT
+                    # Is this even needed? It should be
+                    data_bl -= 1
                     continue
                 if self.__nsx_data_header[self.nsx_to_load] is None:
                     t_start = 0.
@@ -399,14 +402,16 @@ class BlackrockRawIO(BaseRawIO):
                 if i not in self.nsx_data:
                     self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
                                      self.nsx_data.items()}
-            # Also remap nev data, ev_ids are the equivalent to keys above
-            if self._avail_files['nev']:
-                for k, (data, ev_ids) in self.nev_data.items():
-                    for i in range(self._nb_segment):
-                        # If this segment id does not exist, reduce all following by 1
-                        # to make them a range starting from 0
-                        if i not in ev_ids:
-                            ev_ids[ev_ids > i] -= 1
+                    # Also remap nev data, ev_ids are the equivalent to keys above
+                    if self._avail_files['nev']:
+                        for k, (data, ev_ids) in self.nev_data.items():
+                            # If this segment id does not exist, reduce all following by 1
+                            # to make them a range starting from 0
+                            if i not in ev_ids:
+                                ev_ids[ev_ids > i] -= 1
+                            else:
+                                raise ValueError("A segment in nsX was omitted but there were"
+                                                 "spikes matched to it.")
 
             # Empty segments were discarded, thus there may be less segments now
             self._nb_segment -= nb_empty_segments
@@ -1074,7 +1079,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self.__read_nev_header(ext_header_variants)
 
-    def __read_nev_data(self, nev_data_masks, nev_data_types):
+    def __read_nev_data(self, nev_data_masks, nev_data_types, raw=False):
         """
         Extract nev data from a 2.1 or 2.2 .nev file
         """
@@ -1089,6 +1094,9 @@ class BlackrockRawIO(BaseRawIO):
             ('value', 'S{0}'.format(data_size - 6))]
 
         raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode='r')
+
+        if raw:
+            return raw_data
 
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
@@ -1261,7 +1269,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self.__read_nev_data(nev_data_masks, nev_data_types)
 
-    def __read_nev_data_variant_b(self):
+    def __read_nev_data_variant_b(self, raw=False):
         """
         Extract nev data from a 2.3 .nev file
         """
@@ -1283,7 +1291,7 @@ class BlackrockRawIO(BaseRawIO):
             'ButtonTrigger': 'a',
             'ConfigEvent': 'a'}
 
-        return self.__read_nev_data(nev_data_masks, nev_data_types)
+        return self.__read_nev_data(nev_data_masks, nev_data_types, raw=raw)
 
     def __nev_ext_header_types(self):
         """
