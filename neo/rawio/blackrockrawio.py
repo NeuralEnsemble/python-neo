@@ -681,7 +681,6 @@ class BlackrockRawIO(BaseRawIO):
         return waveforms
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        # TODO: Should this only return NonNeural events or also Comment events ?
         name = self.header['event_channels']['name'][event_channel_index]
         events_data, event_segment_ids = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
