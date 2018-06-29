@@ -156,7 +156,9 @@ class NixIO(BaseIO):
     def __exit__(self, *args):
         self.close()
 
-    def read_all_blocks(self):
+    def read_all_blocks(self, lazy=False):
+        if lazy:
+            raise Exception("Lazy loading is not supported for NixIO")
         return list(self._nix_to_neo_block(blk)
                     for blk in self.nix_file.blocks)
 
@@ -186,7 +188,9 @@ class NixIO(BaseIO):
         :param nixname: The name of the Block in NIX
         :param neoname: The name of the original Neo Block
         """
-        assert not lazy, "Lazy loading not supported"
+        if lazy:
+            raise Exception("Lazy loading is not supported for NixIO")
+
         nix_block = None
         if index is not None:
             nix_block = self.nix_file.blocks[index]
@@ -195,7 +199,7 @@ class NixIO(BaseIO):
         elif neoname is not None:
             for blk in self.nix_file.blocks:
                 if ("neo_name" in blk.metadata
-                    and blk.metadata["neo_name"] == neoname):
+                        and blk.metadata["neo_name"] == neoname):
                     nix_block = blk
                     break
             else:
