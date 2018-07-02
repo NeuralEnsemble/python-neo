@@ -359,9 +359,6 @@ class BlackrockRawIO(BaseRawIO):
                 if length < 2:
                     nb_empty_segments += 1
                     self.nsx_data.pop(data_bl)
-                    # TODO: CHECK WHAT HAPPENS HERE AND IF -1 IS CORRECT
-                    # Is this even needed? It should be
-                    data_bl -= 1
                     continue
                 if self.__nsx_data_header[self.nsx_to_load] is None:
                     t_start = 0.
