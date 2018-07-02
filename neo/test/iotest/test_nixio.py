@@ -182,8 +182,7 @@ class NixIOTest(unittest.TestCase):
         nixmd = nixdalist[0].metadata
         self.assertTrue(all(nixmd == da.metadata for da in nixdalist))
         neounit = neosig.units
-        for sig, da in zip(np.transpose(neosig),
-                           sorted(nixdalist, key=lambda d: d.name)):
+        for sig, da in zip(np.transpose(neosig), nixdalist):
             self.compare_attr(neosig, da)
             daquant = create_quantity(da[:], da.unit)
             np.testing.assert_almost_equal(sig, daquant)
@@ -696,7 +695,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        asig = AnalogSignal(signal=self.rquant((10, 3), pq.mV),
+        asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
                             sampling_rate=pq.Quantity(10, "Hz"))
         seg.analogsignals.append(asig)
         self.write_and_compare([block])
@@ -705,7 +704,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment("ir signal seg")
         anotherblock.segments.append(seg)
         irsig = IrregularlySampledSignal(
-            signal=np.random.random((20, 3)),
+            signal=np.random.random((20, 30)),
             times=self.rquant(20, pq.ms, True),
             units=pq.A
         )
@@ -723,7 +722,7 @@ class NixIOWriteTest(NixIOTest):
 
         block.segments[0].irregularlysampledsignals.append(
             IrregularlySampledSignal(times=np.random.random(10),
-                                     signal=np.random.random((10, 3)),
+                                     signal=np.random.random((10, 13)),
                                      units="mV", time_units="s",
                                      dtype=np.float,
                                      name="some sort of signal",
@@ -738,7 +737,7 @@ class NixIOWriteTest(NixIOTest):
 
         units = pq.CompoundUnit("1/30000*V")
         srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
-        asig = AnalogSignal(signal=self.rquant((10, 3), units),
+        asig = AnalogSignal(signal=self.rquant((10, 23), units),
                             sampling_rate=srate)
         seg.analogsignals.append(asig)
 
