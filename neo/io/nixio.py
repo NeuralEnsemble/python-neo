@@ -1127,7 +1127,9 @@ class NixIO(BaseIO):
                     values = create_quantity(values, units)
                 if len(values) == 1:
                     values = values[0]
-                if values == "" and prop.definition == EMPTYANNOTATION:
+                if (not isinstance(values, pq.Quantity) and
+                        values == "" and
+                        prop.definition == EMPTYANNOTATION):
                     values = list()
                 neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
