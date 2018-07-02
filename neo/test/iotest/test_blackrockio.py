@@ -283,6 +283,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # Path to nev that will fail
         filename_nev_fail = self.get_filename_path('segment/ResetFail/reset_fail')
+        # Path to nsX and nev that will NOT fail
         filename = self.get_filename_path('segment/ResetCorrect/reset')
 
         # This fails, because in the nev there is no way to separate two segments
@@ -334,6 +335,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # Path to nev that has spikes that don't fit nsX segment
         filename_nev_outside_seg = self.get_filename_path(
             'segment/PauseSpikesOutside/pause_spikes_outside_seg')
+        # Path to nsX and nev that are correct
         filename = self.get_filename_path('segment/PauseCorrect/pause_correct')
 
         # This issues a warning, because there are spikes a long time after the last segment
@@ -368,7 +370,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # Segment time is longer here as well because of spikes after second segment
         self.assertEqual(block.segments[1].t_stop.magnitude, 35.0863)
         self.assertEqual(block.segments[0].analogsignals[0].t_start, 0.0)
-        # The Analogsignal is only 4 seconds long, as opposed to the segment
+        # The AnalogSignal is only 4 seconds long, as opposed to the segment
         # whose length is caused by the additional spike
         self.assertEqual(block.segments[0].analogsignals[0].t_stop, 4.0)
         self.assertEqual(block.segments[1].analogsignals[0].t_start, 31.0087)
