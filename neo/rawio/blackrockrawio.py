@@ -1049,7 +1049,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self.__read_nev_header(ext_header_variants)
 
-    def __read_nev_data(self, nev_data_masks, nev_data_types, raw=False):
+    def __read_nev_data(self, nev_data_masks, nev_data_types):
         """
         Extract nev data from a 2.1 or 2.2 .nev file
         """
@@ -1064,9 +1064,6 @@ class BlackrockRawIO(BaseRawIO):
             ('value', 'S{0}'.format(data_size - 6))]
 
         raw_data = np.memmap(filename, offset=header_size, dtype=dt0, mode='r')
-
-        if raw:
-            return raw_data
 
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
@@ -1182,7 +1179,7 @@ class BlackrockRawIO(BaseRawIO):
                     # If some nev data are outside of this nsX segment, increase their segment ids
                     # and the ids of all following segments. They are checked for the next nsX
                     # segment then. If they do not fit any of them,
-                    # a warning will be shown indicating, how far outside the segment spikes are
+                    # a warning will be shown, indicating how far outside the segment spikes are
                     # If they fit the next segment, more segments are possible in nev,
                     # because a new one has been discovered
                     if len(data[mask_after_seg]) > 0:
@@ -1239,7 +1236,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return self.__read_nev_data(nev_data_masks, nev_data_types)
 
-    def __read_nev_data_variant_b(self, raw=False):
+    def __read_nev_data_variant_b(self):
         """
         Extract nev data from a 2.3 .nev file
         """
@@ -1261,7 +1258,7 @@ class BlackrockRawIO(BaseRawIO):
             'ButtonTrigger': 'a',
             'ConfigEvent': 'a'}
 
-        return self.__read_nev_data(nev_data_masks, nev_data_types, raw=raw)
+        return self.__read_nev_data(nev_data_masks, nev_data_types)
 
     def __nev_ext_header_types(self):
         """
