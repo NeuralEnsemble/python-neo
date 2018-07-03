@@ -374,7 +374,6 @@ class NixIO(BaseIO):
         :param nix_da_group: a list of NIX DataArray objects
         :return: a Neo AnalogSignal object
         """
-        nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
         neo_attrs["nix_name"] = metadata.name  # use the common base name
@@ -418,7 +417,6 @@ class NixIO(BaseIO):
         :param nix_da_group: a list of NIX DataArray objects
         :return: a Neo IrregularlySampledSignal object
         """
-        nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
         neo_attrs["nix_name"] = metadata.name  # use the common base name
@@ -1129,7 +1127,9 @@ class NixIO(BaseIO):
                     values = create_quantity(values, units)
                 if len(values) == 1:
                     values = values[0]
-                if values == "" and prop.definition == EMPTYANNOTATION:
+                if (not isinstance(values, pq.Quantity) and
+                        values == "" and
+                        prop.definition == EMPTYANNOTATION):
                     values = list()
                 neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
@@ -1151,9 +1151,6 @@ class NixIO(BaseIO):
         :return: A dictionary mapping a base name to a list of DataArrays which
         belong to the same Signal
         """
-        # first sort by name
-        dataarrays = sorted(dataarrays, key=lambda x: x.name)
-
         # now start grouping
         groups = dict()
         for da in dataarrays:
