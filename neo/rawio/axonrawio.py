@@ -179,7 +179,7 @@ class AxonRawIO(BaseRawIO):
                     gain /= info['fSignalGain'][chan_id]
                     gain /= info['fADCProgrammableGain'][chan_id]
                     gain /= info['lADCResolution']
-                    if info['nTelegraphEnable'][chan_id]==1:
+                    if info['nTelegraphEnable'][chan_id] == 1:
                         gain /= info['fTelegraphAdditGain'][chan_id]
                     offset = info['fInstrumentOffset'][chan_id]
                     offset -= info['fSignalOffset'][chan_id]
