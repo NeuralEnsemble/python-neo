@@ -529,7 +529,8 @@ class NixIO(BaseIO):
                 calculate_timestamp(block.rec_datetime)
             )
         if block.file_datetime:
-            metadata["file_datetime"] = block.file_datetime
+            fdt = calculate_timestamp(block.file_datetime)
+            metadata["file_datetime"] = fdt
         if block.annotations:
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
@@ -625,7 +626,8 @@ class NixIO(BaseIO):
                 calculate_timestamp(segment.rec_datetime)
             )
         if segment.file_datetime:
-            metadata["file_datetime"] = segment.file_datetime
+            fdt = calculate_timestamp(segment.file_datetime)
+            metadata["file_datetime"] = fdt
         if segment.annotations:
             for k, v in segment.annotations.items():
                 self._write_property(metadata, k, v)
