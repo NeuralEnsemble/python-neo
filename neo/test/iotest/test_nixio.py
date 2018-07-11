@@ -588,9 +588,11 @@ class NixIOTest(unittest.TestCase):
         signal = cls.rquant(1, pq.V)
         blk = Block()
         blk.annotate(**cls.rdict(3))
+        cls.populate_dates(blk)
 
         seg = Segment()
         seg.annotate(**cls.rdict(4))
+        cls.populate_dates(seg)
         blk.segments.append(seg)
 
         asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz)
