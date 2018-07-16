@@ -150,6 +150,9 @@ class NixIO(BaseIO):
         self._ref_map = dict()
         self._signal_map = dict()
 
+        # _names_ok is used to guard against name check duplication
+        self._names_ok = False
+
     def __enter__(self):
         return self
 
@@ -488,23 +491,37 @@ class NixIO(BaseIO):
             self._ref_map[n].append(neo_spiketrain)
         return neo_spiketrain
 
-    def write_all_blocks(self, neo_blocks):
+    def write_all_blocks(self, neo_blocks, use_obj_names=False):
         """
         Convert all ``neo_blocks`` to the NIX equivalent and write them to the
         file.
 
         :param neo_blocks: List (or iterable) containing Neo blocks
+        :param use_obj_names: If True, will not generate unique object names
+        but will instead try to use the name of each Neo object. If these are
+        not unique, an exception will be raised.
         """
+        if use_obj_names:
+            self._use_obj_names(neo_blocks)
+            self._names_ok = True
         for bl in neo_blocks:
-            self.write_block(bl)
+            self.write_block(bl, use_obj_names)
 
-    def write_block(self, block):
+    def write_block(self, block, use_obj_names=False):
         """
         Convert the provided Neo Block to a NIX Block and write it to
         the NIX file.
 
         :param block: Neo Block to be written
+        :param use_obj_names: If True, will not generate unique object names
+        but will instead try to use the name of each Neo object. If these are
+        not unique, an exception will be raised.
         """
+        if use_obj_names:
+            if not self._names_ok:
+                # _names_ok guards against check duplication
+                # If it's False, it means write_block() was called directly
+                self._use_obj_names([block])
         if "nix_name" in block.annotations:
             nix_name = block.annotations["nix_name"]
         else:
@@ -1169,6 +1186,87 @@ class NixIO(BaseIO):
             if hasattr(dim, "label") and dim.label == "time":
                 return dim
         return None
+
+    def _use_obj_names(self, blocks):
+
+        errmsg = "use_obj_names enabled: found conflict or anonymous object"
+
+        allobjs = []
+
+        def check_unique(objs):
+            names = list(o.name for o in objs)
+            if None in names or "" in names:
+                raise ValueError(names)
+            if len(names) != len(set(names)):
+                self._names_ok = False
+                raise ValueError(names)
+            # collect objs if ok
+            allobjs.extend(objs)
+
+        try:
+            check_unique(blocks)
+        except ValueError as ve:
+            raise ValueError("{} in Blocks {}".format(errmsg, ve))
+
+        for blk in blocks:
+            try:
+                # Segments
+                check_unique(blk.segments)
+            except ValueError as ve:
+                raise ValueError("{} at Block '{}' > segments > "
+                                 "{}".format(errmsg, blk.name, ve))
+
+            # collect all signals in all segments
+            signals = []
+            # collect all events, epochs, and spiketrains in all segments
+            eests = []
+            for seg in blk.segments:
+                signals.extend(seg.analogsignals)
+                signals.extend(seg.irregularlysampledsignals)
+                eests.extend(seg.events)
+                eests.extend(seg.epochs)
+                eests.extend(seg.spiketrains)
+
+            try:
+                # AnalogSignals and IrregularlySampledSignals
+                check_unique(signals)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in Signal names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            try:
+                # Events, Epochs, and SpikeTrains
+                check_unique(eests)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in Event, Epoch, and Spiketrain names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            try:
+                # ChannelIndexes
+                check_unique(blk.channel_indexes)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in ChannelIndex names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            for chx in blk.channel_indexes:
+                try:
+                    check_unique(chx.units)
+                except ValueError as ve:
+                    raise ValueError(
+                        "{} in Unit names of Block "
+                        "'{}' > ChannelIndex '{}' {}".format(errmsg, blk.name,
+                                                             chx.name, ve)
+                    )
+
+        # names are OK: assign annotations
+        for o in allobjs:
+            o.annotations["nix_name"] = o.name
 
     def close(self):
         """
