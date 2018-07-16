@@ -35,6 +35,12 @@ try:
 except ImportError:
     HAVE_NIX = False
 
+try:
+    from unittest import mock
+    SKIPMOCK = False
+except ImportError:
+    SKIPMOCK = True
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOTest(unittest.TestCase):
@@ -646,8 +652,8 @@ class NixIOWriteTest(NixIOTest):
         self.reader.close()
         shutil.rmtree(self.tempdir)
 
-    def write_and_compare(self, blocks):
-        self.writer.write_all_blocks(blocks)
+    def write_and_compare(self, blocks, use_obj_names=False):
+        self.writer.write_all_blocks(blocks, use_obj_names)
         self.compare_blocks(blocks, self.reader.blocks)
         self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
         self.compare_blocks(blocks, self.reader.blocks)
@@ -890,8 +896,7 @@ class NixIOWriteTest(NixIOTest):
                                                       t_stop=times[-1] + pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
-                chx = ChannelIndex(name="chx{}".format(chidx),
-                                   index=[1, 2],
+                chx = ChannelIndex(index=[1, 2],
                                    channel_ids=[11, 22])
                 blk.channel_indexes.append(chx)
                 for unidx in range(nunits):
@@ -899,6 +904,102 @@ class NixIOWriteTest(NixIOTest):
                     chx.units.append(unit)
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
+
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+
+    def test_name_objects_write(self):
+        nblocks = 2
+        nsegs = 2
+        nanasig = 4
+        nirrseg = 2
+        nepochs = 3
+        nevents = 4
+        nspiketrains = 3
+        nchx = 5
+        nunits = 10
+
+        times = self.rquant(1, pq.s)
+        signal = self.rquant(1, pq.V)
+        blocks = []
+        for blkidx in range(nblocks):
+            blk = Block(name="block{}".format(blkidx))
+            blocks.append(blk)
+            for segidx in range(nsegs):
+                seg = Segment(name="seg{}".format(segidx))
+                blk.segments.append(seg)
+                for anaidx in range(nanasig):
+                    asig = AnalogSignal(
+                        name="{}:as{}".format(seg.name, anaidx),
+                        signal=signal, sampling_rate=pq.Hz
+                    )
+                    seg.analogsignals.append(asig)
+                for irridx in range(nirrseg):
+                    isig = IrregularlySampledSignal(
+                        name="{}:is{}".format(seg.name, irridx),
+                        times=times,
+                        signal=signal,
+                        time_units=pq.s
+                    )
+                    seg.irregularlysampledsignals.append(isig)
+                for epidx in range(nepochs):
+                    seg.epochs.append(
+                        Epoch(name="{}:ep{}".format(seg.name, epidx),
+                              times=times, durations=times)
+                    )
+                for evidx in range(nevents):
+                    seg.events.append(
+                        Event(name="{}:ev{}".format(seg.name, evidx),
+                              times=times)
+                    )
+                for stidx in range(nspiketrains):
+                    seg.spiketrains.append(
+                        SpikeTrain(name="{}:st{}".format(seg.name, stidx),
+                                   times=times,
+                                   t_stop=times[-1] + pq.s,
+                                   units=pq.s)
+                    )
+            for chidx in range(nchx):
+                chx = ChannelIndex(name="chx{}".format(chidx),
+                                   index=[1, 2],
+                                   channel_ids=[11, 22])
+                blk.channel_indexes.append(chx)
+                for unidx in range(nunits):
+                    unit = Unit(name="unit{}".format(unidx))
+                    chx.units.append(unit)
+
+        # put guard on _generate_nix_name
+        if not SKIPMOCK:
+            nixgenmock = mock.Mock(name="_generate_nix_name",
+                                   wraps=self.io._generate_nix_name)
+            self.io._generate_nix_name = nixgenmock
+
+        self.writer.write_block(blocks[0], use_obj_names=True)
+        self.compare_blocks([blocks[0]], self.reader.blocks)
+        self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
+        self.compare_blocks(blocks, self.reader.blocks)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
+
+        self.write_and_compare(blocks, use_obj_names=True)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
+
+        self.assertEqual(self.reader.blocks[0].name, "block0")
+
+        blocks[0].name = blocks[1].name  # name conflict
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+        blocks[0].name = "new name"
+        self.assertEqual(blocks[0].segments[1].spiketrains[1].name, "seg1:st1")
+        st0 = blocks[0].segments[0].spiketrains[0].name
+        blocks[0].segments[0].spiketrains[1].name = st0  # name conflict
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+        with self.assertRaises(ValueError):
+            self.writer.write_block(blocks[0], use_obj_names=True)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
 
     def test_multiref_write(self):
         blk = Block("blk1")
