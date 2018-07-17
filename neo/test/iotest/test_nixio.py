@@ -1001,6 +1001,76 @@ class NixIOWriteTest(NixIOTest):
         if not SKIPMOCK:
             nixgenmock.assert_not_called()
 
+    def test_name_conflicts(self):
+        # anon block
+        blk = Block()
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # two anon blocks
+        blocks = [Block(), Block()]
+        with self.assertRaises(ValueError):
+            self.io.write_all_blocks(blocks, use_obj_names=True)
+
+        # same name blocks
+        blocks = [Block(name="one"), Block(name="one")]
+        with self.assertRaises(ValueError):
+            self.io.write_all_blocks(blocks, use_obj_names=True)
+
+        # one block, two same name segments
+        blk = Block("new")
+        seg = Segment("I am the segment", a="a annoation")
+        blk.segments.append(seg)
+        seg = Segment("I am the segment", a="b annotation")
+        blk.segments.append(seg)
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        times = self.rquant(1, pq.s)
+        signal = self.rquant(1, pq.V)
+        # name conflict: analog + irregular signals
+        seg.analogsignals.append(
+            AnalogSignal(name="signal", signal=signal, sampling_rate=pq.Hz)
+        )
+        seg.irregularlysampledsignals.append(
+            IrregularlySampledSignal(name="signal", signal=signal, times=times)
+        )
+        blk = Block(name="Signal conflict Block")
+        blk.segments.append(seg)
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict: event + spiketrain
+        blk = Block(name="Event+SpikeTrain conflict Block")
+        seg = Segment(name="Event+SpikeTrain conflict Segment")
+        blk.segments.append(seg)
+        seg.events.append(Event(name="TimeyStuff", times=times))
+        seg.spiketrains.append(SpikeTrain(name="TimeyStuff", times=times,
+                                          t_stop=pq.s))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # make spiketrain anon
+        blk.segments[0].spiketrains[0].name = None
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict in channel indexes
+        blk = Block(name="ChannelIndex conflict Block")
+        blk.channel_indexes.append(ChannelIndex(name="chax", index=[1]))
+        blk.channel_indexes.append(ChannelIndex(name="chax", index=[2]))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict in units
+        blk = Block(name="unitconf")
+        chx = ChannelIndex(name="ok", index=[100])
+        blk.channel_indexes.append(chx)
+        chx.units.append(Unit(name="IHAVEATWIN"))
+        chx.units.append(Unit(name="IHAVEATWIN"))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
     def test_multiref_write(self):
         blk = Block("blk1")
         signal = AnalogSignal(name="sig1", signal=[0, 1, 2], units="mV",
