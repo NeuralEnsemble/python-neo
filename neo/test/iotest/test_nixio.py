@@ -421,7 +421,7 @@ class NixIOTest(unittest.TestCase):
                 mtag_st.name, mtag_st.name + ".metadata"
             )
             mtag_st.metadata = mtag_st_md
-            mtag_st_md.create_property("t_stop", nix.Value(times[-1] + 1.0))
+            mtag_st_md.create_property("t_stop", times[-1] + 1.0)
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -438,7 +438,7 @@ class NixIOTest(unittest.TestCase):
                 wfname, "neo.waveforms.metadata"
             )
             wfda.metadata.create_property("left_sweep",
-                                          [nix.Value(20)] * 5)
+                                          [20] * 5)
             allspiketrains.append(mtag_st)
 
         # Epochs
@@ -515,9 +515,9 @@ class NixIOTest(unittest.TestCase):
             nixrc.metadata = nixchx.metadata.create_section(
                 nixrc.name, "neo.channelindex.metadata"
             )
-            nixrc.metadata.create_property("index", nix.Value(chan))
-            nixrc.metadata.create_property("channel_id", nix.Value(chan + 1))
-            dims = tuple(map(nix.Value, cls.rquant(3, 3)))
+            nixrc.metadata.create_property("index", chan)
+            nixrc.metadata.create_property("channel_id", chan + 1)
+            dims = cls.rquant(3, 1)
             coordprop = nixrc.metadata.create_property("coordinates", dims)
             coordprop.unit = "pm"
 
@@ -1255,9 +1255,9 @@ class NixIOWriteTest(NixIOTest):
         writeprop(section, "val", val)
         self.assertEqual(val, section["val"])
 
-        # empty string
+        # empty string (gets stored as empty list)
         writeprop(section, "emptystring", "")
-        self.assertEqual("", section["emptystring"])
+        self.assertEqual(list(), section["emptystring"])
 
     def test_annotations_special_cases(self):
         # Special cases for annotations: empty list, list of strings,
