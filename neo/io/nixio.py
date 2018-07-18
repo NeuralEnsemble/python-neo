@@ -124,7 +124,7 @@ class NixIO(BaseIO):
             raise ValueError("Invalid mode specified '{}'. "
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
                              " 'ow' (Overwrite).".format(mode))
-        self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
+        self.nix_file = nix.File.open(self.filename, filemode)
 
         if self.nix_file.mode == nix.FileMode.ReadOnly:
             self._file_version = '0.5.2'

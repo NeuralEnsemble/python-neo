@@ -315,8 +315,7 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_full_nix_file(cls, filename):
-        nixfile = nix.File.open(filename, nix.FileMode.Overwrite,
-                                backend="h5py")
+        nixfile = nix.File.open(filename, nix.FileMode.Overwrite)
 
         nix_block_a = nixfile.create_block(cls.rword(10), "neo.block")
         nix_block_a.definition = cls.rsentence(5, 10)
@@ -643,9 +642,7 @@ class NixIOWriteTest(NixIOTest):
         self.filename = os.path.join(self.tempdir, "testnixio.nix")
         self.writer = NixIO(self.filename, "ow")
         self.io = self.writer
-        self.reader = nix.File.open(self.filename,
-                                    nix.FileMode.ReadOnly,
-                                    backend="h5py")
+        self.reader = nix.File.open(self.filename, nix.FileMode.ReadOnly)
 
     def tearDown(self):
         self.writer.close()
@@ -1209,8 +1206,7 @@ class NixIOWriteTest(NixIOTest):
         self.compare_blocks([blk], self.reader.blocks)
 
         # Read back and check counts
-        scndreader = nix.File.open(secondwrite, mode=nix.FileMode.ReadOnly,
-                                   backend="h5py")
+        scndreader = nix.File.open(secondwrite, mode=nix.FileMode.ReadOnly)
         self.compare_blocks([blk], scndreader.blocks)
         checksignalcounts(secondwrite)
 
@@ -1369,22 +1365,19 @@ class NixIOContextTests(NixIOTest):
         with NixIO(self.filename, "ow") as iofile:
             iofile.write_block(neoblock)
 
-        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly,
-                                backend="h5py")
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         self.compare_blocks([neoblock], nixfile.blocks)
         nixfile.close()
 
         neoblock.annotate(**self.rdict(5))
         with NixIO(self.filename, "rw") as iofile:
             iofile.write_block(neoblock)
-        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly,
-                                backend="h5py")
+        nixfile = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         self.compare_blocks([neoblock], nixfile.blocks)
         nixfile.close()
 
     def test_context_read(self):
-        nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite,
-                                backend="h5py")
+        nixfile = nix.File.open(self.filename, nix.FileMode.Overwrite)
         name_one = self.rword()
         name_two = self.rword()
         nixfile.create_block(name_one, "neo.block")
