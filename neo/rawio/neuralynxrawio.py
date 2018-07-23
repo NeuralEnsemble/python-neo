@@ -89,7 +89,8 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            if os.path.getsize(filename)<=HEADER_SIZE:
+            if (os.path.getsize(filename)<=HEADER_SIZE) and \
+               (ext in ['nse', 'ncs', 'ntt']):
                 self._empty_files.append(filename)
                 continue
 
