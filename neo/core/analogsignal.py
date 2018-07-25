@@ -494,6 +494,13 @@ class AnalogSignal(BaseSignal):
         # we're going to send the list of indicies so that we get *copy* of the
         # sliced data
         obj = super(AnalogSignal, self).__getitem__(np.arange(i, j, 1))
+
+        # If there is any data remaining, there will be data for every channel
+        # In this case, array_annotations need to stay available
+        # super.__getitem__ cannot do this, so it needs to be done here
+        if len(obj) > 0:
+            obj.array_annotations = self.array_annotations
+
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj
