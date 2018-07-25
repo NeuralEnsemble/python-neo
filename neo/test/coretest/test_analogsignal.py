@@ -546,13 +546,15 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertIs(result.channel_index, None)
 
     def test_splice_2channels_inplace(self):
+        arr_ann1 = {'index': np.arange(10, 12)}
+        arr_ann2 = {'index': np.arange(2), 'test': ['a', 'b']}
         signal = AnalogSignal(np.arange(20.0).reshape((10, 2)),
                               sampling_rate=1 * pq.kHz,
-                              units="mV")
+                              units="mV", array_annotations=arr_ann1)
         signal_for_splicing = AnalogSignal(np.array([[0.1, 0.0], [0.2, 0.0], [0.3, 0.0]]),
                                            t_start=3 * pq.ms,
                                            sampling_rate=self.signal1.sampling_rate,
-                                           units=pq.V)
+                                           units=pq.V, array_annotations=arr_ann2)
         result = signal.splice(signal_for_splicing, copy=False)
         assert_array_equal(result.magnitude,
                            np.array([[0.0, 1.0],
@@ -566,6 +568,9 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                                      [16.0, 17.0],
                                      [18.0, 19.0]]))
         assert_array_equal(signal, result)  # in-place
+        # Array annotations are taken from the main signal
+        assert_array_equal(result.array_annotations['index'], np.arange(10, 12))
+        self.assertNotIn('test', result.array_annotations)
 
     def test_splice_1channel_invalid_t_start(self):
         signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
