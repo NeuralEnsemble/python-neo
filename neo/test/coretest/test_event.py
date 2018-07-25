@@ -168,7 +168,7 @@ class TestEvent(unittest.TestCase):
 
     def test_time_slice_empty(self):
         params = {'test2': 'y1', 'test3': True}
-        arr_ann = {'index': [], 'test': []}
+        arr_ann = {'index': np.array([]), 'test': np.array([])}
         evt = Event([] * pq.ms,
                     name='test', description='tester',
                     file_origin='test.file',
