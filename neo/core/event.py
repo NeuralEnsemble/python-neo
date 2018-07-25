@@ -101,7 +101,8 @@ class Event(DataObject):
                        (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj.labels = labels
+        obj.array_annotate(labels=labels)
+        obj.labels = obj.array_annotations['labels']
         obj.segment = None
         return obj
 

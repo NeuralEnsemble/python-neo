@@ -108,8 +108,10 @@ class Epoch(DataObject):
                        (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.durations = durations
-        obj.labels = labels
+        obj.array_annotate(labels=labels)
+        obj.labels = obj.array_annotations['labels']
+        obj.array_annotate(durations=durations)
+        obj.durations = obj.array_annotations['durations']
         obj.segment = None
         return obj
 
