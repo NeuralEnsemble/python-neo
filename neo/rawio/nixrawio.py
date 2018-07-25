@@ -1,15 +1,23 @@
 """
 RawIO Class for NIX files
 
-The RawIO assumes all segments and all blocks have the same structure. It supports all kinds of NEO objects.
+The RawIO assumes all segments and all blocks have the same structure.
+It supports all kinds of NEO objects.
 
 Author: Chek Yin Choi
 """
 
 from __future__ import print_function, division, absolute_import
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype, _event_channel_dtype)
+from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
+                                 _unit_channel_dtype, _event_channel_dtype)
 import numpy as np
-import nixio as nix
+try:
+    import nixio as nix
+
+    HAVE_NIX = True
+except ImportError:
+    HAVE_NIX = False
+    nix = None
 
 
 class NIXRawIO (BaseRawIO):
@@ -18,9 +26,12 @@ class NIXRawIO (BaseRawIO):
     rawmode = 'one-file'
 
     def __init__(self, filename=''):
+        if not HAVE_NIX:
+            raise Exception("Failed to import NIX. "
+                            "The NixIO requires the Python bindings for NIX "
+                            "(nixio on PyPi). Try `pip install nixio`.")
         BaseRawIO.__init__(self)
         self.filename = filename
-        print(filename)
 
     def _source_name(self):
         return self.filename
@@ -49,11 +60,13 @@ class NIXRawIO (BaseRawIO):
                         group_id = 0
                         for cid, name in enumerate(channel_name):
                             if name == da.sources[0].name:
-                                group_id = cid  # very important! group_id use to store channel groups!!!
+                                group_id = cid
+                                # very important! group_id use to store channel groups!!!
                                 # use only for different signal length
                         gain = 1
                         offset = 0.
-                        sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+                        sig_channels.append((ch_name, chan_id, sr, dtype,
+                                             units, gain, offset, group_id))
                 break
             break
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -121,9 +134,10 @@ class NIXRawIO (BaseRawIO):
                         size_list.append(da.size)
                         data_list.append(da)
                         ch_name_list.append(da.sources[0].name)
-                self.da_list['blocks'][block_index]['segments'][seg_index]['data_size'] = size_list
-                self.da_list['blocks'][block_index]['segments'][seg_index]['data'] = data_list
-                self.da_list['blocks'][block_index]['segments'][seg_index]['ch_name'] = ch_name_list
+                seg = self.da_list['blocks'][block_index]['segments'][seg_index]
+                seg['data_size'] = size_list
+                seg['data'] = data_list
+                seg['ch_name'] = ch_name_list
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
@@ -135,15 +149,15 @@ class NIXRawIO (BaseRawIO):
                 st_idx = 0
                 for st in seg.multi_tags:
                     d = {'waveforms': []}
-                    self.unit_list['blocks'][block_index]['segments'][seg_index]['spiketrains_unit'].append(d)
+                    segd = self.unit_list['blocks'][block_index]['segments'][seg_index]
+                    segd['spiketrains_unit'].append(d)
                     for src in st.sources:
                         if st.type == 'neo.spiketrain' and [src.type == "neo.unit"]:
-                            seg = self.unit_list['blocks'][block_index]['segments'][seg_index]
-                            seg['spiketrains'].append(st.positions)
-                            seg['spiketrains_id'].append(src.id)
+                            segd['spiketrains'].append(st.positions)
+                            segd['spiketrains_id'].append(src.id)
                             if st.features[0].data.type == "neo.waveforms":
                                 waveforms = st.features[0].data
-                                seg['spiketrains_unit'][st_idx]['waveforms'] = waveforms
+                                segd['spiketrains_unit'][st_idx]['waveforms'] = waveforms
                                 # assume one spiketrain one waveform
                                 st_idx += 1
 
@@ -299,7 +313,8 @@ class NIXRawIO (BaseRawIO):
                 break
         if ev_unit == 'ms':
             event_timestamps /= 1000
-        event_times = event_timestamps.astype(dtype)  # supposing unit is second, other possibilies maybe mS microS...
+        event_times = event_timestamps.astype(dtype)
+        # supposing unit is second, other possibilies maybe mS microS...
         return event_times  # return in seconds
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
@@ -310,5 +325,6 @@ class NIXRawIO (BaseRawIO):
                 break
         if ep_unit == 'ms':
             raw_duration /= 1000
-        durations = raw_duration.astype(dtype)  # supposing unit is second, other possibilies maybe mS microS...
+        durations = raw_duration.astype(dtype)
+        # supposing unit is second, other possibilies maybe mS microS...
         return durations  # return in seconds
