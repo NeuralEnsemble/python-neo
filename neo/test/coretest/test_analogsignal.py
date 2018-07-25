@@ -524,19 +524,23 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
                                            t_start=3 * pq.ms,
                                            sampling_rate=self.signal1.sampling_rate,
-                                           units=pq.uA)
+                                           units=pq.uA,
+                                           array_annotations={'anno1': [0], 'anno2': ['C']})
         result = self.signal1.splice(signal_for_splicing, copy=False)
         assert_array_equal(result.magnitude.flatten(),
                            np.array([0.0, 1.0, 2.0, 100.0, 100.0, 100.0, 6.0, 7.0, 8.0, 9.0]))
         assert_array_equal(self.signal1, result)  # in-place
         self.assertEqual(result.segment, self.signal1.segment)
         self.assertEqual(result.channel_index, self.signal1.channel_index)
+        assert_array_equal(result.array_annotations['anno1'], np.array([23]))
+        assert_array_equal(result.array_annotations['anno2'], np.array(['A']))
 
     def test_splice_1channel_with_copy(self):
         signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1],
                                            t_start=3 * pq.ms,
                                            sampling_rate=self.signal1.sampling_rate,
-                                           units=pq.uA)
+                                           units=pq.uA,
+                                           array_annotations={'anno1': [0], 'anno2': ['C']})
         result = self.signal1.splice(signal_for_splicing, copy=True)
         assert_array_equal(result.magnitude.flatten(),
                            np.array([0.0, 1.0, 2.0, 100.0, 100.0, 100.0, 6.0, 7.0, 8.0, 9.0]))
@@ -544,6 +548,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                            np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]))
         self.assertIs(result.segment, None)
         self.assertIs(result.channel_index, None)
+        assert_array_equal(result.array_annotations['anno1'], np.array([23]))
+        assert_array_equal(result.array_annotations['anno2'], np.array(['A']))
 
     def test_splice_2channels_inplace(self):
         arr_ann1 = {'index': np.arange(10, 12)}

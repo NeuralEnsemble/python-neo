@@ -837,7 +837,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         self.assertEqual(merged23.description, 'test signal')
         self.assertEqual(merged13.file_origin, 'merge(None, testfile.txt)')
         self.assertEqual(merged23.file_origin, 'testfile.txt')
-        
+
         assert_arrays_equal(merged13.array_annotations['anno1'], np.arange(11))
         self.assertNotIn('anno2', merged13.array_annotations)
         self.assertNotIn('anno3', merged13.array_annotations)
