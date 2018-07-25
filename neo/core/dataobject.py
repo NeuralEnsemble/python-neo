@@ -29,7 +29,7 @@ class DataObject(BaseNeo, pq.Quantity):
         if array_annotations is None:
             self.array_annotations = {}
         else:
-            self.array_annotations = self._check_array_annotations(array_annotations)
+            self.array_annotate(**self._check_array_annotations(array_annotations))
 
         BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin, **annotations)
 
@@ -61,12 +61,29 @@ class DataObject(BaseNeo, pq.Quantity):
         else:
             # TODO: Are those assumptions correct?
             # Number of items is last dimension in current objects
-            own_length = self.shape[-1]
+            try:
+                own_length = self.shape[-1]
+            # FIXME This is because __getitem__[scalar] returns a scalar Epoch/Event/SpikeTrain
+            # To be removed when __getitem__[scalar] is 'fixed'
+            except IndexError:
+                    own_length = 1
 
             # Escape check if empty array or list and just annotate an empty array
             # TODO: Does this make sense?
             if len(value) == 0:
-                value = np.ndarray(own_length)
+                if isinstance(value, np.ndarray):
+                    # Uninitialized array annotation containing default values (i.e. 0, '', ...)
+                    # Quantity preserves units
+                    if isinstance(value, pq.Quantity):
+                        value = np.zeros(own_length, dtype=value.dtype)*value.units
+                    # Simple array only preserves dtype
+                    else:
+                        value = np.zeros(own_length, dtype=value.dtype)
+
+                else:
+                    raise ValueError("Empty array annotation without data type detected. If you "
+                                     "wish to create an uninitialized array annotation, please "
+                                     "use a numpy.ndarray containing the data type you want.")
                 val_length = own_length
             else:
                 # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
@@ -74,10 +91,16 @@ class DataObject(BaseNeo, pq.Quantity):
                 val_length = len(value)
 
             if not own_length == val_length:
-                raise ValueError("Incorrect length of array annotation: {} != {}".format(val_length, own_length))
+                raise ValueError("Incorrect length of array annotation: {} != {}".
+                                 format(val_length, own_length))
 
             for element in value:
-                if isinstance(element, (list, np.ndarray)):
+                # Nested array annotations not allowed currently
+                # So if an entry is a list or a np.ndarray, it's not allowed,
+                # except if it's a quantity of length 1
+                if isinstance(element, list) or \
+                        (isinstance(element, np.ndarray) and not
+                        (isinstance(element, pq.Quantity) and element.shape == ())):
                     raise ValueError("Array annotations should only be 1-dimensional")
 
                 # Perform regular check for elements of array or list
