@@ -113,8 +113,6 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epc.labels, np.array(['test epoch 1',
                                                   'test epoch 2',
                                                   'test epoch 3'], dtype='S'))
-        assert_arrays_equal(epc.array_annotations['labels'], np.array(['a', 'b', 'c']))
-        assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
         self.assertEqual(epc.name, 'test')
         self.assertEqual(epc.description, 'tester')
         self.assertEqual(epc.file_origin, 'test.file')
@@ -122,6 +120,8 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(epc.annotations['test1'], 1.1)
         self.assertEqual(epc.annotations['test2'], 'y1')
         self.assertTrue(epc.annotations['test3'])
+        assert_arrays_equal(epc.array_annotations['labels'], np.array(['a', 'b', 'c']))
+        assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
 
     def test_Epoch_repr(self):
         params = {'test2': 'y1', 'test3': True}
@@ -548,12 +548,16 @@ class TestEpoch(unittest.TestCase):
         times = [2, 3, 4, 5]
         durations = [0.1, 0.2, 0.3, 0.4]
         labels = ["A", "B", "C", "D"]
-        epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels)
+        arr_ann = {'index': np.arange(4), 'test': ['a', 'b', 'c', 'd']}
+        epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels,
+                    array_annotations=arr_ann)
         single_epoch = epc[1:3]
         self.assertIsInstance(single_epoch, Epoch)
         assert_array_equal(single_epoch.times, np.array([3.0, 4.0]))
         assert_array_equal(single_epoch.durations, np.array([0.2, 0.3]))
         assert_array_equal(single_epoch.labels, np.array(["B", "C"]))
+        assert_arrays_equal(single_epoch.array_annotations['index'], np.arange(1, 3))
+        assert_arrays_equal(single_epoch.array_annotations['test'], np.array(['b', 'c']))
 
 
 class TestDuplicateWithNewData(unittest.TestCase):
