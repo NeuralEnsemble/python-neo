@@ -73,18 +73,24 @@ class NeuralynxRawIO(BaseRawIO):
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
         self.internal_event_ids = []
+        self._empty_ncs = [] # this list contains filenames of empty records
 
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
         signal_annotations = []
         unit_annotations = []
         event_annotations = []
+
         for filename in sorted(os.listdir(self.dirname)):
             filename = os.path.join(self.dirname, filename)
 
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             if ext not in self.extensions:
+                continue
+
+            if (os.path.getsize(filename)<=HEADER_SIZE) and (ext == 'ncs'):
+                self._empty_ncs.append(filename)
                 continue
 
             # All file have more or less the same header structure

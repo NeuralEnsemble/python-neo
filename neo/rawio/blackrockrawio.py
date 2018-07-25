@@ -237,7 +237,7 @@ class BlackrockRawIO(BaseRawIO):
                 self.__nev_header_reader[self.__nev_spec]()
 
             self.nev_data = self.__nev_data_reader[self.__nev_spec]()
-            spikes = self.nev_data['Spikes']
+            spikes, spike_segment_ids = self.nev_data['Spikes']
 
             # scan all channel to get number of Unit
             unit_channels = []
@@ -264,7 +264,7 @@ class BlackrockRawIO(BaseRawIO):
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
-            events_data = self.nev_data['NonNeural']
+            events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
             for ev_name in ev_dict:
                 event_channels.append((ev_name, '', 'event'))
@@ -282,7 +282,8 @@ class BlackrockRawIO(BaseRawIO):
             self.__nsx_basic_header[nsx_nb], self.__nsx_ext_header[nsx_nb] = \
                 self.__nsx_header_reader[spec](nsx_nb)
 
-            # Read nsx data header(s) for nsxdef get_analogsignal_shape(self, block_index, seg_index):
+            # Read nsx data header(s)
+            # for nsxdef get_analogsignal_shape(self, block_index, seg_index):
             self.__nsx_data_header[nsx_nb] = self.__nsx_dataheader_reader[spec](nsx_nb)
 
         # We can load only one for one class instance
@@ -290,12 +291,17 @@ class BlackrockRawIO(BaseRawIO):
             self.nsx_to_load = max(self._avail_nsx)
 
         if self.nsx_to_load is not None and \
-                        self.__nsx_spec[self.nsx_to_load] == '2.1' and \
+                self.__nsx_spec[self.nsx_to_load] == '2.1' and \
                 not self._avail_files['nev']:
             pass
             # Because rescaling to volts requires information from nev file (dig_factor)
             # Remove if raw loading becomes possible
             # raise IOError("For loading Blackrock file version 2.1 .nev files are required!")
+
+        # This requires nsX to be parsed already
+        # Needs to be called when no nsX are available as well in order to warn the user
+        if self._avail_files['nev']:
+            self.__match_nsx_and_nev_segment_ids(self.nsx_to_load)
 
         if self.nsx_to_load is not None:
             spec = self.__nsx_spec[self.nsx_to_load]
@@ -343,6 +349,8 @@ class BlackrockRawIO(BaseRawIO):
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype,
                                      units, gain, offset, group_id,))
 
+            self.__delete_empty_segments()
+
             # t_start/t_stop for segment are given by nsx limits or nev limits
             self._sigs_t_starts = []
             self._seg_t_starts, self._seg_t_stops = [], []
@@ -352,46 +360,57 @@ class BlackrockRawIO(BaseRawIO):
                     t_start = 0.
                 else:
                     t_start = self.__nsx_data_header[self.nsx_to_load][data_bl]['timestamp'] / \
-                              sig_sampling_rate
+                        self.__nsx_basic_header[self.nsx_to_load]['timestamp_resolution']
+                self._sigs_t_starts.append(t_start)
+
                 t_stop = t_start + length / sig_sampling_rate
+
                 if self._avail_files['nev']:
                     max_nev_time = 0
-                    for k, data in self.nev_data.items():
-                        if data.size > 0:
-                            t = data[-1]['timestamp'] / self.__nev_basic_header[
+                    for k, (data, ev_ids) in self.nev_data.items():
+                        segment_mask = ev_ids == data_bl
+                        if data[segment_mask].size > 0:
+                            t = data[segment_mask][-1]['timestamp'] / self.__nev_basic_header[
                                 'timestamp_resolution']
                             max_nev_time = max(max_nev_time, t)
                     if max_nev_time > t_stop:
                         t_stop = max_nev_time
                     min_nev_time = max_nev_time
-                    for k, data in self.nev_data.items():
-                        if data.size > 0:
-                            t = data[0]['timestamp'] / self.__nev_basic_header[
+                    for k, (data, ev_ids) in self.nev_data.items():
+                        segment_mask = ev_ids == data_bl
+                        if data[segment_mask].size > 0:
+                            t = data[segment_mask][0]['timestamp'] / self.__nev_basic_header[
                                 'timestamp_resolution']
                             min_nev_time = min(min_nev_time, t)
                     if min_nev_time < t_start:
                         t_start = min_nev_time
                 self._seg_t_starts.append(t_start)
                 self._seg_t_stops.append(float(t_stop))
-                self._sigs_t_starts.append(float(t_start))
 
         else:
-            # not signal at all so 1 segment
-            self._nb_segment = 1
+            # When only nev is available, only segments that are documented in nev can be detected
 
-            # no nsx so use nev min/max timestamp
-            max_nev_time = 0.
-            for k, data in self.nev_data.items():
-                if data.size > 0:
-                    t = data[-1]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                    max_nev_time = max(max_nev_time, t)
-            min_nev_time = max_nev_time
-            for k, data in self.nev_data.items():
-                if data.size > 0:
-                    t = data[0]['timestamp'] / self.__nev_basic_header['timestamp_resolution']
-                    min_nev_time = min(min_nev_time, t)
-            self._sigs_t_starts = [min_nev_time]
-            self._seg_t_starts, self._seg_t_stops = [min_nev_time], [max_nev_time]
+            max_nev_times = {}
+            min_nev_times = {}
+
+            # Find maximal and minimal time for each nev segment
+            for k, (data, ev_ids) in self.nev_data.items():
+                for i in np.unique(ev_ids):
+                    mask = [ev_ids == i]
+                    curr_data = data[mask]
+                    if curr_data.size > 0:
+                        if max(curr_data['timestamp']) >= max_nev_times.get(i, 0):
+                            max_nev_times[i] = max(curr_data['timestamp'])
+                        if min(curr_data['timestamp']) <= min_nev_times.get(i,
+                                                                            max_nev_times[i]):
+                            min_nev_times[i] = min(curr_data['timestamp'])
+
+            # Calculate t_start and t_stop for each segment in seconds
+            resolution = self.__nev_basic_header['timestamp_resolution']
+            self._seg_t_starts = [v / float(resolution) for k, v in sorted(min_nev_times.items())]
+            self._seg_t_stops = [v / float(resolution) for k, v in sorted(max_nev_times.items())]
+            self._nb_segment = len(self._seg_t_starts)
+            self._sigs_t_starts = [None] * self._nb_segment
 
         # finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
@@ -476,10 +495,10 @@ class BlackrockRawIO(BaseRawIO):
                         get_idx]
                     chidx_ann['connector_pinID'] = self.__nsx_ext_header[k]['connector_pin'][
                         get_idx]
-                    chidx_ann['nsx_hi_freq_corner'] = self.__nsx_ext_header[k][
-                                                          'hi_freq_corner'][get_idx] / 1000. * pq.Hz
-                    chidx_ann['nsx_lo_freq_corner'] = self.__nsx_ext_header[k][
-                                                          'lo_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_hi_freq_corner'] = \
+                        self.__nsx_ext_header[k]['hi_freq_corner'][get_idx] / 1000. * pq.Hz
+                    chidx_ann['nsx_lo_freq_corner'] = \
+                        self.__nsx_ext_header[k]['lo_freq_corner'][get_idx] / 1000. * pq.Hz
                     chidx_ann['nsx_hi_freq_order'] = self.__nsx_ext_header[k][
                         'hi_freq_order'][get_idx]
                     chidx_ann['nsx_lo_freq_order'] = self.__nsx_ext_header[k][
@@ -541,7 +560,6 @@ class BlackrockRawIO(BaseRawIO):
         return memmap_data.shape[0]
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        # same as segment starts
         return self._sigs_t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
@@ -556,7 +574,7 @@ class BlackrockRawIO(BaseRawIO):
     def _spike_count(self, block_index, seg_index, unit_index):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
-        all_spikes = self.nev_data['Spikes']
+        all_spikes = self.nev_data['Spikes'][0]
         mask = (all_spikes['packet_id'] == channel_id) & (all_spikes['unit_class_nb'] == unit_id)
         if self._nb_segment == 1:
             # very fast
@@ -572,10 +590,11 @@ class BlackrockRawIO(BaseRawIO):
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
 
-        all_spikes = self.nev_data['Spikes']
+        all_spikes, event_segment_ids = self.nev_data['Spikes']
 
         # select by channel_id and unit_id
-        mask = (all_spikes['packet_id'] == channel_id) & (all_spikes['unit_class_nb'] == unit_id)
+        mask = ((all_spikes['packet_id'] == channel_id) & (all_spikes['unit_class_nb'] == unit_id)
+                & (event_segment_ids == seg_index))
         unit_spikes = all_spikes[mask]
 
         timestamp = unit_spikes['timestamp']
@@ -614,9 +633,10 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
         channel_id, unit_id = self.internal_unit_ids[unit_index]
-        all_spikes = self.nev_data['Spikes']
+        all_spikes, event_segment_ids = self.nev_data['Spikes']
 
-        mask = (all_spikes['packet_id'] == channel_id) & (all_spikes['unit_class_nb'] == unit_id)
+        mask = ((all_spikes['packet_id'] == channel_id) & (all_spikes['unit_class_nb'] == unit_id)
+                & (event_segment_ids == seg_index))
         unit_spikes = all_spikes[mask]
 
         wf_dtype = self.__nev_params('waveform_dtypes')[channel_id]
@@ -633,11 +653,12 @@ class BlackrockRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data = self.nev_data['NonNeural']
+        events_data, event_segment_ids = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         if self._nb_segment == 1:
             # very fast
-            nb = int(np.sum(ev_dict['mask']))
+            nb = int(np.sum(mask))
         else:
             # must clip in time time range
             timestamp = events_data[ev_dict['mask']]['timestamp']
@@ -648,11 +669,12 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data = self.nev_data['NonNeural']
+        events_data, event_segment_ids = self.nev_data['NonNeural']
         ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
 
-        timestamp = events_data[ev_dict['mask']]['timestamp']
-        labels = events_data[ev_dict['mask']][ev_dict['field']]
+        timestamp = events_data[mask]['timestamp']
+        labels = events_data[mask][ev_dict['field']]
 
         # time clip
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
@@ -915,7 +937,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def __read_nev_header(self, ext_header_variants):
         """
-        Extract nev header information from a 2.1 .nsx file
+        Extract nev header information from a of specific .nsx header variant
         """
         filename = '.'.join([self._filenames['nev'], 'nev'])
 
@@ -972,6 +994,7 @@ class BlackrockRawIO(BaseRawIO):
                 ext_header_variants[packet_id]]
 
             nev_ext_header[packet_id] = raw_ext_header.view(dt2)[mask]
+
         return nev_basic_header, nev_ext_header
 
     def __read_nev_header_variant_a(self):
@@ -1045,11 +1068,159 @@ class BlackrockRawIO(BaseRawIO):
         masks = self.__nev_data_masks(raw_data['packet_id'])
         types = self.__nev_data_types(data_size)
 
+        event_segment_ids = self.__get_event_segment_ids(raw_data, masks, nev_data_masks)
+
         data = {}
         for k, v in nev_data_masks.items():
-            data[k] = raw_data.view(types[k][nev_data_types[k]])[masks[k][v]]
+            mask = masks[k][v]
+            data[k] = (raw_data.view(types[k][nev_data_types[k]])[mask], event_segment_ids[mask])
 
         return data
+
+    def __get_reset_event_mask(self, raw_event_data, masks, nev_data_masks):
+        """
+        Extract mask for reset comment events in 2.3 .nev file
+        """
+        restart_mask = np.logical_and(masks['Comments'][nev_data_masks['Comments']],
+                                      raw_event_data['value'] ==
+                                      b'\x00\x00\x00\x00\x00\x00critical load restart')
+        # TODO: Fix hardcoded number of bytes
+        return restart_mask
+
+    def __get_event_segment_ids(self, raw_event_data, masks, nev_data_masks):
+        """
+        Construct array of corresponding segment ids for each event for nev version 2.3
+        """
+
+        if self.__nev_spec in ['2.1', '2.2']:
+            # No pause or reset mechanism present for file version 2.1 and 2.2
+            return np.zeros(len(raw_event_data), dtype=int)
+
+        elif self.__nev_spec == '2.3':
+            reset_ev_mask = self.__get_reset_event_mask(raw_event_data, masks, nev_data_masks)
+            reset_ev_ids = np.where(reset_ev_mask)[0]
+
+            # consistency check for monotone increasing time stamps
+            # explicitely converting to int to allow for negative diff values
+            jump_ids = \
+                np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
+            overlap = np.isin(jump_ids, reset_ev_ids)
+            if not all(overlap):
+                # additional resets occurred without a reset event being stored
+                additional_ids = jump_ids[np.invert(overlap)]
+                warnings.warn('Detected {} undocumented segments within '
+                              'nev data after timestamps {}.'
+                              ''.format(len(additional_ids), additional_ids))
+                reset_ev_ids = sorted(np.unique(np.concatenate((reset_ev_ids, jump_ids))))
+
+            event_segment_ids = np.zeros(len(raw_event_data), dtype=int)
+            for reset_event_id in reset_ev_ids:
+                event_segment_ids[reset_event_id:] += 1
+
+            self._nb_segment_nev = len(reset_ev_ids) + 1
+            return event_segment_ids
+
+    def __match_nsx_and_nev_segment_ids(self, nsx_nb):
+        """
+        Ensure matching ids of segments detected in nsx and nev file for version 2.3
+        """
+
+        # NSX required for matching, if not available, warn the user
+        if not self._avail_nsx:
+            warnings.warn("No nsX available so it cannot be checked whether "
+                          "the segments in nev are all correct. Most importantly, "
+                          "recording pauses will not be detected", UserWarning)
+            return
+
+        # Only needs to be done for nev version 2.3
+        if self.__nev_spec == '2.3':
+            nsx_offset = self.__nsx_data_header[nsx_nb][0]['timestamp']
+            # Multiples of 1/30.000s that pass between two nsX samples
+            nsx_period = self.__nsx_basic_header[self.nsx_to_load]['period']
+            # NSX segments needed as dict and list
+            nonempty_nsx_segments = {}
+            list_nonempty_nsx_segments = []
+            # Counts how many segments CAN be created from nev
+            nb_possible_nev_segments = self._nb_segment_nev
+
+            # Nonempty segments are those containing at least 2 samples
+            # These have to be able to be mapped to nev
+            for k, v in sorted(self.__nsx_data_header[nsx_nb].items()):
+                if v['nb_data_points'] > 1:
+                    nonempty_nsx_segments[k] = v
+                    list_nonempty_nsx_segments.append(v)
+
+            # Account for paused segments
+            # This increases nev event segment ids if from the nsx an additional segment is found
+            # If one new segment, i.e. that could not be determined from the nev was found,
+            # all following ids need to be increased to account for the additional segment before
+            for k, (data, ev_ids) in self.nev_data.items():
+
+                # Check all nonempty nsX segments
+                for i, seg in enumerate(list_nonempty_nsx_segments[:]):
+
+                    # Last timestamp in this nsX segment
+                    # Not subtracting nsX offset from end because spike extraction might continue
+                    end_of_current_nsx_seg = seg['timestamp'] + \
+                                seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
+
+                    mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
+                                                       end_of_current_nsx_seg + nsx_period)]
+
+                    # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
+                    # Spike should belong to segment before
+                    mask_outside = [(ev_ids == i) & (data['timestamp'] < int(seg['timestamp']) -
+                                                     nsx_offset - nsx_period)]
+                    if len(data[mask_outside]) > 0:
+                        warnings.warn("Spikes outside any segment. Detected on segment #{}".
+                                      format(i))
+                        ev_ids[mask_outside] -= 1
+
+                    # If some nev data are outside of this nsX segment, increase their segment ids
+                    # and the ids of all following segments. They are checked for the next nsX
+                    # segment then. If they do not fit any of them,
+                    # a warning will be shown, indicating how far outside the segment spikes are
+                    # If they fit the next segment, more segments are possible in nev,
+                    # because a new one has been discovered
+                    if len(data[mask_after_seg]) > 0:
+                        # Warning if spikes are after last segment
+                        if i == len(list_nonempty_nsx_segments) - 1:
+                            timestamp_resolution = self.__nsx_params[self.__nsx_spec[
+                                self.nsx_to_load]]('timestamp_resolution', self.nsx_to_load)
+                            time_after_seg = (data[mask_after_seg]['timestamp'][-1] -
+                                              end_of_current_nsx_seg) / timestamp_resolution
+                            warnings.warn("Spikes {}s after last segment.".format(time_after_seg))
+                            # Break out of loop because it's the last iteration
+                            # and the spikes should stay connected to last segment
+                            break
+
+                        # If reset and no segment detected in nev, then these segments cannot be
+                        # distinguished in nev, which is a big problem
+                        # XXX 96 is an arbitrary number based on observations in available files
+                        elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
+                            # If not all definitely belong to the next segment,
+                            # then it cannot be distinguished where some belong
+                            if len(data[ev_ids == i]) != len(data[mask_after_seg]):
+                                raise ValueError("Some segments in nsX cannot be detected in nev")
+
+                        # Actual processing if no problem has occurred
+                        nb_possible_nev_segments += 1
+                        ev_ids[ev_ids > i] += 1
+                        ev_ids[mask_after_seg] += 1
+
+            # consistency check: same number of segments for nsx and nev data
+            assert nb_possible_nev_segments == len(nonempty_nsx_segments), \
+                ('Inconsistent ns{0} and nev file. {1} segments present in .nev file, but {2} in '
+                 'ns{0} file.'.format(self.nsx_to_load, nb_possible_nev_segments,
+                                      len(nonempty_nsx_segments)))
+
+            new_nev_segment_id_mapping = dict(zip(range(nb_possible_nev_segments),
+                                                  sorted(list(nonempty_nsx_segments))))
+
+            # replacing event ids by matched event ids in place
+            for k, (data, ev_ids) in self.nev_data.items():
+                if len(ev_ids):
+                    ev_ids[:] = np.vectorize(new_nev_segment_id_mapping.__getitem__)(ev_ids)
 
     def __read_nev_data_variant_a(self):
         """
@@ -1555,7 +1726,8 @@ class BlackrockRawIO(BaseRawIO):
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
-        return nsx_parameters  # Returns complete dictionary because then it does not need to be called so often
+        # Returns complete dictionary because then it does not need to be called so often
+        return nsx_parameters
 
     def __get_nsx_param_variant_b(self, param_name, nsx_nb):
         """
@@ -1630,6 +1802,51 @@ class BlackrockRawIO(BaseRawIO):
                 'desc': 'Periodic sampling event of a certain frequency'}})
 
         return event_types
+
+    def __delete_empty_segments(self):
+        """
+        If there are empty segments (e.g. due to a reset or clock synchronization across
+        two systems), these can be discarded.
+        If this is done, all the data and data_headers need to be remapped to become a range
+        starting from 0 again. Nev data are mapped accordingly to stay with their corresponding
+        segment in the nsX data.
+        """
+
+        nb_empty_segments = 0
+        for data_bl in range(self._nb_segment):
+            length = self.nsx_data[data_bl].shape[0]
+            # Discard empty segments
+            if length < 2:
+                nb_empty_segments += 1
+                self.nsx_data.pop(data_bl)
+                self.__nsx_data_header[self.nsx_to_load].pop(data_bl)
+                continue
+
+        # Keys need to be increasing from 0 to maximum in steps of 1
+        # To ensure this after removing empty segments, some keys need to be changed
+        for i in range(self._nb_segment):
+            # If this key does not exist, reduce all following keys by 1,
+            # so the keys become a range starting from 0
+            if i not in self.nsx_data:
+                self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
+                                 self.nsx_data.items()}
+                data_header = self.__nsx_data_header[self.nsx_to_load]
+                data_header = {key - 1 if key > i else key: value for (key, value) in
+                               data_header.items()}
+                self.__nsx_data_header[self.nsx_to_load] = data_header
+                # Also remap nev data, ev_ids are the equivalent to keys above
+                if self._avail_files['nev']:
+                    for k, (data, ev_ids) in self.nev_data.items():
+                        # If this segment id does not exist, reduce all following by 1
+                        # to make them a range starting from 0
+                        if i not in ev_ids:
+                            ev_ids[ev_ids > i] -= 1
+                        else:
+                            raise ValueError("A segment in nsX was omitted but there were"
+                                             "spikes matched to it.")
+
+        # Empty segments were discarded, thus there may be less segments now
+        self._nb_segment -= nb_empty_segments
 
     def __get_nonneural_evtypes_variant_b(self, data):
         """

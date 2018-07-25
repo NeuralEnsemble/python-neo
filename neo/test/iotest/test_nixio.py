@@ -35,6 +35,12 @@ try:
 except ImportError:
     HAVE_NIX = False
 
+try:
+    from unittest import mock
+    SKIPMOCK = False
+except ImportError:
+    SKIPMOCK = True
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOTest(unittest.TestCase):
@@ -182,8 +188,7 @@ class NixIOTest(unittest.TestCase):
         nixmd = nixdalist[0].metadata
         self.assertTrue(all(nixmd == da.metadata for da in nixdalist))
         neounit = neosig.units
-        for sig, da in zip(np.transpose(neosig),
-                           sorted(nixdalist, key=lambda d: d.name)):
+        for sig, da in zip(np.transpose(neosig), nixdalist):
             self.compare_attr(neosig, da)
             daquant = create_quantity(da[:], da.unit)
             np.testing.assert_almost_equal(sig, daquant)
@@ -589,9 +594,11 @@ class NixIOTest(unittest.TestCase):
         signal = cls.rquant(1, pq.V)
         blk = Block()
         blk.annotate(**cls.rdict(3))
+        cls.populate_dates(blk)
 
         seg = Segment()
         seg.annotate(**cls.rdict(4))
+        cls.populate_dates(seg)
         blk.segments.append(seg)
 
         asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz)
@@ -645,8 +652,8 @@ class NixIOWriteTest(NixIOTest):
         self.reader.close()
         shutil.rmtree(self.tempdir)
 
-    def write_and_compare(self, blocks):
-        self.writer.write_all_blocks(blocks)
+    def write_and_compare(self, blocks, use_obj_names=False):
+        self.writer.write_all_blocks(blocks, use_obj_names)
         self.compare_blocks(blocks, self.reader.blocks)
         self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
         self.compare_blocks(blocks, self.reader.blocks)
@@ -696,7 +703,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        asig = AnalogSignal(signal=self.rquant((10, 3), pq.mV),
+        asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
                             sampling_rate=pq.Quantity(10, "Hz"))
         seg.analogsignals.append(asig)
         self.write_and_compare([block])
@@ -705,7 +712,7 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment("ir signal seg")
         anotherblock.segments.append(seg)
         irsig = IrregularlySampledSignal(
-            signal=np.random.random((20, 3)),
+            signal=np.random.random((20, 30)),
             times=self.rquant(20, pq.ms, True),
             units=pq.A
         )
@@ -723,7 +730,7 @@ class NixIOWriteTest(NixIOTest):
 
         block.segments[0].irregularlysampledsignals.append(
             IrregularlySampledSignal(times=np.random.random(10),
-                                     signal=np.random.random((10, 3)),
+                                     signal=np.random.random((10, 13)),
                                      units="mV", time_units="s",
                                      dtype=np.float,
                                      name="some sort of signal",
@@ -738,7 +745,7 @@ class NixIOWriteTest(NixIOTest):
 
         units = pq.CompoundUnit("1/30000*V")
         srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
-        asig = AnalogSignal(signal=self.rquant((10, 3), units),
+        asig = AnalogSignal(signal=self.rquant((10, 23), units),
                             sampling_rate=srate)
         seg.analogsignals.append(asig)
 
@@ -889,8 +896,7 @@ class NixIOWriteTest(NixIOTest):
                                                       t_stop=times[-1] + pq.s,
                                                       units=pq.s))
             for chidx in range(nchx):
-                chx = ChannelIndex(name="chx{}".format(chidx),
-                                   index=[1, 2],
+                chx = ChannelIndex(index=[1, 2],
                                    channel_ids=[11, 22])
                 blk.channel_indexes.append(chx)
                 for unidx in range(nunits):
@@ -898,6 +904,172 @@ class NixIOWriteTest(NixIOTest):
                     chx.units.append(unit)
         self.writer.write_all_blocks(blocks)
         self.compare_blocks(blocks, self.reader.blocks)
+
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+
+    def test_name_objects_write(self):
+        nblocks = 2
+        nsegs = 2
+        nanasig = 4
+        nirrseg = 2
+        nepochs = 3
+        nevents = 4
+        nspiketrains = 3
+        nchx = 5
+        nunits = 10
+
+        times = self.rquant(1, pq.s)
+        signal = self.rquant(1, pq.V)
+        blocks = []
+        for blkidx in range(nblocks):
+            blk = Block(name="block{}".format(blkidx))
+            blocks.append(blk)
+            for segidx in range(nsegs):
+                seg = Segment(name="seg{}".format(segidx))
+                blk.segments.append(seg)
+                for anaidx in range(nanasig):
+                    asig = AnalogSignal(
+                        name="{}:as{}".format(seg.name, anaidx),
+                        signal=signal, sampling_rate=pq.Hz
+                    )
+                    seg.analogsignals.append(asig)
+                for irridx in range(nirrseg):
+                    isig = IrregularlySampledSignal(
+                        name="{}:is{}".format(seg.name, irridx),
+                        times=times,
+                        signal=signal,
+                        time_units=pq.s
+                    )
+                    seg.irregularlysampledsignals.append(isig)
+                for epidx in range(nepochs):
+                    seg.epochs.append(
+                        Epoch(name="{}:ep{}".format(seg.name, epidx),
+                              times=times, durations=times)
+                    )
+                for evidx in range(nevents):
+                    seg.events.append(
+                        Event(name="{}:ev{}".format(seg.name, evidx),
+                              times=times)
+                    )
+                for stidx in range(nspiketrains):
+                    seg.spiketrains.append(
+                        SpikeTrain(name="{}:st{}".format(seg.name, stidx),
+                                   times=times,
+                                   t_stop=times[-1] + pq.s,
+                                   units=pq.s)
+                    )
+            for chidx in range(nchx):
+                chx = ChannelIndex(name="chx{}".format(chidx),
+                                   index=[1, 2],
+                                   channel_ids=[11, 22])
+                blk.channel_indexes.append(chx)
+                for unidx in range(nunits):
+                    unit = Unit(name="unit{}".format(unidx))
+                    chx.units.append(unit)
+
+        # put guard on _generate_nix_name
+        if not SKIPMOCK:
+            nixgenmock = mock.Mock(name="_generate_nix_name",
+                                   wraps=self.io._generate_nix_name)
+            self.io._generate_nix_name = nixgenmock
+
+        self.writer.write_block(blocks[0], use_obj_names=True)
+        self.compare_blocks([blocks[0]], self.reader.blocks)
+        self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
+        self.compare_blocks(blocks, self.reader.blocks)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
+
+        self.write_and_compare(blocks, use_obj_names=True)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
+
+        self.assertEqual(self.reader.blocks[0].name, "block0")
+
+        blocks[0].name = blocks[1].name  # name conflict
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+        blocks[0].name = "new name"
+        self.assertEqual(blocks[0].segments[1].spiketrains[1].name, "seg1:st1")
+        st0 = blocks[0].segments[0].spiketrains[0].name
+        blocks[0].segments[0].spiketrains[1].name = st0  # name conflict
+        with self.assertRaises(ValueError):
+            self.writer.write_all_blocks(blocks, use_obj_names=True)
+        with self.assertRaises(ValueError):
+            self.writer.write_block(blocks[0], use_obj_names=True)
+        if not SKIPMOCK:
+            nixgenmock.assert_not_called()
+
+    def test_name_conflicts(self):
+        # anon block
+        blk = Block()
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # two anon blocks
+        blocks = [Block(), Block()]
+        with self.assertRaises(ValueError):
+            self.io.write_all_blocks(blocks, use_obj_names=True)
+
+        # same name blocks
+        blocks = [Block(name="one"), Block(name="one")]
+        with self.assertRaises(ValueError):
+            self.io.write_all_blocks(blocks, use_obj_names=True)
+
+        # one block, two same name segments
+        blk = Block("new")
+        seg = Segment("I am the segment", a="a annoation")
+        blk.segments.append(seg)
+        seg = Segment("I am the segment", a="b annotation")
+        blk.segments.append(seg)
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        times = self.rquant(1, pq.s)
+        signal = self.rquant(1, pq.V)
+        # name conflict: analog + irregular signals
+        seg.analogsignals.append(
+            AnalogSignal(name="signal", signal=signal, sampling_rate=pq.Hz)
+        )
+        seg.irregularlysampledsignals.append(
+            IrregularlySampledSignal(name="signal", signal=signal, times=times)
+        )
+        blk = Block(name="Signal conflict Block")
+        blk.segments.append(seg)
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict: event + spiketrain
+        blk = Block(name="Event+SpikeTrain conflict Block")
+        seg = Segment(name="Event+SpikeTrain conflict Segment")
+        blk.segments.append(seg)
+        seg.events.append(Event(name="TimeyStuff", times=times))
+        seg.spiketrains.append(SpikeTrain(name="TimeyStuff", times=times,
+                                          t_stop=pq.s))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # make spiketrain anon
+        blk.segments[0].spiketrains[0].name = None
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict in channel indexes
+        blk = Block(name="ChannelIndex conflict Block")
+        blk.channel_indexes.append(ChannelIndex(name="chax", index=[1]))
+        blk.channel_indexes.append(ChannelIndex(name="chax", index=[2]))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
+
+        # name conflict in units
+        blk = Block(name="unitconf")
+        chx = ChannelIndex(name="ok", index=[100])
+        blk.channel_indexes.append(chx)
+        chx.units.append(Unit(name="IHAVEATWIN"))
+        chx.units.append(Unit(name="IHAVEATWIN"))
+        with self.assertRaises(ValueError):
+            self.io.write_block(blk, use_obj_names=True)
 
     def test_multiref_write(self):
         blk = Block("blk1")
