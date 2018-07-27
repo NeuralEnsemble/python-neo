@@ -41,6 +41,7 @@ class Test_array_annotations(unittest.TestCase):
 
         # Containing None
         none_ann = corr_ann_copy
+        # noinspection PyTypeChecker
         none_ann['anno2'] = None
         with self.assertRaises(ValueError):
             datobj._check_array_annotations(none_ann)
@@ -59,11 +60,13 @@ class Test_array_annotations(unittest.TestCase):
 
         # Scalar as array annotation raises Error if len(datobj)!=1
         scalar_ann = copy.deepcopy(corr_ann)
+        # noinspection PyTypeChecker
         scalar_ann['anno2'] = 3
         with self.assertRaises(ValueError):
             datobj._check_array_annotations(scalar_ann)
 
         # But not if len(datobj) == 1, then it's wrapped into an array
+        # noinspection PyTypeChecker
         scalar_ann['anno1'] = 'ABC'
         datobj2 = DataObject([1])
         datobj2._check_array_annotations(scalar_ann)

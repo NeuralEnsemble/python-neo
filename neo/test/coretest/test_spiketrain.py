@@ -840,6 +840,7 @@ class TestSorting(unittest.TestCase):
         self.assertEqual(train.t_stop, 10.0 * pq.s)
         assert_arrays_equal(train.array_annotations['a'], np.array([0, 2, 1]))
 
+
 class TestSlice(unittest.TestCase):
     def setUp(self):
         self.waveforms1 = np.array([[[0., 1.],
@@ -1275,7 +1276,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label' not in result.array_annotations)
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
-                         np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+                            np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
 
     def test_merge_with_waveforms(self):
         result = self.train1.merge(self.train2)
@@ -1297,7 +1298,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label' not in result.array_annotations)
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
-                         np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+                            np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
 
     def test_rescaling_units(self):
         train3 = self.train1.duplicate_with_new_data(
@@ -1316,7 +1317,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label' not in result.array_annotations)
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
-                         np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
+                            np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
 
     def test_sampling_rate(self):
         result = self.train1.merge(self.train2)
