@@ -73,7 +73,6 @@ class BaseSignal(DataObject):
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
-        # TODO: Why does this work?
         if not hasattr(self, 'array_annotations'):
             self.array_annotations = {}
 
@@ -133,7 +132,7 @@ class BaseSignal(DataObject):
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
         # TODO: If e.g. adding another signal, what is supposed to happen with array annotations?
-        # _Copy_data_complement can't always copy array annotations,
+        # _copy_data_complement can't always copy array annotations,
         # so this needs to be done locally
         new_signal.array_annotations = copy.deepcopy(self.array_annotations)
         return new_signal
@@ -166,8 +165,9 @@ class BaseSignal(DataObject):
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
-        # Note: Array annotations are not copied here, because it is not ensured that the same number of signals is used
-        # and they would possibly make no sense when combined with another signal
+        # Note: Array annotations are not copied here, because it is not ensured
+        # that the same number of signals is used and they would possibly make no sense
+        # when combined with another signal
         return new
 
     def _copy_data_complement(self, other):
@@ -182,7 +182,8 @@ class BaseSignal(DataObject):
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
 
-        # Note: Array annotations cannot be copied because they belong to their respective time series
+        # Note: Array annotations cannot be copied
+        # because they belong to their respective time series
 
     def __rsub__(self, other, *args):
         '''
@@ -270,7 +271,8 @@ class BaseSignal(DataObject):
         merged_array_annotations = {}
         for key in self.array_annotations.keys():
             try:
-                merged_array_annotations[key] = np.append(self.array_annotations[key], other.array_annotations[key])
+                merged_array_annotations[key] = np.append(self.array_annotations[key],
+                                                          other.array_annotations[key])
             except KeyError:
                 continue
         kwargs['array_annotations'] = merged_array_annotations

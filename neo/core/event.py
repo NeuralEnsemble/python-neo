@@ -210,7 +210,8 @@ class Event(DataObject):
         '''
         Copy the metadata from another :class:`Event`.
         '''
-        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
+        # Note: Array annotations cannot be copied
+        # because they are linked to their respective timestamps
         for attr in ("labels", "name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, getattr(other, attr, None))

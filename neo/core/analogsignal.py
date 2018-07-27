@@ -277,13 +277,13 @@ class AnalogSignal(BaseSignal):
         else:
             return None
 
-    def __getitem__(self, i):   # TODO: IN BASESIGNAL, ARRAYANNOTATIONS RICHTIG SLICEN
+    def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
         obj = super(AnalogSignal, self).__getitem__(i)
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
-            obj = pq.Quantity(obj.magnitude, units=obj.units)   # TODO: Should this be a quantity???
+            obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
             j, k = i
             if isinstance(j, (int, np.integer)):  # extract a quantity array
