@@ -1344,7 +1344,6 @@ class TestMerge(unittest.TestCase):
             self.train2.merge(train3)
 
 
-# TODO: HIER WEITER
 class TestDuplicateWithNewData(unittest.TestCase):
     def setUp(self):
         self.waveforms = np.array([[[0., 1.],

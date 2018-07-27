@@ -166,7 +166,7 @@ class TestEpoch(unittest.TestCase):
                                       'test epoch 2 3'], dtype='S'),
                      name='test', description='tester 2',
                      file_origin='test.file',
-                     test1=1, array_annotations=arr_ann2,**params2)
+                     test1=1, array_annotations=arr_ann2, **params2)
         epctarg = Epoch([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
                         durations=[20, 40, 60, 3000, 5000, 7000] * pq.ns,
                         labels=np.array(['test epoch 1 1',
@@ -299,7 +299,7 @@ class TestEpoch(unittest.TestCase):
                                      'test epoch 3'], dtype='S'),
                     name='test', description='tester',
                     file_origin='test.file',
-                    test1=1, array_annotations=arr_ann,**params)
+                    test1=1, array_annotations=arr_ann, **params)
         epc.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(epc)
 
@@ -410,7 +410,7 @@ class TestEpoch(unittest.TestCase):
                                      'test epoch 3'], dtype='S'),
                     name='test', description='tester',
                     file_origin='test.file',
-                    test1=1, array_annotations=arr_ann,**params)
+                    test1=1, array_annotations=arr_ann, **params)
         epc.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(epc)
 
