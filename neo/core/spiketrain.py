@@ -396,7 +396,6 @@ class SpikeTrain(DataObject):
         # Add empty array annotations, because they cannot always be copied,
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
-        # TODO: Why does this work?
         if not hasattr(self, 'array_annotations'):
             self.array_annotations = {}
 
