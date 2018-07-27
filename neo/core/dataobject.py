@@ -9,9 +9,8 @@ import copy
 
 import quantities as pq
 import numpy as np
-# TODO: Deos this make sense? Should the _ be removed?
-from neo.core.baseneo import BaseNeo, _check_annotations, ALLOWED_ANNOTATION_TYPES
-#import neo.core.basesignal # import BaseSignal
+# TODO: _check_annotations?
+from neo.core.baseneo import BaseNeo, _check_annotations
 
 
 # TODO: Add array annotations to all docstrings
@@ -22,8 +21,9 @@ class DataObject(BaseNeo, pq.Quantity):
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
                  **annotations):
         """
-        This method is called from each data object and initializes the newly created object by adding array annotations
-        and calling __init__ of the super class, where more annotations and attributes are processed.
+        This method is called from each data object and initializes the newly created object by
+        adding array annotations and calling __init__ of the super class, where more annotations
+        and attributes are processed.
         """
 
         if array_annotations is None:
@@ -31,10 +31,11 @@ class DataObject(BaseNeo, pq.Quantity):
         else:
             self.array_annotate(**self._check_array_annotations(array_annotations))
 
-        BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin, **annotations)
+        BaseNeo.__init__(self, name=name, description=description,
+                         file_origin=file_origin, **annotations)
 
     # TODO: Okay to make it bound to instance instead of static like _check_annotations?
-    def _check_array_annotations(self, value):  # TODO: Is there anything else that can be checked here?
+    def _check_array_annotations(self, value):
 
         """
         Recursively check that value is either an array or list containing only "simple" types
@@ -180,8 +181,10 @@ class DataObject(BaseNeo, pq.Quantity):
 
         """
         Return dictionary of array annotations at a given index or list of indices
-        :param index: int, list, numpy array: The index (indices) from which the annotations are extracted
-        :return: dictionary of values or numpy arrays containing all array annotations for given index
+        :param index: int, list, numpy array: The index (indices) from which the annotations
+                      are extracted
+        :return: dictionary of values or numpy arrays containing all array annotations
+                 for given index
 
         Example:
         >>> obj.array_annotate(key1=[value00, value01, value02], key2=[value10, value11, value12])
@@ -205,14 +208,17 @@ class DataObject(BaseNeo, pq.Quantity):
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:
             return self.copy()
-        # The following are from BaseSignal.rescale, where I had the same implementation:
-        # TODO: Check why it does not work with units=dim (dimensionality)!!!
-        # TODO: Find out, how to validate units without altering them:
-        # Raised error in validate_dimensionality???
-        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
-        # Expected behavior is deepcopy, so trying this
+
+        # Rescale the object into a new object
+        # Works for all objects currently
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim),
+                                           units=units)
+
+        # Expected behavior is deepcopy, so deepcopying array_annotations
         obj.array_annotations = copy.deepcopy(self.array_annotations)
+
         obj.segment = self.segment
+
         return obj
 
     # Needed to implement this so array annotations are copied as well, ONLY WHEN copying 1:1
