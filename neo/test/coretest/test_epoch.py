@@ -4,6 +4,7 @@ Tests of the neo.core.epoch.Epoch class
 """
 
 import unittest
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -184,7 +185,18 @@ class TestEpoch(unittest.TestCase):
         assert_neo_object_is_compliant(epc2)
         assert_neo_object_is_compliant(epctarg)
 
-        epcres = epc1.merge(epc2)
+        with warnings.catch_warnings(record=True) as w:
+            epcres = epc1.merge(epc2)
+
+            self.assertTrue(len(w) == 1)
+            self.assertEqual(w[0].category, UserWarning)
+            self.assertSequenceEqual(str(w[0].message), "The following array annotations were "
+                                                        "omitted, because they were only present"
+                                                        " in one of the merged objects: "
+                                                        "[] from the one that was merged "
+                                                        "into and ['test'] from the one that "
+                                                        "was merged into the other")
+
         assert_neo_object_is_compliant(epcres)
         assert_same_sub_schema(epctarg, epcres)
         # Remove this, when array_annotations are added to assert_same_sub_schema

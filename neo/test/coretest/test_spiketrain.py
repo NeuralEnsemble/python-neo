@@ -9,6 +9,7 @@ from __future__ import absolute_import
 import sys
 
 import unittest
+import warnings
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -1269,7 +1270,18 @@ class TestMerge(unittest.TestCase):
         self.train1.waveforms = None
         self.train2.waveforms = None
 
-        result = self.train1.merge(self.train2)
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+
+            self.assertTrue(len(w) == 1)
+            self.assertEqual(w[0].category, UserWarning)
+            self.assertSequenceEqual(str(w[0].message), "The following array annotations were "
+                                                        "omitted, because they were only present"
+                                                        " in one of the merged objects: "
+                                                        "['label'] from the one that was merged "
+                                                        "into and ['label2'] from the one that "
+                                                        "was merged into the other")
+
         assert_neo_object_is_compliant(result)
 
         # Make sure array annotations are merged correctly
@@ -1279,17 +1291,29 @@ class TestMerge(unittest.TestCase):
                             np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
 
     def test_merge_with_waveforms(self):
-        result = self.train1.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         assert_neo_object_is_compliant(result)
 
     def test_correct_shape(self):
-        result = self.train1.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         self.assertEqual(len(result.shape), 1)
         self.assertEqual(result.shape[0],
                          self.train1.shape[0] + self.train2.shape[0])
 
     def test_correct_times(self):
-        result = self.train1.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         expected = sorted(np.concatenate((self.train1.times,
                                           self.train2.times)))
         np.testing.assert_array_equal(result, expected)
@@ -1305,7 +1329,11 @@ class TestMerge(unittest.TestCase):
             self.train1.times.magnitude * pq.microsecond)
         train3.segment = self.train1.segment
         train3.array_annotate(**self.arr_ann1)
-        result = train3.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = train3.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         time_unit = result.units
         expected = sorted(np.concatenate((train3.rescale(time_unit).times,
                                           self.train2.rescale(
@@ -1320,11 +1348,19 @@ class TestMerge(unittest.TestCase):
                             np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
 
     def test_sampling_rate(self):
-        result = self.train1.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         self.assertEqual(result.sampling_rate, self.train1.sampling_rate)
 
     def test_neo_relations(self):
-        result = self.train1.merge(self.train2)
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(self.train2)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
         self.assertEqual(self.train1.segment, result.segment)
         self.assertTrue(result in result.segment.spiketrains)
 

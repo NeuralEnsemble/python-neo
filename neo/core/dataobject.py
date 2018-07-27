@@ -6,6 +6,7 @@ It contains basic functionality that is shared among all those data objects.
 
 """
 import copy
+import warnings
 
 import quantities as pq
 import numpy as np
@@ -204,13 +205,24 @@ class DataObject(BaseNeo, pq.Quantity):
         return index_annotations
 
     def merge_array_annotations(self, other):
+        # Make sure the user is notified for every object about which exact annotations are lost
+        warnings.simplefilter('always', UserWarning)
         merged_array_annotations = {}
+        omitted_keys_self = []
         for key in self.array_annotations.keys():
             try:
-                merged_array_annotations[key] = np.append(self.array_annotations[key],
-                                                          other.array_annotations[key])
+                merged_array_annotations[key] = np.append(copy.copy(self.array_annotations[key]),
+                                                          copy.copy(other.array_annotations[key]))
             except KeyError:
+                omitted_keys_self.append(key)
                 continue
+        omitted_keys_other = [key for key in other.array_annotations
+                              if key not in self.array_annotations]
+        if omitted_keys_other or omitted_keys_self:
+            warnings.warn("The following array annotations were omitted, because they were only "
+                          "present in one of the merged objects: {} from the one that was merged "
+                          "into and {} from the one that was merged into the other".
+                          format(omitted_keys_self, omitted_keys_other), UserWarning)
         return merged_array_annotations
 
     def rescale(self, units):

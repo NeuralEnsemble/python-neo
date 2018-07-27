@@ -23,6 +23,8 @@ from __future__ import absolute_import, division, print_function
 import sys
 
 import copy
+import warnings
+
 import numpy as np
 import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
@@ -668,8 +670,13 @@ class SpikeTrain(DataObject):
 
         assert sorting is not None, "The order of the merged spikes must be known"
 
+        # Make sure the user is notified for every object about which exact annotations are lost
+        warnings.simplefilter('always', UserWarning)
+
         merged_array_annotations = {}
-        # IGNORE ANNOTATIONS ONLY IN ONE SPIKETRAIN     # TODO: Should this change?
+
+        omitted_keys_self = []
+
         keys = self.array_annotations.keys()
         for key in keys:
             try:
@@ -677,9 +684,21 @@ class SpikeTrain(DataObject):
                 other_ann = copy.copy(other.array_annotations[key])
                 arr_ann = np.concatenate([self_ann, other_ann])
                 merged_array_annotations[key] = arr_ann[sorting]
-            # Annotation only available in 'other', must be skipped
+            # Annotation only available in 'self', must be skipped
+            # Ignore annotations present only in one of the SpikeTrains
             except KeyError:
+                omitted_keys_self.append(key)
                 continue
+
+        omitted_keys_other = [key for key in other.array_annotations
+                              if key not in self.array_annotations]
+
+        if omitted_keys_self or omitted_keys_other:
+            warnings.warn("The following array annotations were omitted, because they were only "
+                          "present in one of the merged objects: {} from the one that was merged "
+                          "into and {} from the one that was merged into the other".
+                          format(omitted_keys_self, omitted_keys_other), UserWarning)
+
         return merged_array_annotations
 
     @property

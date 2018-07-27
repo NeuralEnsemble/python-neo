@@ -7,6 +7,8 @@ import unittest
 
 import os
 import pickle
+import warnings
+
 import numpy as np
 import quantities as pq
 from numpy.testing import assert_array_equal
@@ -811,7 +813,17 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
                                            description='test signal',
                                            file_origin='testfile.txt')
 
-        merged12 = signal1.merge(signal2)
+        with warnings.catch_warnings(record=True) as w:
+            merged12 = signal1.merge(signal2)
+
+            self.assertTrue(len(w) == 1)
+            self.assertEqual(w[0].category, UserWarning)
+            self.assertSequenceEqual(str(w[0].message), "The following array annotations were "
+                                                        "omitted, because they were only present"
+                                                        " in one of the merged objects: "
+                                                        "['anno2'] from the one that was merged "
+                                                        "into and ['anno3'] from the one that "
+                                                        "was merged into the other")
 
         target_data12 = np.hstack([data1, data2.rescale(pq.uV)])
 

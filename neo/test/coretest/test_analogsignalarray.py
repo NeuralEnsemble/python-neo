@@ -7,6 +7,7 @@ import os
 import pickle
 
 import unittest
+import warnings
 
 import numpy as np
 import quantities as pq
@@ -687,7 +688,6 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         self.assertEqual(result.description, 'eggs')
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
-        # TODO: Is this the desired result?
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
@@ -805,9 +805,22 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
                                file_origin='testfile.txt',
                                array_annotations=arr_ann4)
 
-        merged13 = self.signal1.merge(signal3)
-        merged23 = signal2.merge(signal3)
-        merged24 = signal2.merge(signal4)
+        with warnings.catch_warnings(record=True) as w:
+            merged13 = self.signal1.merge(signal3)
+            merged23 = signal2.merge(signal3)
+            merged24 = signal2.merge(signal4)
+
+            self.assertTrue(len(w) == 3)
+            self.assertEqual(w[-1].category, UserWarning)
+            self.assertSequenceEqual(str(w[2].message), str(w[0].message))
+            self.assertSequenceEqual(str(w[2].message), str(w[1].message))
+            self.assertSequenceEqual(str(w[2].message), "The following array annotations were "
+                                                        "omitted, because they were only present"
+                                                        " in one of the merged objects: "
+                                                        "['anno2'] from the one that was merged "
+                                                        "into and ['anno3'] from the one that "
+                                                        "was merged into the other")
+
         mergeddata13 = np.array(merged13)
         mergeddata23 = np.array(merged23)
         mergeddata24 = np.array(merged24)
