@@ -203,6 +203,16 @@ class DataObject(BaseNeo, pq.Quantity):
 
         return index_annotations
 
+    def merge_array_annotations(self, other):
+        merged_array_annotations = {}
+        for key in self.array_annotations.keys():
+            try:
+                merged_array_annotations[key] = np.append(self.array_annotations[key],
+                                                          other.array_annotations[key])
+            except KeyError:
+                continue
+        return merged_array_annotations
+
     def rescale(self, units):
 
         # Use simpler functionality, if nothing will be changed

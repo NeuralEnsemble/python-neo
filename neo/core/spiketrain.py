@@ -634,22 +634,8 @@ class SpikeTrain(DataObject):
         sorting = np.argsort(stack)
         stack = stack[sorting]
         kwargs = {}
-        # TODO: Check this again (wh is this next line here?) + copy??
-        merged_array_annotations = {}
-        # TODO: Probably move this code elsewhere
-        # IGNORE ANNOTATIONS ONLY IN ONE SPIKETRAIN     # TODO: Should this change?
-        keys = list(self.array_annotations.keys())
-        for key in keys:
-            try:
-                # TODO: Array annotations copy or not???
-                self_ann = copy.deepcopy(self.array_annotations[key])
-                other_ann = copy.deepcopy(other.array_annotations[key])
-                arr_ann = np.concatenate([self_ann,  other_ann])
-                merged_array_annotations[key] = arr_ann[sorting]
-            except KeyError:
-                continue
 
-        kwargs['array_annotations'] = merged_array_annotations
+        kwargs['array_annotations'] = self.merge_array_annotations(other, sorting)
 
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -678,6 +664,24 @@ class SpikeTrain(DataObject):
         if hasattr(self, "lazy_shape"):
             train.lazy_shape = merged_lazy_shape
         return train
+
+    def merge_array_annotations(self, other, sorting=None):
+
+        assert sorting is not None, "The order of the merged spikes must be known"
+
+        merged_array_annotations = {}
+        # IGNORE ANNOTATIONS ONLY IN ONE SPIKETRAIN     # TODO: Should this change?
+        keys = self.array_annotations.keys()
+        for key in keys:
+            try:
+                self_ann = copy.copy(self.array_annotations[key])
+                other_ann = copy.copy(other.array_annotations[key])
+                arr_ann = np.concatenate([self_ann, other_ann])
+                merged_array_annotations[key] = arr_ann[sorting]
+            # Annotation only available in 'other', must be skipped
+            except KeyError:
+                continue
+        return merged_array_annotations
 
     @property
     def times(self):

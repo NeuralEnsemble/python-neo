@@ -194,15 +194,7 @@ class Event(DataObject):
                                                other.annotations)
         kwargs.update(merged_annotations)
 
-        # TODO: Possibly move this code elsewhere
-        merged_array_annotations = {}
-        for key in self.array_annotations.keys():
-            try:
-                merged_array_annotations[key] = np.hstack([self.array_annotations[key],
-                                                           other.array_annotations[key]])
-            except KeyError:
-                continue
-        kwargs['array_annotations'] = deepcopy(merged_array_annotations)
+        kwargs['array_annotations'] = self.merge_array_annotations(other)
 
         return Event(times=times, labels=labels, **kwargs)
 
