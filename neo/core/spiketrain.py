@@ -534,9 +534,10 @@ class SpikeTrain(DataObject):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
         '''
-        # Note: Array annotations cannot be copied because they are linked to their respective timestamps
+        # Copying array annotations over as well, although there is new data now
+        # This ensures consistency with previous implementations
         for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
-                     "description", "annotations"):
+                     "description", "annotations", "array_annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)

@@ -131,10 +131,6 @@ class BaseSignal(DataObject):
         f = getattr(super(BaseSignal, self), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
-        # TODO: If e.g. adding another signal, what is supposed to happen with array annotations?
-        # _copy_data_complement can't always copy array annotations,
-        # so this needs to be done locally
-        new_signal.array_annotations = copy.deepcopy(self.array_annotations)
         return new_signal
 
     def _get_required_attributes(self, signal, units):
@@ -165,9 +161,6 @@ class BaseSignal(DataObject):
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
-        # Note: Array annotations are not copied here, because it is not ensured
-        # that the same number of signals is used and they would possibly make no sense
-        # when combined with another signal
         return new
 
     def _copy_data_complement(self, other):
@@ -181,9 +174,9 @@ class BaseSignal(DataObject):
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
-
-        # Note: Array annotations cannot be copied
-        # because they belong to their respective time series
+        # Copying array annotations over as well, although there is new data now
+        # This ensures consistency with previous implementations
+        setattr(self, 'array_annotations', copy.deepcopy(getattr(other, 'array_annotations', {})))
 
     def __rsub__(self, other, *args):
         '''

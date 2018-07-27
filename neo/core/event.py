@@ -206,6 +206,9 @@ class Event(DataObject):
         for attr in ("labels", "name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, getattr(other, attr, None))
+        # Copying array annotations over as well, although there is new data now
+        # This ensures consistency with previous implementations
+        setattr(self, 'array_annotations', deepcopy(getattr(other, 'array_annotations', {})))
 
     def __deepcopy__(self, memo):
         cls = self.__class__

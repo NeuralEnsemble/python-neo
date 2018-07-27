@@ -186,7 +186,8 @@ class Epoch(DataObject):
         obj.durations = self.durations[i]
         obj.labels = self.labels[i]
         try:
-            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            # Array annotations need to be sliced accordingly
+            obj.array_annotations = self.array_annotations_at_index(i)
         except AttributeError:  # If Quantity was returned, not Epoch
             pass
         return obj
@@ -232,11 +233,12 @@ class Epoch(DataObject):
         '''
         Copy the metadata from another :class:`Epoch`.
         '''
-        # Note: Array annotations cannot be copied
-        # because they are linked to their respective timestamps
         for attr in ("labels", "durations", "name", "file_origin",
                      "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
+        # Copying array annotations over as well, although there is new data now
+        # This ensures consistency with previous implementations
+        setattr(self, 'array_annotations', deepcopy(getattr(other, 'array_annotations', {})))
 
     def __deepcopy__(self, memo):
         cls = self.__class__

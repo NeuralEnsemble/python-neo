@@ -481,7 +481,11 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
-        self.assertEqual(signal1b.array_annotations, {})
+        print(signal1b.array_annotations)
+        assert_arrays_equal(signal1b.array_annotations['index'], np.arange(6))
+        assert_arrays_equal(signal1b.array_annotations['labels'], np.zeros(6, dtype='S'))
+        assert_arrays_equal(signal1b.array_annotations['test'],
+                            np.array(['a', 'b', 'c', 'd', 'e', 'f']))
 
 
 class TestEventFunctions(unittest.TestCase):
