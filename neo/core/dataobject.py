@@ -26,9 +26,10 @@ class DataObject(BaseNeo, pq.Quantity):
         and attributes are processed.
         """
 
-        # Adding array annotations to the object, default is empty dict
+        # Adding array annotations to the object if not yet available, default is empty dict
         if array_annotations is None:
-            self.array_annotations = {}
+            if 'array_annotations' not in self.__dict__ or not self.array_annotations:
+                self.array_annotations = {}
         else:
             self.array_annotate(**self._check_array_annotations(array_annotations))
 

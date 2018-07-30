@@ -101,8 +101,7 @@ class Event(DataObject):
                        (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj.array_annotate(labels=labels)
-        obj.labels = obj.array_annotations['labels']
+        obj.labels = labels
         obj.segment = None
         return obj
 
@@ -126,7 +125,6 @@ class Event(DataObject):
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
-        self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -179,7 +177,6 @@ class Event(DataObject):
         '''
         othertimes = other.times.rescale(self.times.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
-        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -191,11 +188,14 @@ class Event(DataObject):
 
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
+
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self.merge_array_annotations(other)
 
-        return Event(times=times, labels=labels, **kwargs)
+        evt = Event(times=times, labels=kwargs['array_annotations']['labels'], **kwargs)
+
+        return evt
 
     def _copy_data_complement(self, other):
         '''
@@ -203,7 +203,7 @@ class Event(DataObject):
         '''
         # Note: Array annotations cannot be copied
         # because they are linked to their respective timestamps
-        for attr in ("labels", "name", "file_origin", "description",
+        for attr in ("name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, getattr(other, attr, None))
         # Copying array annotations over as well, although there is new data now
@@ -267,3 +267,11 @@ class Event(DataObject):
         new_evt.array_annotations = deepcopy(self.array_annotations_at_index(indices))
 
         return new_evt
+
+    def set_labels(self, labels):
+        self.array_annotate(labels=labels)
+
+    def get_labels(self):
+        return self.array_annotations['labels']
+
+    labels = property(get_labels, set_labels)

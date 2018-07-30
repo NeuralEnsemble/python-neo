@@ -93,7 +93,7 @@ class Test__generate_datasets(unittest.TestCase):
 class TestEvent(unittest.TestCase):
     def test_Event_creation(self):
         params = {'test2': 'y1', 'test3': True}
-        arr_ann = {'labels': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
+        arr_ann = {'names': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
                     labels=np.array(['test event 1',
                                      'test event 2',
@@ -116,7 +116,7 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(evt.annotations['test1'], 1.1)
         self.assertEqual(evt.annotations['test2'], 'y1')
         self.assertTrue(evt.annotations['test3'])
-        assert_arrays_equal(evt.array_annotations['labels'], np.array(['a', 'b', 'c']))
+        assert_arrays_equal(evt.array_annotations['names'], np.array(['a', 'b', 'c']))
         assert_arrays_equal(evt.array_annotations['index'], np.arange(10, 13))
 
     def tests_time_slice(self):
@@ -481,7 +481,6 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
-        print(signal1b.array_annotations)
         assert_arrays_equal(signal1b.array_annotations['index'], np.arange(6))
         assert_arrays_equal(signal1b.array_annotations['labels'], np.zeros(6, dtype='S'))
         assert_arrays_equal(signal1b.array_annotations['test'],

@@ -108,10 +108,8 @@ class Epoch(DataObject):
                        (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.array_annotate(labels=labels)
-        obj.labels = obj.array_annotations['labels']
-        obj.array_annotate(durations=durations)
-        obj.durations = obj.array_annotations['durations']
+        obj.labels = labels
+        obj.durations = durations
         obj.segment = None
         return obj
 
@@ -136,8 +134,6 @@ class Epoch(DataObject):
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
-        self.durations = getattr(obj, 'durations', None)
-        self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -183,8 +179,6 @@ class Epoch(DataObject):
         '''
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
-        obj.durations = self.durations[i]
-        obj.labels = self.labels[i]
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotations = self.array_annotations_at_index(i)
@@ -211,7 +205,6 @@ class Epoch(DataObject):
         times = np.hstack([self.times, othertimes]) * self.times.units
         durations = np.hstack([self.durations,
                                otherdurations]) * self.durations.units
-        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -226,6 +219,10 @@ class Epoch(DataObject):
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self.merge_array_annotations(other)
+        labels = kwargs['array_annotations']['labels']
+
+        # To make sure that Quantities are handled correctly
+        kwargs['array_annotations']['durations'] = durations
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
@@ -233,7 +230,7 @@ class Epoch(DataObject):
         '''
         Copy the metadata from another :class:`Epoch`.
         '''
-        for attr in ("labels", "durations", "name", "file_origin",
+        for attr in ("name", "file_origin",
                      "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
         # Copying array annotations over as well, although there is new data now
@@ -286,8 +283,22 @@ class Epoch(DataObject):
 
         indices = (self >= _t_start) & (self <= _t_stop)
         new_epc = self[indices]
-        new_epc.durations = self.durations[indices]
-        new_epc.labels = self.labels[indices]
         new_epc.array_annotations = deepcopy(self.array_annotations_at_index(indices))
 
         return new_epc
+
+    def set_labels(self, labels):
+        self.array_annotate(labels=labels)
+
+    def get_labels(self):
+        return self.array_annotations['labels']
+
+    labels = property(get_labels, set_labels)
+
+    def set_durations(self, durations):
+        self.array_annotate(durations=durations)
+
+    def get_durations(self):
+        return self.array_annotations['durations']
+
+    durations = property(get_durations, set_durations)

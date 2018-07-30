@@ -98,7 +98,7 @@ class Test__generate_datasets(unittest.TestCase):
 class TestEpoch(unittest.TestCase):
     def test_Epoch_creation(self):
         params = {'test2': 'y1', 'test3': True}
-        arr_ann = {'labels': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
+        arr_ann = {'names': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=[20, 40, 60] * pq.ns,
                     labels=np.array(['test epoch 1',
                                      'test epoch 2',
@@ -121,7 +121,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(epc.annotations['test1'], 1.1)
         self.assertEqual(epc.annotations['test2'], 'y1')
         self.assertTrue(epc.annotations['test3'])
-        assert_arrays_equal(epc.array_annotations['labels'], np.array(['a', 'b', 'c']))
+        assert_arrays_equal(epc.array_annotations['names'], np.array(['a', 'b', 'c']))
         assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
 
     def test_Epoch_repr(self):
@@ -372,7 +372,9 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test0'], targ.annotations['test0'])
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
-        self.assertEqual(result.array_annotations, {})
+        assert_arrays_equal(result.array_annotations['durations'],
+                            np.array([], dtype='float64')*pq.ns)
+        assert_arrays_equal(result.array_annotations['labels'], np.array([], dtype='S'))
 
     def test_time_slice_none_stop(self):
         params = {'test2': 'y1', 'test3': True}
