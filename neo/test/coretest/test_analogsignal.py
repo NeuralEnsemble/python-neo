@@ -719,7 +719,6 @@ class TestAnalogSignalCombination(unittest.TestCase):
         self.assertEqual(result.description, 'eggs')
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
-        # TODO: Is this a desired result?
         self.assertEqual(result.array_annotations, {'anno1': [23], 'anno2': ['A']})
 
         targ = AnalogSignal(np.arange(10.0, 30.0, 2.0), units="mV",

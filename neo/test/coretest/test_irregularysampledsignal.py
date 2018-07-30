@@ -668,7 +668,6 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.description, 'eggs')
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
-        # TODO: Is this a desired result?
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
 

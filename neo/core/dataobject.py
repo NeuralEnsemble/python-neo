@@ -18,7 +18,6 @@ from neo.core.baseneo import BaseNeo, _check_annotations
 # TODO: Documentation
 class DataObject(BaseNeo, pq.Quantity):
 
-    # TODO: Do the _new_... functions also need to be changed?
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
                  **annotations):
         """
