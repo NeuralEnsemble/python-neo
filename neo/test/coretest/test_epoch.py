@@ -169,7 +169,7 @@ class TestEpoch(unittest.TestCase):
                      file_origin='test.file',
                      test1=1, array_annotations=arr_ann2, **params2)
         epctarg = Epoch([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
-                        durations=[20, 40, 60, 3000, 5000, 7000] * pq.ns,
+                        durations=[20, 40, 60, 3000, 5000, 7000] * pq.us,
                         labels=np.array(['test epoch 1 1',
                                          'test epoch 1 2',
                                          'test epoch 1 3',

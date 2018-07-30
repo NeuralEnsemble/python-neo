@@ -209,10 +209,20 @@ class DataObject(BaseNeo, pq.Quantity):
         warnings.simplefilter('always', UserWarning)
         merged_array_annotations = {}
         omitted_keys_self = []
-        for key in self.array_annotations.keys():
+        for key in self.array_annotations:
             try:
-                merged_array_annotations[key] = np.append(copy.copy(self.array_annotations[key]),
-                                                          copy.copy(other.array_annotations[key]))
+                value = copy.copy(self.array_annotations[key])
+                other_value = copy.copy(other.array_annotations[key])
+                if isinstance(value, pq.Quantity):
+                    try:
+                        other_value = other_value.rescale(value.units)
+                    except ValueError:
+                        raise ValueError("Could not merge array annotations "
+                                         "due to different units")
+                    merged_array_annotations[key] = np.append(value, other_value)*value.units
+                else:
+                    merged_array_annotations[key] = np.append(value, other_value)
+
             except KeyError:
                 omitted_keys_self.append(key)
                 continue

@@ -201,10 +201,7 @@ class Epoch(DataObject):
         compatible, and Exception is raised.
         '''
         othertimes = other.times.rescale(self.times.units)
-        otherdurations = other.durations.rescale(self.durations.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
-        durations = np.hstack([self.durations,
-                               otherdurations]) * self.durations.units
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -220,9 +217,7 @@ class Epoch(DataObject):
 
         kwargs['array_annotations'] = self.merge_array_annotations(other)
         labels = kwargs['array_annotations']['labels']
-
-        # To make sure that Quantities are handled correctly
-        kwargs['array_annotations']['durations'] = durations
+        durations = kwargs['array_annotations']['durations']
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
