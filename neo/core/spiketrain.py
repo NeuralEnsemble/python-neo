@@ -637,7 +637,7 @@ class SpikeTrain(DataObject):
         stack = stack[sorting]
         kwargs = {}
 
-        kwargs['array_annotations'] = self._merge_array_annotations(other, sorting)
+        kwargs['array_annotations'] = self._merge_array_annotations(other, sorting=sorting)
 
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -668,6 +668,15 @@ class SpikeTrain(DataObject):
         return train
 
     def _merge_array_annotations(self, other, sorting=None):
+        '''
+        Merges array annotations of 2 different objects.
+        The merge happens in such a way that the result fits the merged data
+        In general this means concatenating the arrays from the 2 objects.
+        If an annotation is only present in one of the objects, it will be omitted.
+        Apart from that the array_annotations need to be sorted according to the sorting of
+        the spikes.
+        :return Merged array_annotations
+        '''
 
         assert sorting is not None, "The order of the merged spikes must be known"
 

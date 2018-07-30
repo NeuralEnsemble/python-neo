@@ -13,9 +13,24 @@ import numpy as np
 from neo.core.baseneo import BaseNeo, _check_annotations
 
 
-# TODO: Add array annotations to all docstrings
-# TODO: Documentation
 class DataObject(BaseNeo, pq.Quantity):
+    '''
+    This is the base class from which all objects containing data inherit
+    It contains common functionality for all those objects and handles array_annotations.
+
+    Common functionality that is not included in BaseNeo includes:
+    - duplicating with new data
+    - rescaling the object
+    - copying the object
+    - returning it as pq.Quantity or np.ndarray
+    - handling of array_annotations
+
+    Array_annotations are a kind of annotations that contain metadata for every data point,
+    i.e. per timestamp (in Spiketrain, Event and Epoch) or signal channel (in AnalogSignal
+    and IrregularlySampledSignal).
+    They may contain the same data as regular annotations, except they are arrays containing these
+    data.
+    '''
 
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
                  **annotations):
@@ -40,6 +55,8 @@ class DataObject(BaseNeo, pq.Quantity):
         """
         Recursively check that value is either an array or list containing only "simple" types
         (number, string, date/time) or is a dict of those.
+        :return The array_annotations from value in correct form
+        :raises ValueError: In case value is not accepted as array_annotation(s)
         """
 
         # First stage, resolve dict of annotations into single annotations
@@ -203,14 +220,24 @@ class DataObject(BaseNeo, pq.Quantity):
         return index_annotations
 
     def _merge_array_annotations(self, other):
+        '''
+        Merges array annotations of 2 different objects.
+        The merge happens in such a way that the result fits the merged data
+        In general this means concatenating the arrays from the 2 objects.
+        If an annotation is only present in one of the objects, it will be omitted
+        :return Merged array_annotations
+        '''
+
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
         merged_array_annotations = {}
         omitted_keys_self = []
+        # Concatenating arrays for each key
         for key in self.array_annotations:
             try:
                 value = copy.deepcopy(self.array_annotations[key])
                 other_value = copy.deepcopy(other.array_annotations[key])
+                # Quantities need to be rescaled to common unit
                 if isinstance(value, pq.Quantity):
                     try:
                         other_value = other_value.rescale(value.units)
@@ -222,19 +249,28 @@ class DataObject(BaseNeo, pq.Quantity):
                     merged_array_annotations[key] = np.append(value, other_value)
 
             except KeyError:
+                # Save the  omitted keys to be able to print them
                 omitted_keys_self.append(key)
                 continue
+        # Also save omitted keys from 'other'
         omitted_keys_other = [key for key in other.array_annotations
                               if key not in self.array_annotations]
+        # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
+
+        # Return the merged array_annotations
         return merged_array_annotations
 
     def rescale(self, units):
-
+        '''
+        Return a copy of the object converted to the specified
+        units
+        :return Copy of self with specified units
+        '''
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
         if self.dimensionality == dim:
@@ -254,6 +290,11 @@ class DataObject(BaseNeo, pq.Quantity):
 
     # Needed to implement this so array annotations are copied as well, ONLY WHEN copying 1:1
     def copy(self, **kwargs):
+        '''
+        Returns a copy of the object
+        :return Copy of self
+        '''
+
         obj = super(DataObject, self).copy(**kwargs)
         obj.array_annotations = self.array_annotations
         return obj
