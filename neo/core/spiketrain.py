@@ -534,10 +534,10 @@ class SpikeTrain(DataObject):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
         '''
-        # Copying array annotations over as well, although there is new data now
-        # This ensures consistency with previous implementations
+        # Note: Array annotations cannot be copied because length of data can be changed
+        # here which would cause inconsistencies
         for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
-                     "description", "annotations", "array_annotations"):
+                     "description", "annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)
@@ -564,6 +564,8 @@ class SpikeTrain(DataObject):
         new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop,
                                 waveforms=waveforms, units=units)
         new_st._copy_data_complement(self, deep_copy=deep_copy)
+
+        # Note: Array annotations are not copied here, because length of data could change
 
         # overwriting t_start and t_stop with new values
         new_st.t_start = t_start

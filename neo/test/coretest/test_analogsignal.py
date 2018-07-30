@@ -248,9 +248,9 @@ class TestAnalogSignalProperties(unittest.TestCase):
                                    np.asarray(signal2 / 1000.), 1e-12)
         self.assertEqual(signal1b.t_start, signal1.t_start)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
-        # After duplicating array annotations should always be empty
-        # They are tied to their respective data
-        self.assertEqual(signal1b.array_annotations['ann'], np.arange(1))
+        # After duplicating, array annotations should always be empty,
+        # because different length of data would cause inconsistencies
+        self.assertEqual(signal1b.array_annotations, {})
 
     # def test__children(self):
     #     signal = self.signals[0]

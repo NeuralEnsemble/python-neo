@@ -588,15 +588,15 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1 = self.epoch
         new_data = np.sort(np.random.uniform(0, 100, self.epoch.size)) * pq.ms
         signal1b = signal1.duplicate_with_new_data(new_data)
-        assert_arrays_almost_equal(np.asarray(signal1b),
-                                   np.asarray(new_data), 1e-12)
-        assert_arrays_almost_equal(np.asarray(signal1b.durations),
-                                   np.asarray(signal1.durations), 1e-12)
-        assert_arrays_equal(signal1b.array_annotations['index'], np.arange(6))
-        assert_arrays_equal(signal1b.array_annotations['durations'], self.durations)
-        assert_arrays_equal(signal1b.array_annotations['labels'], np.zeros(6, dtype='S'))
-        assert_arrays_equal(signal1b.array_annotations['test'],
-                            np.array(['a', 'b', 'c', 'd', 'e', 'f']))
+        # Note: Labels and Durations are NOT copied any more!!!
+        # After duplicating, array annotations should always be empty,
+        # because different length of data would cause inconsistencies
+        # Only labels and durations should be available
+        assert_arrays_equal(signal1b.labels, np.zeros(signal1b.shape[-1], dtype='S'))
+        assert_arrays_equal(signal1b.durations, np.zeros(signal1b.shape[-1], dtype='float64') *
+                            signal1.durations.units)
+        self.assertTrue('index' not in signal1b.array_annotations)
+        self.assertTrue('test' not in signal1b.array_annotations)
 
 
 class TestEpochFunctions(unittest.TestCase):

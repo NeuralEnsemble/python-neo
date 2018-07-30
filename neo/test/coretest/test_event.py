@@ -481,10 +481,13 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1b = signal1.duplicate_with_new_data(new_data)
         assert_arrays_almost_equal(np.asarray(signal1b),
                                    np.asarray(new_data), 1e-12)
-        assert_arrays_equal(signal1b.array_annotations['index'], np.arange(6))
-        assert_arrays_equal(signal1b.array_annotations['labels'], np.zeros(6, dtype='S'))
-        assert_arrays_equal(signal1b.array_annotations['test'],
-                            np.array(['a', 'b', 'c', 'd', 'e', 'f']))
+        # Note: Labels and Durations are NOT copied any more!!!
+        # After duplicating, array annotations should always be empty,
+        # because different length of data would cause inconsistencies
+        # Only labels and durations should be available
+        assert_arrays_equal(signal1b.labels, np.zeros(signal1b.shape[-1], dtype='S'))
+        self.assertTrue('index' not in signal1b.array_annotations)
+        self.assertTrue('test' not in signal1b.array_annotations)
 
 
 class TestEventFunctions(unittest.TestCase):

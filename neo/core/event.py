@@ -206,9 +206,9 @@ class Event(DataObject):
         for attr in ("name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, getattr(other, attr, None))
-        # Copying array annotations over as well, although there is new data now
-        # This ensures consistency with previous implementations
-        setattr(self, 'array_annotations', deepcopy(getattr(other, 'array_annotations', {})))
+        # Note: Array annotations cannot be copied because length of data can be changed
+        # here which would cause inconsistencies
+        # This includes labels and durations!!!
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -245,6 +245,7 @@ class Event(DataObject):
 
         new = self.__class__(times=signal, units=units)
         new._copy_data_complement(self)
+        # Note: Array annotations cannot be copied here, because length of data can be changed
         return new
 
     def time_slice(self, t_start, t_stop):

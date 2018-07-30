@@ -225,12 +225,11 @@ class Epoch(DataObject):
         '''
         Copy the metadata from another :class:`Epoch`.
         '''
+        # Note: Array annotations cannot be copied because length of data could be changed
+        # here which would cause inconsistencies. This is instead done locally.
         for attr in ("name", "file_origin",
                      "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
-        # Copying array annotations over as well, although there is new data now
-        # This ensures consistency with previous implementations
-        setattr(self, 'array_annotations', deepcopy(getattr(other, 'array_annotations', {})))
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -260,6 +259,7 @@ class Epoch(DataObject):
 
         new = self.__class__(times=signal, units=units)
         new._copy_data_complement(self)
+        # Note: Array annotations can not be copied here because length of data can change
         return new
 
     def time_slice(self, t_start, t_stop):

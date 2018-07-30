@@ -1417,7 +1417,9 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.assertEqual(signal1b.t_start, new_t_start)
         self.assertEqual(signal1b.t_stop, new_t_stop)
         self.assertEqual(signal1b.sampling_rate, signal1.sampling_rate)
-        assert_arrays_equal(signal1b.array_annotations['index'], np.arange(6))
+        # After duplicating, array annotations should always be empty,
+        # because different length of data would cause inconsistencies
+        self.assertEqual(signal1b.array_annotations, {})
 
     def test_deep_copy_attributes(self):
         signal1 = self.train
