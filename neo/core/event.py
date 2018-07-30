@@ -191,7 +191,7 @@ class Event(DataObject):
 
         kwargs.update(merged_annotations)
 
-        kwargs['array_annotations'] = self.merge_array_annotations(other)
+        kwargs['array_annotations'] = self._merge_array_annotations(other)
 
         evt = Event(times=times, labels=kwargs['array_annotations']['labels'], **kwargs)
 

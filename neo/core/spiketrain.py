@@ -637,7 +637,7 @@ class SpikeTrain(DataObject):
         stack = stack[sorting]
         kwargs = {}
 
-        kwargs['array_annotations'] = self.merge_array_annotations(other, sorting)
+        kwargs['array_annotations'] = self._merge_array_annotations(other, sorting)
 
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -667,7 +667,7 @@ class SpikeTrain(DataObject):
             train.lazy_shape = merged_lazy_shape
         return train
 
-    def merge_array_annotations(self, other, sorting=None):
+    def _merge_array_annotations(self, other, sorting=None):
 
         assert sorting is not None, "The order of the merged spikes must be known"
 

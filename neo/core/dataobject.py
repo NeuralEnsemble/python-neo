@@ -10,7 +10,6 @@ import warnings
 
 import quantities as pq
 import numpy as np
-# TODO: _check_annotations?
 from neo.core.baseneo import BaseNeo, _check_annotations
 
 
@@ -36,7 +35,6 @@ class DataObject(BaseNeo, pq.Quantity):
         BaseNeo.__init__(self, name=name, description=description,
                          file_origin=file_origin, **annotations)
 
-    # TODO: Okay to make it bound to instance instead of static like _check_annotations?
     def _check_array_annotations(self, value):
 
         """
@@ -204,15 +202,15 @@ class DataObject(BaseNeo, pq.Quantity):
 
         return index_annotations
 
-    def merge_array_annotations(self, other):
+    def _merge_array_annotations(self, other):
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
         merged_array_annotations = {}
         omitted_keys_self = []
         for key in self.array_annotations:
             try:
-                value = copy.copy(self.array_annotations[key])
-                other_value = copy.copy(other.array_annotations[key])
+                value = copy.deepcopy(self.array_annotations[key])
+                other_value = copy.deepcopy(other.array_annotations[key])
                 if isinstance(value, pq.Quantity):
                     try:
                         other_value = other_value.rescale(value.units)

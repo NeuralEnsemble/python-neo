@@ -215,7 +215,7 @@ class Epoch(DataObject):
                                                other.annotations)
         kwargs.update(merged_annotations)
 
-        kwargs['array_annotations'] = self.merge_array_annotations(other)
+        kwargs['array_annotations'] = self._merge_array_annotations(other)
         labels = kwargs['array_annotations']['labels']
         durations = kwargs['array_annotations']['durations']
 
