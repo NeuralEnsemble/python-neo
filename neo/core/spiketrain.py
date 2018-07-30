@@ -690,9 +690,13 @@ class SpikeTrain(DataObject):
         keys = self.array_annotations.keys()
         for key in keys:
             try:
-                self_ann = copy.copy(self.array_annotations[key])
-                other_ann = copy.copy(other.array_annotations[key])
-                arr_ann = np.concatenate([self_ann, other_ann])
+                self_ann = copy.deepcopy(self.array_annotations[key])
+                other_ann = copy.deepcopy(other.array_annotations[key])
+                if isinstance(self_ann, pq.Quantity):
+                    other_ann.rescale(self_ann.units)
+                    arr_ann = np.concatenate([self_ann, other_ann]) * self_ann.units
+                else:
+                    arr_ann = np.concatenate([self_ann, other_ann])
                 merged_array_annotations[key] = arr_ann[sorting]
             # Annotation only available in 'self', must be skipped
             # Ignore annotations present only in one of the SpikeTrains
