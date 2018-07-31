@@ -423,7 +423,7 @@ def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10,
             continue
         assert key in ob2.array_annotations
         try:
-            assert value == ob2.array_annotations[key]
+            assert_arrays_equal(value, ob2.array_annotations[key])
         except ValueError:
             assert_arrays_almost_equal(ob1, ob2,
                                        threshold=threshold, dtype=False)
