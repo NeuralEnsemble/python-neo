@@ -43,8 +43,7 @@ class Test__generate_datasets(unittest.TestCase):
         self.annotations['seed'] = 0
         waveforms = get_fake_value('waveforms', pq.Quantity, seed=3, dim=3)
         shape = waveforms.shape[0]
-        times = get_fake_value('times', pq.Quantity, seed=0, dim=1,
-                               shape=waveforms.shape[0])
+        times = get_fake_value('times', pq.Quantity, seed=0, dim=1, shape=shape)
         t_start = get_fake_value('t_start', pq.Quantity, seed=1, dim=0)
         t_stop = get_fake_value('t_stop', pq.Quantity, seed=2, dim=0)
         left_sweep = get_fake_value('left_sweep', pq.Quantity, seed=4, dim=0)
@@ -54,11 +53,13 @@ class Test__generate_datasets(unittest.TestCase):
         description = get_fake_value('description', str,
                                      seed=7, obj='SpikeTrain')
         file_origin = get_fake_value('file_origin', str)
+        arr_ann = get_fake_value('array_annotations', dict, seed=9, obj=SpikeTrain, n=1)
         attrs1 = {'name': name,
                   'description': description,
                   'file_origin': file_origin}
         attrs2 = attrs1.copy()
         attrs2.update(self.annotations)
+        attrs2['array_annotations'] = arr_ann
 
         res11 = get_fake_values(SpikeTrain, annotate=False, seed=0)
         res12 = get_fake_values('SpikeTrain', annotate=False, seed=0)
@@ -97,8 +98,17 @@ class Test__generate_datasets(unittest.TestCase):
 
         self.assertEqual(res11, attrs1)
         self.assertEqual(res12, attrs1)
+        # Array annotations need to be compared separately
+        # because numpy arrays define equality differently
+        arr_ann_res21 = res21.pop('array_annotations')
+        arr_ann_attrs2 = attrs2.pop('array_annotations')
         self.assertEqual(res21, attrs2)
+        assert_arrays_equal(arr_ann_res21['valid'], arr_ann_attrs2['valid'])
+        assert_arrays_equal(arr_ann_res21['number'], arr_ann_attrs2['number'])
+        arr_ann_res22 = res22.pop('array_annotations')
         self.assertEqual(res22, attrs2)
+        assert_arrays_equal(arr_ann_res22['valid'], arr_ann_attrs2['valid'])
+        assert_arrays_equal(arr_ann_res22['number'], arr_ann_attrs2['number'])
 
     def test__fake_neo__cascade(self):
         self.annotations['seed'] = None

@@ -18,6 +18,7 @@ from neo.core import (class_by_name, Block, Segment,
                       AnalogSignal,
                       IrregularlySampledSignal, SpikeTrain,
                       Event, Epoch)
+from neo.core.dataobject import DataObject
 from neo.test.generate_datasets import (generate_one_simple_block,
                                         generate_one_simple_segment,
                                         generate_from_supported_objects,
@@ -530,6 +531,9 @@ class Test__get_fake_values(unittest.TestCase):
         attritems = zip(attrnames, attrtypes)
 
         attrannnames = attrnames + list(self.annotations.keys())
+        # All DataObjects also have array annotations
+        if issubclass(cls, DataObject):
+            attrannnames.append('array_annotations')
 
         self.assertEqual(sorted(attrnames), sorted(res1.keys()))
         self.assertEqual(sorted(attrannnames), sorted(res2.keys()))
