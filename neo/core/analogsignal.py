@@ -122,6 +122,7 @@ class AnalogSignal(BaseSignal):
     *Optional attributes/properties*:
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
         :copy: (bool) True by default.
+        :array_annotations: (dict) Arrays containing annotations for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.

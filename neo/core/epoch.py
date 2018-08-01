@@ -67,6 +67,9 @@ class Epoch(DataObject):
         :description: (str) Text description,
         :file_origin: (str) Filesystem path or URL of the original data file.
 
+    *Optional attributes/properties*:
+        :array_annotations: (dict) Arrays containing annotations for all data points
+
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`,
 
