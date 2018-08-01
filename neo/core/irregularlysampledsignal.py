@@ -408,9 +408,6 @@ class IrregularlySampledSignal(BaseSignal):
 
         new_st = self[id_start:id_stop]
 
-        # Note: Array annotations can simply be copied over, because the number of traces is kept the same
-        new_st.array_annotations = deepcopy(self.array_annotations)
-
         return new_st
 
     def merge(self, other):

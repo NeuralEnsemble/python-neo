@@ -278,7 +278,6 @@ class Epoch(DataObject):
 
         indices = (self >= _t_start) & (self <= _t_stop)
         new_epc = self[indices]
-        new_epc.array_annotations = deepcopy(self.array_annotations_at_index(indices))
 
         return new_epc
 

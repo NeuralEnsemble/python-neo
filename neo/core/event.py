@@ -265,8 +265,6 @@ class Event(DataObject):
         indices = (self >= _t_start) & (self <= _t_stop)
         new_evt = self[indices]
 
-        new_evt.array_annotations = deepcopy(self.array_annotations_at_index(indices))
-
         return new_evt
 
     def set_labels(self, labels):

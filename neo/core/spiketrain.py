@@ -597,8 +597,6 @@ class SpikeTrain(DataObject):
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
 
-        new_st.array_annotations = copy.deepcopy(self.array_annotations_at_index(indices))
-
         return new_st
 
     def merge(self, other):
