@@ -65,7 +65,8 @@ class Event(DataObject):
         :file_origin: (str) Filesystem path or URL of the original data file.
 
     *Optional attributes/properties*:
-        :array_annotations: (dict) Arrays containing annotations for all data points
+        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
+        for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
