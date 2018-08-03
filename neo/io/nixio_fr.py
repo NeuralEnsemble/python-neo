@@ -1,7 +1,7 @@
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.nixrawio import NIXRawIO
 
-#This class subjects to limitations when there are multiple asymmetric blocks
+# This class subjects to limitations when there are multiple asymmetric blocks
 
 
 class NixIO(NIXRawIO, BaseFromRaw):
