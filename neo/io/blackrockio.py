@@ -26,33 +26,34 @@ def _move_channel_indexes_and_analogsignals(from_block, to_block):
             ana.channel_index.irregularlysampledsignals = []
 
 
-class BlackrockIO(BlackrockRawIO, BaseFromRaw):
+class BlackrockIO_single_nsx(BlackrockRawIO, BaseFromRaw):
+    """
+    Supplementary class for reading BlackRock data using only a single nsx file.
+    """
+    name = 'Blackrock IO for single nsx'
+    description = "This IO reads a pair of corresponding nev and nsX files of the Blackrock " \
+                  "" + "(Cerebus) recording system."
+
+    _prefered_signal_group_mode = 'split-all'
+
+    def __init__(self, filename, nsx_to_load=None, **kargs):
+        BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)
+        BaseFromRaw.__init__(self, filename)
+
+
+class BlackrockIO(BlackrockIO_single_nsx):
     name = 'Blackrock IO'
     description = "This IO reads .nev/.nsX files of the Blackrock (Cerebus) recording system."
 
-    class BlackrockIO_single_nsx(BlackrockRawIO, BaseFromRaw):
-        """
-        Supplementary class for reading BlackRock data using only a single nsx file.
-        """
-        name = 'Blackrock IO for single nsx'
-        description = "This IO reads a pair of corresponding nev and nsX files of the Blackrock " \
-                      "" + "(Cerebus) recording system."
-
-        _prefered_signal_group_mode = 'split-all'
-
-        def __init__(self, filename, nsx_to_load=None, **kargs):
-            BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)
-            BaseFromRaw.__init__(self, filename)
-
     def __init__(self, filename, nsx_to_load='all', **kargs):
-        self.BlackrockIO_single_nsx.__init__(self, filename)
+        BlackrockIO_single_nsx.__init__(self, filename)
         if nsx_to_load == 'all':
             self._selected_nsx = self._avail_nsx
         else:
             self._selected_nsx = [nsx_to_load]
         self._nsx_ios = []
         for nsx in self._selected_nsx:
-            self._nsx_ios.append(self.BlackrockIO_single_nsx(filename, nsx_to_load=nsx, **kargs))
+            self._nsx_ios.append(BlackrockIO_single_nsx(filename, nsx_to_load=nsx, **kargs))
 
     def read_block(self, **kargs):
         bl = self._nsx_ios[0].read_block(**kargs)
