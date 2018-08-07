@@ -316,7 +316,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
             self.assertGreaterEqual(len(w), 1)
             self.assertEqual(w[-1].category, UserWarning)
             self.assertSequenceEqual(str(w[-1].message),
-                    "Detected 1 undocumented segments within nev data after timestamps [5451].")
+                                     "Detected 1 undocumented segments within nev data after "
+                                     "timestamps [5451].")
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
