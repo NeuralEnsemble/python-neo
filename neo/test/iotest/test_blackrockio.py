@@ -38,6 +38,8 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
+# printing all warnings, so testing for warning handling works reliably
+warnings.simplefilter("always")
 
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
@@ -169,6 +171,25 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         anasig = block.segments[0].analogsignals[0]
         self.assertIsNotNone(anasig.file_origin)
 
+    def test_load_muliple_nsx(self):
+        """
+        Test if multiple nsx signals can be loaded at the same time.
+        """
+        filename = self.get_filename_path('blackrock_2_1/l101210-001')
+        reader = BlackrockIO(filename=filename, verbose=False, nsx_to_load='all')
+
+        # number of different sampling rates corresponds to number of nsx signals, because
+        # single nsx contains only signals of identical sampling rate
+        block = reader.read_block(load_waveforms=False)
+        sampling_rates = np.unique(
+            [a.sampling_rate.rescale('Hz') for a in block.filter(objects='AnalogSignal')])
+        self.assertEqual(len(sampling_rates), len(reader._selected_nsx))
+
+        segment = reader.read_segment()
+        sampling_rates = np.unique(
+            [a.sampling_rate.rescale('Hz') for a in segment.filter(objects='AnalogSignal')])
+        self.assertEqual(len(sampling_rates), len(reader._selected_nsx))
+
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_v21(self):
         """
@@ -297,7 +318,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
             self.assertGreaterEqual(len(w), 1)
             self.assertEqual(w[-1].category, UserWarning)
             self.assertSequenceEqual(str(w[-1].message),
-                    "Detected 1 undocumented segments within nev data after timestamps [5451].")
+                                     "Detected 1 undocumented segments within nev data after "
+                                     "timestamps [5451].")
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
