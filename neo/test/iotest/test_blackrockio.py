@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import unittest
 import warnings
+warnings.simplefilter("always")  # required for reliable test for warnings
 
 from numpy.testing import assert_equal
 
