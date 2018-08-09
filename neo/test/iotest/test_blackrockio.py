@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 import unittest
 import warnings
-warnings.simplefilter("always")  # required for reliable test for warnings
 
 from numpy.testing import assert_equal
 
@@ -39,6 +38,8 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
+# printing all warnings, so testing for warning handling works reliably
+warnings.simplefilter("always")
 
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
