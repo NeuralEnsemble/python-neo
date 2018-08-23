@@ -276,8 +276,10 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Equality test (==)
         '''
-        return (super(IrregularlySampledSignal, self).__eq__(other).all() and
-                (self.times == other.times).all())
+        if (isinstance(other, IrregularlySampledSignal) and
+                    not (self.times == other.times).all()):
+            return False
+        return super(IrregularlySampledSignal, self).__eq__(other)
 
     def _check_consistency(self, other):
         '''
