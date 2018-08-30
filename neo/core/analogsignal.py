@@ -413,8 +413,9 @@ class AnalogSignal(BaseSignal):
         '''
         Equality test (==)
         '''
-        if (self.t_start != other.t_start or
-                    self.sampling_rate != other.sampling_rate):
+        if (isinstance(other, AnalogSignal) and
+                    (self.t_start != other.t_start or
+                     self.sampling_rate != other.sampling_rate)):
             return False
         return super(AnalogSignal, self).__eq__(other)
 
