@@ -14,3 +14,10 @@ class NixIO(NIXRawIO, BaseFromRaw):
     def __init__(self, filename):
         NIXRawIO.__init__(self, filename)
         BaseFromRaw.__init__(self, filename)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.file.close()
+        NIXRawIO.header = None
