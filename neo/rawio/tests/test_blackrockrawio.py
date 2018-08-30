@@ -101,15 +101,16 @@ class TestBlackrockRawIO(BaseTestRawIO, unittest.TestCase, ):
         for ev_chan in range(nb_ev_chan):
             name = reader.header['event_channels']['name'][ev_chan]
             # ~ print(name)
+            all_timestamps, _, labels = reader.get_event_timestamps(
+                event_channel_index=ev_chan)
             if name == 'digital_input_port':
-
-                all_timestamps, _, labels = reader.get_event_timestamps(
-                    event_channel_index=ev_chan)
-
                 for label in np.unique(labels):
                     python_digievents = all_timestamps[labels == label]
                     matlab_digievents = mts_ml[mid_ml == int(label)]
                     assert_equal(python_digievents, matlab_digievents)
+            elif name == 'comments':
+                pass
+                # TODO: Save comments to Matlab file.
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_v21(self):
