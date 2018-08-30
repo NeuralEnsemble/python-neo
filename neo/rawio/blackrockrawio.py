@@ -216,6 +216,10 @@ class BlackrockRawIO(BaseRawIO):
             '2.1': self.__get_nonneural_evtypes_variant_a,
             '2.2': self.__get_nonneural_evtypes_variant_a,
             '2.3': self.__get_nonneural_evtypes_variant_b}
+        self.__comment_evtypes = {
+            '2.1': self.__get_comment_evtypes_variant_a,
+            '2.2': self.__get_comment_evtypes_variant_a,
+            '2.3': self.__get_comment_evtypes_variant_a}
 
     def _parse_header(self):
 
@@ -264,10 +268,20 @@ class BlackrockRawIO(BaseRawIO):
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
+            # NonNeural: serial and digital input
             events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
             for ev_name in ev_dict:
                 event_channels.append((ev_name, '', 'event'))
+
+            if 'Comments' in self.nev_data:
+                comments_data, comments_segment_ids = self.nev_data['Comments']
+                ev_dict = self.__comment_evtypes[self.__nev_spec](comments_data)
+                for ev_name in ev_dict:
+                    event_channels.append((ev_name, '', 'event'))
+            # TODO: TrackingEvents
+            # TODO: ButtonTrigger
+            # TODO: VideoSync
 
         # Step2 NSX file
         # Load file spec and headers of available nsx files
@@ -540,6 +554,7 @@ class BlackrockRawIO(BaseRawIO):
 
             if self._avail_files['nev']:
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+                ev_dict.update(self.__comment_evtypes[self.__nev_spec](events_data))
                 for c in range(event_channels.size):
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
@@ -653,8 +668,12 @@ class BlackrockRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data, event_segment_ids = self.nev_data['NonNeural']
-        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        if name == 'comments':
+            events_data, event_segment_ids = self.nev_data['Comments']
+            ev_dict = self.__comment_evtypes[self.__nev_spec](events_data)[name]
+        else:
+            events_data, event_segment_ids = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
         mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         if self._nb_segment == 1:
             # very fast
@@ -669,12 +688,21 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data, event_segment_ids = self.nev_data['NonNeural']
-        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
-        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
+        if name == 'comments':
+            events_data, event_segment_ids = self.nev_data['Comments']
+            ev_dict = self.__comment_evtypes[self.__nev_spec](events_data)[name]
+            # If immediate decoding is desired:
+            # labels = [_['comment'].decode({0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}[_['char_set']])
+            #           for _ in events_data]
+            labels = events_data[ev_dict['field']]
+        else:
+            events_data, event_segment_ids = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+            labels = events_data[ev_dict['field']]
 
+        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         timestamp = events_data[mask]['timestamp']
-        labels = events_data[mask][ev_dict['field']]
+        labels = labels[mask]
 
         # time clip
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
@@ -1870,6 +1898,16 @@ class BlackrockRawIO(BaseRawIO):
                 'desc': "Events of the serial input port"}}
 
         return event_types
+
+    def __get_comment_evtypes_variant_a(self, data):
+        return {
+            'comments': {
+                'name': 'comments',
+                'field': 'comment',
+                'mask': data['packet_id'] == 65535,
+                'desc': 'Comments'
+            }
+        }
 
     def __is_set(self, flag, pos):
         """
