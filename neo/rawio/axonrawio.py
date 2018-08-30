@@ -562,6 +562,21 @@ def parse_axon_soup(filename):
                 header['dictEpochInfoPerDAC'][DACNum][EpochNum] = \
                     EpochInfoPerDAC
 
+            # Epoch sections
+            header['EpochInfo'] = []
+            for i in range(sections['EpochSection']['llNumEntries']):
+                # read EpochInfo
+                f.seek(sections['EpochSection']['uBlockIndex'] *
+                       BLOCKSIZE + sections['EpochSection']['uBytes'] * i)
+                EpochInfo = {}
+                for key, fmt in EpochInfoDescription:
+                    val = f.read_f(fmt)
+                    if len(val) == 1:
+                        EpochInfo[key] = val[0]
+                    else:
+                        EpochInfo[key] = np.array(val)
+                header['EpochInfo'].append(EpochInfo)
+
         # date and time
         if header['fFileVersionNumber'] < 2.:
             YY = 1900
