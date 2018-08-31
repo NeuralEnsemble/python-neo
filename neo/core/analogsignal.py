@@ -154,8 +154,9 @@ class AnalogSignal(BaseSignal):
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
-    _necessary_attrs = (
-    ('signal', pq.Quantity, 2), ('sampling_rate', pq.Quantity, 0), ('t_start', pq.Quantity, 0))
+    _necessary_attrs = (('signal', pq.Quantity, 2),
+                        ('sampling_rate', pq.Quantity, 0),
+                        ('t_start', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
 
     def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
@@ -206,10 +207,11 @@ class AnalogSignal(BaseSignal):
         Map the __new__ function onto _new_AnalogSignalArray, so that pickle
         works
         '''
-        return _new_AnalogSignalArray, (
-        self.__class__, np.array(self), self.units, self.dtype, True, self.t_start,
-        self.sampling_rate, self.sampling_period, self.name, self.file_origin, self.description,
-        self.annotations, self.channel_index, self.segment)
+        return _new_AnalogSignalArray, (self.__class__, np.array(self), self.units, self.dtype,
+                                        True, self.t_start, self.sampling_rate,
+                                        self.sampling_period, self.name, self.file_origin,
+                                        self.description, self.annotations, self.channel_index,
+                                        self.segment)
 
     def _array_finalize_spec(self, obj):
         '''
@@ -243,9 +245,10 @@ class AnalogSignal(BaseSignal):
         '''
         Returns a string representing the :class:`AnalogSignal`.
         '''
-        return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (
-        self.__class__.__name__, super(AnalogSignal, self).__repr__(), self.t_start, self.t_stop,
-        self.sampling_rate))
+        return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
+                                                           super(AnalogSignal, self).__repr__(),
+                                                           self.t_start, self.t_stop,
+                                                           self.sampling_rate))
 
     def get_channel_index(self):
         """

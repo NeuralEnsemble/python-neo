@@ -263,20 +263,21 @@ class TestAnalogSignalProperties(unittest.TestCase):
     def test__repr(self):
         for i, signal in enumerate(self.signals):
             prepr = repr(signal)
-            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % (
-            repr(self.data[i].reshape(-1, 1)), self.t_start[i],
-            self.t_start[i] + len(self.data[i]) / self.rates[i], self.rates[i])
+            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' \
+                   '' % (repr(self.data[i].reshape(-1, 1)), self.t_start[i],
+                         self.t_start[i] + len(self.data[i]) / self.rates[i], self.rates[i])
             self.assertEqual(prepr, targ)
 
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
-            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n' % (
-            signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
-            signal.dtype)) + ('annotations: %s\n' % signal.annotations) + (
-                        'sampling rate: {}\n'.format(signal.sampling_rate)) + (
-                        'time: {} to {}'.format(signal.t_start, signal.t_stop)))
+            targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
+                     '' % (signal.shape[1], signal.shape[0],
+                           signal.units.dimensionality.unicode,signal.dtype))
+                    + ('annotations: %s\n' % signal.annotations)
+                    + ('sampling rate: {}\n'.format(signal.sampling_rate))
+                    + ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
             self.assertEqual(prepr, targ)
 
 

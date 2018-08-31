@@ -658,13 +658,12 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def test__pretty(self):
         res = pretty(self.signal1)
         signal = self.signal1
-        targ = ((
-                        "IrregularlySampledSignal with %d channels of length %d; units %s; "
-                        "datatype %s \n" % (
-                    signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
-                    signal.dtype)) + ("name: '%s'\ndescription: '%s'\n" % (
-        signal.name, signal.description)) + ("annotations: %s\n" % str(signal.annotations)) + (
-                            "sample times: %s" % (signal.times[:10],)))
+        targ = (("IrregularlySampledSignal with %d channels of length %d; units %s; datatype %s \n"
+                 "" % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
+                       signal.dtype))
+                + ("name: '%s'\ndescription: '%s'\n" % (signal.name, signal.description))
+                + ("annotations: %s\n" % str(signal.annotations))
+                + ("sample times: %s" % (signal.times[:10],)))
         self.assertEqual(res, targ)
 
     def test__merge(self):
