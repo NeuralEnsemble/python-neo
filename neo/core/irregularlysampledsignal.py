@@ -241,8 +241,20 @@ class IrregularlySampledSignal(BaseSignal):
                     # add if channel_index
         elif isinstance(i, slice):
             obj.times = self.times.__getitem__(i)
+        elif isinstance(i, np.ndarray):
+            # Indexing of an IrregularlySampledSignal is only consistent if the resulting
+            # number of samples is the same for each trace. The time axis for these samples is not
+            # guaranteed to be continuous, so returning a Quantity instead of an
+            # IrregularlySampledSignal here.
+            new_time_dims = np.sum(i, axis=0)
+            if len(new_time_dims) and all(new_time_dims == new_time_dims[0]):
+                obj = obj.reshape(-1, self.shape[1])
+                obj = pq.Quantity(obj.magnitude, units=obj.units)
+            else:
+                raise IndexError("indexing of an IrregularlySampledSignal needs to keep the same "
+                                 "number of sample for each trace contained")
         else:
-            raise IndexError("index should be an integer, tuple or slice")
+            raise IndexError("index should be an integer, tuple, slice or boolean numpy array")
         return obj
 
     @property

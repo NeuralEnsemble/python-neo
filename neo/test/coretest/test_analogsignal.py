@@ -450,6 +450,9 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                            np.array([True, True, True, True, True,
                                      True, True, True, True, True]).reshape(-1, 1))
 
+    def test__comparison_as_indexing(self):
+        self.assertEqual(self.signal1[self.signal1 == 5], [5*pq.mV])
+
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal1.__gt__, 5 * pq.mV)
 
