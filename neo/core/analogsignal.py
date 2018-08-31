@@ -430,8 +430,10 @@ class AnalogSignal(BaseSignal):
         '''
         pp.text("{cls} with {channels} channels of length {length}; "
                 "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
-            channels=self.shape[1], length=self.shape[0], units=self.units.dimensionality.string,
-            dtype=self.dtype))
+                                                          channels=self.shape[1],
+                                                          length=self.shape[0],
+                                                          units=self.units.dimensionality.string,
+                                                          dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
