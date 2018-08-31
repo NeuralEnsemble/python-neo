@@ -384,10 +384,10 @@ class IrregularlySampledSignal(BaseSignal):
         id_stop = None
         for i in indices:
             if id_start is None:
-                if i is True:
+                if i == True:
                     id_start = count
             else:
-                if i is False:
+                if i == False:
                     id_stop = count
                     break
             count += 1
