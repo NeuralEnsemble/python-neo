@@ -420,8 +420,13 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_array_equal(self.signal1 == self.signal1, np.array(
             [True, True, True, True, True, True, True, True, True, True]).reshape(-1, 1))
 
-    def test__comparison_as_indexing(self):
+    def test__comparison_as_indexing_single_trace(self):
         self.assertEqual(self.signal1[self.signal1 == 5], [5 * pq.mV])
+
+    def test__comparison_as_indexing_multi_trace(self):
+        signal = AnalogSignal(np.arange(20).reshape((-1, 2))*pq.V, sampling_rate=1*pq.Hz)
+        assert_array_equal(signal[signal < 10],
+                           np.array([[0, 2, 4, 6, 8], [1, 3, 5, 7, 9]]).T * pq.V)
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal1.__gt__, 5 * pq.mV)
