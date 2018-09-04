@@ -262,10 +262,11 @@ class AnalogSignal(BaseSignal):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(AnalogSignal, self).__getitem__(i)
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
+            obj = super(AnalogSignal, self).__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
+            obj = super(AnalogSignal, self).__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # extract a quantity array
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -286,6 +287,7 @@ class AnalogSignal(BaseSignal):
                 if self.channel_index:
                     obj.channel_index = self.channel_index.__getitem__(k)
         elif isinstance(i, slice):
+            obj = super(AnalogSignal, self).__getitem__(i)
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
         elif isinstance(i, np.ndarray):
@@ -294,8 +296,9 @@ class AnalogSignal(BaseSignal):
             # guaranteed to be continuous, so returning a Quantity instead of an AnalogSignal here.
             new_time_dims = np.sum(i, axis=0)
             if len(new_time_dims) and all(new_time_dims == new_time_dims[0]):
-                obj = obj.reshape(-1, self.shape[1])
-                obj = pq.Quantity(obj.magnitude, units=obj.units)
+                obj = np.asarray(self).T.__getitem__(i.T)
+                obj = obj.T.reshape(self.shape[1], -1).T
+                obj = pq.Quantity(obj, units=self.units)
             else:
                 raise IndexError("indexing of an AnalogSignals needs to keep the same number of "
                                  "sample for each trace contained")
