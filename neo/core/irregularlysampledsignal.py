@@ -205,10 +205,11 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(IrregularlySampledSignal, self).__getitem__(i)
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -222,6 +223,7 @@ class IrregularlySampledSignal(BaseSignal):
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)  # add if channel_index
         elif isinstance(i, slice):
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj.times = self.times.__getitem__(i)
         elif isinstance(i, np.ndarray):
             # Indexing of an IrregularlySampledSignal is only consistent if the resulting
@@ -230,8 +232,9 @@ class IrregularlySampledSignal(BaseSignal):
             # IrregularlySampledSignal here.
             new_time_dims = np.sum(i, axis=0)
             if len(new_time_dims) and all(new_time_dims == new_time_dims[0]):
-                obj = obj.reshape(-1, self.shape[1])
-                obj = pq.Quantity(obj.magnitude, units=obj.units)
+                obj = np.asarray(self).T.__getitem__(i.T)
+                obj = obj.T.reshape(self.shape[1], -1).T
+                obj = pq.Quantity(obj, units=self.units)
             else:
                 raise IndexError("indexing of an IrregularlySampledSignal needs to keep the same "
                                  "number of sample for each trace contained")

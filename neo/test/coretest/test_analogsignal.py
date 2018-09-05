@@ -430,27 +430,26 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__indexing_keeps_order_across_channels(self):
         # AnalogSignals with 10 traces each having 5 samples (eg. data[0] = [0,10,20,30,40])
-        data = np.array([range(10), range(10,20), range(20,30), range(30,40), range(40,50)])
-        mask = np.full((5,10), fill_value=False)
+        data = np.array([range(10), range(10, 20), range(20, 30), range(30, 40), range(40, 50)])
+        mask = np.full((5, 10), fill_value=False)
         # selecting one entry per trace
         mask[[0, 1, 0, 3, 0, 2, 4, 3, 1, 4], range(10)] = True
 
-        signal = AnalogSignal(np.array(data)*pq.V, sampling_rate=1*pq.Hz)
-        assert_array_equal(signal[mask],
-                           np.array([0, 11, 2, 33, 4, 25, 46, 37, 18, 49]) * pq.V)
+        signal = AnalogSignal(np.array(data) * pq.V, sampling_rate=1 * pq.Hz)
+        assert_array_equal(signal[mask], np.array([[0, 11, 2, 33, 4, 25, 46, 37, 18, 49]]) * pq.V)
 
     def test__indexing_keeps_order_across_time(self):
         # AnalogSignals with 10 traces each having 5 samples (eg. data[0] = [0,10,20,30,40])
-        data = np.array([range(10), range(10,20), range(20,30), range(30,40), range(40,50)])
-        mask = np.full((5,10), fill_value=False)
+        data = np.array([range(10), range(10, 20), range(20, 30), range(30, 40), range(40, 50)])
+        mask = np.full((5, 10), fill_value=False)
         # selecting two entries per trace
         temporal_ids = [0, 1, 0, 3, 1, 2, 4, 2, 1, 4] + [4, 3, 2, 1, 0, 1, 2, 3, 2, 1]
         mask[temporal_ids, list(range(10)) + list(range(10))] = True
 
-        signal = AnalogSignal(np.array(data)*pq.V, sampling_rate=1*pq.Hz)
-        assert_array_equal(signal[mask],
-                           np.array([[0, 11, 2, 13, 4, 15, 26, 27, 18, 19],
-                                    [40, 31, 22, 33, 14, 25, 46, 37, 28, 49]]) * pq.V)
+        signal = AnalogSignal(np.array(data) * pq.V, sampling_rate=1 * pq.Hz)
+        assert_array_equal(signal[mask], np.array([[0, 11, 2, 13, 4, 15, 26, 27, 18, 19],
+                                                   [40, 31, 22, 33, 14, 25, 46, 37, 28,
+                                                    49]]) * pq.V)
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal1.__gt__, 5 * pq.mV)
