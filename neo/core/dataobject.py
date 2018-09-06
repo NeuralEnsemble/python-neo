@@ -43,7 +43,7 @@ class DataObject(BaseNeo, pq.Quantity):
         # Adding array annotations to the object if not yet available, default is empty dict
         if array_annotations is None:
             if 'array_annotations' not in self.__dict__ or not self.array_annotations:
-                self.array_annotations = {}
+                self.array_annotations = ArrayDict(self._check_array_annotations)
         else:
             self.array_annotate(**self._check_array_annotations(array_annotations))
 
@@ -191,7 +191,7 @@ class DataObject(BaseNeo, pq.Quantity):
         value11
         """
 
-        array_annotations = self._check_array_annotations(array_annotations)
+        # array_annotations = self._check_array_annotations(array_annotations)
         self.array_annotations.update(array_annotations)
 
     def array_annotations_at_index(self, index):
@@ -209,6 +209,8 @@ class DataObject(BaseNeo, pq.Quantity):
         {key1=value01, key2=value11}
         """
 
+        # Taking only a part of the array annotations
+        # Thus not using ArrayDict here, because checks for length are not needed
         index_annotations = {}
 
         # Use what is given as an index to determine the corresponding annotations,
@@ -230,7 +232,7 @@ class DataObject(BaseNeo, pq.Quantity):
 
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
-        merged_array_annotations = {}
+        merged_array_annotations = ArrayDict(self._check_array_annotations)
         omitted_keys_self = []
         # Concatenating arrays for each key
         for key in self.array_annotations:
@@ -326,3 +328,22 @@ class DataObject(BaseNeo, pq.Quantity):
         # This holds true for the current implementation
         # This method should be overridden in case this changes
         return self.shape[-1]
+
+
+class ArrayDict(dict):
+    """Dictionary subclass to handle array annotations
+
+       When setting `obj.array_annotations[key]=value`, checks for consistency
+       should not be bypassed.
+       This class overrides __setitem__ from dict to perform these checks every time.
+       The method used for these checks is given as an argument for __init__.
+    """
+
+    def __init__(self, check_function, *args, **kwargs):
+        super(ArrayDict, self).__init__(*args, **kwargs)
+        self.check_function = check_function
+
+    def __setitem__(self, key, value):
+        value = self.check_function(value)
+        super(ArrayDict, self).__setitem__(key, value)
+

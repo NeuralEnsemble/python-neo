@@ -25,7 +25,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
-from neo.core.dataobject import DataObject
+from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.channelindex import ChannelIndex
 
 logger = logging.getLogger("Neo")
@@ -74,7 +74,7 @@ class BaseSignal(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = {}
+            self.array_annotations = ArrayDict(self._check_array_annotations)
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)

@@ -16,8 +16,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
-from neo.core.dataobject import DataObject
-
+from neo.core.dataobject import DataObject, ArrayDict
 
 PY_VER = sys.version_info[0]
 
@@ -138,7 +137,7 @@ class Event(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = {}
+            self.array_annotations = ArrayDict(self._check_array_annotations)
 
     def __repr__(self):
         '''
