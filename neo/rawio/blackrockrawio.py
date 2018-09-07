@@ -344,7 +344,7 @@ class BlackrockRawIO(BaseRawIO):
                     gain = (float(chan['max_analog_val']) - float(chan['min_analog_val'])) / \
                            (float(chan['max_digital_val']) - float(chan['min_digital_val']))
                     offset = -float(chan['min_digital_val']) \
-                             * gain + float(chan['min_analog_val'])
+                        * gain + float(chan['min_analog_val'])
                 group_id = 0
                 sig_channels.append((ch_name, ch_id, sig_sampling_rate, sig_dtype,
                                      units, gain, offset, group_id,))
@@ -885,8 +885,8 @@ class BlackrockRawIO(BaseRawIO):
 
             # data size = number of data points * (2bytes * number of channels)
             # use of `int` avoids overflow problem
-            data_size = int(dh['nb_data_points']) * \
-                        int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
+            data_size = int(dh['nb_data_points']) *\
+                int(self.__nsx_basic_header[nsx_nb]['channel_count']) * 2
             # define new offset (to possible next data block)
             offset = data_header[index]['offset_to_data_block'] + data_size
 
@@ -1104,7 +1104,7 @@ class BlackrockRawIO(BaseRawIO):
             # explicitely converting to int to allow for negative diff values
             jump_ids = \
                 np.where(np.diff(np.asarray(raw_event_data['timestamp'], dtype=int)) < 0)[0] + 1
-            overlap = np.isin(jump_ids, reset_ev_ids)
+            overlap = np.in1d(jump_ids, reset_ev_ids)
             if not all(overlap):
                 # additional resets occurred without a reset event being stored
                 additional_ids = jump_ids[np.invert(overlap)]
@@ -1696,8 +1696,8 @@ class BlackrockRawIO(BaseRawIO):
         filename = '.'.join([self._filenames['nsx'], 'ns%i' % nsx_nb])
 
         bytes_in_headers = self.__nsx_basic_header[nsx_nb].dtype.itemsize + \
-                           self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
-                           self.__nsx_basic_header[nsx_nb]['channel_count']
+            self.__nsx_ext_header[nsx_nb].dtype.itemsize * \
+            self.__nsx_basic_header[nsx_nb]['channel_count']
 
         if np.isnan(dig_factor[0]):
             units = ''
