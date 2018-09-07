@@ -4,8 +4,8 @@ This module implements :class:`IrregularlySampledSignal`, an array of analog
 signals with samples taken at arbitrary time points.
 
 :class:`IrregularlySampledSignal` inherits from :class:`basesignal.BaseSignal`
-which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`, 
-and from :class:`quantities.Quantity`, which in turn inherits from 
+which derives from :class:`BaseNeo`, from :module:`neo.core.baseneo`,
+and from :class:`quantities.Quantity`, which in turn inherits from
 :class:`numpy.ndarray`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -120,8 +120,7 @@ class IrregularlySampledSignal(BaseSignal):
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
     _quantity_attr = 'signal'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('signal', pq.Quantity, 2))
+    _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None,
                 copy=True, name=None, file_origin=None,
@@ -144,15 +143,13 @@ class IrregularlySampledSignal(BaseSignal):
             if time_units != times.units:
                 times = times.rescale(time_units)
         # should check time units have correct dimensions
-        obj = pq.Quantity.__new__(cls, signal, units=units,
-                                  dtype=dtype, copy=copy)
+        obj = pq.Quantity.__new__(cls, signal, units=units, dtype=dtype, copy=copy)
         if obj.ndim == 1:
             obj = obj.reshape(-1, 1)
         if len(times) != obj.shape[0]:
             raise ValueError("times array and signal array must "
                              "have same length")
-        obj.times = pq.Quantity(times, units=time_units,
-                                dtype=float, copy=copy)
+        obj.times = pq.Quantity(times, units=time_units, dtype=float, copy=copy)
         obj.segment = None
         obj.channel_index = None
 
@@ -203,9 +200,8 @@ class IrregularlySampledSignal(BaseSignal):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_signal = cls(self.times, np.array(self), units=self.units,
-                         time_units=self.times.units, dtype=self.dtype,
-                         t_start=self.t_start, name=self.name,
+        new_signal = cls(self.times, np.array(self), units=self.units, time_units=self.times.units,
+                         dtype=self.dtype, t_start=self.t_start, name=self.name,
                          file_origin=self.file_origin, description=self.description)
         new_signal.__dict__.update(self.__dict__)
         memo[id(self)] = new_signal
@@ -220,18 +216,18 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
-        return '<%s(%s at times %s)>' % (self.__class__.__name__,
-                                         super(IrregularlySampledSignal,
-                                               self).__repr__(), self.times)
+        return '<%s(%s at times %s)>' % (
+            self.__class__.__name__, super(IrregularlySampledSignal, self).__repr__(), self.times)
 
     def __getitem__(self, i):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(IrregularlySampledSignal, self).__getitem__(i)
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # a single point in time across some channels
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
@@ -247,10 +243,24 @@ class IrregularlySampledSignal(BaseSignal):
                     # add if channel_index
                 obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
+            obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj.times = self.times.__getitem__(i)
             obj.array_annotations = deepcopy(self.array_annotations)
+        elif isinstance(i, np.ndarray):
+            # Indexing of an IrregularlySampledSignal is only consistent if the resulting
+            # number of samples is the same for each trace. The time axis for these samples is not
+            # guaranteed to be continuous, so returning a Quantity instead of an
+            # IrregularlySampledSignal here.
+            new_time_dims = np.sum(i, axis=0)
+            if len(new_time_dims) and all(new_time_dims == new_time_dims[0]):
+                obj = np.asarray(self).T.__getitem__(i.T)
+                obj = obj.T.reshape(self.shape[1], -1).T
+                obj = pq.Quantity(obj, units=self.units)
+            else:
+                raise IndexError("indexing of an IrregularlySampledSignal needs to keep the same "
+                                 "number of sample for each trace contained")
         else:
-            raise IndexError("index should be an integer, tuple or slice")
+            raise IndexError("index should be an integer, tuple, slice or boolean numpy array")
         return obj
 
     @property
@@ -284,8 +294,9 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Equality test (==)
         '''
-        return (super(IrregularlySampledSignal, self).__eq__(other).all() and
-                (self.times == other.times).all())
+        if (isinstance(other, IrregularlySampledSignal) and not (self.times == other.times).all()):
+            return False
+        return super(IrregularlySampledSignal, self).__eq__(other)
 
     def _check_consistency(self, other):
         '''
@@ -300,8 +311,7 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: %s vs %s' %
-                             (self.ndim, other.ndim))
+            raise ValueError('Dimensionality does not match: %s vs %s' % (self.ndim, other.ndim))
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):
@@ -309,8 +319,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError('Times do not match: %s vs %s' %
-                             (self.times, other.times))
+            raise ValueError('Times do not match: %s vs %s' % (self.times, other.times))
 
     def __rsub__(self, other, *args):
         '''
@@ -323,12 +332,11 @@ class IrregularlySampledSignal(BaseSignal):
         Handle pretty-printing the :class:`IrregularlySampledSignal`.
         '''
         pp.text("{cls} with {channels} channels of length {length}; "
-                "units {units}; datatype {dtype} ".format(
-            cls=self.__class__.__name__,
-            channels=self.shape[1],
-            length=self.shape[0],
-            units=self.units.dimensionality.string,
-            dtype=self.dtype))
+                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
+                                                          channels=self.shape[1],
+                                                          length=self.shape[0],
+                                                          units=self.units.dimensionality.string,
+                                                          dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -400,10 +408,10 @@ class IrregularlySampledSignal(BaseSignal):
         id_stop = None
         for i in indices:
             if id_start is None:
-                if i == True:
+                if i:
                     id_start = count
             else:
-                if i == False:
+                if not i:
                     id_stop = count
                     break
             count += 1
@@ -449,27 +457,26 @@ class IrregularlySampledSignal(BaseSignal):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
-
-        kwargs['array_annotations'] = self._merge_array_annotations(other)
 
         signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
                                 copy=False, **kwargs)
         signal.segment = self.segment
+        signal.array_annotate(**self._merge_array_annotations(other))
 
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
 
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
-            signal.channel_index = ChannelIndex(
-                index=np.arange(signal.shape[1]),
-                channel_ids=np.hstack([self.channel_index.channel_ids,
-                                       other.channel_index.channel_ids]),
-                channel_names=np.hstack([self.channel_index.channel_names,
-                                         other.channel_index.channel_names]))
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
+                                                channel_ids=np.hstack(
+                                                    [self.channel_index.channel_ids,
+                                                     other.channel_index.channel_ids]),
+                                                channel_names=np.hstack(
+                                                    [self.channel_index.channel_names,
+                                                     other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 

@@ -1132,16 +1132,87 @@ class NixIOWriteTest(NixIOTest):
         chidx.units.append(unit)
         unit.spiketrains.extend([sta, stb])
         self.writer.write_block(blk)
+        self.writer.close()
 
         self.compare_blocks([blk], self.reader.blocks)
 
-        self.writer.close()
         reader = NixIO(self.filename, "ro")
         blk = reader.read_block(neoname="segmentless block")
         chx = blk.channel_indexes[0]
         self.assertEqual(len(chx.analogsignals), 1)
         self.assertEqual(len(chx.irregularlysampledsignals), 1)
         self.assertEqual(len(chx.units[0].spiketrains), 2)
+
+    def test_rewrite_refs(self):
+
+        def checksignalcounts(fname):
+            with NixIO(fname, "ro") as r:
+                blk = r.read_block()
+            chidx = blk.channel_indexes[0]
+            seg = blk.segments[0]
+            self.assertEqual(len(chidx.analogsignals), 2)
+            self.assertEqual(len(chidx.units[0].spiketrains), 3)
+            self.assertEqual(len(seg.analogsignals), 1)
+            self.assertEqual(len(seg.spiketrains), 1)
+
+        blk = Block()
+        # ChannelIndex
+        chidx = ChannelIndex(index=[1])
+        blk.channel_indexes.append(chidx)
+
+        # Two signals on ChannelIndex
+        for idx in range(2):
+            asigchx = AnalogSignal(signal=[idx], units="mV",
+                                   sampling_rate=pq.Hz)
+            chidx.analogsignals.append(asigchx)
+
+        # Unit
+        unit = Unit()
+        chidx.units.append(unit)
+
+        # Three SpikeTrains on Unit
+        for idx in range(3):
+            st = SpikeTrain([idx], units="ms", t_stop=40)
+            unit.spiketrains.append(st)
+
+        # Segment
+        seg = Segment()
+        blk.segments.append(seg)
+
+        # One signal on Segment
+        asigseg = AnalogSignal(signal=[2], units="uA",
+                               sampling_rate=pq.Hz)
+        seg.analogsignals.append(asigseg)
+
+        # One spiketrain on Segment
+        stseg = SpikeTrain([10], units="ms", t_stop=40)
+        seg.spiketrains.append(stseg)
+
+        # Write, compare, and check counts
+        self.writer.write_block(blk)
+        self.compare_blocks([blk], self.reader.blocks)
+        self.assertEqual(len(chidx.analogsignals), 2)
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertEqual(len(chidx.analogsignals), 2)
+        self.assertEqual(len(chidx.units[0].spiketrains), 3)
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertEqual(len(seg.spiketrains), 1)
+
+        # Check counts with separate reader
+        checksignalcounts(self.filename)
+
+        # Write again and check counts
+        secondwrite = os.path.join(self.tempdir, "testnixio-2.nix")
+        with NixIO(secondwrite, "ow") as w:
+            w.write_block(blk)
+
+        self.compare_blocks([blk], self.reader.blocks)
+
+        # Read back and check counts
+        scndreader = nix.File.open(secondwrite, mode=nix.FileMode.ReadOnly,
+                                   backend="h5py")
+        self.compare_blocks([blk], scndreader.blocks)
+        checksignalcounts(secondwrite)
 
     def test_to_value(self):
         section = self.io.nix_file.create_section("Metadata value test",

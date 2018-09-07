@@ -2,8 +2,8 @@
 '''
 This module implements :class:`AnalogSignal`, an array of analog signals.
 
-:class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which 
-derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which 
+:class:`AnalogSignal` inherits from :class:`basesignal.BaseSignal` which
+derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
 in turn inherits from :class:`numpy.array`.
 
 Inheritance from :class:`numpy.array` is explained here:
@@ -31,9 +31,9 @@ from neo.core.dataobject import DataObject
 from neo.core.channelindex import ChannelIndex
 from copy import copy, deepcopy
 
-logger = logging.getLogger("Neo")
-
 from neo.core.basesignal import BaseSignal
+
+logger = logging.getLogger("Neo")
 
 
 def _get_sampling_rate(sampling_rate, sampling_period):
@@ -43,8 +43,7 @@ def _get_sampling_rate(sampling_rate, sampling_period):
     '''
     if sampling_period is None:
         if sampling_rate is None:
-            raise ValueError("You must provide either the sampling rate or " +
-                             "sampling period")
+            raise ValueError("You must provide either the sampling rate or " + "sampling period")
     elif sampling_rate is None:
         sampling_rate = 1.0 / sampling_period
     elif sampling_period != 1.0 / sampling_rate:
@@ -249,10 +248,10 @@ class AnalogSignal(BaseSignal):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_signal = cls(np.array(self), units=self.units, dtype=self.dtype,
-                         t_start=self.t_start, sampling_rate=self.sampling_rate,
-                         sampling_period=self.sampling_period, name=self.name,
-                         file_origin=self.file_origin, description=self.description)
+        new_signal = cls(np.array(self), units=self.units, dtype=self.dtype, t_start=self.t_start,
+                         sampling_rate=self.sampling_rate, sampling_period=self.sampling_period,
+                         name=self.name, file_origin=self.file_origin,
+                         description=self.description)
         new_signal.__dict__.update(self.__dict__)
         memo[id(self)] = new_signal
         for k, v in self.__dict__.items():
@@ -266,10 +265,10 @@ class AnalogSignal(BaseSignal):
         '''
         Returns a string representing the :class:`AnalogSignal`.
         '''
-        return ('<%s(%s, [%s, %s], sampling rate: %s)>' %
-                (self.__class__.__name__,
-                 super(AnalogSignal, self).__repr__(), self.t_start,
-                 self.t_stop, self.sampling_rate))
+        return ('<%s(%s, [%s, %s], sampling rate: %s)>' % (self.__class__.__name__,
+                                                           super(AnalogSignal, self).__repr__(),
+                                                           self.t_start, self.t_stop,
+                                                           self.sampling_rate))
 
     def get_channel_index(self):
         """
@@ -283,23 +282,24 @@ class AnalogSignal(BaseSignal):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = super(AnalogSignal, self).__getitem__(i)
         if isinstance(i, (int, np.integer)):  # a single point in time across all channels
+            obj = super(AnalogSignal, self).__getitem__(i)
             obj = pq.Quantity(obj.magnitude, units=obj.units)
         elif isinstance(i, tuple):
+            obj = super(AnalogSignal, self).__getitem__(i)
             j, k = i
             if isinstance(j, (int, np.integer)):  # extract a quantity array
                 obj = pq.Quantity(obj.magnitude, units=obj.units)
             else:
                 if isinstance(j, slice):
                     if j.start:
-                        obj.t_start = (self.t_start +
-                                       j.start * self.sampling_period)
+                        obj.t_start = (self.t_start + j.start * self.sampling_period)
                     if j.step:
                         obj.sampling_period *= j.step
                 elif isinstance(j, np.ndarray):
-                    raise NotImplementedError("Arrays not yet supported")
-                    # in the general case, would need to return IrregularlySampledSignal(Array)
+                    raise NotImplementedError(
+                        "Arrays not yet supported")  # in the general case, would need to return
+                    #  IrregularlySampledSignal(Array)
                 else:
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
@@ -308,11 +308,24 @@ class AnalogSignal(BaseSignal):
                     obj.channel_index = self.channel_index.__getitem__(k)
                 obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
+            obj = super(AnalogSignal, self).__getitem__(i)
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
             obj.array_annotations = deepcopy(self.array_annotations)
+        elif isinstance(i, np.ndarray):
+            # Indexing of an AnalogSignal is only consistent if the resulting number of
+            # samples is the same for each trace. The time axis for these samples is not
+            # guaranteed to be continuous, so returning a Quantity instead of an AnalogSignal here.
+            new_time_dims = np.sum(i, axis=0)
+            if len(new_time_dims) and all(new_time_dims == new_time_dims[0]):
+                obj = np.asarray(self).T.__getitem__(i.T)
+                obj = obj.T.reshape(self.shape[1], -1).T
+                obj = pq.Quantity(obj, units=self.units)
+            else:
+                raise IndexError("indexing of an AnalogSignals needs to keep the same number of "
+                                 "sample for each trace contained")
         else:
-            raise IndexError("index should be an integer, tuple or slice")
+            raise IndexError("index should be an integer, tuple, slice or boolean numpy array")
         return obj
 
     def __setitem__(self, i, value):
@@ -420,8 +433,8 @@ class AnalogSignal(BaseSignal):
         '''
         Equality test (==)
         '''
-        if (self.t_start != other.t_start or
-                    self.sampling_rate != other.sampling_rate):
+        if (isinstance(other, AnalogSignal) and (
+                self.t_start != other.t_start or self.sampling_rate != other.sampling_rate)):
             return False
         return super(AnalogSignal, self).__eq__(other)
 
@@ -433,20 +446,19 @@ class AnalogSignal(BaseSignal):
         if isinstance(other, AnalogSignal):
             for attr in "t_start", "sampling_rate":
                 if getattr(self, attr) != getattr(other, attr):
-                    raise ValueError("Inconsistent values of %s" % attr)
-                    # how to handle name and annotations?
+                    raise ValueError(
+                        "Inconsistent values of %s" % attr)  # how to handle name and annotations?
 
     def _repr_pretty_(self, pp, cycle):
         '''
         Handle pretty-printing the :class:`AnalogSignal`.
         '''
         pp.text("{cls} with {channels} channels of length {length}; "
-                "units {units}; datatype {dtype} ".format(
-            cls=self.__class__.__name__,
-            channels=self.shape[1],
-            length=self.shape[0],
-            units=self.units.dimensionality.string,
-            dtype=self.dtype))
+                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
+                                                          channels=self.shape[1],
+                                                          length=self.shape[0],
+                                                          units=self.units.dimensionality.string,
+                                                          dtype=self.dtype))
         if self._has_repr_pretty_attrs_():
             pp.breakable()
             self._repr_pretty_attrs_(pp, cycle)
@@ -457,8 +469,7 @@ class AnalogSignal(BaseSignal):
                 pp.text(line)
 
         for line in ["sampling rate: {0}".format(self.sampling_rate),
-                     "time: {0} to {1}".format(self.t_start, self.t_stop)
-                     ]:
+                     "time: {0} to {1}".format(self.t_start, self.t_stop)]:
             _pp(line)
 
     def time_index(self, t):
@@ -520,7 +531,7 @@ class AnalogSignal(BaseSignal):
 
         If `copy` is False (the default), modify the current signal in place.
         If `copy` is True, return a new signal and leave the current one untouched.
-        In this case, the new signal will not be linked to any parent objects.        
+        In this case, the new signal will not be linked to any parent objects.
         """
         if signal.t_start < self.t_start:
             raise ValueError("Cannot splice earlier than the start of the signal")

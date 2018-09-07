@@ -410,6 +410,14 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
                             np.array([[False, True, True],
                                       [True, True, True],
                                       [True, True, True]]))
+        assert_arrays_equal(self.signal1[0:3, 0:3] == 5 * pq.nA,
+                            np.array([[False, False, False],
+                                      [True, False, False],
+                                      [False, False, False]]))
+        assert_arrays_equal(self.signal1[0:3, 0:3] == self.signal1[0:3, 0:3],
+                            np.array([[True, True, True],
+                                      [True, True, True],
+                                      [True, True, True]]))
 
     def test__comparison_with_inconsistent_units_should_raise_Exception(self):
         self.assertRaises(ValueError, self.signal1.__gt__, 5 * pq.mV)
