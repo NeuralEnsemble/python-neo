@@ -559,7 +559,15 @@ def read_txt_header(filename):
                 name = k2
             value = match[1].rstrip(' ')
             if type_ is not None:
-                value = type_(value)
+                if type_==bool:
+                     if value=='True': 
+                         value=True
+                     elif value=='False': 
+                         value=False
+                     else: 
+                         raise Exception('Unknown value %s for k1=%s, k2=%s' %(value, k1, k2))
+                else:
+                     value = type_(value)
             info[name] = value
 
     # if channel_ids or s not in info then the filename is used
