@@ -497,7 +497,7 @@ def _to_bool(txt):
     elif txt=='False': 
         return False
     else: 
-        raise Exception('Connot convert %s to bool' %(txt))
+        raise Exception('Can not convert %s to bool' %(txt))
 
 # keys in
 txt_header_keys = [
