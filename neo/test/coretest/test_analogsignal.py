@@ -814,6 +814,7 @@ class TestAnalogSignalFunctions(unittest.TestCase):
 
         assert_array_equal(signal1, signal2)
         assert_array_equal(signal2.channel_index.index, np.array([0]))
+        assert_array_equal(signal2.array_annotations['anno1'], np.array([23]))
         fobj.close()
         os.remove('./pickle')
 

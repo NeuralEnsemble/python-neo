@@ -349,8 +349,8 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test0'], targ.annotations['test0'])
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
-        assert_arrays_equal(result.array_annotations['index'], arr_ann['index'])
-        assert_arrays_equal(result.array_annotations['test'], arr_ann['test'])
+        assert_arrays_equal(result.array_annotations['index'], np.array(arr_ann['index']))
+        assert_arrays_equal(result.array_annotations['test'], np.array(arr_ann['test']))
 
     def test_time_slice_empty(self):
         params = {'test2': 'y1', 'test3': True}

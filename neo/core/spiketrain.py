@@ -28,7 +28,7 @@ import warnings
 import numpy as np
 import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
-from neo.core.dataobject import DataObject, ArrayDict
+from neo.core.dataobject import DataObject, ArrayDict, _normalize_array_annotations
 
 
 def check_has_dimensions_time(*values):
@@ -401,7 +401,7 @@ class SpikeTrain(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = ArrayDict(self._check_array_annotations)
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
         # Note: Array annotations have to be changed when slicing or initializing an object,
         # copying them over in spite of changed data would result in unexpected behaviour
@@ -685,7 +685,7 @@ class SpikeTrain(DataObject):
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
 
-        merged_array_annotations = ArrayDict(self._check_array_annotations)
+        merged_array_annotations = {}
 
         omitted_keys_self = []
 

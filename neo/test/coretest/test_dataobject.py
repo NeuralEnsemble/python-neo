@@ -3,7 +3,7 @@ import copy
 import numpy as np
 import unittest
 
-from neo.core.dataobject import DataObject
+from neo.core.dataobject import DataObject, _normalize_array_annotatios
 
 
 class Test_DataObject(unittest.TestCase):
@@ -24,58 +24,60 @@ class Test_array_annotations(unittest.TestCase):
 
         corr_ann_copy = copy.deepcopy(corr_ann)
 
+        # Obtaining check and normalize function
         # Checking correct annotations should work fine
-        datobj._check_array_annotations(corr_ann)
+        corr_ann = _normalize_array_annotatios(corr_ann, datobj._get_arr_ann_length())
 
         # Make sure the annotations have not been altered
         self.assertSequenceEqual(corr_ann.keys(), corr_ann_copy.keys())
-        self.assert_((corr_ann['anno1'] == corr_ann_copy['anno1']).all())
-        self.assert_((corr_ann['anno2'] == corr_ann_copy['anno2']).all())
+        self.assertTrue((corr_ann['anno1'] == corr_ann_copy['anno1']).all())
+        self.assertTrue((corr_ann['anno2'] == corr_ann_copy['anno2']).all())
 
         # Now creating incorrect inputs:
 
         # Nested dict
         nested_ann = {'anno1': {'val1': arr1}, 'anno2': {'val2': arr2}}
         with self.assertRaises(ValueError):
-            datobj._check_array_annotations(nested_ann)
+            nested_ann = _normalize_array_annotatios(nested_ann, datobj._get_arr_ann_length())
 
         # Containing None
         none_ann = corr_ann_copy
         # noinspection PyTypeChecker
         none_ann['anno2'] = None
         with self.assertRaises(ValueError):
-            datobj._check_array_annotations(none_ann)
+            none_ann = _normalize_array_annotatios(none_ann, datobj._get_arr_ann_length())
 
         # Multi-dimensional arrays in annotations
         multi_dim_ann = copy.deepcopy(corr_ann)
         multi_dim_ann['anno2'] = multi_dim_ann['anno2'].reshape(1, 2)
         with self.assertRaises(ValueError):
-            datobj._check_array_annotations(multi_dim_ann)
+            multi_dim_ann = _normalize_array_annotatios(multi_dim_ann,
+                                                        datobj._get_arr_ann_length())
 
         # Wrong length of annotations
         len_ann = corr_ann
         len_ann['anno1'] = np.asarray(['ABC', 'DEF', 'GHI'])
         with self.assertRaises(ValueError):
-            datobj._check_array_annotations(len_ann)
+            len_ann = _normalize_array_annotatios(len_ann, datobj._get_arr_ann_length())
 
         # Scalar as array annotation raises Error if len(datobj)!=1
         scalar_ann = copy.deepcopy(corr_ann)
         # noinspection PyTypeChecker
         scalar_ann['anno2'] = 3
         with self.assertRaises(ValueError):
-            datobj._check_array_annotations(scalar_ann)
+            scalar_ann = _normalize_array_annotatios(scalar_ann, datobj._get_arr_ann_length())
 
         # But not if len(datobj) == 1, then it's wrapped into an array
         # noinspection PyTypeChecker
         scalar_ann['anno1'] = 'ABC'
         datobj2 = DataObject([1])
-        datobj2._check_array_annotations(scalar_ann)
+        scalar_ann = _normalize_array_annotatios(scalar_ann, datobj2._get_arr_ann_length())
         self.assertIsInstance(scalar_ann['anno1'], np.ndarray)
         self.assertIsInstance(scalar_ann['anno2'], np.ndarray)
 
         # Lists are also made to np.ndarrays
         list_ann = {'anno1': [3, 6], 'anno2': ['ABC', 'DEF']}
-        datobj._check_array_annotations(list_ann)
+        list_ann = _normalize_array_annotatios(list_ann, datobj._get_arr_ann_length())
         self.assertIsInstance(list_ann['anno1'], np.ndarray)
         self.assertIsInstance(list_ann['anno2'], np.ndarray)
 
@@ -88,8 +90,9 @@ class Test_array_annotations(unittest.TestCase):
         datobj.array_annotate(**arr_ann)
 
         # Make sure they are correct
-        self.assert_((datobj.array_annotations['anno1'] == [3, 4, 5]).all())
-        self.assert_((datobj.array_annotations['anno2'] == ['ABC', 'DEF', 'GHI']).all())
+        self.assertTrue((datobj.array_annotations['anno1'] == np.array([3, 4, 5])).all())
+        self.assertTrue((datobj.array_annotations['anno2'] ==
+                         np.array(['ABC', 'DEF', 'GHI'])).all())
 
     def test_arr_anns_at_index(self):
         # Get them, test for desired type and size, content
@@ -106,13 +109,13 @@ class Test_array_annotations(unittest.TestCase):
 
         # Slice as index
         ann_slice = datobj.array_annotations_at_index(slice(1, 3))
-        self.assert_((ann_slice['anno1'] == [4, 5]).all())
-        self.assert_((ann_slice['anno2'] == ['DEF', 'GHI']).all())
+        self.assert_((ann_slice['anno1'] == np.array([4, 5])).all())
+        self.assert_((ann_slice['anno2'] == np.array(['DEF', 'GHI'])).all())
 
         # Slice from beginning to end
         ann_slice_all = datobj.array_annotations_at_index(slice(0, None))
-        self.assert_((ann_slice_all['anno1'] == [3, 4, 5, 6]).all())
-        self.assert_((ann_slice_all['anno2'] == ['ABC', 'DEF', 'GHI', 'JKL']).all())
+        self.assert_((ann_slice_all['anno1'] == np.array([3, 4, 5, 6])).all())
+        self.assert_((ann_slice_all['anno2'] == np.array(['ABC', 'DEF', 'GHI', 'JKL'])).all())
 
         # Make sure that original object is edited when editing extracted array_annotations
         ann_slice_all['anno1'][2] = 10

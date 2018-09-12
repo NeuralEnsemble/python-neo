@@ -245,7 +245,7 @@ class IrregularlySampledSignal(BaseSignal):
         elif isinstance(i, slice):
             obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj.times = self.times.__getitem__(i)
-            obj.array_annotations = deepcopy(self.array_annotations)
+            obj.array_annotate(**deepcopy(self.array_annotations))
         elif isinstance(i, np.ndarray):
             # Indexing of an IrregularlySampledSignal is only consistent if the resulting
             # number of samples is the same for each trace. The time axis for these samples is not
