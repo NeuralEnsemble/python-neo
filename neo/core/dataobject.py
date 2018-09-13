@@ -12,16 +12,9 @@ import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo, _check_annotations
 
-# TODO: Check if objects always only have arrays as array annotations or I forgot to wrap them
-# after running array_annotations_at_index
-# I had, fixed now
-
-# TODO: Pickle
-# TODO: Does my implementation make sense?
 # TODO: If yes, then should array annotations as a whole also be a property?
 
 
-# def _array_annotation_normalizer(length):
 def _normalize_array_annotations(value, length):
 
     """
@@ -178,16 +171,10 @@ class DataObject(BaseNeo, pq.Quantity):
         and attributes are processed.
         """
 
-        if not hasattr(self, 'array_annotations') or not self.array_annotations:
+        if not hasattr(self, 'array_annotations') or self.array_annotations is None:
             self.array_annotations = ArrayDict(self._get_arr_ann_length())
-        # Adding array annotations to the object if not yet available, default is empty dict
-        # if array_annotations is None:
-        #     if 'array_annotations' not in self.__dict__ or not self.array_annotations:
-        #         self.array_annotations = ArrayDict(self._array_annotation_normalizer(
-        #             self._get_arr_ann_length()))
         if array_annotations is not None:
             self.array_annotate(**array_annotations)
-            # self.array_annotate(**self._check_array_annotations(array_annotations))
 
         BaseNeo.__init__(self, name=name, description=description,
                          file_origin=file_origin, **annotations)
@@ -204,7 +191,6 @@ class DataObject(BaseNeo, pq.Quantity):
         value11
         """
 
-        # array_annotations = self._check_array_annotations(array_annotations)
         self.array_annotations.update(array_annotations)
 
     def array_annotations_at_index(self, index):
