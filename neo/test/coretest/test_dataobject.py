@@ -24,7 +24,6 @@ class Test_array_annotations(unittest.TestCase):
 
         corr_ann_copy = copy.deepcopy(corr_ann)
 
-        # Obtaining check and normalize function
         # Checking correct annotations should work fine
         corr_ann = _normalize_array_annotations(corr_ann, datobj._get_arr_ann_length())
 
@@ -80,6 +79,74 @@ class Test_array_annotations(unittest.TestCase):
         list_ann = _normalize_array_annotations(list_ann, datobj._get_arr_ann_length())
         self.assertIsInstance(list_ann['anno1'], np.ndarray)
         self.assertIsInstance(list_ann['anno2'], np.ndarray)
+
+    def test_implicit_dict_check(self):
+
+        # DataObject instance that handles checking
+        datobj = DataObject([1, 2])  # Inherits from Quantity, so some data is required
+
+        # Correct annotations
+        arr1 = np.asarray(["ABC", "DEF"])
+        arr2 = np.asarray([3, 6])
+        corr_ann = {'anno1': arr1, 'anno2': arr2}
+
+        corr_ann_copy = copy.deepcopy(corr_ann)
+
+        # Implicit checks when setting item in dict directly
+        # Checking correct annotations should work fine
+        datobj.array_annotations['anno1'] = arr1
+        datobj.array_annotations.update({'anno2': arr2})
+
+        # Make sure the annotations have not been altered
+        self.assertTrue((datobj.array_annotations['anno1'] == corr_ann_copy['anno1']).all())
+        self.assertTrue((datobj.array_annotations['anno2'] == corr_ann_copy['anno2']).all())
+
+        # Now creating incorrect inputs:
+
+        # Nested dict
+        nested_ann = {'anno1': {'val1': arr1}, 'anno2': {'val2': arr2}}
+        with self.assertRaises(ValueError):
+            datobj.array_annotations['anno1'] = {'val1': arr1}
+
+        # Containing None
+        none_ann = corr_ann_copy
+        # noinspection PyTypeChecker
+        none_ann['anno2'] = None
+        with self.assertRaises(ValueError):
+            datobj.array_annotations['anno1'] = None
+
+        # Multi-dimensional arrays in annotations
+        multi_dim_ann = copy.deepcopy(corr_ann)
+        multi_dim_ann['anno2'] = multi_dim_ann['anno2'].reshape(1, 2)
+        with self.assertRaises(ValueError):
+            datobj.array_annotations.update(multi_dim_ann)
+
+        # Wrong length of annotations
+        len_ann = corr_ann
+        len_ann['anno1'] = np.asarray(['ABC', 'DEF', 'GHI'])
+        with self.assertRaises(ValueError):
+            datobj.array_annotations.update(len_ann)
+
+        # Scalar as array annotation raises Error if len(datobj)!=1
+        scalar_ann = copy.deepcopy(corr_ann)
+        # noinspection PyTypeChecker
+        scalar_ann['anno2'] = 3
+        with self.assertRaises(ValueError):
+            datobj.array_annotations.update(scalar_ann)
+
+        # But not if len(datobj) == 1, then it's wrapped into an array
+        # noinspection PyTypeChecker
+        scalar_ann['anno1'] = 'ABC'
+        datobj2 = DataObject([1])
+        datobj2.array_annotations.update(scalar_ann)
+        self.assertIsInstance(datobj2.array_annotations['anno1'], np.ndarray)
+        self.assertIsInstance(datobj2.array_annotations['anno2'], np.ndarray)
+
+        # Lists are also made to np.ndarrays
+        list_ann = {'anno1': [3, 6], 'anno2': ['ABC', 'DEF']}
+        datobj.array_annotations.update(list_ann)
+        self.assertIsInstance(datobj.array_annotations['anno1'], np.ndarray)
+        self.assertIsInstance(datobj.array_annotations['anno2'], np.ndarray)
 
     def test_array_annotate(self):
         # Calls _check_array_annotations, so no need to test for these Errors here
