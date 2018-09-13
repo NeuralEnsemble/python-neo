@@ -15,6 +15,8 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import quantities as pq
 
+from neo.core.dataobject import ArrayDict
+
 try:
     from IPython.lib.pretty import pretty
 except ImportError as err:
@@ -780,6 +782,8 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(train2.left_sweep, None)
         self.assertEqual(train1.array_annotations, {})
         self.assertEqual(train2.array_annotations, {})
+        self.assertIsInstance(train1.array_annotations, ArrayDict)
+        self.assertIsInstance(train2.array_annotations, ArrayDict)
 
     def test_default_tstart(self):
         # t start defaults to zero
@@ -850,6 +854,7 @@ class TestSorting(unittest.TestCase):
         self.assertEqual(train.t_start, 0.0 * pq.s)
         self.assertEqual(train.t_stop, 10.0 * pq.s)
         assert_arrays_equal(train.array_annotations['a'], np.array([0, 2, 1]))
+        self.assertIsInstance(train.array_annotations, ArrayDict)
 
 
 class TestSlice(unittest.TestCase):
@@ -896,6 +901,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['def']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_slice_to_end(self):
         # slice spike train, keep sliced spike times
@@ -925,6 +931,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['def', 'ghi']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_slice_from_beginning(self):
         # slice spike train, keep sliced spike times
@@ -954,6 +961,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['abc', 'def']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_slice_negative_idxs(self):
         # slice spike train, keep sliced spike times
@@ -983,6 +991,7 @@ class TestSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['abc', 'def']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
 
 class TestTimeSlice(unittest.TestCase):
@@ -1040,6 +1049,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['b', 'c', 'd']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_differnt_units(self):
         # time_slice spike train, keep sliced spike times
@@ -1071,6 +1081,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['b', 'c', 'd']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_matching_ends(self):
         # time_slice spike train, keep sliced spike times
@@ -1095,6 +1106,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_out_of_boundries(self):
         self.train1.t_start = 0.1 * pq.ms
@@ -1122,6 +1134,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_empty(self):
         waveforms = np.array([[[]]]) * pq.mV
@@ -1175,6 +1188,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['c', 'd', 'e', 'f']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_start(self):
         # time_slice spike train, keep sliced spike times
@@ -1202,6 +1216,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(['a', 'b']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_both(self):
         self.train1.t_start = 0.1 * pq.ms
@@ -1227,6 +1242,7 @@ class TestTimeSlice(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['label'], np.array(self.arr_ann['label']))
         self.assertIsInstance(result.array_annotations['index'], np.ndarray)
         self.assertIsInstance(result.array_annotations['label'], np.ndarray)
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
 
 class TestMerge(unittest.TestCase):
@@ -1299,6 +1315,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
                             np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_merge_with_waveforms(self):
         # Array annotations merge warning was already tested, can be ignored now
@@ -1333,6 +1350,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
                             np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_rescaling_units(self):
         train3 = self.train1.duplicate_with_new_data(
@@ -1356,6 +1374,7 @@ class TestMerge(unittest.TestCase):
         self.assertTrue('label2' not in result.array_annotations)
         assert_arrays_equal(result.array_annotations['index'],
                             np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_sampling_rate(self):
         # Array annotations merge warning was already tested, can be ignored now
@@ -1430,6 +1449,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
         # After duplicating, array annotations should always be empty,
         # because different length of data would cause inconsistencies
         self.assertEqual(signal1b.array_annotations, {})
+        self.assertIsInstance(signal1b.array_annotations, ArrayDict)
 
     def test_deep_copy_attributes(self):
         signal1 = self.train
@@ -1476,15 +1496,18 @@ class TestAttributesAnnotations(unittest.TestCase):
         train = SpikeTrain([3, 4, 5] * pq.s, t_stop=11.1)
         assert_neo_object_is_compliant(train)
         self.assertEqual(train.array_annotations, {})
+        self.assertIsInstance(train.array_annotations, ArrayDict)
 
         train = SpikeTrain([3, 4, 5] * pq.s, t_stop=11.1,
                            array_annotations={'ratnames': ['L', 'N', 'E']})
         assert_neo_object_is_compliant(train)
         assert_arrays_equal(train.array_annotations['ratnames'], np.array(['L', 'N', 'E']))
+        self.assertIsInstance(train.array_annotations, ArrayDict)
 
         train.array_annotate(index=[1, 2, 3])
         assert_neo_object_is_compliant(train)
         assert_arrays_equal(train.array_annotations['index'], np.arange(1, 4))
+        self.assertIsInstance(train.array_annotations, ArrayDict)
 
 
 class TestChanging(unittest.TestCase):

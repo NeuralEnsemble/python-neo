@@ -3,7 +3,7 @@ import copy
 import numpy as np
 import unittest
 
-from neo.core.dataobject import DataObject, _normalize_array_annotations
+from neo.core.dataobject import DataObject, _normalize_array_annotations, ArrayDict
 
 
 class Test_DataObject(unittest.TestCase):
@@ -160,6 +160,7 @@ class Test_array_annotations(unittest.TestCase):
         self.assertTrue((datobj.array_annotations['anno1'] == np.array([3, 4, 5])).all())
         self.assertTrue((datobj.array_annotations['anno2'] ==
                          np.array(['ABC', 'DEF', 'GHI'])).all())
+        self.assertIsInstance(datobj.array_annotations, ArrayDict)
 
     def test_arr_anns_at_index(self):
         # Get them, test for desired type and size, content

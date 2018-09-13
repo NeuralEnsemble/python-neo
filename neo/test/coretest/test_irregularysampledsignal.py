@@ -13,6 +13,8 @@ import numpy as np
 import quantities as pq
 from numpy.testing import assert_array_equal
 
+from neo.core.dataobject import ArrayDict
+
 try:
     from IPython.lib.pretty import pretty
 except ImportError as err:
@@ -127,6 +129,7 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
 
         assert_arrays_equal(sig.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(sig.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(sig.array_annotations, ArrayDict)
 
     def test_IrregularlySampledSignal_creation_units_arg(self):
         params = {'test2': 'y1', 'test3': True}
@@ -154,6 +157,7 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
 
         assert_arrays_equal(sig.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(sig.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(sig.array_annotations, ArrayDict)
 
     def test_IrregularlySampledSignal_creation_units_rescale(self):
         params = {'test2': 'y1', 'test3': True}
@@ -181,6 +185,7 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
 
         assert_arrays_equal(sig.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(sig.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(sig.array_annotations, ArrayDict)
 
     def test_IrregularlySampledSignal_different_lens_ValueError(self):
         times = [1.1, 1.5, 1.7] * pq.ms
@@ -288,6 +293,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1.annotations, {'arg1': 'test'})
         assert_arrays_equal(self.signal1.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(self.signal1.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(self.signal1.array_annotations, ArrayDict)
 
     def test__slice_should_return_IrregularlySampledSignal(self):
         result = self.signal1[3:8]
@@ -311,6 +317,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, self.signal1.annotations)
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test__getitem_should_return_single_quantity(self):
         self.assertEqual(self.signal1[0], 0 * pq.mV)
@@ -387,6 +394,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.units, 1 * pq.mV)
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1))
@@ -410,6 +418,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.units, 1 * pq.uV)
         assert_arrays_almost_equal(np.array(result), self.data1.reshape(-1, 1) * 1000., 1e-10)
@@ -446,6 +455,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_out_of_boundries(self):
         targdataquant = self.data1quant
@@ -469,6 +479,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_empty(self):
         targdataquant = [] * pq.mV
@@ -491,6 +502,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.file_origin, 'testfile.txt')
         self.assertEqual(result.annotations, {'arg1': 'test'})
         self.assertEqual(result.array_annotations, {})
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_stop(self):
         targdataquant = [[1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0], [8.0], [9.0]] * pq.mV
@@ -515,6 +527,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_start(self):
         targdataquant = [[0.0], [1.0], [2.0], [3.0]] * pq.mV
@@ -539,6 +552,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_both(self):
         targdataquant = [[0.0], [1.0], [2.0], [3.0], [4.0], [5.0], [6.0], [7.0], [8.0],
@@ -564,6 +578,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_differnt_units(self):
         targdataquant = [[1.0], [2.0], [3.0]] * pq.mV
@@ -592,6 +607,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_as_array(self):
         sig_as_arr = self.signal1.as_array()
@@ -632,6 +648,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(self.signal1.annotations, {'arg1': 'test'})
         assert_arrays_equal(self.signal1.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(self.signal1.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(self.signal1.array_annotations, ArrayDict)
 
     def test__add_const_quantity_should_preserve_data_complement(self):
         result = self.signal1 + 0.065 * pq.V
@@ -643,6 +660,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         assert_array_equal(result.magnitude, self.data1.reshape(-1, 1) + 65)
         assert_array_equal(result.times, self.time1quant)
@@ -664,6 +682,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         targ = IrregularlySampledSignal(self.time1quant, signal=np.arange(10.0, 30.0, 2.0),
                                         units="mV", name='spam', description='eggs',
@@ -697,6 +716,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(self.signal1[9], 9 * pq.mV)
         self.assertEqual(result[9], -56 * pq.mV)
@@ -713,6 +733,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(self.signal1[9], 9 * pq.mV)
         self.assertEqual(result[9], 1 * pq.mV)
@@ -729,6 +750,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(self.signal1[9], 9 * pq.mV)
         self.assertEqual(result[9], 18 * pq.mV)
@@ -745,6 +767,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(self.signal1[9], 9 * pq.mV)
         self.assertEqual(result[9], 18 * pq.mV)
@@ -761,6 +784,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(self.signal1[9], 9 * pq.mV)
         self.assertEqual(result[9], 18 * pq.mV)
@@ -827,6 +851,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         self.assertEqual(merged12.file_origin, 'testfile.txt')
         assert_arrays_equal(merged12.array_annotations['anno1'],
                             np.array([0, 1, 2, 3, 4, 5, 100, 101, 102]))
+        self.assertIsInstance(merged12.array_annotations, ArrayDict)
 
         assert_arrays_equal(merged12.magnitude, target_data12)
 

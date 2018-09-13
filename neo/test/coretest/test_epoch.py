@@ -12,6 +12,8 @@ import pickle
 import os
 from numpy.testing import assert_array_equal
 
+from neo.core.dataobject import ArrayDict
+
 try:
     from IPython.lib.pretty import pretty
 except ImportError as err:
@@ -134,6 +136,7 @@ class TestEpoch(unittest.TestCase):
         self.assertTrue(epc.annotations['test3'])
         assert_arrays_equal(epc.array_annotations['names'], np.array(['a', 'b', 'c']))
         assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
+        self.assertIsInstance(epc.array_annotations, ArrayDict)
 
     def test_Epoch_repr(self):
         params = {'test2': 'y1', 'test3': True}
@@ -213,6 +216,7 @@ class TestEpoch(unittest.TestCase):
         # Remove this, when array_annotations are added to assert_same_sub_schema
         assert_arrays_equal(epcres.array_annotations['index'], np.array([10, 11, 12, 0, 1, 2]))
         self.assertTrue('test' not in epcres.array_annotations)
+        self.assertIsInstance(epcres.array_annotations, ArrayDict)
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
@@ -274,6 +278,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(epc.annotations, epc2.annotations)
         assert_arrays_equal(epc2.array_annotations['index'], np.arange(2))
         assert_arrays_equal(epc2.array_annotations['test'], np.array(['a', 'b']))
+        self.assertIsInstance(epc2.array_annotations, ArrayDict)
 
     def test_time_slice2(self):
         params = {'test2': 'y1', 'test3': True}
@@ -312,6 +317,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array([1]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
@@ -351,6 +357,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array(arr_ann['index']))
         assert_arrays_equal(result.array_annotations['test'], np.array(arr_ann['test']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_empty(self):
         params = {'test2': 'y1', 'test3': True}
@@ -386,6 +393,7 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['durations'],
                             np.array([], dtype='float64')*pq.ns)
         assert_arrays_equal(result.array_annotations['labels'], np.array([], dtype='S'))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_stop(self):
         params = {'test2': 'y1', 'test3': True}
@@ -425,6 +433,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array([1, 2]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['b', 'c']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_start(self):
         params = {'test2': 'y1', 'test3': True}
@@ -463,6 +472,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array([0, 1]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['a', 'b']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_both(self):
         params = {'test2': 'y1', 'test3': True}
@@ -503,6 +513,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array([0, 1, 2]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['a', 'b', 'c']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_differnt_units(self):
         params = {'test2': 'y1', 'test3': True}
@@ -541,6 +552,7 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
         assert_arrays_equal(result.array_annotations['index'], np.array([1]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_as_array(self):
         times = [2, 3, 4, 5]
@@ -583,6 +595,7 @@ class TestEpoch(unittest.TestCase):
         assert_array_equal(single_epoch.labels, np.array(["B", "C"]))
         assert_arrays_equal(single_epoch.array_annotations['index'], np.arange(1, 3))
         assert_arrays_equal(single_epoch.array_annotations['test'], np.array(['b', 'c']))
+        self.assertIsInstance(single_epoch.array_annotations, ArrayDict)
 
 
 class TestDuplicateWithNewData(unittest.TestCase):
@@ -608,6 +621,7 @@ class TestDuplicateWithNewData(unittest.TestCase):
                             signal1.durations.units)
         self.assertTrue('index' not in signal1b.array_annotations)
         self.assertTrue('test' not in signal1b.array_annotations)
+        self.assertIsInstance(signal1b.array_annotations, ArrayDict)
 
 
 class TestEpochFunctions(unittest.TestCase):
@@ -632,6 +646,7 @@ class TestEpochFunctions(unittest.TestCase):
         self.assertEqual(epoch2.annotations, epoch1.annotations)
         assert_arrays_equal(epoch2.array_annotations['index'], np.array(arr_ann['index']))
         assert_arrays_equal(epoch2.array_annotations['test'], np.array(arr_ann['test']))
+        self.assertIsInstance(epoch2.array_annotations, ArrayDict)
         # Make sure the dict can perform correct checks after unpickling
         epoch2.array_annotations['anno3'] = list(range(3, 6))
         with self.assertRaises(ValueError):

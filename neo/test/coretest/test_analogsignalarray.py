@@ -12,6 +12,8 @@ import warnings
 import numpy as np
 import quantities as pq
 
+from neo.core.dataobject import ArrayDict
+
 try:
     from IPython.lib.pretty import pretty
 except ImportError as err:
@@ -270,6 +272,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         assert_arrays_equal(self.signal1.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(self.signal1.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(self.signal1.array_annotations, ArrayDict)
 
         assert_neo_object_is_compliant(self.signal2)
         self.assertEqual(self.signal2.name, 'spam')
@@ -278,6 +281,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal2.annotations, {'arg1': 'test'})
         assert_arrays_equal(self.signal2.array_annotations['anno1'], np.array([10, 11]))
         assert_arrays_equal(self.signal2.array_annotations['anno2'], np.array(['k', 'l']))
+        self.assertIsInstance(self.signal2.array_annotations, ArrayDict)
 
     def test__index_dim1_should_return_single_channel_analogsignalarray(self):
         result = self.signal1[:, 0]
@@ -289,6 +293,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([0]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['a']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.t_stop, self.signal1.t_stop)
         self.assertEqual(result.t_start, self.signal1.t_start)
@@ -307,6 +312,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([0]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['a']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.t_start,
                          self.signal1.t_start + 2 * self.signal1.sampling_period)
@@ -359,6 +365,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([0, 1, 2]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['a', 'b', 'c']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         targ = AnalogSignal([[0, 1, 2], [5, 6, 7], [10, 11, 12]],
                             dtype=float, units="nA",
@@ -385,6 +392,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.shape, (5, 5))
         self.assertEqual(result.t_start,
@@ -442,6 +450,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.units, 1 * pq.nA)
         assert_arrays_equal(result, self.data1)
@@ -460,6 +469,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.units, 1 * pq.pA)
         assert_arrays_almost_equal(np.array(result), self.data1 * 1000., 1e-10)
@@ -517,6 +527,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([10, 11]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['k', 'l']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(result.t_stop, t_stop)
         self.assertEqual(result.t_start, t_start)
@@ -539,6 +550,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([10, 11]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['k', 'l']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         targ = AnalogSignal(np.array([[2., 3.], [2., 3.]]).T,
                             t_start=12.0 * pq.ms,
@@ -570,6 +582,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
         self.assertEqual(result.annotations, {'arg1': 'test'})
         assert_arrays_equal(result.array_annotations['anno1'], np.array([10, 11]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['k', 'l']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         targ = AnalogSignal(np.array([[2., 3.], [2., 3.]]).T,
                             t_start=t_start.rescale(pq.ms),
@@ -607,6 +620,7 @@ class TestAnalogSignalArrayArrayMethods(unittest.TestCase):
             self.assertEqual(result.annotations, {'arg1': 'test'})
             assert_arrays_equal(result.array_annotations['anno1'], np.array([10, 11]))
             assert_arrays_equal(result.array_annotations['anno2'], np.array(['k', 'l']))
+            self.assertIsInstance(result.array_annotations, ArrayDict)
 
             targ_ind = np.where((self.signal2.times >= t_start_targ) &
                                 (self.signal2.times < t_stop_targ))
@@ -670,6 +684,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(self.signal1.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(self.signal1.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(self.signal1.array_annotations, ArrayDict)
 
         assert_neo_object_is_compliant(self.signal2)
         self.assertEqual(self.signal2.name, 'spam')
@@ -679,6 +694,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(self.signal2.array_annotations['anno1'], np.arange(10, 15))
         assert_arrays_equal(self.signal2.array_annotations['anno2'],
                             np.array(['k', 'l', 'm', 'n', 'o']))
+        self.assertIsInstance(self.signal2.array_annotations, ArrayDict)
 
     def test__add_const_quantity_should_preserve_data_complement(self):
         result = self.signal1 + 0.065 * pq.V
@@ -691,6 +707,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         # time zero, signal index 4
         assert_arrays_equal(result, self.data1 + 65)
@@ -710,6 +727,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         targdata = np.arange(100.0, 210.0, 2.0).reshape((11, 5))
         targ = AnalogSignal(targdata, units="mV",
@@ -738,6 +756,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(np.array(self.signal1[1, 4]), 9)
         self.assertEqual(np.array(result[1, 4]), -56)
@@ -755,6 +774,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(np.array(self.signal1[1, 4]), 9)
         self.assertEqual(np.array(result[1, 4]), 1)
@@ -772,6 +792,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(np.array(self.signal1[1, 4]), 9)
         self.assertEqual(np.array(result[1, 4]), 18)
@@ -789,6 +810,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.arange(5))
         assert_arrays_equal(result.array_annotations['anno2'],
                             np.array(['a', 'b', 'c', 'd', 'e']))
+        self.assertIsInstance(result.array_annotations, ArrayDict)
 
         self.assertEqual(np.array(self.signal1[1, 4]), 9)
         self.assertEqual(np.array(result[1, 4]), 18)
@@ -871,13 +893,16 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
         self.assertEqual(merged23.file_origin, 'testfile.txt')
 
         assert_arrays_equal(merged13.array_annotations['anno1'], np.arange(11))
+        self.assertIsInstance(merged13.array_annotations, ArrayDict)
         self.assertNotIn('anno2', merged13.array_annotations)
         self.assertNotIn('anno3', merged13.array_annotations)
         assert_arrays_equal(merged23.array_annotations['anno1'], np.arange(11))
+        self.assertIsInstance(merged23.array_annotations, ArrayDict)
         self.assertNotIn('anno2', merged23.array_annotations)
         self.assertNotIn('anno3', merged23.array_annotations)
         assert_arrays_equal(merged24.array_annotations['anno1'],
                             np.array([0, 1, 2, 3, 4, 100, 101, 102, 103, 104, 105]))
+        self.assertIsInstance(merged24.array_annotations, ArrayDict)
         self.assertNotIn('anno2', merged24.array_annotations)
         self.assertNotIn('anno3', merged24.array_annotations)
 
