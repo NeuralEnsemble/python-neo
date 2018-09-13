@@ -351,7 +351,9 @@ class ArrayDict(dict):
 
     def __setitem__(self, key, value):
         # Directly call the defined function
-        value = self.check_function(value, self.length)
+        # Need to wrap key and value in a dict in order to make sure
+        # that nested dicts are detected
+        value = self.check_function({key: value}, self.length)[key]
         super(ArrayDict, self).__setitem__(key, value)
 
     # Updating the dict also needs to perform checks, so rerouting this to __setitem__
