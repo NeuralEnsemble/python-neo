@@ -22,7 +22,7 @@ from neo.core.baseneo import BaseNeo, _check_annotations
 
 
 # def _array_annotation_normalizer(length):
-def _normalize_array_annotatios(value, length):
+def _normalize_array_annotations(value, length):
 
     """
     Recursively check that value is either an array or list containing only "simple" types
@@ -36,7 +36,7 @@ def _normalize_array_annotatios(value, length):
         for key in value.keys():
             if isinstance(value[key], dict):
                 raise ValueError("Nested dicts are not allowed as array annotations")
-            value[key] = _normalize_array_annotatios(value[key], length)
+            value[key] = _normalize_array_annotations(value[key], length)
 
     elif value is None:
         raise ValueError("Array annotations must not be None")
@@ -46,7 +46,7 @@ def _normalize_array_annotatios(value, length):
     elif not isinstance(value, (list, np.ndarray)) or \
             (isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
-        value = _normalize_array_annotatios(np.array([value]), length)
+        value = _normalize_array_annotations(np.array([value]), length)
 
     # If array annotation, check for correct length,
     # only single dimension and allowed data
@@ -89,7 +89,7 @@ def _normalize_array_annotatios(value, length):
         def _check_single_elem(element):
             # Nested array annotations not allowed currently
             # So if an entry is a list or a np.ndarray, it's not allowed,
-            # except if it's a quantity et_arr_ann_lengof length 1
+            # except if it's a quantity of length 1
             if isinstance(element, list) or \
                     (isinstance(element, np.ndarray) and not
                     (isinstance(element, pq.Quantity) and element.shape == ())):
@@ -149,8 +149,6 @@ def _normalize_array_annotatios(value, length):
                     raise e
 
     return value
-
-    # return _normalize_array_annotations
 
 
 class DataObject(BaseNeo, pq.Quantity):
@@ -344,8 +342,8 @@ class DataObject(BaseNeo, pq.Quantity):
         # This method should be overridden in case this changes
         try:
             length = self.shape[-1]
-        # FIXME This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed when __getitem__[int] is 'fixed'
+        # XXX This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
+        # To be removed if __getitem__[int] is changed
         except IndexError:
             length = 1
         return length
@@ -360,19 +358,17 @@ class ArrayDict(dict):
        The method used for these checks is given as an argument for __init__.
     """
 
-    def __init__(self, length, *args, **kwargs):
+    def __init__(self, length, check_function=_normalize_array_annotations, *args, **kwargs):
         super(ArrayDict, self).__init__(*args, **kwargs)
-        # self.check_function = check_function
+        self.check_function = check_function
         self.length = length
 
     def __setitem__(self, key, value):
-        # The attribute is always set except when unpickling
-        #if hasattr(self, 'check_function'):
-        value = _normalize_array_annotatios(value, self.length)
-        #else:
-        #    raise KeyError("Un-Pickling causes problems")
+        # Directly call the defined function
+        value = self.check_function(value, self.length)
         super(ArrayDict, self).__setitem__(key, value)
 
+    # Updating the dict also needs to perform checks, so rerouting this to __setitem__
     def update(self, *args, **kwargs):
         if args:
             if len(args) > 1:
@@ -386,13 +382,3 @@ class ArrayDict(dict):
 
     def __reduce__(self):
         return super(ArrayDict, self).__reduce__()
-        #return (ArrayDict, (self.length,), None, None, self.items())
-
-
-class _normalize_array_annotations(object):
-
-    def __init__(self, len):
-        self.length = len
-
-    def __call__(self, value):
-        return _normalize_array_annotatios(value, self.length)

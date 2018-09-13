@@ -16,7 +16,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
-from neo.core.dataobject import DataObject, ArrayDict, _normalize_array_annotations
+from neo.core.dataobject import DataObject, ArrayDict
 
 PY_VER = sys.version_info[0]
 
