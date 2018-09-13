@@ -518,6 +518,12 @@ class TestEventFunctions(unittest.TestCase):
 
         fobj.close()
         assert_array_equal(event1.times, event2.times)
+        assert_arrays_equal(event2.array_annotations['index'], np.array(arr_ann['index']))
+        assert_arrays_equal(event2.array_annotations['test'], np.array(arr_ann['test']))
+        # Make sure the dict can perform correct checks after unpickling
+        event2.array_annotations['anno3'] = list(range(3, 6))
+        with self.assertRaises(ValueError):
+            event2.array_annotations['anno4'] = [2, 1]
         os.remove('./pickle')
         self.assertEqual(event2.annotations, event1.annotations)
 

@@ -632,7 +632,10 @@ class TestEpochFunctions(unittest.TestCase):
         self.assertEqual(epoch2.annotations, epoch1.annotations)
         assert_arrays_equal(epoch2.array_annotations['index'], np.array(arr_ann['index']))
         assert_arrays_equal(epoch2.array_annotations['test'], np.array(arr_ann['test']))
-
+        # Make sure the dict can perform correct checks after unpickling
+        epoch2.array_annotations['anno3'] = list(range(3, 6))
+        with self.assertRaises(ValueError):
+            epoch2.array_annotations['anno4'] = [2, 1]
         os.remove('./pickle')
 
 

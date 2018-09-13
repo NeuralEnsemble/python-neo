@@ -815,6 +815,10 @@ class TestAnalogSignalFunctions(unittest.TestCase):
         assert_array_equal(signal1, signal2)
         assert_array_equal(signal2.channel_index.index, np.array([0]))
         assert_array_equal(signal2.array_annotations['anno1'], np.array([23]))
+        # Make sure the dict can perform correct checks after unpickling
+        signal2.array_annotations['anno3'] = [2]
+        with self.assertRaises(ValueError):
+            signal2.array_annotations['anno4'] = [2, 1]
         fobj.close()
         os.remove('./pickle')
 
