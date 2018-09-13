@@ -171,7 +171,7 @@ class DataObject(BaseNeo, pq.Quantity):
         and attributes are processed.
         """
 
-        if not hasattr(self, 'array_annotations') or self.array_annotations is None:
+        if not hasattr(self, 'array_annotations') or not self.array_annotations:
             self.array_annotations = ArrayDict(self._get_arr_ann_length())
         if array_annotations is not None:
             self.array_annotate(**array_annotations)
