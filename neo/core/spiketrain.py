@@ -446,7 +446,7 @@ class SpikeTrain(DataObject):
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
-        self.array_annotations = copy.deepcopy(self.array_annotations_at_index(sort_indices))
+        self.array_annotate(**copy.deepcopy(self.array_annotations_at_index(sort_indices)))
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
