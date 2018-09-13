@@ -19,7 +19,6 @@ from __future__ import absolute_import
 
 from datetime import datetime
 import os
-import re
 import sys
 
 import numpy as np
@@ -108,17 +107,20 @@ class AxographIO(BaseIO):
             # cross-platform issues than created time (ctime)
             blk.file_datetime = datetime.fromtimestamp(os.path.getmtime(self.filename))
 
+            # store the filename if it is available
+            blk.file_origin = self.filename
+
         # determine the channel names and counts
-        channel_names = np.unique(self.axo_obj.names[1:])
+        _, channel_ordering = np.unique(self.axo_obj.names[1:], return_index=True)
+        channel_names = np.array(self.axo_obj.names[1:])[np.sort(channel_ordering)]
         channel_count = len(channel_names)
 
-        # determine the time signal and sample rate
-        sample_rate = 1 / ((self.axo_obj.data[0][1] - self.axo_obj.data[0][0]) * pq.s)
-        start_time = 0 * pq.s
+        # determine the time signal and sample period
+        sample_period = self.axo_obj.data[0].step * pq.s
+        start_time = self.axo_obj.data[0].start * pq.s
 
         # Attempt to read units from the channel names
-        unit_regex = re.compile(r"\((.*?)\)")
-        channel_unit_names = [unit_regex.search(x).group(1) for x in channel_names]
+        channel_unit_names = [x.split()[-1].strip('()') for x in channel_names]
         channel_units = []
 
         for unit in channel_unit_names:
@@ -126,6 +128,9 @@ class AxographIO(BaseIO):
                 channel_units.append(pq.Quantity(1, unit))
             except LookupError:
                 channel_units.append(None)
+
+        # Strip units from channel names
+        channel_names = [' '.join(x.split()[:-1]) for x in channel_names]
 
         # build up segments by grouping axograph columns
         for seg_idx in range(1, len(self.axo_obj.data), channel_count):
@@ -136,7 +141,7 @@ class AxographIO(BaseIO):
                 signal = pq.Quantity(
                     self.axo_obj.data[seg_idx + chan_idx], channel_units[chan_idx])
                 analog = AnalogSignal(signal,
-                                      sampling_rate=sample_rate, t_start=start_time,
+                                      sampling_period=sample_period, t_start=start_time,
                                       name=channel_names[chan_idx], channel_index=chan_idx)
                 seg.analogsignals.append(analog)
 
