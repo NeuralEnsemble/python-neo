@@ -261,7 +261,9 @@ class DataObject(BaseNeo, pq.Quantity):
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
-
+        
+        # Reset warning filter to default state
+        warnings.simplefilter("default")
         # Return the merged array_annotations
         return merged_array_annotations
 
