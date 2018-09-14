@@ -38,8 +38,6 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
-# printing all warnings, so testing for warning handling works reliably
-warnings.simplefilter("always")
 
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
@@ -314,12 +312,12 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # The correct file will issue a warning because a reset has occurred
         # and could be detected, but was not explicitly documented in the file
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             reader = BlackrockIO(filename=filename, nsx_to_load=2)
             self.assertGreaterEqual(len(w), 1)
-            self.assertEqual(w[-1].category, UserWarning)
-            self.assertSequenceEqual(str(w[-1].message),
-                                     "Detected 1 undocumented segments within nev data after "
-                                     "timestamps [5451].")
+            messages = [str(warning.message) for warning in w if warning.category==UserWarning]
+            self.assertIn("Detected 1 undocumented segments within nev data after "
+                                     "timestamps [5451].", messages)
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
@@ -363,16 +361,15 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # This issues a warning, because there are spikes a long time after the last segment
         # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             reader = BlackrockIO(filename=filename, nsx_to_load=2,
                                  nev_override=filename_nev_outside_seg)
             self.assertGreaterEqual(len(w), 2)
 
             # Check that warnings are correct
-            self.assertEqual(w[-2].category, UserWarning)
-            self.assertSequenceEqual(str(w[-2].message),
-                                     'Spikes outside any segment. Detected on segment #1')
-            self.assertEqual(w[-1].category, UserWarning)
-            self.assertSequenceEqual(str(w[-1].message), 'Spikes 0.0776s after last segment.')
+            messages = [str(warning.message) for warning in w if warning.category == UserWarning]
+            self.assertIn('Spikes outside any segment. Detected on segment #1', messages)
+            self.assertIn('Spikes 0.0776s after last segment.', messages)
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
