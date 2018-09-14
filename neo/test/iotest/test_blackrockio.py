@@ -305,6 +305,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # Path to nsX and nev that will NOT fail
         filename = self.get_filename_path('segment/ResetCorrect/reset')
 
+        # Warning filter needs to be set to always before first occurrence of this warning
+        warnings.simplefilter("always", UserWarning)
+
         # This fails, because in the nev there is no way to separate two segments
         with self.assertRaises(AssertionError):
             reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_fail)
@@ -312,12 +315,14 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # The correct file will issue a warning because a reset has occurred
         # and could be detected, but was not explicitly documented in the file
         with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
             reader = BlackrockIO(filename=filename, nsx_to_load=2)
             self.assertGreaterEqual(len(w), 1)
-            messages = [str(warning.message) for warning in w if warning.category==UserWarning]
+            messages = [str(warning.message) for warning in w if warning.category == UserWarning]
             self.assertIn("Detected 1 undocumented segments within nev data after "
-                                     "timestamps [5451].", messages)
+                          "timestamps [5451].", messages)
+
+        # Manually reset warning filter in order to not show too many warnings afterwards
+        warnings.simplefilter("default")
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
