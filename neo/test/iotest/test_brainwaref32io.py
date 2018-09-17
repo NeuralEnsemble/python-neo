@@ -59,7 +59,7 @@ def proc_f32(filename):
 
     try:
         with np.load(filename) as f32obj:
-            f32file = f32obj.items()[0][1].flatten()
+            f32file = list(f32obj.items())[0][1].flatten()
     except IOError as exc:
         if 'as a pickle' in exc.message:
             block.create_many_to_one_relationship()

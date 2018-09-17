@@ -45,7 +45,7 @@ def proc_dam(filename):
              dam file name = 'file1.dam'
     '''
     with np.load(filename) as damobj:
-        damfile = damobj.items()[0][1].flatten()
+        damfile = list(damobj.items())[0][1].flatten()
 
     filename = os.path.basename(filename[:-12] + '.dam')
 
