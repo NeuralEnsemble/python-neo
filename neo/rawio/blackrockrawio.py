@@ -1854,8 +1854,9 @@ class BlackrockRawIO(BaseRawIO):
         a 2.3 nev file.
         """
         # digital events
-        if not np.all(np.in1d(data['packet_insertion_reason'], [1,129])):
-            raise ValueError('Unknown event codes found.')  # Blackrock spec gives reason==64 means PERIODIC, but never seen this live
+        if not np.all(np.in1d(data['packet_insertion_reason'], [1, 129])):
+            # Blackrock spec gives reason==64 means PERIODIC, but never seen this live
+            warnings.warn("Unknown event codes found", RuntimeWarning)
         event_types = {
             'digital_input_port': {
                 'name': 'digital_input_port',
