@@ -38,8 +38,6 @@ else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
 
-# printing all warnings, so testing for warning handling works reliably
-warnings.simplefilter("always")
 
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = BlackrockIO
@@ -307,6 +305,9 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # Path to nsX and nev that will NOT fail
         filename = self.get_filename_path('segment/ResetCorrect/reset')
 
+        # Warning filter needs to be set to always before first occurrence of this warning
+        warnings.simplefilter("always", UserWarning)
+
         # This fails, because in the nev there is no way to separate two segments
         with self.assertRaises(AssertionError):
             reader = BlackrockIO(filename=filename, nsx_to_load=2, nev_override=filename_nev_fail)
@@ -316,10 +317,12 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             reader = BlackrockIO(filename=filename, nsx_to_load=2)
             self.assertGreaterEqual(len(w), 1)
-            self.assertEqual(w[-1].category, UserWarning)
-            self.assertSequenceEqual(str(w[-1].message),
-                                     "Detected 1 undocumented segments within nev data after "
-                                     "timestamps [5451].")
+            messages = [str(warning.message) for warning in w if warning.category == UserWarning]
+            self.assertIn("Detected 1 undocumented segments within nev data after "
+                          "timestamps [5451].", messages)
+
+        # Manually reset warning filter in order to not show too many warnings afterwards
+        warnings.simplefilter("default")
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
@@ -363,16 +366,15 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         # This issues a warning, because there are spikes a long time after the last segment
         # And another one because there are spikes between segments
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
             reader = BlackrockIO(filename=filename, nsx_to_load=2,
                                  nev_override=filename_nev_outside_seg)
             self.assertGreaterEqual(len(w), 2)
 
             # Check that warnings are correct
-            self.assertEqual(w[-2].category, UserWarning)
-            self.assertSequenceEqual(str(w[-2].message),
-                                     'Spikes outside any segment. Detected on segment #1')
-            self.assertEqual(w[-1].category, UserWarning)
-            self.assertSequenceEqual(str(w[-1].message), 'Spikes 0.0776s after last segment.')
+            messages = [str(warning.message) for warning in w if warning.category == UserWarning]
+            self.assertIn('Spikes outside any segment. Detected on segment #1', messages)
+            self.assertIn('Spikes 0.0776s after last segment.', messages)
 
         block = reader.read_block(load_waveforms=False, signal_group_mode="split-all")
 
