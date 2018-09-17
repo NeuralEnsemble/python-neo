@@ -679,3 +679,4 @@ def get_nse_or_ntt_dtype(info, ext):
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
+
