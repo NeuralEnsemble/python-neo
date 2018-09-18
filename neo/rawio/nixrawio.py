@@ -20,7 +20,7 @@ except ImportError:
     nix = None
 
 
-class NixRawIO (BaseRawIO):
+class NIXRawIO (BaseRawIO):
 
     extensions = ['nix']
     rawmode = 'one-file'
