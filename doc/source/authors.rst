@@ -38,6 +38,7 @@ and may not be the current affiliation of a contributor.
 * Matthieu Sénoville [2]
 * Chadwick Boulay [16]
 * Björn Müller [13]
+* William Hart [17]
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
@@ -56,6 +57,6 @@ and may not be the current affiliation of a contributor.
 14. University of Texas at Austin
 15. Arizona State University
 16. Ottawa Hospital Research Institute, Canada
-
+17. Swinburne University of Technology, Australia
 
 If we've somehow missed you off the list we're very sorry - please let us know.
