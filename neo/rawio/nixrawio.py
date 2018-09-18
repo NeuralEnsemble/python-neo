@@ -20,7 +20,7 @@ except ImportError:
     nix = None
 
 
-class NIXRawIO (BaseRawIO):
+class NIXRawIO(BaseRawIO):
 
     extensions = ['nix']
     rawmode = 'one-file'
@@ -262,8 +262,11 @@ class NIXRawIO (BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         event_count = 0
         for event in self.file.blocks[block_index].groups[seg_index].multi_tags:
-            if event.type == 'neo.event':
-                event_count += 1
+            if event.type == 'neo.event' or event.type == 'neo.epoch':
+                if event_count == event_channel_index:
+                    return len(event.positions)
+                else:
+                    event_count += 1
         return event_count
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
@@ -271,14 +274,15 @@ class NIXRawIO (BaseRawIO):
         labels = []
         durations = None
         if event_channel_index == None:
-            event_channel_index = np.arange(self.header['event_channels'].size)
+            raise IndexError
         for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             if mt.type == "neo.event" or mt.type == "neo.epoch":
                 labels.append(mt.positions.dimensions[0].labels)
                 po = mt.positions
                 if po.type == "neo.event.times" or po.type == "neo.epoch.times":
                     timestamp.append(po)
-                if self.header['event_channels'][event_channel_index][2] == b'epoch' and mt.extents:
+                if self.header['event_channels'][event_channel_index]\
+                            ['type'] == b'epoch' and mt.extents:
                         if mt.extents.type == 'neo.epoch.durations':
                             durations = np.array(mt.extents)
                             break

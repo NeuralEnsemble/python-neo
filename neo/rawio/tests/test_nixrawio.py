@@ -5,7 +5,6 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 testfname = "neoraw.nix"
 
-
 class TestNixRawIO(BaseTestRawIO, unittest.TestCase, ):
     rawioclass = NIXRawIO
     entities_to_test = [testfname]
