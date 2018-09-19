@@ -553,7 +553,8 @@ class BlackrockRawIO(BaseRawIO):
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
                 if 'Comments' in self.nev_data:
                     ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
-                    color_codes = ["{:08X}".format(code) for code in comments_data['color']]
+                    color_codes = ["#{:08X}".format(code) for code in comments_data['color']]
+                    color_codes = np.array(color_codes, dtype='S9')
                 for c in range(event_channels.size):
                     # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann['events'][c]
