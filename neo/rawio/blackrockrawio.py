@@ -553,12 +553,15 @@ class BlackrockRawIO(BaseRawIO):
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
                 if 'Comments' in self.nev_data:
                     ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
+                    color_codes = ["{:08X}".format(code) for code in comments_data['color']]
                 for c in range(event_channels.size):
                     # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
                     ev_ann['file_origin'] = self._filenames['nev'] + '.nev'
+                    if name == 'comments':
+                        ev_ann['color_codes'] = color_codes
 
     def _source_name(self):
         return self.filename
@@ -692,7 +695,8 @@ class BlackrockRawIO(BaseRawIO):
             ev_dict = self.__comment_evtypes[self.__nev_spec](events_data)[name]
             # If immediate decoding is desired:
             encoding = {0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}
-            labels = [data['comment'].decode(encoding[data['char_set']]) for data in events_data]
+            labels = [data[ev_dict['field']].decode(
+                encoding[data['char_set']]) for data in events_data]
             # Only ASCII can be allowed due to using numpy
             # labels.astype('S') forces to use bytes in BaseFromRaw 401, in read_segment
             # This is not recommended
@@ -1475,7 +1479,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('packet_id', 'uint16'),
                     ('char_set', 'uint8'),
                     ('flag', 'uint8'),
-                    ('data', 'uint32'),
+                    ('color', 'uint32'),
                     ('comment', 'S{0}'.format(data_size - 12))]},
             'VideoSync': {
                 'a': [
