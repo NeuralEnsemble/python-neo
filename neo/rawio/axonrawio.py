@@ -72,7 +72,7 @@ class AxonRawIO(BaseRawIO):
         if version < 2.:
             nbchannel = info['nADCNumChannels']
             head_offset = info['lDataSectionPtr'] * BLOCKSIZE + info[
-                                                                    'nNumPointsIgnored'] * sig_dtype.itemsize
+                                                'nNumPointsIgnored'] * sig_dtype.itemsize
             totalsize = info['lActualAcqLength']
         elif version >= 2.:
             nbchannel = info['sections']['ADCSection']['llNumEntries']
@@ -171,26 +171,30 @@ class AxonRawIO(BaseRawIO):
                 adc_num = ADCInfo['nADCNum']
             adc_nums.append(adc_num)
 
-            if version < 2.:
-                gain = info['fADCRange']
-                gain /= info['fInstrumentScaleFactor'][chan_id]
-                gain /= info['fSignalGain'][chan_id]
-                gain /= info['fADCProgrammableGain'][chan_id]
-                gain /= info['lADCResolution']
-                if info['nTelegraphEnable'][chan_id]:
-                    gain /= info['fTelegraphAdditGain'][chan_id]
-                offset = info['fInstrumentOffset'][chan_id]
-                offset -= info['fSignalOffset'][chan_id]
-            elif version >= 2.:
-                gain = info['protocol']['fADCRange']
-                gain /= info['listADCInfo'][chan_id]['fInstrumentScaleFactor']
-                gain /= info['listADCInfo'][chan_id]['fSignalGain']
-                gain /= info['listADCInfo'][chan_id]['fADCProgrammableGain']
-                gain /= info['protocol']['lADCResolution']
-                if info['listADCInfo'][chan_id]['nTelegraphEnable']:
-                    gain /= info['listADCInfo'][chan_id]['fTelegraphAdditGain']
-                offset = info['listADCInfo'][chan_id]['fInstrumentOffset']
-                offset -= info['listADCInfo'][chan_id]['fSignalOffset']
+            if info['nDataFormat'] == 0:
+                # int16 gain/offset
+                if version < 2.:
+                    gain = info['fADCRange']
+                    gain /= info['fInstrumentScaleFactor'][chan_id]
+                    gain /= info['fSignalGain'][chan_id]
+                    gain /= info['fADCProgrammableGain'][chan_id]
+                    gain /= info['lADCResolution']
+                    if info['nTelegraphEnable'][chan_id]:
+                        gain /= info['fTelegraphAdditGain'][chan_id]
+                    offset = info['fInstrumentOffset'][chan_id]
+                    offset -= info['fSignalOffset'][chan_id]
+                elif version >= 2.:
+                    gain = info['protocol']['fADCRange']
+                    gain /= info['listADCInfo'][chan_id]['fInstrumentScaleFactor']
+                    gain /= info['listADCInfo'][chan_id]['fSignalGain']
+                    gain /= info['listADCInfo'][chan_id]['fADCProgrammableGain']
+                    gain /= info['protocol']['lADCResolution']
+                    if info['listADCInfo'][chan_id]['nTelegraphEnable']:
+                        gain /= info['listADCInfo'][chan_id]['fTelegraphAdditGain']
+                    offset = info['listADCInfo'][chan_id]['fInstrumentOffset']
+                    offset -= info['listADCInfo'][chan_id]['fSignalOffset']
+            else:
+                gain, offset = 1., 0.
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
                                  sig_dtype, units, gain, offset, group_id))
@@ -340,13 +344,12 @@ class AxonRawIO(BaseRawIO):
                     for epochNum, epoch in epochInfo.items():
                         i_begin = i_last
                         i_end = i_last + epoch['lEpochInitDuration'] + \
-                                epoch['lEpochDurationInc'] * epiNum
+                            epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
                         sig[i_begin:i_end] = np.ones((dif)) * \
-                                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] *
-                                              epiNum)
+                            (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] * epiNum)
                         i_last += epoch['lEpochInitDuration'] + \
-                                  epoch['lEpochDurationInc'] * epiNum
+                            epoch['lEpochDurationInc'] * epiNum
                 signals.append(sig)
             sigs_by_segments.append(signals)
 
@@ -407,7 +410,7 @@ def parse_axon_soup(filename):
         elif f_file_signature == b'ABF2':
             n = header['fFileVersionNumber']
             header['fFileVersionNumber'] = n[3] + 0.1 * n[2] + \
-                                           0.01 * n[1] + 0.001 * n[0]
+                0.01 * n[1] + 0.001 * n[0]
             header['lFileStartTime'] = header['uFileStartTimeMS'] * .001
 
         if header['fFileVersionNumber'] < 2.:
@@ -445,18 +448,23 @@ def parse_axon_soup(filename):
 
             # strings sections
             # hack for reading channels names and units
+            # this section is not very detailed and so the code
+            # not very robust. The idea is to remove the first
+            # part by find ing one of th fowoling KEY
+            # unfortunatly the later part contains a the file
+            # taht can contain by accident also one of theses keys...
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
             for key in [b'AXENGN', b'clampex', b'Clampex',
-                        b'CLAMPEX', b'axoscope', b'Clampfit']:
+                        b'CLAMPEX', b'axoscope', b'AxoScope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
-                goodstart = big_string.find(key)
+                goodstart = big_string.find(b'\x00'+key)
                 if goodstart != -1:
                     break
             assert goodstart != -1, \
                 'This file does not contain clampex, axoscope or clampfit in the header'
-            big_string = big_string[goodstart:]
+            big_string = big_string[goodstart+1:]
             strings = big_string.split(b'\x00')
 
             # ADC sections

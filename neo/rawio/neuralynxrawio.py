@@ -73,18 +73,24 @@ class NeuralynxRawIO(BaseRawIO):
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
         self.internal_event_ids = []
+        self._empty_ncs = [] # this list contains filenames of empty records
 
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
         signal_annotations = []
         unit_annotations = []
         event_annotations = []
+
         for filename in sorted(os.listdir(self.dirname)):
             filename = os.path.join(self.dirname, filename)
 
             _, ext = os.path.splitext(filename)
             ext = ext[1:]  # remove dot
             if ext not in self.extensions:
+                continue
+
+            if (os.path.getsize(filename)<=HEADER_SIZE) and (ext == 'ncs'):
+                self._empty_ncs.append(filename)
                 continue
 
             # All file have more or less the same header structure
@@ -484,6 +490,15 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_length.append(length)
 
 
+### Keys funcitons
+def _to_bool(txt):
+    if txt=='True': 
+        return True
+    elif txt=='False': 
+        return False
+    else: 
+        raise Exception('Can not convert %s to bool' %(txt))
+
 # keys in
 txt_header_keys = [
     ('AcqEntName', 'channel_names', None),  # used
@@ -498,7 +513,7 @@ txt_header_keys = [
     ('NumADChannels', '', None),
     ('ADChannel', 'channel_ids', None),  # used
     ('InputRange', '', None),
-    ('InputInverted', 'input_inverted', bool),  # used
+    ('InputInverted', 'input_inverted', _to_bool),  # used
     ('DSPLowCutFilterEnabled', '', None),
     ('DspLowCutFrequency', '', None),
     ('DspLowCutNumTaps', '', None),
@@ -664,3 +679,4 @@ def get_nse_or_ntt_dtype(info, ext):
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
+

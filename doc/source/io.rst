@@ -15,7 +15,7 @@ It is not only file-oriented, it can also read/write objects from a database.
 
 At the moment, there are 3 families of IO modules:
     1. for reading closed manufacturers' formats (Spike2, Plexon, AlphaOmega, BlackRock, Axon, ...)
-    2. for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, PyNN, ...)
+    2. for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, ...)
     3. for reading/writing Neo structure in neutral formats (HDF5, .mat, ...) but with Neo structure inside (NeoHDF5, NeoMatlab, ...)
 
 Combining **1** for reading and **3** for writing is a good example of use: converting your datasets
