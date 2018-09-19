@@ -271,14 +271,11 @@ class BlackrockRawIO(BaseRawIO):
             # NonNeural: serial and digital input
             events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
-            for ev_name in ev_dict:
-                event_channels.append((ev_name, '', 'event'))
-
             if 'Comments' in self.nev_data:
                 comments_data, comments_segment_ids = self.nev_data['Comments']
-                ev_dict = self.__comment_evtypes[self.__nev_spec](comments_data)
-                for ev_name in ev_dict:
-                    event_channels.append((ev_name, '', 'event'))
+                ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
+            for ev_name in ev_dict:
+                event_channels.append((ev_name, '', 'event'))
             # TODO: TrackingEvents
             # TODO: ButtonTrigger
             # TODO: VideoSync
@@ -554,8 +551,10 @@ class BlackrockRawIO(BaseRawIO):
 
             if self._avail_files['nev']:
                 ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
-                ev_dict.update(self.__comment_evtypes[self.__nev_spec](events_data))
+                if 'Comments' in self.nev_data:
+                    ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
                 for c in range(event_channels.size):
+                    # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
@@ -692,9 +691,13 @@ class BlackrockRawIO(BaseRawIO):
             events_data, event_segment_ids = self.nev_data['Comments']
             ev_dict = self.__comment_evtypes[self.__nev_spec](events_data)[name]
             # If immediate decoding is desired:
-            # labels = [_['comment'].decode({0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}[_['char_set']])
-            #           for _ in events_data]
-            labels = events_data[ev_dict['field']]
+            encoding = {0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}
+            labels = [data['comment'].decode(encoding[data['char_set']]) for data in events_data]
+            # Only ASCII can be allowed due to using numpy
+            # labels.astype('S') forces to use bytes in BaseFromRaw 401, in read_segment
+            # This is not recommended
+            # TODO: Maybe switch to astype('U')
+            labels = np.array([data.encode('ASCII', errors='ignore') for data in labels])
         else:
             events_data, event_segment_ids = self.nev_data['NonNeural']
             ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
