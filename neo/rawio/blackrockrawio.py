@@ -220,10 +220,6 @@ class BlackrockRawIO(BaseRawIO):
             '2.1': self.__get_comment_evtypes_variant_a,
             '2.2': self.__get_comment_evtypes_variant_a,
             '2.3': self.__get_comment_evtypes_variant_a}
-        self.__get_evtypes = {
-            '2.1': self.__get_evtypes_variant_a,
-            '2.2': self.__get_evtypes_variant_a,
-            '2.3': self.__get_evtypes_variant_b}
 
     def _parse_header(self):
 
@@ -273,8 +269,11 @@ class BlackrockRawIO(BaseRawIO):
 
             # scan events
             # NonNeural: serial and digital input
-            ev_dict = self.__get_evtypes[self.__nev_spec]('NonNeural')
-            ev_dict.update(self.__get_evtypes[self.__nev_spec]('Comments'))
+            events_data, event_segment_ids = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+            if 'Comments' in self.nev_data:
+                comments_data, comments_segment_ids = self.nev_data['Comments']
+                ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
             for ev_name in ev_dict:
                 event_channels.append((ev_name, '', 'event'))
             # TODO: TrackingEvents
@@ -551,15 +550,11 @@ class BlackrockRawIO(BaseRawIO):
                 st_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
             if self._avail_files['nev']:
-                ev_dict = self.__get_evtypes[self.__nev_spec]('NonNeural')
-                ev_dict.update(self.__get_evtypes[self.__nev_spec]('Comments'))
-                # For comment events add color codes
-                try:
-                    comments_data, _ = self.nev_data['Comments']
+                ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+                if 'Comments' in self.nev_data:
+                    ev_dict.update(self.__comment_evtypes[self.__nev_spec](comments_data))
                     color_codes = ["#{:08X}".format(code) for code in comments_data['color']]
                     color_codes = np.array(color_codes, dtype='S9')
-                except KeyError:
-                    pass
                 for c in range(event_channels.size):
                     # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann['events'][c]
@@ -1921,35 +1916,6 @@ class BlackrockRawIO(BaseRawIO):
                 'desc': 'Comments'
             }
         }
-
-    # This is introduced only for compatibilty reasons
-    # It is used for supporting Blackrock filespec 2.1 and 2.2
-    def __get_evtypes_variant_a(self, name):
-        data = self.__get_nev_data(name)
-        if data is None:
-            return {}
-        # Not a problem to call this for unsupported evtypes, they will just be ignored
-        # In this case there should not be anything unsupported
-        return self.__nonneural_evtypes[self.__nev_spec](data)
-
-    def __get_evtypes_variant_b(self, name):
-        data = self.__get_nev_data(name)
-        if data is None:
-            return {}
-        if name == 'Comments':
-            return self.__comment_evtypes[self.__nev_spec](data)
-        # TODO: All the other event types belong here.
-        # Not a problem to call this for unsupported evtypes, they will just be ignored
-        else:
-            return self.__nonneural_evtypes[self.__nev_spec](data)
-
-    def __get_nev_data(self, name, default=None):
-        try:
-            data, _ = self.nev_data[name]
-            return data
-        except KeyError:
-            # Return default value if not found
-            return default
 
     def __is_set(self, flag, pos):
         """
