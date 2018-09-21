@@ -260,7 +260,7 @@ in order to create annotations with one value per data point. Using this feature
 called Array Annotations, the consistency of those annotations with the actual data
 is ensured.
 Apart from adding those on object construction, Array Annotations can also be added
-using the :meth:`array_annotate` method possessed by all Neo data objects, e.g.::
+using the :meth:`array_annotate` method provided by all Neo data objects, e.g.::
 
     >>> sptr = SpikeTrain(times=[1, 2, 3]*pq.s, t_stop=3*pq.s)
     >>> sptr.array_annotate(index=[0, 1, 2], relevant=[True, False, True])
