@@ -26,10 +26,10 @@ class DataObject(BaseNeo, pq.Quantity):
     - handling of array_annotations
 
     Array_annotations are a kind of annotations that contain metadata for every data point,
-    i.e. per timestamp (in Spiketrain, Event and Epoch) or signal channel (in AnalogSignal
+    i.e. per timestamp (in SpikeTrain, Event and Epoch) or signal channel (in AnalogSignal
     and IrregularlySampledSignal).
-    They may contain the same data as regular annotations, except they are arrays containing these
-    data.
+    They can contain the same data types as regular annotations, but are always represented
+    as numpy arrays of the same length as the number of data points of the annotated neo object.
     '''
 
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
@@ -85,7 +85,7 @@ class DataObject(BaseNeo, pq.Quantity):
             # FIXME This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
             # To be removed when __getitem__[int] is 'fixed'
             except IndexError:
-                    own_length = 1
+                own_length = 1
 
             # Escape check if empty array or list and just annotate an empty array
             # This enables the user to easily create dummy array annotations that will be filled
@@ -95,6 +95,7 @@ class DataObject(BaseNeo, pq.Quantity):
                     # Uninitialized array annotation containing default values (i.e. 0, '', ...)
                     # Quantity preserves units
                     if isinstance(value, pq.Quantity):
+                        # TODO: Try to remove this or think of better solution
                         value = np.zeros(own_length, dtype=value.dtype)*value.units
                     # Simple array only preserves dtype
                     else:
@@ -154,7 +155,7 @@ class DataObject(BaseNeo, pq.Quantity):
                 # Check the first element for correctness
                 # If its type is correct for annotations, all others are correct as well,
                 # if they are of the same type
-                # Note: Emtpy lists cannot reach this point
+                # Note: Empty lists cannot reach this point
                 _check_single_elem(value[0])
                 dtype = type(value[0])
 
@@ -186,9 +187,9 @@ class DataObject(BaseNeo, pq.Quantity):
 
         Example:
 
-        >>> obj.array_annotate(key1=[value00, value01, value02], key2=[value10, value11, value12])
-        >>> obj.key2[1]
-        value11
+        >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
+        >>> obj.array_annotations['code'][1]
+        'b'
         """
 
         array_annotations = self._check_array_annotations(array_annotations)
@@ -204,9 +205,9 @@ class DataObject(BaseNeo, pq.Quantity):
                  for given index
 
         Example:
-        >>> obj.array_annotate(key1=[value00, value01, value02], key2=[value10, value11, value12])
+        >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations_at_index(1)
-        {key1=value01, key2=value11}
+        {code='b', category=1}
         """
 
         index_annotations = {}
@@ -265,13 +266,16 @@ class DataObject(BaseNeo, pq.Quantity):
         # Reset warning filter to default state
         warnings.simplefilter("default")
         # Return the merged array_annotations
+
+        warnings.simplefilter('default')
+
         return merged_array_annotations
 
     def rescale(self, units):
         '''
         Return a copy of the object converted to the specified
         units
-        :return Copy of self with specified units
+        :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
@@ -294,7 +298,7 @@ class DataObject(BaseNeo, pq.Quantity):
     def copy(self, **kwargs):
         '''
         Returns a copy of the object
-        :return Copy of self
+        :return: Copy of self
         '''
 
         obj = super(DataObject, self).copy(**kwargs)
