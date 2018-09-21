@@ -97,8 +97,8 @@ class BaseSignal(DataObject):
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
-            # could improve this test, what if units is a string?
-            # This test should be safe now
+            # This test always returns True, i.e. rescaling is always executed if one of the units
+            # is a pq.CompoundUnit. This is fine because rescaling is correct anyway.
             if pq.quantity.validate_dimensionality(units) != signal.dimensionality:
                 signal = signal.rescale(units)
         return signal
