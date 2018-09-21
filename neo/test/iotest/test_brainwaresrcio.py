@@ -68,7 +68,7 @@ def proc_src(filename):
              src file name = 'file1.src'
     '''
     with np.load(filename) as srcobj:
-        srcfile = srcobj.items()[0][1]
+        srcfile = list(srcobj.items())[0][1]
 
     filename = os.path.basename(filename[:-12] + '.src')
 

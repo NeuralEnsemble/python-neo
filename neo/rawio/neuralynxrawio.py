@@ -490,6 +490,15 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_length.append(length)
 
 
+### Keys funcitons
+def _to_bool(txt):
+    if txt=='True': 
+        return True
+    elif txt=='False': 
+        return False
+    else: 
+        raise Exception('Can not convert %s to bool' %(txt))
+
 # keys in
 txt_header_keys = [
     ('AcqEntName', 'channel_names', None),  # used
@@ -504,7 +513,7 @@ txt_header_keys = [
     ('NumADChannels', '', None),
     ('ADChannel', 'channel_ids', None),  # used
     ('InputRange', '', None),
-    ('InputInverted', 'input_inverted', bool),  # used
+    ('InputInverted', 'input_inverted', _to_bool),  # used
     ('DSPLowCutFilterEnabled', '', None),
     ('DspLowCutFrequency', '', None),
     ('DspLowCutNumTaps', '', None),
@@ -670,3 +679,4 @@ def get_nse_or_ntt_dtype(info, ext):
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
+
