@@ -1144,7 +1144,7 @@ class NixIO(BaseIO):
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.inherited_properties():
-                values = list(v.value for v in prop.values)
+                values = prop.values
                 if prop.unit:
                     units = prop.unit
                     values = create_quantity(values, units)
