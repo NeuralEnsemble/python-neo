@@ -28,7 +28,7 @@ Neo will still install but the IO module that uses them will fail on loading:
    * h5py >= 2.5 for Hdf5IO, KwikIO
    * klusta for KwikIO
    * igor >= 0.2 for IgorIO
-   * nixio >= 1.2 for NixIO
+   * nixio >= 1.5 for NixIO
    * stfio for StimfitIO
 
 
