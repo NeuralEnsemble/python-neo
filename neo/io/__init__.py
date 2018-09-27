@@ -73,6 +73,8 @@ Classes:
 
 .. autoclass:: neo.io.RawBinarySignalIO
 
+.. autoclass:: neo.io.RawMCSIO
+
 .. autoclass:: neo.io.StimfitIO
 
 .. autoclass:: neo.io.TdtIO
@@ -133,6 +135,7 @@ from neo.io.nsdfio import NSDFIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
+from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
@@ -170,6 +173,7 @@ iolist = [
     PickleIO,
     PlexonIO,
     RawBinarySignalIO,
+    RawMCSIO,
     Spike2IO,
     StimfitIO,
     TdtIO,
