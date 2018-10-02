@@ -600,9 +600,6 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         arr_ann2 = ['abc', 'def', 'ghi']
         arr_anns = {'index': arr_ann1, 'label': arr_ann2}
         signal = AnalogSignal(data, sampling_rate=30000*pq.Hz, array_annotations=arr_anns)
-        # data2 = np.arange(15)*2*pq.mV
-        # signal2 = AnalogSignal(data2, sampling_rate=30000*pq.Hz)
-        # r = signal.merge(signal2)
 
         # A time slice of all signals is selected, so all array annotations need to remain
         result1 = signal[0:2]
