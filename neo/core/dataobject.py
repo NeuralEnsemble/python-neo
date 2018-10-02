@@ -87,24 +87,12 @@ class DataObject(BaseNeo, pq.Quantity):
             except IndexError:
                 own_length = 1
 
-            # Escape check if empty array or list and just annotate an empty array
+            # Escape check if empty array or list and just annotate an empty array (length 0)
             # This enables the user to easily create dummy array annotations that will be filled
             # with data later on
             if len(value) == 0:
-                if isinstance(value, np.ndarray):
-                    # Uninitialized array annotation containing default values (i.e. 0, '', ...)
-                    # Quantity preserves units
-                    if isinstance(value, pq.Quantity):
-                        # TODO: Try to remove this or think of better solution
-                        value = np.zeros(own_length, dtype=value.dtype)*value.units
-                    # Simple array only preserves dtype
-                    else:
-                        value = np.zeros(own_length, dtype=value.dtype)
-
-                else:
-                    raise ValueError("Empty array annotation without data type detected. If you "
-                                     "wish to create an uninitialized array annotation, please "
-                                     "use a numpy.ndarray containing the data type you want.")
+                if not isinstance(value, np.ndarray):
+                    value = np.ndarray((0, ))
                 val_length = own_length
             else:
                 # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
@@ -141,13 +129,8 @@ class DataObject(BaseNeo, pq.Quantity):
                     # Perform check on first element
                     _check_single_elem(value[0])
                 except IndexError:
-                    # Length 0 array annotations are possible is data are of length 0
-                    if own_length == 0:
-                        pass
-                    else:
-                        # This should never happen, but maybe there are some subtypes
-                        # of np.array that behave differently than usual
-                        raise ValueError("Unallowed array annotation type")
+                    # If length of data is 0, then nothing needs to be checked
+                    pass
                 return value
 
             # In case of list, it needs to be ensured that all data are of the same type
@@ -216,7 +199,15 @@ class DataObject(BaseNeo, pq.Quantity):
         # if not possible, numpy raises an Error
         for ann in self.array_annotations.keys():
             # NO deepcopy, because someone might want to alter the actual object using this
-            index_annotations[ann] = self.array_annotations[ann][index]
+            try:
+                index_annotations[ann] = self.array_annotations[ann][index]
+            except IndexError as e:
+                # IndexError caused by 'dummy' array annotations should not result in failure
+                # Taking a slice from nothing results in nothing
+                if len(self.array_annotations[ann]) == 0 and not self._get_arr_ann_length() == 0:
+                    index_annotations[ann] = self.array_annotations[ann]
+                else:
+                    raise e
 
         return index_annotations
 
