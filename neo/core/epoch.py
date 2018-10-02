@@ -228,6 +228,7 @@ class Epoch(DataObject):
     def _copy_data_complement(self, other):
         '''
         Copy the metadata from another :class:`Epoch`.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.

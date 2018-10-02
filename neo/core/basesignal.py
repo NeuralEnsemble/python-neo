@@ -174,6 +174,7 @@ class BaseSignal(DataObject):
         '''
         Copy the metadata from another signal.
         Required and recommended attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:

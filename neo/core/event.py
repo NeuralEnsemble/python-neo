@@ -204,6 +204,7 @@ class Event(DataObject):
     def _copy_data_complement(self, other):
         '''
         Copy the metadata from another :class:`Event`.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # Note: Array annotations cannot be copied
         # because they are linked to their respective timestamps

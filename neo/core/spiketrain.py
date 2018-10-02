@@ -535,6 +535,7 @@ class SpikeTrain(DataObject):
     def _copy_data_complement(self, other, deep_copy=False):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # Note: Array annotations cannot be copied because length of data can be changed
         # here which would cause inconsistencies
