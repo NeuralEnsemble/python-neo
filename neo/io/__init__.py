@@ -128,6 +128,7 @@ from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
+from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
