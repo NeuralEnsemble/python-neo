@@ -153,6 +153,7 @@ class BaseSignal(DataObject):
         '''
         Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         if units is None:
             units = self.units

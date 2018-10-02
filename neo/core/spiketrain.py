@@ -178,7 +178,7 @@ class SpikeTrain(DataObject):
         :copy: (bool) Whether to copy the times array.  True by default.
             Must be True when you request a change of units or dtype.
         :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-        for all data points
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -550,6 +550,7 @@ class SpikeTrain(DataObject):
         '''
         Create a new :class:`SpikeTrain` with the same metadata
         but different data (times, t_start, t_stop)
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # using previous t_start and t_stop if no values are provided
         if t_start is None:

@@ -66,7 +66,7 @@ class Event(DataObject):
 
     *Optional attributes/properties*:
         :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-        for all data points
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -241,6 +241,7 @@ class Event(DataObject):
         '''
         Create a new :class:`Event` with the same metadata
         but different data
+        Note: Array annotations can not be copied here because length of data can change
         '''
         if units is None:
             units = self.units
