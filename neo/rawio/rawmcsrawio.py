@@ -2,14 +2,14 @@
 """
 Class for reading data from "Raw" Multi Channel System (MCS) format.
 This format is NOT the native MCS format (*.mcd).
-This format is a raw format with an internal binary header exported by the 
-"MC_DataTool binary conversion".
+This format is a raw format with an internal binary header exported by the
+"MC_DataTool binary conversion" with the option header slected.
 
 The internal header contain sampling rate, channel names, gain and units.
 Not so bad : everything that neo need, so this IO is without parameters.
 
 If some MCS custumers read this you should lobby to get the real specification
-of the real MCS format (.mcd) and so the MCSRawIO could be done instead of this 
+of the real MCS format (.mcd) and so the MCSRawIO could be done instead of this
 ersatz.
 
 
@@ -27,7 +27,7 @@ import sys
 
 
 class RawMCSRawIO(BaseRawIO):
-    extensions = ['raw',]
+    extensions = ['raw']
     rawmode = 'one-file'
 
     def __init__(self, filename=''):
@@ -38,11 +38,8 @@ class RawMCSRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-
-        
         self._info = info = parse_mcs_raw_header(self.filename)
-        
-        
+
         self.dtype = 'uint16'
         self.sampling_rate = info['sampling_rate']
         self.nb_channel = len(info['channel_names'])
@@ -54,8 +51,9 @@ class RawMCSRawIO(BaseRawIO):
         for c in range(self.nb_channel):
             chan_id = c
             group_id = 0
-            sig_channels.append((info['channel_names'][c], chan_id, self.sampling_rate, self.dtype,
-                                 info['signal_units'], info['signal_gain'], info['signal_offset'], group_id))
+            sig_channels.append((info['channel_names'][c], chan_id, self.sampling_rate,
+                                self.dtype, info['signal_units'], info['signal_gain'],
+                                info['signal_offset'], group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -103,41 +101,40 @@ def parse_mcs_raw_header(filename):
     This is a mix with stuff on github.
     https://github.com/spyking-circus/spyking-circus/blob/master/circus/files/mcs_raw_binary.py
     https://github.com/jeffalstott/Multi-Channel-Systems-Import/blob/master/MCS.py
-    
     """
     MAX_HEADER_SIZE = 5000
 
     with open(filename, mode='rb') as f:
         raw_header = f.read(MAX_HEADER_SIZE)
+
         header_size = raw_header.find(b'EOH')
-        assert header_size !=-1, 'Error in reading raw mcs header'
+        assert header_size != -1, 'Error in reading raw mcs header'
         header_size = header_size + 5
-        #~ print(header_size)
         raw_header = raw_header[:header_size]
-        raw_header = raw_header.replace(b'\r',b'')
-        
+        raw_header = raw_header.replace(b'\r', b'')
+
         info = {}
         info['header_size'] = header_size
-        
+
         def parse_line(line, key):
             if key + b' = ' in line:
                 v = line.replace(key, b'').replace(b' ', b'').replace(b'=', b'')
                 return v
 
-        keys = (b'Sample rate', b'ADC zero', b'ADC zero',b'El', b'Streams')
+        keys = (b'Sample rate', b'ADC zero', b'ADC zero', b'El', b'Streams')
 
         for line in raw_header.split(b'\n'):
             for key in keys:
                 v = parse_line(line, key)
                 if v is None:
                     continue
-                
+
                 if key == b'Sample rate':
                     info['sampling_rate'] = float(v)
-                
+
                 elif key == b'ADC zero':
                     info['adc_zero'] = int(v)
-                
+
                 elif key == b'El':
                     v = v.decode('Windows-1252')
                     v = v.replace('/AD', '')
@@ -149,9 +146,9 @@ def parse_mcs_raw_header(filename):
                             break
                     assert split_pos is not None, 'Impossible to find units and scaling'
                     info['signal_gain'] = float(v[:split_pos])
-                    info['signal_units'] = v[split_pos:]
+                    info['signal_units'] = v[split_pos:].replace(u'µ', u'u')
                     info['signal_offset'] = -info['signal_gain'] * info['adc_zero']
-                
+
                 elif key == b'Streams':
                     info['channel_names'] = v.decode('Windows-1252').split(';')
 
