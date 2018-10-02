@@ -265,10 +265,8 @@ class DataObject(BaseNeo, pq.Quantity):
         
         # Reset warning filter to default state
         warnings.simplefilter("default")
+
         # Return the merged array_annotations
-
-        warnings.simplefilter('default')
-
         return merged_array_annotations
 
     def rescale(self, units):
