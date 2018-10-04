@@ -448,11 +448,10 @@ class IrregularlySampledSignal(BaseSignal):
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        kwargs['array_annotations'] = self._merge_array_annotations(other)
-
         signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
                                 copy=False, **kwargs)
         signal.segment = self.segment
+        signal.array_annotate(**self._merge_array_annotations(other))
 
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape

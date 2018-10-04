@@ -401,7 +401,7 @@ class SpikeTrain(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = ArrayDict(self._check_array_annotations)
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
         # Note: Array annotations have to be changed when slicing or initializing an object,
         # copying them over in spite of changed data would result in unexpected behaviour
@@ -446,7 +446,7 @@ class SpikeTrain(DataObject):
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
-        self.array_annotations = copy.deepcopy(self.array_annotations_at_index(sort_indices))
+        self.array_annotate(**copy.deepcopy(self.array_annotations_at_index(sort_indices)))
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -687,7 +687,7 @@ class SpikeTrain(DataObject):
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
 
-        merged_array_annotations = ArrayDict(self._check_array_annotations)
+        merged_array_annotations = {}
 
         omitted_keys_self = []
 

@@ -147,7 +147,7 @@ class Epoch(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = ArrayDict(self._check_array_annotations)
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
     def __repr__(self):
         '''
@@ -185,7 +185,7 @@ class Epoch(DataObject):
         obj._copy_data_complement(self)
         try:
             # Array annotations need to be sliced accordingly
-            obj.array_annotations = self.array_annotations_at_index(i)
+            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not Epoch
             pass
         return obj

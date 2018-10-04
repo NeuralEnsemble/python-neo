@@ -137,7 +137,7 @@ class Event(DataObject):
         # but do not overwrite existing ones from slicing etc.
         # This ensures the attribute exists
         if not hasattr(self, 'array_annotations'):
-            self.array_annotations = ArrayDict(self._check_array_annotations)
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
     def __repr__(self):
         '''

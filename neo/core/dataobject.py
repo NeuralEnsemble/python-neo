@@ -12,6 +12,124 @@ import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo, _check_annotations
 
+# TODO: If yes, then should array annotations as a whole also be a property?
+
+
+def _normalize_array_annotations(value, length):
+
+    """
+    Recursively check that value is either an array or list containing only "simple" types
+    (number, string, date/time) or is a dict of those.
+    :return The array_annotations from value in correct form
+    :raises ValueError: In case value is not accepted as array_annotation(s)
+    """
+
+    # First stage, resolve dict of annotations into single annotations
+    if isinstance(value, dict):
+        for key in value.keys():
+            if isinstance(value[key], dict):
+                raise ValueError("Nested dicts are not allowed as array annotations")
+            value[key] = _normalize_array_annotations(value[key], length)
+
+    elif value is None:
+        raise ValueError("Array annotations must not be None")
+    # If not array annotation, pass on to regular check and make it a list,
+    # that is checked again
+    # This covers array annotations with length 1
+    elif not isinstance(value, (list, np.ndarray)) or \
+            (isinstance(value, pq.Quantity) and value.shape == ()):
+        _check_annotations(value)
+        value = _normalize_array_annotations(np.array([value]), length)
+
+    # If array annotation, check for correct length,
+    # only single dimension and allowed data
+    else:
+        # Get length that is required for array annotations, which is equal to the length
+        # of the object's data
+        own_length = length
+
+        # Escape check if empty array or list and just annotate an empty array (length 0)
+        # This enables the user to easily create dummy array annotations that will be filled
+        # with data later on
+        if len(value) == 0:
+            if not isinstance(value, np.ndarray):
+                value = np.ndarray((0,))
+            val_length = own_length
+        else:
+            # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
+            # which is exactly the desired behaviour here
+            val_length = len(value)
+
+        if not own_length == val_length:
+            raise ValueError("Incorrect length of array annotation: {} != {}".
+                             format(val_length, own_length))
+
+        # Local function used to check single elements of a list or an array
+        # They must not be lists or arrays and fit the usual annotation data types
+        def _check_single_elem(element):
+            # Nested array annotations not allowed currently
+            # So if an entry is a list or a np.ndarray, it's not allowed,
+            # except if it's a quantity of length 1
+            if isinstance(element, list) or \
+                    (isinstance(element, np.ndarray) and not
+                    (isinstance(element, pq.Quantity) and element.shape == ())):
+                raise ValueError("Array annotations should only be 1-dimensional")
+            if isinstance(element, dict):
+                raise ValueError("Dicts are not supported array annotations")
+
+            # Perform regular check for elements of array or list
+            _check_annotations(element)
+
+        # Arrays only need testing of single element to make sure the others are the same
+        if isinstance(value, np.ndarray):
+            # Type of first element is representative for all others
+            # Thus just performing a check on the first element is enough
+            # Even if it's a pq.Quantity, which can be scalar or array, this is still true
+            # Because a np.ndarray cannot contain scalars and sequences simultaneously
+            try:
+                # Perform check on first element
+                _check_single_elem(value[0])
+            except IndexError:
+                # Length 0 array annotations are possible is data are of length 0
+                if own_length == 0:
+                    pass
+                else:
+                    # This should never happen, but maybe there are some subtypes
+                    # of np.array that behave differently than usual
+                    raise ValueError("Unallowed array annotation type")
+            return value
+
+        # In case of list, it needs to be ensured that all data are of the same type
+        else:
+            # Check the first element for correctness
+            # If its type is correct for annotations, all others are correct as well,
+            # if they are of the same type
+            # Note: Emtpy lists cannot reach this point
+            _check_single_elem(value[0])
+            dtype = type(value[0])
+
+            # Loop through and check for varying datatypes in the list
+            # Because these would create not clearly defined behavior
+            # In case the user wants this, the list needs to be converted
+            #  to np.ndarray first
+            for element in value:
+                if not isinstance(element, dtype):
+                    raise ValueError("Lists with different types are not supported for "
+                                     "array annotations. ")
+
+            # Create arrays from lists, because array annotations should be numpy arrays
+            try:
+                value = np.array(value)
+            except ValueError as e:
+                msg = str(e)
+                if "setting an array element with a sequence." in msg:
+                    raise ValueError("Scalar Quantities and array Quanitities cannot be "
+                                     "combined into a single array")
+                else:
+                    raise e
+
+    return value
+
 
 class DataObject(BaseNeo, pq.Quantity):
     '''
@@ -40,128 +158,13 @@ class DataObject(BaseNeo, pq.Quantity):
         and attributes are processed.
         """
 
-        # Adding array annotations to the object if not yet available, default is empty dict
-        if array_annotations is None:
-            if 'array_annotations' not in self.__dict__ or not self.array_annotations:
-                self.array_annotations = ArrayDict(self._check_array_annotations)
-        else:
-            self.array_annotate(**self._check_array_annotations(array_annotations))
+        if not hasattr(self, 'array_annotations') or not self.array_annotations:
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
+        if array_annotations is not None:
+            self.array_annotate(**array_annotations)
 
         BaseNeo.__init__(self, name=name, description=description,
                          file_origin=file_origin, **annotations)
-
-    def _check_array_annotations(self, value):
-
-        """
-        Recursively check that value is either an array or list containing only "simple" types
-        (number, string, date/time) or is a dict of those.
-        :return The array_annotations from value in correct form
-        :raises ValueError: In case value is not accepted as array_annotation(s)
-        """
-
-        # First stage, resolve dict of annotations into single annotations
-        if isinstance(value, dict):
-            for key in value.keys():
-                if isinstance(value[key], dict):
-                    raise ValueError("Nested dicts are not allowed as array annotations")
-                value[key] = self._check_array_annotations(value[key])
-
-        elif value is None:
-            raise ValueError("Array annotations must not be None")
-        # If not array annotation, pass on to regular check and make it a list,
-        # that is checked again
-        # This covers array annotations with length 1
-        elif not isinstance(value, (list, np.ndarray)) or \
-                (isinstance(value, pq.Quantity) and value.shape == ()):
-            _check_annotations(value)
-            value = self._check_array_annotations(np.array([value]))
-
-        # If array annotation, check for correct length, only single dimension and allowed data
-        else:
-            # Get length that is required for array annotations, which is equal to the length
-            # of the object's data
-            try:
-                own_length = self._get_arr_ann_length()
-            # FIXME This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-            # To be removed when __getitem__[int] is 'fixed'
-            except IndexError:
-                own_length = 1
-
-            # Escape check if empty array or list and just annotate an empty array (length 0)
-            # This enables the user to easily create dummy array annotations that will be filled
-            # with data later on
-            if len(value) == 0:
-                if not isinstance(value, np.ndarray):
-                    value = np.ndarray((0, ))
-                val_length = own_length
-            else:
-                # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
-                # which is exactly the desired behaviour here
-                val_length = len(value)
-
-            if not own_length == val_length:
-                raise ValueError("Incorrect length of array annotation: {} != {}".
-                                 format(val_length, own_length))
-
-            # Local function used to check single elements of a list or an array
-            # They must not be lists or arrays and fit the usual annotation data types
-            def _check_single_elem(element):
-                # Nested array annotations not allowed currently
-                # So if an entry is a list or a np.ndarray, it's not allowed,
-                # except if it's a quantity of length 1
-                if isinstance(element, list) or \
-                   (isinstance(element, np.ndarray) and not
-                   (isinstance(element, pq.Quantity) and element.shape == ())):
-                    raise ValueError("Array annotations should only be 1-dimensional")
-                if isinstance(element, dict):
-                    raise ValueError("Dicts are not supported array annotations")
-
-                # Perform regular check for elements of array or list
-                _check_annotations(element)
-
-            # Arrays only need testing of single element to make sure the others are the same
-            if isinstance(value, np.ndarray):
-                # Type of first element is representative for all others
-                # Thus just performing a check on the first element is enough
-                # Even if it's a pq.Quantity, which can be scalar or array, this is still true
-                # Because a np.ndarray cannot contain scalars and sequences simultaneously
-                try:
-                    # Perform check on first element
-                    _check_single_elem(value[0])
-                except IndexError:
-                    # If length of data is 0, then nothing needs to be checked
-                    pass
-                return value
-
-            # In case of list, it needs to be ensured that all data are of the same type
-            else:
-                # Check the first element for correctness
-                # If its type is correct for annotations, all others are correct as well,
-                # if they are of the same type
-                # Note: Empty lists cannot reach this point
-                _check_single_elem(value[0])
-                dtype = type(value[0])
-
-                # Loop through and check for varying datatypes in the list
-                # Because these would create not clearly defined behavior
-                # In case the user wants this, the list needs to be converted to np.ndarray first
-                for element in value:
-                    if not isinstance(element, dtype):
-                        raise ValueError("Lists with different types are not supported for "
-                                         "array annotations. ")
-
-                # Create arrays from lists, because array annotations should be numpy arrays
-                try:
-                    value = np.array(value)
-                except ValueError as e:
-                    msg = str(e)
-                    if "setting an array element with a sequence." in msg:
-                        raise ValueError("Scalar Quantities and array Quanitities cannot be "
-                                         "combined into a single array")
-                    else:
-                        raise e
-
-        return value
 
     def array_annotate(self, **array_annotations):
 
@@ -175,7 +178,6 @@ class DataObject(BaseNeo, pq.Quantity):
         'b'
         """
 
-        # array_annotations = self._check_array_annotations(array_annotations)
         self.array_annotations.update(array_annotations)
 
     def array_annotations_at_index(self, index):
@@ -185,7 +187,7 @@ class DataObject(BaseNeo, pq.Quantity):
         :param index: int, list, numpy array: The index (indices) from which the annotations
                       are extracted
         :return: dictionary of values or numpy arrays containing all array annotations
-                 for given index
+                 for given index/indices
 
         Example:
         >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
@@ -224,7 +226,7 @@ class DataObject(BaseNeo, pq.Quantity):
 
         # Make sure the user is notified for every object about which exact annotations are lost
         warnings.simplefilter('always', UserWarning)
-        merged_array_annotations = ArrayDict(self._check_array_annotations)
+        merged_array_annotations = {}
         omitted_keys_self = []
         # Concatenating arrays for each key
         for key in self.array_annotations:
@@ -322,7 +324,13 @@ class DataObject(BaseNeo, pq.Quantity):
         # Number of items is last dimension in current objects
         # This holds true for the current implementation
         # This method should be overridden in case this changes
-        return self.shape[-1]
+        try:
+            length = self.shape[-1]
+        # XXX This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
+        # To be removed if __getitem__[int] is changed
+        except IndexError:
+            length = 1
+        return length
 
 
 class ArrayDict(dict):
@@ -334,11 +342,29 @@ class ArrayDict(dict):
        The method used for these checks is given as an argument for __init__.
     """
 
-    def __init__(self, check_function, *args, **kwargs):
+    def __init__(self, length, check_function=_normalize_array_annotations, *args, **kwargs):
         super(ArrayDict, self).__init__(*args, **kwargs)
         self.check_function = check_function
+        self.length = length
 
     def __setitem__(self, key, value):
-        value = self.check_function(value)
+        # Directly call the defined function
+        # Need to wrap key and value in a dict in order to make sure
+        # that nested dicts are detected
+        value = self.check_function({key: value}, self.length)[key]
         super(ArrayDict, self).__setitem__(key, value)
 
+    # Updating the dict also needs to perform checks, so rerouting this to __setitem__
+    def update(self, *args, **kwargs):
+        if args:
+            if len(args) > 1:
+                raise TypeError("update expected at most 1 arguments, "
+                                "got %d" % len(args))
+            other = dict(args[0])
+            for key in other:
+                self[key] = other[key]
+        for key in kwargs:
+            self[key] = kwargs[key]
+
+    def __reduce__(self):
+        return super(ArrayDict, self).__reduce__()
