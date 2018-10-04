@@ -19,6 +19,7 @@ from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
+from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
@@ -35,6 +36,7 @@ rawiolist = [
     NeuralynxRawIO,
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
+    NIXRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
     Spike2RawIO,

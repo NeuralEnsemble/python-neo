@@ -14,6 +14,7 @@ extras_require = {
     'neomatlabio': ['scipy>=0.12.0'],
     'nixio': ['nixio>=1.4.3'],
     'stimfitio': ['stfio'],
+    'axographio': ['axographio']
 }
 
 if os.environ.get('TRAVIS') == 'true' and \
