@@ -90,13 +90,8 @@ def _normalize_array_annotations(value, length):
                 # Perform check on first element
                 _check_single_elem(value[0])
             except IndexError:
-                # Length 0 array annotations are possible is data are of length 0
-                if own_length == 0:
-                    pass
-                else:
-                    # This should never happen, but maybe there are some subtypes
-                    # of np.array that behave differently than usual
-                    raise ValueError("Unallowed array annotation type")
+                # If length of data is 0, then nothing needs to be checked
+                pass
             return value
 
         # In case of list, it needs to be ensured that all data are of the same type
