@@ -67,6 +67,8 @@ Classes:
 
 .. autoclass:: neo.io.NSDFIO
 
+.. autoclass:: neo.io.OpenEphysIO
+
 .. autoclass:: neo.io.PickleIO
 
 .. autoclass:: neo.io.PlexonIO
@@ -130,6 +132,7 @@ from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
 from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
+from neo.io.openephysio import OpenEphysIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
@@ -167,6 +170,7 @@ iolist = [
     NeuroScopeIO,
     NeuroshareIO,
     NSDFIO,
+    OpenEphysIO,
     PickleIO,
     PlexonIO,
     RawBinarySignalIO,
