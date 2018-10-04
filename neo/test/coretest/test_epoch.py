@@ -603,9 +603,8 @@ class TestDuplicateWithNewData(unittest.TestCase):
         # After duplicating, array annotations should always be empty,
         # because different length of data would cause inconsistencies
         # Only labels and durations should be available
-        assert_arrays_equal(signal1b.labels, np.zeros(signal1b.shape[-1], dtype='S'))
-        assert_arrays_equal(signal1b.durations, np.zeros(signal1b.shape[-1], dtype='float64') *
-                            signal1.durations.units)
+        assert_arrays_equal(signal1b.labels, np.ndarray((0,), dtype='S'))
+        assert_arrays_equal(signal1b.durations.magnitude, np.ndarray((0,)))
         self.assertTrue('index' not in signal1b.array_annotations)
         self.assertTrue('test' not in signal1b.array_annotations)
 

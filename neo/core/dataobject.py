@@ -26,10 +26,10 @@ class DataObject(BaseNeo, pq.Quantity):
     - handling of array_annotations
 
     Array_annotations are a kind of annotations that contain metadata for every data point,
-    i.e. per timestamp (in Spiketrain, Event and Epoch) or signal channel (in AnalogSignal
+    i.e. per timestamp (in SpikeTrain, Event and Epoch) or signal channel (in AnalogSignal
     and IrregularlySampledSignal).
-    They may contain the same data as regular annotations, except they are arrays containing these
-    data.
+    They can contain the same data types as regular annotations, but are always represented
+    as numpy arrays of the same length as the number of data points of the annotated neo object.
     '''
 
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
@@ -85,25 +85,14 @@ class DataObject(BaseNeo, pq.Quantity):
             # FIXME This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
             # To be removed when __getitem__[int] is 'fixed'
             except IndexError:
-                    own_length = 1
+                own_length = 1
 
-            # Escape check if empty array or list and just annotate an empty array
+            # Escape check if empty array or list and just annotate an empty array (length 0)
             # This enables the user to easily create dummy array annotations that will be filled
             # with data later on
             if len(value) == 0:
-                if isinstance(value, np.ndarray):
-                    # Uninitialized array annotation containing default values (i.e. 0, '', ...)
-                    # Quantity preserves units
-                    if isinstance(value, pq.Quantity):
-                        value = np.zeros(own_length, dtype=value.dtype)*value.units
-                    # Simple array only preserves dtype
-                    else:
-                        value = np.zeros(own_length, dtype=value.dtype)
-
-                else:
-                    raise ValueError("Empty array annotation without data type detected. If you "
-                                     "wish to create an uninitialized array annotation, please "
-                                     "use a numpy.ndarray containing the data type you want.")
+                if not isinstance(value, np.ndarray):
+                    value = np.ndarray((0, ))
                 val_length = own_length
             else:
                 # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
@@ -140,13 +129,8 @@ class DataObject(BaseNeo, pq.Quantity):
                     # Perform check on first element
                     _check_single_elem(value[0])
                 except IndexError:
-                    # Length 0 array annotations are possible is data are of length 0
-                    if own_length == 0:
-                        pass
-                    else:
-                        # This should never happen, but maybe there are some subtypes
-                        # of np.array that behave differently than usual
-                        raise ValueError("Unallowed array annotation type")
+                    # If length of data is 0, then nothing needs to be checked
+                    pass
                 return value
 
             # In case of list, it needs to be ensured that all data are of the same type
@@ -154,7 +138,7 @@ class DataObject(BaseNeo, pq.Quantity):
                 # Check the first element for correctness
                 # If its type is correct for annotations, all others are correct as well,
                 # if they are of the same type
-                # Note: Emtpy lists cannot reach this point
+                # Note: Empty lists cannot reach this point
                 _check_single_elem(value[0])
                 dtype = type(value[0])
 
@@ -186,9 +170,9 @@ class DataObject(BaseNeo, pq.Quantity):
 
         Example:
 
-        >>> obj.array_annotate(key1=[value00, value01, value02], key2=[value10, value11, value12])
-        >>> obj.key2[1]
-        value11
+        >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
+        >>> obj.array_annotations['code'][1]
+        'b'
         """
 
         # array_annotations = self._check_array_annotations(array_annotations)
@@ -204,9 +188,9 @@ class DataObject(BaseNeo, pq.Quantity):
                  for given index
 
         Example:
-        >>> obj.array_annotate(key1=[value00, value01, value02], key2=[value10, value11, value12])
+        >>> obj.array_annotate(code=['a', 'b', 'a'], category=[2, 1, 1])
         >>> obj.array_annotations_at_index(1)
-        {key1=value01, key2=value11}
+        {code='b', category=1}
         """
 
         # Taking only a part of the array annotations
@@ -217,7 +201,15 @@ class DataObject(BaseNeo, pq.Quantity):
         # if not possible, numpy raises an Error
         for ann in self.array_annotations.keys():
             # NO deepcopy, because someone might want to alter the actual object using this
-            index_annotations[ann] = self.array_annotations[ann][index]
+            try:
+                index_annotations[ann] = self.array_annotations[ann][index]
+            except IndexError as e:
+                # IndexError caused by 'dummy' array annotations should not result in failure
+                # Taking a slice from nothing results in nothing
+                if len(self.array_annotations[ann]) == 0 and not self._get_arr_ann_length() == 0:
+                    index_annotations[ann] = self.array_annotations[ann]
+                else:
+                    raise e
 
         return index_annotations
 
@@ -263,6 +255,9 @@ class DataObject(BaseNeo, pq.Quantity):
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
+        
+        # Reset warning filter to default state
+        warnings.simplefilter("default")
 
         # Return the merged array_annotations
         return merged_array_annotations
@@ -271,7 +266,7 @@ class DataObject(BaseNeo, pq.Quantity):
         '''
         Return a copy of the object converted to the specified
         units
-        :return Copy of self with specified units
+        :return: Copy of self with specified units
         '''
         # Use simpler functionality, if nothing will be changed
         dim = pq.quantity.validate_dimensionality(units)
@@ -294,7 +289,7 @@ class DataObject(BaseNeo, pq.Quantity):
     def copy(self, **kwargs):
         '''
         Returns a copy of the object
-        :return Copy of self
+        :return: Copy of self
         '''
 
         obj = super(DataObject, self).copy(**kwargs)

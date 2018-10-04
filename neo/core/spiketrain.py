@@ -178,7 +178,7 @@ class SpikeTrain(DataObject):
         :copy: (bool) Whether to copy the times array.  True by default.
             Must be True when you request a change of units or dtype.
         :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
-        for all data points
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -535,6 +535,7 @@ class SpikeTrain(DataObject):
     def _copy_data_complement(self, other, deep_copy=False):
         '''
         Copy the metadata from another :class:`SpikeTrain`.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # Note: Array annotations cannot be copied because length of data can be changed
         # here which would cause inconsistencies
@@ -550,6 +551,7 @@ class SpikeTrain(DataObject):
         '''
         Create a new :class:`SpikeTrain` with the same metadata
         but different data (times, t_start, t_stop)
+        Note: Array annotations can not be copied here because length of data can change
         '''
         # using previous t_start and t_stop if no values are provided
         if t_start is None:
@@ -714,6 +716,8 @@ class SpikeTrain(DataObject):
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
+        # Reset warning filter to default state
+        warnings.simplefilter("default")
 
         return merged_array_annotations
 

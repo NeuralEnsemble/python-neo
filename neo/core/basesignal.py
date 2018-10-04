@@ -97,8 +97,8 @@ class BaseSignal(DataObject):
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
-            # could improve this test, what if units is a string?
-            # This test should be safe now
+            # This test always returns True, i.e. rescaling is always executed if one of the units
+            # is a pq.CompoundUnit. This is fine because rescaling is correct anyway.
             if pq.quantity.validate_dimensionality(units) != signal.dimensionality:
                 signal = signal.rescale(units)
         return signal
@@ -153,6 +153,7 @@ class BaseSignal(DataObject):
         '''
         Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         if units is None:
             units = self.units
@@ -173,6 +174,7 @@ class BaseSignal(DataObject):
         '''
         Copy the metadata from another signal.
         Required and recommended attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
