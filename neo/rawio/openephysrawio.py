@@ -113,10 +113,61 @@ class OpenEphysRawIO(BaseRawIO):
         
         
         # scan for spikes files
-        #TODO
-        unit_channels = []
-        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        self._spikes_memmap ={}
+        for seg_index in range(nb_segment):
+            self._spikes_memmap[seg_index] = {}
+            for spike_filename in info['spikes'][seg_index]:
+                fullname = os.path.join(self.dirname, spike_filename)
+                spike_info = read_file_header(fullname)
+                spikes_dtype = make_spikes_dtype(fullname)
+                
+                # "STp106.0n0_2.spikes" to "STp106.0n0"
+                name = spike_filename.replace('.spikes', '')
+                if seg_index>0:
+                    name = name.replace('_'+str(seg_index+1), '')
+                
+                data_spike = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
+                                    dtype=spikes_dtype)
+                self._spikes_memmap[seg_index][name] = data_spike
         
+        # In each file 'sorted_id' indicate the number of cluster so number of units
+        # so need to scan file for all segment to get units
+        self._spike_sampling_rate = None 
+        unit_channels = []
+        if len(info['spikes'])>0:
+            
+            for spike_filename_seg0 in info['spikes'][0]:
+                name = spike_filename_seg0.replace('.spikes', '')
+
+                fullname = os.path.join(self.dirname, spike_filename_seg0)
+                spike_info = read_file_header(fullname)
+                if self._spike_sampling_rate is None:
+                    self._spike_sampling_rate = spike_info['sampleRate']
+                else:
+                    assert self._spike_sampling_rate == spike_info['sampleRate'], 'mismatch in spike sampleRate'
+                
+                # scan all to detect several all unique(sorted_ids)
+                all_sorted_ids = []
+                for seg_index in range(nb_segment):
+                    data_spike = self._spikes_memmap[seg_index][name]
+                    all_sorted_ids += np.unique(data_spike['sorted_id']).tolist()
+                all_sorted_ids = np.unique(all_sorted_ids)
+                
+                # supose all channel have the same gain
+                wf_units = 'uV'
+                wf_gain = 1000. / data_spike[0]['gains'][0] 
+                wf_offset =  - (2**15) * wf_gain
+                wf_left_sweep = 0
+                wf_sampling_rate = spike_info['sampleRate']
+                
+                # each sorted_id is one channel
+                for sorted_id in all_sorted_ids:
+                    unit_name = "{}#{}".format(name, sorted_id)
+                    unit_id = "{}#{}".format(name, sorted_id)
+                    unit_channels.append((unit_name, unit_id, wf_units, 
+                                wf_gain, wf_offset,wf_left_sweep, wf_sampling_rate))
+        
+        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         
         # event file are:
         #    * all_channel.events (header + binray)  -->  event 0
@@ -200,44 +251,66 @@ class OpenEphysRawIO(BaseRawIO):
 
         return sigs_chunk
 
-        
-        
+    def _get_spike_slice(self, block_index, seg_index, unit_index, t_start, t_stop):
+        name, sorted_id = self.header['unit_channels'][unit_index]['name'].split('#')
+        sorted_id = int(sorted_id)
+        data_spike = self._spikes_memmap[seg_index][name]
+
+        if t_start is None:
+            t_start = self._segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self._segment_t_stop(block_index, seg_index)
+        ts0 = int(t_start * self._spike_sampling_rate)
+        ts1 = int(t_stop * self._spike_sampling_rate)
+
+        ts = data_spike['timestamp']
+        keep = (data_spike['sorted_id'] == sorted_id) & (ts>=ts0) & (ts<=ts1)
+        return data_spike, keep
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        return 0
-
+        data_spike, keep = self._get_spike_slice(block_index, seg_index, unit_index, None, None)
+        return np.sum(keep)
+    
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return None
+        data_spike, keep = self._get_spike_slice(block_index, seg_index, unit_index, t_start, t_stop)
+        return data_spike['timestamp'][keep]
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        return None
+        spike_times = spike_timestamps.astype(dtype) / self._spike_sampling_rate
+        return spike_times
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        return None
+        data_spike, keep = self._get_spike_slice(block_index, seg_index, unit_index, t_start, t_stop)
+        nb_chan = data_spike[0]['nb_channel']
+        nb = np.sum(keep)
+        waveforms = data_spike[keep]['samples'].flatten()
+        waveforms = waveforms.reshape(nb, nb_chan, -1)
+        return waveforms
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         if event_channel_index==0:
             return self._events_memmap[seg_index].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        if event_channel_index==0:
-            if t_start is None:
-                t_start = self._segment_t_start(block_index, seg_index)
-            if t_stop is None:
-                t_stop = self._segment_t_stop(block_index, seg_index)
-            ts0 = int(t_start * self._event_sampling_rate)
-            ts1 = int(t_stop * self._event_sampling_rate)
-            ts = self._events_memmap[seg_index]['timestamp']
-            keep = (ts>=ts0) & (ts<=ts1)
-            
-            subdata = self._events_memmap[seg_index][keep]
-            timestamps = subdata['timestamp']
-            # question what is the label????
-            # here I put a combinaison
-            labels = np.array(['{}#{}#{}'.format(int(d['event_type']), int(d['processor_id']), int(d['chan_id']) ) for d in subdata])
-            durations = None
-            
-            return timestamps, durations, labels
+        # assert event_channel_index==0
+        
+        if t_start is None:
+            t_start = self._segment_t_start(block_index, seg_index)
+        if t_stop is None:
+            t_stop = self._segment_t_stop(block_index, seg_index)
+        ts0 = int(t_start * self._event_sampling_rate)
+        ts1 = int(t_stop * self._event_sampling_rate)
+        ts = self._events_memmap[seg_index]['timestamp']
+        keep = (ts>=ts0) & (ts<=ts1)
+        
+        subdata = self._events_memmap[seg_index][keep]
+        timestamps = subdata['timestamp']
+        # question what is the label????
+        # here I put a combinaison
+        labels = np.array(['{}#{}#{}'.format(int(d['event_type']), int(d['processor_id']), int(d['chan_id']) ) for d in subdata])
+        durations = None
+        
+        return timestamps, durations, labels
 
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
@@ -258,6 +331,52 @@ events_dtype = [('timestamp', 'int64'), ('sample_pos', 'int16'),
     ('event_type', 'uint8'), ('processor_id', 'uint8'), 
     ('event_id', 'uint8'), ('chan_id', 'uint8'),
     ('record_num', 'uint16')]
+
+# the dtype is dynamic and depend on nb_channel and nb_sample
+_base_spikes_dtype = [('event_stype', 'uint8'), ('timestamp', 'int64'),
+    ('software_timestamp', 'int64'), ('source_id', 'uint16'),
+    ('nb_channel', 'uint16'), ('nb_sample', 'uint16'), 
+    ('sorted_id', 'uint16'), ('electrode_id', 'uint16'), 
+    ('within_chan_index', 'uint16'), ('color', 'uint8',3),
+    ('pca', 'float32', 2), ('sampling_rate', 'uint16'),
+    ('samples', 'uint16', None), ('gains', 'float32', None),
+    ('thresholds', 'uint16', None), ('rec_num', 'uint16')]
+
+def make_spikes_dtype(filename):
+    """
+    Given the spike file make the appropriate dtype that depend of:
+      * N number of channel
+      * M sample per spike
+    See doc of file format.
+    """
+
+    # strangly the header do not have the sample size
+    # So this do not work (too bad):
+    # spike_info = read_file_header(filename)
+    # N = spike_info['num_channels']
+    # M =????
+    
+    # so we need to read the very first spike
+    # but it will fail when 0 spikes (too bad)
+    try:
+        with open(filename, mode='rb') as f:
+            # M and N is at 1024 + 19 bytes
+            f.seek(HEADER_SIZE+19)
+            N = np.fromfile(f, np.dtype('<u2'), 1)[0]
+            M = np.fromfile(f, np.dtype('<u2'), 1)[0]
+    except:
+        spike_info = read_file_header(filename)
+        N = spike_info['num_channels']
+        M = 40 # this is in the original code from openephys
+    
+    # make a copy
+    spikes_dtype = [e for e in  _base_spikes_dtype]
+    spikes_dtype[12] = ('samples', 'uint16', N*M)
+    spikes_dtype[13] = ('gains', 'float32', N)
+    spikes_dtype[14] = ('thresholds', 'uint16', N)
+    
+    return spikes_dtype
+
 
 
 
@@ -310,6 +429,7 @@ def explore_folder(dirname):
             info['spikes'][seg_index].append(filename)
 
     # TODO sort by channel number for continuous
+    # TODO sort by channel spikes
 
     return info
     
@@ -360,7 +480,7 @@ def read_file_header(filename):
             # Convert some values to numeric
             if key in ['bitVolts', 'sampleRate']:
                 header[key] = float(value)
-            elif key in ['blockLength', 'bufferSize', 'header_bytes']:
+            elif key in ['blockLength', 'bufferSize', 'header_bytes', 'num_channels']:
                 header[key] = int(value)
             else:
                 # Keep as string
