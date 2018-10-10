@@ -24,7 +24,7 @@ from __future__ import absolute_import
 
 import time
 from datetime import datetime
-from collections import Iterable
+from collections import Iterable, OrderedDict
 import itertools
 from uuid import uuid4
 
@@ -1174,7 +1174,7 @@ class NixIO(BaseIO):
         belong to the same Signal
         """
         # now start grouping
-        groups = dict()
+        groups = OrderedDict()
         for da in dataarrays:
             basename = ".".join(da.name.split(".")[:-1])
             if basename not in groups:
