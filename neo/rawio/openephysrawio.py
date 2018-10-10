@@ -28,23 +28,33 @@ class OpenEphysRawIO(BaseRawIO):
 
     OpenEphy group already propose some tools here:
     https://github.com/open-ephys/analysis-tools/blob/master/OpenEphys.py
-    but there is no package at pypi.
+    but there is no package at pypi and read everything in memory.
 
     Its directory based with several files :
         * .continuous
         * .events
         * .spikes
 
-    This class is based on:
+    This implementation of class is based on:
       * this code https://github.com/open-ephys/analysis-tools/blob/master/Python3/OpenEphys.py
         done by Dan Denman and Josh Siegle
       * a previous PR done by Cristian Tatarau and Charite Berlin
-    Contrary to previous code to open this format here all data are memaped so it should
+    Contrary to previous code to open this format here all data use memmap so it should
     be super fast and light compared to legacy code.
 
+    When the acquisition is stopped and restarted then files are named *_2, *_3.
+    In that case this class create a new Segment. Note that timestamps is reseted in this situation.
+
     Limitation :
-      * Work only if all continuous channels have the same samplerate, first timestamp and length
-        Wich is a resonnable hypothesis.
+      * Work only if all continuous channels have the same samplerate. Wich is a resonnable hypothesis.
+      * When the recording is stopped and restarted all continuous files will contains gaps.
+        Ideally this would lead to a new Segment but it is not implemented due to complexity.
+        In that case it will raise an error.
+
+    Special cases:
+      * Normaly all continuous files have the same first timestamp and length. In situation
+        where it is not the case all files are clip to the smallest one so that they are all aligned.
+        In that case a wrning is emited.
     """
     extensions = []
     rawmode = 'one-dir'
@@ -59,7 +69,7 @@ class OpenEphysRawIO(BaseRawIO):
     def _parse_header(self):
         info = self._info = explore_folder(self.dirname)
         nb_segment = info['nb_segment']
-        
+
         # scan for continuous files
         self._sigs_memmap = {}
         self._sig_length = {}
@@ -79,7 +89,7 @@ class OpenEphysRawIO(BaseRawIO):
                 s = continuous_filename.replace('.continuous', '').split('_')
                 processor_id, ch_name = s[0], s[1]
                 chan_id = int(ch_name.replace('CH', ''))
-                
+
                 filesize = os.stat(fullname).st_size
                 size = (filesize - HEADER_SIZE)//np.dtype(continuous_dtype).itemsize
                 data_chan = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
@@ -93,14 +103,14 @@ class OpenEphysRawIO(BaseRawIO):
 
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
-                assert np.all(diff == RECORD_SIZE), 'Not continuous timestamps for {}'.format(continuous_filename)
+                assert np.all(diff == RECORD_SIZE), \
+                    'Not continuous timestamps for {}. Maybe because recording is pause/stop.'.format(continuous_filename)
 
                 if seg_index == 0:
                     # add in channel list
                     sig_channels.append((ch_name, chan_id, chan_info['sampleRate'],
                                 'int16', 'V', chan_info['bitVolts'], 0., int(processor_id)))
-            
-            
+
             # In some cases, continuous do not have the same lentgh because
             # one record block is missing when the "OE GUI is freezing"
             # So we need to clip to the smallest files
@@ -128,7 +138,7 @@ class OpenEphysRawIO(BaseRawIO):
                     all_sigs_length.append(data_chan.size*RECORD_SIZE)
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
-                    
+
             # chech that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
                         'All signals do not have the same lentgh'
@@ -387,13 +397,14 @@ def make_spikes_dtype(filename):
 
     # so we need to read the very first spike
     # but it will fail when 0 spikes (too bad)
-    try:
+    filesize = os.stat(filename).st_size
+    if filesize >= (HEADER_SIZE + 23):
         with open(filename, mode='rb') as f:
             # M and N is at 1024 + 19 bytes
             f.seek(HEADER_SIZE+19)
             N = np.fromfile(f, np.dtype('<u2'), 1)[0]
             M = np.fromfile(f, np.dtype('<u2'), 1)[0]
-    except:
+    else:
         spike_info = read_file_header(filename)
         N = spike_info['num_channels']
         M = 40  # this is in the original code from openephys
