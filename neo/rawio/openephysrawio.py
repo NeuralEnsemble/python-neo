@@ -59,7 +59,7 @@ class OpenEphysRawIO(BaseRawIO):
     def _parse_header(self):
         info = self._info = explore_folder(self.dirname)
         nb_segment = info['nb_segment']
-
+        
         # scan for continuous files
         self._sigs_memmap = {}
         self._sig_length = {}
@@ -69,7 +69,8 @@ class OpenEphysRawIO(BaseRawIO):
             self._sigs_memmap[seg_index] = {}
 
             all_sigs_length = []
-            all_timestamp0 = []
+            all_first_timestamps = []
+            all_last_timestamps = []
             all_samplerate = []
             for continuous_filename in info['continuous'][seg_index]:
                 fullname = os.path.join(self.dirname, continuous_filename)
@@ -78,13 +79,16 @@ class OpenEphysRawIO(BaseRawIO):
                 s = continuous_filename.replace('.continuous', '').split('_')
                 processor_id, ch_name = s[0], s[1]
                 chan_id = int(ch_name.replace('CH', ''))
-
+                
+                filesize = os.stat(fullname).st_size
+                size = (filesize - HEADER_SIZE)//np.dtype(continuous_dtype).itemsize
                 data_chan = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
-                                        dtype=continuous_dtype)
+                                        dtype=continuous_dtype, shape=(size, ))
                 self._sigs_memmap[seg_index][chan_id] = data_chan
 
                 all_sigs_length.append(data_chan.size*RECORD_SIZE)
-                all_timestamp0.append(data_chan[0]['timestamp'])
+                all_first_timestamps.append(data_chan[0]['timestamp'])
+                all_last_timestamps.append(data_chan[-1]['timestamp'])
                 all_samplerate.append(chan_info['sampleRate'])
 
                 # check for continuity (no gaps)
@@ -95,17 +99,46 @@ class OpenEphysRawIO(BaseRawIO):
                     # add in channel list
                     sig_channels.append((ch_name, chan_id, chan_info['sampleRate'],
                                 'int16', 'V', chan_info['bitVolts'], 0., int(processor_id)))
+            
+            
+            # In some cases, continuous do not have the same lentgh because
+            # one record block is missing when the "OE GUI is freezing"
+            # So we need to clip to the smallest files
+            if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
+                not all(all_first_timestamps[0] == e for e in all_first_timestamps):
 
+                self.logger.warning('Continuous files are not timestamps aligned. So there clip then to aligned')
+
+                first, last = -np.inf, np.inf
+                for chan_id in self._sigs_memmap[seg_index]:
+                    data_chan = self._sigs_memmap[seg_index][chan_id]
+                    if data_chan[0]['timestamp']>first:
+                        first = data_chan[0]['timestamp']
+                    if data_chan[-1]['timestamp']<last:
+                        last = data_chan[-1]['timestamp']
+
+                all_sigs_length = []
+                all_first_timestamps = []
+                all_last_timestamps = []
+                for chan_id in self._sigs_memmap[seg_index]:
+                    data_chan = self._sigs_memmap[seg_index][chan_id]
+                    keep = (data_chan['timestamp']>=first) & (data_chan['timestamp']<=last)
+                    data_chan = data_chan[keep]
+                    self._sigs_memmap[seg_index][chan_id] = data_chan
+                    all_sigs_length.append(data_chan.size*RECORD_SIZE)
+                    all_first_timestamps.append(data_chan[0]['timestamp'])
+                    all_last_timestamps.append(data_chan[-1]['timestamp'])
+                    
             # chech that all signals have the same lentgh and timestamp0 for this segment
             assert all(all_sigs_length[0] == e for e in all_sigs_length),\
                         'All signals do not have the same lentgh'
-            assert all(all_timestamp0[0] == e for e in all_timestamp0),\
+            assert all(all_first_timestamps[0] == e for e in all_first_timestamps),\
                         'All signals do not have the same first timestamp'
             assert all(all_samplerate[0] == e for e in all_samplerate),\
                         'All signals do not have the same sample rate'
 
             self._sig_length[seg_index] = all_sigs_length[0]
-            self._sig_timestamp0[seg_index] = all_timestamp0[0]
+            self._sig_timestamp0[seg_index] = all_first_timestamps[0]
 
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
         self._sig_sampling_rate = sig_channels['sampling_rate'][0]  # unique for channel
