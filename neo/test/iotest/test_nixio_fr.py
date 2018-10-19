@@ -3,11 +3,20 @@ import unittest
 from neo.io.nixio_fr import NixIO as NixIOfr
 import quantities as pq
 from neo.io.nixio import NixIO
+try:
+    import nixio as nix
+
+    HAVE_NIX = True
+except ImportError:
+    HAVE_NIX = False
 
 
+@unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class TestNixfr(unittest.TestCase):
 
     files_to_test = ['nixio_fr.nix']
+
+    files_to_download = ['nixio_fr.nix']
 
     def setUp(self):
         self.testfilename = 'nixio_fr.nix'
@@ -58,17 +67,17 @@ class TestNixfr(unittest.TestCase):
         an_sig1 = seg1.analogsignals[0]
         assert len(an_sig1) == 30
         an_sig2 = seg1.analogsignals[1]
-        assert an_sig2.shape == (50,3)
+        assert an_sig2.shape == (50, 3)
 
     def test_spike_train(self):
         st1 = self.blk.segments[0].spiketrains[0]
-        assert np.all(st1.times == np.cumsum(np.arange(0,1,0.1)).tolist() * pq.s + 10 *pq.s)
+        assert np.all(st1.times == np.cumsum(np.arange(0, 1, 0.1)).tolist() * pq.s + 10 * pq.s)
 
     def test_event(self):
         seg1 = self.blk.segments[0]
         event1 = seg1.events[0]
-        raw_time = 10 + np.cumsum(np.array([0,1,2,3,4]))
-        assert np.all(event1.times == np.array(raw_time *pq.s / 1000))
+        raw_time = 10 + np.cumsum(np.array([0, 1, 2, 3, 4]))
+        assert np.all(event1.times == np.array(raw_time * pq.s / 1000))
         assert np.all(event1.labels == np.array([b'A', b'B', b'C', b'D', b'E']))
         assert len(seg1.events) == 1
 
@@ -80,6 +89,7 @@ class TestNixfr(unittest.TestCase):
         assert len(epoch1.durations) == len(epoch1.times)
         assert np.all(epoch1.durations == epoch2.durations)
         assert np.all(epoch1.labels == epoch2.labels)
+
 
 if __name__ == '__main__':
     unittest.main()
