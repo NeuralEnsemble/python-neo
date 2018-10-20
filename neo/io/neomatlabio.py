@@ -276,7 +276,11 @@ class NeoMatlabIO(BaseIO):
                 struct[childname] = []
 
         # attributes
-        for i, attr in enumerate(ob._all_attrs):
+        all_attrs = list(ob._all_attrs)
+        if hasattr(ob, 'annotations'):
+            all_attrs.append(('annotations', type(ob.annotations)))
+
+        for i, attr in enumerate(all_attrs):
             attrname, attrtype = attr[0], attr[1]
 
             # ~ if attrname =='':
@@ -367,7 +371,7 @@ class NeoMatlabIO(BaseIO):
                             child_struct[c],
                             classname_lower_to_upper[attrname[:-1]])
                         getattr(ob, attrname.lower()).append(child)
-                    
+
                 continue
 
             # attributes
@@ -380,7 +384,7 @@ class NeoMatlabIO(BaseIO):
 
             item = getattr(struct, attrname)
 
-            attributes = cl._necessary_attrs + cl._recommended_attrs
+            attributes = cl._necessary_attrs + cl._recommended_attrs + (('annotations', dict),)
             dict_attributes = dict([(a[0], a[1:]) for a in attributes])
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
@@ -401,6 +405,9 @@ class NeoMatlabIO(BaseIO):
                         item = pq.Quantity(item, units)
                     else:
                         item = pq.Quantity(item, units)
+                elif attrtype == dict:
+                    # FIXME: doesn't allow nested dicts
+                    item = {fn: getattr(item, fn) for fn in item._fieldnames}
                 else:
                     item = attrtype(item)
 
