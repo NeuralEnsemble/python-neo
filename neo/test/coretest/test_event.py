@@ -19,6 +19,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.event import Event
+from neo.core.epoch import Epoch
 from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant,
                             assert_arrays_equal,
@@ -398,6 +399,59 @@ class TestEvent(unittest.TestCase):
         evt_as_q = evt.as_quantity()
         self.assertIsInstance(evt_as_q, pq.Quantity)
         assert_array_equal(data * pq.ms, evt_as_q)
+
+    def test_to_epoch(self):
+        seg = Segment(name="test")
+        event = Event(times=np.array([5.0, 12.0, 23.0, 45.0]), units="ms",
+                      labels=np.array(["A", "B", "C", "D"]))
+        event.segment = seg
+
+        # Mode 1
+        epoch = event.to_epoch()
+        self.assertIsInstance(epoch, Epoch)
+        assert_array_equal(epoch.times.magnitude,
+                           np.array([5.0, 12.0, 23.0]))
+        assert_array_equal(epoch.durations.magnitude,
+                           np.array([7.0, 11.0, 22.0]))
+        assert_array_equal(epoch.labels,
+                           np.array(['A-B', 'B-C', 'C-D']))
+
+        # Mode 2
+        epoch = event.to_epoch(pairwise=True)
+        assert_array_equal(epoch.times.magnitude,
+                           np.array([5.0, 23.0]))
+        assert_array_equal(epoch.durations.magnitude,
+                           np.array([7.0, 22.0]))
+        assert_array_equal(epoch.labels,
+                           np.array(['A-B', 'C-D']))
+
+        # Mode 3 (scalar)
+        epoch = event.to_epoch(durations=2.0*pq.ms)
+        assert_array_equal(epoch.times.magnitude,
+                           np.array([5.0, 12.0, 23.0, 45.0]))
+        assert_array_equal(epoch.durations.magnitude,
+                           np.array([2.0, 2.0, 2.0, 2.0]))
+        assert_array_equal(epoch.labels,
+                           np.array(['A', 'B', 'C', 'D']))
+
+        # Mode 3 (array)
+        epoch = event.to_epoch(durations=np.array([2.0, 3.0, 4.0, 5.0])*pq.ms)
+        assert_array_equal(epoch.times.magnitude,
+                           np.array([5.0, 12.0, 23.0, 45.0]))
+        assert_array_equal(epoch.durations.magnitude,
+                           np.array([2.0, 3.0, 4.0, 5.0]))
+        assert_array_equal(epoch.labels,
+                           np.array(['A', 'B', 'C', 'D']))
+
+        # Error conditions
+        self.assertRaises(ValueError, event.to_epoch, pairwise=True, durations=2.0*pq.ms)
+
+        odd_event = Event(times=np.array([5.0, 12.0, 23.0]), units="ms",
+                          labels=np.array(["A", "B", "C"]))
+        self.assertRaises(ValueError, odd_event.to_epoch, pairwise=True)
+
+        # todo: fix Epoch, as the following does not raise a ValueError
+        # self.assertRaises(ValueError, event.to_epoch, durations=2.0)  # missing units
 
 
 class TestDuplicateWithNewData(unittest.TestCase):
