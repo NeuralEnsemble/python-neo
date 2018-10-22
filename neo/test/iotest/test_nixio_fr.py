@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+Tests of neo.io.nixio_fr
+"""
+from __future__ import absolute_import
 import numpy as np
 import unittest
 from neo.io.nixio_fr import NixIO as NixIOfr
 import quantities as pq
 from neo.io.nixio import NixIO
+from neo.test.iotest.common_io_test import BaseTestIO
+from neo.test.iotest.tools import get_test_file_full_path
 try:
     import nixio as nix
 
@@ -11,20 +18,24 @@ except ImportError:
     HAVE_NIX = False
 
 
+
+
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
-class TestNixfr(unittest.TestCase):
+class TestNixfr(BaseTestIO, unittest.TestCase, ):
+    ioclass = NixIOfr
 
     files_to_test = ['nixio_fr.nix']
 
     files_to_download = ['nixio_fr.nix']
 
     def setUp(self):
-        self.testfilename = self.get_filename_path('nixio_fr.nix')
+        super(TestNixfr, self).setUp()
+        self.testfilename = 'nixio_fr.nix'
         self.reader_fr = NixIOfr(filename=self.testfilename)
         self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
         self.blk = self.reader_fr.read_block(block_index=1, load_waveforms=True)
         # read block with NixIOfr
-        self.blk1 = self.reader_norm.read_block(index=1)  # read same block with NIXio
+        self.blk1 = self.reader_norm.read_block(index=1)  # read same block with NixIO
 
     def tearDown(self):
         self.reader_fr.file.close()
