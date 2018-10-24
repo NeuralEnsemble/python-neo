@@ -74,6 +74,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
         self.internal_event_ids = []
         self._empty_ncs = [] # this list contains filenames of empty records
+        self._empty_nse_ntt = []
 
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
@@ -89,7 +90,7 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            if (os.path.getsize(filename)<=HEADER_SIZE) and (ext == 'ncs'):
+            if (os.path.getsize(filename)<=HEADER_SIZE) and (ext in ['ncs']):
                 self._empty_ncs.append(filename)
                 continue
 
@@ -144,7 +145,17 @@ class NeuralynxRawIO(BaseRawIO):
                     self.nse_ntt_filenames[chan_id] = filename
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
-                    data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
+
+                    if (os.path.getsize(filename)<=HEADER_SIZE):
+                        self._empty_nse_ntt.append(filename)
+                        data = dict(unit_id    = np.array([]), 
+                                    channel_id = np.array([]), 
+                                    timestamp  = np.array([]), 
+                                    features   = np.array([[]]), 
+                                    samples    = np.array([[]]))
+                    else:
+                        data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
+
                     self._spike_memmap[chan_id] = data
 
                     unit_ids = np.unique(data['unit_id'])
