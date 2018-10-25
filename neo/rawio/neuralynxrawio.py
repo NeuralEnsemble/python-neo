@@ -148,11 +148,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                     if (os.path.getsize(filename)<=HEADER_SIZE):
                         self._empty_nse_ntt.append(filename)
-                        data = dict(unit_id    = np.zeros((0,), dtype=dtype), 
-                                    channel_id = np.zeros((0,), dtype=dtype), 
-                                    timestamp  = np.zeros((0,), dtype=dtype), 
-                                    features   = np.zeros((0,0), dtype=dtype), 
-                                    samples    = np.zeros((0,0), dtype=dtype))
+                        data = np.zeros((0,), dtype=dtype)
                     else:
                         data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
 
