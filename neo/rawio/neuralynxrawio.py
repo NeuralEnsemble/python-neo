@@ -65,7 +65,7 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = []
         event_channels = []
 
-        self.ncs_filenames = OrderedDict()  # chan_id: filename
+        self.ncs_filenames = OrderedDict()  # uid: filename
         self.nse_ntt_filenames = OrderedDict()  # chan_id: filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
@@ -82,13 +82,15 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        for filename in sorted(os.listdir(self.dirname)):
-            filename = os.path.join(self.dirname, filename)
+        # prefilter all filenames to match reader extension,
+        # so that fid indicates only true files
+        all_filenames = filter(lambda f: os.path.splitext(f)[1][1:] in self.extensions, 
+                               sorted(os.listdir(self.dirname)))
 
-            _, ext = os.path.splitext(filename)
-            ext = ext[1:]  # remove dot
-            if ext not in self.extensions:
-                continue
+        for fid, filename in enumerate(all_filenames):
+            filename = os.path.join(self.dirname, filename)
+            ext = os.path.splitext(filename)[1][1:]
+
 
             if (os.path.getsize(filename)<=HEADER_SIZE) and (ext in ['ncs']):
                 self._empty_ncs.append(filename)
@@ -99,19 +101,32 @@ class NeuralynxRawIO(BaseRawIO):
             chan_names = info['channel_names']
             chan_ids = info['channel_ids']
 
-            for idx, chan_id in enumerate(chan_ids):
-                chan_name = chan_names[idx]
+            for idx, (chan_id, chan_name) in enumerate(zip(chan_ids, chan_names)):
+
                 if ext == 'ncs':
-                    # a signal channels
+                    # signal channels
                     units = 'uV'
                     gain = info['bit_to_microVolt'][idx]
                     if info['input_inverted']:
                         gain *= -1
                     offset = 0.
                     group_id = 0
-                    sig_channels.append((chan_name, chan_id, info['sampling_rate'],
+
+                    # I'm generating a unique id for a channel,
+                    # chan_id is not a unique id, as several
+                    # CSCs could reference the same chan_id
+                    #
+                    # BTW: I had never met cases when idx is non-zero
+                    #
+                    # // Mike
+                    uid = 1000*idx + fid
+
+                    ### Note: vvvv: this structure could contain non-unique chan_name, chan_id
+                    sig_channels.append((chan_name, uid, info['sampling_rate'],
                                          'int16', units, gain, offset, group_id))
-                    self.ncs_filenames[chan_id] = filename
+                    ### // Mike
+
+                    self.ncs_filenames[uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
                         'recording_opened',
@@ -134,6 +149,7 @@ class NeuralynxRawIO(BaseRawIO):
                         'NumADChannels',
                         'DspHighCutFilterType',
                     ]
+
                     d = {k: info[k] for k in keys if k in info}
                     signal_annotations.append(d)
 
