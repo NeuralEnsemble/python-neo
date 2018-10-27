@@ -66,15 +66,16 @@ class NeuralynxRawIO(BaseRawIO):
         event_channels = []
 
         self.ncs_filenames = OrderedDict()  # uid: filename
-        self.nse_ntt_filenames = OrderedDict()  # chan_id: filename
+        self.nse_ntt_filenames = OrderedDict()  # uid: filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
+        self.uid2chid = OrderedDict() # uid : (file_enum, chan_enum, chan_id)
 
         self._nev_memmap = {}
         self._spike_memmap = {}
-        self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
+        self.internal_unit_ids = []  # uid > (channel_id, unit_id)
         self.internal_event_ids = []
-        self._empty_ncs = [] # this list contains filenames of empty records
-        self._empty_nse_ntt = []
+        self._empty_ncs = [] # filenames of empty records
+        self._empty_nse_ntt = [] # filenames of empty spikes        
 
         # explore the directory looking for ncs, nev, nse and ntt
         # And construct channels headers
@@ -82,10 +83,16 @@ class NeuralynxRawIO(BaseRawIO):
         unit_annotations = []
         event_annotations = []
 
-        # prefilter all filenames to match reader extension,
-        # so that fid indicates only true files
+        # filter all filenames to match IO extensions,
+        # so that fid indicates only the necessary files
         all_filenames = filter(lambda f: os.path.splitext(f)[1][1:] in self.extensions, 
                                sorted(os.listdir(self.dirname)))
+
+        # I'm generating a unique id for a channel.
+        # chan_id is not a unique id, as several
+        # CSCs could reference the same chan_id
+        # // Mike
+        gen_uid = lambda x,y,z: x + 1000*y
 
         for fid, filename in enumerate(all_filenames):
             filename = os.path.join(self.dirname, filename)
@@ -102,6 +109,10 @@ class NeuralynxRawIO(BaseRawIO):
             chan_ids = info['channel_ids']
 
             for idx, (chan_id, chan_name) in enumerate(zip(chan_ids, chan_names)):
+                # ^^^ I had never seen cases when idx is non-zero // Mike
+                
+                uid = gen_uid(fid, idx, chan_id)
+                self.uid2chid[uid] = (fid, idx, chan_id)
 
                 if ext == 'ncs':
                     # signal channels
@@ -111,15 +122,6 @@ class NeuralynxRawIO(BaseRawIO):
                         gain *= -1
                     offset = 0.
                     group_id = 0
-
-                    # I'm generating a unique id for a channel,
-                    # chan_id is not a unique id, as several
-                    # CSCs could reference the same chan_id
-                    #
-                    # BTW: I had never met cases when idx is non-zero
-                    #
-                    # // Mike
-                    uid = 1000*idx + fid
 
                     ### Note: vvvv: this structure could contain non-unique chan_name, chan_id
                     sig_channels.append((chan_name, uid, info['sampling_rate'],
@@ -156,9 +158,12 @@ class NeuralynxRawIO(BaseRawIO):
                 elif ext in ('nse', 'ntt'):
                     # nse and ntt are pretty similar except for the wavform shape
                     # a file can contain several unit_id (so several unit channel)
-                    assert chan_id not in self.nse_ntt_filenames, \
-                        'Several nse or ntt files have the same unit_id!!!'
-                    self.nse_ntt_filenames[chan_id] = filename
+
+                    # vvv this assert is not informative anymore
+                    # assert chan_id not in self.nse_ntt_filenames, \
+                    #     'Several nse or ntt files have the same unit_id!!!'
+
+                    self.nse_ntt_filenames[uid] = filename
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
@@ -168,14 +173,14 @@ class NeuralynxRawIO(BaseRawIO):
                     else:
                         data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
 
-                    self._spike_memmap[chan_id] = data
+                    self._spike_memmap[uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
                     for unit_id in unit_ids:
                         # a spike channel for each (chan_id, unit_id)
-                        self.internal_unit_ids.append((chan_id, unit_id))
+                        self.internal_unit_ids.append((uid, unit_id))
 
-                        unit_name = "ch{}#{}".format(chan_id, unit_id)
+                        unit_name = "ch{}#{}".format(uid, unit_id)
                         unit_id = '{}'.format(unit_id)
                         wf_units = 'uV'
                         wf_gain = info['bit_to_microVolt'][idx]
@@ -223,7 +228,7 @@ class NeuralynxRawIO(BaseRawIO):
         # so need to scan all spike and event to
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
-            for chan_id, data in _data_memmap.items():
+            for _, data in _data_memmap.items():
                 ts = data['timestamp']
                 if ts.size == 0:
                     continue
