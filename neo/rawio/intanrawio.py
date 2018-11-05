@@ -3,7 +3,9 @@
 
 Support for intan tech rhd  and rhs files.
 
-This 2 formats are more or less the same with some variance in headers.
+This 2 formats are more or less the same but:
+  * some variance in headers.
+  * rhs amplifier is more complexe because the optional DC channel
 
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
@@ -20,6 +22,9 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
 
 import numpy as np
 from collections import OrderedDict
+
+
+BLOCK_SIZE = 128 #  sample per block
 
 
 class IntanRawIO(BaseRawIO):
@@ -39,24 +44,34 @@ class IntanRawIO(BaseRawIO):
     def _parse_header(self):
         
         if self.filename.endswith('.rhs'):
-            info = read_rhs(self.filename)
+            self._global_info, self._channels_info, data_dtype, header_size = read_rhs(self.filename)
+            #  self._dc_amplifier_data_saved = bool(self._global_info['dc_amplifier_data_saved'])
         elif self.filename.endswith('.rhd'):
-            info = read_rh(self.filename)
+            self._global_info, self._channels_info, data_dtype, header_size = read_rhd(self.filename)
+            #  self._dc_amplifier_data_saved = False
         
-        exit()
-            
+        self._sampling_rate = self._global_info['sampling_rate']
         
+        print(len(data_dtype))
+        self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode='r', offset=header_size)
+        self._sigs_length = self._raw_data.size * BLOCK_SIZE
+        
+        # TODO check timestamp continuity
+        #~ timestamp = self._raw_data['timestamp'].flatten()
+        #~ assert np.all(np.diff(timestamp)==1)
         
         # signals
         sig_channels = []
-        for c in range(nb_channel):
-            name = 'ch{}grp{}'.format(c, channel_group[c])
+        for c, chan_info in enumerate(self._channels_info):
+            name = chan_info['native_channel_name']
             chan_id = c
-            units = 'mV'
-            offset = 0.
+            units = 'uV'
+            offset = 0. # TODO
+            gain = 1. # TODO
+            sig_dtype = 'uint16'
             group_id = 0
             sig_channels.append((name, chan_id, self._sampling_rate,
-                                 sig_dtype, units, gain, offset, group_id))
+                                sig_dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         # No events
@@ -81,84 +96,48 @@ class IntanRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._raw_signals.shape[0] / self._sampling_rate
+        t_stop = self._sigs_length / self._sampling_rate
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        return self._raw_signals.shape[0]
+        return self._sigs_length
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
+
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = self._sigs_length
+
+        block_start = i_start // BLOCK_SIZE
+        block_stop = i_stop // BLOCK_SIZE + 1
+        sl0 = i_start % BLOCK_SIZE
+        sl1 = sl0 + (i_stop - i_start)
+
         if channel_indexes is None:
             channel_indexes = slice(None)
-        raw_signals = self._raw_signals[slice(i_start, i_stop), channel_indexes]
-        return raw_signals
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
+
+        sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype='uint16')
+        for i, chan_name in enumerate(channel_names):
+            data = self._raw_data[chan_name]
+            sigs_chunk[:, i] = data[block_start:block_stop].flatten()[sl0:sl1]
+
+        return sigs_chunk
+
 
 
 
 
 def read_qstring(f):
-    a = ''
     length = np.fromfile(f, dtype='uint32', count=1)[0]
-    
-    print('length', length, hex(length))
-    #~ exit()
-    
-    if length == 0xFFFFFFFF or length == '':
+    if length == 0xFFFFFFFF or length == 0:
         return ''
-    
-    txt =''
-    txt = f.read(length // 2)  #.decode('utf-16')
-    #~ print(txt)
-    #~ txt = txt.decode()
-    
-    #~ for ii in range(length):
-        #~ print('ii', ii)
-        #~ newchar = np.fromfile(f, 'u2', 1)[0]
-        #~ print(newchar)
-        #~ a += newchar.tostring().decode('utf-16')
+    txt = f.read(length).decode('utf-16')
     return txt
-
-
-import struct
-import os
-import sys
-def read_qstring(fid):
-    """Read Qt style QString.  
-
-    The first 32-bit unsigned number indicates the length of the string (in bytes).  
-    If this number equals 0xFFFFFFFF, the string is null.
-
-    Strings are stored as unicode.
-    """
-
-    length, = struct.unpack('<I', fid.read(4))
-    print(length)
-    if length == int('ffffffff', 16): return ""
-
-    if length > (os.fstat(fid.fileno()).st_size - fid.tell() + 1) :
-        print(length)
-        raise Exception('Length too long.')
-
-    # convert length from bytes to 16-bit Unicode words
-    length = int(length / 2)
-
-    data = []
-    for i in range(0, length):
-        c, = struct.unpack('<H', fid.read(2))
-        data.append(c)
-
-    if sys.version_info >= (3,0):
-        a = ''.join([chr(c) for c in data])
-    else:
-        a = ''.join([unichr(c) for c in data])
-
-    return a
-
-
-
 
 rhs_global_header =[
     ('magic_number', 'uint32'),  # 0xD69127AC for rhs   0xC6912702 for rdh
@@ -215,7 +194,7 @@ signal_group_header = [
     ('amplified_channel_num', 'int16'),
 ]
 
-signal_channel_header = [
+rhs_signal_channel_header = [
     ('native_channel_name', 'QString'),
     ('custom_channel_name', 'QString'),
     ('native_order', 'int16'),
@@ -223,6 +202,7 @@ signal_channel_header = [
     ('signal_type', 'int16'),
     ('channel_enabled', 'int16'),
     ('chip_channel_num', 'int16'),
+    ('command_stream', 'int16'),  #######
     ('board_stream_num', 'int16'),
     ('spike_scope_trigger_mode', 'int16'),
     ('spike_scope_voltage_thresh', 'int16'),
@@ -240,11 +220,12 @@ def read_variable_header(f, header):
         
         if field_type == 'QString':
             field_value = read_qstring(f)
-            print(field_name, field_type,  len(field_value), field_value)
+            #~ print(field_name, field_type,  len(field_value), field_value)
         else:
             field_value = np.fromfile(f, dtype=field_type, count=1)[0]
-            print(field_name, field_type,  field_value)
-            
+            #~ print(field_name, field_type,  field_value)
+        
+        #~ print(field_name, ':',  field_value)
         info[field_name] = field_value
     
     return info
@@ -255,14 +236,52 @@ def read_rhd(filename):
     return
     
 
+
+# signal_type
+# 0: RHS2000 amplifier channel.
+# 3: Analog input channel.
+# 4: Analog output channel.
+# 5: Digital input channel.
+# 6: Digital output channel.
+
+
+
 def read_rhs(filename):
     with open(filename, mode='rb') as f:
-        info = read_variable_header(f, rhs_global_header)
+        global_info = read_variable_header(f, rhs_global_header)
+        
+        print(global_info['dc_amplifier_data_saved'], bool(global_info['dc_amplifier_data_saved']))
+        channels_info = []
+        data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
+        for g in range(global_info['nb_signal_group']):
+            #~ print('goup', g)
+            group_info = read_variable_header(f, signal_group_header)
+            print(group_info)
+            if bool(group_info['signal_group_enabled']):
+                for c in range(group_info['channel_num']):
+                    #~ print('  c', c)
+                    chan_info = read_variable_header(f, rhs_signal_channel_header)
+                    
+                    if bool(chan_info['channel_enabled']):
+                        channels_info.append(chan_info)
+                        print('goup', g, 'channel', c, chan_info['native_channel_name'])
+                        name = chan_info['native_channel_name']
+                        data_dtype +=[(name, 'int32', BLOCK_SIZE)]
+                        
+                        if chan_info['signal_type'] == 0:
+                            if bool(global_info['dc_amplifier_data_saved']):
+                                chan_info_dc = dict(chan_info)
+                                chan_info_dc['native_channel_name'] = name+'_DC'
+                                channels_info.append(chan_info_dc)
+                                data_dtype +=[(name+'_DC', 'int32', BLOCK_SIZE)]
+                                
+                            chan_info_stim = dict(chan_info)
+                            chan_info_stim['native_channel_name'] = name+'_STIM'
+                            channels_info.append(chan_info_stim)
+                            data_dtype +=[(name+'_STIM', 'int32', BLOCK_SIZE)]
+                        
+        header_size = f.tell()
     
-    
-    
-    
-    
-    
-    
-    
+    return global_info, channels_info, data_dtype, header_size
+
+
