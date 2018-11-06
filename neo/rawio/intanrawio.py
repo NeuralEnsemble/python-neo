@@ -76,7 +76,6 @@ class IntanRawIO(BaseRawIO):
             sig_channels.append((name, chan_id, self._sampling_rate,
                                 sig_dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
-        #~ print(sig_channels)
 
         # No events
         event_channels = []
@@ -134,31 +133,22 @@ class IntanRawIO(BaseRawIO):
 
 
 
-
-
 def read_qstring(f):
     length = np.fromfile(f, dtype='uint32', count=1)[0]
     if length == 0xFFFFFFFF or length == 0:
         return ''
     txt = f.read(length).decode('utf-16')
     return txt
-    
-    
+
     
 def read_variable_header(f, header):
     info = {}
     for field_name, field_type in header:
-        
         if field_type == 'QString':
             field_value = read_qstring(f)
-            #~ print(field_name, field_type,  len(field_value), field_value)
         else:
             field_value = np.fromfile(f, dtype=field_type, count=1)[0]
-            #~ print(field_name, field_type,  field_value)
-        
-        #~ print(field_name, ':',  field_value)
         info[field_name] = field_value
-    
     return info
 
 
@@ -166,8 +156,6 @@ def read_variable_header(f, header):
 
 ###############
 # RHS ZONE
-
-
 
 rhs_global_header =[
     ('magic_number', 'uint32'),  # 0xD69127AC
@@ -206,14 +194,11 @@ rhs_global_header =[
     
     ('dc_amplifier_data_saved', 'int16'),
     
-    
-    
     ('board_mode', 'int16'),
     
     ('ref_channel_name', 'QString'),
     
     ('nb_signal_group', 'int16'),
-    
 ]
 
 rhs_signal_group_header = [
@@ -244,18 +229,6 @@ rhs_signal_channel_header = [
 ]
 
 
-
-
-
-# signal_type
-# 0: RHS2000 amplifier channel.
-# 3: Analog input channel.
-# 4: Analog output channel.
-# 5: Digital input channel.
-# 6: Digital output channel.
-
-
-
 def read_rhs(filename):
     BLOCK_SIZE = 128 #  sample per block
 
@@ -265,7 +238,6 @@ def read_rhs(filename):
         channels_by_type = {k:[] for k in [0,3, 4, 5, 6]}
         for g in range(global_info['nb_signal_group']):
             group_info = read_variable_header(f, rhs_signal_group_header)
-            #~ print(group_info)
             
             if bool(group_info['signal_group_enabled']):
                 for c in range(group_info['channel_num']):
@@ -279,6 +251,8 @@ def read_rhs(filename):
     # construct dtype by re-ordering channels by types
     ordered_channels = []
     data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
+    
+    # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
         name = chan_info['native_channel_name']
         ordered_channels.append(chan_info)
@@ -298,45 +272,36 @@ def read_rhs(filename):
         chan_info_stim['native_channel_name'] = name+'_STIM'
         ordered_channels.append(chan_info_stim)
         data_dtype +=[(name+'_STIM', 'uint16', BLOCK_SIZE)]
-    
+
+    # 3: Analog input channel.
+    # 4: Analog output channel.
     for sig_type in [3, 4, ]:
         for chan_info in channels_by_type[sig_type]:
             name = chan_info['native_channel_name']
             ordered_channels.append(chan_info)
             data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
-    
+
+    # 5: Digital input channel.
+    # 6: Digital output channel.
     for sig_type in [5, 6]:
         if len(channels_by_type[sig_type]) > 0:
             name = {5:'DIGITAL-IN', 6:'DIGITAL-OUT' }[sig_type]
             data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
     
-    for e in data_dtype:
-        print(e)
-    
-    #~ for chan_info in ordered_channels:
-        #~ print(chan_info)
-        
-    #~ print(data_dtype)
-    #~ exit()
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
-
-
 
 
 ###############
 # RHD ZONE
 
-
 rhd_global_header_base =[
     ('magic_number', 'uint32'),  #  0xC6912702
-    
     ('major_version', 'int16'),
     ('minor_version', 'int16'),
 ]
 
 
-rhd_global_header_part1 =[
-    
+rhd_global_header_part1 =[    
     ('sampling_rate', 'float32'),
     
     ('dsp_enabled', 'int16'),
@@ -357,8 +322,7 @@ rhd_global_header_part1 =[
     ('note2', 'QString'),
     ('note3', 'QString'),
     
-    ('nb_temp_sensor', 'int16'),
-    
+    ('nb_temp_sensor', 'int16'),    
 ]
 
 rhd_global_header_v11 = [
@@ -404,21 +368,7 @@ rhd_signal_channel_header = [
 ]
 
 
-
-
-# signal type
-# 0: RHD2000 amplifier channel
-# 1: RHD2000 auxiliary input channel
-# 2: RHD2000 supply voltage channel
-# 3: USB board ADC input channel
-# 4: USB board digital input channel
-# 5: USB board digital output channel
-
-
-
 def read_rhd(filename):
-    # TODO FIXME : error in dtype order
-    
     with open(filename, mode='rb') as f:
         
         global_info = read_variable_header(f, rhd_global_header_base)
