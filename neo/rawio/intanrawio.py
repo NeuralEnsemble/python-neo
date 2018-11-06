@@ -7,6 +7,9 @@ This 2 formats are more or less the same but:
   * some variance in headers.
   * rhs amplifier is more complexe because the optional DC channel
 
+RHS supported version 1.0
+RHD supported version  1.0 1.1 1.2 1.3 2.0
+
 See:
   * http://intantech.com/files/Intan_RHD2000_data_file_formats.pdf
   * http://intantech.com/files/Intan_RHS2000_data_file_formats.pdf
@@ -22,6 +25,7 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
 
 import numpy as np
 from collections import OrderedDict
+from distutils.version import LooseVersion as V
 
 
 
@@ -43,25 +47,25 @@ class IntanRawIO(BaseRawIO):
     def _parse_header(self):
         
         if self.filename.endswith('.rhs'):
-            self._global_info, self._channels_info, data_dtype, header_size, self.block_size = read_rhs(self.filename)
-            #  self._dc_amplifier_data_saved = bool(self._global_info['dc_amplifier_data_saved'])
+            self._global_info, self._ordered_channels, data_dtype, header_size, self.block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
-            self._global_info, self._channels_info, data_dtype, header_size, self.block_size = read_rhd(self.filename)
-            #  self._dc_amplifier_data_saved = False
+            self._global_info, self._ordered_channels, data_dtype, header_size, self.block_size = read_rhd(self.filename)
         
+        # TODO this depend on channel
         self._sampling_rate = self._global_info['sampling_rate']
         
-        print(len(data_dtype))
         self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode='r', offset=header_size)
+        
+        # TODO this depend on channel
         self._sigs_length = self._raw_data.size * self.block_size
         
         # TODO check timestamp continuity
-        #~ timestamp = self._raw_data['timestamp'].flatten()
-        #~ assert np.all(np.diff(timestamp)==1)
+        timestamp = self._raw_data['timestamp'].flatten()
+        assert np.all(np.diff(timestamp)==1)
         
         # signals
         sig_channels = []
-        for c, chan_info in enumerate(self._channels_info):
+        for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info['native_channel_name']
             chan_id = c
             units = 'uV'
@@ -72,6 +76,7 @@ class IntanRawIO(BaseRawIO):
             sig_channels.append((name, chan_id, self._sampling_rate,
                                 sig_dtype, units, gain, offset, group_id))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        #~ print(sig_channels)
 
         # No events
         event_channels = []
@@ -122,8 +127,8 @@ class IntanRawIO(BaseRawIO):
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype='uint16')
         for i, chan_name in enumerate(channel_names):
-            data = self._raw_data[chan_name]
-            sigs_chunk[:, i] = data[block_start:block_stop].flatten()[sl0:sl1]
+            data_chan = self._raw_data[chan_name]
+            sigs_chunk[:, i] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
 
         return sigs_chunk
 
@@ -159,169 +164,8 @@ def read_variable_header(f, header):
 
 
 
-
-rhd_global_header =[
-    ('magic_number', 'uint32'),  #  0xC6912702
-    
-    ('major_version', 'int16'),
-    ('minor_version', 'int16'),
-    
-    ('sampling_rate', 'float32'),
-    
-    ('dsp_enabled', 'int16'),
-    
-    ('actual_dsp_cutoff_frequency', 'float32'),
-    ('actual_lower_bandwidth', 'float32'),
-    ('actual_upper_bandwidth', 'float32'),
-    ('desired_dsp_cutoff_frequency', 'float32'),
-    ('desired_lower_bandwidth', 'float32'),
-    ('desired_upper_bandwidth', 'float32'),
-    
-    ('notch_filter_mode', 'int16'),
-    
-    ('desired_impedance_test_frequency', 'float32'),
-    ('actual_impedance_test_frequency', 'float32'),
-    
-    ('note1', 'QString'),
-    ('note2', 'QString'),
-    ('note3', 'QString'),
-    
-    ('nb_temp_sensor', 'int16'),
-    
-    
-    
-    #~ ('board_mode', 'int16'),
-    
-    #~ ('ref_channel_name', 'QString'),
-    
-    #~ ('nb_signal_group', 'int16'),
-    
-]
-
-rhd_global_header_v11 = [
-    ('num_temp_sensor_channels', 'int16'),
-]
-
-rhd_global_header_v13 = [
-    ('eval_board_mode', 'int16'),
-]
-
-rhd_global_header_v20 = [
-    ('reference_channel', 'QString'),
-]
-
-rhd_signal_group_header = [
-    ('signal_group_name', 'QString'),
-    ('signal_group_prefix', 'QString'),
-    ('signal_group_enabled', 'int16'),
-    ('channel_num', 'int16'),
-    ('amplified_channel_num', 'int16'),
-]
-
-rhd_signal_channel_header = [
-    ('native_channel_name', 'QString'),
-    ('custom_channel_name', 'QString'),
-    ('native_order', 'int16'),
-    ('custom_order', 'int16'),
-    ('signal_type', 'int16'),
-    ('channel_enabled', 'int16'),
-    ('chip_channel_num', 'int16'),
-    ('board_stream_num', 'int16'),
-    ('spike_scope_trigger_mode', 'int16'),
-    ('spike_scope_voltage_thresh', 'int16'),
-    ('spike_scope_digital_trigger_channel', 'int16'),
-    ('spike_scope_digital_edge_polarity', 'int16'),
-    ('electrode_impedance_magnitude', 'float32'),
-    ('electrode_impedance_phase', 'float32'),
-    
-]
-
-
-# signal type
-# 0: RHD2000 amplifier channel
-# 1: RHD2000 auxiliary input channel
-# 2: RHD2000 supply voltage channel
-# 3: USB board ADC input channel
-# 4: USB board digital input channel
-# 5: USB board digital output channel
-
-
-
-def read_rhd(filename):
-    # TODO FIXME : error in dtype order
-    
-    with open(filename, mode='rb') as f:
-        global_info = read_variable_header(f, rhd_global_header)
-        
-        if ['major_version']>=2:
-            BLOCK_SIZE = 128
-        else:
-            BLOCK_SIZE = 60 # 256 channels
-        
-        global_info['num_temp_sensor_channels'] = 0
-        global_info['eval_board_mode'] = 0
-        global_info['eval_board_mode'] = 0
-        
-        if (['major_version'] == 1 and ['minor_version'] >= 1) or (['major_version'] >= 2):
-            global_info.update(read_variable_header(f, rhd_global_header_v11))
-
-        if (['major_version'] == 1 and ['minor_version'] >= 3) or (['major_version'] >= 2):
-            global_info.update(read_variable_header(f, rhd_global_header_v13))
-        
-        if ['major_version'] >= 2:
-            global_info.update(read_variable_header(f, rhd_global_header_v20))
-        
-        global_info.update(read_variable_header(f, [('nb_signal_group', 'int16'),]))
-        
-        channels_info = []
-        if (['major_version'] == 1 and ['minor_version'] >= 2) or (['major_version'] >= 2):
-            data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
-        else:
-            data_dtype = [('timestamp', 'uint32', BLOCK_SIZE)]
-        
-        for g in range(global_info['nb_signal_group']):
-            group_info = read_variable_header(f, rhd_signal_group_header)
-            
-            if bool(group_info['signal_group_enabled']):
-                for c in range(group_info['channel_num']):
-                    chan_info = read_variable_header(f, rhd_signal_channel_header)
-                    
-                    if bool(chan_info['channel_enabled']):
-                        channels_info.append(chan_info)
-                        name = chan_info['native_channel_name']
-                        
-                        if chan_info['signal_type'] in (0, 3, 4, 5):
-                            data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
-
-                        if chan_info['signal_type'] in (1, ):
-                            data_dtype +=[(name, 'uint16', BLOCK_SIZE//4)]
-                        
-                        # TODO temperature
-                        if chan_info['signal_type'] in (2, ):
-                            data_dtype +=[(name, 'uint16')]
-                        
-                        #~ global_info['num_temp_sensor_channels'] 
-                        
-
-
-                        
-                        #~ if chan_info['signal_type'] == 0:
-                            #~ if bool(global_info['dc_amplifier_data_saved']):
-                                #~ chan_info_dc = dict(chan_info)
-                                #~ chan_info_dc['native_channel_name'] = name+'_DC'
-                                #~ channels_info.append(chan_info_dc)
-                                #~ data_dtype +=[(name+'_DC', 'int32', BLOCK_SIZE)]
-                                
-                            #~ chan_info_stim = dict(chan_info)
-                            #~ chan_info_stim['native_channel_name'] = name+'_STIM'
-                            #~ channels_info.append(chan_info_stim)
-                            #~ data_dtype +=[(name+'_STIM', 'int32', BLOCK_SIZE)]
-                        
-        header_size = f.tell()
-    # TODO sampling_rate for auxilary channel
-    
-    return global_info, channels_info, data_dtype, header_size, BLOCK_SIZE
-
+###############
+# RHS ZONE
 
 
 
@@ -337,11 +181,11 @@ rhs_global_header =[
     
     ('actual_dsp_cutoff_frequency', 'float32'),
     ('actual_lower_bandwidth', 'float32'),
-    ('actual_lower_settle_bandwidth', 'float32'),   #######
+    ('actual_lower_settle_bandwidth', 'float32'),
     ('actual_upper_bandwidth', 'float32'),
     ('desired_dsp_cutoff_frequency', 'float32'),
     ('desired_lower_bandwidth', 'float32'),
-    ('desired_lower_settle_bandwidth', 'float32'),   #####
+    ('desired_lower_settle_bandwidth', 'float32'),
     ('desired_upper_bandwidth', 'float32'),
     
     ('notch_filter_mode', 'int16'),
@@ -349,18 +193,18 @@ rhs_global_header =[
     ('desired_impedance_test_frequency', 'float32'),
     ('actual_impedance_test_frequency', 'float32'),
     
-    ('amp_settle_mode', 'int16'),  ####
-    ('charge_recovery_mode', 'int16'), ####
+    ('amp_settle_mode', 'int16'),
+    ('charge_recovery_mode', 'int16'),
     
-    ('stim_step_size', 'float32'),  ####
-    ('recovery_current_limit', 'float32'),  ####
-    ('recovery_target_voltage', 'float32'), ####
+    ('stim_step_size', 'float32'),
+    ('recovery_current_limit', 'float32'),
+    ('recovery_target_voltage', 'float32'),
 
     ('note1', 'QString'),
     ('note2', 'QString'),
     ('note3', 'QString'),
     
-    ('dc_amplifier_data_saved', 'int16'),  ###### nb_temp_sensor
+    ('dc_amplifier_data_saved', 'int16'),
     
     
     
@@ -413,41 +257,258 @@ rhs_signal_channel_header = [
 
 
 def read_rhs(filename):
-    # TODO FIXME : error in dtype order
-    
     BLOCK_SIZE = 128 #  sample per block
 
     with open(filename, mode='rb') as f:
         global_info = read_variable_header(f, rhs_global_header)
         
-        channels_info = []
-        data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
+        channels_by_type = {k:[] for k in [0,3, 4, 5, 6]}
         for g in range(global_info['nb_signal_group']):
             group_info = read_variable_header(f, rhs_signal_group_header)
+            #~ print(group_info)
             
             if bool(group_info['signal_group_enabled']):
                 for c in range(group_info['channel_num']):
                     chan_info = read_variable_header(f, rhs_signal_channel_header)
-                    
+                    assert chan_info['signal_type'] not in (1, 2)
                     if bool(chan_info['channel_enabled']):
-                        channels_info.append(chan_info)
-                        name = chan_info['native_channel_name']
-                        data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
-                        
-                        if chan_info['signal_type'] == 0:
-                            if bool(global_info['dc_amplifier_data_saved']):
-                                chan_info_dc = dict(chan_info)
-                                chan_info_dc['native_channel_name'] = name+'_DC'
-                                channels_info.append(chan_info_dc)
-                                data_dtype +=[(name+'_DC', 'uint16', BLOCK_SIZE)]
-                                
-                            chan_info_stim = dict(chan_info)
-                            chan_info_stim['native_channel_name'] = name+'_STIM'
-                            channels_info.append(chan_info_stim)
-                            data_dtype +=[(name+'_STIM', 'uint16', BLOCK_SIZE)]
-                        
+                        channels_by_type[chan_info['signal_type']].append(chan_info)
+        
         header_size = f.tell()
     
-    return global_info, channels_info, data_dtype, header_size, BLOCK_SIZE
+    # construct dtype by re-ordering channels by types
+    ordered_channels = []
+    data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
+    for chan_info in channels_by_type[0]:
+        name = chan_info['native_channel_name']
+        ordered_channels.append(chan_info)
+        data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    if bool(global_info['dc_amplifier_data_saved']):
+        for chan_info in channels_by_type[0]:
+            name = chan_info['native_channel_name']
+            chan_info_dc = dict(chan_info)
+            chan_info_dc['native_channel_name'] = name+'_DC'
+            ordered_channels.append(chan_info_dc)
+            data_dtype +=[(name+'_DC', 'uint16', BLOCK_SIZE)]
+
+    for chan_info in channels_by_type[0]:
+        name = chan_info['native_channel_name']
+        chan_info_stim = dict(chan_info)
+        chan_info_stim['native_channel_name'] = name+'_STIM'
+        ordered_channels.append(chan_info_stim)
+        data_dtype +=[(name+'_STIM', 'uint16', BLOCK_SIZE)]
+    
+    for sig_type in [3, 4, ]:
+        for chan_info in channels_by_type[sig_type]:
+            name = chan_info['native_channel_name']
+            ordered_channels.append(chan_info)
+            data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    for sig_type in [5, 6]:
+        if len(channels_by_type[sig_type]) > 0:
+            name = {5:'DIGITAL-IN', 6:'DIGITAL-OUT' }[sig_type]
+            data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    for e in data_dtype:
+        print(e)
+    
+    #~ for chan_info in ordered_channels:
+        #~ print(chan_info)
+        
+    #~ print(data_dtype)
+    #~ exit()
+    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
 
 
+
+
+###############
+# RHD ZONE
+
+
+rhd_global_header_base =[
+    ('magic_number', 'uint32'),  #  0xC6912702
+    
+    ('major_version', 'int16'),
+    ('minor_version', 'int16'),
+]
+
+
+rhd_global_header_part1 =[
+    
+    ('sampling_rate', 'float32'),
+    
+    ('dsp_enabled', 'int16'),
+    
+    ('actual_dsp_cutoff_frequency', 'float32'),
+    ('actual_lower_bandwidth', 'float32'),
+    ('actual_upper_bandwidth', 'float32'),
+    ('desired_dsp_cutoff_frequency', 'float32'),
+    ('desired_lower_bandwidth', 'float32'),
+    ('desired_upper_bandwidth', 'float32'),
+    
+    ('notch_filter_mode', 'int16'),
+    
+    ('desired_impedance_test_frequency', 'float32'),
+    ('actual_impedance_test_frequency', 'float32'),
+    
+    ('note1', 'QString'),
+    ('note2', 'QString'),
+    ('note3', 'QString'),
+    
+    ('nb_temp_sensor', 'int16'),
+    
+]
+
+rhd_global_header_v11 = [
+    ('num_temp_sensor_channels', 'int16'),
+]
+
+rhd_global_header_v13 = [
+    ('eval_board_mode', 'int16'),
+]
+
+rhd_global_header_v20 = [
+    ('reference_channel', 'QString'),
+]
+
+rhd_global_header_final = [
+    ('nb_signal_group', 'int16'),
+]
+
+rhd_signal_group_header = [
+    ('signal_group_name', 'QString'),
+    ('signal_group_prefix', 'QString'),
+    ('signal_group_enabled', 'int16'),
+    ('channel_num', 'int16'),
+    ('amplified_channel_num', 'int16'),
+]
+
+rhd_signal_channel_header = [
+    ('native_channel_name', 'QString'),
+    ('custom_channel_name', 'QString'),
+    ('native_order', 'int16'),
+    ('custom_order', 'int16'),
+    ('signal_type', 'int16'),
+    ('channel_enabled', 'int16'),
+    ('chip_channel_num', 'int16'),
+    ('board_stream_num', 'int16'),
+    ('spike_scope_trigger_mode', 'int16'),
+    ('spike_scope_voltage_thresh', 'int16'),
+    ('spike_scope_digital_trigger_channel', 'int16'),
+    ('spike_scope_digital_edge_polarity', 'int16'),
+    ('electrode_impedance_magnitude', 'float32'),
+    ('electrode_impedance_phase', 'float32'),
+    
+]
+
+
+
+
+# signal type
+# 0: RHD2000 amplifier channel
+# 1: RHD2000 auxiliary input channel
+# 2: RHD2000 supply voltage channel
+# 3: USB board ADC input channel
+# 4: USB board digital input channel
+# 5: USB board digital output channel
+
+
+
+def read_rhd(filename):
+    # TODO FIXME : error in dtype order
+    
+    with open(filename, mode='rb') as f:
+        
+        global_info = read_variable_header(f, rhd_global_header_base)
+        
+        version = V('{major_version}.{minor_version}'.format(global_info))
+        print(version)
+        
+        # the header size depend on the version :-(
+        header = list(rhd_global_header_part1)  #  make a copy
+        
+        if version>='1.1':
+            header = header + rhd_global_header_v11
+        else:
+            global_info['num_temp_sensor_channels'] = 0
+
+        if version >= '1.3':
+            header = header + rhd_global_header_v13
+        else:
+            global_info['eval_board_mode'] = 0
+        
+        if version >= '2.0':
+            header = header + rhd_global_header_v20
+        else:
+            global_info['reference_channel'] = ''
+        
+        header = header + rhd_global_header_final
+        
+        global_info.update(read_variable_header(f, header))
+        
+        # read channel group and channel header
+        channels_by_type = {k:[] for k in [0, 1, 2, 3, 4, 5,]}
+        for g in range(global_info['nb_signal_group']):
+            group_info = read_variable_header(f, rhd_signal_group_header)
+            
+            if bool(group_info['signal_group_enabled']):
+                for c in range(group_info['channel_num']):
+                    chan_info = read_variable_header(f, rhd_signal_channel_header)
+                    if bool(chan_info['channel_enabled']):
+                        channels_by_type[chan_info['signal_type']].append(chan_info)
+
+        header_size = f.tell()
+        
+    # TODO sampling_rate for auxilary channel
+    
+    # construct the data block dtype
+    
+    if version>='2.0':
+        BLOCK_SIZE = 128
+    else:
+        BLOCK_SIZE = 60 # 256 channels
+
+    ordered_channels = []
+    
+    if version>='1.2':
+        data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
+    else:
+        data_dtype = [('timestamp', 'uint32', BLOCK_SIZE)]
+
+    # 0: RHD2000 amplifier channel
+    for chan_info in channels_by_type[0]:
+        name = chan_info['native_channel_name']
+        ordered_channels.append(chan_info)
+        data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    # 1: RHD2000 auxiliary input channel
+    for chan_info in channels_by_type[1]:
+        name = chan_info['native_channel_name']
+        ordered_channels.append(chan_info)
+        data_dtype +=[(name, 'uint16', BLOCK_SIZE//4)]
+    
+    # 2: RHD2000 supply voltage channel
+    for chan_info in channels_by_type[2]:
+        name = chan_info['native_channel_name']
+        ordered_channels.append(chan_info)
+        data_dtype +=[('supply_voltage', 'uint16')]
+    
+    for i in range(global_info['num_temp_sensor_channels']):
+        data_dtype +=[('temperature_{}'.format(i), 'uint16')]
+    
+    # 3: USB board ADC input channel
+    for chan_info in channels_by_type[3]:
+        name = chan_info['native_channel_name']
+        ordered_channels.append(chan_info)
+        data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    # 4: USB board digital input channel
+    # 5: USB board digital output channel
+    for sig_type in [4, 5]:
+        if len(channels_by_type[sig_type]) > 0:
+            name = {4:'DIGITAL-IN', 5:'DIGITAL-OUT' }[sig_type]
+            data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
+    
+    return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
