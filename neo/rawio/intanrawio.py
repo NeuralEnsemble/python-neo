@@ -50,16 +50,11 @@ class IntanRawIO(BaseRawIO):
             self._global_info, self._ordered_channels, data_dtype, header_size, self.block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
             self._global_info, self._ordered_channels, data_dtype, header_size, self.block_size = read_rhd(self.filename)
-        
-        # TODO this depend on channel
-        self._sampling_rate = self._global_info['sampling_rate']
-        
+
+        # memmap raw data with the complicated structured dtype
         self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode='r', offset=header_size)
         
-        # TODO this depend on channel
-        self._sigs_length = self._raw_data.size * self.block_size
-        
-        # TODO check timestamp continuity
+        # check timestamp continuity
         timestamp = self._raw_data['timestamp'].flatten()
         assert np.all(np.diff(timestamp)==1)
         
@@ -67,15 +62,20 @@ class IntanRawIO(BaseRawIO):
         sig_channels = []
         for c, chan_info in enumerate(self._ordered_channels):
             name = chan_info['native_channel_name']
-            chan_id = c
-            units = 'uV'
-            offset = 0. # TODO
-            gain = 1. # TODO
-            sig_dtype = 'uint16'
+            chan_id = c  #  the chan_id have no meaning in intan
+            if chan_info['signal_type'] == 20:
+                # exception for temperature
+                sig_dtype = 'int16'
+            else:
+                sig_dtype = 'uint16'
             group_id = 0
-            sig_channels.append((name, chan_id, self._sampling_rate,
-                                sig_dtype, units, gain, offset, group_id))
+            sig_channels.append((name, chan_id,  chan_info['sampling_rate'],
+                                sig_dtype, chan_info['units'], chan_info['gain'],
+                                chan_info['offset'], chan_info['signal_type']))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+        
+        self._max_sampling_rate = np.max(sig_channels['sampling_rate'])
+        self._max_sigs_length = self._raw_data.size * self.block_size
 
         # No events
         event_channels = []
@@ -99,11 +99,16 @@ class IntanRawIO(BaseRawIO):
         return 0.
 
     def _segment_t_stop(self, block_index, seg_index):
-        t_stop = self._sigs_length / self._sampling_rate
+        t_stop = self._max_sigs_length / self._max_sampling_rate
         return t_stop
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        return self._sigs_length
+        assert channel_indexes is not None, 'channel_indexes cannot be None, several signal size'
+        assert np.unique(self.header['signal_channels'][channel_indexes]['group_id']).size == 1
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
+        chan_name = channel_names[0]
+        size = self._raw_data[chan_name].size
+        return size
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
         return 0.
@@ -113,7 +118,7 @@ class IntanRawIO(BaseRawIO):
         if i_start is None:
             i_start = 0
         if i_stop is None:
-            i_stop = self._sigs_length
+            i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
 
         block_start = i_start // self.block_size
         block_stop = i_stop // self.block_size + 1
@@ -248,6 +253,8 @@ def read_rhs(filename):
         
         header_size = f.tell()
     
+    sr = global_info['sampling_rate']
+    
     # construct dtype by re-ordering channels by types
     ordered_channels = []
     data_dtype = [('timestamp', 'int32', BLOCK_SIZE)]
@@ -255,6 +262,10 @@ def read_rhs(filename):
     # 0: RHS2000 amplifier channel.
     for chan_info in channels_by_type[0]:
         name = chan_info['native_channel_name']
+        chan_info['sampling_rate'] = sr
+        chan_info['units'] = 'uV'
+        chan_info['gain'] = 0.195
+        chan_info['offset'] = -32768 * 0.195
         ordered_channels.append(chan_info)
         data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
     
@@ -263,6 +274,11 @@ def read_rhs(filename):
             name = chan_info['native_channel_name']
             chan_info_dc = dict(chan_info)
             chan_info_dc['native_channel_name'] = name+'_DC'
+            chan_info_dc['sampling_rate'] = sr
+            chan_info_dc['units'] = 'mV'
+            chan_info_dc['gain'] = 19.23
+            chan_info_dc['offset'] = -512 * 19.23
+            chan_info_dc['signal_type'] = 10 #  put it in another group
             ordered_channels.append(chan_info_dc)
             data_dtype +=[(name+'_DC', 'uint16', BLOCK_SIZE)]
 
@@ -270,6 +286,13 @@ def read_rhs(filename):
         name = chan_info['native_channel_name']
         chan_info_stim = dict(chan_info)
         chan_info_stim['native_channel_name'] = name+'_STIM'
+        chan_info_stim['sampling_rate'] = sr
+        # stim channel are coplicated because they are coded
+        # with bits, they do not fit the gain/offset rawio strategy
+        chan_info_stim['units'] = ''
+        chan_info_stim['gain'] = 1.
+        chan_info_stim['offset'] = 0.
+        chan_info_stim['signal_type'] = 11 #  put it in another group
         ordered_channels.append(chan_info_stim)
         data_dtype +=[(name+'_STIM', 'uint16', BLOCK_SIZE)]
 
@@ -278,12 +301,18 @@ def read_rhs(filename):
     for sig_type in [3, 4, ]:
         for chan_info in channels_by_type[sig_type]:
             name = chan_info['native_channel_name']
+            chan_info['sampling_rate'] = sr
+            chan_info['units'] = 'V'
+            chan_info['gain'] = 0.0003125
+            chan_info['offset'] = -32768 * 0.0003125
             ordered_channels.append(chan_info)
             data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
 
     # 5: Digital input channel.
     # 6: Digital output channel.
     for sig_type in [5, 6]:
+        # at the moment theses channel are not in sig channel list
+        # but they are in the raw memamp
         if len(channels_by_type[sig_type]) > 0:
             name = {5:'DIGITAL-IN', 6:'DIGITAL-OUT' }[sig_type]
             data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
@@ -411,10 +440,9 @@ def read_rhd(filename):
 
         header_size = f.tell()
         
-    # TODO sampling_rate for auxilary channel
+    sr = global_info['sampling_rate']
     
-    # construct the data block dtype
-    
+    # construct the data block dtype and reorder channels
     if version>='2.0':
         BLOCK_SIZE = 128
     else:
@@ -430,35 +458,70 @@ def read_rhd(filename):
     # 0: RHD2000 amplifier channel
     for chan_info in channels_by_type[0]:
         name = chan_info['native_channel_name']
+        chan_info['sampling_rate'] = sr
+        chan_info['units'] = 'uV'
+        chan_info['gain'] = 0.195
+        chan_info['offset'] = -32768 * 0.195
         ordered_channels.append(chan_info)
         data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
     
     # 1: RHD2000 auxiliary input channel
     for chan_info in channels_by_type[1]:
         name = chan_info['native_channel_name']
+        chan_info['sampling_rate'] = sr / 4.
+        chan_info['units'] = 'V'
+        chan_info['gain'] = 0.0000374
+        chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
         data_dtype +=[(name, 'uint16', BLOCK_SIZE//4)]
     
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:
         name = chan_info['native_channel_name']
+        chan_info['sampling_rate'] = sr / BLOCK_SIZE
+        chan_info['units'] = 'V'
+        chan_info['gain'] =  0.0000748
+        chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
         data_dtype +=[('supply_voltage', 'uint16')]
     
+    # temperature is not an official channel in the header
     for i in range(global_info['num_temp_sensor_channels']):
-        data_dtype +=[('temperature_{}'.format(i), 'uint16')]
+        chan_info = {'native_channel_name' : 'temperature', 'signal_type': 20 }
+        chan_info['sampling_rate'] = sr / BLOCK_SIZE
+        chan_info['units'] = 'Celsius'
+        chan_info['gain'] =  0.001
+        chan_info['offset'] = 0.
+        ordered_channels.append(chan_info)
+        data_dtype +=[('temperature_{}'.format(i), 'int16')]
+        
     
     # 3: USB board ADC input channel
     for chan_info in channels_by_type[3]:
         name = chan_info['native_channel_name']
+        chan_info['sampling_rate'] = sr
+        chan_info['units'] = 'V'
+        if global_info['eval_board_mode'] == 0:
+            chan_info['gain'] = 0.000050354
+            chan_info['offset'] = 0.
+        elif global_info['eval_board_mode'] == 1:
+            chan_info['gain'] = 0.00015259
+            chan_info['offset'] = -32768 *  0.00015259
+        elif global_info['eval_board_mode'] == 13:
+            chan_info['gain'] = 0.0003125
+            chan_info['offset'] = -32768 * 0.0003125
         ordered_channels.append(chan_info)
         data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
     
     # 4: USB board digital input channel
     # 5: USB board digital output channel
     for sig_type in [4, 5]:
+        # at the moment theses channel are not in sig channel list
+        # but they are in the raw memamp
         if len(channels_by_type[sig_type]) > 0:
             name = {4:'DIGITAL-IN', 5:'DIGITAL-OUT' }[sig_type]
             data_dtype +=[(name, 'uint16', BLOCK_SIZE)]
     
     return global_info, ordered_channels, data_dtype, header_size, BLOCK_SIZE
+
+
