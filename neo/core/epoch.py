@@ -176,7 +176,7 @@ class Epoch(BaseNeo, pq.Quantity):
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
         obj.durations = self.durations[i]
-        obj.labels = self.labels[i]
+        obj.labels = np.array(self.labels)[i].tolist()
         return obj
 
     @property
