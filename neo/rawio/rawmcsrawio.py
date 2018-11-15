@@ -3,15 +3,14 @@
 Class for reading data from "Raw" Multi Channel System (MCS) format.
 This format is NOT the native MCS format (*.mcd).
 This format is a raw format with an internal binary header exported by the
-"MC_DataTool binary conversion" with the option header slected.
+"MC_DataTool binary conversion" with the option header selected.
 
-The internal header contain sampling rate, channel names, gain and units.
-Not so bad : everything that neo need, so this IO is without parameters.
+The internal header contains sampling rate, channel names, gain and units.
+Not so bad: everything that Neo needs, so this IO is without parameters.
 
-If some MCS custumers read this you should lobby to get the real specification
-of the real MCS format (.mcd) and so the MCSRawIO could be done instead of this
-ersatz.
-
+If some MCS customers read this you should lobby to get the real specification
+of the real MCS format (.mcd), then an IO module for the native MCS format
+could be written instead of this ersatz.
 
 Author: Samuel Garcia
 """
@@ -98,7 +97,8 @@ class RawMCSRawIO(BaseRawIO):
 
 def parse_mcs_raw_header(filename):
     """
-    This is a mix with stuff on github.
+    This is a from-scratch implementation, with some inspiration
+    (but no code) taken from the following files:
     https://github.com/spyking-circus/spyking-circus/blob/master/circus/files/mcs_raw_binary.py
     https://github.com/jeffalstott/Multi-Channel-Systems-Import/blob/master/MCS.py
     """
