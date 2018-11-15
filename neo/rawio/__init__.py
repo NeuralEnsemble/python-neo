@@ -22,6 +22,7 @@ from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
+from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
@@ -39,6 +40,7 @@ rawiolist = [
     NIXRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
+    RawMCSRawIO,
     Spike2RawIO,
     TdtRawIO,
     WinEdrRawIO,
