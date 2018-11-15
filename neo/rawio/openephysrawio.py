@@ -20,41 +20,42 @@ HEADER_SIZE = 1024
 
 class OpenEphysRawIO(BaseRawIO):
     """
-    OpenEphys GUI software offer several data format see
+    OpenEphys GUI software offers several data formats, see
     https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/491632/Data+format
 
-    This class implement the legacy OpenEphys format here
+    This class implements the legacy OpenEphys format here
     https://open-ephys.atlassian.net/wiki/spaces/OEW/pages/65667092/Open+Ephys+format
 
-    OpenEphy group already propose some tools here:
+    The OpenEphys group already proposes some tools here:
     https://github.com/open-ephys/analysis-tools/blob/master/OpenEphys.py
-    but there is no package at pypi and read everything in memory.
+    but (i) there is no package at PyPI and (ii) those tools read everything in memory.
 
-    Its directory based with several files :
+    The format is directory based with several files:
         * .continuous
         * .events
         * .spikes
 
-    This implementation of class is based on:
+    This implementation is based on:
       * this code https://github.com/open-ephys/analysis-tools/blob/master/Python3/OpenEphys.py
-        done by Dan Denman and Josh Siegle
-      * a previous PR done by Cristian Tatarau and Charite Berlin
-    Contrary to previous code to open this format here all data use memmap so it should
+        written by Dan Denman and Josh Siegle
+      * a previous PR by Cristian Tatarau at Charité Berlin
+
+    In contrast to previous code for reading this format, here all data use memmap so it should
     be super fast and light compared to legacy code.
 
     When the acquisition is stopped and restarted then files are named *_2, *_3.
-    In that case this class create a new Segment. Note that timestamps is reseted in this situation.
+    In that case this class creates a new Segment. Note that timestamps are reset in this situation.
 
     Limitation :
-      * Work only if all continuous channels have the same samplerate. Wich is a resonnable hypothesis.
-      * When the recording is stopped and restarted all continuous files will contains gaps.
-        Ideally this would lead to a new Segment but it is not implemented due to complexity.
-        In that case it will raise an error.
+      * Works only if all continuous channels have the same sampling rate, which is a reasonable hypothesis.
+      * When the recording is stopped and restarted all continuous files will contain gaps.
+        Ideally this would lead to a new Segment but this use case is not implemented due to its complexity.
+        Instead it will raise an error.
 
     Special cases:
-      * Normaly all continuous files have the same first timestamp and length. In situation
-        where it is not the case all files are clip to the smallest one so that they are all aligned.
-        In that case a wrning is emited.
+      * Normaly all continuous files have the same first timestamp and length. In situations
+        where it is not the case all files are clipped to the smallest one so that they are all aligned,
+        and a warning is emitted.
     """
     extensions = []
     rawmode = 'one-dir'
@@ -104,7 +105,7 @@ class OpenEphysRawIO(BaseRawIO):
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
                 assert np.all(diff == RECORD_SIZE), \
-                    'Not continuous timestamps for {}. Maybe because recording is pause/stop.'.format(continuous_filename)
+                    'Not continuous timestamps for {}. Maybe because recording was paused/stopped.'.format(continuous_filename)
 
                 if seg_index == 0:
                     # add in channel list
@@ -117,7 +118,7 @@ class OpenEphysRawIO(BaseRawIO):
             if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
                 not all(all_first_timestamps[0] == e for e in all_first_timestamps):
 
-                self.logger.warning('Continuous files are not timestamps aligned. So there clip then to aligned')
+                self.logger.warning('Continuous files do not have aligned timestamps; clipping to make them aligned.')
 
                 first, last = -np.inf, np.inf
                 for chan_id in self._sigs_memmap[seg_index]:
@@ -187,7 +188,7 @@ class OpenEphysRawIO(BaseRawIO):
                     self._spike_sampling_rate = spike_info['sampleRate']
                 else:
                     assert self._spike_sampling_rate == spike_info['sampleRate'],\
-                                'mismatch in spike sampleRate'
+                                'mismatch in spike sampling rate'
 
                 # scan all to detect several all unique(sorted_ids)
                 all_sorted_ids = []
@@ -383,10 +384,10 @@ _base_spikes_dtype = [('event_stype', 'uint8'), ('timestamp', 'int64'),
 
 def make_spikes_dtype(filename):
     """
-    Given the spike file make the appropriate dtype that depend of:
-      * N number of channel
-      * M sample per spike
-    See doc of file format.
+    Given the spike file make the appropriate dtype that depends on:
+      * N - number of channels
+      * M - samples per spike
+    See documentation of file format.
     """
 
     # strangly the header do not have the sample size
@@ -420,10 +421,10 @@ def make_spikes_dtype(filename):
 
 def explore_folder(dirname):
     """
-    This explore a folder and disptach coninuous, event and spikes
+    This explores a folder and dispatch coninuous, event and spikes
     files by segment (aka recording session).
 
-    The nb of segment is check with this rules
+    The number of segments is checked with these rules
     "100_CH0.continuous" ---> seg_index 0
     "100_CH0_2.continuous" ---> seg_index 1
     "100_CH0_N.continuous" ---> seg_index N-1
@@ -487,7 +488,7 @@ def explore_folder(dirname):
 
 def read_file_header(filename):
     """Read header information from the first 1024 bytes of an OpenEphys file.
-    See doc.
+    See docs.
     """
     header = {}
     with open(filename, mode='rb') as f:
