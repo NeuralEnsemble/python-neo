@@ -212,10 +212,14 @@ class BlackrockRawIO(BaseRawIO):
             '2.1': self.__get_channel_labels_variant_a,
             '2.2': self.__get_channel_labels_variant_b,
             '2.3': self.__get_channel_labels_variant_b}
-        self.__nonneural_evtypes = {
-            '2.1': self.__get_nonneural_evtypes_variant_a,
-            '2.2': self.__get_nonneural_evtypes_variant_a,
-            '2.3': self.__get_nonneural_evtypes_variant_b}
+        self.__nonneural_evdicts = {
+            '2.1': self.__get_nonneural_evdicts_variant_a,
+            '2.2': self.__get_nonneural_evdicts_variant_a,
+            '2.3': self.__get_nonneural_evdicts_variant_b}
+        self.__comment_evdict = {
+            '2.1': self.__get_comment_evdict_variant_a,
+            '2.2': self.__get_comment_evdict_variant_a,
+            '2.3': self.__get_comment_evdict_variant_a}
 
     def _parse_header(self):
 
@@ -264,10 +268,17 @@ class BlackrockRawIO(BaseRawIO):
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
             # scan events
+            # NonNeural: serial and digital input
             events_data, event_segment_ids = self.nev_data['NonNeural']
-            ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+            ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)
+            if 'Comments' in self.nev_data:
+                comments_data, comments_segment_ids = self.nev_data['Comments']
+                ev_dict.update(self.__comment_evdict[self.__nev_spec](comments_data))
             for ev_name in ev_dict:
                 event_channels.append((ev_name, '', 'event'))
+            # TODO: TrackingEvents
+            # TODO: ButtonTrigger
+            # TODO: VideoSync
 
         # Step2 NSX file
         # Load file spec and headers of available nsx files
@@ -539,12 +550,19 @@ class BlackrockRawIO(BaseRawIO):
                 st_ann['file_origin'] = self._filenames['nev'] + '.nev'
 
             if self._avail_files['nev']:
-                ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)
+                ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)
+                if 'Comments' in self.nev_data:
+                    ev_dict.update(self.__comment_evdict[self.__nev_spec](comments_data))
+                    color_codes = ["#{:08X}".format(code) for code in comments_data['color']]
+                    color_codes = np.array(color_codes, dtype='S9')
                 for c in range(event_channels.size):
+                    # Next line makes ev_ann a reference to seg_ann['events'][c]
                     ev_ann = seg_ann['events'][c]
                     name = event_channels['name'][c]
                     ev_ann['description'] = ev_dict[name]['desc']
                     ev_ann['file_origin'] = self._filenames['nev'] + '.nev'
+                    if name == 'comments':
+                        ev_ann['color_codes'] = color_codes
 
     def _source_name(self):
         return self.filename
@@ -653,8 +671,12 @@ class BlackrockRawIO(BaseRawIO):
 
     def _event_count(self, block_index, seg_index, event_channel_index):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data, event_segment_ids = self.nev_data['NonNeural']
-        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
+        if name == 'comments':
+            events_data, event_segment_ids = self.nev_data['Comments']
+            ev_dict = self.__comment_evdict[self.__nev_spec](events_data)[name]
+        else:
+            events_data, event_segment_ids = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)[name]
         mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         if self._nb_segment == 1:
             # very fast
@@ -669,12 +691,26 @@ class BlackrockRawIO(BaseRawIO):
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         name = self.header['event_channels']['name'][event_channel_index]
-        events_data, event_segment_ids = self.nev_data['NonNeural']
-        ev_dict = self.__nonneural_evtypes[self.__nev_spec](events_data)[name]
-        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
+        if name == 'comments':
+            events_data, event_segment_ids = self.nev_data['Comments']
+            ev_dict = self.__comment_evdict[self.__nev_spec](events_data)[name]
+            # If immediate decoding is desired:
+            encoding = {0: 'latin_1', 1: 'utf_16', 255: 'latin_1'}
+            labels = [data[ev_dict['field']].decode(
+                encoding[data['char_set']]) for data in events_data]
+            # Only ASCII can be allowed due to using numpy
+            # labels.astype('S') forces to use bytes in BaseFromRaw 401, in read_segment
+            # This is not recommended
+            # TODO: Maybe switch to astype('U')
+            labels = np.array([data.encode('ASCII', errors='ignore') for data in labels])
+        else:
+            events_data, event_segment_ids = self.nev_data['NonNeural']
+            ev_dict = self.__nonneural_evdicts[self.__nev_spec](events_data)[name]
+            labels = events_data[ev_dict['field']]
 
+        mask = ev_dict['mask'] & (event_segment_ids == seg_index)
         timestamp = events_data[mask]['timestamp']
-        labels = events_data[mask][ev_dict['field']]
+        labels = labels[mask]
 
         # time clip
         sl = self._get_timestamp_slice(timestamp, seg_index, t_start, t_stop)
@@ -1444,7 +1480,7 @@ class BlackrockRawIO(BaseRawIO):
                     ('packet_id', 'uint16'),
                     ('char_set', 'uint8'),
                     ('flag', 'uint8'),
-                    ('data', 'uint32'),
+                    ('color', 'uint32'),
                     ('comment', 'S{0}'.format(data_size - 12))]},
             'VideoSync': {
                 'a': [
@@ -1760,7 +1796,7 @@ class BlackrockRawIO(BaseRawIO):
 
         return nsx_parameters[param_name]
 
-    def __get_nonneural_evtypes_variant_a(self, data):
+    def __get_nonneural_evdicts_variant_a(self, data):
         """
         Defines event types and the necessary parameters to extract them from
         a 2.1 and 2.2 nev file.
@@ -1849,7 +1885,7 @@ class BlackrockRawIO(BaseRawIO):
         # Empty segments were discarded, thus there may be less segments now
         self._nb_segment -= nb_empty_segments
 
-    def __get_nonneural_evtypes_variant_b(self, data):
+    def __get_nonneural_evdicts_variant_b(self, data):
         """
         Defines event types and the necessary parameters to extract them from
         a 2.3 nev file.
@@ -1873,6 +1909,16 @@ class BlackrockRawIO(BaseRawIO):
                 'desc': "Events of the serial input port"}}
 
         return event_types
+
+    def __get_comment_evdict_variant_a(self, data):
+        return {
+            'comments': {
+                'name': 'comments',
+                'field': 'comment',
+                'mask': data['packet_id'] == 65535,
+                'desc': 'Comments'
+            }
+        }
 
     def __is_set(self, flag, pos):
         """
