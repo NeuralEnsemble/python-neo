@@ -37,6 +37,7 @@ class IntanRawIO(BaseRawIO):
 
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
+
         self.filename = filename
 
     def _source_name(self):
@@ -46,10 +47,10 @@ class IntanRawIO(BaseRawIO):
 
         if self.filename.endswith('.rhs'):
             self._global_info, self._ordered_channels, data_dtype,\
-                    header_size, self.block_size = read_rhs(self.filename)
+                    header_size, self._block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
             self._global_info, self._ordered_channels,  data_dtype,\
-                    header_size, self.block_size = read_rhd(self.filename)
+                    header_size, self._block_size = read_rhd(self.filename)
 
         # memmap raw data with the complicated structured dtype
         self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode='r', offset=header_size)
@@ -75,7 +76,7 @@ class IntanRawIO(BaseRawIO):
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
         self._max_sampling_rate = np.max(sig_channels['sampling_rate'])
-        self._max_sigs_length = self._raw_data.size * self.block_size
+        self._max_sigs_length = self._raw_data.size * self._block_size
 
         # No events
         event_channels = []
@@ -120,19 +121,30 @@ class IntanRawIO(BaseRawIO):
         if i_stop is None:
             i_stop = self._get_signal_size(block_index, seg_index, channel_indexes)
 
-        block_start = i_start // self.block_size
-        block_stop = i_stop // self.block_size + 1
-        sl0 = i_start % self.block_size
-        sl1 = sl0 + (i_stop - i_start)
-
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_names = self.header['signal_channels'][channel_indexes]['name']
 
+        shape = self._raw_data[channel_names[0]].shape
+
+        # some channel (temperature) have 1D field so shape 1D
+        # because 1 sample per block
+        if len(shape) == 2:
+            # this is the general case with 2D
+            block_size = shape[1]
+            block_start = i_start // block_size
+            block_stop = i_stop // block_size + 1
+
+            sl0 = i_start % block_size
+            sl1 = sl0 + (i_stop - i_start)
+
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_names)), dtype='uint16')
         for i, chan_name in enumerate(channel_names):
             data_chan = self._raw_data[chan_name]
-            sigs_chunk[:, i] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
+            if len(shape) == 1:
+                sigs_chunk[:, i] = data_chan[i_start:i_stop]
+            else:
+                sigs_chunk[:, i] = data_chan[block_start:block_stop].flatten()[sl0:sl1]
 
         return sigs_chunk
 
@@ -347,7 +359,6 @@ rhd_global_header_part1 = [
     ('note2', 'QString'),
     ('note3', 'QString'),
 
-    ('nb_temp_sensor', 'int16'),
 ]
 
 rhd_global_header_v11 = [
@@ -397,8 +408,7 @@ def read_rhd(filename):
 
         global_info = read_variable_header(f, rhd_global_header_base)
 
-        version = V('{major_version}.{minor_version}'.format(global_info))
-        # print(version)
+        version = V('{major_version}.{minor_version}'.format(**global_info))
 
         # the header size depend on the version :-(
         header = list(rhd_global_header_part1)  # make a copy
@@ -478,17 +488,18 @@ def read_rhd(filename):
         chan_info['gain'] = 0.0000748
         chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
-        data_dtype += [('supply_voltage', 'uint16')]
+        data_dtype += [(name, 'uint16')]
 
     # temperature is not an official channel in the header
     for i in range(global_info['num_temp_sensor_channels']):
-        chan_info = {'native_channel_name': 'temperature', 'signal_type': 20}
+        name = 'temperature_{}'.format(i)
+        chan_info = {'native_channel_name': name, 'signal_type': 20}
         chan_info['sampling_rate'] = sr / BLOCK_SIZE
         chan_info['units'] = 'Celsius'
         chan_info['gain'] = 0.001
         chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
-        data_dtype += [('temperature_{}'.format(i), 'int16')]
+        data_dtype += [(name, 'int16')]
 
     # 3: USB board ADC input channel
     for chan_info in channels_by_type[3]:
