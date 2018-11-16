@@ -232,22 +232,22 @@ class BlackrockIO(BaseIO):
         self._filenames = {}
         if nsx_override:
             self._filenames['nsx'] = re.sub(
-                os.path.extsep + 'ns[1,2,3,4,5,6]$', '', nsx_override)
+                os.path.extsep + r'ns[1,2,3,4,5,6]$', '', nsx_override)
         else:
             self._filenames['nsx'] = self.filename
         if nev_override:
             self._filenames['nev'] = re.sub(
-                os.path.extsep + 'nev$', '', nev_override)
+                os.path.extsep + r'nev$', '', nev_override)
         else:
             self._filenames['nev'] = self.filename
         if sif_override:
             self._filenames['sif'] = re.sub(
-                os.path.extsep + 'sif$', '', sif_override)
+                os.path.extsep + r'sif$', '', sif_override)
         else:
             self._filenames['sif'] = self.filename
         if ccf_override:
             self._filenames['ccf'] = re.sub(
-                os.path.extsep + 'ccf$', '', ccf_override)
+                os.path.extsep + r'ccf$', '', ccf_override)
         else:
             self._filenames['ccf'] = self.filename
 
