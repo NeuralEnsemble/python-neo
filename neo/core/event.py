@@ -261,7 +261,7 @@ class Event(BaseNeo, pq.Quantity):
 
     def to_epoch(self, pairwise=False, durations=None):
         """
-        Transform Event to Epoch.
+        Returns a new Epoch object based on the times and labels in the Event object.
 
         This method has three modes of action.
 
