@@ -534,7 +534,7 @@ def read_as_dict(fid, dtype):
     Make conversion for strings.
     """
     dt = np.dtype(dtype)
-    h = np.fromstring(fid.read(dt.itemsize), dt)[0]
+    h = np.frombuffer(fid.read(dt.itemsize), dt)[0]
     info = OrderedDict()
     for k in dt.names:
         v = h[k]
