@@ -2985,7 +2985,7 @@ class LayoutFactory(object):
 
     def __init__(self, elphy_file):
         self.elphy_file = elphy_file
-        self.pattern = "\d{4}(\d+|\D)\D"
+        self.pattern = r"\d{4}(\d+|\D)\D"
         self.block_subclasses = dict()
 
     @property
