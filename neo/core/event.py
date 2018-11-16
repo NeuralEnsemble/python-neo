@@ -267,6 +267,8 @@ class Event(BaseNeo, pq.Quantity):
 
         1. By default, an array of `n` event times will be transformed into
            `n-1` epochs, where the end of one epoch is the beginning of the next.
+           This assumes that the events are ordered in time; it is the
+           responsibility of the caller to check this is the case.
         2. If `pairwise` is True, then the event times will be taken as pairs
            representing the start and end time of an epoch. The number of
            events must be even, otherwise a ValueError is raised.
