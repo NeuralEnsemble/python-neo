@@ -1267,7 +1267,7 @@ class BlackrockIO(BaseIO):
         nsx_parameters = {
             'labels': labels,
             'units': np.array(
-                ['uV'] *
+                [b'uV'] *
                 self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),
