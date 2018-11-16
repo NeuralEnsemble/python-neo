@@ -179,6 +179,14 @@ class Epoch(BaseNeo, pq.Quantity):
         obj.labels = self.labels[i]
         return obj
 
+    def __getslice__(self, i, j):
+        '''
+        Get a slice from :attr:`i` to :attr:`j`.attr[0]
+
+        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
+        '''
+        return self.__getitem__(slice(i, j))
+
     @property
     def times(self):
         return pq.Quantity(self)
