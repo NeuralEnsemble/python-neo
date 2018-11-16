@@ -329,6 +329,8 @@ def fake_epoch(seed=None, n=1):
     Epoch are not independent (must all have the same size)
     """
     kwargs = get_annotations()
+    if seed is not None:
+        np.random.seed(seed)
     size = np.random.randint(5, 15)
     for i, attr in enumerate(Epoch._necessary_attrs + Epoch._recommended_attrs):
         if seed is not None:
