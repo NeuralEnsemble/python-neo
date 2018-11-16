@@ -431,6 +431,7 @@ class TestEvent(unittest.TestCase):
                            np.array([5.0, 12.0, 23.0, 45.0]))
         assert_array_equal(epoch.durations.magnitude,
                            np.array([2.0, 2.0, 2.0, 2.0]))
+        self.assertEqual(epoch.durations.size, 4)
         assert_array_equal(epoch.labels,
                            np.array(['A', 'B', 'C', 'D']))
 

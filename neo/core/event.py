@@ -266,8 +266,7 @@ class Event(BaseNeo, pq.Quantity):
         This method has three modes of action.
 
         1. By default, an array of `n` event times will be transformed into
-           an array of `n-1` epochs, where the end of one epoch is the
-           beginning of the next.
+           `n-1` epochs, where the end of one epoch is the beginning of the next.
         2. If `pairwise` is True, then the event times will be taken as pairs
            representing the start and end time of an epoch. The number of
            events must be even, otherwise a ValueError is raised.
@@ -278,6 +277,11 @@ class Event(BaseNeo, pq.Quantity):
 
         `pairwise=True` and `durations` are mutually exclusive. A ValueError
         will be raised if both are given.
+
+        If `durations` is given, epoch labels are set to the corresponding
+        labels of the events that indicate the epoch start
+        If `durations` is not given, then the event labels A and B bounding
+        the epoch are used to set the labels of the epochs in the form 'A-B'.
         """
 
         if pairwise:
