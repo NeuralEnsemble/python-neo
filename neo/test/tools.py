@@ -392,6 +392,43 @@ def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10,
                                        threshold=threshold, dtype=False)
 
 
+def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10,
+                            exclude=None):
+    '''
+    Test if ob1 and ob2 has the same annotations.
+
+    Arguments:
+        equal_almost: if False do a strict arrays_equal if
+                      True do arrays_almost_equal
+        exclude: a list of attributes and annotations to ignore in
+                 the comparison
+
+    '''
+    if exclude is None:
+        exclude = []
+
+    if not equal_almost:
+        threshold = None
+        dtype = False
+    else:
+        dtype = True
+
+    for key in ob2.array_annotations:
+        if key in exclude:
+            continue
+        assert key in ob1.array_annotations
+
+    for key, value in ob1.array_annotations.items():
+        if key in exclude:
+            continue
+        assert key in ob2.array_annotations
+        try:
+            assert_arrays_equal(value, ob2.array_annotations[key])
+        except ValueError:
+            assert_arrays_almost_equal(ob1, ob2,
+                                       threshold=threshold, dtype=False)
+
+
 def assert_sub_schema_is_lazy_loaded(ob):
     '''
     This is util for testing lazy load. All object must load with ndarray.size

@@ -22,6 +22,7 @@ from neo.core import (AnalogSignal,
                       class_by_name)
 
 from neo.core.baseneo import _container_name
+from neo.core.dataobject import DataObject
 
 TEST_ANNOTATIONS = [1, 0, 1.5, "this is a test",
                     datetime.fromtimestamp(424242424), None]
@@ -75,6 +76,9 @@ def generate_one_simple_segment(seg_name='segment 0',
                                              },
                                 epoch_duration_range=[.5, 3.],
 
+                                array_annotations={'valid': np.array([True, False]),
+                                                   'number': np.array(range(5))}
+
                                 ):
     if supported_objects and Segment not in supported_objects:
         raise ValueError('Segment must be in supported_objects')
@@ -100,6 +104,10 @@ def generate_one_simple_segment(seg_name='segment 0',
             sptr = SpikeTrain(spikes * duration,
                               t_start=t_start, t_stop=t_start + duration)
             sptr.annotations['channel_index'] = s
+            # Randomly generate array_annotations from given options
+            arr_ann = {key: value[(rand(len(spikes)) * len(value)).astype('i')]
+                       for (key, value) in array_annotations.items()}
+            sptr.array_annotate(**arr_ann)
             seg.spiketrains.append(sptr)
 
     if Event in supported_objects:
@@ -110,6 +118,10 @@ def generate_one_simple_segment(seg_name='segment 0',
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(evt_size) * len(labels)).astype('i')]
             evt = Event(times=rand(evt_size) * duration, labels=labels)
+            # Randomly generate array_annotations from given options
+            arr_ann = {key: value[(rand(evt_size)*len(value)).astype('i')]
+                       for (key, value) in array_annotations.items()}
+            evt.array_annotate(**arr_ann)
             seg.events.append(evt)
 
     if Epoch in supported_objects:
@@ -130,6 +142,10 @@ def generate_one_simple_segment(seg_name='segment 0',
                                               units=pq.s),
                         labels=labels,
                         )
+            # Randomly generate array_annotations from given options
+            arr_ann = {key: value[(rand(len(times))*len(value)).astype('i')]
+                       for (key, value) in array_annotations.items()}
+            epc.array_annotate(**arr_ann)
             seg.epochs.append(epc)
 
     # TODO : Spike, Event
@@ -236,7 +252,8 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         size = []
         for _ in range(int(dim)):
             if shape is None:
-                if name == "times":
+                # To ensure consistency, times, labels and durations need to have the same size
+                if name in ["times", "labels", "durations"]:
                     size.append(5)
                 else:
                     size.append(np.random.randint(5) + 1)
@@ -255,6 +272,23 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None,
         return data.tolist()
     if datatype == pq.Quantity:
         return data * units  # set the units
+
+    # Array annotations need to be a dict containing arrays
+    if name == 'array_annotations' and datatype == dict:
+        # Make sure that array annotations have the correct length
+        if obj in ['AnalogSignal', 'IrregularlySampledSignal']:
+            length = n if n is not None else 1
+        elif obj in ['IrregularlySampledSignal', 'SpikeTrain', 'Epoch', 'Event']:
+            length = n
+        else:
+            raise ValueError("This object cannot have array annotations")
+        # Generate array annotations
+        valid = np.array([True, False])
+        number = np.arange(5)
+        arr_ann = {'valid': valid[(rand(length)*len(valid)).astype('i')],
+                   'number': number[(rand(length)*len(number)).astype('i')]}
+
+        return arr_ann
 
     # we have gone through everything we know, so it must be something invalid
     raise ValueError('Unknown name/datatype combination %s %s' % (name,
@@ -275,13 +309,12 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     if hasattr(cls,
                'lower'):  # is this a test that cls is a string? better to use isinstance(cls, basestring), no?
         cls = class_by_name[cls]
-
+    # iseed is needed below for generation of array annotations
+    iseed = None
     kwargs = {}  # assign attributes
     for i, attr in enumerate(cls._necessary_attrs + cls._recommended_attrs):
         if seed is not None:
             iseed = seed + i
-        else:
-            iseed = None
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
 
     if 'waveforms' in kwargs:  # everything here is to force the kwargs to have len(time) == kwargs["waveforms"].shape[0]
@@ -300,12 +333,27 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
             else:
                 kwargs['times'] = kwargs['times'][:kwargs["waveforms"].shape[0]]
 
+    # IrregularlySampledSignal
     if 'times' in kwargs and 'signal' in kwargs:
         kwargs['times'] = kwargs['times'][:len(kwargs['signal'])]
         kwargs['signal'] = kwargs['signal'][:len(kwargs['times'])]
 
     if annotate:
         kwargs.update(get_annotations())
+        # Make sure that array annotations have the right length
+        if cls in [IrregularlySampledSignal, AnalogSignal]:
+            try:
+                n = len(kwargs['signal'][0])
+            # If only 1 signal, len(int) is called, this raises a TypeError
+            except TypeError:
+                n = 1
+        elif cls in [SpikeTrain, Event, Epoch]:
+            n = len(kwargs['times'])
+        # Array annotate any DataObject
+        if issubclass(cls, DataObject):
+            new_seed = iseed + 1 if iseed is not None else iseed
+            kwargs['array_annotations'] = get_fake_value('array_annotations', dict,
+                                                         seed=new_seed, obj=cls, n=n)
         kwargs['seed'] = seed
 
     return kwargs

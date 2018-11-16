@@ -251,3 +251,23 @@ limitations on the data types of annotations: they must be "simple" types or
 containers (lists, dicts, tuples, NumPy arrays) of simple types, where the simple types
 are ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and
 ``datetime``.
+
+Array Annotations
+-----------------
+
+Next to "regular" annotations there is also a way to annotate arrays of values
+in order to create annotations with one value per data point. Using this feature,
+called Array Annotations, the consistency of those annotations with the actual data
+is ensured.
+Apart from adding those on object construction, Array Annotations can also be added
+using the :meth:`array_annotate` method provided by all Neo data objects, e.g.::
+
+    >>> sptr = SpikeTrain(times=[1, 2, 3]*pq.s, t_stop=3*pq.s)
+    >>> sptr.array_annotate(index=[0, 1, 2], relevant=[True, False, True])
+    >>> print(sptr.array_annotations)
+    {'index': array([0, 1, 2]), 'relevant': array([ True, False,  True])}
+
+Since Array Annotations may be written to a file or database, there are some
+limitations on the data types of arrays: they must be 1-dimensional (i.e. not nested)
+and contain the same types as annotations:
+ ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and ``datetime``.
