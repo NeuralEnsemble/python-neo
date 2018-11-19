@@ -15,6 +15,28 @@ class AxonIO(AxonRawIO, BaseFromRaw):
     - abf = Axon binary file
     - atf is a text file based format from axon that could be
       read by AsciiIO (but this file is less efficient.)
+
+    Here an important note from erikli@github for user who want to get the :
+    With Axon ABF2 files, the information that you need to recapitulate the original stimulus waveform (both digital and analog) is contained in multiple places.
+
+     - `AxonIO._axon_info['protocol']` -- things like number of samples in episode
+     - `AxonIO.axon_info['section']['ADCSection']` | `AxonIO.axon_info['section']['DACSection']` -- things about the number of channels and channel properties
+     - `AxonIO._axon_info['protocol']['nActiveDACChannel']` -- bitmask specifying which DACs are actually active
+     - `AxonIO._axon_info['protocol']['nDigitalEnable']` -- bitmask specifying which set of Epoch timings should be used to specify the duration of digital outputs
+    - `AxonIO._axon_info['dictEpochInfoPerDAC']` -- dict of dict. First index is DAC channel and second index is Epoch number (i.e. information about Epoch A in Channel 2 would be in `AxonIO._axon_info['dictEpochInfoPerDAC'][2][0]`)
+     - `AxonIO._axon_info['EpochInfo']` -- list of dicts containing information about each Epoch's digital out pattern. Digital out is a bitmask with least significant bit corresponding to Digital Out 0
+     - `AxonIO._axon_info['listDACInfo']` -- information about DAC name, scale factor, holding level, etc
+     - `AxonIO._t_starts` -- start time of each sweep in a unified time basis
+     - `AxonIO._sampling_rate`
+
+    The current AxonIO.read_protocol() method utilizes a subset of these.
+    In particular I know it doesn't consider `nDigitalEnable`, `EpochInfo`, or `nActiveDACChannel` and it doesn't account 
+    for different types of Epochs offered by Clampex/pClamp other than discrete steps (such as ramp, pulse train, etc and
+    encoded by `nEpochType` in the EpochInfoPerDAC section). I'm currently parsing a superset of the properties used 
+    by read_protocol() in my analysis scripts, but that code still doesn't parse the full information and isn't in a state
+    where it could be committed and I can't currently prioritize putting together all the code that would parse the full
+    set of data. The `AxonIO._axon_info['EpochInfo']` section doesn't currently exist.
+
     """
     _prefered_signal_group_mode = 'split-all'
 
