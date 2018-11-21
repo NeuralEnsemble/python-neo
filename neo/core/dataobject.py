@@ -96,32 +96,31 @@ def _normalize_array_annotations(value, length):
 
         # In case of list, it needs to be ensured that all data are of the same type
         else:
-            # Check the first element for correctness
-            # If its type is correct for annotations, all others are correct as well,
-            # if they are of the same type
-            # Note: Emtpy lists cannot reach this point
-            _check_single_elem(value[0])
-            dtype = type(value[0])
 
-            # Loop through and check for varying datatypes in the list
-            # Because these would create not clearly defined behavior
-            # In case the user wants this, the list needs to be converted
-            #  to np.ndarray first
-            for element in value:
-                if not isinstance(element, dtype):
-                    raise ValueError("Lists with different types are not supported for "
-                                     "array annotations. ")
-
-            # Create arrays from lists, because array annotations should be numpy arrays
+            # Conversion to numpy array makes all elements same type
+            # Converts elements to most general type
             try:
                 value = np.array(value)
+            # Except when scalar and non-scalar values are mixed, this causes conversion to fail
             except ValueError as e:
                 msg = str(e)
                 if "setting an array element with a sequence." in msg:
-                    raise ValueError("Scalar Quantities and array Quanitities cannot be "
-                                     "combined into a single array")
+                    raise ValueError("Scalar values and arrays/lists cannot be "
+                                     "combined into a single array annotation")
                 else:
                     raise e
+
+            # If most specialized data type that possibly fits all elements is object,
+            # raise an Error with a telling error message, because this means the elements
+            # are not compatible
+            if value.dtype == object:
+                raise ValueError("Cannot convert list of incompatible types into a single"
+                                 " array annotation")
+
+            # Check the first element for correctness
+            # If its type is correct for annotations, all others are correct as well
+            # Note: Emtpy lists cannot reach this point
+            _check_single_elem(value[0])
 
     return value
 
