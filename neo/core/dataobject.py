@@ -12,16 +12,24 @@ import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo, _check_annotations
 
-# TODO: If yes, then should array annotations as a whole also be a property?
-
 
 def _normalize_array_annotations(value, length):
 
-    """
+    """Check consistency of array annotations
+
     Recursively check that value is either an array or list containing only "simple" types
     (number, string, date/time) or is a dict of those.
-    :return The array_annotations from value in correct form
-    :raises ValueError: In case value is not accepted as array_annotation(s)
+
+    Args:
+        :value: (np.ndarray, list or dict) value to be checked for consistency
+        :length: (int) required length of the array annotation
+
+    Returns:
+        np.ndarray The array_annotations from value in correct form
+
+    Raises:
+        ValueError: In case value is not accepted as array_annotation(s)
+
     """
 
     # First stage, resolve dict of annotations into single annotations
@@ -33,16 +41,14 @@ def _normalize_array_annotations(value, length):
 
     elif value is None:
         raise ValueError("Array annotations must not be None")
-    # If not array annotation, pass on to regular check and make it a list,
-    # that is checked again
+    # If not array annotation, pass on to regular check and make it a list, that is checked again
     # This covers array annotations with length 1
     elif not isinstance(value, (list, np.ndarray)) or \
             (isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
         value = _normalize_array_annotations(np.array([value]), length)
 
-    # If array annotation, check for correct length,
-    # only single dimension and allowed data
+    # If array annotation, check for correct length, only single dimension and allowed data
     else:
         # Get length that is required for array annotations, which is equal to the length
         # of the object's data
@@ -56,26 +62,27 @@ def _normalize_array_annotations(value, length):
                 value = np.ndarray((0,))
             val_length = own_length
         else:
-            # Note: len(o) also works for np.ndarray, it then uses the outmost dimension,
+            # Note: len(o) also works for np.ndarray, it then uses the first dimension,
             # which is exactly the desired behaviour here
             val_length = len(value)
 
         if not own_length == val_length:
-            raise ValueError("Incorrect length of array annotation: {} != {}".
-                             format(val_length, own_length))
+            raise ValueError("Incorrect length of array annotation: {} != {}".format(val_length,
+                                                                                     own_length))
 
         # Local function used to check single elements of a list or an array
         # They must not be lists or arrays and fit the usual annotation data types
         def _check_single_elem(element):
             # Nested array annotations not allowed currently
-            # So if an entry is a list or a np.ndarray, it's not allowed,
-            # except if it's a quantity of length 1
+            # If element is a list or a np.ndarray, it's not conform except if it's a quantity of
+            # length 1
             if isinstance(element, list) or \
                     (isinstance(element, np.ndarray) and not
-                    (isinstance(element, pq.Quantity) and element.shape == ())):
+                    (isinstance(element, pq.Quantity) and (element.shape == ()
+                                                           or element.shape == (1,)))):
                 raise ValueError("Array annotations should only be 1-dimensional")
             if isinstance(element, dict):
-                raise ValueError("Dicts are not supported array annotations")
+                raise ValueError("Dictionaries are not supported as array annotations")
 
             # Perform regular check for elements of array or list
             _check_annotations(element)
@@ -86,19 +93,19 @@ def _normalize_array_annotations(value, length):
             # Thus just performing a check on the first element is enough
             # Even if it's a pq.Quantity, which can be scalar or array, this is still true
             # Because a np.ndarray cannot contain scalars and sequences simultaneously
-            try:
+
+            # If length of data is 0, then nothing needs to be checked
+            if len(value):
                 # Perform check on first element
                 _check_single_elem(value[0])
-            except IndexError:
-                # If length of data is 0, then nothing needs to be checked
-                pass
+
             return value
 
         # In case of list, it needs to be ensured that all data are of the same type
         else:
-
             # Conversion to numpy array makes all elements same type
             # Converts elements to most general type
+
             try:
                 value = np.array(value)
             # Except when scalar and non-scalar values are mixed, this causes conversion to fail
@@ -137,17 +144,25 @@ class DataObject(BaseNeo, pq.Quantity):
     - returning it as pq.Quantity or np.ndarray
     - handling of array_annotations
 
-    Array_annotations are a kind of annotations that contain metadata for every data point,
+    Array_annotations are a kind of annotation that contains metadata for every data point,
     i.e. per timestamp (in SpikeTrain, Event and Epoch) or signal channel (in AnalogSignal
     and IrregularlySampledSignal).
     They can contain the same data types as regular annotations, but are always represented
     as numpy arrays of the same length as the number of data points of the annotated neo object.
+
+    Args:
+        name (str, optional): Name of the Neo object
+        description (str, optional): Human readable string description of the Neo object
+        file_origin (str, optional): Origin of the data contained in this Neo object
+        array_annotations (dict, optional): Dictionary containing arrays / lists which annotate
+            individual data points of the Neo object.
+        kwargs: regular annotations stored in a separate annotation dictionary
     '''
 
     def __init__(self, name=None, description=None, file_origin=None, array_annotations=None,
                  **annotations):
         """
-        This method is called from each data object and initializes the newly created object by
+        This method is called by each data object and initializes the newly created object by
         adding array annotations and calling __init__ of the super class, where more annotations
         and attributes are processed.
         """
@@ -163,7 +178,8 @@ class DataObject(BaseNeo, pq.Quantity):
     def array_annotate(self, **array_annotations):
 
         """
-        Add annotations (non-standardized metadata) as arrays to a Neo data object.
+        Add array annotations (annotations for individual data points) as arrays to a Neo data
+        object.
 
         Example:
 
@@ -218,8 +234,6 @@ class DataObject(BaseNeo, pq.Quantity):
         :return Merged array_annotations
         '''
 
-        # Make sure the user is notified for every object about which exact annotations are lost
-        warnings.simplefilter('always', UserWarning)
         merged_array_annotations = {}
         omitted_keys_self = []
         # Concatenating arrays for each key
@@ -251,9 +265,6 @@ class DataObject(BaseNeo, pq.Quantity):
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
-        
-        # Reset warning filter to default state
-        warnings.simplefilter("default")
 
         # Return the merged array_annotations
         return merged_array_annotations
@@ -270,7 +281,6 @@ class DataObject(BaseNeo, pq.Quantity):
             return self.copy()
 
         # Rescale the object into a new object
-        # Works for all objects currently
         obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim),
                                            units=units)
 
@@ -315,12 +325,11 @@ class DataObject(BaseNeo, pq.Quantity):
         This is the last dimension of every object.
         :return Required length of array annotations for this object
         """
-        # Number of items is last dimension in current objects
-        # This holds true for the current implementation
+        # Number of items is last dimension in of data object
         # This method should be overridden in case this changes
         try:
             length = self.shape[-1]
-        # XXX This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
+        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
         # To be removed if __getitem__[int] is changed
         except IndexError:
             length = 1
