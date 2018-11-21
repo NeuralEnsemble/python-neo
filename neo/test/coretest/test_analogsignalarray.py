@@ -847,6 +847,7 @@ class TestAnalogSignalArrayCombination(unittest.TestCase):
                                array_annotations=arr_ann4)
 
         with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings('always')
             merged13 = self.signal1.merge(signal3)
             merged23 = signal2.merge(signal3)
             merged24 = signal2.merge(signal4)
