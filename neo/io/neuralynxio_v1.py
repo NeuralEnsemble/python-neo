@@ -1901,9 +1901,9 @@ class NeuralynxIO(BaseIO):
             'Successfully decoded text header of file (%s).' % filename)
 
     def __get_cheetah_version_from_txt_header(self, text_header, filename):
-        version_regex = re.compile('((-CheetahRev )|'
-                                   '(ApplicationName Cheetah "))'
-                                   '(?P<version>\d{1,3}\.\d{1,3}\.\d{1,3})')
+        version_regex = re.compile(r'((-CheetahRev )|'
+                                   r'(ApplicationName Cheetah "))'
+                                   r'(?P<version>\d{1,3}\.\d{1,3}\.\d{1,3})')
         match = version_regex.search(text_header)
         if match:
             return match.groupdict()['version']
@@ -1913,27 +1913,27 @@ class NeuralynxIO(BaseIO):
 
     def __get_filename_and_times_from_txt_header(self, text_header, version):
         if parse_version(version) <= parse_version('5.6.4'):
-            datetime1_regex = re.compile('## Time Opened \(m/d/y\): '
-                                         '(?P<date>\S+)'
-                                         '  \(h:m:s\.ms\) '
-                                         '(?P<time>\S+)')
-            datetime2_regex = re.compile('## Time Closed \(m/d/y\): '
-                                         '(?P<date>\S+)'
-                                         '  \(h:m:s\.ms\) '
-                                         '(?P<time>\S+)')
-            filename_regex = re.compile('## File Name (?P<filename>\S+)')
+            datetime1_regex = re.compile(r'## Time Opened \(m/d/y\): '
+                                         r'(?P<date>\S+)'
+                                         r'  \(h:m:s\.ms\) '
+                                         r'(?P<time>\S+)')
+            datetime2_regex = re.compile(r'## Time Closed \(m/d/y\): '
+                                         r'(?P<date>\S+)'
+                                         r'  \(h:m:s\.ms\) '
+                                         r'(?P<time>\S+)')
+            filename_regex = re.compile(r'## File Name (?P<filename>\S+)')
 
             datetimeformat = '%m/%d/%Y %H:%M:%S.%f'
 
         else:
-            datetime1_regex = re.compile('-TimeCreated '
-                                         '(?P<date>\S+) '
-                                         '(?P<time>\S+)')
-            datetime2_regex = re.compile('-TimeClosed '
-                                         '(?P<date>\S+) '
-                                         '(?P<time>\S+)')
-            filename_regex = re.compile('-OriginalFileName '
-                                        '"?(?P<filename>\S+)"?')
+            datetime1_regex = re.compile(r'-TimeCreated '
+                                         r'(?P<date>\S+) '
+                                         r'(?P<time>\S+)')
+            datetime2_regex = re.compile(r'-TimeClosed '
+                                         r'(?P<date>\S+) '
+                                         r'(?P<time>\S+)')
+            filename_regex = re.compile(r'-OriginalFileName '
+                                        r'"?(?P<filename>\S+)"?')
 
             datetimeformat = '%Y/%m/%d %H:%M:%S'
 

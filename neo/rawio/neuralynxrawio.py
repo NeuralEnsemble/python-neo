@@ -566,7 +566,7 @@ def read_txt_header(filename):
     # find keys
     info = OrderedDict()
     for k1, k2, type_ in txt_header_keys:
-        pattern = '-(?P<name>' + k1 + ') (?P<value>[\S ]*)'
+        pattern = r'-(?P<name>' + k1 + r') (?P<value>[\S ]*)'
         matches = re.findall(pattern, txt_header)
         for match in matches:
             if k2 == '':
@@ -583,14 +583,14 @@ def read_txt_header(filename):
 
     # convert channel ids
     if 'channel_ids' in info:
-        chid_entries = re.findall('\w+', info['channel_ids'])
+        chid_entries = re.findall(r'\w+', info['channel_ids'])
         info['channel_ids'] = [int(c) for c in chid_entries]
     else:
         info['channel_ids'] = [name]
 
     # convert channel names
     if 'channel_names' in info:
-        name_entries = re.findall('\w+', info['channel_names'])
+        name_entries = re.findall(r'\w+', info['channel_names'])
         if len(name_entries) == 1:
             info['channel_names'] = name_entries * len(info['channel_ids'])
         assert len(info['channel_names']) == len(info['channel_ids']), \
@@ -603,7 +603,7 @@ def read_txt_header(filename):
 
     # convert bit_to_microvolt
     if 'bit_to_microVolt' in info:
-        btm_entries = re.findall('\S+', info['bit_to_microVolt'])
+        btm_entries = re.findall(r'\S+', info['bit_to_microVolt'])
         if len(btm_entries) == 1:
             btm_entries = btm_entries * len(info['channel_ids'])
         info['bit_to_microVolt'] = [float(e) * 1e6 for e in btm_entries]
@@ -611,7 +611,7 @@ def read_txt_header(filename):
             'Number of channel ids does not match bit_to_microVolt conversion factors.'
 
     if 'InputRange' in info:
-        ir_entries = re.findall('\w+', info['InputRange'])
+        ir_entries = re.findall(r'\w+', info['InputRange'])
         if len(ir_entries) == 1:
             info['InputRange'] = [int(ir_entries[0])] * len(chid_entries)
         else:
@@ -621,14 +621,14 @@ def read_txt_header(filename):
 
     # filename and datetime
     if info['version'] <= distutils.version.LooseVersion('5.6.4'):
-        datetime1_regex = '## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
-        datetime2_regex = '## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
-        filename_regex = '## File Name (?P<filename>\S+)'
+        datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
+        datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
+        filename_regex = r'## File Name (?P<filename>\S+)'
         datetimeformat = '%m/%d/%Y %H:%M:%S.%f'
     else:
-        datetime1_regex = '-TimeCreated (?P<date>\S+) (?P<time>\S+)'
-        datetime2_regex = '-TimeClosed (?P<date>\S+) (?P<time>\S+)'
-        filename_regex = '-OriginalFileName "?(?P<filename>\S+)"?'
+        datetime1_regex = r'-TimeCreated (?P<date>\S+) (?P<time>\S+)'
+        datetime2_regex = r'-TimeClosed (?P<date>\S+) (?P<time>\S+)'
+        filename_regex = r'-OriginalFileName "?(?P<filename>\S+)"?'
         datetimeformat = '%Y/%m/%d %H:%M:%S'
 
     original_filename = re.search(filename_regex, txt_header).groupdict()['filename']

@@ -187,7 +187,7 @@ def read_brainvsion_soup(filename):
         for line in f:
             line = line.strip('\n').strip('\r')
             if line.startswith('['):
-                section = re.findall('\[([\S ]+)\]', line)[0]
+                section = re.findall(r'\[([\S ]+)\]', line)[0]
                 all_info[section] = {}
                 continue
             if line.startswith(';'):

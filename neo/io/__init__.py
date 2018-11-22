@@ -43,6 +43,8 @@ Classes:
 
 .. autoclass:: neo.io.IgorIO
 
+.. autoclass:: neo.io.IntanIO
+
 .. autoclass:: neo.io.KlustaKwikIO
 
 .. autoclass:: neo.io.KwikIO
@@ -121,6 +123,7 @@ from neo.io.elanio import ElanIO
 # from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
+from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
@@ -161,6 +164,7 @@ iolist = [
     # ElphyIO,
     ExampleIO,
     IgorIO,
+    IntanIO,
     KlustaKwikIO,
     KwikIO,
     MicromedIO,
