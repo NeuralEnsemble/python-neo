@@ -806,7 +806,7 @@ class TestIrregularlySampledSignalCombination(unittest.TestCase):
         times1 = np.arange(11.0) * pq.ms
         times2 = np.arange(1.0, 12.0) * pq.ms
         arr_ann1 = {'anno1': np.arange(6), 'anno2': ['a', 'b', 'c', 'd', 'e', 'f']}
-        arr_ann2 = {'anno1': np.arange(100, 103), 'anno3': [None]*3}
+        arr_ann2 = {'anno1': np.arange(100, 103), 'anno3': []}
 
         signal1 = IrregularlySampledSignal(times1, data1, name='signal1',
                                            description='test signal', file_origin='testfile.txt',
