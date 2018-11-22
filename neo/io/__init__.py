@@ -43,6 +43,8 @@ Classes:
 
 .. autoclass:: neo.io.IgorIO
 
+.. autoclass:: neo.io.IntanIO
+
 .. autoclass:: neo.io.KlustaKwikIO
 
 .. autoclass:: neo.io.KwikIO
@@ -67,11 +69,15 @@ Classes:
 
 .. autoclass:: neo.io.NSDFIO
 
+.. autoclass:: neo.io.OpenEphysIO
+
 .. autoclass:: neo.io.PickleIO
 
 .. autoclass:: neo.io.PlexonIO
 
 .. autoclass:: neo.io.RawBinarySignalIO
+
+.. autoclass:: neo.io.RawMCSIO
 
 .. autoclass:: neo.io.StimfitIO
 
@@ -117,6 +123,7 @@ from neo.io.elanio import ElanIO
 # from neo.io.elphyio import ElphyIO
 from neo.io.exampleio import ExampleIO
 from neo.io.igorproio import IgorIO
+from neo.io.intanio import IntanIO
 from neo.io.klustakwikio import KlustaKwikIO
 from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
@@ -128,10 +135,13 @@ from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
 from neo.io.neuroscopeio import NeuroScopeIO
 from neo.io.nixio import NixIO
+from neo.io.nixio_fr import NixIO as NixIOFr
 from neo.io.nsdfio import NSDFIO
+from neo.io.openephysio import OpenEphysIO
 from neo.io.pickleio import PickleIO
 from neo.io.plexonio import PlexonIO
 from neo.io.rawbinarysignalio import RawBinarySignalIO
+from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
@@ -154,6 +164,7 @@ iolist = [
     # ElphyIO,
     ExampleIO,
     IgorIO,
+    IntanIO,
     KlustaKwikIO,
     KwikIO,
     MicromedIO,
@@ -166,9 +177,11 @@ iolist = [
     NeuroScopeIO,
     NeuroshareIO,
     NSDFIO,
+    OpenEphysIO,
     PickleIO,
     PlexonIO,
     RawBinarySignalIO,
+    RawMCSIO,
     Spike2IO,
     StimfitIO,
     TdtIO,

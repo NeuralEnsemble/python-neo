@@ -52,9 +52,9 @@ class ElanRawIO(BaseRawIO):
             # strange 2 line for datetime
             # line1
             l = f.readline()
-            r1 = re.findall('(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall('(\d+):(\d+):(\d+)', l)
-            r3 = re.findall('(\d+)-(\d+)-(\d+)', l)
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
             YY, MM, DD, hh, mm, ss = (None,) * 6
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
@@ -65,9 +65,9 @@ class ElanRawIO(BaseRawIO):
 
             # line2
             l = f.readline()
-            r1 = re.findall('(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
-            r2 = re.findall('(\d+):(\d+):(\d+)', l)
-            r3 = re.findall('(\d+)-(\d+)-(\d+)', l)
+            r1 = re.findall(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', l)
+            r2 = re.findall(r'(\d+):(\d+):(\d+)', l)
+            r3 = re.findall(r'(\d+)-(\d+)-(\d+)', l)
             if len(r1) != 0:
                 DD, MM, YY, hh, mm, ss = r1[0]
             elif len(r2) != 0:
@@ -146,7 +146,7 @@ class ElanRawIO(BaseRawIO):
             self._event_labels = []
             self._reject_codes = []
             for l in f.readlines():
-                r = re.findall(' *(\d+) *(\d+) *(\d+) *', l)
+                r = re.findall(r' *(\d+) *(\d+) *(\d+) *', l)
                 self._raw_event_timestamps.append(int(r[0][0]))
                 self._event_labels.append(str(r[0][1]))
                 self._reject_codes.append(str(r[0][2]))

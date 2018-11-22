@@ -458,15 +458,28 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Shifts the time point of all spikes by adding the amount in
         :attr:`time` (:class:`Quantity`)
 
-        Raises an exception if new time points fall outside :attr:`t_start` or
-        :attr:`t_stop`
+        If `time` is a scalar, this also shifts :attr:`t_start` and :attr:`t_stop`.
+        If `time` is an array, :attr:`t_start` and :attr:`t_stop` are not changed unless
+        some of the new spikes would be outside this range.
+        In this case :attr:`t_start` and :attr:`t_stop` are modified if necessary to
+        ensure they encompass all spikes.
+
+        It is not possible to add two SpikeTrains (raises ValueError).
         '''
         spikes = self.view(pq.Quantity)
         check_has_dimensions_time(time)
-        _check_time_in_range(spikes + time, self.t_start, self.t_stop)
-        return SpikeTrain(times=spikes + time, t_stop=self.t_stop,
+        if isinstance(time, SpikeTrain):
+            raise TypeError("Can't add two spike trains")
+        new_times = spikes + time
+        if time.size > 1:
+            t_start = min(self.t_start, np.min(new_times))
+            t_stop = max(self.t_stop, np.max(new_times))
+        else:
+            t_start = self.t_start + time
+            t_stop = self.t_stop + time
+        return SpikeTrain(times=new_times, t_stop=t_stop,
                           units=self.units, sampling_rate=self.sampling_rate,
-                          t_start=self.t_start, waveforms=self.waveforms,
+                          t_start=t_start, waveforms=self.waveforms,
                           left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin,
                           description=self.description, **self.annotations)
@@ -476,18 +489,38 @@ class SpikeTrain(BaseNeo, pq.Quantity):
         Shifts the time point of all spikes by subtracting the amount in
         :attr:`time` (:class:`Quantity`)
 
-        Raises an exception if new time points fall outside :attr:`t_start` or
-        :attr:`t_stop`
+        If `time` is a scalar, this also shifts :attr:`t_start` and :attr:`t_stop`.
+        If `time` is an array, :attr:`t_start` and :attr:`t_stop` are not changed unless
+        some of the new spikes would be outside this range.
+        In this case :attr:`t_start` and :attr:`t_stop` are modified if necessary to
+        ensure they encompass all spikes.
+
+        In general, it is not possible to subtract two SpikeTrain objects (raises ValueError).
+        However, if `time` is itself a SpikeTrain of the same size as the SpikeTrain,
+        returns a Quantities array (since this is often used in checking
+        whether two spike trains are the same or in calculating the inter-spike interval.
         '''
         spikes = self.view(pq.Quantity)
         check_has_dimensions_time(time)
-        _check_time_in_range(spikes - time, self.t_start, self.t_stop)
-        return SpikeTrain(times=spikes - time, t_stop=self.t_stop,
-                          units=self.units, sampling_rate=self.sampling_rate,
-                          t_start=self.t_start, waveforms=self.waveforms,
-                          left_sweep=self.left_sweep, name=self.name,
-                          file_origin=self.file_origin,
-                          description=self.description, **self.annotations)
+        if isinstance(time, SpikeTrain):
+            if self.size == time.size:
+                return spikes - time
+            else:
+                raise TypeError("Can't subtract spike trains with different sizes")
+        else:
+            new_times = spikes - time
+            if time.size > 1:
+                t_start = min(self.t_start, np.min(new_times))
+                t_stop = max(self.t_stop, np.max(new_times))
+            else:
+                t_start = self.t_start - time
+                t_stop = self.t_stop - time
+            return SpikeTrain(times=spikes - time, t_stop=t_stop,
+                              units=self.units, sampling_rate=self.sampling_rate,
+                              t_start=t_start, waveforms=self.waveforms,
+                              left_sweep=self.left_sweep, name=self.name,
+                              file_origin=self.file_origin,
+                              description=self.description, **self.annotations)
 
     def __getitem__(self, i):
         '''

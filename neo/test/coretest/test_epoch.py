@@ -120,6 +120,21 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(epc.annotations['test2'], 'y1')
         self.assertTrue(epc.annotations['test3'])
 
+    def test_Epoch_creation_scalar_duration(self):
+        # test with scalar for durations
+        epc = Epoch([1.1, 1.5, 1.7] * pq.ms,
+                    durations=20 * pq.ns,
+                    labels=np.array(['test epoch 1',
+                                     'test epoch 2',
+                                     'test epoch 3'], dtype='S'))
+        assert_neo_object_is_compliant(epc)
+
+        assert_arrays_equal(epc.times, [1.1, 1.5, 1.7] * pq.ms)
+        assert_arrays_equal(epc.durations, [20, 20, 20] * pq.ns)
+        self.assertEqual(epc.durations.size, 3)
+        assert_arrays_equal(epc.labels,
+                            np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
+
     def test_Epoch_repr(self):
         params = {'test2': 'y1', 'test3': True}
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=[20, 40, 60] * pq.ns,

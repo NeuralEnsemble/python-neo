@@ -35,7 +35,10 @@ class TestPickleIO(unittest.TestCase):
         train.unit = unit
         unit.spiketrains.append(train)
 
-        epoch = Epoch([0, 10, 20], [2, 2, 2], ["a", "b", "c"], units="ms")
+        epoch = Epoch(np.array([0, 10, 20]),
+                      np.array([2, 2, 2]),
+                      np.array(["a", "b", "c"]),
+                      units="ms")
 
         blk = Block()
         seg = Segment()
