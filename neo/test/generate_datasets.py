@@ -125,6 +125,8 @@ def generate_one_simple_segment(seg_name='segment 0',
                 t = t + dur
             labels = np.array(labels, dtype='S')
             labels = labels[(rand(len(times)) * len(labels)).astype('i')]
+            assert len(times) == len(durations)
+            assert len(times) == len(labels)
             epc = Epoch(times=pq.Quantity(times, units=pq.s),
                         durations=pq.Quantity([x[0] for x in durations],
                                               units=pq.s),
@@ -319,6 +321,31 @@ def get_annotations():
     return dict([(str(i), ann) for i, ann in enumerate(TEST_ANNOTATIONS)])
 
 
+def fake_epoch(seed=None, n=1):
+    """
+    Create a fake Epoch.
+
+    We use this separate function because the attributes of
+    Epoch are not independent (must all have the same size)
+    """
+    kwargs = get_annotations()
+    if seed is not None:
+        np.random.seed(seed)
+    size = np.random.randint(5, 15)
+    for i, attr in enumerate(Epoch._necessary_attrs + Epoch._recommended_attrs):
+        if seed is not None:
+            iseed = seed + i
+        else:
+            iseed = None
+        if attr[0] in ('times', 'durations', 'labels'):
+            kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=Epoch, shape=size)
+        else:
+            kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=Epoch, n=n)
+    kwargs['seed'] = seed
+    obj = Epoch(**kwargs)
+    return obj
+
+
 def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
     '''
     Create a fake NEO object of a given type. Follows one-to-many
@@ -336,8 +363,11 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         cls = obj_type
         obj_type = obj_type.__name__
 
-    kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
-    obj = cls(**kwargs)
+    if cls is Epoch:
+        obj = fake_epoch(seed=seed, n=n)
+    else:
+        kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
+        obj = cls(**kwargs)
 
     # if not cascading, we don't need to do any of the stuff after this
     if not cascade:
