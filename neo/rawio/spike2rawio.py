@@ -86,7 +86,7 @@ class Spike2RawIO(BaseRawIO):
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
                     chan_info['t_start'] = float(block_info['start_time']) * \
-                        info['us_per_time'] * info['dtime_base']
+                        float(info['us_per_time']) * float(info['dtime_base'])
 
                 self._channel_infos.append(chan_info)
 
