@@ -399,7 +399,7 @@ class TestEvent(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             evtres = evt1.merge(evt2)
 
-            self.assertTrue(len(w) == 1)
+            self.assertEqual(len(w), 1)
             self.assertEqual(w[0].category, UserWarning)
             self.assertSequenceEqual(str(w[0].message), "The following array annotations were "
                                                         "omitted, because they were only present"
