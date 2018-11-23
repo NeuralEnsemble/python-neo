@@ -281,11 +281,10 @@ class TestAnalogSignalProperties(unittest.TestCase):
         for i, signal in enumerate(self.signals):
             prepr = pretty(signal)
             targ = (('AnalogSignal with %d channels of length %d; units %s; datatype %s \n'
-                     '' % (signal.shape[1], signal.shape[0],
-                           signal.units.dimensionality.unicode, signal.dtype))
-                    + ('annotations: %s\n' % signal.annotations)
-                    + ('sampling rate: {}\n'.format(signal.sampling_rate))
-                    + ('time: {} to {}'.format(signal.t_start, signal.t_stop)))
+                     '' % (signal.shape[1], signal.shape[0], signal.units.dimensionality.unicode,
+                           signal.dtype)) + ('annotations: %s\n' % signal.annotations) + (
+                        'sampling rate: {}\n'.format(signal.sampling_rate)) + (
+                        'time: {} to {}'.format(signal.t_start, signal.t_stop)))
             self.assertEqual(prepr, targ)
 
 
@@ -445,7 +444,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1[self.signal1 == 5], [5 * pq.mV])
 
     def test__comparison_as_indexing_double_trace(self):
-        signal = AnalogSignal(np.arange(20).reshape((-1, 2))*pq.V, sampling_rate=1*pq.Hz)
+        signal = AnalogSignal(np.arange(20).reshape((-1, 2)) * pq.V, sampling_rate=1 * pq.Hz)
         assert_array_equal(signal[signal < 10],
                            np.array([[0, 2, 4, 6, 8], [1, 3, 5, 7, 9]]).T * pq.V)
 
@@ -607,11 +606,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertRaises(ValueError, self.signal1.splice, signal_for_splicing, copy=False)
 
     def test_array_annotations_getitem(self):
-        data = np.arange(15).reshape(5, 3)*pq.mV
+        data = np.arange(15).reshape(5, 3) * pq.mV
         arr_ann1 = [10, 15, 20]
         arr_ann2 = ['abc', 'def', 'ghi']
         arr_anns = {'index': arr_ann1, 'label': arr_ann2}
-        signal = AnalogSignal(data, sampling_rate=30000*pq.Hz, array_annotations=arr_anns)
+        signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz, array_annotations=arr_anns)
 
         # A time slice of all signals is selected, so all array annotations need to remain
         result1 = signal[0:2]

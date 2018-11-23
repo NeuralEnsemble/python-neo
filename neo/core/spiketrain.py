@@ -39,10 +39,9 @@ def check_has_dimensions_time(*values):
     errmsgs = []
     for value in values:
         dim = value.dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
-            errmsgs.append("value %s has dimensions %s, not [time]" %
-                           (value, dim.simplified))
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                          pq.UnitTime)):
+            errmsgs.append("value %s has dimensions %s, not [time]" % (value, dim.simplified))
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
@@ -69,11 +68,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         t_stop = t_stop.view(np.ndarray)
 
     if value.min() < t_start:
-        raise ValueError("The first spike (%s) is before t_start (%s)" %
-                         (value, t_start))
+        raise ValueError("The first spike (%s) is before t_start (%s)" % (value, t_start))
     if value.max() > t_stop:
-        raise ValueError("The last spike (%s) is after t_stop (%s)" %
-                         (value, t_stop))
+        raise ValueError("The last spike (%s) is after t_stop (%s)" % (value, t_stop))
 
 
 def _check_waveform_dimensions(spiketrain):
@@ -92,25 +89,21 @@ def _check_waveform_dimensions(spiketrain):
 
     if waveforms.shape[0] != len(spiketrain):
         raise ValueError("Spiketrain length (%s) does not match to number of "
-                         "waveforms present (%s)" % (len(spiketrain),
-                                                     waveforms.shape[0]))
+                         "waveforms present (%s)" % (len(spiketrain), waveforms.shape[0]))
 
 
-def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None,
-                    copy=True, sampling_rate=1.0 * pq.Hz,
-                    t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
-                    name=None, file_origin=None, description=None,
-                    array_annotations=None, annotations=None,
-                    segment=None, unit=None):
+def _new_spiketrain(cls, signal, t_stop, units=None, dtype=None, copy=True,
+                    sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
+                    name=None, file_origin=None, description=None, array_annotations=None,
+                    annotations=None, segment=None, unit=None):
     '''
     A function to map :meth:`BaseAnalogSignal.__new__` to function that
     does not do the unit checking. This is needed for :module:`pickle` to work.
     '''
     if annotations is None:
         annotations = {}
-    obj = SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate,
-                     t_start, waveforms, left_sweep, name, file_origin,
-                     description, array_annotations, **annotations)
+    obj = SpikeTrain(signal, t_stop, units, dtype, copy, sampling_rate, t_start, waveforms,
+                     left_sweep, name, file_origin, description, array_annotations, **annotations)
     obj.segment = segment
     obj.unit = unit
     return obj
@@ -207,29 +200,23 @@ class SpikeTrain(DataObject):
 
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('t_start', pq.Quantity, 0),
-                        ('t_stop', pq.Quantity, 0))
-    _recommended_attrs = ((('waveforms', pq.Quantity, 3),
-                           ('left_sweep', pq.Quantity, 0),
-                           ('sampling_rate', pq.Quantity, 0)) +
-                          BaseNeo._recommended_attrs)
+    _necessary_attrs = (
+    ('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0), ('t_stop', pq.Quantity, 0))
+    _recommended_attrs = ((('waveforms', pq.Quantity, 3), ('left_sweep', pq.Quantity, 0),
+                           ('sampling_rate', pq.Quantity, 0)) + BaseNeo._recommended_attrs)
 
-    def __new__(cls, times, t_stop, units=None, dtype=None, copy=True,
-                sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None,
-                left_sweep=None, name=None, file_origin=None, description=None,
-                array_annotations=None, **annotations):
+    def __new__(cls, times, t_stop, units=None, dtype=None, copy=True, sampling_rate=1.0 * pq.Hz,
+                t_start=0.0 * pq.s, waveforms=None, left_sweep=None, name=None, file_origin=None,
+                description=None, array_annotations=None, **annotations):
         '''
         Constructs a new :clas:`Spiketrain` instance from data.
 
         This is called whenever a new :class:`SpikeTrain` is created from the
         constructor, but not when slicing.
         '''
-        if len(times) != 0 and waveforms is not None and len(times) != \
-                waveforms.shape[0]:
+        if len(times) != 0 and waveforms is not None and len(times) != waveforms.shape[0]:
             # len(times)!=0 has been used to workaround a bug occuring during neo import
-            raise ValueError(
-                "the number of waveforms should be equal to the number of spikes")
+            raise ValueError("the number of waveforms should be equal to the number of spikes")
 
         # Make sure units are consistent
         # also get the dimensionality now since it is much faster to feed
@@ -278,8 +265,8 @@ class SpikeTrain(DataObject):
         # check to make sure the units are time
         # this approach is orders of magnitude faster than comparing the
         # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                          pq.UnitTime)):
             ValueError("Unit has dimensions %s, not [time]" % dim.simplified)
 
         # Construct Quantity from data
@@ -288,16 +275,15 @@ class SpikeTrain(DataObject):
         # if the dtype and units match, just copy the values here instead
         # of doing the much more expensive creation of a new Quantity
         # using items() is orders of magnitude faster
-        if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and
-                hasattr(t_start, 'dimensionality') and
-                t_start.dimensionality.items() == dim.items()):
+        if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and hasattr(t_start,
+                                                                                 'dimensionality') and t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
-        if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and
-                hasattr(t_stop, 'dimensionality') and
-                t_stop.dimensionality.items() == dim.items()):
+        if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and hasattr(t_stop,
+                                                                               'dimensionality')
+                and t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
             obj.t_stop = pq.Quantity(t_stop, units=dim, dtype=obj.dtype)
@@ -316,10 +302,10 @@ class SpikeTrain(DataObject):
 
         return obj
 
-    def __init__(self, times, t_stop, units=None, dtype=np.float,
-                 copy=True, sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s,
-                 waveforms=None, left_sweep=None, name=None, file_origin=None,
-                 description=None, array_annotations=None, **annotations):
+    def __init__(self, times, t_stop, units=None, dtype=np.float, copy=True,
+                 sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, waveforms=None, left_sweep=None,
+                 name=None, file_origin=None, description=None, array_annotations=None,
+                 **annotations):
         '''
         Initializes a newly constructed :class:`SpikeTrain` instance.
         '''
@@ -330,9 +316,8 @@ class SpikeTrain(DataObject):
 
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        DataObject.__init__(self, name=name, file_origin=file_origin,
-                            description=description, array_annotations=array_annotations,
-                            **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
 
     def _repr_pretty_(self, pp, cycle):
         super(SpikeTrain, self)._repr_pretty_(pp, cycle)
@@ -352,13 +337,11 @@ class SpikeTrain(DataObject):
         works
         '''
         import numpy
-        return _new_spiketrain, (self.__class__, numpy.array(self),
-                                 self.t_stop, self.units, self.dtype, True,
-                                 self.sampling_rate, self.t_start,
-                                 self.waveforms, self.left_sweep,
-                                 self.name, self.file_origin, self.description,
-                                 self.array_annotations, self.annotations,
-                                 self.segment, self.unit)
+        return _new_spiketrain, (
+        self.__class__, numpy.array(self), self.t_stop, self.units, self.dtype, True,
+        self.sampling_rate, self.t_start, self.waveforms, self.left_sweep, self.name,
+        self.file_origin, self.description, self.array_annotations, self.annotations, self.segment,
+        self.unit)
 
     def __array_finalize__(self, obj):
         '''
@@ -416,10 +399,9 @@ class SpikeTrain(DataObject):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_st = cls(np.array(self), self.t_stop, units=self.units,
-                     dtype=self.dtype, copy=True, sampling_rate=self.sampling_rate,
-                     t_start=self.t_start, waveforms=self.waveforms,
-                     left_sweep=self.left_sweep, name=self.name,
+        new_st = cls(np.array(self), self.t_stop, units=self.units, dtype=self.dtype, copy=True,
+                     sampling_rate=self.sampling_rate, t_start=self.t_start,
+                     waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
                      file_origin=self.file_origin, description=self.description)
         new_st.__dict__.update(self.__dict__)
         memo[id(self)] = new_st
@@ -485,12 +467,10 @@ class SpikeTrain(DataObject):
         else:
             t_start = self.t_start + time
             t_stop = self.t_stop + time
-        return SpikeTrain(times=new_times, t_stop=t_stop,
-                          units=self.units, sampling_rate=self.sampling_rate,
-                          t_start=t_start, waveforms=self.waveforms,
-                          left_sweep=self.left_sweep, name=self.name,
-                          file_origin=self.file_origin,
-                          description=self.description,
+        return SpikeTrain(times=new_times, t_stop=t_stop, units=self.units,
+                          sampling_rate=self.sampling_rate, t_start=t_start,
+                          waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
+                          file_origin=self.file_origin, description=self.description,
                           array_annotations=copy.deepcopy(self.array_annotations),
                           **self.annotations)
 
@@ -525,12 +505,10 @@ class SpikeTrain(DataObject):
             else:
                 t_start = self.t_start - time
                 t_stop = self.t_stop - time
-            return SpikeTrain(times=spikes - time, t_stop=t_stop,
-                              units=self.units, sampling_rate=self.sampling_rate,
-                              t_start=t_start, waveforms=self.waveforms,
-                              left_sweep=self.left_sweep, name=self.name,
-                              file_origin=self.file_origin,
-                              description=self.description,
+            return SpikeTrain(times=spikes - time, t_stop=t_stop, units=self.units,
+                              sampling_rate=self.sampling_rate, t_start=t_start,
+                              waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
+                              file_origin=self.file_origin, description=self.description,
                               array_annotations=copy.deepcopy(self.array_annotations),
                               **self.annotations)
 
@@ -552,9 +530,9 @@ class SpikeTrain(DataObject):
         Set the value the item or slice :attr:`i`.
         '''
         if not hasattr(value, "units"):
-            value = pq.Quantity(value, units=self.units)
-            # or should we be strict: raise ValueError("Setting a value
-            # requires a quantity")?
+            value = pq.Quantity(value,
+                                units=self.units)  # or should we be strict: raise ValueError(
+            # "Setting a value  # requires a quantity")?
         # check for values outside t_start, t_stop
         _check_time_in_range(value, self.t_start, self.t_stop)
         super(SpikeTrain, self).__setitem__(i, value)
@@ -572,15 +550,15 @@ class SpikeTrain(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data can be changed
         # here which would cause inconsistencies
-        for attr in ("left_sweep", "sampling_rate", "name", "file_origin",
-                     "description", "annotations"):
+        for attr in (
+        "left_sweep", "sampling_rate", "name", "file_origin", "description", "annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)
             setattr(self, attr, attr_value)
 
-    def duplicate_with_new_data(self, signal, t_start=None, t_stop=None,
-                                waveforms=None, deep_copy=True, units=None):
+    def duplicate_with_new_data(self, signal, t_start=None, t_stop=None, waveforms=None,
+                                deep_copy=True, units=None):
         '''
         Create a new :class:`SpikeTrain` with the same metadata
         but different data (times, t_start, t_stop)
@@ -598,8 +576,8 @@ class SpikeTrain(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop,
-                                waveforms=waveforms, units=units)
+        new_st = self.__class__(signal, t_start=t_start, t_stop=t_stop, waveforms=waveforms,
+                                units=units)
         new_st._copy_data_complement(self, deep_copy=deep_copy)
 
         # Note: Array annotations are not copied here, because length of data could change
@@ -683,15 +661,12 @@ class SpikeTrain(DataObject):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
-        train = SpikeTrain(stack, units=self.units, dtype=self.dtype,
-                           copy=False, t_start=self.t_start,
-                           t_stop=self.t_stop,
-                           sampling_rate=self.sampling_rate,
-                           left_sweep=self.left_sweep, **kwargs)
+        train = SpikeTrain(stack, units=self.units, dtype=self.dtype, copy=False,
+                           t_start=self.t_start, t_stop=self.t_stop,
+                           sampling_rate=self.sampling_rate, left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
             wfs_stack = np.vstack((self.waveforms, other.waveforms))
             wfs_stack = wfs_stack[sorting]
@@ -738,14 +713,14 @@ class SpikeTrain(DataObject):
                 omitted_keys_self.append(key)
                 continue
 
-        omitted_keys_other = [key for key in other.array_annotations
-                              if key not in self.array_annotations]
+        omitted_keys_other = [key for key in other.array_annotations if
+                              key not in self.array_annotations]
 
         if omitted_keys_self or omitted_keys_other:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other".
-                          format(omitted_keys_self, omitted_keys_other), UserWarning)
+                          "into and {} from the one that was merged into the other".format(
+                omitted_keys_self, omitted_keys_other), UserWarning)
 
         return merged_array_annotations
 

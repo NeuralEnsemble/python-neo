@@ -19,13 +19,11 @@ from neo.core.baseneo import merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.epoch import Epoch
 
-
 PY_VER = sys.version_info[0]
 
 
-def _new_event(cls, times=None, labels=None, units=None, name=None,
-               file_origin=None, description=None, array_annotations=None,
-               annotations=None, segment=None):
+def _new_event(cls, times=None, labels=None, units=None, name=None, file_origin=None,
+               description=None, array_annotations=None, annotations=None, segment=None):
     '''
     A function to map Event.__new__ to function that
     does not do the unit checking. This is needed for pickle to work.
@@ -76,8 +74,7 @@ class Event(DataObject):
 
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+    _necessary_attrs = (('times', pq.Quantity, 1), ('labels', np.ndarray, 1, np.dtype('S')))
 
     def __new__(cls, times=None, labels=None, units=None, name=None, description=None,
                 file_origin=None, array_annotations=None, **annotations):
@@ -100,10 +97,9 @@ class Event(DataObject):
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
-            ValueError("Unit %s has dimensions %s, not [time]" %
-                       (units, dim.simplified))
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                          pq.UnitTime)):
+            ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
         obj.labels = labels
@@ -115,18 +111,17 @@ class Event(DataObject):
         '''
         Initialize a new :class:`Event` instance.
         '''
-        DataObject.__init__(self, name=name, file_origin=file_origin,
-                            description=description, array_annotations=array_annotations,
-                            **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
 
     def __reduce__(self):
         '''
         Map the __new__ function onto _new_event, so that pickle
         works
         '''
-        return _new_event, (self.__class__, np.array(self), self.labels, self.units,
-                            self.name, self.file_origin, self.description, self.array_annotations,
-                            self.annotations, self.segment)
+        return _new_event, (
+        self.__class__, np.array(self), self.labels, self.units, self.name, self.file_origin,
+        self.description, self.array_annotations, self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
@@ -150,8 +145,7 @@ class Event(DataObject):
             labels = self.labels.astype('U')
         else:
             labels = self.labels
-        objs = ['%s@%s' % (label, time) for label, time in zip(labels,
-                                                               self.times)]
+        objs = ['%s@%s' % (label, time) for label, time in zip(labels, self.times)]
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
@@ -192,8 +186,7 @@ class Event(DataObject):
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
 
         print('Event: merge annotations')
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
 
         kwargs.update(merged_annotations)
 
@@ -210,19 +203,16 @@ class Event(DataObject):
         '''
         # Note: Array annotations cannot be copied
         # because they are linked to their respective timestamps
-        for attr in ("name", "file_origin", "description",
-                     "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
-        # Note: Array annotations cannot be copied because length of data can be changed
-        # here which would cause inconsistencies
-        # This includes labels and durations!!!
+        for attr in ("name", "file_origin", "description", "annotations"):
+            setattr(self, attr, getattr(other, attr,
+                                        None))  # Note: Array annotations cannot be copied
+            # because length of data can be changed  # here which would cause inconsistencies  #
+            #  This includes labels and durations!!!
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_ev = cls(times=self.times,
-                     labels=self.labels, units=self.units,
-                     name=self.name, description=self.description,
-                     file_origin=self.file_origin)
+        new_ev = cls(times=self.times, labels=self.labels, units=self.units, name=self.name,
+                     description=self.description, file_origin=self.file_origin)
         new_ev.__dict__.update(self.__dict__)
         memo[id(self)] = new_ev
         for k, v in self.__dict__.items():
@@ -320,14 +310,14 @@ class Event(DataObject):
                                  " requires an even number of events")
             times = self.times[::2]
             durations = self.times[1::2] - times
-            labels = np.array(["{}-{}".format(a, b)
-                              for a, b in zip(self.labels[::2], self.labels[1::2])])
+            labels = np.array(
+                ["{}-{}".format(a, b) for a, b in zip(self.labels[::2], self.labels[1::2])])
         elif durations is None:
             # Mode 1
             times = self.times[:-1]
             durations = np.diff(self.times)
-            labels = np.array(["{}-{}".format(a, b)
-                              for a, b in zip(self.labels[:-1], self.labels[1:])])
+            labels = np.array(
+                ["{}-{}".format(a, b) for a, b in zip(self.labels[:-1], self.labels[1:])])
         else:
             # Mode 3
             times = self.times

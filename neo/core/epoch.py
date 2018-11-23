@@ -22,17 +22,18 @@ PY_VER = sys.version_info[0]
 
 
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
-               description=None, file_origin=None, array_annotations=None,
-               annotations=None, segment=None):
+               description=None, file_origin=None, array_annotations=None, annotations=None,
+               segment=None):
     '''
     A function to map epoch.__new__ to function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name,
               file_origin=file_origin, description=description,
-              array_annotations=array_annotations,  **annotations)
+              array_annotations=array_annotations, **annotations)
     e.segment = segment
     return e
+
 
 class Epoch(DataObject):
     '''
@@ -78,13 +79,11 @@ class Epoch(DataObject):
 
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('durations', pq.Quantity, 1),
+    _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
-    def __new__(cls, times=None, durations=None, labels=None, units=None,
-                name=None, description=None, file_origin=None, array_annotations=None,
-                **annotations):
+    def __new__(cls, times=None, durations=None, labels=None, units=None, name=None,
+                description=None, file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
         if durations is None:
@@ -113,10 +112,9 @@ class Epoch(DataObject):
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
-            ValueError("Unit %s has dimensions %s, not [time]" %
-                       (units, dim.simplified))
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                          pq.UnitTime)):
+            ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
         obj.labels = labels
@@ -124,24 +122,22 @@ class Epoch(DataObject):
         obj.segment = None
         return obj
 
-    def __init__(self, times=None, durations=None, labels=None, units=None,
-                 name=None, description=None, file_origin=None, array_annotations=None,
-                 **annotations):
+    def __init__(self, times=None, durations=None, labels=None, units=None, name=None,
+                 description=None, file_origin=None, array_annotations=None, **annotations):
         '''
         Initialize a new :class:`Epoch` instance.
         '''
-        DataObject.__init__(self, name=name, file_origin=file_origin,
-                            description=description, array_annotations=array_annotations,
-                            **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
 
     def __reduce__(self):
         '''
         Map the __new__ function onto _new_epoch, so that pickle
         works
         '''
-        return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
-                            self.name, self.file_origin, self.description, self.array_annotations,
-                            self.annotations, self.segment)
+        return _new_epoch, (
+        self.__class__, self.times, self.durations, self.labels, self.units, self.name,
+        self.file_origin, self.description, self.array_annotations, self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
@@ -166,8 +162,8 @@ class Epoch(DataObject):
         else:
             labels = self.labels
 
-        objs = ['%s@%s for %s' % (label, time, dur) for
-                label, time, dur in zip(labels, self.times, self.durations)]
+        objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
+                zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
@@ -230,8 +226,7 @@ class Epoch(DataObject):
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
 
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
@@ -247,15 +242,13 @@ class Epoch(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.
-        for attr in ("name", "file_origin",
-                     "description", "annotations"):
+        for attr in ("name", "file_origin", "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_ep = cls(times=self.times, durations=self.durations,
-                     labels=self.labels, units=self.units,
-                     name=self.name, description=self.description,
+        new_ep = cls(times=self.times, durations=self.durations, labels=self.labels,
+                     units=self.units, name=self.name, description=self.description,
                      file_origin=self.file_origin)
         new_ep.__dict__.update(self.__dict__)
         memo[id(self)] = new_ep

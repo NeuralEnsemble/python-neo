@@ -10,7 +10,7 @@ Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
 In brief:
-* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist. 
+* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist.
 Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
@@ -39,9 +39,9 @@ class BaseSignal(DataObject):
     This class contains all common methods of both child classes.
     It uses the following child class attributes:
 
-        :_necessary_attrs: a list of the attributes that the class must have. 
+        :_necessary_attrs: a list of the attributes that the class must have.
 
-        :_recommended_attrs: a list of the attributes that the class may 
+        :_recommended_attrs: a list of the attributes that the class may
         optionally have.
     '''
 
@@ -60,9 +60,9 @@ class BaseSignal(DataObject):
 
         User-specified values are only relevant for construction from
         constructor, and these are set in __new__ in the child object.
-        Then they are just copied over here. Default values for the 
+        Then they are just copied over here. Default values for the
         specific attributes for subclasses (:class:`AnalogSignal`
-        and :class:`IrregularlySampledSignal`) are set in 
+        and :class:`IrregularlySampledSignal`) are set in
         :meth:`_array_finalize_spec`
         '''
         super(BaseSignal, self).__array_finalize__(obj)
@@ -90,7 +90,7 @@ class BaseSignal(DataObject):
         '''
         Check that units are present, and rescale the signal if necessary.
         This is called whenever a new signal is
-        created from the constructor. See :meth:`__new__' in  
+        created from the constructor. See :meth:`__new__' in
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
         '''
         if units is None:
@@ -183,8 +183,8 @@ class BaseSignal(DataObject):
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
 
-        # Note: Array annotations cannot be copied because length of data can be changed
-        # here which would cause inconsistencies
+        # Note: Array annotations cannot be copied because length of data can be changed  # here
+        #  which would cause inconsistencies
 
     def __rsub__(self, other, *args):
         '''
@@ -264,16 +264,13 @@ class BaseSignal(DataObject):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
 
-        signal = self.__class__(stack, units=self.units, dtype=self.dtype,
-                                copy=False, t_start=self.t_start,
-                                sampling_rate=self.sampling_rate,
-                                **kwargs)
+        signal = self.__class__(stack, units=self.units, dtype=self.dtype, copy=False,
+                                t_start=self.t_start, sampling_rate=self.sampling_rate, **kwargs)
         signal.segment = self.segment
 
         if hasattr(self, "lazy_shape"):
@@ -281,12 +278,11 @@ class BaseSignal(DataObject):
 
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
-            signal.channel_index = ChannelIndex(
-                index=np.arange(signal.shape[1]),
-                channel_ids=np.hstack([self.channel_index.channel_ids,
-                                       other.channel_index.channel_ids]),
-                channel_names=np.hstack([self.channel_index.channel_names,
-                                         other.channel_index.channel_names]))
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
+                channel_ids=np.hstack(
+                    [self.channel_index.channel_ids, other.channel_index.channel_ids]),
+                channel_names=np.hstack(
+                    [self.channel_index.channel_names, other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 

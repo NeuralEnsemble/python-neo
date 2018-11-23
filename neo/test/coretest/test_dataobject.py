@@ -13,7 +13,6 @@ class Test_DataObject(unittest.TestCase):
 
 class Test_array_annotations(unittest.TestCase):
     def test_check_arr_ann(self):
-
         # DataObject instance that handles checking
         datobj = DataObject([1, 2])  # Inherits from Quantity, so some data is required
 
@@ -81,7 +80,6 @@ class Test_array_annotations(unittest.TestCase):
         self.assertIsInstance(list_ann['anno2'], np.ndarray)
 
     def test_implicit_dict_check(self):
-
         # DataObject instance that handles checking
         datobj = DataObject([1, 2])  # Inherits from Quantity, so some data is required
 
@@ -158,8 +156,8 @@ class Test_array_annotations(unittest.TestCase):
 
         # Make sure they are correct
         self.assertTrue((datobj.array_annotations['anno1'] == np.array([3, 4, 5])).all())
-        self.assertTrue((datobj.array_annotations['anno2'] ==
-                         np.array(['ABC', 'DEF', 'GHI'])).all())
+        self.assertTrue(
+            (datobj.array_annotations['anno2'] == np.array(['ABC', 'DEF', 'GHI'])).all())
         self.assertIsInstance(datobj.array_annotations, ArrayDict)
 
     def test_arr_anns_at_index(self):

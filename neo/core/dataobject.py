@@ -14,7 +14,6 @@ from neo.core.baseneo import BaseNeo, _check_annotations
 
 
 def _normalize_array_annotations(value, length):
-
     """Check consistency of array annotations
 
     Recursively check that value is either an array or list containing only "simple" types
@@ -43,8 +42,8 @@ def _normalize_array_annotations(value, length):
         raise ValueError("Array annotations must not be None")
     # If not array annotation, pass on to regular check and make it a list, that is checked again
     # This covers array annotations with length 1
-    elif not isinstance(value, (list, np.ndarray)) or \
-            (isinstance(value, pq.Quantity) and value.shape == ()):
+    elif not isinstance(value, (list, np.ndarray)) or (
+            isinstance(value, pq.Quantity) and value.shape == ()):
         _check_annotations(value)
         value = _normalize_array_annotations(np.array([value]), length)
 
@@ -67,8 +66,8 @@ def _normalize_array_annotations(value, length):
             val_length = len(value)
 
         if not own_length == val_length:
-            raise ValueError("Incorrect length of array annotation: {} != {}".format(val_length,
-                                                                                     own_length))
+            raise ValueError(
+                "Incorrect length of array annotation: {} != {}".format(val_length, own_length))
 
         # Local function used to check single elements of a list or an array
         # They must not be lists or arrays and fit the usual annotation data types
@@ -76,10 +75,9 @@ def _normalize_array_annotations(value, length):
             # Nested array annotations not allowed currently
             # If element is a list or a np.ndarray, it's not conform except if it's a quantity of
             # length 1
-            if isinstance(element, list) or \
-                    (isinstance(element, np.ndarray) and not
-                    (isinstance(element, pq.Quantity) and (element.shape == ()
-                                                           or element.shape == (1,)))):
+            if isinstance(element, list) or (isinstance(element, np.ndarray) and not (
+                    isinstance(element, pq.Quantity) and (
+                    element.shape == () or element.shape == (1,)))):
                 raise ValueError("Array annotations should only be 1-dimensional")
             if isinstance(element, dict):
                 raise ValueError("Dictionaries are not supported as array annotations")
@@ -172,8 +170,8 @@ class DataObject(BaseNeo, pq.Quantity):
         if array_annotations is not None:
             self.array_annotate(**array_annotations)
 
-        BaseNeo.__init__(self, name=name, description=description,
-                         file_origin=file_origin, **annotations)
+        BaseNeo.__init__(self, name=name, description=description, file_origin=file_origin,
+                         **annotations)
 
     def array_annotate(self, **array_annotations):
 
@@ -248,7 +246,7 @@ class DataObject(BaseNeo, pq.Quantity):
                     except ValueError:
                         raise ValueError("Could not merge array annotations "
                                          "due to different units")
-                    merged_array_annotations[key] = np.append(value, other_value)*value.units
+                    merged_array_annotations[key] = np.append(value, other_value) * value.units
                 else:
                     merged_array_annotations[key] = np.append(value, other_value)
 
@@ -257,15 +255,15 @@ class DataObject(BaseNeo, pq.Quantity):
                 omitted_keys_self.append(key)
                 continue
         # Also save omitted keys from 'other'
-        omitted_keys_other = [key for key in other.array_annotations
-                              if key not in self.array_annotations]
+        omitted_keys_other = [key for key in other.array_annotations if
+                              key not in self.array_annotations]
 
         # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other".
-                          format(omitted_keys_self, omitted_keys_other), UserWarning)
+                          "into and {} from the one that was merged into the other".format(
+                omitted_keys_self, omitted_keys_other), UserWarning)
 
         # Return the merged array_annotations
         return merged_array_annotations
@@ -282,8 +280,7 @@ class DataObject(BaseNeo, pq.Quantity):
             return self.copy()
 
         # Rescale the object into a new object
-        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim),
-                                           units=units)
+        obj = self.duplicate_with_new_data(signal=self.view(pq.Quantity).rescale(dim), units=units)
 
         # Expected behavior is deepcopy, so deepcopying array_annotations
         obj.array_annotations = copy.deepcopy(self.array_annotations)
