@@ -1727,8 +1727,8 @@ class TestPropertiesMethods(unittest.TestCase):
     @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
     def test__pretty(self):
         res = pretty(self.train1)
-        targ = ("SpikeTrain\n" + "name: '%s'\ndescription: '%s'\nannotations: %s" % (
-        self.name1, self.description1, pretty(self.ann1)))
+        targ = ("SpikeTrain\n" + "name: '%s'\ndescription: '%s'\nannotations: %s"
+                                 "" % (self.name1, self.description1, pretty(self.ann1)))
         self.assertEqual(res, targ)
 
 

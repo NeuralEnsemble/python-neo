@@ -348,9 +348,11 @@ class TestEvent(unittest.TestCase):
                      labels=np.array(['test event 2 1', 'test event 2 2', 'test event 2 3'],
                                      dtype='S'), name='test', description='tester 2',
                      file_origin='test.file', array_annotations=arr_ann2, test1=1, **params2)
-        evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms, labels=np.array(
-            ['test event 1 1', 'test event 1 2', 'test event 1 3', 'test event 2 1',
-             'test event 2 2', 'test event 2 3'], dtype='S'), name='test',
+        evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
+                        labels=np.array(['test event 1 1', 'test event 1 2', 'test event 1 3',
+                                         'test event 2 1',  'test event 2 2', 'test event 2 3'],
+                                        dtype='S'),
+                        name='test',
                         description='merge(tester 1, tester 2)', file_origin='test.file',
                         array_annotations={'index': [10, 11, 12, 0, 1, 2]}, test1=1, **paramstarg)
         assert_neo_object_is_compliant(evt1)
@@ -411,8 +413,8 @@ class TestEvent(unittest.TestCase):
         assert_neo_object_is_compliant(evt)
 
         prepr = pretty(evt)
-        targ = ("Event\nname: '%s'\ndescription: '%s'\nannotations: %s" % (
-        evt.name, evt.description, pretty(evt.annotations)))
+        targ = ("Event\nname: '%s'\ndescription: '%s'\nannotations: %s"
+                "" % (evt.name, evt.description, pretty(evt.annotations)))
 
         self.assertEqual(prepr, targ)
 

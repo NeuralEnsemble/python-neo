@@ -150,10 +150,9 @@ class TestEpoch(unittest.TestCase):
         epc.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(epc)
 
-        targ = (
-                    '<Epoch: test epoch 1@1.1 ms for 20.0 ns, ' + 'test epoch 2@1.5 ms for 40.0 '
-                                                                  'ns, ' + 'test epoch 3@1.7 ms '
-                                                                           'for 60.0 ns>')
+        targ = ('<Epoch: test epoch 1@1.1 ms for 20.0 ns, '
+                + 'test epoch 2@1.5 ms for 40.0 ns, '
+                + 'test epoch 3@1.7 ms for 60.0 ns>')
 
         res = repr(epc)
 
@@ -174,9 +173,11 @@ class TestEpoch(unittest.TestCase):
                                      dtype='S'), name='test', description='tester 2',
                      file_origin='test.file', test1=1, array_annotations=arr_ann2, **params2)
         epctarg = Epoch([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
-                        durations=[20, 40, 60, 3000, 5000, 7000] * pq.us, labels=np.array(
-                ['test epoch 1 1', 'test epoch 1 2', 'test epoch 1 3', 'test epoch 2 1',
-                 'test epoch 2 2', 'test epoch 2 3'], dtype='S'), name='test',
+                        durations=[20, 40, 60, 3000, 5000, 7000] * pq.us,
+                        labels=np.array(['test epoch 1 1', 'test epoch 1 2', 'test epoch 1 3',
+                                         'test epoch 2 1', 'test epoch 2 2', 'test epoch 2 3'],
+                                        dtype='S'),
+                        name='test',
                         description='merge(tester 1, tester 2)', file_origin='test.file',
                         array_annotations={'index': [10, 11, 12, 0, 1, 2]}, test1=1, **paramstarg)
         assert_neo_object_is_compliant(epc1)
@@ -237,8 +238,8 @@ class TestEpoch(unittest.TestCase):
         assert_neo_object_is_compliant(epc)
 
         prepr = pretty(epc)
-        targ = ("Epoch\nname: '%s'\ndescription: '%s'\nannotations: %s" % (
-        epc.name, epc.description, pretty(epc.annotations)))
+        targ = ("Epoch\nname: '%s'\ndescription: '%s'\nannotations: %s"
+                "" % (epc.name, epc.description, pretty(epc.annotations)))
 
         self.assertEqual(prepr, targ)
 

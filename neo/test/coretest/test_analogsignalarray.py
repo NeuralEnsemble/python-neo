@@ -220,9 +220,9 @@ class TestAnalogSignalArrayProperties(unittest.TestCase):
     def test__repr(self):
         for i, signal in enumerate(self.signals):
             prepr = repr(signal)
-            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' % (
-            repr(self.data[i]), self.t_start[i],
-            self.t_start[i] + len(self.data[i]) / self.rates[i], self.rates[i])
+            targ = '<AnalogSignal(%s, [%s, %s], sampling rate: %s)>' \
+                   '' % (repr(self.data[i]), self.t_start[i],
+                         self.t_start[i] + len(self.data[i]) / self.rates[i], self.rates[i])
             self.assertEqual(prepr, targ)
 
 

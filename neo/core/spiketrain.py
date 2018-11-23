@@ -200,8 +200,8 @@ class SpikeTrain(DataObject):
 
     _single_parent_objects = ('Segment', 'Unit')
     _quantity_attr = 'times'
-    _necessary_attrs = (
-    ('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0), ('t_stop', pq.Quantity, 0))
+    _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
+                        ('t_stop', pq.Quantity, 0))
     _recommended_attrs = ((('waveforms', pq.Quantity, 3), ('left_sweep', pq.Quantity, 0),
                            ('sampling_rate', pq.Quantity, 0)) + BaseNeo._recommended_attrs)
 
@@ -275,14 +275,16 @@ class SpikeTrain(DataObject):
         # if the dtype and units match, just copy the values here instead
         # of doing the much more expensive creation of a new Quantity
         # using items() is orders of magnitude faster
-        if (hasattr(t_start, 'dtype') and t_start.dtype == obj.dtype and hasattr(t_start,
-                                                                                 'dimensionality') and t_start.dimensionality.items() == dim.items()):
+        if (hasattr(t_start, 'dtype')
+                and t_start.dtype == obj.dtype
+                and hasattr(t_start, 'dimensionality')
+                and t_start.dimensionality.items() == dim.items()):
             obj.t_start = t_start.copy()
         else:
             obj.t_start = pq.Quantity(t_start, units=dim, dtype=obj.dtype)
 
-        if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype and hasattr(t_stop,
-                                                                               'dimensionality')
+        if (hasattr(t_stop, 'dtype') and t_stop.dtype == obj.dtype
+                and hasattr(t_stop, 'dimensionality')
                 and t_stop.dimensionality.items() == dim.items()):
             obj.t_stop = t_stop.copy()
         else:
@@ -337,11 +339,11 @@ class SpikeTrain(DataObject):
         works
         '''
         import numpy
-        return _new_spiketrain, (
-        self.__class__, numpy.array(self), self.t_stop, self.units, self.dtype, True,
-        self.sampling_rate, self.t_start, self.waveforms, self.left_sweep, self.name,
-        self.file_origin, self.description, self.array_annotations, self.annotations, self.segment,
-        self.unit)
+        return _new_spiketrain, (self.__class__, numpy.array(self), self.t_stop, self.units,
+                                 self.dtype, True, self.sampling_rate, self.t_start,
+                                 self.waveforms, self.left_sweep, self.name, self.file_origin,
+                                 self.description, self.array_annotations, self.annotations,
+                                 self.segment, self.unit)
 
     def __array_finalize__(self, obj):
         '''
@@ -550,8 +552,8 @@ class SpikeTrain(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data can be changed
         # here which would cause inconsistencies
-        for attr in (
-        "left_sweep", "sampling_rate", "name", "file_origin", "description", "annotations"):
+        for attr in ("left_sweep", "sampling_rate", "name", "file_origin", "description",
+                     "annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
                 attr_value = copy.deepcopy(attr_value)
@@ -719,8 +721,8 @@ class SpikeTrain(DataObject):
         if omitted_keys_self or omitted_keys_other:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other".format(
-                omitted_keys_self, omitted_keys_other), UserWarning)
+                          "into and {} from the one that was merged into the other"
+                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
 
         return merged_array_annotations
 

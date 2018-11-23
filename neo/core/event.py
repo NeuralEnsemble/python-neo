@@ -119,9 +119,9 @@ class Event(DataObject):
         Map the __new__ function onto _new_event, so that pickle
         works
         '''
-        return _new_event, (
-        self.__class__, np.array(self), self.labels, self.units, self.name, self.file_origin,
-        self.description, self.array_annotations, self.annotations, self.segment)
+        return _new_event, (self.__class__, np.array(self), self.labels, self.units, self.name,
+                            self.file_origin, self.description, self.array_annotations,
+                            self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)

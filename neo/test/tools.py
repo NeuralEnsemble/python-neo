@@ -60,8 +60,8 @@ def assert_arrays_almost_equal(a, b, threshold, dtype=False):
     #                                                               b.dtype)
     if a.dtype.kind in ['f', 'c', 'i']:
         assert (abs(
-            a - b) < threshold).all(), "abs(%s - %s)    max(|a - b|) = %s    threshold:%s" % (
-        a, b, (abs(a - b)).max(), threshold)
+            a - b) < threshold).all(), "abs(%s - %s)    max(|a - b|) = %s    threshold:%s" \
+                                       "" % (a, b, (abs(a - b)).max(), threshold)
 
     if dtype:
         assert a.dtype == b.dtype, "%s and %s not same dtype %s and %s" % (a, b, a.dtype, b.dtype)
@@ -123,33 +123,36 @@ def assert_neo_object_is_compliant(ob):
             assert ob.ndim == ndim, '%s dimension is %d should be %d' % (classname, ob.ndim, ndim)
             if attrtype == np.ndarray:
                 dtp = ioattr[3]
-                assert ob.dtype.kind == dtp.kind, '%s dtype.kind is %s should be %s' % (
-                classname, ob.dtype.kind, dtp.kind)
+                assert ob.dtype.kind == dtp.kind, '%s dtype.kind is %s should be %s' \
+                                                  '' % (classname, ob.dtype.kind, dtp.kind)
 
         elif hasattr(ob, attrname):
             if getattr(ob, attrname) is not None:
                 obattr = getattr(ob, attrname)
-                assert issubclass(type(obattr), attrtype), '%s in %s is %s should be %s' % (
-                attrname, classname, type(obattr), attrtype)
+                assert issubclass(type(obattr), attrtype), '%s in %s is %s should be %s' \
+                                                           '' % (attrname, classname,
+                                                                 type(obattr), attrtype)
                 if attrtype == pq.Quantity or attrtype == np.ndarray:
                     ndim = ioattr[2]
-                    assert obattr.ndim == ndim, '%s.%s dimension is %d should be %d' % (
-                    classname, attrname, obattr.ndim, ndim)
+                    assert obattr.ndim == ndim, '%s.%s dimension is %d should be %d' \
+                                                '' % (classname, attrname, obattr.ndim, ndim)
                 if attrtype == np.ndarray:
                     dtp = ioattr[3]
-                    assert obattr.dtype.kind == dtp.kind, '%s.%s dtype.kind is %s should be %s' % (
-                    classname, attrname, obattr.dtype.kind, dtp.kind)
+                    assert obattr.dtype.kind == dtp.kind, '%s.%s dtype.kind is %s should be %s' \
+                                                          '' % (classname, attrname,
+                                                                obattr.dtype.kind, dtp.kind)
 
     # test bijectivity : parents and children
     for container in getattr(ob, '_single_child_containers', []):
         for i, child in enumerate(getattr(ob, container, [])):
             assert hasattr(child, _reference_name(
-                classname)), '%s should have %s attribute (2 way relationship)' % (
-            container, _reference_name(classname))
+                classname)), '%s should have %s attribute (2 way relationship)' \
+                             '' % (container, _reference_name(classname))
             if hasattr(child, _reference_name(classname)):
                 parent = getattr(child, _reference_name(classname))
-                assert parent == ob, '%s.%s %s is not symetric with %s.%s' % (
-                container, _reference_name(classname), i, classname, container)
+                assert parent == ob, '%s.%s %s is not symetric with %s.%s' \
+                                     '' % (container, _reference_name(classname), i, classname,
+                                           container)
 
     # recursive on one to many rel
     for i, child in enumerate(getattr(ob, 'children', [])):
@@ -182,8 +185,8 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         exclude = []
 
     if isinstance(ob1, list):
-        assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' % (
-        len(ob1), len(ob2), ob1, ob2)
+        assert len(ob1) == len(ob2), 'lens %s and %s not equal for %s and %s' \
+                                     '' % (len(ob1), len(ob2), ob1, ob2)
         for i, (sub1, sub2) in enumerate(zip(ob1, ob2)):
             try:
                 assert_same_sub_schema(sub1, sub2, equal_almost=equal_almost, threshold=threshold,
@@ -199,19 +202,19 @@ def assert_same_sub_schema(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
         if container in exclude:
             continue
         if not hasattr(ob1, container):
-            assert not hasattr(ob2, container), '%s 2 does have %s but not %s 1' % (
-            classname, container, classname)
+            assert not hasattr(ob2, container), '%s 2 does have %s but not %s 1' \
+                                                '' % (classname, container, classname)
             continue
         else:
-            assert hasattr(ob2, container), '%s 1 has %s but not %s 2' % (
-            classname, container, classname)
+            assert hasattr(ob2, container), '%s 1 has %s but not %s 2' % (classname, container,
+                                                                          classname)
 
         sub1 = getattr(ob1, container)
         sub2 = getattr(ob2, container)
 
         assert len(sub1) == len(
-            sub2), 'theses two %s do not have the same %s number: %s and %s' % (
-        classname, container, len(sub1), len(sub2))
+            sub2), 'theses two %s do not have the same %s number: %s and %s' \
+                   '' % (classname, container, len(sub1), len(sub2))
         for i in range(len(getattr(ob1, container))):
             # previously lacking parameter
             try:
@@ -262,27 +265,30 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
             except BaseException as exc:
                 exc.args += ('from %s %s' % (classname, attrname),)
                 raise
-            assert ob1.dimensionality.string == ob2.dimensionality.string, 'Units of %s %s are ' \
-                                                                           'not the same: %s and' \
-                                                                           ' %s' % (
-            classname, attrname, ob1.dimensionality.string, ob2.dimensionality.string)
+            assert ob1.dimensionality.string == ob2.dimensionality.string,\
+                'Units of %s %s are not the same: %s and %s' \
+                '' % (classname, attrname, ob1.dimensionality.string, ob2.dimensionality.string)
             continue
 
         if not hasattr(ob1, attrname):
-            assert not hasattr(ob2, attrname), '%s 2 does have %s but not %s 1' % (
-            classname, attrname, classname)
+            assert not hasattr(ob2, attrname), '%s 2 does have %s but not %s 1' \
+                                               '' % (classname, attrname, classname)
             continue
         else:
-            assert hasattr(ob2, attrname), '%s 1 has %s but not %s 2' % (
-            classname, attrname, classname)
+            assert hasattr(ob2, attrname), '%s 1 has %s but not %s 2' \
+                                           '' % (classname, attrname, classname)
 
         if getattr(ob1, attrname) is None:
-            assert getattr(ob2, attrname) is None, 'In %s.%s %s and %s differed' % (
-            classname, attrname, getattr(ob1, attrname), getattr(ob2, attrname))
+            assert getattr(ob2, attrname) is None, 'In %s.%s %s and %s differed' \
+                                                   '' % (classname, attrname,
+                                                         getattr(ob1, attrname),
+                                                         getattr(ob2, attrname))
             continue
         if getattr(ob2, attrname) is None:
-            assert getattr(ob1, attrname) is None, 'In %s.%s %s and %s differed' % (
-            classname, attrname, getattr(ob1, attrname), getattr(ob2, attrname))
+            assert getattr(ob1, attrname) is None, 'In %s.%s %s and %s differed' \
+                                                   '' % (classname, attrname,
+                                                         getattr(ob1, attrname),
+                                                         getattr(ob2, attrname))
             continue
 
         if attrtype == pq.Quantity:
@@ -302,8 +308,8 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
             dim2 = getattr(ob2, attrname).dimensionality.simplified
             dimstr1 = getattr(ob1, attrname).dimensionality.string
             dimstr2 = getattr(ob2, attrname).dimensionality.string
-            assert dim1 == dim2, 'Attribute %s of %s are not the same: %s != %s' % (
-            attrname, classname, dimstr1, dimstr2)
+            assert dim1 == dim2, 'Attribute %s of %s are not the same: %s != %s' \
+                                 '' % (attrname, classname, dimstr1, dimstr2)
         elif attrtype == np.ndarray:
             try:
                 assert_arrays_almost_equal(getattr(ob1, attrname), getattr(ob2, attrname),
@@ -314,11 +320,10 @@ def assert_same_attributes(ob1, ob2, equal_almost=True, threshold=1e-10, exclude
                 raise
         else:
             # ~ print 'yep', getattr(ob1, attrname),  getattr(ob2, attrname)
-            assert getattr(ob1, attrname) == getattr(ob2,
-                                                     attrname), 'Attribute %s.%s are not the ' \
-                                                                'same %s %s %s %s' % (
-            classname, attrname, type(getattr(ob1, attrname)), getattr(ob1, attrname),
-            type(getattr(ob2, attrname)), getattr(ob2, attrname))
+            assert getattr(ob1, attrname) == getattr(ob2, attrname),\
+                'Attribute %s.%s are not the same %s %s %s %s' \
+                '' % (classname, attrname, type(getattr(ob1, attrname)), getattr(ob1, attrname),
+                      type(getattr(ob2, attrname)), getattr(ob2, attrname))
 
 
 def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
@@ -416,9 +421,8 @@ def assert_sub_schema_is_lazy_loaded(ob):
         # ~ if attrname == '':
         if hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname:
             assert ob.size == 0, 'Lazy loaded error %s.size = %s' % (classname, ob.size)
-            assert hasattr(ob,
-                           'lazy_shape'), 'Lazy loaded error, %s should have lazy_shape ' \
-                                          'attribute' % classname
+            assert hasattr(ob, 'lazy_shape'),\
+                'Lazy loaded error, %s should have lazy_shape attribute' % classname
             continue
 
         if not hasattr(ob, attrname) or getattr(ob, attrname) is None:
@@ -435,12 +439,12 @@ def assert_sub_schema_is_lazy_loaded(ob):
             # ~ print 'ndim', ndim
             # ~ print getattr(ob, attrname).size
             if ndim >= 1:
-                assert getattr(ob, attrname).size == 0, 'Lazy loaded error %s.%s.size = %s' % (
-                classname, attrname, getattr(ob, attrname).size)
-                assert hasattr(ob,
-                               'lazy_shape'), 'Lazy loaded error ' + '%s should have lazy_shape ' \
-                                                                     'attribute ' % classname + \
-                                              'because of %s attribute' % attrname
+                assert getattr(ob, attrname).size == 0,\
+                    'Lazy loaded error %s.%s.size = %s' % (classname, attrname,
+                                                           getattr(ob, attrname).size)
+                assert hasattr(ob,'lazy_shape'),\
+                    'Lazy loaded error %s should have lazy_shape attribute ' % classname + \
+                    'because of %s attribute' % attrname
 
 
 lazy_shape_arrays = {'SpikeTrain': 'times', 'AnalogSignal': 'signal', 'Event': 'times',
@@ -457,12 +461,11 @@ def assert_lazy_sub_schema_can_be_loaded(ob, io):
     if classname in lazy_shape_arrays:
         new_load = io.load_lazy_object(ob)
         assert hasattr(ob, 'lazy_shape'), 'Object %s was not lazy loaded' % classname
-        assert not hasattr(new_load,
-                           'lazy_shape'), 'Newly loaded object from %s was also lazy loaded' % \
-                                          classname
+        assert not hasattr(new_load, 'lazy_shape'),\
+            'Newly loaded object from %s was also lazy loaded' % classname
         if hasattr(ob, '_quantity_attr'):
-            assert ob.lazy_shape == new_load.shape, 'Shape of loaded object %sis not equal to ' \
-                                                    'lazy shape' % classname
+            assert ob.lazy_shape == new_load.shape,\
+                'Shape of loaded object %sis not equal to lazy shape' % classname
         else:
             assert ob.lazy_shape == getattr(new_load, lazy_shape_arrays[
                 classname]).shape, 'Shape of loaded object %s not equal to lazy shape' % classname
@@ -495,8 +498,8 @@ def assert_objects_equivalent(obj1, obj2):
         attr1 = hashlib.md5(getattr(obj1, attr_name)).hexdigest()
         assert hasattr(obj2, attr_name)
         attr2 = hashlib.md5(getattr(obj2, attr_name)).hexdigest()
-        assert attr1 == attr2, "Attribute %s for class %s is not equal." % (
-        attr_name, obj1.__class__.__name__)
+        assert attr1 == attr2, "Attribute %s for class %s is not equal." \
+                               "" % (attr_name, obj1.__class__.__name__)
 
     obj_type = obj1.__class__.__name__
     assert obj_type == obj2.__class__.__name__

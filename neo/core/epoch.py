@@ -135,9 +135,9 @@ class Epoch(DataObject):
         Map the __new__ function onto _new_epoch, so that pickle
         works
         '''
-        return _new_epoch, (
-        self.__class__, self.times, self.durations, self.labels, self.units, self.name,
-        self.file_origin, self.description, self.array_annotations, self.annotations, self.segment)
+        return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
+                            self.name, self.file_origin, self.description, self.array_annotations,
+                            self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)

@@ -262,8 +262,8 @@ class DataObject(BaseNeo, pq.Quantity):
         if omitted_keys_other or omitted_keys_self:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other".format(
-                omitted_keys_self, omitted_keys_other), UserWarning)
+                          "into and {} from the one that was merged into the other"
+                          "".format(omitted_keys_self, omitted_keys_other), UserWarning)
 
         # Return the merged array_annotations
         return merged_array_annotations
