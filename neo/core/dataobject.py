@@ -259,6 +259,7 @@ class DataObject(BaseNeo, pq.Quantity):
         # Also save omitted keys from 'other'
         omitted_keys_other = [key for key in other.array_annotations
                               if key not in self.array_annotations]
+
         # Warn if keys were omitted
         if omitted_keys_other or omitted_keys_self:
             warnings.warn("The following array annotations were omitted, because they were only "

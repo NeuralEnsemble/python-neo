@@ -191,6 +191,7 @@ class Event(DataObject):
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
 
+        print('Event: merge annotations')
         merged_annotations = merge_annotations(self.annotations,
                                                other.annotations)
 

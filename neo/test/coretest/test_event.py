@@ -5,6 +5,7 @@ Tests of the neo.core.event.Event class
 
 import unittest
 import warnings
+warnings.simplefilter("always")
 
 import numpy as np
 import quantities as pq
@@ -358,6 +359,7 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(targ, res)
 
     def test_Event_merge(self):
+        warnings.simplefilter("always")
         params1 = {'test2': 'y1', 'test3': True}
         params2 = {'test2': 'no', 'test4': False}
         paramstarg = {'test2': 'yes;no',

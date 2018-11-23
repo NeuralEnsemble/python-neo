@@ -217,7 +217,7 @@ class TestEpoch(unittest.TestCase):
         with warnings.catch_warnings(record=True) as w:
             epcres = epc1.merge(epc2)
 
-            self.assertTrue(len(w) == 1)
+            self.assertTrue(len(w), 1)
             self.assertEqual(w[0].category, UserWarning)
             self.assertSequenceEqual(str(w[0].message), "The following array annotations were "
                                                         "omitted, because they were only present"

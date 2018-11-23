@@ -717,9 +717,6 @@ class SpikeTrain(DataObject):
 
         assert sorting is not None, "The order of the merged spikes must be known"
 
-        # Make sure the user is notified for every object about which exact annotations are lost
-        warnings.simplefilter('always', UserWarning)
-
         merged_array_annotations = {}
 
         omitted_keys_self = []
@@ -749,8 +746,6 @@ class SpikeTrain(DataObject):
                           "present in one of the merged objects: {} from the one that was merged "
                           "into and {} from the one that was merged into the other".
                           format(omitted_keys_self, omitted_keys_other), UserWarning)
-        # Reset warning filter to default state
-        warnings.simplefilter("default")
 
         return merged_array_annotations
 
