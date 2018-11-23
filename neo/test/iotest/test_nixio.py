@@ -1333,6 +1333,8 @@ class NixIOReadTest(NixIOTest):
         for idx, nixblock in enumerate(self.nixfile.blocks):
             neoblock = self.io.read_block(index=idx)
             self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
+            self.assertEqual(neoblock.annotations["nix_name"],
+                             self.nixfile.blocks[idx].name)
 
     def test_auto_index_read(self):
         for nixblock in self.nixfile.blocks:
@@ -1343,6 +1345,15 @@ class NixIOReadTest(NixIOTest):
         self.assertIs(self.io.read_block(), None)
         self.assertIs(self.io.read_block(), None)
         self.assertIs(self.io.read_block(), None)
+
+        with NixIO(self.filename, "ro") as nf:
+            neoblock = nf.read_block(index=1)
+            self.assertEqual(self.nixfile.blocks[1].name,
+                             neoblock.annotations["nix_name"])
+
+            neoblock = nf.read_block()  # should start again from 0
+            self.assertEqual(self.nixfile.blocks[0].name,
+                             neoblock.annotations["nix_name"])
 
     def test_neo_name_read(self):
         for nixblock in self.nixfile.blocks:

@@ -214,9 +214,8 @@ class NixIO(BaseIO):
             if index >= len(self.nix_file.blocks):
                 return None
             nix_block = self.nix_file.blocks[index]
+            self._block_read_counter += 1
 
-        nix_block = self.nix_file.blocks[self._block_read_counter]
-        self._block_read_counter += 1
         return self._nix_to_neo_block(nix_block)
 
     def iter_blocks(self):
