@@ -15,6 +15,7 @@ from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
 from neo.rawio.brainvisionrawio import BrainVisionRawIO
 from neo.rawio.elanrawio import ElanRawIO
+from neo.rawio.intanrawio import IntanRawIO
 from neo.rawio.micromedrawio import MicromedRawIO
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
@@ -22,6 +23,7 @@ from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
+from neo.rawio.rawmcsrawio import RawMCSRawIO
 from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
@@ -32,6 +34,7 @@ rawiolist = [
     BlackrockRawIO,
     BrainVisionRawIO,
     ElanRawIO,
+    IntanRawIO,
     MicromedRawIO,
     NeuralynxRawIO,
     NeuroExplorerRawIO,
@@ -39,6 +42,7 @@ rawiolist = [
     NIXRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
+    RawMCSRawIO,
     Spike2RawIO,
     TdtRawIO,
     WinEdrRawIO,

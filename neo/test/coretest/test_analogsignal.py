@@ -452,7 +452,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__indexing_keeps_order_across_channels(self):
         # AnalogSignals with 10 traces each having 5 samples (eg. data[0] = [0,10,20,30,40])
         data = np.array([range(10), range(10, 20), range(20, 30), range(30, 40), range(40, 50)])
-        mask = np.full((5, 10), fill_value=False)
+        mask = np.full((5, 10), fill_value=False, dtype=bool)
         # selecting one entry per trace
         mask[[0, 1, 0, 3, 0, 2, 4, 3, 1, 4], range(10)] = True
 
@@ -462,7 +462,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test__indexing_keeps_order_across_time(self):
         # AnalogSignals with 10 traces each having 5 samples (eg. data[0] = [0,10,20,30,40])
         data = np.array([range(10), range(10, 20), range(20, 30), range(30, 40), range(40, 50)])
-        mask = np.full((5, 10), fill_value=False)
+        mask = np.full((5, 10), fill_value=False, dtype=bool)
         # selecting two entries per trace
         temporal_ids = [0, 1, 0, 3, 1, 2, 4, 2, 1, 4] + [4, 3, 2, 1, 0, 1, 2, 3, 2, 1]
         mask[temporal_ids, list(range(10)) + list(range(10))] = True

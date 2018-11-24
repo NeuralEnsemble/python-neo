@@ -57,10 +57,10 @@ class Epoch(DataObject):
               dtype='|S4')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D) The starts of the time periods.
-        :durations: (quantity array 1D) The length of the time period.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the
-            time periods.
+        :times: (quantity array 1D) The start times of each time period.
+        :durations: (quantity array 1D or quantity scalar) The length(s) of each time period.
+           If a scalar, the same value is used for all time periods.
+        :labels: (numpy.array 1D dtype='S') Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -89,8 +89,15 @@ class Epoch(DataObject):
             times = np.array([]) * pq.s
         if durations is None:
             durations = np.array([]) * pq.s
+        elif durations.size != times.size:
+            if durations.size == 1:
+                durations = durations * np.ones_like(times.magnitude)
+            else:
+                raise ValueError("Durations array has different length to times")
         if labels is None:
             labels = np.array([], dtype='S')
+        elif len(labels) != times.size:
+            raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -189,6 +196,14 @@ class Epoch(DataObject):
         except AttributeError:  # If Quantity was returned, not Epoch
             pass
         return obj
+
+    def __getslice__(self, i, j):
+        '''
+        Get a slice from :attr:`i` to :attr:`j`.attr[0]
+
+        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
+        '''
+        return self.__getitem__(slice(i, j))
 
     @property
     def times(self):
