@@ -186,7 +186,8 @@ class BCI2000RawIO(BaseRawIO):
                     bit_mask[-1] &= 255 & (255 >> extra_bits)  # Fix the mask for the last byte
                     # When converting to an int, we need to know which integer type it will become
                     n_max_bytes = 1 << (nbytes - 1).bit_length()
-                    view_type = {1: np.int8, 2: np.int16, 4: np.int32, 8: np.int64}.get(n_max_bytes)
+                    view_type = {1: np.int8, 2: np.int16,
+                        4: np.int32, 8: np.int64}.get(n_max_bytes)
                     # Slice and mask the data
                     masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
                     # Convert byte array to a vector of ints:

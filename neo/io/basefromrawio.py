@@ -134,7 +134,7 @@ class BaseFromRaw(BaseIO):
                     for j in ind_abs:
                         for key in list(self.raw_annotations['signal_channels'][i].keys()):
                             chidx_annotations[key].append(self.raw_annotations[
-                                                              'signal_channels'][j][key])
+                                'signal_channels'][j][key])
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)

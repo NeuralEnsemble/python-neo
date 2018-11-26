@@ -473,7 +473,7 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
                     chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
                     chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
-                                                            get_idx] * pq.uV
+                        get_idx] * pq.uV
                     chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
                     chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
                     chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
@@ -486,12 +486,12 @@ class BlackrockRawIO(BaseRawIO):
                             sig_channels[c]['id'])
                         # filter type codes (extracted from blackrock manual)
                         chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
-                                                              get_idx] / 1000. * pq.Hz
+                            get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
                         chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
                             get_idx]]
                         chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
-                                                              get_idx] / 1000. * pq.Hz
+                            get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
@@ -1198,7 +1198,7 @@ class BlackrockRawIO(BaseRawIO):
                     # Last timestamp in this nsX segment
                     # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = seg['timestamp'] + \
-                                seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
+                        seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
 
                     mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
                                                        end_of_current_nsx_seg + nsx_period)]
@@ -1233,7 +1233,7 @@ class BlackrockRawIO(BaseRawIO):
                         # If reset and no segment detected in nev, then these segments cannot be
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
-                        elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
+                        elif list_nonempty_nsx_segments[i + 1]['timestamp'] - nsx_offset <= 96:
                             # If not all definitely belong to the next segment,
                             # then it cannot be distinguished where some belong
                             if len(data[ev_ids == i]) != len(data[mask_after_seg]):

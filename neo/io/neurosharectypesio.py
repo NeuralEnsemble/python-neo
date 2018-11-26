@@ -238,7 +238,7 @@ class NeurosharectypesIO(BaseIO):
 
             # segment
             if entity_types[
-                entityInfo.dwEntityType] == 'ns_ENTITY_SEGMENT' and import_neuroshare_segment:
+                    entityInfo.dwEntityType] == 'ns_ENTITY_SEGMENT' and import_neuroshare_segment:
 
                 pdwSegmentInfo = ns_SEGMENTINFO()
                 if not str(entityInfo.szEntityLabel).startswith('spks'):
@@ -268,12 +268,13 @@ class NeurosharectypesIO(BaseIO):
                 times = np.empty((entityInfo.dwItemCount), dtype='f')
                 waveforms = np.empty((entityInfo.dwItemCount, nsource, nsample), dtype='f')
                 for dwIndex in range(entityInfo.dwItemCount):
-                    neuroshare.ns_GetSegmentData(hFile, dwEntityID, dwIndex,
-                                                 ctypes.byref(pdTimeStamp), pData.ctypes.data_as(
-                            ctypes.POINTER(ctypes.c_double)),
-                                                 dwDataBufferSize *
-                                                 8, ctypes.byref(pdwSampleCount),
-                                                 ctypes.byref(pdwUnitID))
+                    neuroshare.ns_GetSegmentData(
+                        hFile, dwEntityID, dwIndex,
+                        ctypes.byref(pdTimeStamp),
+                        pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                        dwDataBufferSize *
+                        8, ctypes.byref(pdwSampleCount),
+                        ctypes.byref(pdwUnitID))
 
                     times[dwIndex] = pdTimeStamp.value
                     waveforms[dwIndex, :, :] = pData[:nsample *

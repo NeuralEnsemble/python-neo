@@ -170,7 +170,7 @@ class NestIO(BaseIO):
             # create one analogsignal per value column requested
             for v_id, value_column in enumerate(value_columns):
                 signal = data[
-                         selected_ids[0]:selected_ids[1], value_column]
+                    selected_ids[0]:selected_ids[1], value_column]
 
                 # create AnalogSignal objects and annotate them with
                 #  the neuron ID
@@ -736,9 +736,7 @@ class ColumnIO:
         elif (condition is not None) and (condition_column is not None):
             condition_function = np.vectorize(condition)
             mask = condition_function(
-                selected_data[
-                :, condition_column]).astype(bool)
-
+                selected_data[:, condition_column]).astype(bool)
             selected_data = selected_data[mask, :]
 
         # Apply sorting if requested

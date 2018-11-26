@@ -286,7 +286,7 @@ class NeoMatlabIO(BaseIO):
             # ~ continue
 
             if (hasattr(ob, '_quantity_attr') and
-                ob._quantity_attr == attrname):
+                    ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
@@ -375,7 +375,7 @@ class NeoMatlabIO(BaseIO):
                 # linked with another field
                 continue
             if (hasattr(cl, '_quantity_attr') and
-                cl._quantity_attr == attrname):
+                    cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)

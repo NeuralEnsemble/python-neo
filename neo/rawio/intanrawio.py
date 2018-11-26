@@ -47,10 +47,10 @@ class IntanRawIO(BaseRawIO):
 
         if self.filename.endswith('.rhs'):
             self._global_info, self._ordered_channels, data_dtype,\
-                    header_size, self._block_size = read_rhs(self.filename)
+                header_size, self._block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
             self._global_info, self._ordered_channels,  data_dtype,\
-                    header_size, self._block_size = read_rhd(self.filename)
+                header_size, self._block_size = read_rhd(self.filename)
 
         # memmap raw data with the complicated structured dtype
         self._raw_data = np.memmap(self.filename, dtype=data_dtype, mode='r', offset=header_size)
@@ -281,19 +281,19 @@ def read_rhs(filename):
         for chan_info in channels_by_type[0]:
             name = chan_info['native_channel_name']
             chan_info_dc = dict(chan_info)
-            chan_info_dc['native_channel_name'] = name+'_DC'
+            chan_info_dc['native_channel_name'] = name + '_DC'
             chan_info_dc['sampling_rate'] = sr
             chan_info_dc['units'] = 'mV'
             chan_info_dc['gain'] = 19.23
             chan_info_dc['offset'] = -512 * 19.23
             chan_info_dc['signal_type'] = 10  # put it in another group
             ordered_channels.append(chan_info_dc)
-            data_dtype += [(name+'_DC', 'uint16', BLOCK_SIZE)]
+            data_dtype += [(name + '_DC', 'uint16', BLOCK_SIZE)]
 
     for chan_info in channels_by_type[0]:
         name = chan_info['native_channel_name']
         chan_info_stim = dict(chan_info)
-        chan_info_stim['native_channel_name'] = name+'_STIM'
+        chan_info_stim['native_channel_name'] = name + '_STIM'
         chan_info_stim['sampling_rate'] = sr
         # stim channel are coplicated because they are coded
         # with bits, they do not fit the gain/offset rawio strategy
@@ -302,7 +302,7 @@ def read_rhs(filename):
         chan_info_stim['offset'] = 0.
         chan_info_stim['signal_type'] = 11  # put it in another group
         ordered_channels.append(chan_info_stim)
-        data_dtype += [(name+'_STIM', 'uint16', BLOCK_SIZE)]
+        data_dtype += [(name + '_STIM', 'uint16', BLOCK_SIZE)]
 
     # 3: Analog input channel.
     # 4: Analog output channel.
@@ -478,7 +478,7 @@ def read_rhd(filename):
         chan_info['gain'] = 0.0000374
         chan_info['offset'] = 0.
         ordered_channels.append(chan_info)
-        data_dtype += [(name, 'uint16', BLOCK_SIZE//4)]
+        data_dtype += [(name, 'uint16', BLOCK_SIZE // 4)]
 
     # 2: RHD2000 supply voltage channel
     for chan_info in channels_by_type[2]:

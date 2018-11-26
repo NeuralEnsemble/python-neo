@@ -32,7 +32,7 @@ def get_rect_height(name, obj):
     nlines += len(getattr(obj, '_single_child_objects', []))
     nlines += len(getattr(obj, '_multi_child_objects', []))
     nlines += len(getattr(obj, '_multi_parent_objects', []))
-    return nlines*line_heigth
+    return nlines * line_heigth
 
 
 def annotate(ax, coord1, coord2, connectionstyle, color, alpha):
@@ -55,7 +55,7 @@ def annotate(ax, coord1, coord2, connectionstyle, color, alpha):
 
 def calc_coordinates(pos, height):
     x = pos[0]
-    y = pos[1] + height - line_heigth*.5
+    y = pos[1] + height - line_heigth * .5
 
     return pos[0], y
 
@@ -110,15 +110,15 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # title green
-        pos2 = pos[0], pos[1]+htotal - line_heigth*1.5
-        rect = Rectangle(pos2, rect_width, line_heigth*1.5,
+        pos2 = pos[0], pos[1] + htotal - line_heigth * 1.5
+        rect = Rectangle(pos2, rect_width, line_heigth * 1.5,
                          facecolor='g', edgecolor='k', alpha=.5, linewidth=2.)
         ax.add_patch(rect)
 
         # single relationship
         relationship = getattr(obj, '_single_child_objects', [])
-        pos2 = pos[1] + htotal - line_heigth*(1.5+len(relationship))
-        rect_height = len(relationship)*line_heigth
+        pos2 = pos[1] + htotal - line_heigth * (1.5 + len(relationship))
+        rect_height = len(relationship) * line_heigth
 
         rect = Rectangle((pos[0], pos2), rect_width, rect_height,
                          facecolor='c', edgecolor='k', alpha=.5)
@@ -127,20 +127,20 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         # multi relationship
         relationship = (list(getattr(obj, '_multi_child_objects', [])) +
                         list(getattr(obj, '_multi_parent_containers', [])))
-        pos2 = (pos[1]+htotal - line_heigth*(1.5+len(relationship)) -
+        pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship)) -
                 rect_height)
-        rect_height = len(relationship)*line_heigth
+        rect_height = len(relationship) * line_heigth
 
         rect = Rectangle((pos[0], pos2), rect_width, rect_height,
                          facecolor='m', edgecolor='k', alpha=.5)
         ax.add_patch(rect)
 
         # necessary attr
-        pos2 = (pos[1]+htotal -
-                line_heigth*(1.5+len(allrelationship) +
+        pos2 = (pos[1] + htotal -
+                line_heigth * (1.5 + len(allrelationship) +
                              len(obj._necessary_attrs)))
         rect = Rectangle((pos[0], pos2), rect_width,
-                         line_heigth*len(obj._necessary_attrs),
+                         line_heigth * len(obj._necessary_attrs),
                          facecolor='r', edgecolor='k', alpha=.5)
         ax.add_patch(rect)
 
@@ -149,17 +149,17 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
             post = '* '
         else:
             post = ''
-        ax.text(pos[0]+rect_width/2., pos[1]+htotal - line_heigth*1.5/2.,
-                name+post,
+        ax.text(pos[0] + rect_width / 2., pos[1] + htotal - line_heigth * 1.5 / 2.,
+                name + post,
                 horizontalalignment='center', verticalalignment='center',
-                fontsize=fontsize+2,
+                fontsize=fontsize + 2,
                 fontproperties=FontProperties(weight='bold'),
                 )
 
-        #relationship
+        # relationship
         for i, relat in enumerate(allrelationship):
-            ax.text(pos[0]+left_text_shift, pos[1]+htotal - line_heigth*(i+2),
-                    relat+': list',
+            ax.text(pos[0] + left_text_shift, pos[1] + htotal - line_heigth * (i + 2),
+                    relat + ': list',
                     horizontalalignment='left', verticalalignment='center',
                     fontsize=fontsize,
                     )
@@ -169,7 +169,7 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
             t1 = attrname
             if (hasattr(obj, '_quantity_attr') and
                     obj._quantity_attr == attrname):
-                t1 = attrname+'(object itself)'
+                t1 = attrname + '(object itself)'
             else:
                 t1 = attrname
 
@@ -185,9 +185,9 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
             else:
                 t2 = attrtype.__name__
 
-            t = t1+' :  '+t2
-            ax.text(pos[0]+left_text_shift,
-                    pos[1]+htotal - line_heigth*(i+len(allrelationship)+2),
+            t = t1 + ' :  ' + t2
+            ax.text(pos[0] + left_text_shift,
+                    pos[1] + htotal - line_heigth * (i + len(allrelationship) + 2),
                     t,
                     horizontalalignment='left', verticalalignment='center',
                     fontsize=fontsize,
@@ -206,15 +206,15 @@ def generate_diagram_simple():
     figsize = (18, 12)
     rw = rect_width = 3.
     bf = blank_fact = 1.2
-    rect_pos = {'Block': (.5+rw*bf*0, 4),
-                'Segment': (.5+rw*bf*1, .5),
-                'Event': (.5+rw*bf*4, 3.0),
-                'Epoch': (.5+rw*bf*4, 1.0),
-                'ChannelIndex': (.5+rw*bf*1, 7.5),
-                'Unit': (.5+rw*bf*2., 9.9),
-                'SpikeTrain': (.5+rw*bf*3, 7.5),
-                'IrregularlySampledSignal': (.5+rw*bf*3, 0.5),
-                'AnalogSignal': (.5+rw*bf*3, 4.9),
+    rect_pos = {'Block': (.5 + rw * bf * 0, 4),
+                'Segment': (.5 + rw * bf * 1, .5),
+                'Event': (.5 + rw * bf * 4, 3.0),
+                'Epoch': (.5 + rw * bf * 4, 1.0),
+                'ChannelIndex': (.5 + rw * bf * 1, 7.5),
+                'Unit': (.5 + rw * bf * 2., 9.9),
+                'SpikeTrain': (.5 + rw * bf * 3, 7.5),
+                'IrregularlySampledSignal': (.5 + rw * bf * 3, 0.5),
+                'AnalogSignal': (.5 + rw * bf * 3, 4.9),
                 }
     generate_diagram('simple_generated_diagram.svg',
                      rect_pos, rect_width, figsize)

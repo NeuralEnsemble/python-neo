@@ -174,7 +174,6 @@ class DataObject(BaseNeo, pq.Quantity):
                          **annotations)
 
     def array_annotate(self, **array_annotations):
-
         """
         Add array annotations (annotations for individual data points) as arrays to a Neo data
         object.
@@ -189,7 +188,6 @@ class DataObject(BaseNeo, pq.Quantity):
         self.array_annotations.update(array_annotations)
 
     def array_annotations_at_index(self, index):
-
         """
         Return dictionary of array annotations at a given index or list of indices
         :param index: int, list, numpy array: The index (indices) from which the annotations

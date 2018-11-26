@@ -1658,7 +1658,7 @@ class BlackrockIO(BaseIO):
                     "".format(user_n_stops[start_stop_id]))
 
             if (user_n_stops[start_stop_id] < min_time
-                or user_n_starts[start_stop_id] > max_time):
+                    or user_n_starts[start_stop_id] > max_time):
                 user_n_stops.pop(start_stop_id)
                 user_n_starts.pop(start_stop_id)
                 self._print_verbose(
@@ -1721,7 +1721,7 @@ class BlackrockIO(BaseIO):
                 mask = (n_stops_files > start) & (n_stops_files < stop)
                 red_n_stops_files = np.array(n_stops_files)[mask]
                 merged_n_stops = [
-                                     tp * highest_res for tp in red_n_stops_files] + [stop]
+                    tp * highest_res for tp in red_n_stops_files] + [stop]
             else:
                 merged_n_stops = [stop]
             # Define combined user and file n_starts and n_stops
@@ -2008,11 +2008,11 @@ class BlackrockIO(BaseIO):
                     nev_dig_factor=self.__nev_ext_header[
                         b'NEUEVWAV']['digitization_factor'][get_idx],
                     nev_energy_threshold=self.__nev_ext_header[
-                                             b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
                     nev_hi_threshold=self.__nev_ext_header[
-                                         b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
                     nev_lo_threshold=self.__nev_ext_header[
-                                         b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
                     nb_sorted_units=self.__nev_ext_header[
                         b'NEUEVWAV']['nb_sorted_units'][get_idx],
                     waveform_size=self.__waveform_size[self.__nev_spec](
@@ -2027,15 +2027,15 @@ class BlackrockIO(BaseIO):
                     # filter type codes (extracted from blackrock manual)
                     chidx.annotate(
                         nev_hi_freq_corner=self.__nev_ext_header[b'NEUEVFLT'][
-                                               'hi_freq_corner'][get_idx] /
-                                           1000. * pq.Hz,
+                            'hi_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
                         nev_hi_freq_order=self.__nev_ext_header[b'NEUEVFLT'][
                             'hi_freq_order'][get_idx],
                         nev_hi_freq_type=flt_type[self.__nev_ext_header[
                             b'NEUEVFLT']['hi_freq_type'][get_idx]],
                         nev_lo_freq_corner=self.__nev_ext_header[
-                                               b'NEUEVFLT']['lo_freq_corner'][get_idx] /
-                                           1000. * pq.Hz,
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx] /
+                        1000. * pq.Hz,
                         nev_lo_freq_order=self.__nev_ext_header[
                             b'NEUEVFLT']['lo_freq_order'][get_idx],
                         nev_lo_freq_type=flt_type[self.__nev_ext_header[
@@ -2051,9 +2051,9 @@ class BlackrockIO(BaseIO):
                     channel_id)
                 chidx.annotate(
                     nsx_hi_freq_corner=self.__nsx_ext_header[k][
-                                           'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
+                        'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
                     nsx_lo_freq_corner=self.__nsx_ext_header[k][
-                                           'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
+                        'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
                     nsx_hi_freq_order=self.__nsx_ext_header[k][
                         'hi_freq_order'][get_idx],
                     nsx_lo_freq_order=self.__nsx_ext_header[k][

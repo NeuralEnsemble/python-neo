@@ -529,17 +529,17 @@ class NeuralynxIO(BaseIO):
         # rescaling to global start time of recording (time of first sample
         # in any file type)
         if t_start is None or t_start < (
-                    self.parameters_ncs[chid]['t_start'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ncs[chid]['t_start'] -
+            self.parameters_global[
+                't_start']):
             t_start = (
                 self.parameters_ncs[chid]['t_start'] - self.parameters_global[
                     't_start'])
 
         if t_start > (
-                    self.parameters_ncs[chid]['t_stop'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ncs[chid]['t_stop'] -
+            self.parameters_global[
+                't_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
@@ -549,16 +549,16 @@ class NeuralynxIO(BaseIO):
                                   filename_ncs))
 
         if t_stop is None or t_stop > (
-                    self.parameters_ncs[chid]['t_stop'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ncs[chid]['t_stop'] -
+            self.parameters_global[
+                't_start']):
             t_stop = (
                 self.parameters_ncs[chid]['t_stop'] - self.parameters_global[
                     't_start'])
 
         if t_stop < (
-                    self.parameters_ncs[chid]['t_start'] -
-                    self.parameters_global['t_start']):
+                self.parameters_ncs[chid]['t_start'] -
+                self.parameters_global['t_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is earlier than data '
                 'are '
@@ -582,7 +582,7 @@ class NeuralynxIO(BaseIO):
         else:
 
             tstamps = header_time_data * self.ncs_time_unit - \
-                      self.parameters_global['t_start']
+                self.parameters_global['t_start']
 
             # find data packet to start with signal construction
             starts = np.where(tstamps <= t_start)[0]
@@ -651,11 +651,9 @@ class NeuralynxIO(BaseIO):
         anasig = AnalogSignal(signal=pq.Quantity(sig, unit, copy=False),
                               sampling_rate=1 * sampling_rate,
                               # rescaling t_start to sampling time units
-                              t_start=(header_time_data[
-                                           p_id_start] * self.ncs_time_unit -
-                                       self.parameters_global[
-                                           't_start']).rescale(
-                                  1 / sampling_rate),
+                              t_start=(header_time_data[p_id_start] * self.ncs_time_unit -
+                                  self.parameters_global['t_start']).rescale(
+                                      1 / sampling_rate),
                               name='channel_%i' % (chid),
                               channel_index=chid)
 
@@ -731,8 +729,8 @@ class NeuralynxIO(BaseIO):
 
         # ensure meaningful values for requested start and stop times
         if t_start is None or t_start < (
-                    self.parameters_nev[filename_nev]['t_start'] -
-                    self.parameters_global['t_start']):
+                self.parameters_nev[filename_nev]['t_start'] -
+                self.parameters_global['t_start']):
             t_start = (self.parameters_nev[filename_nev]['t_start'] -
                        self.parameters_global['t_start'])
 
@@ -742,14 +740,13 @@ class NeuralynxIO(BaseIO):
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
                 'for file %s.' % (t_start, t_stop,
-                                  (self.parameters_nev[filename_nev][
-                                       't_stop'] -
+                                  (self.parameters_nev[filename_nev]['t_stop'] -
                                    self.parameters_global['t_start']),
                                   filename_nev))
 
         if t_stop is None or t_stop > (
-                    self.parameters_nev[filename_nev]['t_stop'] -
-                    self.parameters_global['t_start']):
+                self.parameters_nev[filename_nev]['t_stop'] -
+                self.parameters_global['t_start']):
             t_stop = (self.parameters_nev[filename_nev]['t_stop'] -
                       self.parameters_global['t_start'])
 
@@ -892,16 +889,16 @@ class NeuralynxIO(BaseIO):
         # This is not optimal, as there is no way to know how long the
         # recording lasted after last spike
         if t_start is None or t_start < (
-                    self.parameters_nse[chid]['t_first'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_nse[chid]['t_first'] -
+            self.parameters_global[
+                't_start']):
             t_start = (
                 self.parameters_nse[chid]['t_first'] - self.parameters_global[
                     't_start'])
 
         if t_start > (
-                    self.parameters_nse[chid]['t_last'] -
-                    self.parameters_global['t_start']):
+                self.parameters_nse[chid]['t_last'] -
+                self.parameters_global['t_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
@@ -913,17 +910,17 @@ class NeuralynxIO(BaseIO):
         if t_stop is None:
             t_stop = (sys.maxsize) * self.nse_time_unit
         if t_stop is None or t_stop > (
-                    self.parameters_nse[chid]['t_last'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_nse[chid]['t_last'] -
+            self.parameters_global[
+                't_start']):
             t_stop = (
                 self.parameters_nse[chid]['t_last'] - self.parameters_global[
                     't_start'])
 
         if t_stop < (
-                    self.parameters_nse[chid]['t_first'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_nse[chid]['t_first'] -
+            self.parameters_global[
+                't_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is earlier than data '
                 'are recorded (t_start = %s) '
@@ -1066,17 +1063,17 @@ class NeuralynxIO(BaseIO):
         # + rescaling to global recording start (first sample in any
         # recording file)
         if t_start is None or t_start < (
-                    self.parameters_ntt[chid]['t_first'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ntt[chid]['t_first'] -
+            self.parameters_global[
+                't_start']):
             t_start = (
                 self.parameters_ntt[chid]['t_first'] - self.parameters_global[
                     't_start'])
 
         if t_start > (
-                    self.parameters_ntt[chid]['t_last'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ntt[chid]['t_last'] -
+            self.parameters_global[
+                't_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
@@ -1088,17 +1085,17 @@ class NeuralynxIO(BaseIO):
         if t_stop is None:
             t_stop = (sys.maxsize) * self.ntt_time_unit
         if t_stop is None or t_stop > (
-                    self.parameters_ntt[chid]['t_last'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ntt[chid]['t_last'] -
+            self.parameters_global[
+                't_start']):
             t_stop = (
                 self.parameters_ntt[chid]['t_last'] - self.parameters_global[
                     't_start'])
 
         if t_stop < (
-                    self.parameters_ntt[chid]['t_first'] -
-                    self.parameters_global[
-                        't_start']):
+            self.parameters_ntt[chid]['t_first'] -
+            self.parameters_global[
+                't_start']):
             raise ValueError(
                 'Requested times window (%s to %s) is earlier than data '
                 'are '
@@ -1250,8 +1247,7 @@ class NeuralynxIO(BaseIO):
                 'parameter files.' % usecache)
             cachefile = cachedir + sep + self.sessiondir.split(sep)[
                 -1] + '/hashkeys'
-            if not os.path.exists(cachedir + sep + self.sessiondir.split(sep)[
-                -1]):
+            if not os.path.exists(cachedir + sep + self.sessiondir.split(sep)[-1]):
                 os.makedirs(cachedir + sep + self.sessiondir.split(sep)[-1])
 
             if usecache == 'hash':
@@ -1405,7 +1401,7 @@ class NeuralynxIO(BaseIO):
                 if 'SamplingFrequency' in self.parameters_nse[channel_id]:
                     self.parameters_nse[channel_id]['sampling_rate'] = \
                         (self.parameters_nse[channel_id][
-                             'SamplingFrequency'] * self.nse_sr_unit)
+                            'SamplingFrequency'] * self.nse_sr_unit)
 
                 self.nse_asso.append(nse_file)
 
@@ -1478,7 +1474,7 @@ class NeuralynxIO(BaseIO):
                 if 'SamplingFrequency' in self.parameters_ntt[channel_id]:
                     self.parameters_ntt[channel_id]['sampling_rate'] = \
                         (self.parameters_ntt[channel_id][
-                             'SamplingFrequency'] * self.ntt_sr_unit)
+                            'SamplingFrequency'] * self.ntt_sr_unit)
 
                 self.ntt_asso.append(ntt_file)
 
@@ -1525,8 +1521,8 @@ class NeuralynxIO(BaseIO):
             # Set up GLOBAL TIMING SCHEME
             # #############################
             for file_type, parameter_collection in [
-                ('ncs', self.parameters_ncs), ('nse', self.parameters_nse),
-                ('nev', self.parameters_nev), ('ntt', self.parameters_ntt)]:
+                    ('ncs', self.parameters_ncs), ('nse', self.parameters_nse),
+                    ('nev', self.parameters_nev), ('ntt', self.parameters_ntt)]:
                 # check starting times
                 name_t1, name_t2 = ['t_start', 't_stop'] if (
                     file_type != 'nse' and file_type != 'ntt') \
@@ -1641,11 +1637,10 @@ class NeuralynxIO(BaseIO):
 
             # reconstructing original data
             # first 4 ints -> timestamp in microsec
-            timestamps = data[:, 0] + data[:, 1] * 2 ** 16 + data[:,
-                                                             2] * 2 ** 32 + \
-                         data[
-                         :,
-                         3] * 2 ** 48
+            timestamps = data[:, 0] + \
+                data[:, 1] * 2 ** 16 + 
+                data[:, 2] * 2 ** 32 + \
+                data[:, 3] * 2 ** 48
             channel_id = data[:, 4] + data[:, 5] * 2 ** 16
             cell_number = data[:, 6] + data[:, 7] * 2 ** 16
             features = [data[:, p] + data[:, p + 1] * 2 ** 16 for p in
@@ -2358,10 +2353,9 @@ class NeuralynxIO(BaseIO):
                         'Corrupted ncs data packet at the beginning'
                         'or end of file.')
                 elif (timestamps[invalid_packet_id + 1] - timestamps[
-                        invalid_packet_id - 1]
-                          != 2 * (
-                                timestamps[invalid_packet_id - 1] - timestamps[
-                                    invalid_packet_id - 2])):
+                        invalid_packet_id - 1] != 2 * (
+                    timestamps[invalid_packet_id - 1] - timestamps[
+                        invalid_packet_id - 2])):
                     raise ValueError('Starting times of ncs data packets around'
                                      'corrupted data packet are not '
                                      'consistent!')

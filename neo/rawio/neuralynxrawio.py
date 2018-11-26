@@ -73,7 +73,7 @@ class NeuralynxRawIO(BaseRawIO):
         self._spike_memmap = {}
         self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
         self.internal_event_ids = []
-        self._empty_ncs = [] # this list contains filenames of empty records
+        self._empty_ncs = []  # this list contains filenames of empty records
         self._empty_nse_ntt = []
 
         # explore the directory looking for ncs, nev, nse and ntt
@@ -90,7 +90,7 @@ class NeuralynxRawIO(BaseRawIO):
             if ext not in self.extensions:
                 continue
 
-            if (os.path.getsize(filename)<=HEADER_SIZE) and (ext in ['ncs']):
+            if (os.path.getsize(filename) <= HEADER_SIZE) and (ext in ['ncs']):
                 self._empty_ncs.append(filename)
                 continue
 
@@ -146,7 +146,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
-                    if (os.path.getsize(filename)<=HEADER_SIZE):
+                    if (os.path.getsize(filename) <= HEADER_SIZE):
                         self._empty_nse_ntt.append(filename)
                         data = np.zeros((0,), dtype=dtype)
                     else:
@@ -497,14 +497,15 @@ class NeuralynxRawIO(BaseRawIO):
                     self._sigs_length.append(length)
 
 
-### Keys funcitons
+# Keys funcitons
 def _to_bool(txt):
-    if txt=='True': 
+    if txt == 'True':
         return True
-    elif txt=='False': 
+    elif txt == 'False':
         return False
-    else: 
-        raise Exception('Can not convert %s to bool' %(txt))
+    else:
+        raise Exception('Can not convert %s to bool' % (txt))
+
 
 # keys in
 txt_header_keys = [
@@ -686,4 +687,3 @@ def get_nse_or_ntt_dtype(info, ext):
         dtype += [('samples', 'int16', (nb_sample, nb_chan))]
 
     return dtype
-

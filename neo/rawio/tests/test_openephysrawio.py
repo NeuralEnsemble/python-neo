@@ -14,7 +14,7 @@ class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
     entities_to_test = ['OpenEphys_SampleData_1',
         # 'OpenEphys_SampleData_2_(multiple_starts)',  # This not implemented this raise error
         # 'OpenEphys_SampleData_3',
-    ]
+                        ]
 
     files_to_download = [
         # One segment
@@ -66,7 +66,8 @@ class TestOpenEphysRawIO(BaseTestRawIO, unittest.TestCase, ):
     def test_raise_error_if_discontinuous_files(self):
         # the case of discontinuous signals is NOT cover by the IO for the moment
         # It must raise an error
-        reader = OpenEphysRawIO(dirname=self.get_filename_path('OpenEphys_SampleData_2_(multiple_starts)'))
+        reader = OpenEphysRawIO(dirname=self.get_filename_path(
+            'OpenEphys_SampleData_2_(multiple_starts)'))
         with self.assertRaises(Exception):
             reader.parse_header()
 

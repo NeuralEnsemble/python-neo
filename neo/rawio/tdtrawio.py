@@ -121,7 +121,7 @@ class TdtRawIO(BaseRawIO):
                             sortresult_filename = os.path.join(path, 'sort', sortname, file)
                             # get new sortcode
                             newsortcode = np.fromfile(sortresult_filename, 'int8')[
-                                          1024:]  # first 1024 bytes are header
+                                1024:]  # first 1024 bytes are header
                             # update the sort code with the info from this file
                             tsq['sortcode'][1:-1] = newsortcode
                             # print('sortcode updated')

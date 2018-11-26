@@ -107,7 +107,7 @@ class TestIrregularlySampledSignalConstruction(unittest.TestCase):
         arr_ann = {'anno1': [23], 'anno2': ['A']}
         sig = IrregularlySampledSignal([1.1, 1.5, 1.7] * pq.ms, signal=[20., 40., 60.] * pq.mV,
                                        name='test', description='tester', file_origin='test.file',
-                                       test1=1, array_annotations=arr_ann,**params)
+                                       test1=1, array_annotations=arr_ann, **params)
         sig.annotate(test1=1.1, test0=[1, 2])
         assert_neo_object_is_compliant(sig)
 
@@ -231,12 +231,12 @@ class TestIrregularlySampledSignalProperties(unittest.TestCase):
             # see https://github.com/numpy/numpy/blob/master/doc/release/1.14.0-notes.rst#many
             # -changes-to-array-printing-disableable-with-the-new-legacy-printing-mode
             targ = (
-                        '<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
-                        '' + 'at times [1.1 1.5 1.7] s)>')
+                '<IrregularlySampledSignal(array([[2.],\n       [4.],\n       [6.]]) * V '
+                '' + 'at times [1.1 1.5 1.7] s)>')
         else:
             targ = (
-                        '<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
-                        '* V ' + 'at times [ 1.1  1.5  1.7] s)>')
+                '<IrregularlySampledSignal(array([[ 2.],\n       [ 4.],\n       [ 6.]]) '
+                '* V ' + 'at times [ 1.1  1.5  1.7] s)>')
         res = repr(sig)
         self.assertEqual(targ, res)
 
@@ -309,7 +309,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertEqual(self.signal1[self.signal1 == 5], [5 * pq.mV])
 
     def test__comparison_as_indexing_multi_trace(self):
-        signal = IrregularlySampledSignal(self.time1quant, np.arange(20).reshape((-1, 2))*pq.V)
+        signal = IrregularlySampledSignal(self.time1quant, np.arange(20).reshape((-1, 2)) * pq.V)
         assert_array_equal(signal[signal < 10],
                            np.array([[0, 2, 4, 6, 8], [1, 3, 5, 7, 9]]).T * pq.V)
 

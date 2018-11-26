@@ -57,7 +57,8 @@ class NIXRawIO(BaseRawIO):
                                 # use only for different signal length
                         gain = 1
                         offset = 0.
-                        sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+                        sig_channels.append((ch_name, chan_id, sr, dtype,
+                                            units, gain, offset, group_id))
                 break
             break
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
@@ -141,8 +142,8 @@ class NIXRawIO(BaseRawIO):
                 st_idx = 0
                 for st in seg.multi_tags:
                     d = {'waveforms': []}
-                    self.unit_list['blocks'][block_index]['segments'][seg_index]\
-                        ['spiketrains_unit'].append(d)
+                    self.unit_list[
+                        'blocks'][block_index]['segments'][seg_index]['spiketrains_unit'].append(d)
                     if st.type == 'neo.spiketrain':
                         seg = self.unit_list['blocks'][block_index]['segments'][seg_index]
                         seg['spiketrains'].append(st.positions)
@@ -281,11 +282,10 @@ class NIXRawIO(BaseRawIO):
                 po = mt.positions
                 if po.type == "neo.event.times" or po.type == "neo.epoch.times":
                     timestamp.append(po)
-                if self.header['event_channels'][event_channel_index]\
-                            ['type'] == b'epoch' and mt.extents:
-                        if mt.extents.type == 'neo.epoch.durations':
-                            durations = np.array(mt.extents)
-                            break
+                if self.header['event_channels'][event_channel_index]['type'] == b'epoch' and mt.extents:
+                    if mt.extents.type == 'neo.epoch.durations':
+                        durations = np.array(mt.extents)
+                        break
         timestamp = timestamp[event_channel_index][:]
         timestamp = np.array(timestamp, dtype="float")
         labels = labels[event_channel_index][:]
