@@ -669,8 +669,12 @@ class Test__generate_datasets(unittest.TestCase):
     def test__block(self):
         self.check__generate_datasets(AnalogSignal)
 
-    def test__epoch(self):
-        self.check__generate_datasets(Epoch)
+    # commenting the following out, because now we use a custom function to generate
+    # fake Epochs, due to the fact that its attributes are not all independent
+    # really the whole fake data generation needs to be revisited and simplified
+
+    #def test__epoch(self):
+    #    self.check__generate_datasets(Epoch)
 
     def test__event(self):
         self.check__generate_datasets(Event)

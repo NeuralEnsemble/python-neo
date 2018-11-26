@@ -385,7 +385,7 @@ class NeoMatlabIO(BaseIO):
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:
-                    m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
+                    m = r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
                     r = re.findall(m, str(item))
                     if len(r) == 1:
                         item = datetime(*[int(e) for e in r[0]])

@@ -1,2 +1,5 @@
 pycodestyle:
     max-line-length: 99  # Default is 79 in PEP8
+    ignore:
+      - E127
+      - E128

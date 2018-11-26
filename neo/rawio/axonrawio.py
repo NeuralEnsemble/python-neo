@@ -179,8 +179,12 @@ class AxonRawIO(BaseRawIO):
                     gain /= info['fSignalGain'][chan_id]
                     gain /= info['fADCProgrammableGain'][chan_id]
                     gain /= info['lADCResolution']
-                    if info['nTelegraphEnable'][chan_id]:
+                    if info['nTelegraphEnable'][chan_id] == 0:
+                        pass
+                    elif info['nTelegraphEnable'][chan_id] == 1:
                         gain /= info['fTelegraphAdditGain'][chan_id]
+                    else:
+                        logger.warning('ignoring buggy nTelegraphEnable')
                     offset = info['fInstrumentOffset'][chan_id]
                     offset -= info['fSignalOffset'][chan_id]
                 elif version >= 2.:
@@ -561,6 +565,21 @@ def parse_axon_soup(filename):
 
                 header['dictEpochInfoPerDAC'][DACNum][EpochNum] = \
                     EpochInfoPerDAC
+
+            # Epoch sections
+            header['EpochInfo'] = []
+            for i in range(sections['EpochSection']['llNumEntries']):
+                # read EpochInfo
+                f.seek(sections['EpochSection']['uBlockIndex'] *
+                       BLOCKSIZE + sections['EpochSection']['uBytes'] * i)
+                EpochInfo = {}
+                for key, fmt in EpochInfoDescription:
+                    val = f.read_f(fmt)
+                    if len(val) == 1:
+                        EpochInfo[key] = val[0]
+                    else:
+                        EpochInfo[key] = np.array(val)
+                header['EpochInfo'].append(EpochInfo)
 
         # date and time
         if header['fFileVersionNumber'] < 2.:

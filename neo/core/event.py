@@ -16,6 +16,8 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
+from neo.core.epoch import Epoch
+
 
 PY_VER = sys.version_info[0]
 
@@ -256,3 +258,54 @@ class Event(BaseNeo, pq.Quantity):
         Return the event times as a quantities array.
         """
         return self.view(pq.Quantity)
+
+    def to_epoch(self, pairwise=False, durations=None):
+        """
+        Returns a new Epoch object based on the times and labels in the Event object.
+
+        This method has three modes of action.
+
+        1. By default, an array of `n` event times will be transformed into
+           `n-1` epochs, where the end of one epoch is the beginning of the next.
+           This assumes that the events are ordered in time; it is the
+           responsibility of the caller to check this is the case.
+        2. If `pairwise` is True, then the event times will be taken as pairs
+           representing the start and end time of an epoch. The number of
+           events must be even, otherwise a ValueError is raised.
+        3. If `durations` is given, it should be a scalar Quantity or a
+           Quantity array of the same size as the Event.
+           Each event time is then taken as the start of an epoch of duration
+           given by `durations`.
+
+        `pairwise=True` and `durations` are mutually exclusive. A ValueError
+        will be raised if both are given.
+
+        If `durations` is given, epoch labels are set to the corresponding
+        labels of the events that indicate the epoch start
+        If `durations` is not given, then the event labels A and B bounding
+        the epoch are used to set the labels of the epochs in the form 'A-B'.
+        """
+
+        if pairwise:
+            # Mode 2
+            if durations is not None:
+                raise ValueError("Inconsistent arguments. "
+                                 "Cannot give both `pairwise` and `durations`")
+            if self.size % 2 != 0:
+                raise ValueError("Pairwise conversion of events to epochs"
+                                 " requires an even number of events")
+            times = self.times[::2]
+            durations = self.times[1::2] - times
+            labels = np.array(["{}-{}".format(a, b)
+                              for a, b in zip(self.labels[::2], self.labels[1::2])])
+        elif durations is None:
+            # Mode 1
+            times = self.times[:-1]
+            durations = np.diff(self.times)
+            labels = np.array(["{}-{}".format(a, b)
+                              for a, b in zip(self.labels[:-1], self.labels[1:])])
+        else:
+            # Mode 3
+            times = self.times
+            labels = self.labels
+        return Epoch(times=times, durations=durations, labels=labels)

@@ -12,7 +12,7 @@ extras_require = {
     'igorproio': ['igor'],
     'kwikio': ['scipy', 'klusta'],
     'neomatlabio': ['scipy>=0.12.0'],
-    'nixio': ['nixio>=1.4.3'],
+    'nixio': ['nixio>=1.5.0b2'],
     'stimfitio': ['stfio'],
     'axographio': ['axographio']
 }
