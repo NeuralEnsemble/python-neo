@@ -30,18 +30,20 @@ import quantities as pq
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.basesignal import BaseSignal
 from neo.core.channelindex import ChannelIndex
+from neo.core.dataobject import DataObject
 
 
 def _new_IrregularlySampledSignal(cls, times, signal, units=None, time_units=None, dtype=None,
                                   copy=True, name=None, file_origin=None, description=None,
-                                  annotations=None, segment=None, channel_index=None):
+                                  array_annotations=None, annotations=None, segment=None,
+                                  channel_index=None):
     '''
     A function to map IrregularlySampledSignal.__new__ to a function that
     does not do the unit checking. This is needed for pickle to work.
     '''
     iss = cls(times=times, signal=signal, units=units, time_units=time_units, dtype=dtype,
               copy=copy, name=name, file_origin=file_origin, description=description,
-              **annotations)
+              array_annotations=array_annotations, **annotations)
     iss.segment = segment
     iss.channel_index = channel_index
     return iss
@@ -88,6 +90,8 @@ class IrregularlySampledSignal(BaseSignal):
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
             (times are always floats).
         :copy: (bool) True by default.
+        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -119,7 +123,7 @@ class IrregularlySampledSignal(BaseSignal):
     _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
     def __new__(cls, times, signal, units=None, time_units=None, dtype=None, copy=True, name=None,
-                file_origin=None, description=None, **annotations):
+                file_origin=None, description=None, array_annotations=None, **annotations):
         '''
         Construct a new :class:`IrregularlySampledSignal` instance.
 
@@ -150,23 +154,25 @@ class IrregularlySampledSignal(BaseSignal):
         return obj
 
     def __init__(self, times, signal, units=None, time_units=None, dtype=None, copy=True,
-                 name=None, file_origin=None, description=None, **annotations):
+                 name=None, file_origin=None, description=None, array_annotations=None,
+                 **annotations):
         '''
         Initializes a newly constructed :class:`IrregularlySampledSignal`
         instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin, description=description,
-                         **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
 
     def __reduce__(self):
         '''
         Map the __new__ function onto _new_IrregularlySampledSignal, so that pickle
         works
         '''
-        return _new_IrregularlySampledSignal, (
-            self.__class__, self.times, np.array(self), self.units, self.times.units, self.dtype,
-            True, self.name, self.file_origin, self.description, self.annotations, self.segment,
-            self.channel_index)
+        return _new_IrregularlySampledSignal, (self.__class__, self.times, np.array(self),
+                                               self.units, self.times.units, self.dtype, True,
+                                               self.name, self.file_origin, self.description,
+                                               self.array_annotations, self.annotations,
+                                               self.segment, self.channel_index)
 
     def _array_finalize_spec(self, obj):
         '''
@@ -182,8 +188,9 @@ class IrregularlySampledSignal(BaseSignal):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        new_signal = cls(self.times, np.array(self), units=self.units, time_units=self.times.units,
-                         dtype=self.dtype, t_start=self.t_start, name=self.name,
+        new_signal = cls(self.times, np.array(self), units=self.units,
+                         time_units=self.times.units, dtype=self.dtype,
+                         t_start=self.t_start, name=self.name,
                          file_origin=self.file_origin, description=self.description)
         new_signal.__dict__.update(self.__dict__)
         memo[id(self)] = new_signal
@@ -222,9 +229,11 @@ class IrregularlySampledSignal(BaseSignal):
                     raise TypeError("%s not supported" % type(j))
                 if isinstance(k, (int, np.integer)):
                     obj = obj.reshape(-1, 1)  # add if channel_index
+                obj.array_annotations = deepcopy(self.array_annotations_at_index(k))
         elif isinstance(i, slice):
             obj = super(IrregularlySampledSignal, self).__getitem__(i)
             obj.times = self.times.__getitem__(i)
+            obj.array_annotations = deepcopy(self.array_annotations)
         elif isinstance(i, np.ndarray):
             # Indexing of an IrregularlySampledSignal is only consistent if the resulting
             # number of samples is the same for each trace. The time axis for these samples is not
@@ -438,9 +447,11 @@ class IrregularlySampledSignal(BaseSignal):
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
-        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype, copy=False,
-                                **kwargs)
+
+        signal = self.__class__(self.times, stack, units=self.units, dtype=self.dtype,
+                                copy=False, **kwargs)
         signal.segment = self.segment
+        signal.array_annotate(**self._merge_array_annotations(other))
 
         if hasattr(self, "lazy_shape"):
             signal.lazy_shape = merged_lazy_shape
