@@ -461,7 +461,7 @@ def read_tbk(tbk_filename):
 
         # parse into a dict
         info = OrderedDict()
-        pattern = r'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
+        pattern = br'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
         r = re.findall(pattern, chan_grp_header)
         for name, _type, value in r:
             info[name.decode('ascii')] = value
