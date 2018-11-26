@@ -740,8 +740,8 @@ class NeuralynxIO(BaseIO):
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
                 'for file %s.' % (t_start, t_stop,
-                                  (self.parameters_nev[filename_nev]['t_stop'] -
-                                   self.parameters_global['t_start']),
+                                  (self.parameters_nev[filename_nev]['t_stop']
+                                   - self.parameters_global['t_start']),
                                   filename_nev))
 
         if t_stop is None or t_stop > (
@@ -1078,8 +1078,8 @@ class NeuralynxIO(BaseIO):
                 'Requested times window (%s to %s) is later than data are '
                 'recorded (t_stop = %s) '
                 'for file %s.' % (t_start, t_stop,
-                                  (self.parameters_ntt[chid]['t_last'] -
-                                   self.parameters_global['t_start']),
+                                  (self.parameters_ntt[chid]['t_last']
+                                   - self.parameters_global['t_start']),
                                   filename_ntt))
 
         if t_stop is None:
@@ -1271,8 +1271,8 @@ class NeuralynxIO(BaseIO):
 
             # compare hashes to previously saved meta data und load meta data
             #  if no changes occured
-            if usecache == 'always' or all([f in hashes_calc 
-                                            and f in hashes_read 
+            if usecache == 'always' or all([f in hashes_calc
+                                            and f in hashes_read
                                             and hashes_calc[f] == hashes_read[f]
                                             for f in self.sessionfiles]):
                 check_files = False
