@@ -1755,7 +1755,7 @@ class BlackrockRawIO(BaseRawIO):
             'max_digital_val': np.array([1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers': bytes_in_headers,
-            'sampling_rate':  30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
+            'sampling_rate': 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 

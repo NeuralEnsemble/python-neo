@@ -114,11 +114,9 @@ class AxonRawIO(BaseRawIO):
 
         # sampling_rate
         if version < 2.:
-            self._sampling_rate = 1. / (info['fADCSampleInterval'] *
-                                        nbchannel * 1.e-6)
+            self._sampling_rate = 1. / (info['fADCSampleInterval'] * nbchannel * 1.e-6)
         elif version >= 2.:
-            self._sampling_rate = 1.e6 / \
-                info['protocol']['fADCSequenceInterval']
+            self._sampling_rate = 1.e6 / info['protocol']['fADCSequenceInterval']
 
         # one sweep = one segment
         nb_segment = episode_array.size
@@ -475,8 +473,8 @@ def parse_axon_soup(filename):
             header['listADCInfo'] = []
             for i in range(sections['ADCSection']['llNumEntries']):
                 # read ADCInfo
-                f.seek(sections['ADCSection']['uBlockIndex'] *
-                       BLOCKSIZE + sections['ADCSection']['uBytes'] * i)
+                f.seek(sections['ADCSection']['uBlockIndex']
+                       * BLOCKSIZE + sections['ADCSection']['uBytes'] * i)
                 ADCInfo = {}
                 for key, fmt in ADCInfoDescription:
                     val = f.read_f(fmt)
@@ -503,8 +501,8 @@ def parse_axon_soup(filename):
             # tags
             listTag = []
             for i in range(sections['TagSection']['llNumEntries']):
-                f.seek(sections['TagSection']['uBlockIndex'] *
-                       BLOCKSIZE + sections['TagSection']['uBytes'] * i)
+                f.seek(sections['TagSection']['uBlockIndex']
+                       * BLOCKSIZE + sections['TagSection']['uBytes'] * i)
                 tag = {}
                 for key, fmt in TagInfoDescription:
                     val = f.read_f(fmt)
@@ -520,8 +518,8 @@ def parse_axon_soup(filename):
             header['listDACInfo'] = []
             for i in range(sections['DACSection']['llNumEntries']):
                 # read DACInfo
-                f.seek(sections['DACSection']['uBlockIndex'] *
-                       BLOCKSIZE + sections['DACSection']['uBytes'] * i)
+                f.seek(sections['DACSection']['uBlockIndex']
+                       * BLOCKSIZE + sections['DACSection']['uBytes'] * i)
                 DACInfo = {}
                 for key, fmt in DACInfoDescription:
                     val = f.read_f(fmt)
@@ -545,9 +543,8 @@ def parse_axon_soup(filename):
             header['dictEpochInfoPerDAC'] = {}
             for i in range(sections['EpochPerDACSection']['llNumEntries']):
                 #  read DACInfo
-                f.seek(sections['EpochPerDACSection']['uBlockIndex'] *
-                       BLOCKSIZE +
-                       sections['EpochPerDACSection']['uBytes'] * i)
+                f.seek(sections['EpochPerDACSection']['uBlockIndex']
+                       * BLOCKSIZE + sections['EpochPerDACSection']['uBytes'] * i)
                 EpochInfoPerDAC = {}
                 for key, fmt in EpochInfoPerDACDescription:
                     val = f.read_f(fmt)
@@ -570,8 +567,8 @@ def parse_axon_soup(filename):
             header['EpochInfo'] = []
             for i in range(sections['EpochSection']['llNumEntries']):
                 # read EpochInfo
-                f.seek(sections['EpochSection']['uBlockIndex'] *
-                       BLOCKSIZE + sections['EpochSection']['uBytes'] * i)
+                f.seek(sections['EpochSection']['uBlockIndex']
+                       * BLOCKSIZE + sections['EpochSection']['uBytes'] * i)
                 EpochInfo = {}
                 for key, fmt in EpochInfoDescription:
                     val = f.read_f(fmt)

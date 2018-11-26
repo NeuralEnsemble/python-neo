@@ -82,7 +82,7 @@ class BCI2000RawIO(BaseRawIO):
         try:
             self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
                                                           time_formats[0]))
-        except:
+        except Exception:
             self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
                                                           time_formats[1]))
 
@@ -224,7 +224,7 @@ def parse_bci2000_header(filename):
         if param_val.lower().startswith('0x'):
             param_val = int(param_val, 16)
         elif data_type in ['int', 'float']:
-            matches = re.match('(-*\d+)(\w*)', param_val)
+            matches = re.match(r'(-*\d+)(\w*)', param_val)
             if matches is not None:  # Can be None for % in def, min, max vals
                 param_val, unit_str = matches.group(1), matches.group(2)
                 param_val = int(param_val) if data_type == 'int' else float(param_val)
