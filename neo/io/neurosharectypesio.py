@@ -133,8 +133,8 @@ class NeurosharectypesIO(BaseIO):
                      lazy=False):
         """
         Arguments:
-            import_neuroshare_segment: import neuroshare segment as SpikeTrain with associated waveforms or not imported at all.
-
+            import_neuroshare_segment: import neuroshare segment as SpikeTrain
+            with associated waveforms or not imported at all.
         """
         assert not lazy, 'Do not support lazy'
 
@@ -151,8 +151,8 @@ class NeurosharectypesIO(BaseIO):
         # API version
         info = ns_LIBRARYINFO()
         neuroshare.ns_GetLibraryInfo(ctypes.byref(info), ctypes.sizeof(info))
-        seg.annotate(neuroshare_version=str(info.dwAPIVersionMaj) +
-                                        '.' + str(info.dwAPIVersionMin))
+        seg.annotate(neuroshare_version=str(info.dwAPIVersionMaj)
+                                        + '.' + str(info.dwAPIVersionMin))
 
         # open file
         hFile = ctypes.c_uint32(0)
@@ -272,20 +272,20 @@ class NeurosharectypesIO(BaseIO):
                         hFile, dwEntityID, dwIndex,
                         ctypes.byref(pdTimeStamp),
                         pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                        dwDataBufferSize *
-                        8, ctypes.byref(pdwSampleCount),
+                        dwDataBufferSize * 8,
+                        ctypes.byref(pdwSampleCount),
                         ctypes.byref(pdwUnitID))
 
                     times[dwIndex] = pdTimeStamp.value
-                    waveforms[dwIndex, :, :] = pData[:nsample *
-                                                      nsource].reshape(nsample, nsource).transpose()
+                    waveforms[dwIndex, :, :] = pData[:nsample * nsource].reshape(
+                        nsample, nsource).transpose()
 
                 sptr = SpikeTrain(times=pq.Quantity(times, units='s', copy=False),
                                   t_stop=times.max(),
                                   waveforms=pq.Quantity(waveforms, units=str(
                                       pdwSegmentInfo.szUnits), copy=False),
-                                  left_sweep=nsample / 2. /
-                                             float(pdwSegmentInfo.dSampleRate) * pq.s,
+                                  left_sweep=nsample / 2.
+                                             / float(pdwSegmentInfo.dSampleRate) * pq.s,
                                   sampling_rate=float(pdwSegmentInfo.dSampleRate) * pq.Hz,
                                   name=str(entityInfo.szEntityLabel),
                                   )
