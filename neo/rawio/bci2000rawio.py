@@ -82,7 +82,7 @@ class BCI2000RawIO(BaseRawIO):
         try:
             self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
                                                           time_formats[0]))
-        except Exception:
+        except:
             self._global_time = time.mktime(time.strptime(param_defs['StorageTime']['value'],
                                                           time_formats[1]))
 
