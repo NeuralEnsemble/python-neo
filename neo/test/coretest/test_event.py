@@ -6,15 +6,11 @@ Tests of the neo.core.event.Event class
 import unittest
 import warnings
 
-warnings.simplefilter("always")
-
 import numpy as np
 import quantities as pq
 import pickle
 import os
 from numpy.testing import assert_array_equal
-
-from neo.core.dataobject import ArrayDict
 
 try:
     from IPython.lib.pretty import pretty
@@ -23,6 +19,7 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
+from neo.core.dataobject import ArrayDict
 from neo.core.event import Event
 from neo.core.epoch import Epoch
 from neo.core import Segment
@@ -30,6 +27,8 @@ from neo.test.tools import (assert_neo_object_is_compliant, assert_arrays_equal,
                             assert_arrays_almost_equal, assert_same_sub_schema)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
+
+warnings.simplefilter("always")
 
 
 class Test__generate_datasets(unittest.TestCase):
@@ -350,7 +349,7 @@ class TestEvent(unittest.TestCase):
                      file_origin='test.file', array_annotations=arr_ann2, test1=1, **params2)
         evttarg = Event([1.1, 1.5, 1.7, .0021, .0025, .0027] * pq.ms,
                         labels=np.array(['test event 1 1', 'test event 1 2', 'test event 1 3',
-                                         'test event 2 1',  'test event 2 2', 'test event 2 3'],
+                                         'test event 2 1', 'test event 2 2', 'test event 2 3'],
                                         dtype='S'),
                         name='test',
                         description='merge(tester 1, tester 2)', file_origin='test.file',

@@ -442,7 +442,7 @@ def assert_sub_schema_is_lazy_loaded(ob):
                 assert getattr(ob, attrname).size == 0,\
                     'Lazy loaded error %s.%s.size = %s' % (classname, attrname,
                                                            getattr(ob, attrname).size)
-                assert hasattr(ob,'lazy_shape'),\
+                assert hasattr(ob, 'lazy_shape'),\
                     'Lazy loaded error %s should have lazy_shape attribute ' % classname + \
                     'because of %s attribute' % attrname
 

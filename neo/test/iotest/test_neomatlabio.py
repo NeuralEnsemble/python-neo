@@ -20,11 +20,10 @@ class TestNeoMatlabIO(BaseTestIO, unittest.TestCase):
     files_to_test = []
     files_to_download = []
 
-
     def test_write_read_single_spike(self):
         block1 = Block()
         seg = Segment('segment1')
-        spiketrain = SpikeTrain([1]*pq.s, t_stop=10*pq.s, sampling_rate=1*pq.Hz)
+        spiketrain = SpikeTrain([1] * pq.s, t_stop=10 * pq.s, sampling_rate=1 * pq.Hz)
         block1.segments.append(seg)
         seg.spiketrains.append(spiketrain)
 

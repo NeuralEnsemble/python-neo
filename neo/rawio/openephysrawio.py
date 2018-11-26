@@ -44,17 +44,21 @@ class OpenEphysRawIO(BaseRawIO):
     be super fast and light compared to legacy code.
 
     When the acquisition is stopped and restarted then files are named *_2, *_3.
-    In that case this class creates a new Segment. Note that timestamps are reset in this situation.
+    In that case this class creates a new Segment. Note that timestamps are reset in this
+    situation.
 
     Limitation :
-      * Works only if all continuous channels have the same sampling rate, which is a reasonable hypothesis.
+      * Works only if all continuous channels have the same sampling rate, which is a reasonable
+        hypothesis.
       * When the recording is stopped and restarted all continuous files will contain gaps.
-        Ideally this would lead to a new Segment but this use case is not implemented due to its complexity.
+        Ideally this would lead to a new Segment but this use case is not implemented due to its
+        complexity.
         Instead it will raise an error.
 
     Special cases:
       * Normaly all continuous files have the same first timestamp and length. In situations
-        where it is not the case all files are clipped to the smallest one so that they are all aligned,
+        where it is not the case all files are clipped to the smallest one so that they are all
+        aligned,
         and a warning is emitted.
     """
     extensions = []
@@ -92,12 +96,12 @@ class OpenEphysRawIO(BaseRawIO):
                 chan_id = int(ch_name.replace('CH', ''))
 
                 filesize = os.stat(fullname).st_size
-                size = (filesize - HEADER_SIZE)//np.dtype(continuous_dtype).itemsize
+                size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
                 data_chan = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
                                         dtype=continuous_dtype, shape=(size, ))
                 self._sigs_memmap[seg_index][chan_id] = data_chan
 
-                all_sigs_length.append(data_chan.size*RECORD_SIZE)
+                all_sigs_length.append(data_chan.size * RECORD_SIZE)
                 all_first_timestamps.append(data_chan[0]['timestamp'])
                 all_last_timestamps.append(data_chan[-1]['timestamp'])
                 all_samplerate.append(chan_info['sampleRate'])
@@ -105,7 +109,8 @@ class OpenEphysRawIO(BaseRawIO):
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
                 assert np.all(diff == RECORD_SIZE), \
-                    'Not continuous timestamps for {}. Maybe because recording was paused/stopped.'.format(continuous_filename)
+                    'Not continuous timestamps for {}. ' \
+                    'Maybe because recording was paused/stopped.'.format(continuous_filename)
 
                 if seg_index == 0:
                     # add in channel list
@@ -116,16 +121,17 @@ class OpenEphysRawIO(BaseRawIO):
             # one record block is missing when the "OE GUI is freezing"
             # So we need to clip to the smallest files
             if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
-                not all(all_first_timestamps[0] == e for e in all_first_timestamps):
+                    not all(all_first_timestamps[0] == e for e in all_first_timestamps):
 
-                self.logger.warning('Continuous files do not have aligned timestamps; clipping to make them aligned.')
+                self.logger.warning('Continuous files do not have aligned timestamps; '
+                                    'clipping to make them aligned.')
 
                 first, last = -np.inf, np.inf
                 for chan_id in self._sigs_memmap[seg_index]:
                     data_chan = self._sigs_memmap[seg_index][chan_id]
-                    if data_chan[0]['timestamp']>first:
+                    if data_chan[0]['timestamp'] > first:
                         first = data_chan[0]['timestamp']
-                    if data_chan[-1]['timestamp']<last:
+                    if data_chan[-1]['timestamp'] < last:
                         last = data_chan[-1]['timestamp']
 
                 all_sigs_length = []
@@ -133,10 +139,10 @@ class OpenEphysRawIO(BaseRawIO):
                 all_last_timestamps = []
                 for chan_id in self._sigs_memmap[seg_index]:
                     data_chan = self._sigs_memmap[seg_index][chan_id]
-                    keep = (data_chan['timestamp']>=first) & (data_chan['timestamp']<=last)
+                    keep = (data_chan['timestamp'] >= first) & (data_chan['timestamp'] <= last)
                     data_chan = data_chan[keep]
                     self._sigs_memmap[seg_index][chan_id] = data_chan
-                    all_sigs_length.append(data_chan.size*RECORD_SIZE)
+                    all_sigs_length.append(data_chan.size * RECORD_SIZE)
                     all_first_timestamps.append(data_chan[0]['timestamp'])
                     all_last_timestamps.append(data_chan[-1]['timestamp'])
 
@@ -170,7 +176,7 @@ class OpenEphysRawIO(BaseRawIO):
                     # "STp106.0n0_2.spikes" to "STp106.0n0"
                     name = spike_filename.replace('.spikes', '')
                     if seg_index > 0:
-                        name = name.replace('_'+str(seg_index+1), '')
+                        name = name.replace('_' + str(seg_index + 1), '')
 
                     data_spike = np.memmap(fullname, mode='r', offset=HEADER_SIZE,
                                         dtype=spikes_dtype)
@@ -188,7 +194,7 @@ class OpenEphysRawIO(BaseRawIO):
                     self._spike_sampling_rate = spike_info['sampleRate']
                 else:
                     assert self._spike_sampling_rate == spike_info['sampleRate'],\
-                                'mismatch in spike sampling rate'
+                        'mismatch in spike sampling rate'
 
                 # scan all to detect several all unique(sorted_ids)
                 all_sorted_ids = []
@@ -222,7 +228,7 @@ class OpenEphysRawIO(BaseRawIO):
             if seg_index == 0:
                 event_filename = 'all_channels.events'
             else:
-                event_filename = 'all_channels_{}.events'.format(seg_index+1)
+                event_filename = 'all_channels_{}.events'.format(seg_index + 1)
 
             fullname = os.path.join(self.dirname, event_filename)
             event_info = read_file_header(fullname)
@@ -261,7 +267,7 @@ class OpenEphysRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         return (self._sig_timestamp0[seg_index] + self._sig_length[seg_index])\
-                    / self._sig_sampling_rate
+            / self._sig_sampling_rate
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
         return self._sig_length[seg_index]
@@ -392,7 +398,7 @@ def make_spikes_dtype(filename):
 
     # strangly the header do not have the sample size
     # So this do not work (too bad):
-    # spike_info = read_file_header(filename)
+    # spike_info = read_file_header(filename)
     # N = spike_info['num_channels']
     # M =????
 
@@ -402,7 +408,7 @@ def make_spikes_dtype(filename):
     if filesize >= (HEADER_SIZE + 23):
         with open(filename, mode='rb') as f:
             # M and N is at 1024 + 19 bytes
-            f.seek(HEADER_SIZE+19)
+            f.seek(HEADER_SIZE + 19)
             N = np.fromfile(f, np.dtype('<u2'), 1)[0]
             M = np.fromfile(f, np.dtype('<u2'), 1)[0]
     else:
@@ -412,7 +418,7 @@ def make_spikes_dtype(filename):
 
     # make a copy
     spikes_dtype = [e for e in _base_spikes_dtype]
-    spikes_dtype[12] = ('samples', 'uint16', N*M)
+    spikes_dtype[12] = ('samples', 'uint16', N * M)
     spikes_dtype[13] = ('gains', 'float32', N)
     spikes_dtype[14] = ('thresholds', 'uint16', N)
 
@@ -477,7 +483,7 @@ def explore_folder(dirname):
         for spike_filename in spike_filenames:
             name = spike_filename.replace('.spikes', '')
             if seg_index > 0:
-                name = name.replace('_'+str(seg_index+1), '')
+                name = name.replace('_' + str(seg_index + 1), '')
             names.append(name)
         order = np.argsort(names)
         spike_filenames = [spike_filenames[i] for i in order]
