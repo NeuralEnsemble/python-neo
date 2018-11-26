@@ -44,17 +44,21 @@ class OpenEphysRawIO(BaseRawIO):
     be super fast and light compared to legacy code.
 
     When the acquisition is stopped and restarted then files are named *_2, *_3.
-    In that case this class creates a new Segment. Note that timestamps are reset in this situation.
+    In that case this class creates a new Segment. Note that timestamps are reset in this
+    situation.
 
     Limitation :
-      * Works only if all continuous channels have the same sampling rate, which is a reasonable hypothesis.
+      * Works only if all continuous channels have the same sampling rate, which is a reasonable
+        hypothesis.
       * When the recording is stopped and restarted all continuous files will contain gaps.
-        Ideally this would lead to a new Segment but this use case is not implemented due to its complexity.
+        Ideally this would lead to a new Segment but this use case is not implemented due to its
+        complexity.
         Instead it will raise an error.
 
     Special cases:
       * Normaly all continuous files have the same first timestamp and length. In situations
-        where it is not the case all files are clipped to the smallest one so that they are all aligned,
+        where it is not the case all files are clipped to the smallest one so that they are all
+        aligned,
         and a warning is emitted.
     """
     extensions = []
@@ -105,8 +109,8 @@ class OpenEphysRawIO(BaseRawIO):
                 # check for continuity (no gaps)
                 diff = np.diff(data_chan['timestamp'])
                 assert np.all(diff == RECORD_SIZE), \
-                    'Not continuous timestamps for {}. Maybe because recording was paused/stopped.'.format(
-                        continuous_filename)
+                    'Not continuous timestamps for {}. ' \
+                    'Maybe because recording was paused/stopped.'.format(continuous_filename)
 
                 if seg_index == 0:
                     # add in channel list
@@ -119,8 +123,8 @@ class OpenEphysRawIO(BaseRawIO):
             if not all(all_sigs_length[0] == e for e in all_sigs_length) or\
                     not all(all_first_timestamps[0] == e for e in all_first_timestamps):
 
-                self.logger.warning(
-                    'Continuous files do not have aligned timestamps; clipping to make them aligned.')
+                self.logger.warning('Continuous files do not have aligned timestamps; '
+                                    'clipping to make them aligned.')
 
                 first, last = -np.inf, np.inf
                 for chan_id in self._sigs_memmap[seg_index]:
@@ -394,7 +398,7 @@ def make_spikes_dtype(filename):
 
     # strangly the header do not have the sample size
     # So this do not work (too bad):
-    # spike_info = read_file_header(filename)
+    # spike_info = read_file_header(filename)
     # N = spike_info['num_channels']
     # M =????
 
