@@ -1826,9 +1826,9 @@ class BlackrockIO(BaseIO):
 
             if scaling == 'voltage':
                 st.waveforms = (
-                    waveforms[mask] * self.__nev_params('waveform_unit') *
-                    self.__nev_params('digitization_factor')[channel_id] /
-                    1000.)
+                    waveforms[mask] * self.__nev_params('waveform_unit')
+                    * self.__nev_params('digitization_factor')[channel_id]
+                    / 1000.)
             elif scaling == 'raw':
                 st.waveforms = waveforms[mask] * pq.dimensionless
             else:
@@ -2027,15 +2027,15 @@ class BlackrockIO(BaseIO):
                     # filter type codes (extracted from blackrock manual)
                     chidx.annotate(
                         nev_hi_freq_corner=self.__nev_ext_header[b'NEUEVFLT'][
-                            'hi_freq_corner'][get_idx] /
-                        1000. * pq.Hz,
+                            'hi_freq_corner'][get_idx]
+                        / 1000. * pq.Hz,
                         nev_hi_freq_order=self.__nev_ext_header[b'NEUEVFLT'][
                             'hi_freq_order'][get_idx],
                         nev_hi_freq_type=flt_type[self.__nev_ext_header[
                             b'NEUEVFLT']['hi_freq_type'][get_idx]],
                         nev_lo_freq_corner=self.__nev_ext_header[
-                            b'NEUEVFLT']['lo_freq_corner'][get_idx] /
-                        1000. * pq.Hz,
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx]
+                        / 1000. * pq.Hz,
                         nev_lo_freq_order=self.__nev_ext_header[
                             b'NEUEVFLT']['lo_freq_order'][get_idx],
                         nev_lo_freq_type=flt_type[self.__nev_ext_header[
@@ -2558,8 +2558,8 @@ class BlackrockIO(BaseIO):
                 'sampling_rate', nsx_nb)
             avail_el = [
                 el for el in self.__nsx_ext_header[nsx_nb]['electrode_id']]
-            output += "\nAnalog Parameters (NS" + str(nsx_nb) + ")" \
-                                                                "\n===================================="
+            output += "\nAnalog Parameters (NS" \
+                + str(nsx_nb) + ")\n===================================="
             output += "\nResolution (Hz): %i" % analog_res
             output += "\nAvailable channel IDs: " + \
                       ", ".join(["%i" % a for a in avail_el]) + "\n"

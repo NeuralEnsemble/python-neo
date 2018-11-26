@@ -181,8 +181,8 @@ class NestIO(BaseIO):
                     id=i,
                     type=value_types[v_id]))
                 # check for correct length of analogsignal
-                assert (analogsignal_list[-1].t_stop ==
-                        anasig_start_time + len(signal) * sampling_period)
+                assert (analogsignal_list[-1].t_stop
+                        == anasig_start_time + len(signal) * sampling_period)
         return analogsignal_list
 
     def __read_spiketrains(self, gdf_id_list, time_unit,
@@ -398,7 +398,8 @@ class NestIO(BaseIO):
         curr_id = 0
         if ((gid_list != [None]) and (gid_list is not None)):
             if gid_list != []:
-                def condition(x): return x in gid_list
+                def condition(x):
+                    return x in gid_list
 
                 condition_column = id_column
             sorting_column.append(curr_id)  # Sorting according to gids first
