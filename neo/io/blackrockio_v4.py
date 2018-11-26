@@ -1747,7 +1747,7 @@ class BlackrockIO(BaseIO):
                 n_stops.extend(merged_n_stops)
 
         if len(n_starts) > len(user_n_starts) and \
-                        len(n_stops) > len(user_n_stops):
+                len(n_stops) > len(user_n_stops):
             self._print_verbose(
                 "Additional recording pauses were detected. There will be "
                 "more segments than the user expects.")
