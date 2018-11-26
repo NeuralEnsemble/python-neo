@@ -1637,10 +1637,10 @@ class NeuralynxIO(BaseIO):
 
             # reconstructing original data
             # first 4 ints -> timestamp in microsec
-            timestamps = data[:, 0] + \
-                data[:, 1] * 2 ** 16 + 
-                data[:, 2] * 2 ** 32 + \
-                data[:, 3] * 2 ** 48
+            timestamps = data[:, 0] \
+                         + data[:, 1] * 2 ** 16 \
+                         + data[:, 2] * 2 ** 32 \
+                         + data[:,3] * 2 ** 48
             channel_id = data[:, 4] + data[:, 5] * 2 ** 16
             cell_number = data[:, 6] + data[:, 7] * 2 ** 16
             features = [data[:, p] + data[:, p + 1] * 2 ** 16 for p in
