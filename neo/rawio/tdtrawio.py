@@ -201,9 +201,9 @@ class TdtRawIO(BaseRawIO):
 
                     # data buffer test if SEV file exists otherwise TEV
                     path = os.path.join(self.dirname, segment_name)
-                    sev_filename = os.path.join(path, tankname + '_' + segment_name + '_' +
-                                                info['StoreName'].decode('ascii') +
-                                                '_ch' + str(chan_id) + '.sev')
+                    sev_filename = os.path.join(path, tankname + '_' + segment_name + '_'
+                                                + info['StoreName'].decode('ascii')
+                                                + '_ch' + str(chan_id) + '.sev')
                     if os.path.exists(sev_filename):
                         data = np.memmap(sev_filename, mode='r', offset=0, dtype='uint8')
                     else:
@@ -461,7 +461,7 @@ def read_tbk(tbk_filename):
 
         # parse into a dict
         info = OrderedDict()
-        pattern = b'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
+        pattern = r'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
         r = re.findall(pattern, chan_grp_header)
         for name, _type, value in r:
             info[name.decode('ascii')] = value

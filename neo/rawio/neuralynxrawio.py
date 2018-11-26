@@ -539,7 +539,7 @@ txt_header_keys = [
     ('MinRetriggerSamples', '', None),
     ('SpikeRetriggerTime', '', None),
     ('DualThresholding', '', None),
-    ('Feature \w+ \d+', '', None),
+    (r'Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
     ('CheetahRev', 'version', None),  # used  possibilty 1 for version

@@ -130,7 +130,8 @@ class NIXRawIO(BaseRawIO):
                         da_name_list.append(da.metadata['neo_name'])
                 self.da_list['blocks'][block_index]['segments'][seg_index]['data_size'] = size_list
                 self.da_list['blocks'][block_index]['segments'][seg_index]['data'] = data_list
-                self.da_list['blocks'][block_index]['segments'][seg_index]['ch_name'] = da_name_list
+                self.da_list['blocks'][block_index]['segments'][seg_index]['ch_name'] = \
+                    da_name_list
 
         self.unit_list = {'blocks': []}
         for block_index, blk in enumerate(self.file.blocks):
@@ -274,7 +275,7 @@ class NIXRawIO(BaseRawIO):
         timestamp = []
         labels = []
         durations = None
-        if event_channel_index == None:
+        if event_channel_index is None:
             raise IndexError
         for mt in self.file.blocks[block_index].groups[seg_index].multi_tags:
             if mt.type == "neo.event" or mt.type == "neo.epoch":
@@ -282,7 +283,8 @@ class NIXRawIO(BaseRawIO):
                 po = mt.positions
                 if po.type == "neo.event.times" or po.type == "neo.epoch.times":
                     timestamp.append(po)
-                if self.header['event_channels'][event_channel_index]['type'] == b'epoch' and mt.extents:
+                if self.header['event_channels'][event_channel_index]['type'] == b'epoch' \
+                        and mt.extents:
                     if mt.extents.type == 'neo.epoch.durations':
                         durations = np.array(mt.extents)
                         break
