@@ -36,6 +36,6 @@ Removed:
 (Full `list of closed issues`_)
 
 Thanks to Achilleas Koutsou, Andrew Davison, Björn Müller, Chadwick Boulay, erikli, Jeffrey Gill, Julia Sprenger, Lucas (lkoelman), 
-Mark Histed, Michael Denker, Mike Sintsov, Samuel Garcia and Scott W Harden for their contributions to this release.
+Mark Histed, Michael Denker, Mike Sintsov, Samuel Garcia, Scott W Harden and William Hart for their contributions to this release.
 
 .. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.7.0+is%3Aclosed
