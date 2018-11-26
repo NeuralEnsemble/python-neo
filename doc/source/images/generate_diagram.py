@@ -37,15 +37,15 @@ def get_rect_height(name, obj):
 
 def annotate(ax, coord1, coord2, connectionstyle, color, alpha):
     arrowprops = dict(arrowstyle='fancy',
-                      #~ patchB=p,
+                      # ~ patchB=p,
                       shrinkA=.3, shrinkB=.3,
                       fc=color, ec=color,
                       connectionstyle=connectionstyle,
                       alpha=alpha)
     bbox = dict(boxstyle="square", fc="w")
     a = ax.annotate('', coord1, coord2,
-                    #xycoords="figure fraction",
-                    #textcoords="figure fraction",
+                    # xycoords="figure fraction",
+                    # textcoords="figure fraction",
                     ha="right", va="center",
                     size=fontsize,
                     arrowprops=arrowprops,
@@ -102,8 +102,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
     for name, pos in rect_pos.items():
         htotal = all_h[name]
         obj = objs[name]
-        allrelationship = (list(getattr(obj, '_child_containers', [])) +
-                           list(getattr(obj, '_multi_parent_containers', [])))
+        allrelationship = (list(getattr(obj, '_child_containers', []))
+                           + list(getattr(obj, '_multi_parent_containers', [])))
 
         rect = Rectangle(pos, rect_width, htotal,
                          facecolor='w', edgecolor='k', linewidth=2.)
@@ -125,10 +125,10 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # multi relationship
-        relationship = (list(getattr(obj, '_multi_child_objects', [])) +
-                        list(getattr(obj, '_multi_parent_containers', [])))
-        pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship)) -
-                rect_height)
+        relationship = (list(getattr(obj, '_multi_child_objects', []))
+                        + list(getattr(obj, '_multi_parent_containers', [])))
+        pos2 = (pos[1] + htotal - line_heigth * (1.5 + len(relationship))
+                - rect_height)
         rect_height = len(relationship) * line_heigth
 
         rect = Rectangle((pos[0], pos2), rect_width, rect_height,
@@ -136,9 +136,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         ax.add_patch(rect)
 
         # necessary attr
-        pos2 = (pos[1] + htotal -
-                line_heigth * (1.5 + len(allrelationship) +
-                             len(obj._necessary_attrs)))
+        pos2 = (pos[1] + htotal
+                - line_heigth * (1.5 + len(allrelationship) + len(obj._necessary_attrs)))
         rect = Rectangle((pos[0], pos2), rect_width,
                          line_heigth * len(obj._necessary_attrs),
                          facecolor='r', edgecolor='k', alpha=.5)
@@ -167,8 +166,8 @@ def generate_diagram(filename, rect_pos, rect_width, figsize):
         for i, attr in enumerate(obj._all_attrs):
             attrname, attrtype = attr[0], attr[1]
             t1 = attrname
-            if (hasattr(obj, '_quantity_attr') and
-                    obj._quantity_attr == attrname):
+            if (hasattr(obj, '_quantity_attr')
+                    and obj._quantity_attr == attrname):
                 t1 = attrname + '(object itself)'
             else:
                 t1 = attrname

@@ -278,7 +278,7 @@ class BlackrockIO(BaseIO):
         exts = ['nsx', 'nev', 'sif', 'ccf']
         ext_overrides = [nsx_override, nev_override, sif_override, ccf_override]
         for ext, ext_override in zip(exts, ext_overrides):
-            if ext_override is not None and self._avail_files[ext] == False:
+            if ext_override is not None and self._avail_files[ext] is False:
                 raise ValueError('Specified {} file {} could not be '
                                  'found.'.format(ext, ext_override))
 
@@ -1108,8 +1108,8 @@ class BlackrockIO(BaseIO):
         bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'bytes_in_headers', nsx_nb)
         nb_data_points = int(
-            (self.__get_file_size(filename) - bytes_in_headers) /
-            (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
+            (self.__get_file_size(filename) - bytes_in_headers)
+            / (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
 
         # add n_start
         n_starts = [(0 * t_unit).rescale(highest_res)]
@@ -1267,8 +1267,8 @@ class BlackrockIO(BaseIO):
         nsx_parameters = {
             'labels': labels,
             'units': np.array(
-                [b'uV'] *
-                self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [b'uV']
+                * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),
             'min_digital_val': np.array(
@@ -1277,9 +1277,9 @@ class BlackrockIO(BaseIO):
                 [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers':
-                self.__nsx_basic_header[nsx_nb].dtype.itemsize +
-                self.__nsx_ext_header[nsx_nb].dtype.itemsize *
-                self.__nsx_basic_header[nsx_nb]['channel_count'],
+                self.__nsx_basic_header[nsx_nb].dtype.itemsize
+                + self.__nsx_ext_header[nsx_nb].dtype.itemsize
+                * self.__nsx_basic_header[nsx_nb]['channel_count'],
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
@@ -1310,11 +1310,11 @@ class BlackrockIO(BaseIO):
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb]['bytes_in_headers'],
             'sampling_rate':
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period']))}
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period']))}
 
         return nsx_parameters[param_name]
 
@@ -1336,8 +1336,8 @@ class BlackrockIO(BaseIO):
         # extract parameters from nsx basic extended and data header
         data_parameters = {
             'nb_data_points': int(
-                (self.__get_file_size(filename) - bytes_in_headers) /
-                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
+                (self.__get_file_size(filename) - bytes_in_headers)
+                / (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'databl_idx': 1,
             'databl_t_start': t_starts[0],
             'databl_t_stop': t_stops[0]}
@@ -1410,8 +1410,8 @@ class BlackrockIO(BaseIO):
                 'name': 'serial_input_port',
                 'field': 'digital_input',
                 'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0) &
-                    self.__is_set(data['packet_insertion_reason'], 7),
+                    self.__is_set(data['packet_insertion_reason'], 0)
+                    & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         # analog input events via threshold crossings
@@ -1451,8 +1451,8 @@ class BlackrockIO(BaseIO):
                 'name': 'serial_input_port',
                 'field': 'digital_input',
                 'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0) &
-                    self.__is_set(data['packet_insertion_reason'], 7),
+                    self.__is_set(data['packet_insertion_reason'], 0)
+                    & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         return event_types
