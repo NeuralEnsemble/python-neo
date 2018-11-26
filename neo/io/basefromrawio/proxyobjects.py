@@ -92,6 +92,7 @@ class AnalogSignalProxy(BaseProxy):
         # and all gain are the same
         support_raw_magnitude = np.all(sig_chans['gain']==sig_chans['gain'][0]) and \
                                                     np.all(sig_chans['offset']==0.)
+        
         if support_raw_magnitude:
             str_units = ensure_signal_units(sig_chans['units'][0]).units.dimensionality.string
             self._raw_units = pq.CompoundUnit('{}*{}'.format(sig_chans['gain'][0], str_units))
@@ -194,7 +195,7 @@ class AnalogSignalProxy(BaseProxy):
 
         if magnitude_mode=='raw':
             assert self._raw_units is not None,\
-                    'raw magnitude is not support gain are not the same for all channel'
+                    'raw magnitude is not support gain are not the same for all channel or offset is not 0'
             sig = raw_signal
             units = self._raw_units
 
