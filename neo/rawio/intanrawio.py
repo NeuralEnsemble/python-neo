@@ -49,7 +49,7 @@ class IntanRawIO(BaseRawIO):
             self._global_info, self._ordered_channels, data_dtype,\
                 header_size, self._block_size = read_rhs(self.filename)
         elif self.filename.endswith('.rhd'):
-            self._global_info, self._ordered_channels,  data_dtype,\
+            self._global_info, self._ordered_channels, data_dtype,\
                 header_size, self._block_size = read_rhd(self.filename)
 
         # memmap raw data with the complicated structured dtype
@@ -70,7 +70,7 @@ class IntanRawIO(BaseRawIO):
             else:
                 sig_dtype = 'uint16'
             group_id = 0
-            sig_channels.append((name, chan_id,  chan_info['sampling_rate'],
+            sig_channels.append((name, chan_id, chan_info['sampling_rate'],
                                 sig_dtype, chan_info['units'], chan_info['gain'],
                                 chan_info['offset'], chan_info['signal_type']))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
