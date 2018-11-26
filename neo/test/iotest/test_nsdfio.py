@@ -31,7 +31,8 @@ class NSDFIOTest(unittest.TestCase):
     """
     Base class for all NSDFIO tests.
 
-    setUp and tearDown methods are responsible for respectively: setting up and cleaning after tests
+    setUp and tearDown methods are responsible for setting up and cleaning after tests,
+    respectively
     All create_{object} methods create and return an example {object}.
     """
 
