@@ -330,6 +330,8 @@ class SpikeTrain(DataObject):
         units
         '''
         obj = super(SpikeTrain, self).rescale(units)
+        obj.t_start = self.t_start.rescale(units)
+        obj.t_stop = self.t_stop.rescale(units)
         obj.unit = self.unit
         return obj
 

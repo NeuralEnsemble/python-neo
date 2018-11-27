@@ -1552,6 +1552,8 @@ class TestChanging(unittest.TestCase):
         train = SpikeTrain(data, t_start=0.5, t_stop=10.0)
         train.segment = Segment()
         train.unit = Unit()
+        self.assertEqual(train.t_start.magnitude, 0.5)
+        self.assertEqual(train.t_stop.magnitude, 10.0)
         result = train.rescale(pq.s)
         assert_neo_object_is_compliant(train)
         assert_neo_object_is_compliant(result)
@@ -1559,6 +1561,8 @@ class TestChanging(unittest.TestCase):
         self.assertEqual(result.units, 1 * pq.s)
         self.assertIs(result.segment, train.segment)
         self.assertIs(result.unit, train.unit)
+        self.assertEqual(result.t_start.magnitude, 0.0005)
+        self.assertEqual(result.t_stop.magnitude, 0.01)
 
     def test__rescale_same_units(self):
         data = [3, 4, 5] * pq.ms
