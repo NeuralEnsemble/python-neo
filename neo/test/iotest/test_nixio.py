@@ -350,7 +350,7 @@ class NixIOTest(unittest.TestCase):
         allsignalgroups = list()
 
         # analogsignals
-        for n in range(3):
+        for n in range(5):
             siggroup = list()
             asig_name = "{}_asig{}".format(cls.rword(10), n)
             asig_definition = cls.rsentence(5, 5)
