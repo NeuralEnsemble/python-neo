@@ -310,7 +310,7 @@ class NIXRawIO(BaseRawIO):
         if ev_unit == 'ms':
             event_timestamps /= 1000
         event_times = event_timestamps.astype(dtype)
-        # supposing unit is second, other possibilies maybe mS microS...
+        # supposing unit is second, other possibilities maybe mS microS...
         return event_times  # return in seconds
 
     def _rescale_epoch_duration(self, raw_duration, dtype='float64'):
@@ -322,5 +322,5 @@ class NIXRawIO(BaseRawIO):
         if ep_unit == 'ms':
             raw_duration /= 1000
         durations = raw_duration.astype(dtype)
-        # supposing unit is second, other possibilies maybe mS microS...
+        # supposing unit is second, other possibilities maybe mS microS...
         return durations  # return in seconds
