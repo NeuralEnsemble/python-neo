@@ -109,7 +109,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # test 4 Units
         block = reader.read_block(load_waveforms=True,
-                                  units_group_mode='all-in-one')
+                                signal_group_mode = 'split-all',
+                                units_group_mode='all-in-one')
 
         self.assertEqual(len(block.segments[0].analogsignals), 10)
         self.assertEqual(len(block.channel_indexes[-1].units), 4)
@@ -134,7 +135,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         #     reader2 = BlackrockIO(filename=filename, nev_override='nonexistent')
 
         # Load data to maximum extent, one None is not given as list
-        block = reader.read_block(load_waveforms=False)
+        block = reader.read_block(load_waveforms=False, signal_group_mode = 'split-all')
         lena = len(block.segments[0].analogsignals[0])
         numspa = len(block.segments[0].spiketrains[0])
 
@@ -159,7 +160,8 @@ class CommonTests(BaseTestIO, unittest.TestCase):
 
         # test 4 Units
         block = reader.read_block(load_waveforms=True,
-                                  units_group_mode='all-in-one')
+                                signal_group_mode = 'split-all',
+                              units_group_mode='all-in-one')
 
         self.assertEqual(len(block.segments[0].analogsignals), 96)
         self.assertEqual(len(block.channel_indexes[-1].units), 218)
@@ -181,12 +183,44 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         block = reader.read_block(load_waveforms=False)
         sampling_rates = np.unique(
             [a.sampling_rate.rescale('Hz') for a in block.filter(objects='AnalogSignal')])
-        self.assertEqual(len(sampling_rates), len(reader._selected_nsx))
+        self.assertEqual(len(sampling_rates), 2)
 
         segment = reader.read_segment()
         sampling_rates = np.unique(
             [a.sampling_rate.rescale('Hz') for a in segment.filter(objects='AnalogSignal')])
-        self.assertEqual(len(sampling_rates), len(reader._selected_nsx))
+        self.assertEqual(len(sampling_rates), 2)
+
+        # load only ns5
+        reader = BlackrockIO(filename=filename, nsx_to_load=5)
+        seg = reader.read_segment()
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertEqual(seg.analogsignals[0].shape,  (109224, 96))
+
+        # load only ns2
+        reader = BlackrockIO(filename=filename, nsx_to_load=2)
+        seg = reader.read_segment()
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
+
+        # load only ns2
+        reader = BlackrockIO(filename=filename, nsx_to_load=[2])
+        seg = reader.read_segment()
+        self.assertEqual(len(seg.analogsignals), 1)
+        
+        # load ns2 + ns5
+        reader = BlackrockIO(filename=filename, nsx_to_load=[2, 5])
+        seg = reader.read_segment()
+        self.assertEqual(len(seg.analogsignals), 2)
+        self.assertEqual(seg.analogsignals[0].shape, (3640, 6))
+        self.assertEqual(seg.analogsignals[1].shape,  (109224, 96))
+
+        # load only ns5
+        reader = BlackrockIO(filename=filename, nsx_to_load='max')
+        seg = reader.read_segment()
+        self.assertEqual(len(seg.analogsignals), 1)
+        self.assertEqual(seg.analogsignals[0].shape,  (109224, 96))
+        
+        
 
     @unittest.skipUnless(HAVE_SCIPY, "requires scipy")
     def test_compare_blackrockio_with_matlabloader_v21(self):
@@ -224,7 +258,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
             session = BlackrockIO(
                 dirname,
                 verbose=False, **param[1])
-            block = session.read_block(load_waveforms=True)
+            block = session.read_block(load_waveforms=True, signal_group_mode = 'split-all')
             # Check if analog data are equal
             self.assertGreater(len(block.channel_indexes), 0)
             for i, chidx in enumerate(block.channel_indexes):
