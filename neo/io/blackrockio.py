@@ -14,7 +14,7 @@ class BlackrockIO(BlackrockRawIO, BaseFromRaw):
 
     _prefered_signal_group_mode = 'group-by-same-units'
 
-    def __init__(self, filename, nsx_to_load=None, **kargs):
-        BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)
+    def __init__(self, filename, **kargs):
+        BlackrockRawIO.__init__(self, filename=filename, **kargs)
         BaseFromRaw.__init__(self, filename)
 

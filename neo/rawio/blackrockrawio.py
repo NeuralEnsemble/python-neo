@@ -306,12 +306,14 @@ class BlackrockRawIO(BaseRawIO):
                 self.nsx_to_load = [max(self._avail_nsx)]
             else:
                 self.nsx_to_load = []
-        elif isintance(self.nsx_to_load, int):
-            self.nsx_to_load = [max(self._avail_nsx)]
-        elif isintance(self.nsx_to_load, list):
+        elif isinstance(self.nsx_to_load, int):
+            self.nsx_to_load = [self.nsx_to_load]
+        elif isinstance(self.nsx_to_load, list):
             pass
         else:
             raise(ValueError('nsx_to_load is wrong'))
+        
+        assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load), 'nsx_to_load to not match available nsx list'
         
         if len(self.nsx_to_load) > 0 and \
                 self.__nsx_spec[self.nsx_to_load[0]] == '2.1' and \
@@ -328,7 +330,7 @@ class BlackrockRawIO(BaseRawIO):
         if self._avail_files['nev']:
             for nsx_nb in self.nsx_to_load:
                 # TODO check this
-                self.__match_nsx_and_nev_segment_ids(self.nsx_to_load)
+                self.__match_nsx_and_nev_segment_ids(nsx_nb)
     
         # usefull to get local channel index in nsX from the global channel index
         local_sig_indexes = []
@@ -365,7 +367,7 @@ class BlackrockRawIO(BaseRawIO):
                         units = chan['units'].decode()
                     elif spec == '2.1':
                         ch_name = chan['labels']
-                        ch_id = self.__nsx_ext_header[self.nsx_to_load][i]['electrode_id']
+                        ch_id = self.__nsx_ext_header[nsx_nb][i]['electrode_id']
                         units = chan['units']
                     sig_dtype = 'int16'
                     # max_analog_val/min_analog_val/max_digital_val/min_analog_val are int16!!!!!
@@ -631,7 +633,6 @@ class BlackrockRawIO(BaseRawIO):
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         nsx_nb, local_indexes = self._get_nsx_and_local_indexes(channel_indexes)
         memmap_data = self.nsx_datas[nsx_nb][seg_index]
-        local_indexes = slice(None)
         sig_chunk = memmap_data[i_start:i_stop, local_indexes]
         return sig_chunk
 
