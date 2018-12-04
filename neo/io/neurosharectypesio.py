@@ -87,7 +87,7 @@ class NeurosharectypesIO(BaseIO):
         ...
         >>> print seg.spiketrains
         []
-        >>> print seg.eventarrays
+        >>> print seg.events
         [<EventArray: 1@1.12890625 s, 1@2.02734375 s, 1@3.82421875 s>]
 
     Note:
@@ -198,7 +198,7 @@ class NeurosharectypesIO(BaseIO):
                 ea.times = times * pq.s
                 ea.labels = np.array(labels, dtype='S')
 
-                seg.eventarrays.append(ea)
+                seg.events.append(ea)
 
             # analog
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_ANALOG':
