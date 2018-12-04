@@ -98,7 +98,7 @@ class NeuroshareapiIO(BaseIO):
         epochID = 3
         # if a filename was given, create a dictionary with information that will
         # be needed later on.
-        if self.filename != None:
+        if self.filename is not None:
             if dllpath is not None:
                 name = os.path.splitext(os.path.basename(dllpath))[0]
                 library = ns.Library(name, dllpath)
