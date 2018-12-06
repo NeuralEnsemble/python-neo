@@ -18,8 +18,6 @@ except ImportError:
     HAVE_NIX = False
 
 
-
-
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class TestNixfr(BaseTestIO, unittest.TestCase, ):
     ioclass = NixIOfr
