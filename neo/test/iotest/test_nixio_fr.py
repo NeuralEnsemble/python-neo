@@ -28,7 +28,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
 
     def setUp(self):
         super(TestNixfr, self).setUp()
-        self.testfilename = 'nixio_fr.nix'
+        self.testfilename = self.get_filename_path('nixio_fr.nix')
         self.reader_fr = NixIOfr(filename=self.testfilename)
         self.reader_norm = NixIO(filename=self.testfilename, mode='ro')
         self.blk = self.reader_fr.read_block(block_index=1, load_waveforms=True)
