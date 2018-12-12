@@ -312,9 +312,10 @@ class BlackrockRawIO(BaseRawIO):
             pass
         else:
             raise(ValueError('nsx_to_load is wrong'))
-        
-        assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load), 'nsx_to_load to not match available nsx list'
-        
+
+        assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load),\
+                                    'nsx_to_load to not match available nsx list'
+
         if len(self.nsx_to_load) > 0 and \
                 self.__nsx_spec[self.nsx_to_load[0]] == '2.1' and \
                 not self._avail_files['nev']:
@@ -325,24 +326,19 @@ class BlackrockRawIO(BaseRawIO):
 
         # This requires nsX to be parsed already
         # Needs to be called when no nsX are available as well in order to warn the user
-        # TODO QUESTION michael and julia
-        # do we need to do it for all nsx ?
         if self._avail_files['nev']:
             for nsx_nb in self.nsx_to_load:
-                # TODO check this
                 self.__match_nsx_and_nev_segment_ids(nsx_nb)
-    
+
         # usefull to get local channel index in nsX from the global channel index
         local_sig_indexes = []
-        
-        
+
         self.nsx_datas = {}
         self.sig_sampling_rates = {}
         if len(self.nsx_to_load) > 0:
             for nsx_nb in self.nsx_to_load:
                 spec = self.__nsx_spec[nsx_nb]
                 self.nsx_datas[nsx_nb] = self.__nsx_data_reader[spec](nsx_nb)
-                
 
                 sr = float(main_sampling_rate / self.__nsx_basic_header[nsx_nb]['period'])
                 self.sig_sampling_rates[nsx_nb] = sr
@@ -384,15 +380,16 @@ class BlackrockRawIO(BaseRawIO):
                     sig_channels.append((ch_name, ch_id, sr, sig_dtype,
                                          units, gain, offset, group_id,))
                 local_sig_indexes.extend(range(len(ext_header)))
-            
+
             self._local_sig_indexes = np.array(local_sig_indexes)
-            
+
             # check nb segment per nsx
             nb_segments_for_nsx = [len(self.nsx_datas[nsx_nb]) for nsx_nb in self.nsx_to_load]
-            assert all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx), 'Segment nb not consistanent accros nsX files'
+            assert all(nb == nb_segments_for_nsx[0] for nb in nb_segments_for_nsx),\
+                                                    'Segment nb not consistanent across nsX files'
             self._nb_segment = nb_segments_for_nsx[0]
-            # TODO uncomment this after debug
-            # self.__delete_empty_segments()
+
+            self.__delete_empty_segments()
 
             # t_start/t_stop for segment are given by nsx limits or nev limits
             self._sigs_t_starts = {nsx_nb: [] for nsx_nb in self.nsx_to_load}
@@ -606,7 +603,7 @@ class BlackrockRawIO(BaseRawIO):
 
     def _segment_t_stop(self, block_index, seg_index):
         return self._seg_t_stops[seg_index]
-    
+
     def _get_nsx_and_local_indexes(self, channel_indexes):
         # internal helper to get nsx number and local channel index
         # from global channel indexes
@@ -1892,43 +1889,39 @@ class BlackrockRawIO(BaseRawIO):
         starting from 0 again. Nev data are mapped accordingly to stay with their corresponding
         segment in the nsX data.
         """
-        # TODO rewrite this entirely
-        return
-        nb_empty_segments = 0
+
+        # Discard empty segments
+        removed_seg = []
         for data_bl in range(self._nb_segment):
-            length = self.nsx_data[data_bl].shape[0]
-            # Discard empty segments
-            if length < 2:
-                nb_empty_segments += 1
-                self.nsx_data.pop(data_bl)
-                self.__nsx_data_header[self.nsx_to_load].pop(data_bl)
-                continue
+            keep_seg = True
+            for nsx_nb in self.nsx_to_load:
+                length = self.nsx_datas[nsx_nb][data_bl].shape[0]
+                keep_seg = keep_seg and (length < 2)
+
+            if not keep_seg:
+                removed_seg.append(data_bl)
+                for nsx_nb in self.nsx_to_load:
+                    self.nsx_datas[nsx_nb].pop(data_bl)
+                    self.__nsx_data_header[nsx_nb].pop(data_bl)
 
         # Keys need to be increasing from 0 to maximum in steps of 1
-        # To ensure this after removing empty segments, some keys need to be changed
-        for i in range(self._nb_segment):
-            # If this key does not exist, reduce all following keys by 1,
-            # so the keys become a range starting from 0
-            if i not in self.nsx_data:
-                self.nsx_data = {key - 1 if key > i else key: value for (key, value) in
-                                 self.nsx_data.items()}
-                data_header = self.__nsx_data_header[self.nsx_to_load]
-                data_header = {key - 1 if key > i else key: value for (key, value) in
-                               data_header.items()}
-                self.__nsx_data_header[self.nsx_to_load] = data_header
+        # To ensure this after removing empty segments, some keys need to be re mapped
+        for i in removed_seg[::-1]:
+            for j in range(i+1, self._nb_segment):
+                # remap nsx seg index
+                for nsx_nb in self.nsx_to_load:
+                    data = self.nsx_datas[nsx_nb].pop(j)
+                    self.nsx_datas[nsx_nb][j-1] = data
+
+                    data_header = self.__nsx_data_header[nsx_nb].pop(j)
+                    self.__nsx_data_header[nsx_nb][j-1] = data_header
+
                 # Also remap nev data, ev_ids are the equivalent to keys above
                 if self._avail_files['nev']:
                     for k, (data, ev_ids) in self.nev_data.items():
-                        # If this segment id does not exist, reduce all following by 1
-                        # to make them a range starting from 0
-                        if i not in ev_ids:
-                            ev_ids[ev_ids > i] -= 1
-                        else:
-                            raise ValueError("A segment in nsX was omitted but there were"
-                                             "spikes matched to it.")
+                        ev_ids[ev_ids == j] -= 1
 
-        # Empty segments were discarded, thus there may be less segments now
-        self._nb_segment -= nb_empty_segments
+            self._nb_segment -= 1
 
     def __get_nonneural_evdicts_variant_b(self, data):
         """

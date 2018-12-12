@@ -17,4 +17,3 @@ class BlackrockIO(BlackrockRawIO, BaseFromRaw):
     def __init__(self, filename, **kargs):
         BlackrockRawIO.__init__(self, filename=filename, **kargs)
         BaseFromRaw.__init__(self, filename)
-
