@@ -34,6 +34,7 @@ import numpy as np
 from .baseio import BaseIO
 from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
+from ..io.basefromrawio.proxyobjects import BaseProxy
 from ..version import version as neover
 
 try:
@@ -692,12 +693,17 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(anasig[:].magnitude)
+        if isinstance(anasig, BaseProxy):
+            data = np.transpose(anasig.load()[:].magnitude)
+        else:
+            data = np.transpose(anasig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name,
                                            "neo.analogsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
+            print(idx)
             daname = "{}.{}".format(nix_name, idx)
             da = nixblock.create_data_array(daname, "neo.analogsignal",
                                             data=row)
@@ -705,9 +711,7 @@ class NixIO(BaseIO):
             da.definition = anasig.description
             da.unit = units_to_string(anasig.units)
 
-            timedim = da.append_sampled_dimension(
-                anasig.sampling_period.magnitude.item()
-            )
+            timedim = da.append_sampled_dimension(anasig.sampling_period.magnitude.item())
             timedim.unit = units_to_string(anasig.sampling_period.units)
             tstart = anasig.t_start
             metadata["t_start"] = tstart.magnitude.item()
@@ -759,7 +763,11 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(irsig[:].magnitude)
+        if isinstance(irsig, BaseProxy):
+            data = np.transpose(irsig.load()[:].magnitude)
+        else:
+            data = np.transpose(irsig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(
             nix_name, "neo.irregularlysampledsignal.metadata"
@@ -811,8 +819,13 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
-        times = event.times.magnitude
-        units = units_to_string(event.times.units)
+        if isinstance(event, BaseProxy):
+            full_event = event.load()
+            times = full_event.times.magnitude
+            units = units_to_string(full_event.times.units)
+        else:
+            times = event.times.magnitude
+            units = units_to_string(event.times.units)
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.event.times", data=times
         )
@@ -863,8 +876,13 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
-        times = epoch.times.magnitude
-        tunits = units_to_string(epoch.times.units)
+        if isinstance(epoch, BaseProxy):
+            full_epoch = epoch.load()
+            times = full_epoch.times.magnitude
+            tunits = units_to_string(full_epoch.times.units)
+        else:
+            times = epoch.times.magnitude
+            tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
 
@@ -925,12 +943,16 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
-        times = spiketrain.times.magnitude
-        tunits = units_to_string(spiketrain.times.units)
+        if isinstance(spiketrain, BaseProxy):
+            full_spiketrain = spiketrain.load()
+            times = full_spiketrain.times.magnitude
+            tunits = units_to_string(full_spiketrain.times.units)
+        else:
+            times = spiketrain.times.magnitude
+            tunits = units_to_string(spiketrain.times.units)
 
-        timesda = nixblock.create_data_array(
-            "{}.times".format(nix_name), "neo.spiketrain.times", data=times
-        )
+        timesda = nixblock.create_data_array("{}.times".format(nix_name),
+                                             "neo.spiketrain.times", data=times)
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
                                           positions=timesda)
