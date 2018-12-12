@@ -1244,14 +1244,14 @@ class BlackrockRawIO(BaseRawIO):
                     end_of_current_nsx_seg = seg['timestamp'] + \
                         seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
 
-                    mask_after_seg = [(ev_ids == i)
-                                      & (data['timestamp'] > end_of_current_nsx_seg + nsx_period)]
+                    mask_after_seg = (ev_ids == i) & \
+                                      (data['timestamp'] > end_of_current_nsx_seg + nsx_period)
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = [(ev_ids == i)
-                                    & (data['timestamp'] < int(seg['timestamp'])
-                                       - nsx_offset - nsx_period)]
+                    mask_outside = (ev_ids == i) & \
+                                    (data['timestamp'] < int(seg['timestamp'])- nsx_offset - nsx_period)
+
                     if len(data[mask_outside]) > 0:
                         warnings.warn("Spikes outside any segment. Detected on segment #{}".
                                       format(i))
