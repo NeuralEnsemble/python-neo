@@ -1896,7 +1896,7 @@ class BlackrockRawIO(BaseRawIO):
             keep_seg = True
             for nsx_nb in self.nsx_to_load:
                 length = self.nsx_datas[nsx_nb][data_bl].shape[0]
-                keep_seg = keep_seg and (length < 2)
+                keep_seg = keep_seg and (length >= 2)
 
             if not keep_seg:
                 removed_seg.append(data_bl)
