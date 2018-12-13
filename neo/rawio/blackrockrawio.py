@@ -1245,12 +1245,12 @@ class BlackrockRawIO(BaseRawIO):
                         seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
 
                     mask_after_seg = (ev_ids == i) & \
-                                      (data['timestamp'] > end_of_current_nsx_seg + nsx_period)
+                                    (data['timestamp'] > end_of_current_nsx_seg + nsx_period)
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
                     mask_outside = (ev_ids == i) & \
-                                    (data['timestamp'] < int(seg['timestamp'])- nsx_offset - nsx_period)
+                            (data['timestamp'] < int(seg['timestamp']) - nsx_offset - nsx_period)
 
                     if len(data[mask_outside]) > 0:
                         warnings.warn("Spikes outside any segment. Detected on segment #{}".
@@ -1907,14 +1907,14 @@ class BlackrockRawIO(BaseRawIO):
         # Keys need to be increasing from 0 to maximum in steps of 1
         # To ensure this after removing empty segments, some keys need to be re mapped
         for i in removed_seg[::-1]:
-            for j in range(i+1, self._nb_segment):
+            for j in range(i + 1, self._nb_segment):
                 # remap nsx seg index
                 for nsx_nb in self.nsx_to_load:
                     data = self.nsx_datas[nsx_nb].pop(j)
                     self.nsx_datas[nsx_nb][j-1] = data
 
                     data_header = self.__nsx_data_header[nsx_nb].pop(j)
-                    self.__nsx_data_header[nsx_nb][j-1] = data_header
+                    self.__nsx_data_header[nsx_nb][j - 1] = data_header
 
                 # Also remap nev data, ev_ids are the equivalent to keys above
                 if self._avail_files['nev']:
