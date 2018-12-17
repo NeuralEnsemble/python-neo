@@ -168,6 +168,7 @@ iolist = [
     KlustaKwikIO,
     KwikIO,
     MicromedIO,
+    NixIOFr,  # place NixIO (from raw) before NixIO to push rawio implementation
     NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
     NeoHdf5IO,
     NeoMatlabIO,
