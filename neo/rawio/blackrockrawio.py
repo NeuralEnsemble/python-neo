@@ -7,7 +7,7 @@ This work is based on:
   * Michael Denker, Lyuba Zehl - second version
   * Samuel Garcia - third version
   * Lyuba Zehl, Michael Denker - fourth version
-  * Samuel Garcia - fifth version
+  * Samuel Garcia, Julia Srenger - fifth version
 
 This IO supports reading only.
 This IO is able to read:
@@ -315,6 +315,12 @@ class BlackrockRawIO(BaseRawIO):
 
         assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load),\
                                     'nsx_to_load to not match available nsx list'
+
+        # check that all files come from the same specification
+        all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
+        if self._avail_files['nev']:
+            all_spec.append(self.__nev_spec)
+        assert all(all_spec[0] == spec for spec in all_spec), "Files don't have the same internal version"
 
         if len(self.nsx_to_load) > 0 and \
                 self.__nsx_spec[self.nsx_to_load[0]] == '2.1' and \
