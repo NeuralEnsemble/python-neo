@@ -170,7 +170,7 @@ class NestIO(BaseIO):
             # create one analogsignal per value column requested
             for v_id, value_column in enumerate(value_columns):
                 signal = data[
-                         selected_ids[0]:selected_ids[1], value_column]
+                    selected_ids[0]:selected_ids[1], value_column]
 
                 # create AnalogSignal objects and annotate them with
                 #  the neuron ID
@@ -181,8 +181,8 @@ class NestIO(BaseIO):
                     id=i,
                     type=value_types[v_id]))
                 # check for correct length of analogsignal
-                assert (analogsignal_list[-1].t_stop ==
-                        anasig_start_time + len(signal) * sampling_period)
+                assert (analogsignal_list[-1].t_stop
+                        == anasig_start_time + len(signal) * sampling_period)
         return analogsignal_list
 
     def __read_spiketrains(self, gdf_id_list, time_unit,
@@ -398,7 +398,8 @@ class NestIO(BaseIO):
         curr_id = 0
         if ((gid_list != [None]) and (gid_list is not None)):
             if gid_list != []:
-                def condition(x): return x in gid_list
+                def condition(x):
+                    return x in gid_list
 
                 condition_column = id_column
             sorting_column.append(curr_id)  # Sorting according to gids first
@@ -736,9 +737,7 @@ class ColumnIO:
         elif (condition is not None) and (condition_column is not None):
             condition_function = np.vectorize(condition)
             mask = condition_function(
-                selected_data[
-                :, condition_column]).astype(bool)
-
+                selected_data[:, condition_column]).astype(bool)
             selected_data = selected_data[mask, :]
 
         # Apply sorting if requested

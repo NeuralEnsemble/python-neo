@@ -27,6 +27,7 @@ import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.dataobject import DataObject
 from neo.core.channelindex import ChannelIndex
 from copy import copy, deepcopy
 
@@ -54,14 +55,17 @@ def _get_sampling_rate(sampling_rate, sampling_period):
 
 def _new_AnalogSignalArray(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
                            sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                           description=None, annotations=None, channel_index=None, segment=None):
+                           description=None, array_annotations=None, annotations=None,
+                           channel_index=None, segment=None):
     '''
     A function to map AnalogSignal.__new__ to function that
         does not do the unit checking. This is needed for pickle to work.
     '''
-    obj = cls(signal=signal, units=units, dtype=dtype, copy=copy, t_start=t_start,
-              sampling_rate=sampling_rate, sampling_period=sampling_period, name=name,
-              file_origin=file_origin, description=description, **annotations)
+    obj = cls(signal=signal, units=units, dtype=dtype, copy=copy,
+              t_start=t_start, sampling_rate=sampling_rate,
+              sampling_period=sampling_period, name=name,
+              file_origin=file_origin, description=description,
+              array_annotations=array_annotations, **annotations)
     obj.channel_index = channel_index
     obj.segment = segment
     return obj
@@ -116,6 +120,8 @@ class AnalogSignal(BaseSignal):
     *Optional attributes/properties*:
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
         :copy: (bool) True by default.
+        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -161,7 +167,7 @@ class AnalogSignal(BaseSignal):
 
     def __new__(cls, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
                 sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                description=None, **annotations):
+                description=None, array_annotations=None, **annotations):
         '''
         Constructs new :class:`AnalogSignal` from data.
 
@@ -188,7 +194,7 @@ class AnalogSignal(BaseSignal):
 
     def __init__(self, signal, units=None, dtype=None, copy=True, t_start=0 * pq.s,
                  sampling_rate=None, sampling_period=None, name=None, file_origin=None,
-                 description=None, **annotations):
+                 description=None, array_annotations=None, **annotations):
         '''
         Initializes a newly constructed :class:`AnalogSignal` instance.
         '''
@@ -199,8 +205,8 @@ class AnalogSignal(BaseSignal):
 
         # Calls parent __init__, which grabs universally recommended
         # attributes and sets up self.annotations
-        BaseNeo.__init__(self, name=name, file_origin=file_origin, description=description,
-                         **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
 
     def __reduce__(self):
         '''
@@ -210,8 +216,8 @@ class AnalogSignal(BaseSignal):
         return _new_AnalogSignalArray, (self.__class__, np.array(self), self.units, self.dtype,
                                         True, self.t_start, self.sampling_rate,
                                         self.sampling_period, self.name, self.file_origin,
-                                        self.description, self.annotations, self.channel_index,
-                                        self.segment)
+                                        self.description, self.array_annotations,
+                                        self.annotations, self.channel_index, self.segment)
 
     def _array_finalize_spec(self, obj):
         '''
@@ -286,10 +292,12 @@ class AnalogSignal(BaseSignal):
                     obj = obj.reshape(-1, 1)
                 if self.channel_index:
                     obj.channel_index = self.channel_index.__getitem__(k)
+                obj.array_annotate(**deepcopy(self.array_annotations_at_index(k)))
         elif isinstance(i, slice):
             obj = super(AnalogSignal, self).__getitem__(i)
             if i.start:
                 obj.t_start = self.t_start + i.start * self.sampling_period
+            obj.array_annotations = deepcopy(self.array_annotations)
         elif isinstance(i, np.ndarray):
             # Indexing of an AnalogSignal is only consistent if the resulting number of
             # samples is the same for each trace. The time axis for these samples is not
@@ -485,6 +493,13 @@ class AnalogSignal(BaseSignal):
         # we're going to send the list of indicies so that we get *copy* of the
         # sliced data
         obj = super(AnalogSignal, self).__getitem__(np.arange(i, j, 1))
+
+        # If there is any data remaining, there will be data for every channel
+        # In this case, array_annotations need to stay available
+        # super.__getitem__ cannot do this, so it needs to be done here
+        if len(obj) > 0:
+            obj.array_annotations = self.array_annotations
+
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj

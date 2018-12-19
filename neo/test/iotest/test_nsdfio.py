@@ -31,7 +31,8 @@ class NSDFIOTest(unittest.TestCase):
     """
     Base class for all NSDFIO tests.
 
-    setUp and tearDown methods are responsible for respectively: setting up and cleaning after tests
+    setUp and tearDown methods are responsible for setting up and cleaning after tests,
+    respectively
     All create_{object} methods create and return an example {object}.
     """
 
@@ -234,8 +235,8 @@ class NSDFIOTestWriteThenRead(NSDFIOTest):
         assert object1.__class__.__name__ == object2.__class__.__name__
         assert object2.file_origin == self.filename
         assert_same_attributes(object1, object2, exclude=[
-                                                             'file_origin',
-                                                             'file_datetime'] + exclude_attr)
+            'file_origin',
+            'file_datetime'] + exclude_attr)
         assert_same_annotations(object1, object2)
 
 

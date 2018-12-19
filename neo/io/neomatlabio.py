@@ -30,9 +30,9 @@ except ImportError as err:
 else:
     if version.LooseVersion(scipy.version.version) < '0.12.0':
         HAVE_SCIPY = False
-        SCIPY_ERR = ImportError("your scipy version is too old to support " +
-                                "MatlabIO, you need at least 0.12.0. " +
-                                "You have %s" % scipy.version.version)
+        SCIPY_ERR = ImportError("your scipy version is too old to support "
+                                + "MatlabIO, you need at least 0.12.0. "
+                                + "You have %s" % scipy.version.version)
     else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
@@ -149,7 +149,7 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s, 
+                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s,
                                               sampling_rate=100*pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
@@ -285,8 +285,7 @@ class NeoMatlabIO(BaseIO):
             # ~ struct['units'] = ob.dimensionality.string
             # ~ continue
 
-            if (hasattr(ob, '_quantity_attr') and
-                ob._quantity_attr == attrname):
+            if (hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
@@ -374,8 +373,7 @@ class NeoMatlabIO(BaseIO):
             if attrname.endswith('_units') or attrname == 'units':
                 # linked with another field
                 continue
-            if (hasattr(cl, '_quantity_attr') and
-                cl._quantity_attr == attrname):
+            if (hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)

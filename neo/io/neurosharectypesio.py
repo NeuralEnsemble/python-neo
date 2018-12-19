@@ -87,7 +87,7 @@ class NeurosharectypesIO(BaseIO):
         ...
         >>> print seg.spiketrains
         []
-        >>> print seg.eventarrays
+        >>> print seg.events
         [<EventArray: 1@1.12890625 s, 1@2.02734375 s, 1@3.82421875 s>]
 
     Note:
@@ -133,8 +133,8 @@ class NeurosharectypesIO(BaseIO):
                      lazy=False):
         """
         Arguments:
-            import_neuroshare_segment: import neuroshare segment as SpikeTrain with associated waveforms or not imported at all.
-
+            import_neuroshare_segment: import neuroshare segment as SpikeTrain
+            with associated waveforms or not imported at all.
         """
         assert not lazy, 'Do not support lazy'
 
@@ -151,8 +151,8 @@ class NeurosharectypesIO(BaseIO):
         # API version
         info = ns_LIBRARYINFO()
         neuroshare.ns_GetLibraryInfo(ctypes.byref(info), ctypes.sizeof(info))
-        seg.annotate(neuroshare_version=str(info.dwAPIVersionMaj) +
-                                        '.' + str(info.dwAPIVersionMin))
+        seg.annotate(neuroshare_version=str(info.dwAPIVersionMaj)
+                                        + '.' + str(info.dwAPIVersionMin))
 
         # open file
         hFile = ctypes.c_uint32(0)
@@ -198,7 +198,7 @@ class NeurosharectypesIO(BaseIO):
                 ea.times = times * pq.s
                 ea.labels = np.array(labels, dtype='S')
 
-                seg.eventarrays.append(ea)
+                seg.events.append(ea)
 
             # analog
             if entity_types[entityInfo.dwEntityType] == 'ns_ENTITY_ANALOG':
@@ -238,7 +238,7 @@ class NeurosharectypesIO(BaseIO):
 
             # segment
             if entity_types[
-                entityInfo.dwEntityType] == 'ns_ENTITY_SEGMENT' and import_neuroshare_segment:
+                    entityInfo.dwEntityType] == 'ns_ENTITY_SEGMENT' and import_neuroshare_segment:
 
                 pdwSegmentInfo = ns_SEGMENTINFO()
                 if not str(entityInfo.szEntityLabel).startswith('spks'):
@@ -268,23 +268,24 @@ class NeurosharectypesIO(BaseIO):
                 times = np.empty((entityInfo.dwItemCount), dtype='f')
                 waveforms = np.empty((entityInfo.dwItemCount, nsource, nsample), dtype='f')
                 for dwIndex in range(entityInfo.dwItemCount):
-                    neuroshare.ns_GetSegmentData(hFile, dwEntityID, dwIndex,
-                                                 ctypes.byref(pdTimeStamp), pData.ctypes.data_as(
-                            ctypes.POINTER(ctypes.c_double)),
-                                                 dwDataBufferSize *
-                                                 8, ctypes.byref(pdwSampleCount),
-                                                 ctypes.byref(pdwUnitID))
+                    neuroshare.ns_GetSegmentData(
+                        hFile, dwEntityID, dwIndex,
+                        ctypes.byref(pdTimeStamp),
+                        pData.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                        dwDataBufferSize * 8,
+                        ctypes.byref(pdwSampleCount),
+                        ctypes.byref(pdwUnitID))
 
                     times[dwIndex] = pdTimeStamp.value
-                    waveforms[dwIndex, :, :] = pData[:nsample *
-                                                      nsource].reshape(nsample, nsource).transpose()
+                    waveforms[dwIndex, :, :] = pData[:nsample * nsource].reshape(
+                        nsample, nsource).transpose()
 
                 sptr = SpikeTrain(times=pq.Quantity(times, units='s', copy=False),
                                   t_stop=times.max(),
                                   waveforms=pq.Quantity(waveforms, units=str(
                                       pdwSegmentInfo.szUnits), copy=False),
-                                  left_sweep=nsample / 2. /
-                                             float(pdwSegmentInfo.dSampleRate) * pq.s,
+                                  left_sweep=nsample / 2.
+                                             / float(pdwSegmentInfo.dSampleRate) * pq.s,
                                   sampling_rate=float(pdwSegmentInfo.dSampleRate) * pq.Hz,
                                   name=str(entityInfo.szEntityLabel),
                                   )

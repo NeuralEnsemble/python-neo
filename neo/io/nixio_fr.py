@@ -21,4 +21,3 @@ class NixIO(NIXRawIO, BaseFromRaw):
     def __exit__(self, *args):
         self.header = None
         self.file.close()
-

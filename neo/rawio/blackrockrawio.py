@@ -473,7 +473,7 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
                     chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
                     chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
-                                                            get_idx] * pq.uV
+                        get_idx] * pq.uV
                     chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
                     chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
                     chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
@@ -486,12 +486,12 @@ class BlackrockRawIO(BaseRawIO):
                             sig_channels[c]['id'])
                         # filter type codes (extracted from blackrock manual)
                         chidx_ann['nev_hi_freq_corner'] = neuevflt['hi_freq_corner'][
-                                                              get_idx] / 1000. * pq.Hz
+                            get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_hi_freq_order'] = neuevflt['hi_freq_order'][get_idx]
                         chidx_ann['nev_hi_freq_type'] = flt_type[neuevflt['hi_freq_type'][
                             get_idx]]
                         chidx_ann['nev_lo_freq_corner'] = neuevflt['lo_freq_corner'][
-                                                              get_idx] / 1000. * pq.Hz
+                            get_idx] / 1000. * pq.Hz
                         chidx_ann['nev_lo_freq_order'] = neuevflt['lo_freq_order'][get_idx]
                         chidx_ann['nev_lo_freq_type'] = flt_type[neuevflt['lo_freq_type'][
                             get_idx]]
@@ -1118,8 +1118,8 @@ class BlackrockRawIO(BaseRawIO):
         Extract mask for reset comment events in 2.3 .nev file
         """
         restart_mask = np.logical_and(masks['Comments'][nev_data_masks['Comments']],
-                                      raw_event_data['value'] ==
-                                      b'\x00\x00\x00\x00\x00\x00critical load restart')
+                                      raw_event_data['value']
+                                      == b'\x00\x00\x00\x00\x00\x00critical load restart')
         # TODO: Fix hardcoded number of bytes
         return restart_mask
 
@@ -1198,15 +1198,16 @@ class BlackrockRawIO(BaseRawIO):
                     # Last timestamp in this nsX segment
                     # Not subtracting nsX offset from end because spike extraction might continue
                     end_of_current_nsx_seg = seg['timestamp'] + \
-                                seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
+                        seg['nb_data_points'] * self.__nsx_basic_header[nsx_nb]['period']
 
-                    mask_after_seg = [(ev_ids == i) & (data['timestamp'] >
-                                                       end_of_current_nsx_seg + nsx_period)]
+                    mask_after_seg = [(ev_ids == i)
+                                      & (data['timestamp'] > end_of_current_nsx_seg + nsx_period)]
 
                     # Show warning if spikes do not fit any segment (+- 1 sampling 'tick')
                     # Spike should belong to segment before
-                    mask_outside = [(ev_ids == i) & (data['timestamp'] < int(seg['timestamp']) -
-                                                     nsx_offset - nsx_period)]
+                    mask_outside = [(ev_ids == i)
+                                    & (data['timestamp'] < int(seg['timestamp'])
+                                       - nsx_offset - nsx_period)]
                     if len(data[mask_outside]) > 0:
                         warnings.warn("Spikes outside any segment. Detected on segment #{}".
                                       format(i))
@@ -1223,8 +1224,8 @@ class BlackrockRawIO(BaseRawIO):
                         if i == len(list_nonempty_nsx_segments) - 1:
                             timestamp_resolution = self.__nsx_params[self.__nsx_spec[
                                 self.nsx_to_load]]('timestamp_resolution', self.nsx_to_load)
-                            time_after_seg = (data[mask_after_seg]['timestamp'][-1] -
-                                              end_of_current_nsx_seg) / timestamp_resolution
+                            time_after_seg = (data[mask_after_seg]['timestamp'][-1]
+                                              - end_of_current_nsx_seg) / timestamp_resolution
                             warnings.warn("Spikes {}s after last segment.".format(time_after_seg))
                             # Break out of loop because it's the last iteration
                             # and the spikes should stay connected to last segment
@@ -1233,7 +1234,7 @@ class BlackrockRawIO(BaseRawIO):
                         # If reset and no segment detected in nev, then these segments cannot be
                         # distinguished in nev, which is a big problem
                         # XXX 96 is an arbitrary number based on observations in available files
-                        elif list_nonempty_nsx_segments[i+1]['timestamp'] - nsx_offset <= 96:
+                        elif list_nonempty_nsx_segments[i + 1]['timestamp'] - nsx_offset <= 96:
                             # If not all definitely belong to the next segment,
                             # then it cannot be distinguished where some belong
                             if len(data[ev_ids == i]) != len(data[mask_after_seg]):
@@ -1743,22 +1744,18 @@ class BlackrockRawIO(BaseRawIO):
 
         nsx_parameters = {
             'nb_data_points': int(
-                (self.__get_file_size(filename) - bytes_in_headers) /
-                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
+                (self.__get_file_size(filename) - bytes_in_headers)
+                / (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'labels': labels,
-            'units': np.array(
-                [units] *
-                self.__nsx_basic_header[nsx_nb]['channel_count']),
+            'units': np.array([units] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),
             'min_digital_val': np.array(
                 [-1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
-            'max_digital_val': np.array(
-                [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
+            'max_digital_val': np.array([1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers': bytes_in_headers,
-            'sampling_rate':
-                30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
+            'sampling_rate': 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
@@ -1788,11 +1785,11 @@ class BlackrockRawIO(BaseRawIO):
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb]['bytes_in_headers'],
             'sampling_rate':
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period']))}
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period']))}
 
         return nsx_parameters[param_name]
 
@@ -1808,15 +1805,15 @@ class BlackrockRawIO(BaseRawIO):
             'digital_input_port': {
                 'name': 'digital_input_port',
                 'field': 'digital_input',
-                'mask': self.__is_set(data['packet_insertion_reason'], 0) &
-                        ~self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': self.__is_set(data['packet_insertion_reason'], 0)
+                        & ~self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the digital input port"},
             'serial_input_port': {
                 'name': 'serial_input_port',
                 'field': 'digital_input',
                 'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0) &
-                    self.__is_set(data['packet_insertion_reason'], 7),
+                    self.__is_set(data['packet_insertion_reason'], 0)
+                    & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         # analog input events via threshold crossings
@@ -1898,14 +1895,14 @@ class BlackrockRawIO(BaseRawIO):
             'digital_input_port': {
                 'name': 'digital_input_port',
                 'field': 'digital_input',
-                'mask': self.__is_set(data['packet_insertion_reason'], 0) &
-                        ~self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': self.__is_set(data['packet_insertion_reason'], 0)
+                        & ~self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the digital input port"},
             'serial_input_port': {
                 'name': 'serial_input_port',
                 'field': 'digital_input',
-                'mask': self.__is_set(data['packet_insertion_reason'], 0) &
-                        self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': self.__is_set(data['packet_insertion_reason'], 0)
+                        & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         return event_types
