@@ -248,13 +248,13 @@ class BaseFromRaw(BaseIO):
                     # make a proxy...
                     anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
                                     block_index=block_index, seg_index=seg_index)
-                    anasig.segment = seg
                     
                     if not lazy:
                         # ... and get the real AnalogSIgnal if not lazy
                         anasig = anasig.load(time_slice=time_slice)
                         # TODO magnitude_mode='rescaled'/'raw'
-                    
+                        
+                    anasig.segment = seg
                     seg.analogsignals.append(anasig)
 
         # SpikeTrain and waveforms (optional)
@@ -263,13 +263,14 @@ class BaseFromRaw(BaseIO):
             # make a proxy...
             sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index, 
                                                 block_index=block_index, seg_index=seg_index)
-            sptr.segment = seg
+            
             
             if not lazy:
                 # ... and get the real SpikeTrain if not lazy
                 sptr = sptr.load(time_slice=time_slice, load_waveforms=load_waveforms)
                 # TODO magnitude_mode='rescaled'/'raw'
-
+            
+            sptr.segment = seg
             seg.spiketrains.append(sptr)
 
         # Events/Epoch
