@@ -18,15 +18,21 @@ from neo.core.baseneo import BaseNeo
 
 from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
-
+from neo.core.dataobject import ArrayDict
 
 class BaseProxy(BaseNeo):
-    def __init__(self, **kargs):
+    def __init__(self, array_annotations=None, **annotations):
         # this for py27 str vs py3 str in neo attributes ompatibility
-        kargs = check_annotations(kargs)
-        if 'file_origin' not in kargs:
-            kargs['file_origin'] = self._rawio.source_name()
-        BaseNeo.__init__(self, **kargs)
+        annotations = check_annotations(annotations)
+        if 'file_origin' not in annotations:
+            annotations['file_origin'] = self._rawio.source_name()
+        
+        # this mock the array annotaions to avoid inherits DataObject
+        self.array_annotations = ArrayDict(self.shape[-1])
+        if array_annotations is not None:
+            self.array_annotations.update(array_annotations)
+        
+        BaseNeo.__init__(self, **annotations)
 
 
 class AnalogSignalProxy(BaseProxy):
@@ -100,20 +106,20 @@ class AnalogSignalProxy(BaseProxy):
             self._raw_units = None
 
         # both necessary attr and annotations
-        kargs = {}
-        kargs['name'] = self._make_name(None)
+        annotations = {}
+        annotations['name'] = self._make_name(None)
         if len(sig_chans)==1:
             # when only one channel raw_annotations are set to standart annotations
             d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index][
                 'signals'][self._global_channel_indexes[0]]
-            kargs.update(d)
-        else:
-            # annotations have channel_names and channel_ids array
-            # TODO this will be moved in array annotations soon
-            kargs['channel_names'] = sig_chans['name']
-            kargs['channel_ids'] = sig_chans['id']
+            annotations.update(d)
+        
+        array_annotations = {
+            'channel_names': np.array(sig_chans['name'], copy=True),
+            'channel_ids': np.array(sig_chans['id'], copy=True),
+        }
 
-        BaseProxy.__init__(self, **kargs)
+        BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
     def _make_name(self, channel_indexes):
         sig_chans = self._rawio.header['signal_channels'][self._global_channel_indexes]
@@ -207,7 +213,7 @@ class AnalogSignalProxy(BaseProxy):
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
                     sampling_rate=self.sampling_rate, name=name,
                     file_origin=self.file_origin, description=self.description,
-                    **self.annotations)
+                    array_annotations=self.array_annotations, **self.annotations)
 
         return anasig
 
@@ -260,11 +266,11 @@ class SpikeTrainProxy(BaseProxy):
         self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
 
         #both necessary attr and annotations
-        kargs = {}
+        annotations = {}
         for k in ('name', 'id'):
-            kargs[k] = self._rawio.header['unit_channels'][unit_index][k]
+            annotations[k] = self._rawio.header['unit_channels'][unit_index][k]
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['units'][unit_index]
-        kargs.update(ann)
+        annotations.update(ann)
 
         h = self._rawio.header['unit_channels'][unit_index]
         wf_sampling_rate = h['wf_sampling_rate']
@@ -276,7 +282,7 @@ class SpikeTrainProxy(BaseProxy):
             self.sampling_rate = None
             self.left_sweep = None
 
-        BaseProxy.__init__(self, **kargs)
+        BaseProxy.__init__(self, **annotations)
     
     def load(self, time_slice=None, magnitude_mode='rescaled', load_waveforms=False):
         '''
@@ -350,13 +356,13 @@ class _EventOrEpoch(BaseProxy):
         self.t_stop = self._rawio.segment_t_stop(block_index, seg_index) * pq.s
 
         #both necessary attr and annotations
-        kargs = {}
+        annotations = {}
         for k in ('name', 'id'):
-            kargs[k] = self._rawio.header['event_channels'][event_channel_index][k]
+            annotations[k] = self._rawio.header['event_channels'][event_channel_index][k]
         ann = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['events'][event_channel_index]
-        kargs.update(ann)
+        annotations.update(ann)
 
-        BaseProxy.__init__(self, **kargs)
+        BaseProxy.__init__(self, **annotations)
 
     def load(self, time_slice=None, ):
         '''

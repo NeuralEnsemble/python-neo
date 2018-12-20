@@ -424,6 +424,8 @@ def assert_sub_schema_is_lazy_loaded(ob):
         assert ob.__class__ in proxyobjectlist, 'Data object must lazy %' % classname
         loaded_ob = ob.load()
         assert_neo_object_is_compliant(loaded_ob)
+        assert_same_annotations(ob, loaded_ob)
+        assert_same_array_annotations(ob, loaded_ob)
 
 
 def assert_objects_equivalent(obj1, obj2):
