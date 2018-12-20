@@ -13,7 +13,7 @@ import neo
 from neo.core import objectlist
 from neo.core.baseneo import _reference_name, _container_name
 from neo.core.container import Container
-from neo.io.basefromrawio import proxyobjectlist
+from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
 def assert_arrays_equal(a, b, dtype=False):
     '''
@@ -425,7 +425,14 @@ def assert_sub_schema_is_lazy_loaded(ob):
         loaded_ob = ob.load()
         assert_neo_object_is_compliant(loaded_ob)
         assert_same_annotations(ob, loaded_ob)
-        assert_same_array_annotations(ob, loaded_ob)
+        exclude = []
+        if isinstance(ob, EventProxy):
+            exclude=['labels']
+        elif isinstance(ob, EpochProxy):
+            exclude=['labels', 'durations']
+        else:
+            exclude = []
+        assert_same_array_annotations(ob, loaded_ob, exclude=exclude)
 
 
 def assert_objects_equivalent(obj1, obj2):

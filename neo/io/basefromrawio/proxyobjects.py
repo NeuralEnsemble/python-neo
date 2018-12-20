@@ -391,12 +391,12 @@ class _EventOrEpoch(BaseProxy):
 
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':
-            ret = Event(times=times, labels=labels, units='s', copy=False, 
+            ret = Event(times=times, labels=labels, units='s',
                 name=self.name,  file_origin=self.file_origin,
                 description=self.description, **self.annotations)
         elif h['type'] == b'epoch':
             ret = Epoch(times=times, durations=durations, labels=labels,
-                units='s', copy=False,
+                units='s',
                 name=self.name,  file_origin=self.file_origin,
                 description=self.description, **self.annotations)
 
