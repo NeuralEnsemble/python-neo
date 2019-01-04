@@ -374,5 +374,5 @@ class NIXRawIO(BaseRawIO):
             tar_ann[str(props.name)] = values
         else:
             warntxt = "Name of annotation {} shadows parameter " \
-                          "and is therefore dropped".format(props.name)
+            "and is therefore dropped".format(props.name)
             warnings.warn(warntxt)
