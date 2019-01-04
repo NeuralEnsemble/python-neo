@@ -11,6 +11,7 @@ from __future__ import print_function, division, absolute_import
 from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
                                  _unit_channel_dtype, _event_channel_dtype)
 import numpy as np
+import warnings
 try:
     import nixio as nix
 
@@ -169,24 +170,24 @@ class NIXRawIO(BaseRawIO):
         for blk_idx, blk in enumerate(self.file.blocks):
             bl_ann = self.raw_annotations['blocks'][blk_idx]
             for props in blk.metadata.inherited_properties():
-                self._add_annotate(bl_ann, props)
+                self._add_annotate(bl_ann, props, 'blk')
             for seg_index, seg in enumerate(blk.groups):
                 seg_ann = bl_ann['segments'][seg_index]
                 for props in seg.metadata.inherited_properties():
-                    self._add_annotate(seg_ann, props)
+                    self._add_annotate(seg_ann, props, 'seg')
                 ansig_idx = 0
                 for da in seg.data_arrays:
                     if da.type == 'neo.analogsignal':
                         ana_an = seg_ann['signals'][ansig_idx]
                         for props in da.metadata.inherited_properties():
-                            self._add_annotate(ana_an, props)
+                            self._add_annotate(ana_an, props, 'asig')
                         ansig_idx += 1
                 sp_idx = 0
                 for mt in seg.multi_tags:
                     if mt.type == 'neo.spiketrain':
                         spiketrain_an = seg_ann['units'][sp_idx]
                         for props in mt.metadata.inherited_properties():
-                            self._add_annotate(spiketrain_an, props)
+                            self._add_annotate(spiketrain_an, props, 'st')
                         sp_idx += 1
                     ev_idx = 0
                     # if order is preserving, the annotations
@@ -194,7 +195,7 @@ class NIXRawIO(BaseRawIO):
                     if mt.type == "neo.event" or mt.type == "neo.epoch":
                         event_an = seg_ann['events'][sp_idx]
                         for props in mt.metadata.inherited_properties():
-                            self._add_annotate(event_an, props)
+                            self._add_annotate(event_an, props, 'ev')
                         ev_idx += 1
 
     def _segment_t_start(self, block_index, seg_index):
@@ -355,10 +356,23 @@ class NIXRawIO(BaseRawIO):
         # supposing unit is second, other possibilities maybe mS microS...
         return durations  # return in seconds
 
-
-    def _add_annotate(self, tar_ann, props):
+    def _add_annotate(self, tar_ann, props, otype):
         values = props.values
+        list_of_param = []
+        if otype == 'seg':
+            list_of_param = ['index']
+        elif otype == 'asig':
+            list_of_param = ['units', 'copy', 'sampling_rate', 't_start']
+        elif otype == 'st':
+            list_of_param = ['units', 'copy', 'sampling_rate',
+                             't_start', 't_stop', 'waveforms', 'left_sweep']
+        elif otype == 'ev':
+            list_of_param = ['times', 'labels', 'units', 'durations', 'copy']
         if len(values) == 1:
             values = values[0]
-        tar_ann[str(props.name)] = values
-
+        if props.name not in list_of_param:
+            tar_ann[str(props.name)] = values
+        else:
+            warntxt = "Name of annotation {} overshadows parameter " \
+                          "and is therefore dropped".format(props.name)
+            warnings.warn(warntxt)
