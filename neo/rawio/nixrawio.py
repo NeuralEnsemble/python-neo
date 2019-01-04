@@ -373,6 +373,6 @@ class NIXRawIO(BaseRawIO):
         if props.name not in list_of_param:
             tar_ann[str(props.name)] = values
         else:
-            warntxt = "Name of annotation {} overshadows parameter " \
+            warntxt = "Name of annotation {} shadows parameter " \
                           "and is therefore dropped".format(props.name)
             warnings.warn(warntxt)
