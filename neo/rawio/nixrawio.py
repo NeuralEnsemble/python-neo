@@ -166,6 +166,36 @@ class NIXRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
+        for blk_idx, blk in enumerate(self.file.blocks):
+            bl_ann = self.raw_annotations['blocks'][blk_idx]
+            for props in blk.metadata.inherited_properties():
+                self._add_annotate(bl_ann, props)
+            for seg_index, seg in enumerate(blk.groups):
+                seg_ann = bl_ann['segments'][seg_index]
+                for props in seg.metadata.inherited_properties():
+                    self._add_annotate(seg_ann, props)
+                ansig_idx = 0
+                for da in seg.data_arrays:
+                    if da.type == 'neo.analogsignal':
+                        ana_an = seg_ann['signals'][ansig_idx]
+                        for props in da.metadata.inherited_properties():
+                            self._add_annotate(ana_an, props)
+                        ansig_idx += 1
+                sp_idx = 0
+                for mt in seg.multi_tags:
+                    if mt.type == 'neo.spiketrain':
+                        spiketrain_an = seg_ann['units'][sp_idx]
+                        for props in mt.metadata.inherited_properties():
+                            self._add_annotate(spiketrain_an, props)
+                        sp_idx += 1
+                    ev_idx = 0
+                    # if order is preserving, the annotations
+                    # should go to the right place, need test
+                    if mt.type == "neo.event" or mt.type == "neo.epoch":
+                        event_an = seg_ann['events'][sp_idx]
+                        for props in mt.metadata.inherited_properties():
+                            self._add_annotate(event_an, props)
+                        ev_idx += 1
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
@@ -324,3 +354,11 @@ class NIXRawIO(BaseRawIO):
         durations = raw_duration.astype(dtype)
         # supposing unit is second, other possibilities maybe mS microS...
         return durations  # return in seconds
+
+
+    def _add_annotate(self, tar_ann, props):
+        values = props.values
+        if len(values) == 1:
+            values = values[0]
+        tar_ann[str(props.name)] = values
+
