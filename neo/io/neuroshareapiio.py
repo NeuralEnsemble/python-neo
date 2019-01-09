@@ -98,7 +98,7 @@ class NeuroshareapiIO(BaseIO):
         epochID = 3
         # if a filename was given, create a dictionary with information that will
         # be needed later on.
-        if self.filename != None:
+        if self.filename is not None:
             if dllpath is not None:
                 name = os.path.splitext(os.path.basename(dllpath))[0]
                 library = ns.Library(name, dllpath)
@@ -222,19 +222,19 @@ class NeuroshareapiIO(BaseIO):
         # read triggers (in this case without any duration)
         for i in range(self.metadata["num_trigs"]):
             # create event object for each trigger/bit found
-            eva = self.read_eventarray(channel_index=self.metadata["triggersId"][i],
+            eva = self.read_event(channel_index=self.metadata["triggersId"][i],
                                        segment_duration=segment_duration,
                                        t_start=t_start, )
             # add event object to segment
-            seg.eventarrays += [eva]
+            seg.events += [eva]
         # read epochs (digital events with duration)
         for i in range(self.metadata["num_digiEpochs"]):
             # create event object for each trigger/bit found
-            epa = self.read_epocharray(channel_index=self.metadata["digiEpochId"][i],
+            epa = self.read_epoch(channel_index=self.metadata["digiEpochId"][i],
                                        segment_duration=segment_duration,
                                        t_start=t_start, )
             # add event object to segment
-            seg.epocharrays += [epa]
+            seg.epochs += [epa]
         # read nested spiketrain
         # run through all spike channels found
         for i in range(self.metadata["num_spkChans"]):
@@ -352,7 +352,7 @@ class NeuroshareapiIO(BaseIO):
 
         return spiketr
 
-    def read_eventarray(self, lazy=False, channel_index=0,
+    def read_event(self, lazy=False, channel_index=0,
                         t_start=0.,
                         segment_duration=0.):
         """function to read digital timestamps. this function only reads the event
@@ -390,7 +390,7 @@ class NeuroshareapiIO(BaseIO):
                     description="the trigger events (without durations)")
         return eva
 
-    def read_epocharray(self, lazy=False,
+    def read_epoch(self, lazy=False,
                         channel_index=0,
                         t_start=0.,
                         segment_duration=0.):

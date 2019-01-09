@@ -331,6 +331,12 @@ class DataObject(BaseNeo, pq.Quantity):
             length = 1
         return length
 
+    def duplicate_with_new_array(self, signal, units=None):
+        warnings.warn("Use of the `duplicate_with_new_array function is deprecated. "
+                      "Please use `duplicate_with_new_data` instead.",
+                      DeprecationWarning)
+        return self.duplicate_with_new_data(signal, units=units)
+
 
 class ArrayDict(dict):
     """Dictionary subclass to handle array annotations
