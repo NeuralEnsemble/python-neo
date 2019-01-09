@@ -204,9 +204,13 @@ class AnalogSignalProxy(BaseProxy):
                     'raw magnitude is not support gain are not the same for all channel or offset is not 0'
             sig = raw_signal
             units = self._raw_units
-
         elif magnitude_mode=='rescaled':
-            sig = self._rawio.rescale_signal_raw_to_float(raw_signal,  dtype='float32',
+            # dtype is float32 when internally it is float32 or int16
+            if self.dtype == 'float64':
+                dtype = 'float64'
+            else:
+                dtype = 'float32'
+            sig = self._rawio.rescale_signal_raw_to_float(raw_signal,  dtype=dtype,
                                             channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
 
