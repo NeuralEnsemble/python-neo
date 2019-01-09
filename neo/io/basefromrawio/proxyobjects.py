@@ -191,13 +191,13 @@ class AnalogSignalProxy(BaseProxy):
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
                     channel_indexes=self._global_channel_indexes[channel_indexes])
 
-        #if slice in channel so the name change
-        #and also array_annotations
-        #TODO later: implement array_annotations slice here
+        #if slice in channel : change name and array_annotations
         if raw_signal.shape[1]!=self._nb_chan:
             name = self._make_name(channel_indexes)
+            array_annotations = {k: v[channel_indexes] for k, v in self.array_annotations.items()}
         else:
             name = self.name
+            array_annotations = self.array_annotations
 
         if magnitude_mode=='raw':
             assert self._raw_units is not None,\
@@ -213,7 +213,7 @@ class AnalogSignalProxy(BaseProxy):
         anasig = AnalogSignal(sig, units=units, copy=False, t_start=sig_t_start,
                     sampling_rate=self.sampling_rate, name=name,
                     file_origin=self.file_origin, description=self.description,
-                    array_annotations=self.array_annotations, **self.annotations)
+                    array_annotations=array_annotations, **self.annotations)
 
         return anasig
 
