@@ -314,7 +314,7 @@ class BlackrockRawIO(BaseRawIO):
             raise(ValueError('nsx_to_load is wrong'))
 
         assert all(nsx_nb in self._avail_nsx for nsx_nb in self.nsx_to_load),\
-                                    'nsx_to_load to not match available nsx list'
+                                    'nsx_to_load do not match available nsx list'
 
         # check that all files come from the same specification
         all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
