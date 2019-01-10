@@ -356,14 +356,16 @@ def assert_same_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclud
             continue
         assert key in ob1.annotations
 
-    for key, value in ob1.annotations.items():
+    for key, value1 in ob1.annotations.items():
         if key in exclude:
             continue
         assert key in ob2.annotations
-        try:
-            assert value == ob2.annotations[key]
-        except ValueError:
-            assert_arrays_almost_equal(ob1, ob2, threshold=threshold, dtype=False)
+        value2 = ob2.annotations[key]
+        if isinstance(value1, np.ndarray):
+            assert isinstance(value2, np.ndarray)
+            assert_arrays_almost_equal(value1, value2, threshold=threshold, dtype=False)
+        else:
+            assert value1 == value2
 
 
 def assert_same_array_annotations(ob1, ob2, equal_almost=True, threshold=1e-10, exclude=None):
