@@ -298,8 +298,7 @@ class SpikeTrainProxy(BaseProxy):
         '''
         
         t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
-        _t_start = t_start.rescale('s').magnitude
-        _t_stop = t_stop.rescale('s').magnitude
+        _t_start, _t_stop = prepare_time_slice(time_slice)
 
         spike_timestamps = self._rawio.get_spike_timestamps(block_index=self._block_index, 
                         seg_index=self._seg_index, unit_index=self._unit_index, t_start=_t_start,
@@ -376,8 +375,7 @@ class _EventOrEpoch(BaseProxy):
         '''
         
         t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
-        _t_start = t_start.rescale('s').magnitude
-        _t_stop = t_stop.rescale('s').magnitude
+        _t_start, _t_stop = prepare_time_slice(time_slice)
 
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index, 
                         seg_index=self._seg_index, event_channel_index=self._event_channel_index, 
@@ -507,8 +505,30 @@ def ensure_second(v):
     elif isinstance(v, int):
         return float(v) * pq.s
 
+def prepare_time_slice(time_slice):
+    """
+    This give clean time slice but keep None
+    for calling rawio slice
+    """
+    if time_slice is None:
+        t_start, t_stop = None, None
+    else:
+        t_start, t_stop = time_slice
+    
+    if t_start is not None:
+        t_start = ensure_second(t_start).rescale('s').magnitude
+
+    if t_stop is not None:
+        t_stop = ensure_second(t_stop).rescale('s').magnitude
+    
+    return (t_start, t_stop)
+
 
 def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):
+    """
+    This give clean time slice in quantity for t_start/t_stop of object
+    None is replace by seg limit.
+    """
     if time_slice is None:
         t_start, t_stop = None, None
     else:
