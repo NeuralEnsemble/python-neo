@@ -204,7 +204,8 @@ class BaseFromRaw(BaseIO):
         return bl
 
     def read_segment(self, block_index=0, seg_index=0, lazy=False,
-                     signal_group_mode=None, load_waveforms=False, time_slice=None):
+                     signal_group_mode=None, load_waveforms=False, time_slice=None,
+                     strict_slicing=True):
         """
         :param block_index: int default 0. In case of several block block_index can be specified.
 
@@ -223,6 +224,10 @@ class BaseFromRaw(BaseIO):
         :param time_slice: None by default means no limit.
             A time slice is (t_start, t_stop) both are quantities.
             All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
+        
+        :param strict_slicing: True by default.
+             Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
+             is outside the real time range of the segment.
         """
         
         if lazy:
@@ -253,7 +258,7 @@ class BaseFromRaw(BaseIO):
                     
                     if not lazy:
                         # ... and get the real AnalogSIgnal if not lazy
-                        anasig = anasig.load(time_slice=time_slice)
+                        anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
                         # TODO magnitude_mode='rescaled'/'raw'
                         
                     anasig.segment = seg
@@ -269,7 +274,8 @@ class BaseFromRaw(BaseIO):
             
             if not lazy:
                 # ... and get the real SpikeTrain if not lazy
-                sptr = sptr.load(time_slice=time_slice, load_waveforms=load_waveforms)
+                sptr = sptr.load(time_slice=time_slice, strict_slicing=strict_slicing, 
+                                        load_waveforms=load_waveforms)
                 # TODO magnitude_mode='rescaled'/'raw'
             
             sptr.segment = seg
@@ -282,14 +288,14 @@ class BaseFromRaw(BaseIO):
                 e = EventProxy(rawio=self, event_channel_index=chan_ind,
                                         block_index=block_index, seg_index=seg_index)
                 if not lazy:
-                    e = e.load(time_slice=time_slice)
+                    e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
                 e.segment = seg
                 seg.events.append(e)
             elif event_channels['type'][chan_ind] == b'epoch':
                 e = EpochProxy(rawio=self, event_channel_index=chan_ind,
                                         block_index=block_index, seg_index=seg_index)
                 if not lazy:
-                    e = e.load(time_slice=time_slice)
+                    e = e.load(time_slice=time_slice, strict_slicing=strict_slicing)
                 e.segment = seg
                 seg.epochs.append(e)
 

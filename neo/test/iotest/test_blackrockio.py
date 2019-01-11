@@ -94,8 +94,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        # this is valid in read_segment because seg_index is specified
-        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
+        # this is valid in read_segment
+        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
+        # this raise an error
+        with self.assertRaises(AssertionError):
+            seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
         numspb = len(seg.spiketrains[0])
@@ -145,8 +148,11 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         too_large_tstop = block.segments[0].analogsignals[0].t_stop + 1 * pq.s
         buggy_slice = (-100 * pq.ms, too_large_tstop)
 
-        # This is valid in read_segment because seg_index is specified
-        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice)
+        # This is valid in read_segment
+        seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=False)
+        # this raise error
+        with self.assertRaises(AssertionError):
+            seg = reader.read_segment(seg_index=0, time_slice=buggy_slice, strict_slicing=True)
 
         lenb = len(seg.analogsignals[0])
         numspb = len(seg.spiketrains[0])

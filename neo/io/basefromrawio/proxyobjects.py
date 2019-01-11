@@ -141,7 +141,8 @@ class AnalogSignalProxy(BaseProxy):
         '''Time when signal ends'''
         return self.t_start + self.duration
 
-    def load(self, time_slice=None, channel_indexes=None, magnitude_mode='rescaled'):
+    def load(self, time_slice=None, strict_slicing=True,
+                    channel_indexes=None, magnitude_mode='rescaled'):
         '''
         *Args*:
             :time_slice: None or tuple of the time slice expressed with quantities.
@@ -156,6 +157,9 @@ class AnalogSignalProxy(BaseProxy):
                 The CompoundUnit with magnitude_mode='raw' is usefull to
                 postpone the scaling when needed and having an internal dtype=int16
                 but it less intuitive when you don't know so well quantities.
+            :strict_slicing: True by default.
+                 Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
+                 is outside the real time range of the segment.
         '''
 
         if channel_indexes is None:
@@ -173,7 +177,10 @@ class AnalogSignalProxy(BaseProxy):
                 sig_t_start = self.t_start
             else:
                 t_start = ensure_second(t_start)
-                assert t_start<=t_start<=self.t_stop, 't_start is outside'
+                if strict_slicing:
+                    assert self.t_start<=t_start<=self.t_stop, 't_start is outside'
+                else:
+                    t_start = max(t_start, self.t_start)
                 #the i_start is ncessary ceil
                 i_start = int(np.ceil((t_start-self.t_start).magnitude * sr.magnitude))
                 #this needed to get the real t_start of the first sample
@@ -184,7 +191,10 @@ class AnalogSignalProxy(BaseProxy):
                 i_stop = None
             else:
                 t_stop = ensure_second(t_stop)
-                assert t_start<=t_stop<=self.t_stop, 't_stop is outside'
+                if strict_slicing:
+                    assert self.t_start<=t_stop<=self.t_stop, 't_stop is outside'
+                else:
+                    t_stop = min(t_stop, self.t_stop)
                 i_stop = int((t_stop-self.t_start).magnitude * sr.magnitude)
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
@@ -287,17 +297,21 @@ class SpikeTrainProxy(BaseProxy):
             self.left_sweep = None
 
         BaseProxy.__init__(self, **annotations)
-    
-    def load(self, time_slice=None, magnitude_mode='rescaled', load_waveforms=False):
+
+    def load(self, time_slice=None, strict_slicing=True, 
+                    magnitude_mode='rescaled', load_waveforms=False):
         '''
         *Args*:
             :time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
+            :strict_slicing: True by default.
+                 Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
+                 is outside the real time range of the segment.
             :magnitude_mode: 'rescaled' or 'raw'.
             :load_waveforms: bool load waveforms or not.
         '''
         
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
         spike_timestamps = self._rawio.get_spike_timestamps(block_index=self._block_index, 
@@ -367,14 +381,17 @@ class _EventOrEpoch(BaseProxy):
 
         BaseProxy.__init__(self, **annotations)
 
-    def load(self, time_slice=None, ):
+    def load(self, time_slice=None, strict_slicing=True):
         '''
         *Args*:
             :time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
+            :strict_slicing: True by default.
+                 Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
+                 is outside the real time range of the segment.
         '''
         
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop)
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index, 
@@ -524,7 +541,7 @@ def prepare_time_slice(time_slice):
     return (t_start, t_stop)
 
 
-def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):
+def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop, strict_slicing):
     """
     This give clean time slice in quantity for t_start/t_stop of object
     None is replace by seg limit.
@@ -536,10 +553,20 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop):
 
     if t_start is None:
         t_start = seg_t_start
+    else:
+        if strict_slicing:
+            assert seg_t_start<=t_start<=seg_t_stop, 't_start is outside'
+        else:
+            t_start = max(t_start, seg_t_start)
     t_start = ensure_second(t_start)
 
     if t_stop is None:
         t_stop = seg_t_stop
+    else:
+        if strict_slicing:
+            assert seg_t_start<=t_stop<=seg_t_stop, 't_stop is outside'
+        else:
+            t_stop = min(t_stop, seg_t_stop)
     t_stop = ensure_second(t_stop)
 
     return (t_start, t_stop)
