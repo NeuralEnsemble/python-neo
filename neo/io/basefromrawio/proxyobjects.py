@@ -25,7 +25,9 @@ class BaseProxy(BaseNeo):
         # this for py27 str vs py3 str in neo attributes ompatibility
         annotations = check_annotations(annotations)
         if 'file_origin' not in annotations:
-            annotations['file_origin'] = self._rawio.source_name()
+            # the str is to make compatible with neo_py27 where attribute
+            # used to be str so raw bytes
+            annotations['file_origin'] = str(self._rawio.source_name())
         
         # this mock the array annotaions to avoid inherits DataObject
         self.array_annotations = ArrayDict(self.shape[-1])
