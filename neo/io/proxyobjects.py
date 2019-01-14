@@ -91,6 +91,7 @@ class AnalogSignalProxy(BaseProxy):
         self.units = ensure_signal_units(sig_chans['units'][0])
         self.dtype = sig_chans['dtype'][0]
         self.sampling_rate = sig_chans['sampling_rate'][0] * pq.Hz
+        self.sampling_period = 1. / self.sampling_rate
         sigs_size = self._rawio.get_signal_size(block_index=block_index, seg_index=seg_index,
                                         channel_indexes=self._global_channel_indexes)
         self.shape = (sigs_size, self._nb_chan)
