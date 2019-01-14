@@ -1004,9 +1004,9 @@ class NixIO(BaseIO):
             wftime.unit = units_to_string(spiketrain.sampling_period.units)
             wftime.label = "time"
 
-        if spiketrain.left_sweep is not None:
-            self._write_property(wfda.metadata, "left_sweep",
-                                 spiketrain.left_sweep)
+            if spiketrain.left_sweep is not None:
+                self._write_property(wfda.metadata, "left_sweep",
+                                     spiketrain.left_sweep)
 
     def _write_unit(self, neounit, nixchxsource):
         """
