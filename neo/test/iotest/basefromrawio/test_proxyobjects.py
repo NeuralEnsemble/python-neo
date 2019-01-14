@@ -37,7 +37,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert proxy_anasig.t_start == 0 * pq.s
         assert proxy_anasig.t_stop == 10 * pq.s
         assert proxy_anasig.duration == 10 * pq.s
-        assert proxy_anasig.file_origin =='my_filename.fake'
+        assert proxy_anasig.file_origin == 'my_filename.fake'
 
         # full load
         full_anasig = proxy_anasig.load(time_slice=None)

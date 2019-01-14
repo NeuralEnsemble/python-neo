@@ -314,7 +314,7 @@ class SpikeTrainProxy(BaseProxy):
             :load_waveforms: bool load waveforms or not.
         '''
 
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, 
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start,
                                                                     self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
@@ -395,7 +395,7 @@ class _EventOrEpoch(BaseProxy):
                  is outside the real time range of the segment.
         '''
 
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, 
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start,
                                                                     self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
