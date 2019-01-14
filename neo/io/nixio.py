@@ -34,7 +34,7 @@ import numpy as np
 from .baseio import BaseIO
 from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
-from ..io.basefromrawio.proxyobjects import BaseProxy
+from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
 try:
