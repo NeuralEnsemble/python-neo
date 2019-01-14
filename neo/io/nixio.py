@@ -703,7 +703,6 @@ class NixIO(BaseIO):
                                            "neo.analogsignal.metadata")
         nixdas = list()
         for idx, row in enumerate(data):
-            print(idx)
             daname = "{}.{}".format(nix_name, idx)
             da = nixblock.create_data_array(daname, "neo.analogsignal",
                                             data=row)
