@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import quantities as pq
 from neo.rawio.examplerawio import ExampleRawIO
-from neo.io.basefromrawio.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
+from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
                 EventProxy, EpochProxy)
 
 from neo.core import (Segment, AnalogSignal,
