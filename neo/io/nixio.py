@@ -823,9 +823,11 @@ class NixIO(BaseIO):
             full_event = event.load()
             times = full_event.times.magnitude
             units = units_to_string(full_event.times.units)
+            labels = full_event.labels
         else:
             times = event.times.magnitude
             units = units_to_string(event.times.units)
+            labels = event.labels
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.event.times", data=times
         )
@@ -839,7 +841,7 @@ class NixIO(BaseIO):
         metadata = nixmt.metadata
 
         labeldim = timesda.append_set_dimension()
-        labeldim.labels = event.labels
+        labeldim.labels = labels
 
         neoname = event.name if event.name is not None else ""
         metadata["neo_name"] = neoname
@@ -947,9 +949,11 @@ class NixIO(BaseIO):
             full_spiketrain = spiketrain.load()
             times = full_spiketrain.times.magnitude
             tunits = units_to_string(full_spiketrain.times.units)
+            waveforms = full_spiketrain.waveforms
         else:
             times = spiketrain.times.magnitude
             tunits = units_to_string(spiketrain.times.units)
+            waveforms = spiketrain.waveforms
 
         timesda = nixblock.create_data_array("{}.times".format(nix_name),
                                              "neo.spiketrain.times", data=times)
@@ -976,7 +980,7 @@ class NixIO(BaseIO):
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
 
-        if spiketrain.waveforms is not None:
+        if waveforms is not None:
             wfdata = list(wf.magnitude for wf in
                           list(wfgroup for wfgroup in
                                spiketrain.waveforms))
