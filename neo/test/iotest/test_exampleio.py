@@ -10,7 +10,7 @@ import unittest
 
 from neo.io.exampleio import ExampleIO  # , HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.basefromrawio.proxyobjects import (AnalogSignalProxy,
+from neo.io.proxyobjects import (AnalogSignalProxy,
                 SpikeTrainProxy, EventProxy, EpochProxy)
 from neo import (AnalogSignal, SpikeTrain)
 
