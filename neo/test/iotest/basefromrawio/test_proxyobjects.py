@@ -56,6 +56,12 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.duration == 3. * pq.s
         assert anasig.shape == (30000, 16)
 
+        # buggy time slice
+        with self.assertRaises(AssertionError):
+            anasig = proxy_anasig.load(time_slice=(2. * pq.s, 15 * pq.s))
+        anasig = proxy_anasig.load(time_slice=(2. * pq.s, 15 * pq.s), strict_slicing=False)
+        assert proxy_anasig.t_stop == 10 * pq.s
+
         # select channels
         anasig = proxy_anasig.load(channel_indexes=[3, 4, 9])
         assert anasig.shape[1] == 3
@@ -114,6 +120,12 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert sptr.t_stop == .5 * pq.s
         assert sptr.shape == (6,)
 
+        # buggy time slice
+        with self.assertRaises(AssertionError):
+            sptr = proxy_sptr.load(time_slice=(2. * pq.s, 15 * pq.s))
+        sptr = proxy_sptr.load(time_slice=(2. * pq.s, 15 * pq.s), strict_slicing=False)
+        assert sptr.t_stop == 10 * pq.s
+
         # magnitude mode rescaled
         sptr_float = proxy_sptr.load(magnitude_mode='rescaled')
         assert sptr_float.dtype == 'float64'
@@ -161,6 +173,11 @@ class TestEventProxy(BaseProxyTest):
         assert event.shape == (2,)
         assert event.labels.shape == (2,)
 
+        # buggy time slice
+        with self.assertRaises(AssertionError):
+            event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s))
+        event = proxy_event.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
+
 
 class TestEpochProxy(BaseProxyTest):
     def test_EpochProxy(self):
@@ -177,10 +194,15 @@ class TestEpochProxy(BaseProxyTest):
         assert full_epoch.shape == proxy_epoch.shape
 
         # slice time
-        event = proxy_epoch.load(time_slice=(1 * pq.s, 4 * pq.s))
-        assert event.shape == (3,)
-        assert event.labels.shape == (3,)
-        assert event.durations.shape == (3,)
+        epoch = proxy_epoch.load(time_slice=(1 * pq.s, 4 * pq.s))
+        assert epoch.shape == (3,)
+        assert epoch.labels.shape == (3,)
+        assert epoch.durations.shape == (3,)
+
+        # buggy time slice
+        with self.assertRaises(AssertionError):
+            epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s))
+        epoch = proxy_epoch.load(time_slice=(2 * pq.s, 15 * pq.s), strict_slicing=False)
 
 
 class TestSegmentWithProxy(BaseProxyTest):
