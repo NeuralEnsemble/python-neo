@@ -16,11 +16,9 @@ from neo.core import (Segment, AnalogSignal,
                       Epoch, Event, SpikeTrain)
 
 
-from neo.test.tools import (
-                            assert_arrays_almost_equal,
+from neo.test.tools import (assert_arrays_almost_equal,
                             assert_neo_object_is_compliant,
-                            assert_same_attributes,
-                            )
+                            assert_same_attributes)
 
 
 class BaseProxyTest(unittest.TestCase):
@@ -30,15 +28,15 @@ class BaseProxyTest(unittest.TestCase):
 
 
 class TestAnalogSignalProxy(BaseProxyTest):
-    
+
     def test_AnalogSignalProxy(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader, global_channel_indexes=None,
                         block_index=0, seg_index=0,)
 
-        assert proxy_anasig.sampling_rate == 10*pq.kHz
-        assert proxy_anasig.t_start == 0*pq.s
-        assert proxy_anasig.t_stop == 10*pq.s
-        assert proxy_anasig.duration == 10*pq.s
+        assert proxy_anasig.sampling_rate == 10 * pq.kHz
+        assert proxy_anasig.t_start == 0 * pq.s
+        assert proxy_anasig.t_stop == 10 * pq.s
+        assert proxy_anasig.duration == 10 * pq.s
         assert proxy_anasig.file_origin =='my_filename.fake'
 
         # full load
@@ -48,8 +46,8 @@ class TestAnalogSignalProxy(BaseProxyTest):
 
         # slice time
         anasig = proxy_anasig.load(time_slice=(2. * pq.s, 5 * pq.s))
-        assert anasig.t_start == 2.*pq.s
-        assert anasig.duration == 3.*pq.s
+        assert anasig.t_start == 2. * pq.s
+        assert anasig.duration == 3. * pq.s
         assert anasig.shape == (30000, 16)
 
         # ceil next sample when slicing
@@ -63,7 +61,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.shape[1] == 3
 
         # select channels and slice times
-        anasig = proxy_anasig.load(time_slice=(2.*pq.s, 5*pq.s), channel_indexes=[3, 4, 9])
+        anasig = proxy_anasig.load(time_slice=(2. * pq.s, 5 * pq.s), channel_indexes=[3, 4, 9])
         assert anasig.shape == (30000, 3)
 
         # magnitude mode rescaled
@@ -101,8 +99,8 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert proxy_sptr.t_start == 0 * pq.s
         assert proxy_sptr.t_stop == 10 * pq.s
         assert proxy_sptr.shape == (20,)
-        assert proxy_sptr.left_sweep == 0.002*pq.s
-        assert proxy_sptr.sampling_rate == 10*pq.kHz
+        assert proxy_sptr.left_sweep == 0.002 * pq.s
+        assert proxy_sptr.sampling_rate == 10 * pq.kHz
 
         # full load
         full_sptr = proxy_sptr.load(time_slice=None)
@@ -111,9 +109,9 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert full_sptr.shape == proxy_sptr.shape
 
         # slice time
-        sptr = proxy_sptr.load(time_slice=(250*pq.ms, 500*pq.ms))
-        assert sptr.t_start == .25*pq.s
-        assert sptr.t_stop == .5*pq.s
+        sptr = proxy_sptr.load(time_slice=(250 * pq.ms, 500 * pq.ms))
+        assert sptr.t_start == .25 * pq.s
+        assert sptr.t_stop == .5 * pq.s
         assert sptr.shape == (6,)
 
         # magnitude mode rescaled
@@ -159,7 +157,7 @@ class TestEventProxy(BaseProxyTest):
         assert full_event.shape == proxy_event.shape
 
         # slice time
-        event = proxy_event.load(time_slice=(1*pq.s, 2*pq.s))
+        event = proxy_event.load(time_slice=(1 * pq.s, 2 * pq.s))
         assert event.shape == (2,)
         assert event.labels.shape == (2,)
 
@@ -179,7 +177,7 @@ class TestEpochProxy(BaseProxyTest):
         assert full_epoch.shape == proxy_epoch.shape
 
         # slice time
-        event = proxy_epoch.load(time_slice=(1*pq.s, 4*pq.s))
+        event = proxy_epoch.load(time_slice=(1 * pq.s, 4 * pq.s))
         assert event.shape == (3,)
         assert event.labels.shape == (3,)
         assert event.durations.shape == (3,)

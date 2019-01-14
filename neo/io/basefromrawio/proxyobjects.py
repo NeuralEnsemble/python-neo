@@ -161,8 +161,8 @@ class AnalogSignalProxy(BaseProxy):
                 postpone the scaling when needed and having an internal dtype=int16
                 but it less intuitive when you don't know so well quantities.
             :strict_slicing: True by default.
-                 Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
-                 is outside the real time range of the segment.
+                Control if an error is raise or not when one of  time_slice member
+                (t_start or t_stop) is outside the real time range of the segment.
         '''
 
         if channel_indexes is None:
@@ -185,10 +185,10 @@ class AnalogSignalProxy(BaseProxy):
                 else:
                     t_start = max(t_start, self.t_start)
                 # the i_start is ncessary ceil
-                i_start = int(np.ceil((t_start-self.t_start).magnitude * sr.magnitude))
+                i_start = int(np.ceil((t_start - self.t_start).magnitude * sr.magnitude))
                 # this needed to get the real t_start of the first sample
                 # because do not necessary match what is demanded
-                sig_t_start = self.t_start + i_start/sr
+                sig_t_start = self.t_start + i_start / sr
 
             if t_stop is None:
                 i_stop = None
@@ -198,7 +198,7 @@ class AnalogSignalProxy(BaseProxy):
                     assert self.t_start <= t_stop <= self.t_stop, 't_stop is outside'
                 else:
                     t_stop = min(t_stop, self.t_stop)
-                i_stop = int((t_stop-self.t_start).magnitude * sr.magnitude)
+                i_stop = int((t_stop - self.t_start).magnitude * sr.magnitude)
 
         raw_signal = self._rawio.get_analogsignal_chunk(block_index=self._block_index,
                     seg_index=self._seg_index, i_start=i_start, i_stop=i_stop,
@@ -223,7 +223,7 @@ class AnalogSignalProxy(BaseProxy):
                 dtype = 'float64'
             else:
                 dtype = 'float32'
-            sig = self._rawio.rescale_signal_raw_to_float(raw_signal,  dtype=dtype,
+            sig = self._rawio.rescale_signal_raw_to_float(raw_signal, dtype=dtype,
                                     channel_indexes=self._global_channel_indexes[channel_indexes])
             units = self.units
 
@@ -293,7 +293,7 @@ class SpikeTrainProxy(BaseProxy):
         wf_sampling_rate = h['wf_sampling_rate']
         if not np.isnan(wf_sampling_rate) and wf_sampling_rate > 0:
             self.sampling_rate = wf_sampling_rate * pq.Hz
-            self.left_sweep = (h['wf_left_sweep']/self.sampling_rate).rescale('s')
+            self.left_sweep = (h['wf_left_sweep'] / self.sampling_rate).rescale('s')
             self._wf_units = ensure_signal_units(h['wf_units'])
         else:
             self.sampling_rate = None
@@ -314,7 +314,8 @@ class SpikeTrainProxy(BaseProxy):
             :load_waveforms: bool load waveforms or not.
         '''
 
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop, strict_slicing)
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, 
+                                                                    self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
         spike_timestamps = self._rawio.get_spike_timestamps(block_index=self._block_index,
@@ -394,7 +395,8 @@ class _EventOrEpoch(BaseProxy):
                  is outside the real time range of the segment.
         '''
 
-        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, self.t_stop, strict_slicing)
+        t_start, t_stop = consolidate_time_slice(time_slice, self.t_start, 
+                                                                    self.t_stop, strict_slicing)
         _t_start, _t_stop = prepare_time_slice(time_slice)
 
         timestamp, durations, labels = self._rawio.get_event_timestamps(block_index=self._block_index,
@@ -414,12 +416,12 @@ class _EventOrEpoch(BaseProxy):
         h = self._rawio.header['event_channels'][self._event_channel_index]
         if h['type'] == b'event':
             ret = Event(times=times, labels=labels, units='s',
-                name=self.name,  file_origin=self.file_origin,
+                name=self.name, file_origin=self.file_origin,
                 description=self.description, **self.annotations)
         elif h['type'] == b'epoch':
             ret = Epoch(times=times, durations=durations, labels=labels,
                 units='s',
-                name=self.name,  file_origin=self.file_origin,
+                name=self.name, file_origin=self.file_origin,
                 description=self.description, **self.annotations)
 
         return ret
