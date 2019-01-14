@@ -21,9 +21,6 @@ from __future__ import absolute_import
 
 __test__ = False
 
-# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-
 import os
 from copy import copy
 
@@ -50,6 +47,10 @@ from neo.test.iotest.tools import (cleanup_test_file,
                                    read_generic,
                                    write_generic)
 from neo.test.generate_datasets import generate_from_supported_objects
+
+
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestIO(object):
@@ -508,7 +509,7 @@ class BaseTestIO(object):
 
         Test the reader with lazy = True.
         The schema must contain proxy objects.
-        
+
         ''' % self.ioclass.__name__
         # This is for files presents at G-Node or generated
         if self.ioclass.support_lazy:

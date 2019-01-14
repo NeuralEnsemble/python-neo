@@ -15,6 +15,7 @@ from neo.core.baseneo import _reference_name, _container_name
 from neo.core.container import Container
 from neo.io.basefromrawio import proxyobjectlist, EventProxy, EpochProxy
 
+
 def assert_arrays_equal(a, b, dtype=False):
     '''
     Check if two arrays have the same shape and contents.
@@ -102,7 +103,7 @@ def assert_neo_object_is_compliant(ob, check_type=True):
       * check types and/or presence of necessary and recommended attribute.
       * If attribute is Quantities or numpy.ndarray it also check ndim.
       * If attribute is numpy.ndarray also check dtype.kind.
-    
+
     check_type=True by default can be set to false for testing ProxyObject
     '''
     if check_type:
@@ -429,9 +430,9 @@ def assert_sub_schema_is_lazy_loaded(ob):
         assert_same_annotations(ob, loaded_ob)
         exclude = []
         if isinstance(ob, EventProxy):
-            exclude=['labels']
+            exclude = ['labels']
         elif isinstance(ob, EpochProxy):
-            exclude=['labels', 'durations']
+            exclude = ['labels', 'durations']
         else:
             exclude = []
         assert_same_array_annotations(ob, loaded_ob, exclude=exclude)

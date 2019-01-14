@@ -21,7 +21,7 @@ reader = neo.MicromedIO(filename='File_micromed_1.TRC')
 reader.parse_header()
 
 
-lim0, lim1 = -20*pq.ms, +20*pq.ms
+lim0, lim1 = -20 * pq.ms, +20 * pq.ms
 
 
 def apply_my_fancy_average(sig_list):
@@ -32,7 +32,7 @@ def apply_my_fancy_average(sig_list):
     sig_list = [s.magnitude for s in sig_list]
     sigs = np.stack(sig_list, axis=0)
     return np.mean(np.mean(sigs, axis=0), axis=1)
-    
+
 
 seg = reader.read_segment(lazy=False)
 triggers = seg.events[0]
@@ -43,7 +43,6 @@ for t in triggers.times:
     anasig_chunk = anasig.time_slice(t0, t1)
     all_sig_chunks.append(anasig_chunk)
 m1 = apply_my_fancy_average(all_sig_chunks)
-
 
 
 seg = reader.read_segment(lazy=True)

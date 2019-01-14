@@ -224,15 +224,15 @@ class BaseFromRaw(BaseIO):
         :param time_slice: None by default means no limit.
             A time slice is (t_start, t_stop) both are quantities.
             All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
-        
+
         :param strict_slicing: True by default.
              Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
              is outside the real time range of the segment.
         """
-        
+
         if lazy:
             assert time_slice is None, 'For lazy=true you must specify time_slice when loading'
-        
+
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
 
@@ -255,12 +255,12 @@ class BaseFromRaw(BaseIO):
                     # make a proxy...
                     anasig = AnalogSignalProxy(rawio=self, global_channel_indexes=ind_abs,
                                     block_index=block_index, seg_index=seg_index)
-                    
+
                     if not lazy:
                         # ... and get the real AnalogSIgnal if not lazy
                         anasig = anasig.load(time_slice=time_slice, strict_slicing=strict_slicing)
                         # TODO magnitude_mode='rescaled'/'raw'
-                        
+
                     anasig.segment = seg
                     seg.analogsignals.append(anasig)
 
@@ -268,16 +268,15 @@ class BaseFromRaw(BaseIO):
         unit_channels = self.header['unit_channels']
         for unit_index in range(len(unit_channels)):
             # make a proxy...
-            sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index, 
+            sptr = SpikeTrainProxy(rawio=self, unit_index=unit_index,
                                                 block_index=block_index, seg_index=seg_index)
-            
-            
+
             if not lazy:
                 # ... and get the real SpikeTrain if not lazy
-                sptr = sptr.load(time_slice=time_slice, strict_slicing=strict_slicing, 
+                sptr = sptr.load(time_slice=time_slice, strict_slicing=strict_slicing,
                                         load_waveforms=load_waveforms)
                 # TODO magnitude_mode='rescaled'/'raw'
-            
+
             sptr.segment = seg
             seg.spiketrains.append(sptr)
 
@@ -336,4 +335,3 @@ class BaseFromRaw(BaseIO):
         else:
             raise (NotImplementedError)
         return groups
-
