@@ -40,9 +40,9 @@ class BrainVisionRawIO(BaseRawIO):
         binary_filename = self.filename.replace(bname, vhdr_header['Common Infos']['DataFile'])
 
         assert vhdr_header['Common Infos'][
-                   'DataFormat'] == 'BINARY', NotImplementedError
+            'DataFormat'] == 'BINARY', NotImplementedError
         assert vhdr_header['Common Infos'][
-                   'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
+            'DataOrientation'] == 'MULTIPLEXED', NotImplementedError
 
         nb_channel = int(vhdr_header['Common Infos']['NumberOfChannels'])
         sr = 1.e6 / float(vhdr_header['Common Infos']['SamplingInterval'])
@@ -88,7 +88,7 @@ class BrainVisionRawIO(BaseRawIO):
         ev_labels = []
         for i in range(len(all_info)):
             ev_type, ev_label, pos, size, channel = all_info[
-                                                        'Mk%d' % (i + 1,)].split(',')[:5]
+                'Mk%d' % (i + 1,)].split(',')[:5]
             ev_types.append(ev_type)
             ev_timestamps.append(int(pos))
             ev_labels.append(ev_label)
@@ -187,7 +187,7 @@ def read_brainvsion_soup(filename):
         for line in f:
             line = line.strip('\n').strip('\r')
             if line.startswith('['):
-                section = re.findall('\[([\S ]+)\]', line)[0]
+                section = re.findall(r'\[([\S ]+)\]', line)[0]
                 all_info[section] = {}
                 continue
             if line.startswith(';'):

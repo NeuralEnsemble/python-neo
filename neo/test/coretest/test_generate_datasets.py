@@ -13,16 +13,12 @@ from datetime import datetime
 import numpy as np
 import quantities as pq
 
-from neo.core import (class_by_name, Block, Segment,
-                      ChannelIndex, Unit,
-                      AnalogSignal,
-                      IrregularlySampledSignal, SpikeTrain,
-                      Event, Epoch)
-from neo.test.generate_datasets import (generate_one_simple_block,
-                                        generate_one_simple_segment,
-                                        generate_from_supported_objects,
-                                        get_fake_value, get_fake_values,
-                                        fake_neo, TEST_ANNOTATIONS)
+from neo.core import (class_by_name, Block, Segment, ChannelIndex, Unit, AnalogSignal,
+                      IrregularlySampledSignal, SpikeTrain, Event, Epoch)
+from neo.core.dataobject import DataObject
+from neo.test.generate_datasets import (generate_one_simple_block, generate_one_simple_segment,
+                                        generate_from_supported_objects, get_fake_value,
+                                        get_fake_values, fake_neo, TEST_ANNOTATIONS)
 from neo.test.tools import assert_arrays_equal, assert_neo_object_is_compliant
 
 
@@ -40,11 +36,8 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.epochs), 0)
 
     def test_all_supported(self):
-        objects = [Block, Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
-                   Event, Epoch]
+        objects = [Block, Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal,
+                   SpikeTrain, Event, Epoch]
 
         res = generate_one_simple_segment(supported_objects=objects)
 
@@ -58,9 +51,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.epochs), 2)
 
     def test_half_supported(self):
-        objects = [Segment,
-                   IrregularlySampledSignal, SpikeTrain,
-                   Epoch]
+        objects = [Segment, IrregularlySampledSignal, SpikeTrain, Epoch]
 
         res = generate_one_simple_segment(supported_objects=objects)
 
@@ -74,10 +65,7 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.epochs), 2)
 
     def test_all_without_block(self):
-        objects = [Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
         res = generate_one_simple_segment(supported_objects=objects)
@@ -92,14 +80,10 @@ class Test__generate_one_simple_segment(unittest.TestCase):
         self.assertEqual(len(res.epochs), 2)
 
     def test_all_without_segment_valueerror(self):
-        objects = [Block,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Block, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
-        self.assertRaises(ValueError, generate_one_simple_segment,
-                          supported_objects=objects)
+        self.assertRaises(ValueError, generate_one_simple_segment, supported_objects=objects)
 
 
 class Test__generate_one_simple_block(unittest.TestCase):
@@ -112,11 +96,8 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(res.segments), 0)
 
     def test_all_supported(self):
-        objects = [Block, Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
-                   Event, Epoch]
+        objects = [Block, Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal,
+                   SpikeTrain, Event, Epoch]
 
         res = generate_one_simple_block(supported_objects=objects)
 
@@ -145,9 +126,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg3.epochs), 2)
 
     def test_half_supported(self):
-        objects = [Block, Segment,
-                   IrregularlySampledSignal, SpikeTrain,
-                   Epoch]
+        objects = [Block, Segment, IrregularlySampledSignal, SpikeTrain, Epoch]
 
         res = generate_one_simple_block(supported_objects=objects)
 
@@ -176,10 +155,7 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(seg3.epochs), 2)
 
     def test_all_without_segment(self):
-        objects = [Block,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Block, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
         res = generate_one_simple_block(supported_objects=objects)
@@ -190,14 +166,10 @@ class Test__generate_one_simple_block(unittest.TestCase):
         self.assertEqual(len(res.segments), 0)
 
     def test_all_without_block_valueerror(self):
-        objects = [Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
-        self.assertRaises(ValueError, generate_one_simple_block,
-                          supported_objects=objects)
+        self.assertRaises(ValueError, generate_one_simple_block, supported_objects=objects)
 
 
 class Test__generate_from_supported_objects(unittest.TestCase):
@@ -207,11 +179,8 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertRaises(ValueError, generate_from_supported_objects, objects)
 
     def test_all(self):
-        objects = [Block, Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
-                   Event, Epoch]
+        objects = [Block, Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal,
+                   SpikeTrain, Event, Epoch]
 
         res = generate_from_supported_objects(objects)
 
@@ -293,10 +262,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(res.epochs), 0)
 
     def test_all_without_block(self):
-        objects = [Segment,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Segment, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
         res = generate_from_supported_objects(objects)
@@ -311,10 +277,7 @@ class Test__generate_from_supported_objects(unittest.TestCase):
         self.assertEqual(len(res.epochs), 2)
 
     def test_all_without_segment(self):
-        objects = [Block,
-                   ChannelIndex, Unit,
-                   AnalogSignal,
-                   IrregularlySampledSignal, SpikeTrain,
+        objects = [Block, ChannelIndex, Unit, AnalogSignal, IrregularlySampledSignal, SpikeTrain,
                    Event, Epoch]
 
         res = generate_from_supported_objects(supported_objects=objects)
@@ -511,8 +474,8 @@ class Test__get_fake_value(unittest.TestCase):
 class Test__get_fake_values(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = dict(
+            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
         self.annotations['seed'] = 0
 
     def subcheck__get_fake_values(self, cls):
@@ -530,6 +493,9 @@ class Test__get_fake_values(unittest.TestCase):
         attritems = zip(attrnames, attrtypes)
 
         attrannnames = attrnames + list(self.annotations.keys())
+        # All DataObjects also have array annotations
+        if issubclass(cls, DataObject):
+            attrannnames.append('array_annotations')
 
         self.assertEqual(sorted(attrnames), sorted(res1.keys()))
         self.assertEqual(sorted(attrannnames), sorted(res2.keys()))
@@ -596,8 +562,8 @@ class Test__get_fake_values(unittest.TestCase):
 
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = dict(
+            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
 
     def check__generate_datasets(self, cls):
         clsname = cls.__name__
@@ -630,10 +596,7 @@ class Test__generate_datasets(unittest.TestCase):
         resattr = get_fake_values(cls, annotate=False, seed=0)
         if seed is not None:
             for name, value in resattr.items():
-                if name in ['channel_names',
-                            'channel_indexes',
-                            'channel_index',
-                            'coordinates']:
+                if name in ['channel_names', 'channel_indexes', 'channel_index', 'coordinates']:
                     continue
                 try:
                     try:
@@ -660,8 +623,7 @@ class Test__generate_datasets(unittest.TestCase):
         if cls in ['ChannelIndex', ChannelIndex]:
             for i, unit in enumerate(res.units):
                 for sigarr in res.analogsignals:
-                    self.assertEqual(unit.get_channel_indexes()[0],
-                                     sigarr.get_channel_index()[i])
+                    self.assertEqual(unit.get_channel_indexes()[0], sigarr.get_channel_index()[i])
 
     def test__analogsignalarray(self):
         self.check__generate_datasets(AnalogSignal)
@@ -669,8 +631,12 @@ class Test__generate_datasets(unittest.TestCase):
     def test__block(self):
         self.check__generate_datasets(AnalogSignal)
 
-    def test__epoch(self):
-        self.check__generate_datasets(Epoch)
+    # commenting the following out, because now we use a custom function to generate
+    # fake Epochs, due to the fact that its attributes are not all independent
+    # really the whole fake data generation needs to be revisited and simplified
+
+    # def test__epoch(self):
+    #    self.check__generate_datasets(Epoch)
 
     def test__event(self):
         self.check__generate_datasets(Event)

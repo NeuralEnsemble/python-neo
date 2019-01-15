@@ -186,7 +186,8 @@ class BCI2000RawIO(BaseRawIO):
                     bit_mask[-1] &= 255 & (255 >> extra_bits)  # Fix the mask for the last byte
                     # When converting to an int, we need to know which integer type it will become
                     n_max_bytes = 1 << (nbytes - 1).bit_length()
-                    view_type = {1: np.int8, 2: np.int16, 4: np.int32, 8: np.int64}.get(n_max_bytes)
+                    view_type = {1: np.int8, 2: np.int16,
+                        4: np.int32, 8: np.int64}.get(n_max_bytes)
                     # Slice and mask the data
                     masked_byte_array = self._memmap['state_vector'][:, byte_slice] & bit_mask
                     # Convert byte array to a vector of ints:
@@ -223,7 +224,7 @@ def parse_bci2000_header(filename):
         if param_val.lower().startswith('0x'):
             param_val = int(param_val, 16)
         elif data_type in ['int', 'float']:
-            matches = re.match('(-*\d+)(\w*)', param_val)
+            matches = re.match(r'(-*\d+)(\w*)', param_val)
             if matches is not None:  # Can be None for % in def, min, max vals
                 param_val, unit_str = matches.group(1), matches.group(2)
                 param_val = int(param_val) if data_type == 'int' else float(param_val)

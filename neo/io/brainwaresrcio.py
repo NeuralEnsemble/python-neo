@@ -517,7 +517,19 @@ class BrainwareSrcIO(BaseIO):
         senders = []
         for event in events:
             times.append(event.times.magnitude)
-            labels.append(event.labels)
+            # With the introduction of array annotations and the adaptation of labels to use
+            # this infrastructure, even single labels are wrapped into an array to ensure
+            # consistency.
+            # The following lines were 'labels.append(event.labels)' which assumed event.labels
+            # to be a scalar. Thus, I can safely assume the array to have length 1, because
+            # it only wraps this scalar. Now this scalar is accessed as the 0th element of
+            # event.labels
+            if event.labels.shape == (1,):
+                labels.append(event.labels[0])
+            else:
+                raise AssertionError("This single event has multiple labels in an array with "
+                                     "shape {} instead of a single label.".
+                                     format(event.labels.shape))
             senders.append(event.annotations['sender'])
 
         times = np.array(times, dtype=np.float32)

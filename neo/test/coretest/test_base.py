@@ -29,7 +29,6 @@ if sys.version_info[0] >= 3:
 
     long = int
 
-
     def bytes(s):
         return _bytes(s, encoding='ascii')
 

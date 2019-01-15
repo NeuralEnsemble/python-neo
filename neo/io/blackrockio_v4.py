@@ -232,22 +232,22 @@ class BlackrockIO(BaseIO):
         self._filenames = {}
         if nsx_override:
             self._filenames['nsx'] = re.sub(
-                os.path.extsep + 'ns[1,2,3,4,5,6]$', '', nsx_override)
+                os.path.extsep + r'ns[1,2,3,4,5,6]$', '', nsx_override)
         else:
             self._filenames['nsx'] = self.filename
         if nev_override:
             self._filenames['nev'] = re.sub(
-                os.path.extsep + 'nev$', '', nev_override)
+                os.path.extsep + r'nev$', '', nev_override)
         else:
             self._filenames['nev'] = self.filename
         if sif_override:
             self._filenames['sif'] = re.sub(
-                os.path.extsep + 'sif$', '', sif_override)
+                os.path.extsep + r'sif$', '', sif_override)
         else:
             self._filenames['sif'] = self.filename
         if ccf_override:
             self._filenames['ccf'] = re.sub(
-                os.path.extsep + 'ccf$', '', ccf_override)
+                os.path.extsep + r'ccf$', '', ccf_override)
         else:
             self._filenames['ccf'] = self.filename
 
@@ -278,7 +278,7 @@ class BlackrockIO(BaseIO):
         exts = ['nsx', 'nev', 'sif', 'ccf']
         ext_overrides = [nsx_override, nev_override, sif_override, ccf_override]
         for ext, ext_override in zip(exts, ext_overrides):
-            if ext_override is not None and self._avail_files[ext] == False:
+            if ext_override is not None and self._avail_files[ext] is False:
                 raise ValueError('Specified {} file {} could not be '
                                  'found.'.format(ext, ext_override))
 
@@ -1108,8 +1108,8 @@ class BlackrockIO(BaseIO):
         bytes_in_headers = self.__nsx_params[self.__nsx_spec[nsx_nb]](
             'bytes_in_headers', nsx_nb)
         nb_data_points = int(
-            (self.__get_file_size(filename) - bytes_in_headers) /
-            (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
+            (self.__get_file_size(filename) - bytes_in_headers)
+            / (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1)
 
         # add n_start
         n_starts = [(0 * t_unit).rescale(highest_res)]
@@ -1267,8 +1267,8 @@ class BlackrockIO(BaseIO):
         nsx_parameters = {
             'labels': labels,
             'units': np.array(
-                ['uV'] *
-                self.__nsx_basic_header[nsx_nb]['channel_count']),
+                [b'uV']
+                * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'min_analog_val': -1 * np.array(dig_factor),
             'max_analog_val': np.array(dig_factor),
             'min_digital_val': np.array(
@@ -1277,9 +1277,9 @@ class BlackrockIO(BaseIO):
                 [1000] * self.__nsx_basic_header[nsx_nb]['channel_count']),
             'timestamp_resolution': 30000,
             'bytes_in_headers':
-                self.__nsx_basic_header[nsx_nb].dtype.itemsize +
-                self.__nsx_ext_header[nsx_nb].dtype.itemsize *
-                self.__nsx_basic_header[nsx_nb]['channel_count'],
+                self.__nsx_basic_header[nsx_nb].dtype.itemsize
+                + self.__nsx_ext_header[nsx_nb].dtype.itemsize
+                * self.__nsx_basic_header[nsx_nb]['channel_count'],
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
@@ -1310,11 +1310,11 @@ class BlackrockIO(BaseIO):
             'bytes_in_headers':
                 self.__nsx_basic_header[nsx_nb]['bytes_in_headers'],
             'sampling_rate':
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
             'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
-                self.__nsx_basic_header[nsx_nb]['timestamp_resolution'] /
-                self.__nsx_basic_header[nsx_nb]['period']))}
+                self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
+                / self.__nsx_basic_header[nsx_nb]['period']))}
 
         return nsx_parameters[param_name]
 
@@ -1336,8 +1336,8 @@ class BlackrockIO(BaseIO):
         # extract parameters from nsx basic extended and data header
         data_parameters = {
             'nb_data_points': int(
-                (self.__get_file_size(filename) - bytes_in_headers) /
-                (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
+                (self.__get_file_size(filename) - bytes_in_headers)
+                / (2 * self.__nsx_basic_header[nsx_nb]['channel_count']) - 1),
             'databl_idx': 1,
             'databl_t_start': t_starts[0],
             'databl_t_stop': t_stops[0]}
@@ -1410,8 +1410,8 @@ class BlackrockIO(BaseIO):
                 'name': 'serial_input_port',
                 'field': 'digital_input',
                 'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0) &
-                    self.__is_set(data['packet_insertion_reason'], 7),
+                    self.__is_set(data['packet_insertion_reason'], 0)
+                    & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         # analog input events via threshold crossings
@@ -1451,8 +1451,8 @@ class BlackrockIO(BaseIO):
                 'name': 'serial_input_port',
                 'field': 'digital_input',
                 'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0) &
-                    self.__is_set(data['packet_insertion_reason'], 7),
+                    self.__is_set(data['packet_insertion_reason'], 0)
+                    & self.__is_set(data['packet_insertion_reason'], 7),
                 'desc': "Events of the serial input port"}}
 
         return event_types
@@ -1658,7 +1658,7 @@ class BlackrockIO(BaseIO):
                     "".format(user_n_stops[start_stop_id]))
 
             if (user_n_stops[start_stop_id] < min_time
-                or user_n_starts[start_stop_id] > max_time):
+                    or user_n_starts[start_stop_id] > max_time):
                 user_n_stops.pop(start_stop_id)
                 user_n_starts.pop(start_stop_id)
                 self._print_verbose(
@@ -1721,7 +1721,7 @@ class BlackrockIO(BaseIO):
                 mask = (n_stops_files > start) & (n_stops_files < stop)
                 red_n_stops_files = np.array(n_stops_files)[mask]
                 merged_n_stops = [
-                                     tp * highest_res for tp in red_n_stops_files] + [stop]
+                    tp * highest_res for tp in red_n_stops_files] + [stop]
             else:
                 merged_n_stops = [stop]
             # Define combined user and file n_starts and n_stops
@@ -1747,7 +1747,7 @@ class BlackrockIO(BaseIO):
                 n_stops.extend(merged_n_stops)
 
         if len(n_starts) > len(user_n_starts) and \
-                        len(n_stops) > len(user_n_stops):
+                len(n_stops) > len(user_n_stops):
             self._print_verbose(
                 "Additional recording pauses were detected. There will be "
                 "more segments than the user expects.")
@@ -1826,9 +1826,9 @@ class BlackrockIO(BaseIO):
 
             if scaling == 'voltage':
                 st.waveforms = (
-                    waveforms[mask] * self.__nev_params('waveform_unit') *
-                    self.__nev_params('digitization_factor')[channel_id] /
-                    1000.)
+                    waveforms[mask] * self.__nev_params('waveform_unit')
+                    * self.__nev_params('digitization_factor')[channel_id]
+                    / 1000.)
             elif scaling == 'raw':
                 st.waveforms = waveforms[mask] * pq.dimensionless
             else:
@@ -2008,11 +2008,11 @@ class BlackrockIO(BaseIO):
                     nev_dig_factor=self.__nev_ext_header[
                         b'NEUEVWAV']['digitization_factor'][get_idx],
                     nev_energy_threshold=self.__nev_ext_header[
-                                             b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['energy_threshold'][get_idx] * pq.uV,
                     nev_hi_threshold=self.__nev_ext_header[
-                                         b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['hi_threshold'][get_idx] * pq.uV,
                     nev_lo_threshold=self.__nev_ext_header[
-                                         b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
+                        b'NEUEVWAV']['lo_threshold'][get_idx] * pq.uV,
                     nb_sorted_units=self.__nev_ext_header[
                         b'NEUEVWAV']['nb_sorted_units'][get_idx],
                     waveform_size=self.__waveform_size[self.__nev_spec](
@@ -2027,15 +2027,15 @@ class BlackrockIO(BaseIO):
                     # filter type codes (extracted from blackrock manual)
                     chidx.annotate(
                         nev_hi_freq_corner=self.__nev_ext_header[b'NEUEVFLT'][
-                                               'hi_freq_corner'][get_idx] /
-                                           1000. * pq.Hz,
+                            'hi_freq_corner'][get_idx]
+                        / 1000. * pq.Hz,
                         nev_hi_freq_order=self.__nev_ext_header[b'NEUEVFLT'][
                             'hi_freq_order'][get_idx],
                         nev_hi_freq_type=flt_type[self.__nev_ext_header[
                             b'NEUEVFLT']['hi_freq_type'][get_idx]],
                         nev_lo_freq_corner=self.__nev_ext_header[
-                                               b'NEUEVFLT']['lo_freq_corner'][get_idx] /
-                                           1000. * pq.Hz,
+                            b'NEUEVFLT']['lo_freq_corner'][get_idx]
+                        / 1000. * pq.Hz,
                         nev_lo_freq_order=self.__nev_ext_header[
                             b'NEUEVFLT']['lo_freq_order'][get_idx],
                         nev_lo_freq_type=flt_type[self.__nev_ext_header[
@@ -2051,9 +2051,9 @@ class BlackrockIO(BaseIO):
                     channel_id)
                 chidx.annotate(
                     nsx_hi_freq_corner=self.__nsx_ext_header[k][
-                                           'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
+                        'hi_freq_corner'][get_idx] / 1000. * pq.Hz,
                     nsx_lo_freq_corner=self.__nsx_ext_header[k][
-                                           'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
+                        'lo_freq_corner'][get_idx] / 1000. * pq.Hz,
                     nsx_hi_freq_order=self.__nsx_ext_header[k][
                         'hi_freq_order'][get_idx],
                     nsx_lo_freq_order=self.__nsx_ext_header[k][
@@ -2558,8 +2558,8 @@ class BlackrockIO(BaseIO):
                 'sampling_rate', nsx_nb)
             avail_el = [
                 el for el in self.__nsx_ext_header[nsx_nb]['electrode_id']]
-            output += "\nAnalog Parameters (NS" + str(nsx_nb) + ")" \
-                                                                "\n===================================="
+            output += "\nAnalog Parameters (NS" \
+                + str(nsx_nb) + ")\n===================================="
             output += "\nResolution (Hz): %i" % analog_res
             output += "\nAvailable channel IDs: " + \
                       ", ".join(["%i" % a for a in avail_el]) + "\n"

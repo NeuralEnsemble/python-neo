@@ -139,7 +139,7 @@ class MicromedRawIO(BaseRawIO):
 
                 keep = (rawevent['start'] >= rawevent['start'][0]) & (
                     rawevent['start'] < self._raw_signals.shape[0]) & (
-                           rawevent['start'] != 0)
+                    rawevent['start'] != 0)
                 rawevent = rawevent[keep]
                 self._raw_events.append(rawevent)
 

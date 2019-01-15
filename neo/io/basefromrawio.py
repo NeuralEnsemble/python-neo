@@ -125,19 +125,21 @@ class BaseFromRaw(BaseIO):
         for channel_index in channel_indexes_list:
             for i, (ind_within, ind_abs) in self._make_signal_channel_subgroups(
                     channel_index, signal_group_mode=signal_group_mode).items():
-                chidx_annotations = {}
                 if signal_group_mode == "split-all":
                     chidx_annotations = self.raw_annotations['signal_channels'][i]
                 elif signal_group_mode == "group-by-same-units":
-                    for key in list(self.raw_annotations['signal_channels'][i].keys()):
-                        chidx_annotations[key] = []
+                    # this should be done with array_annotation soon:
+                    keys = list(self.raw_annotations['signal_channels'][ind_abs[0]].keys())
+                    # take key from first channel of the group
+                    chidx_annotations = {key: [] for key in keys}
                     for j in ind_abs:
-                        for key in list(self.raw_annotations['signal_channels'][i].keys()):
-                            chidx_annotations[key].append(self.raw_annotations[
-                                                              'signal_channels'][j][key])
+                        for key in keys:
+                            v = self.raw_annotations['signal_channels'][j].get(key, None)
+                            chidx_annotations[key].append(v)
                 if 'name' in list(chidx_annotations.keys()):
                     chidx_annotations.pop('name')
                 chidx_annotations = check_annotations(chidx_annotations)
+                # this should be done with array_annotation soon:
                 ch_names = all_channels[ind_abs]['name'].astype('S')
                 neo_channel_index = ChannelIndex(index=ind_within,
                                                  channel_names=ch_names,

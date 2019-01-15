@@ -85,8 +85,8 @@ class Spike2RawIO(BaseRawIO):
                 else:
                     fid.seek(chan_info['firstblock'])
                     block_info = read_as_dict(fid, blockHeaderDesciption)
-                    chan_info['t_start'] = block_info['start_time'] * \
-                        info['us_per_time'] * info['dtime_base']
+                    chan_info['t_start'] = float(block_info['start_time']) * \
+                        float(info['us_per_time']) * float(info['dtime_base'])
 
                 self._channel_infos.append(chan_info)
 
@@ -534,7 +534,7 @@ def read_as_dict(fid, dtype):
     Make conversion for strings.
     """
     dt = np.dtype(dtype)
-    h = np.fromstring(fid.read(dt.itemsize), dt)[0]
+    h = np.frombuffer(fid.read(dt.itemsize), dt)[0]
     info = OrderedDict()
     for k in dt.names:
         v = h[k]

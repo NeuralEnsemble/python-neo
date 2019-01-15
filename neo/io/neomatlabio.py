@@ -30,9 +30,9 @@ except ImportError as err:
 else:
     if version.LooseVersion(scipy.version.version) < '0.12.0':
         HAVE_SCIPY = False
-        SCIPY_ERR = ImportError("your scipy version is too old to support " +
-                                "MatlabIO, you need at least 0.12.0. " +
-                                "You have %s" % scipy.version.version)
+        SCIPY_ERR = ImportError("your scipy version is too old to support "
+                                + "MatlabIO, you need at least 0.12.0. "
+                                + "You have %s" % scipy.version.version)
     else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
@@ -378,6 +378,7 @@ class NeoMatlabIO(BaseIO):
             if attrname.endswith('_units') or attrname == 'units':
                 # linked with another field
                 continue
+
             if hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname:
                 continue
 
@@ -389,7 +390,7 @@ class NeoMatlabIO(BaseIO):
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:
-                    m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
+                    m = r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
                     r = re.findall(m, str(item))
                     if len(r) == 1:
                         item = datetime(*[int(e) for e in r[0]])

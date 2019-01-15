@@ -10,7 +10,7 @@ Inheritance from :class:`numpy.array` is explained here:
 http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
 In brief:
-* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist. 
+* Constructor :meth:`__new__` for :class:`BaseSignal` doesn't exist.
 Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
@@ -18,18 +18,20 @@ can be created.
 # needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+import copy
 import logging
 
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
+from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.channelindex import ChannelIndex
 
 logger = logging.getLogger("Neo")
 
 
-class BaseSignal(BaseNeo, pq.Quantity):
+class BaseSignal(DataObject):
     '''
     This is the base class from which all signal objects inherit:
     :class:`AnalogSignal` and :class:`IrregularlySampledSignal`.
@@ -37,9 +39,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
     This class contains all common methods of both child classes.
     It uses the following child class attributes:
 
-        :_necessary_attrs: a list of the attributes that the class must have. 
+        :_necessary_attrs: a list of the attributes that the class must have.
 
-        :_recommended_attrs: a list of the attributes that the class may 
+        :_recommended_attrs: a list of the attributes that the class may
         optionally have.
     '''
 
@@ -58,9 +60,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
         User-specified values are only relevant for construction from
         constructor, and these are set in __new__ in the child object.
-        Then they are just copied over here. Default values for the 
+        Then they are just copied over here. Default values for the
         specific attributes for subclasses (:class:`AnalogSignal`
-        and :class:`IrregularlySampledSignal`) are set in 
+        and :class:`IrregularlySampledSignal`) are set in
         :meth:`_array_finalize_spec`
         '''
         super(BaseSignal, self).__array_finalize__(obj)
@@ -68,6 +70,11 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
         # The additional arguments
         self.annotations = getattr(obj, 'annotations', {})
+        # Add empty array annotations, because they cannot always be copied,
+        # but do not overwrite existing ones from slicing etc.
+        # This ensures the attribute exists
+        if not hasattr(self, 'array_annotations'):
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
         # Globally recommended attributes
         self.name = getattr(obj, 'name', None)
@@ -83,17 +90,23 @@ class BaseSignal(BaseNeo, pq.Quantity):
         '''
         Check that units are present, and rescale the signal if necessary.
         This is called whenever a new signal is
-        created from the constructor. See :meth:`__new__' in  
+        created from the constructor. See :meth:`__new__' in
         :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
         '''
         if units is None:
             if not hasattr(signal, "units"):
                 raise ValueError("Units must be specified")
         elif isinstance(signal, pq.Quantity):
-            # could improve this test, what if units is a string?
-            if units != signal.units:
+            # This test always returns True, i.e. rescaling is always executed if one of the units
+            # is a pq.CompoundUnit. This is fine because rescaling is correct anyway.
+            if pq.quantity.validate_dimensionality(units) != signal.dimensionality:
                 signal = signal.rescale(units)
         return signal
+
+    def rescale(self, units):
+        obj = super(BaseSignal, self).rescale(units)
+        obj.channel_index = self.channel_index
+        return obj
 
     def __getslice__(self, i, j):
         '''
@@ -118,6 +131,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
         f = getattr(super(BaseSignal, self), op)
         new_signal = f(other, *args)
         new_signal._copy_data_complement(self)
+        # _copy_data_complement can't always copy array annotations,
+        # so this needs to be done locally
+        new_signal.array_annotations = copy.deepcopy(self.array_annotations)
         return new_signal
 
     def _get_required_attributes(self, signal, units):
@@ -133,49 +149,32 @@ class BaseSignal(BaseNeo, pq.Quantity):
         required_attributes['units'] = units
         return required_attributes
 
-    def rescale(self, units):
-        '''
-        Return a copy of the signal converted to the specified
-        units
-        '''
-        to_dims = pq.quantity.validate_dimensionality(units)
-        if self.dimensionality == to_dims:
-            to_u = self.units
-            signal = np.array(self)
-        else:
-            to_u = pq.Quantity(1.0, to_dims)
-            from_u = pq.Quantity(1.0, self.dimensionality)
-            try:
-                cf = pq.quantity.get_conversion_factor(from_u, to_u)
-            except AssertionError:
-                raise ValueError('Unable to convert between units of "%s" \
-                                 and "%s"' % (from_u._dimensionality,
-                                              to_u._dimensionality))
-            signal = cf * self.magnitude
-        required_attributes = self._get_required_attributes(signal, to_u)
-        new = self.__class__(**required_attributes)
-        new._copy_data_complement(self)
-        new.channel_index = self.channel_index
-        new.segment = self.segment
-        new.annotations.update(self.annotations)
-        return new
-
-    def duplicate_with_new_array(self, signal):
+    def duplicate_with_new_data(self, signal, units=None):
         '''
         Create a new signal with the same metadata but different data.
         Required attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
+        if units is None:
+            units = self.units
+        # else:
+        #     units = pq.quantity.validate_dimensionality(units)
+
         # signal is the new signal
-        required_attributes = self._get_required_attributes(signal, self.units)
+        required_attributes = self._get_required_attributes(signal, units)
         new = self.__class__(**required_attributes)
         new._copy_data_complement(self)
         new.annotations.update(self.annotations)
+        # Note: Array annotations are not copied here, because it is not ensured
+        # that the same number of signals is used and they would possibly make no sense
+        # when combined with another signal
         return new
 
     def _copy_data_complement(self, other):
         '''
         Copy the metadata from another signal.
         Required and recommended attributes of the signal are used.
+        Note: Array annotations can not be copied here because length of data can change
         '''
         all_attr = {self._recommended_attrs, self._necessary_attrs}
         for sub_at in all_attr:
@@ -183,6 +182,9 @@ class BaseSignal(BaseNeo, pq.Quantity):
                 if attr[0] != 'signal':
                     setattr(self, attr[0], getattr(other, attr[0], None))
         setattr(self, 'annotations', getattr(other, 'annotations', None))
+
+        # Note: Array annotations cannot be copied because length of data can be changed  # here
+        #  which would cause inconsistencies
 
     def __rsub__(self, other, *args):
         '''
@@ -223,23 +225,6 @@ class BaseSignal(BaseNeo, pq.Quantity):
     __radd__ = __add__
     __rmul__ = __sub__
 
-    def as_array(self, units=None):
-        """
-        Return the signal as a plain NumPy array.
-
-        If `units` is specified, first rescale to those units.
-        """
-        if units:
-            return self.rescale(units).magnitude
-        else:
-            return self.magnitude
-
-    def as_quantity(self):
-        """
-        Return the signal as a quantities array.
-        """
-        return self.view(pq.Quantity)
-
     def merge(self, other):
         '''
         Merge another signal into this one.
@@ -279,13 +264,13 @@ class BaseSignal(BaseNeo, pq.Quantity):
                 kwargs[name] = attr_self
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
-        signal = self.__class__(stack, units=self.units, dtype=self.dtype,
-                                copy=False, t_start=self.t_start,
-                                sampling_rate=self.sampling_rate,
-                                **kwargs)
+
+        kwargs['array_annotations'] = self._merge_array_annotations(other)
+
+        signal = self.__class__(stack, units=self.units, dtype=self.dtype, copy=False,
+                                t_start=self.t_start, sampling_rate=self.sampling_rate, **kwargs)
         signal.segment = self.segment
 
         if hasattr(self, "lazy_shape"):
@@ -293,12 +278,11 @@ class BaseSignal(BaseNeo, pq.Quantity):
 
         # merge channel_index (move to ChannelIndex.merge()?)
         if self.channel_index and other.channel_index:
-            signal.channel_index = ChannelIndex(
-                index=np.arange(signal.shape[1]),
-                channel_ids=np.hstack([self.channel_index.channel_ids,
-                                       other.channel_index.channel_ids]),
-                channel_names=np.hstack([self.channel_index.channel_names,
-                                         other.channel_index.channel_names]))
+            signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]),
+                channel_ids=np.hstack(
+                    [self.channel_index.channel_ids, other.channel_index.channel_ids]),
+                channel_names=np.hstack(
+                    [self.channel_index.channel_names, other.channel_index.channel_names]))
         else:
             signal.channel_index = ChannelIndex(index=np.arange(signal.shape[1]))
 
