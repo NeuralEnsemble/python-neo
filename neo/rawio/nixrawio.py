@@ -11,6 +11,7 @@ from __future__ import print_function, division, absolute_import
 from .baserawio import (BaseRawIO, _signal_channel_dtype,
                         _unit_channel_dtype, _event_channel_dtype)
 from ..io.nixio import NixIO
+from ..io.nixio import check_nix_version
 import numpy as np
 import warnings
 try:
@@ -37,6 +38,7 @@ class NIXRawIO(BaseRawIO):
     rawmode = 'one-file'
 
     def __init__(self, filename=''):
+        check_nix_version()
         BaseRawIO.__init__(self)
         self.filename = filename
 
