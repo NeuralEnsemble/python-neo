@@ -1112,13 +1112,13 @@ class NixIO(BaseIO):
         for chx in neoblock.channel_indexes:
             signames = []
             for asig in chx.analogsignals:
-                if not ("nix_name" in asig.annotations and
-                        asig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in asig.annotations
+                        and asig.annotations["nix_name"] in self._signal_map):
                     self._write_analogsignal(asig, nixblock, None)
                 signames.append(asig.annotations["nix_name"])
             for isig in chx.irregularlysampledsignals:
-                if not ("nix_name" in isig.annotations and
-                        isig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in isig.annotations
+                        and isig.annotations["nix_name"] in self._signal_map):
                     self._write_irregularlysampledsignal(isig, nixblock, None)
                 signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
@@ -1129,10 +1129,11 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    if not ("nix_name" in st.annotations and
-                            st.annotations["nix_name"] in nixblock.multi_tags):
+                    mtags = nixblock.multi_tags
+                    if not ("nix_name" in st.annotations
+                            and st.annotations["nix_name"] in mtags):
                         self._write_spiketrain(st, nixblock, None)
-                    stmt = nixblock.multi_tags[st.annotations["nix_name"]]
+                    stmt = mtags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
                     stmt.sources.append(unitsource)
 
@@ -1364,8 +1365,8 @@ class NixIO(BaseIO):
         """
         Closes the open nix file and resets maps.
         """
-        if (hasattr(self, "nix_file") and
-                self.nix_file and self.nix_file.is_open()):
+        if (hasattr(self, "nix_file")
+                and self.nix_file and self.nix_file.is_open()):
             self.nix_file.close()
             self.nix_file = None
             self._neo_map = None
