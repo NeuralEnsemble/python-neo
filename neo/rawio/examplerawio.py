@@ -309,9 +309,13 @@ class ExampleRawIO(BaseRawIO):
         # it is not always the case
         # we 20 spikes with a sweep of 50 (5ms)
 
+        # trick to get how many spike in the slice
+        ts = self._get_spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
+        nb_spike = ts.size
+
         np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2 ** 4, high=2 ** 4, size=20 * 50, dtype='int16')
-        waveforms = waveforms.reshape(20, 1, 50)
+        waveforms = np.random.randint(low=-2**4, high=2**4, size=nb_spike * 50, dtype='int16')
+        waveforms = waveforms.reshape(nb_spike, 1, 50)
         return waveforms
 
     def _event_count(self, block_index, seg_index, event_channel_index):

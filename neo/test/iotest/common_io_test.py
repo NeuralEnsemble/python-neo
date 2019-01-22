@@ -21,9 +21,6 @@ from __future__ import absolute_import
 
 __test__ = False
 
-# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-
 import os
 from copy import copy
 
@@ -36,7 +33,6 @@ from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
                             assert_sub_schema_is_lazy_loaded,
-                            assert_lazy_sub_schema_can_be_loaded,
                             assert_children_empty)
 
 from neo.rawio.tests.tools import (can_use_network, make_all_directories,
@@ -51,6 +47,10 @@ from neo.test.iotest.tools import (cleanup_test_file,
                                    read_generic,
                                    write_generic)
 from neo.test.generate_datasets import generate_from_supported_objects
+
+
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestIO(object):
@@ -494,30 +494,22 @@ class BaseTestIO(object):
         Compliance test: neo.test.tools.assert_neo_object_is_compliant for
         lazy mode.
         ''' % self.ioclass.__name__
-        # This is for files presents at G-Node or generated
-        lazy_list = [False]
-        if self.ioclass.support_lazy:
-            lazy_list.append(True)
-
-        for lazy in lazy_list:
-            for obj, path in self.iter_objects(lazy=lazy, return_path=True):
-                try:
-                    # Check compliance of the block
-                    assert_neo_object_is_compliant(obj)
-                # intercept exceptions and add more information
-                except BaseException as exc:
-                    exc.args += ('from %s with lazy=%s' %
-                                 (os.path.basename(path), lazy),)
-                    raise
+        for obj, path in self.iter_objects(lazy=False, return_path=True):
+            try:
+                # Check compliance of the block
+                assert_neo_object_is_compliant(obj)
+            # intercept exceptions and add more information
+            except BaseException as exc:
+                exc.args += ('from %s' % os.path.basename(path))
+                raise
 
     def test_readed_with_lazy_is_compliant(self):
         '''
         Reading %s files in `files_to_test` with `lazy` is compliant.
 
-        Test the reader with lazy = True.  All objects derived from ndarray
-        or Quantity should have a size of 0. Also, AnalogSignal,
-        AnalogSignalArray, SpikeTrain, Epoch, and Event should
-        contain the lazy_shape attribute.
+        Test the reader with lazy = True.
+        The schema must contain proxy objects.
+
         ''' % self.ioclass.__name__
         # This is for files presents at G-Node or generated
         if self.ioclass.support_lazy:
@@ -527,26 +519,3 @@ class BaseTestIO(object):
                 # intercept exceptions and add more information
                 except BaseException as exc:
                     raise
-
-    def test_load_lazy_objects(self):
-        '''
-        Reading %s files in `files_to_test` with `lazy` works.
-
-        Test the reader with lazy = True.  All objects derived from ndarray
-        or Quantity should have a size of 0. Also, AnalogSignal,
-        AnalogSignalArray, SpikeTrain, Epoch, and Event should
-        contain the lazy_shape attribute.
-        ''' % self.ioclass.__name__
-        if not hasattr(self.ioclass, 'load_lazy_object'):
-            return
-
-        # This is for files presents at G-Node or generated
-        for obj, path, ioobj in self.iter_objects(
-                lazy=True,
-                return_ioobj=True,
-                return_path=True):
-            try:
-                assert_lazy_sub_schema_can_be_loaded(obj, ioobj)
-            # intercept exceptions and add more information
-            except BaseException as exc:
-                raise
