@@ -117,7 +117,8 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
             assert len(times) == len(labels)
             epc = Epoch(times=pq.Quantity(times, units=pq.s),
                         durations=pq.Quantity([x[0] for x in durations], units=pq.s),
-                        labels=labels, )
+                        labels=labels,)
+            assert epc.times.dtype == 'float'
             # Randomly generate array_annotations from given options
             arr_ann = {key: value[(rand(len(times)) * len(value)).astype('i')] for (key, value) in
                        array_annotations.items()}
