@@ -45,13 +45,13 @@ class AsciiSignalIO(BaseIO):
         skiprows : skip n first lines in case they contains header informations
         sampling_rate : the sampling rate of signals. Ignored if timecolumn is not None
         t_start : time of the first sample (Quantity). Ignored if timecolumn is not None
-        multichannel : if True, load data as a single, multi-channel AnalogSignal, 
-                       otherwise (default for backwards compatibility) load data as 
+        multichannel : if True, load data as a single, multi-channel AnalogSignal,
+                       otherwise (default for backwards compatibility) load data as
                        separate, single-channel AnalogSignals
         method : 'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a filename
                  and usecolumns as argument and returns a 2D NumPy array.
-        
-        If specifying both usecols and timecolumn, the latter should identify 
+
+        If specifying both usecols and timecolumn, the latter should identify
         the column index _after_ removing the unused columns.
 
         The methods are as follows:
@@ -66,7 +66,8 @@ class AsciiSignalIO(BaseIO):
 
     supported_objects = [Block, Segment, AnalogSignal]
     readable_objects = [Block, Segment]
-    writeable_objects = [Segment]  # can write a Block with a single segment, but not the general case
+    # can write a Block with a single segment, but not the general case
+    writeable_objects = [Segment]
 
     has_header = False
     is_streameable = False
@@ -128,7 +129,8 @@ class AsciiSignalIO(BaseIO):
         self.units = pq.Quantity(1, units)
 
         if not(method in ('genfromtxt', 'csv', 'homemade') or callable(method)):
-            raise ValueError("method must be one of 'genfromtxt', 'csv', 'homemade', or a function")
+            raise ValueError(
+                "method must be one of 'genfromtxt', 'csv', 'homemade', or a function")
         self.method = method
         self.multichannel = multichannel
 
@@ -141,7 +143,7 @@ class AsciiSignalIO(BaseIO):
 
     def read_segment(self, lazy=False):
         """
-        
+
         """
         if lazy:
             raise NotImplementedError("lazy mode not supported")
@@ -193,7 +195,7 @@ class AsciiSignalIO(BaseIO):
             sampling_rate = self.sampling_rate
             t_start = self.t_start
         else:
-            # todo: if the values in timecolumn are not equally spaced 
+            # todo: if the values in timecolumn are not equally spaced
             #       (within float representation tolerances)
             #       we should produce an IrregularlySampledSignal
             sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
@@ -210,13 +212,13 @@ class AsciiSignalIO(BaseIO):
             else:
                 signal = sig
             anaSig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
-                                  t_start=t_start, 
+                                  t_start=t_start,
                                   channel_index=self.usecols or np.arange(signal.shape[1]),
                                   name='multichannel')
             seg.analogsignals.append(anaSig)
         else:
             if self.timecolumn is not None and self.timecolumn < 0:
-                time_col  = sig.shape[1] + self.timecolumn
+                time_col = sig.shape[1] + self.timecolumn
             else:
                 time_col = self.timecolumn
             for i in range(sig.shape[1]):
@@ -235,13 +237,15 @@ class AsciiSignalIO(BaseIO):
         """
         Write a segment and AnalogSignal in a text file.
         """
-        # todo: check all analog signals have the same length, physical dimensions and sampling rates
+        # todo: check all analog signals have the same length, physical dimensions
+        # and sampling rates
         l = []
         if self.timecolumn is not None:
             if self.timecolumn != 0:
                 raise NotImplementedError("Only column 0 currently supported for writing times")
             l.append(segment.analogsignals[0].times[:, np.newaxis].rescale(self.time_units))
-        # todo: check signals are compatible (size, sampling rate), otherwise we can't/shouldn't concatenate them
+        # todo: check signals are compatible (size, sampling rate), otherwise we
+        # can't/shouldn't concatenate them
         for anaSig in segment.analogsignals:
             l.append(anaSig.rescale(self.units).magnitude)
         sigs = np.concatenate(l, axis=1)

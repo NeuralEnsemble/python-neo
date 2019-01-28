@@ -30,16 +30,16 @@ class TestAsciiSignalIO(unittest.TestCase):
         sample_data = np.random.uniform(size=(200, 3))
         filename = "test_genfromtxt_expect_success.txt"
         np.savetxt(filename, sample_data, delimiter=' ')
-        sampling_rate = 1*pq.kHz
+        sampling_rate = 1 * pq.kHz
         io = AsciiSignalIO(filename, sampling_rate=sampling_rate, delimiter=' ',
                            units='mV', method='genfromtxt')
         block = io.read_block()
-        
+
         signal1 = block.segments[0].analogsignals[1]
         assert_array_almost_equal(signal1.reshape(-1).magnitude, sample_data[:, 1],
                                   decimal=6)
         self.assertEqual(len(block.segments[0].analogsignals), 3)
-        self.assertEqual(signal1.t_stop, sample_data.shape[0]/sampling_rate)
+        self.assertEqual(signal1.t_stop, sample_data.shape[0] / sampling_rate)
         self.assertEqual(signal1.units, pq.mV)
 
         os.remove(filename)
@@ -62,7 +62,7 @@ class TestAsciiSignalIO(unittest.TestCase):
                            units='mV', method='genfromtxt', timecolumn=-1,
                            time_units='ms', multichannel=False)
         block = io.read_block()
-        
+
         signal1 = block.segments[0].analogsignals[1]
         assert_array_almost_equal(signal1.reshape(-1).magnitude, sample_data[:, 1],
                                   decimal=6)
@@ -77,17 +77,17 @@ class TestAsciiSignalIO(unittest.TestCase):
         sample_data = np.random.uniform(size=(200, 3))
         filename = "test_multichannel.txt"
         np.savetxt(filename, sample_data, delimiter=' ')
-        sampling_rate = 1*pq.kHz
+        sampling_rate = 1 * pq.kHz
         io = AsciiSignalIO(filename, sampling_rate=sampling_rate, delimiter=' ',
                            units='mV', method='genfromtxt',
                            multichannel=True)
         block = io.read_block()
-        
+
         signal = block.segments[0].analogsignals[0]
         assert_array_almost_equal(signal.magnitude, sample_data,
                                   decimal=6)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
-        self.assertEqual(signal.t_stop, sample_data.shape[0]/sampling_rate)
+        self.assertEqual(signal.t_stop, sample_data.shape[0] / sampling_rate)
         self.assertEqual(signal.units, pq.mV)
 
         os.remove(filename)
@@ -104,7 +104,7 @@ class TestAsciiSignalIO(unittest.TestCase):
                            time_units='ms',
                            multichannel=True)
         block = io.read_block()
-        
+
         signal = block.segments[0].analogsignals[0]
         assert_array_almost_equal(signal.magnitude, sample_data,
                                   decimal=6)
@@ -127,7 +127,7 @@ class TestAsciiSignalIO(unittest.TestCase):
                            time_units='ms',
                            multichannel=True)
         block = io.read_block()
-        
+
         signal = block.segments[0].analogsignals[0]
         assert_array_almost_equal(signal.magnitude, sample_data,
                                   decimal=6)
@@ -141,7 +141,6 @@ class TestAsciiSignalIO(unittest.TestCase):
     # test write without timecolumn
     # test write with timecolumn
     # test write with units/timeunits different from those of signal
-
 
 
 if __name__ == "__main__":
