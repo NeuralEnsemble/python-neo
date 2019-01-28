@@ -52,7 +52,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
 
                                 epoch_types={'animal state': ['Sleep', 'Freeze', 'Escape'],
                                              'light': ['dark', 'lighted']},
-                                epoch_duration_range=[.5, 3.],
+                                epoch_duration_range=[.5, 3.],  # this should be multiplied by pq.s, no?
 
                                 array_annotations={'valid': np.array([True, False]),
                                                    'number': np.array(range(5))}
@@ -107,7 +107,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
             durations = []
             while t < duration:
                 times.append(t)
-                dur = rand() * np.diff(epoch_duration_range)
+                dur = rand() * (epoch_duration_range[1] - epoch_duration_range[0])
                 dur += epoch_duration_range[0]
                 durations.append(dur)
                 t = t + dur
@@ -116,7 +116,7 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
             assert len(times) == len(durations)
             assert len(times) == len(labels)
             epc = Epoch(times=pq.Quantity(times, units=pq.s),
-                        durations=pq.Quantity([x[0] for x in durations], units=pq.s),
+                        durations=pq.Quantity(durations, units=pq.s),
                         labels=labels,)
             assert epc.times.dtype == 'float'
             # Randomly generate array_annotations from given options
