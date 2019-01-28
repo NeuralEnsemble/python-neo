@@ -27,7 +27,7 @@ Rules for creating a new class:
 
   3. Step 3 : Create the neo.io class with the wrapper
     * Create a file in neo/io/ that endith with "io.py"
-    * Create a that hinerits bot yrou RawIO class and BaseFromRaw class
+    * Create a that inherits both your RawIO class and BaseFromRaw class
     * copy/paste from neo/io/exampleio.py
 
   4.Step 4 : IO test
