@@ -52,7 +52,8 @@ def generate_one_simple_segment(seg_name='segment 0', supported_objects=[], nb_a
 
                                 epoch_types={'animal state': ['Sleep', 'Freeze', 'Escape'],
                                              'light': ['dark', 'lighted']},
-                                epoch_duration_range=[.5, 3.],  # this should be multiplied by pq.s, no?
+                                epoch_duration_range=[.5, 3.],  
+                                # this should be multiplied by pq.s, no?
 
                                 array_annotations={'valid': np.array([True, False]),
                                                    'number': np.array(range(5))}
@@ -407,8 +408,8 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
             # if we are creating a block and this is the object's primary
             # parent, don't create the object, we will import it from secondary
             # containers later
-            if (cascade == 'block' and len(child._parent_objects) > 0 and obj_type !=
-                    child._parent_objects[-1]):
+            if (cascade == 'block' and len(child._parent_objects) > 0 
+                    and obj_type != child._parent_objects[-1]):
                 continue
             getattr(obj, _container_name(childname)).append(child)
 
