@@ -255,7 +255,7 @@ class BaseSignal(DataObject):
                 raise MergeError("Cannot merge a lazy object with a real object.")
         if other.units != self.units:
             other = other.rescale(self.units)
-        stack = np.hstack(map(np.array, (self, other)))
+        stack = np.hstack((self.magnitude, other.magnitude))
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
