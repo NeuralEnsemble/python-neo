@@ -114,7 +114,7 @@ Here is an example showing these relationships in use::
 
     from neo.io import AxonIO
     import urllib
-    url = "https://portal.g-node.org/neo/axon/File_axon_3.abf"
+    url = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/axon/File_axon_3.abf"
     filename = './test.abf'
     urllib.urlretrieve(url, filename)
 

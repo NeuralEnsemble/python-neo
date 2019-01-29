@@ -40,7 +40,8 @@ jobs:
             . venv/bin/activate
             pip install -r requirements.txt
             pip install -r .circleci/requirements_testing.txt
-            pip install . 
+            pip install .
+            pip freeze
 
       - save_cache:
           paths:
@@ -72,7 +73,7 @@ jobs:
   test-2.7:
     docker:
       - image: circleci/python:2.7-stretch
-      
+
     environment:
       - NEO_TEST_FILE_DIR: "/home/circleci/repo/files_for_testing_neo"
 
@@ -100,7 +101,8 @@ jobs:
             pip install -r requirements.txt
             pip install -r .circleci/requirements_testing.txt
             pip install mock  # only needed for Python 2
-            pip install . 
+            pip install .
+            pip freeze
 
       - save_cache:
           paths:
@@ -122,4 +124,3 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
-          
