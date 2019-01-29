@@ -48,8 +48,8 @@ class AsciiSignalIO(BaseIO):
         skiprows : skip n first lines in case they contains header informations
         sampling_rate : the sampling rate of signals. Ignored if timecolumn is not None
         t_start : time of the first sample (Quantity). Ignored if timecolumn is not None
-        multichannel : if True, load data as a single, multi-channel AnalogSignal,
-                       otherwise (default for backwards compatibility) load data as
+        signal_group_mode : if 'all-in-one', load data as a single, multi-channel AnalogSignal,
+                       if 'split-all' (default for backwards compatibility) load data as
                        separate, single-channel AnalogSignals
         method : 'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a
                  filename and usecolumns as argument and returns a 2D NumPy array.
@@ -86,7 +86,7 @@ class AsciiSignalIO(BaseIO):
             ('sampling_rate', {'value': 1.0 * pq.Hz, }),
             ('t_start', {'value': 0.0 * pq.s, }),
             ('method', {'value': 'homemade', 'possible': ['genfromtxt', 'csv', 'homemade']}),
-            ('multichannel', {'value': False})
+            ('signal_group_mode', {'value': 'split-all'})
         ]
     }
     write_params = {
@@ -103,7 +103,7 @@ class AsciiSignalIO(BaseIO):
 
     def __init__(self, filename=None, delimiter='\t', usecols=None, skiprows=0, timecolumn=None,
                  sampling_rate=1.0 * pq.Hz, t_start=0.0 * pq.s, units=pq.V, time_units=pq.s,
-                 method='genfromtxt', multichannel=False):
+                 method='genfromtxt', signal_group_mode='split-all'):
         """
         This class read/write AnalogSignal in a text file.
         Each signal is a column.
@@ -135,7 +135,7 @@ class AsciiSignalIO(BaseIO):
             raise ValueError(
                 "method must be one of 'genfromtxt', 'csv', 'homemade', or a function")
         self.method = method
-        self.multichannel = multichannel
+        self.signal_group_mode = signal_group_mode
 
     def read_block(self, lazy=False):
         block = Block(file_origin=os.path.basename(self.filename))
@@ -204,7 +204,7 @@ class AsciiSignalIO(BaseIO):
             sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
             t_start = sig[0, self.timecolumn] * self.time_units
 
-        if self.multichannel:
+        if self.signal_group_mode == 'all-in-one':
             if self.timecolumn is not None:
                 mask = list(range(sig.shape[1]))
                 if self.timecolumn >= 0:

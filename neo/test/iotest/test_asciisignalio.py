@@ -60,7 +60,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         np.savetxt(filename, combined_data, delimiter=' ')
         io = AsciiSignalIO(filename, delimiter=' ',
                            units='mV', method='genfromtxt', timecolumn=-1,
-                           time_units='ms', multichannel=False)
+                           time_units='ms', signal_group_mode='split-all')
         block = io.read_block()
 
         signal1 = block.segments[0].analogsignals[1]
@@ -80,7 +80,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         sampling_rate = 1 * pq.kHz
         io = AsciiSignalIO(filename, sampling_rate=sampling_rate, delimiter=' ',
                            units='mV', method='genfromtxt',
-                           multichannel=True)
+                           signal_group_mode='all-in-one')
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
@@ -102,7 +102,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         io = AsciiSignalIO(filename, delimiter=' ',
                            units='mV', method='genfromtxt', timecolumn=0,
                            time_units='ms',
-                           multichannel=True)
+                           signal_group_mode='all-in-one')
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
@@ -125,7 +125,7 @@ class TestAsciiSignalIO(unittest.TestCase):
         io = AsciiSignalIO(filename, delimiter=' ',
                            units='mV', method='genfromtxt', timecolumn=-1,
                            time_units='ms',
-                           multichannel=True)
+                           signal_group_mode='all-in-one')
         block = io.read_block()
 
         signal = block.segments[0].analogsignals[0]
