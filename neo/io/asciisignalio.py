@@ -36,20 +36,23 @@ class AsciiSignalIO(BaseIO):
 
     Arguments relevant for reading and writing:
         delimiter : column delimiter in file, e.g. '\t', one space, two spaces, ',', ';'
-        timecolumn :  None or a valid integer that identifies which column contains the time vector (counting from zero)
+        timecolumn :  None or a valid integer that identifies which column contains
+                      the time vector (counting from zero)
         units : units of AnalogSignal can be a str or directly a Quantity
-        time_units : where timecolumn is specified, the time units must be specified as a string or Quantity
+        time_units : where timecolumn is specified, the time units must be specified
+                     as a string or Quantity
 
     Arguments relevant only for reading:
-        usecols : if None take all columns otherwise a list for selected columns (counting from zero)
+        usecols : if None take all columns otherwise a list for selected columns
+                  (counting from zero)
         skiprows : skip n first lines in case they contains header informations
         sampling_rate : the sampling rate of signals. Ignored if timecolumn is not None
         t_start : time of the first sample (Quantity). Ignored if timecolumn is not None
         multichannel : if True, load data as a single, multi-channel AnalogSignal,
                        otherwise (default for backwards compatibility) load data as
                        separate, single-channel AnalogSignals
-        method : 'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a filename
-                 and usecolumns as argument and returns a 2D NumPy array.
+        method : 'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a
+                 filename and usecolumns as argument and returns a 2D NumPy array.
 
         If specifying both usecols and timecolumn, the latter should identify
         the column index _after_ removing the unused columns.
@@ -174,10 +177,10 @@ class AsciiSignalIO(BaseIO):
             for line in fid.readlines():
                 line = line.replace('\r', '')
                 line = line.replace('\n', '')
-                l = line.split(self.delimiter)
-                while '' in l:
-                    l.remove('')
-                tab.append(l)
+                parts = line.split(self.delimiter)
+                while '' in parts:
+                    parts.remove('')
+                tab.append(parts)
             sig = np.array(tab, dtype='f')
             if self.usecols is not None:
                 mask = np.array(self.usecols)
