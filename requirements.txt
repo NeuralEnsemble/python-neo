@@ -1,5 +1,5 @@
 # essential
-numpy>=1.7.1
+numpy>=1.7.1,!=1.16.0
 quantities>=0.9.0
 # for running tests
 nose>=1.1.2
