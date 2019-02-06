@@ -177,26 +177,27 @@ class NIXRawIO(BaseRawIO):
                     self._add_annotate(seg_ann, props, 'seg')
                 ansig_idx = 0
                 for da in seg.data_arrays:
-                    if da.type == 'neo.analogsignal':
+                    if da.type == 'neo.analogsignal' and seg_ann['signals'] != []:
                         ana_an = seg_ann['signals'][ansig_idx]
                         for props in da.metadata.inherited_properties():
                             self._add_annotate(ana_an, props, 'asig')
                         ansig_idx += 1
                 sp_idx = 0
+                ev_idx = 0
                 for mt in seg.multi_tags:
-                    if mt.type == 'neo.spiketrain':
+                    if mt.type == 'neo.spiketrain' and seg_ann['units'] != []:
                         spiketrain_an = seg_ann['units'][sp_idx]
                         for props in mt.metadata.inherited_properties():
                             self._add_annotate(spiketrain_an, props, 'st')
                         sp_idx += 1
-                    ev_idx = 0
                     # if order is preserving, the annotations
                     # should go to the right place, need test
                     if mt.type == "neo.event" or mt.type == "neo.epoch":
-                        event_an = seg_ann['events'][sp_idx]
-                        for props in mt.metadata.inherited_properties():
-                            self._add_annotate(event_an, props, 'ev')
-                        ev_idx += 1
+                        if seg_ann['events'] != []:
+                            event_an = seg_ann['events'][ev_idx]
+                            for props in mt.metadata.inherited_properties():
+                                self._add_annotate(event_an, props, 'ev')
+                            ev_idx += 1
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
