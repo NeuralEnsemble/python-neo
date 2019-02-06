@@ -179,8 +179,10 @@ class NIXRawIO(BaseRawIO):
                 for da in seg.data_arrays:
                     if da.type == 'neo.analogsignal' and seg_ann['signals'] != []:
                         ana_an = seg_ann['signals'][ansig_idx]
+                        sigch_an = self.raw_annotations['signal_channels'][ansig_idx]
                         for props in da.metadata.inherited_properties():
                             self._add_annotate(ana_an, props, 'asig')
+                            self._add_annotate(sigch_an, props, 'asig')
                         ansig_idx += 1
                 sp_idx = 0
                 ev_idx = 0

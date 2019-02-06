@@ -131,10 +131,7 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
             frbl = frio.read_block()
             assert 'my_custom_annotation' in frbl.annotations
             assert 'something' in frbl.segments[0].annotations
-            print(frbl.segments[0].analogsignals[0].annotations)
-            print(frio.raw_annotations)
-            print(frio.signal_channels_count())
-            # assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
+            assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
             assert 'railway' in frbl.segments[0].spiketrains[0].annotations
             assert 'venue' in frbl.segments[0].events[0].annotations
             assert 'evven' in frbl.segments[0].events[1].annotations
