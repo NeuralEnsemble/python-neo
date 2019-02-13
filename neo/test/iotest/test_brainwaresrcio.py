@@ -109,7 +109,7 @@ def proc_src_comments(srcfile, filename):
     timeStamps = np.array(timeStamps, dtype=np.float32)
     t_start = timeStamps.min()
     timeStamps = pq.Quantity(timeStamps - t_start, units=pq.d).rescale(pq.s)
-    texts = np.array(texts, dtype='S')
+    texts = np.array(texts, dtype='U')
     senders = np.array(senders, dtype='S')
     t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
 
