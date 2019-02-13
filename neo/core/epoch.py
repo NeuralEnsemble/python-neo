@@ -47,7 +47,7 @@ class Epoch(DataObject):
         >>>
         >>> epc = Epoch(times=np.arange(0, 30, 10)*s,
         ...             durations=[10, 5, 7]*ms,
-        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        ...             labels=np.array(['btn0', 'btn1', 'btn2'], dtype='U'))
         >>>
         >>> epc.times
         array([  0.,  10.,  20.]) * s
@@ -55,13 +55,13 @@ class Epoch(DataObject):
         array([ 10.,   5.,   7.]) * ms
         >>> epc.labels
         array(['btn0', 'btn1', 'btn2'],
-              dtype='|S4')
+              dtype='<U4')
 
     *Required attributes/properties*:
         :times: (quantity array 1D) The start times of each time period.
         :durations: (quantity array 1D or quantity scalar) The length(s) of each time period.
            If a scalar, the same value is used for all time periods.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the time periods.
+        :labels: (numpy.array 1D dtype='U') Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -94,7 +94,7 @@ class Epoch(DataObject):
             else:
                 raise ValueError("Durations array has different length to times")
         if labels is None:
-            labels = np.array([], dtype='S')
+            labels = np.array([], dtype='U')
         elif len(labels) != times.size:
             raise ValueError("Labels array has different length to times")
         if units is None:

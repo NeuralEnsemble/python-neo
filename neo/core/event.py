@@ -46,17 +46,17 @@ class Event(DataObject):
         >>>
         >>> evt = Event(np.arange(0, 30, 10)*s,
         ...             labels=np.array(['trig0', 'trig1', 'trig2'],
-        ...                             dtype='S'))
+        ...                             dtype='U'))
         >>>
         >>> evt.times
         array([  0.,  10.,  20.]) * s
         >>> evt.labels
         array(['trig0', 'trig1', 'trig2'],
-              dtype='|S5')
+              dtype='<U5')
 
     *Required attributes/properties*:
         :times: (quantity array 1D) The time of the events.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the events.
+        :labels: (numpy.array 1D dtype='U') Names or labels for the events.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset.
@@ -81,7 +81,7 @@ class Event(DataObject):
         if times is None:
             times = np.array([]) * pq.s
         if labels is None:
-            labels = np.array([], dtype='S')
+            labels = np.array([], dtype='U')
         if units is None:
             # No keyword units, so get from `times`
             try:
