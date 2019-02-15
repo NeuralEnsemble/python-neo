@@ -11,11 +11,7 @@ from matplotlib import pyplot
 
 import neo
 
-url = 'https://portal.g-node.org/neo/'
-# distantfile = url + 'neuroexplorer/File_neuroexplorer_2.nex'
-# localfile = 'File_neuroexplorer_2.nex'
-
-distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_3.plx'
+distantfile = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/plexon/File_plexon_3.plx'
 localfile = './File_plexon_3.plx'
 
 urllib.request.urlretrieve(distantfile, localfile)
