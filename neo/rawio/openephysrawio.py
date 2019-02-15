@@ -355,7 +355,7 @@ class OpenEphysRawIO(BaseRawIO):
         # question what is the label????
         # here I put a combinaison
         labels = np.array(['{}#{}#{}'.format(int(d['event_type']),
-                                int(d['processor_id']), int(d['chan_id'])) for d in subdata])
+                                int(d['processor_id']), int(d['chan_id'])) for d in subdata], dtype='U')
         durations = None
 
         return timestamps, durations, labels
