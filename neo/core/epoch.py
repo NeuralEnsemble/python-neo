@@ -80,7 +80,7 @@ class Epoch(DataObject):
     _single_parent_objects = ('Segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
-                        ('labels', np.ndarray, 1, np.dtype('S')))
+                        ('labels', np.ndarray, 1, np.dtype('U')))
 
     def __new__(cls, times=None, durations=None, labels=None, units=None, name=None,
                 description=None, file_origin=None, array_annotations=None, **annotations):
