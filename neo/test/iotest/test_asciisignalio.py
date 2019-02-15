@@ -57,7 +57,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             (-64.6, -64.2, -77.0, 0.7),
             (-64.3, -64.0, -99.9, 0.8)
         ]
-        with open(filename, 'w', newline='') as csvfile:
+        with open(filename, 'w') as csvfile:
             writer = csv.writer(csvfile, delimiter=',',
                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for row in sample_data:
@@ -88,7 +88,7 @@ class TestAsciiSignalIO(unittest.TestCase):
             (-64.6, -64.2, -77.0, 0.7),
             (-64.3, -64.0, -99.9, 0.8)
         ]
-        with open(filename, 'w', newline='') as datafile:
+        with open(filename, 'w') as datafile:
             datafile.write("# a comment\n")
             for row in sample_data:
                 datafile.write("\t ".join(map(str, row)) + "\t\n")
