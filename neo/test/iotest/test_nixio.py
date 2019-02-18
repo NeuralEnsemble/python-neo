@@ -238,11 +238,6 @@ class NixIOTest(unittest.TestCase):
         np.testing.assert_almost_equal(epoch.durations, extquant)
         for neol, nixl in zip(epoch.labels,
                               mtag.positions.dimensions[0].labels):
-            # Dirty. Should find the root cause instead
-            if isinstance(neol, bytes):
-                neol = neol.decode()
-            if isinstance(nixl, bytes):
-                nixl = nixl.decode()
             self.assertEqual(neol, nixl)
 
     def compare_event_mtag(self, event, mtag):
@@ -253,12 +248,6 @@ class NixIOTest(unittest.TestCase):
         np.testing.assert_almost_equal(event.as_quantity(), posquant)
         for neol, nixl in zip(event.labels,
                               mtag.positions.dimensions[0].labels):
-            # Dirty. Should find the root cause instead
-            # Only happens in 3.2
-            if isinstance(neol, bytes):
-                neol = neol.decode()
-            if isinstance(nixl, bytes):
-                nixl = nixl.decode()
             self.assertEqual(neol, nixl)
 
     def compare_spiketrain_mtag(self, spiketrain, mtag):
@@ -786,7 +775,7 @@ class NixIOWriteTest(NixIOTest):
 
         epoch = Epoch(times=[1, 1, 10, 3] * pq.ms,
                       durations=[3, 3, 3, 1] * pq.ms,
-                      labels=np.array(["one", "two", "three", "four"]),
+                      labels=np.array(["one", "two", "three", "four"], dtype='U'),
                       name="test epoch", description="an epoch for testing")
 
         seg.epochs.append(epoch)
@@ -798,7 +787,7 @@ class NixIOWriteTest(NixIOTest):
         block.segments.append(seg)
 
         event = Event(times=np.arange(0, 30, 10) * pq.s,
-                      labels=np.array(["0", "1", "2"]),
+                      labels=np.array(["0", "1", "2"], dtype='U'),
                       name="event name",
                       description="event description")
         seg.events.append(event)
