@@ -156,14 +156,9 @@ class Epoch(DataObject):
         '''
         Returns a string representing the :class:`Epoch`.
         '''
-        # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
 
-        objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
-                zip(labels, self.times, self.durations)]
+        objs = ['%s@%s for %s' % (label, str(time), str(dur)) for label, time, dur in
+                zip(self.labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):

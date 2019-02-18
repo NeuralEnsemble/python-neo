@@ -140,12 +140,8 @@ class Event(DataObject):
         '''
         Returns a string representing the :class:`Event`.
         '''
-        # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
-        objs = ['%s@%s' % (label, time) for label, time in zip(labels, self.times)]
+
+        objs = ['%s@%s' % (label, str(time)) for label, time in zip(self.labels, self.times)]
         return '<Event: %s>' % ', '.join(objs)
 
     def _repr_pretty_(self, pp, cycle):
