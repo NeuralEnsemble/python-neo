@@ -311,6 +311,76 @@ def get_events(container, properties=None):
             'in order to extract Events.' % (type(container)))
 
 
+def get_epochs(container, properties=None):
+    """
+    This function returns a list of Neo Epoch objects, corresponding to given
+    key-value pairs in the attributes or annotations of the Epoch.
+
+    Parameters:
+    -----------
+    container: neo.Block or neo.Segment
+        The Neo Block or Segment object to extract data from.
+    properties: dictionary
+        A dictionary that contains the Epoch keys and values to filter for.
+        Each key of the dictionary is matched to an attribute or an an
+        annotation of the Event. The value of each dictionary entry corresponds
+        to a valid entry or a list of valid entries of the attribute or
+        annotation.
+
+        If the value belonging to the key is a list of entries of the same
+        length as the number of epochs in the Epoch object, the list entries
+        are matched to the epochs in the Epoch object. The resulting Epoch
+        object contains only those epochs where the values match up.
+
+        Otherwise, the value is compared to the attribute or annotation of the
+        Epoch object as such, and depending on the comparison, either the
+        complete Epoch object is returned or not.
+
+        If None or an empty dictionary is passed, all Epoch Objects will
+        be returned in a list.
+
+    Returns:
+    --------
+    epochs: list
+        A list of Epoch objects matching the given criteria.
+
+    Example:
+    --------
+        >>> epoch = neo.Epoch(
+                times = [0.5, 10.0, 25.2] * pq.s,
+                durations = [100, 100, 100] * pq.ms)
+        >>> epoch.annotate(
+                event_type = 'complete trial',
+                trial_id = [1, 2, 3]
+        >>> seg = neo.Segment()
+        >>> seg.epochs = [epoch]
+
+        # Will return a list with the complete event object
+        >>> get_epochs(epoch, prop={epoch_type='complete trial')
+
+        # Will return an empty list
+        >>> get_epochs(epoch, prop={epoch_type='error trial'})
+
+        # Will return a list with an Event object, but only with trial 2
+        >>> get_epochs(epoch, prop={'trial_id' = 2})
+
+        # Will return a list with an Event object, but only with trials 1 and 2
+        >>> get_epochs(epoch, prop={'trial_id' = [1, 2]})
+    """
+    if isinstance(container, neo.Segment):
+        return _get_from_list(container.epochs, prop=properties)
+
+    elif isinstance(container, neo.Block):
+        epoch_list = []
+        for seg in container.segments:
+            epoch_list += _get_from_list(seg.epochs, prop=properties)
+        return epoch_list
+    else:
+        raise TypeError(
+            'Container needs to be of type neo.Block or neo.Segment, not %s '
+            'in order to extract Epochs.' % (type(container)))
+
+
 def _get_from_list(input_list, prop=None):
     """
     Internal function
@@ -587,6 +657,144 @@ def add_epoch(
         segment.create_relationship()
 
     return ep
+
+
+def match_events(event1, event2):
+    """
+    Finds pairs of Event entries in event1 and event2 with the minimum delay,
+    such that the entry of event1 directly preceeds the entry of event2.
+    Returns filtered two events of identical length, which contain matched
+    entries.
+
+    Parameters:
+    -----------
+    event1, event2: neo.Event
+        The two Event objects to match up.
+
+    Returns:
+    --------
+    event1, event2: neo.Event
+        Event objects with identical number of events, containing only those
+        events that could be matched against each other. A warning is issued if
+        not all events in event1 or event2 could be matched.
+    """
+    event1 = event1
+    event2 = event2
+
+    id1, id2 = 0, 0
+    match_ev1, match_ev2 = [], []
+    while id1 < len(event1) and id2 < len(event2):
+        time1 = event1.times[id1]
+        time2 = event2.times[id2]
+
+        # wrong order of events
+        if time1 > time2:
+            id2 += 1
+
+        # shorter epoch possible by later event1 entry
+        elif id1 + 1 < len(event1) and event1.times[id1 + 1] < time2:
+                # there is no event in 2 until the next event in 1
+            id1 += 1
+
+        # found a match
+        else:
+            match_ev1.append(id1)
+            match_ev2.append(id2)
+            id1 += 1
+            id2 += 1
+
+    if id1 < len(event1):
+        warnings.warn(
+            'Could not match all events to generate epochs. Missed '
+            '%s event entries in event1 list' % (len(event1) - id1))
+    if id2 < len(event2):
+        warnings.warn(
+            'Could not match all events to generate epochs. Missed '
+            '%s event entries in event2 list' % (len(event2) - id2))
+
+    event1_matched = _event_epoch_slice_by_valid_ids(
+        obj=event1, valid_ids=match_ev1)
+    event2_matched = _event_epoch_slice_by_valid_ids(
+        obj=event2, valid_ids=match_ev2)
+
+    return event1_matched, event2_matched
+
+
+def cut_block_by_epochs(block, properties=None, reset_time=False):
+    """
+    This function cuts Neo Segments in a Neo Block according to multiple Neo
+    Epoch objects.
+
+    The function alters the Neo Block by adding one Neo Segment per Epoch entry
+    fulfilling a set of conditions on the Epoch attributes and annotations. The
+    original segments are removed from the block.
+
+    A dictionary contains restrictions on which epochs are considered for
+    the cutting procedure. To this end, it is possible to
+    specify accepted (valid) values of specific annotations on the source
+    epochs.
+
+    The resulting cut segments may either retain their original time stamps, or
+    be shifted to a common starting time.
+
+    Parameters
+    ----------
+    block: Neo Block
+        Contains the Segments to cut according to the Epoch criteria provided
+    properties: dictionary
+        A dictionary that contains the Epoch keys and values to filter for.
+        Each key of the dictionary is matched to an attribute or an an
+        annotation of the Event. The value of each dictionary entry corresponds
+        to a valid entry or a list of valid entries of the attribute or
+        annotation.
+
+        If the value belonging to the key is a list of entries of the same
+        length as the number of epochs in the Epoch object, the list entries
+        are matched to the epochs in the Epoch object. The resulting Epoch
+        object contains only those epochs where the values match up.
+
+        Otherwise, the value is compared to the attributes or annotation of the
+        Epoch object as such, and depending on the comparison, either the
+        complete Epoch object is returned or not.
+
+        If None or an empty dictionary is passed, all Epoch Objects will
+        be considered
+
+    reset_time: bool
+        If True the times stamps of all sliced objects are set to fall
+        in the range from 0 to the duration of the epoch duration.
+        If False, original time stamps are retained.
+        Default is False.
+
+    Returns:
+    --------
+    None
+    """
+    if not isinstance(block, neo.Block):
+        raise TypeError(
+            'block needs to be a neo Block, not %s' % type(block))
+
+    old_segments = copy.copy(block.segments)
+    for seg in old_segments:
+        epochs = _get_from_list(seg.epochs, prop=properties)
+        if len(epochs) > 1:
+            warnings.warn(
+                'Segment %s contains multiple epochs with '
+                'requested properties (%s). Subsegments can '
+                'have overlapping times' % (seg.name, properties))
+
+        elif len(epochs) == 0:
+            warnings.warn(
+                'No epoch is matching the requested epoch properties %s. '
+                'No cutting of segment performed.' % (properties))
+
+        for epoch in epochs:
+            new_segments = cut_segment_by_epoch(
+                seg, epoch=epoch, reset_time=reset_time)
+            block.segments += new_segments
+
+        block.segments.remove(seg)
+    block.create_relationship()
 
 
 def cut_segment_by_epoch(seg, epoch, reset_time=False):
