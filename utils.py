@@ -1,3 +1,4 @@
+# TODO: unittests
 # TODO: do we want/need this header?
 """
 Convenience functions to extend the functionality of the Neo framework
@@ -197,6 +198,10 @@ def shift_spiketrain(spiketrain, t_shift):
         t_start=spiketrain.t_start + t_shift,
         t_stop=spiketrain.t_stop + t_shift)
     return new_st
+
+# TODO: merge_concatenate_multiple_spiketrains could also be done by setting all t_start and t_stop values
+#       to the ones of the merged spiketrain
+#       I don't really like that approach, but it would not require any additional functions
 
 
 def merge_concatenate_multiple_spiketrains(spiketrain_list, t_start=None, t_stop=None):
