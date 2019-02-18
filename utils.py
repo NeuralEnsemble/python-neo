@@ -499,8 +499,6 @@ def _is_annotation_list(value, exp_length):
             isinstance(value, np.ndarray) and value.ndim > 0)) and
         (len(value) == exp_length))
 
-# TODO: continue adding array annotations where necessary starting from this line
-
 
 def add_epoch(
         segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s,
@@ -642,6 +640,11 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                 subseg.annotations[a] = copy.copy(epoch.annotations[a][ep_id])
             else:
                 subseg.annotations[a] = copy.copy(epoch.annotations[a])
+
+        # Add array-annotations of Epoch
+        for a in epoch.array_annotations:
+            subseg.annotations[a] = copy.copy(epoch.array_annotations[a][ep_id])
+
         segments.append(subseg)
 
     return segments
