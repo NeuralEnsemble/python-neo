@@ -1,3 +1,4 @@
+# TODO: proxy objects
 # TODO: unittests
 # TODO: do we want/need this header?
 """
@@ -43,7 +44,8 @@ import numpy as np
 import quantities as pq
 
 
-# TODO: these two functions should just replace the current spiketrain.merge
+# TODO: these two functions should just be replaced by a generalised spiketrain.merge
+#       merge_multiple_spiketrains does not care about the neo structures and also neglects (array-)annotations
 
 
 def merge_multiple_spiketrains(spiketrain_list, t_start=None, t_stop=None):
