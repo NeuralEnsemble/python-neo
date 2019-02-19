@@ -291,6 +291,46 @@ class TestAsciiSignalIO(unittest.TestCase):
         os.remove(filename)
         os.remove(metadata_filename)
 
+    def test_genfromtxt_irregular_expect_success(self):
+        sample_data = np.random.uniform(size=(200, 3))
+        sample_data[:, 0] = np.sort(sample_data[:, 0])  # make column 0 the time column
+        filename = "test_genfromtxt_irregular_expect_success.txt"
+        np.savetxt(filename, sample_data, delimiter=' ')
+
+        io = AsciiSignalIO(filename, delimiter=' ', timecolumn=0,
+                           units='mV', method='genfromtxt', signal_group_mode='split-all')
+        block = io.read_block()
+
+        signal1 = block.segments[0].irregularlysampledsignals[1]
+        assert_array_almost_equal(signal1.reshape(-1).magnitude, sample_data[:, 2],
+                                  decimal=6)
+        self.assertEqual(len(block.segments[0].analogsignals), 0)
+        self.assertEqual(len(block.segments[0].irregularlysampledsignals), 2)
+        self.assertEqual(signal1.units, pq.mV)
+
+        os.remove(filename)
+
+
+    def test_irregular_multichannel(self):
+        sample_data = np.random.uniform(size=(200, 3))
+        sample_data[:, 0] = np.sort(sample_data[:, 0])  # make column 0 the time column
+        filename = "test_irregular_multichannel.txt"
+        np.savetxt(filename, sample_data, delimiter=' ')
+
+        io = AsciiSignalIO(filename, delimiter=' ', timecolumn=0,
+                           units='mV', method='genfromtxt', signal_group_mode='all-in-one')
+        block = io.read_block()
+
+        signal = block.segments[0].irregularlysampledsignals[0]
+        assert_array_almost_equal(signal.magnitude, sample_data[:, 1:3],
+                                  decimal=6)
+        self.assertEqual(len(block.segments[0].analogsignals), 0)
+        self.assertEqual(len(block.segments[0].irregularlysampledsignals), 1)
+        self.assertEqual(signal.shape, (200, 2))
+        self.assertEqual(signal.units, pq.mV)
+
+        os.remove(filename)
+
 
 if __name__ == "__main__":
     unittest.main()
