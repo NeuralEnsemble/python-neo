@@ -64,13 +64,15 @@ class TestAsciiSignalIO(unittest.TestCase):
                 writer.writerow(row)
 
         io = AsciiSignalIO(filename, usecols=(0, 1, 3), timecolumn=2,
-                           # note that timecolumn applies to the remaining columns after applying usecols
+                           # note that timecolumn applies to the remaining columns
+                           # after applying usecols
                            time_units="ms", delimiter=',', units="mV", method='csv',
                            signal_group_mode='all-in-one', t_start=0.5)
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols and timecolumn applied
+        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
+                                                # and timecolumn applied
         assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude,
                                   np.array(sample_data)[:, 1],
                                   decimal=5)
@@ -99,7 +101,8 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols and timecolumn applied
+        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
+                                                # and timecolumn applied
         assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude,
                                   np.array(sample_data)[:, 1],
                                   decimal=5)
@@ -283,7 +286,8 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert len(block2.segments[0].analogsignals) == 3
         signal2 = block2.segments[0].analogsignals[1]
 
-        assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1), decimal=7)
+        assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1),
+                                  decimal=7)
         self.assertEqual(signal1.units, signal2.units)
         self.assertEqual(signal1.sampling_rate, signal2.sampling_rate)
         assert_array_equal(signal1.times, signal2.times)
@@ -309,7 +313,6 @@ class TestAsciiSignalIO(unittest.TestCase):
         self.assertEqual(signal1.units, pq.mV)
 
         os.remove(filename)
-
 
     def test_irregular_multichannel(self):
         sample_data = np.random.uniform(size=(200, 3))

@@ -230,7 +230,7 @@ class AsciiSignalIO(BaseIO):
             #       we should produce an IrregularlySampledSignal
             delta_t = np.diff(sig[:, self.timecolumn])
             mean_delta_t = np.mean(delta_t)
-            if (delta_t.max() - delta_t.min())/mean_delta_t < 1e-6:
+            if (delta_t.max() - delta_t.min()) / mean_delta_t < 1e-6:
                 # equally spaced
                 sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
             else:
