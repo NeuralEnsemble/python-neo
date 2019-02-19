@@ -147,8 +147,8 @@ class AsciiSignalIO(BaseIO):
         self.timecolumn = metadata.get("timecolumn", timecolumn)
         self.sampling_rate = metadata.get("sampling_rate", sampling_rate)
         self.time_units = metadata.get("time_units", time_units)
-        if time_units is not None:
-            self.time_units = pq.Quantity(1, time_units)
+        if self.time_units is not None:
+            self.time_units = pq.Quantity(1, self.time_units)
         self.t_start = metadata.get("t_start", t_start)
         if not isinstance(t_start, pq.Quantity):
             if not isinstance(self.time_units, pq.Quantity):
