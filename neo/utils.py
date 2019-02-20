@@ -449,7 +449,7 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     sparse_annotations = _get_valid_annotations(obj, valid_ids)
 
     # modify array annotations
-    sparse_array_annotations = {key: value[valid_ids] for key, value in obj.array_annotations.items()}
+    sparse_array_annotations = {key: (value[valid_ids] if len(value) else value) for key, value in obj.array_annotations.items()}
 
     # modify labels
     sparse_labels = _get_valid_labels(obj, valid_ids)
