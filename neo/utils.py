@@ -288,16 +288,16 @@ def get_events(container, properties=None):
         >>> seg.events = [event]
 
         # Will return a list with the complete event object
-        >>> get_events(event, properties={event_type='trial start')
+        >>> get_events(event, properties={'event_type': 'trial start'})
 
         # Will return an empty list
-        >>> get_events(event, properties={event_type='trial stop'})
+        >>> get_events(event, properties={'event_type': 'trial stop'})
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_events(event, properties={'trial_id' = 2})
+        >>> get_events(event, properties={'trial_id': 2})
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_events(event, properties={'trial_id' = [1, 2]})
+        >>> get_events(event, properties={'trial_id': [1, 2]})
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.events, prop=properties)
@@ -358,16 +358,16 @@ def get_epochs(container, properties=None):
         >>> seg.epochs = [epoch]
 
         # Will return a list with the complete event object
-        >>> get_epochs(epoch, prop={epoch_type='complete trial')
+        >>> get_epochs(epoch, prop={'epoch_type': 'complete trial')
 
         # Will return an empty list
-        >>> get_epochs(epoch, prop={epoch_type='error trial'})
+        >>> get_epochs(epoch, prop={'epoch_type': 'error trial'})
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_epochs(epoch, prop={'trial_id' = 2})
+        >>> get_epochs(epoch, prop={'trial_id': 2})
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_epochs(epoch, prop={'trial_id' = [1, 2]})
+        >>> get_epochs(epoch, prop={'trial_id': [1, 2]})
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.epochs, prop=properties)
