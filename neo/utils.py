@@ -249,15 +249,12 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     sparse_annotations = _get_valid_annotations(obj, valid_ids)
 
     # modify array annotations
-    sparse_array_annotations = {key: (value[valid_ids] if len(value) else value) for key, value in obj.array_annotations.items()}
-
-    # modify labels
-    sparse_labels = _get_valid_labels(obj, valid_ids)
+    sparse_array_annotations = {key: value[valid_ids]
+                                for key, value in obj.array_annotations.items() if len(value)}
 
     if type(obj) is neo.Event:
         sparse_obj = neo.Event(
             times=copy.deepcopy(obj.times[valid_ids]),
-            labels=sparse_labels,
             units=copy.deepcopy(obj.units),
             name=copy.deepcopy(obj.name),
             description=copy.deepcopy(obj.description),
@@ -268,7 +265,6 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
         sparse_obj = neo.Epoch(
             times=copy.deepcopy(obj.times[valid_ids]),
             durations=copy.deepcopy(obj.durations[valid_ids]),
-            labels=sparse_labels,
             units=copy.deepcopy(obj.units),
             name=copy.deepcopy(obj.name),
             description=copy.deepcopy(obj.description),
@@ -347,24 +343,6 @@ def _get_valid_annotations(obj, valid_ids):
             sparse_annotations[key] = list(np.array(sparse_annotations[key])[
                 valid_ids])
     return sparse_annotations
-
-
-def _get_valid_labels(obj, valid_ids):
-    """
-    Internal function
-    """
-    labels = obj.labels
-    selected_labels = []
-    if len(labels) > 0:
-        if _is_annotation_list(labels, len(obj)):
-            for vid in valid_ids:
-                selected_labels.append(labels[vid])
-            # sparse_labels = sparse_labels[valid_ids]
-        else:
-            warnings.warn('Can not filter object labels. Shape (%s) does not '
-                          'fit object shape (%s)'
-                          '' % (labels.shape, obj.shape))
-    return np.array(selected_labels)
 
 
 def _is_annotation_list(value, exp_length):
