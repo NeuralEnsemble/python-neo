@@ -492,7 +492,7 @@ def match_events(event1, event2):
         time2 = event2.times[id2]
 
         # wrong order of events
-        if time1 > time2:
+        if time1 >= time2:
             id2 += 1
 
         # shorter epoch possible by later event1 entry
