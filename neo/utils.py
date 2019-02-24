@@ -44,206 +44,6 @@ import numpy as np
 import quantities as pq
 
 
-# TODO: these two functions should just be replaced by a generalised spiketrain.merge
-#       merge_multiple_spiketrains does not care about the neo structures and also neglects (array-)annotations
-
-
-def merge_multiple_spiketrains(spiketrain_list, t_start=None, t_stop=None):
-    """
-    Convenience function to merge multiple spiketrains, will not be necessary once neo.Spiketrain.merge is generalised
-    for merging more than two spiketrains.
-    :param spiketrain_list: list of neo Spiketrains to be merged
-    :param t_start: start time for the merged spiketrain, optional
-    :param t_stop: stop time for the merged spiketrain, optional
-    :return: merged spiketrain
-    """
-    if not spiketrain_list:
-        return None
-    _check_consistency_of_spiketrainlist(
-            spiketrain_list, t_start=t_start, t_stop=t_stop)
-    if t_start is None:
-        t_start = spiketrain_list[0].t_start
-    if t_stop is None:
-        t_stop = spiketrain_list[0].t_stop
-    spikes = np.concatenate([st.magnitude for st in spiketrain_list])
-    merged_spiketrain = neo.core.SpikeTrain(np.sort(spikes), units=spiketrain_list[0].units,
-                                   t_start=t_start, t_stop=t_stop)
-    return merged_spiketrain
-
-
-def _check_consistency_of_spiketrainlist(spiketrain_list, t_start=None, t_stop=None):
-    for spiketrain in spiketrain_list:
-        if not isinstance(spiketrain, neo.core.SpikeTrain):
-            raise TypeError(
-                "spike train must be instance of :class:`SpikeTrain` of Neo!\n"
-                "    Found: %s, value %s" % (type(spiketrain), str(spiketrain)))
-        if t_start is None and not spiketrain.t_start == spiketrain_list[0].t_start:
-            raise ValueError(
-                "the spike trains must have the same t_start!")
-        if t_stop is None and not spiketrain.t_stop == spiketrain_list[0].t_stop:
-            raise ValueError(
-                "the spike trains must have the same t_stop!")
-        if not spiketrain.units == spiketrain_list[0].units:
-            raise ValueError(
-                "the spike trains must have the same units!")
-    return None
-
-# TODO: this might be too specific to go into this module
-# TODO: maybe find a better name for this function?
-
-
-def create_concatenated_triggered_spiketrain_list(spiketrain_list, event1, event2=None,
-                                                  pre=0 * pq.s, post=0 * pq.s,
-                                                  padding=10 * pq.ms):
-    """
-    Slice spiketrains around a single event, or between pairs of events. Starting
-    and end time of the slices can be modified using pre and post as offsets
-    before the and after the event(s). All slices are concatenated separated by
-    padding. Returns a list of merged concatenated spiketrains.
-
-    Parameters:
-    -----------
-    spiketrain_list : list of Neo SpikeTrains
-        The spiketrains to slice
-    event1 : neo.Event
-        The Neo Event objects containing the start events of the slices. If no
-        event2 is specified, these event1 also specifies the stop events, i.e.,
-        the slice is cut around event1 times.
-    event2: neo.Event
-        The Neo Event objects containing the stop events of the slices. If no
-        event2 is specified, event1 specifies the stop events, i.e., the slice
-        is cut around event1 times. The number of events in event2 must match
-        that of event1.
-    pre, post: Quantity (time)
-        Time offsets to modify the start (pre) and end (post) of the resulting
-        slice. Example: pre=-10*ms and post=+25*ms will cut from 10 ms before
-        event1 times to 25 ms after event2 times
-    padding: Quantity (time)
-        The padding between concatenated slices of the SpikeTrains
-
-    Keyword Arguments:
-    ------------------
-    Passed to the Neo Epoch object.
-
-    Returns:
-    --------
-    result: list of Neo SpikeTrains
-        Same shape as the input, now containing concatenated versions of the input spiketrains at the trigger times
-    """
-    if event2 is None:
-        event2 = event1
-
-    for event in [event1, event2]:
-        if not isinstance(event, neo.Event):
-            raise TypeError(
-                'Events have to be of type neo.Event, not %s' % type(event))
-
-    if len(event1) != len(event2):
-        raise ValueError(
-            'event1 and event2 have to have the same number of entries in '
-            'order to create slices between pairs of entries. Match your '
-            'events before generating slices. Current event lengths '
-            'are %i and %i' % (len(event1), len(event2)))
-
-    start_times = event1.times + pre
-    end_times = event2.times + post
-
-    if len(start_times.shape) == 2:
-        start_times = start_times.reshape((-1, ))
-    if len(end_times.shape) == 2:
-        end_times = end_times.reshape((-1, ))
-
-    durations = end_times - start_times
-
-    if any(durations < 0):
-        raise ValueError(
-            'Can not create slice with negative duration. '
-            'Requested durations %s.' % durations)
-    elif any(durations == 0):
-        raise ValueError('Can not create slice with zero duration.')
-
-    result = []
-
-    for st in spiketrain_list:
-        result.append([st.time_slice(t_start=start_times[0], t_stop=end_times[0])])
-        last_t_stop = end_times[0]
-        for t_start, t_stop in zip(start_times[1:], end_times[1:]):
-            slice_start_time = last_t_stop + padding
-            result[-1].append(shift_spiketrain(st.time_slice(t_start, t_stop), slice_start_time - t_start))
-            last_t_stop = result[-1][-1].t_stop
-
-    result = [merge_concatenate_multiple_spiketrains(sts) for sts in result]
-
-    return result
-
-
-def shift_spiketrain(spiketrain, t_shift):
-    """
-    Shifts a spike train to start at a new time.
-
-    Parameters:
-    -----------
-    spiketrain: Neo SpikeTrain
-        Spiketrain of which a copy will be generated with shifted spikes and
-        starting and stopping times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the SpikeTrain.
-
-    Returns:
-    --------
-    spiketrain: Neo SpikeTrain
-        New instance of a SpikeTrain object starting at t_start (the original
-        SpikeTrain is not modified).
-    """
-    new_st = spiketrain.duplicate_with_new_data(
-        signal=spiketrain.times.view(pq.Quantity) + t_shift,
-        t_start=spiketrain.t_start + t_shift,
-        t_stop=spiketrain.t_stop + t_shift)
-    return new_st
-
-# TODO: merge_concatenate_multiple_spiketrains could also be done by setting all t_start and t_stop values
-#       to the ones of the merged spiketrain
-#       I don't really like that approach, but it would not require any additional functions
-
-
-def merge_concatenate_multiple_spiketrains(spiketrain_list, t_start=None, t_stop=None):
-    """
-        Like merge_multiple spiketrains, but t_start and t_stop of the
-        input spiketrains are allowed to be different, all spikes between
-        the min t_start and max t_stop are merged into one spiketrain.
-        t_start and t_stop can also be set manually.
-        :param spiketrain_list: list of neo Spiketrains to be merged
-        :param t_start: start time for the merged spiketrain, optional
-        :param t_stop: stop time for the merged spiketrain, optional
-        :return: merged spiketrain
-        """
-    if not len(spiketrain_list):
-        return None
-    _check_type_and_units_of_spiketrainlist(spiketrain_list)
-    if t_start is None:
-        t_start = min([st.t_start for st in spiketrain_list])
-    if t_stop is None:
-        t_stop = max([st.t_stop for st in spiketrain_list])
-    spikes = np.concatenate([st.magnitude for st in spiketrain_list])
-    merged_spiketrain = neo.core.SpikeTrain(np.sort(spikes), units=spiketrain_list[0].units,
-                                            t_start=t_start, t_stop=t_stop)
-    merged_spiketrain.annotations = spiketrain_list[0].annotations
-    merged_spiketrain.annotations = spiketrain_list[0].annotations
-    return merged_spiketrain
-
-
-def _check_type_and_units_of_spiketrainlist(spiketrain_list):
-    for spiketrain in spiketrain_list:
-        if not isinstance(spiketrain, neo.core.SpikeTrain):
-            raise TypeError(
-                "spike train must be instance of :class:`SpikeTrain` of Neo!\n"
-                "    Found: %s, value %s" % (type(spiketrain), str(spiketrain)))
-        if not spiketrain.units == spiketrain_list[0].units:
-            raise ValueError(
-                "the spike trains must have the same units!")
-    return None
-
-
 def get_events(container, properties=None):
     """
     This function returns a list of Neo Event objects, corresponding to given
@@ -288,16 +88,16 @@ def get_events(container, properties=None):
         >>> seg.events = [event]
 
         # Will return a list with the complete event object
-        >>> get_events(event, properties={'event_type': 'trial start'})
+        >>> get_events(seg, properties={'event_type': 'trial start'})
 
         # Will return an empty list
-        >>> get_events(event, properties={'event_type': 'trial stop'})
+        >>> get_events(seg, properties={'event_type': 'trial stop'})
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_events(event, properties={'trial_id': 2})
+        >>> get_events(seg, properties={'trial_id': 2})
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_events(event, properties={'trial_id': [1, 2]})
+        >>> get_events(seg, properties={'trial_id': [1, 2]})
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.events, prop=properties)
@@ -358,16 +158,16 @@ def get_epochs(container, properties=None):
         >>> seg.epochs = [epoch]
 
         # Will return a list with the complete event object
-        >>> get_epochs(epoch, prop={'epoch_type': 'complete trial')
+        >>> get_epochs(seg, prop={'epoch_type': 'complete trial'})
 
         # Will return an empty list
-        >>> get_epochs(epoch, prop={'epoch_type': 'error trial'})
+        >>> get_epochs(seg, prop={'epoch_type': 'error trial'})
 
         # Will return a list with an Event object, but only with trial 2
-        >>> get_epochs(epoch, prop={'trial_id': 2})
+        >>> get_epochs(seg, prop={'trial_id': 2})
 
         # Will return a list with an Event object, but only with trials 1 and 2
-        >>> get_epochs(epoch, prop={'trial_id': [1, 2]})
+        >>> get_epochs(seg, prop={'trial_id': [1, 2]})
     """
     if isinstance(container, neo.Segment):
         return _get_from_list(container.epochs, prop=properties)
@@ -409,7 +209,7 @@ def _filter_event_epoch(obj, annotation_key, annotation_value):
     """
     Internal function.
 
-    This function return a copy of a neo Event or Epoch object, which only
+    This function returns a copy of a neo Event or Epoch object, which only
     contains attributes or annotations corresponding to requested key-value
     pairs.
 
@@ -589,7 +389,7 @@ def add_epoch(
     Parameters:
     -----------
     sgement : neo.Segment
-        The segement in which the final Epoch object is added.
+        The segment in which the final Epoch object is added.
     event1 : neo.Event
         The Neo Event objects containing the start events of the epochs. If no
         event2 is specified, these event1 also specifies the stop events, i.e.,
@@ -664,7 +464,7 @@ def add_epoch(
 def match_events(event1, event2):
     """
     Finds pairs of Event entries in event1 and event2 with the minimum delay,
-    such that the entry of event1 directly preceeds the entry of event2.
+    such that the entry of event1 directly precedes the entry of event2.
     Returns filtered two events of identical length, which contain matched
     entries.
 
@@ -912,7 +712,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # cut analogsignals
     for ana_id in range(len(seg.analogsignals)):
         ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
-        # explicitely copying parents as this is not yet fixed in neo (
+        # explicitly copying parents as this is not yet fixed in neo (
         # NeuralEnsemble/python-neo issue #220)
         ana_time_slice.segment = subseg
         ana_time_slice.channel_index = seg.analogsignals[ana_id].channel_index
