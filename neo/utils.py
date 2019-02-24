@@ -692,6 +692,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # cut analogsignals
     for ana_id in range(len(seg.analogsignals)):
         ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
+        # TODO: is this still an issue?
         # explicitly copying parents as this is not yet fixed in neo (
         # NeuralEnsemble/python-neo issue #220)
         ana_time_slice.segment = subseg
@@ -728,6 +729,31 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # TODO: Improve
     # seg.create_relationship(force=True)
     return subseg
+
+
+def shift_spiketrain(spiketrain, t_shift):
+    """
+    Shifts a spike train to start at a new time.
+
+    Parameters:
+    -----------
+    spiketrain: Neo SpikeTrain
+        Spiketrain of which a copy will be generated with shifted spikes and
+        starting and stopping times
+    t_shift: Quantity (time)
+        Amount of time by which to shift the SpikeTrain.
+
+    Returns:
+    --------
+    spiketrain: Neo SpikeTrain
+        New instance of a SpikeTrain object starting at t_start (the original
+        SpikeTrain is not modified).
+    """
+    new_st = spiketrain.duplicate_with_new_data(
+        signal=spiketrain.times.view(pq.Quantity) + t_shift,
+        t_start=spiketrain.t_start + t_shift,
+        t_stop=spiketrain.t_stop + t_shift)
+    return new_st
 
 
 def event_time_slice(event, t_start=None, t_stop=None):
