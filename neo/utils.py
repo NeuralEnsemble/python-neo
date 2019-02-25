@@ -692,11 +692,6 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # cut analogsignals
     for ana_id in range(len(seg.analogsignals)):
         ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
-        # TODO: is this still an issue?
-        # explicitly copying parents as this is not yet fixed in neo (
-        # NeuralEnsemble/python-neo issue #220)
-        ana_time_slice.segment = subseg
-        ana_time_slice.channel_index = seg.analogsignals[ana_id].channel_index
         if reset_time:
             ana_time_slice.t_start = ana_time_slice.t_start + t_shift
         subseg.analogsignals.append(ana_time_slice)
