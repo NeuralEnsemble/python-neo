@@ -1,5 +1,4 @@
-# TODO: proxy objects
-# TODO: unittests
+# TODO: compatibility with proxy objects and corresponding unittests
 # TODO: do we want/need this header?
 """
 Convenience functions to extend the functionality of the Neo framework
