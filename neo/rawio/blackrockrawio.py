@@ -509,9 +509,11 @@ class BlackrockRawIO(BaseRawIO):
                     chidx_ann['connector_pinID'] = neuevwav['connector_pin'][get_idx]
                     chidx_ann['nev_dig_factor'] = neuevwav['digitization_factor'][get_idx]
                     chidx_ann['nev_energy_threshold'] = neuevwav['energy_threshold'][
-                        get_idx] * pq.uV
-                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * pq.uV
-                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * pq.uV
+                        get_idx] * chidx_ann['nev_dig_factor'] / 1000 * pq.uV
+                    chidx_ann['nev_hi_threshold'] = neuevwav['hi_threshold'][get_idx] * chidx_ann[
+                        'nev_dig_factor'] / 1000 * pq.uV
+                    chidx_ann['nev_lo_threshold'] = neuevwav['lo_threshold'][get_idx] * chidx_ann[
+                        'nev_dig_factor'] / 1000 * pq.uV
                     chidx_ann['nb_sorted_units'] = neuevwav['nb_sorted_units'][get_idx]
                     chidx_ann['waveform_size'] = self.__waveform_size[self.__nev_spec](
                     )[sig_channels[c]['id']] * self.__nev_params('waveform_time_unit')
