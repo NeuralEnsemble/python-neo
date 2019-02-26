@@ -638,8 +638,9 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                 subseg.annotations[a] = copy.copy(epoch.annotations[a])
 
         # Add array-annotations of Epoch
-        for a in epoch.array_annotations:
-            subseg.annotations[a] = copy.copy(epoch.array_annotations[a][ep_id])
+        for key, val in epoch.array_annotations.items():
+            if len(val):
+                subseg.annotations[key] = copy.copy(val[ep_id])
 
         segments.append(subseg)
 
