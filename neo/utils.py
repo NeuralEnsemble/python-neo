@@ -568,7 +568,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         elif len(epochs) == 0:
             warnings.warn(
                 'No epoch is matching the requested epoch properties %s. '
-                'No cutting of segment performed.' % (properties))
+                'No cutting of segment %s performed.' % (properties, seg.name))
 
         for epoch in epochs:
             new_segments = cut_segment_by_epoch(
@@ -576,7 +576,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
             block.segments += new_segments
 
         block.segments.remove(seg)
-    block.create_relationship()
+    block.create_many_to_one_relationship(force=True)
 
 
 def cut_segment_by_epoch(seg, epoch, reset_time=False):
@@ -628,6 +628,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                                 epoch.times[ep_id],
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
+
         # Add annotations of Epoch
         for a in epoch.annotations:
             if type(epoch.annotations[a]) is list \
@@ -660,7 +661,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         Stop time of the sliced time window.
     reset_time: bool
         If True the times stamps of all sliced objects are set to fall
-        in the range from 0 to the duration of the epoch duration.
+        in the range from 0 to the duration of the epoch.
         If False, original time stamps are retained.
         Default is False.
 
@@ -682,14 +683,10 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         setattr(subseg, attr, getattr(seg, attr))
 
     subseg.annotations = copy.deepcopy(seg.annotations)
-    # This would be the better definition of t_shift after incorporating
-    # PR#215 at NeuronalEnsemble/python-neo
-    t_shift = seg.t_start - t_start
 
-    # t_min_id = np.argmin(np.array([a.t_start for a in seg.analogsignals]))
-    # t_shift = seg.analogsignals[t_min_id] - t_start
+    t_shift = - t_start
 
-    # cut analogsignals
+    # cut analogsignals and analogsignalarrays
     for ana_id in range(len(seg.analogsignals)):
         ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
         if reset_time:
@@ -721,8 +718,6 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         if len(ep_time_slice):
             subseg.epochs.append(ep_time_slice)
 
-    # TODO: Improve
-    # seg.create_relationship(force=True)
     return subseg
 
 
