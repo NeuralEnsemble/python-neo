@@ -90,7 +90,7 @@ def merge_annotation(a, b):
         return a
 
 
-def merge_annotations(A, B):
+def merge_annotations(A, *Bs):
     """
     Merge two sets of annotations.
 
@@ -102,21 +102,19 @@ def merge_annotations(A, B):
         For strings: concatenate with ';'
         Otherwise: warn if the annotations are not equal
     """
-    merged = {}
-    for name in A:
-        if name in B:
-            try:
-                merged[name] = merge_annotation(A[name], B[name])
-            except BaseException as exc:
-                # exc.args += ('key %s' % name,)
-                # raise
-                merged[name] = "MERGE CONFLICT"  # temporary hack
-        else:
-            merged[name] = A[name]
-    for name in B:
-        if name not in merged:
-            merged[name] = B[name]
-    logger.debug("Merging annotations: A=%s B=%s merged=%s", A, B, merged)
+    merged = A.copy()
+    for B in Bs:
+        for name in B:
+            if name not in merged:
+                merged[name] = B[name]
+            else:
+                try:
+                    merged[name] = merge_annotation(merged[name], B[name])
+                except BaseException as exc:
+                    # exc.args += ('key %s' % name,)
+                    # raise
+                    merged[name] = "MERGE CONFLICT"  # temporary hack
+    logger.debug("Merging annotations: A=%s Bs=%s merged=%s", A, Bs, merged)
     return merged
 
 

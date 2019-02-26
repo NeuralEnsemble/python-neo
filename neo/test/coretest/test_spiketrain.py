@@ -1138,8 +1138,8 @@ class TestMerge(unittest.TestCase):
                                                         "omitted, because they were only present"
                                                         " in one of the merged objects: "
                                                         "['label'] from the one that was merged "
-                                                        "into and ['label2'] from the one that "
-                                                        "was merged into the other")
+                                                        "into and ['label2'] from the ones that "
+                                                        "were merged into it.")
 
         assert_neo_object_is_compliant(result)
 

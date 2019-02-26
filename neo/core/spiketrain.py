@@ -618,45 +618,54 @@ class SpikeTrain(DataObject):
 
         return new_st
 
-    def merge(self, other):
+    def merge(self, *others):
         '''
-        Merge another :class:`SpikeTrain` into this one.
+        Merge other :class:`SpikeTrain` objects into this one.
 
         The times of the :class:`SpikeTrain` objects combined in one array
         and sorted.
 
-        If the attributes of the two :class:`SpikeTrain` are not
+        If the attributes of the :class:`SpikeTrain` objects are not
         compatible, an Exception is raised.
         '''
-        if self.sampling_rate != other.sampling_rate:
-            raise MergeError("Cannot merge, different sampling rates")
-        if self.t_start != other.t_start:
-            raise MergeError("Cannot merge, different t_start")
-        if self.t_stop != other.t_stop:
-            raise MemoryError("Cannot merge, different t_stop")
-        if self.left_sweep != other.left_sweep:
-            raise MemoryError("Cannot merge, different left_sweep")
-        if self.segment != other.segment:
-            raise MergeError("Cannot merge these two signals as they belong to"
-                             " different segments.")
+        # TODO: unittests for merging multiple spiketrains
+        # TODO: maybe allow for lists of spiketrains as input? would be convenient in many use cases
+        # TODO: improve! better way to loop over self AND others?
+        for other in others:
+            if self.sampling_rate != other.sampling_rate:
+                raise MergeError("Cannot merge, different sampling rates")
+            if self.t_start != other.t_start:
+                raise MergeError("Cannot merge, different t_start")
+            if self.t_stop != other.t_stop:
+                raise MemoryError("Cannot merge, different t_stop")
+            if self.left_sweep != other.left_sweep:
+                raise MemoryError("Cannot merge, different left_sweep")
+            if self.segment != other.segment:
+                raise MergeError("Cannot merge these signals as they belong to"
+                                 " different segments.")
+            if other.units != self.units:
+                other = other.rescale(self.units)
         if hasattr(self, "lazy_shape"):
-            if hasattr(other, "lazy_shape"):
-                merged_lazy_shape = (self.lazy_shape[0] + other.lazy_shape[0])
-            else:
-                raise MergeError("Cannot merge a lazy object with a real"
-                                 " object.")
-        if other.units != self.units:
-            other = other.rescale(self.units)
-        wfs = [self.waveforms is not None, other.waveforms is not None]
+            merged_lazy_shape = self.lazy_shape[0]
+            for other in others:
+                if hasattr(other, "lazy_shape"):
+                    merged_lazy_shape[0] += other.lazy_shape[0]
+                else:
+                    raise MergeError("Cannot merge a lazy object with a real"
+                                     " object.")
+        all_spiketrains = [self]
+        all_spiketrains.extend(others)
+        wfs = [st.waveforms is not None for st in all_spiketrains]
         if any(wfs) and not all(wfs):
             raise MergeError("Cannot merge signal with waveform and signal "
                              "without waveform.")
-        stack = np.concatenate((np.asarray(self), np.asarray(other)))
+        stack = np.concatenate([np.asarray(st) for st in all_spiketrains])
         sorting = np.argsort(stack)
         stack = stack[sorting]
+
         kwargs = {}
 
-        kwargs['array_annotations'] = self._merge_array_annotations(other, sorting=sorting)
+        kwargs['array_annotations'] = self._merge_array_annotations(others, sorting=sorting)
 
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -672,7 +681,7 @@ class SpikeTrain(DataObject):
                            t_start=self.t_start, t_stop=self.t_stop,
                            sampling_rate=self.sampling_rate, left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
-            wfs_stack = np.vstack((self.waveforms, other.waveforms))
+            wfs_stack = np.vstack([st.waveforms for st in all_spiketrains])
             wfs_stack = wfs_stack[sorting]
             train.waveforms = wfs_stack
         train.segment = self.segment
@@ -683,12 +692,12 @@ class SpikeTrain(DataObject):
             train.lazy_shape = merged_lazy_shape
         return train
 
-    def _merge_array_annotations(self, other, sorting=None):
+    def _merge_array_annotations(self, others, sorting=None):
         '''
-        Merges array annotations of 2 different objects.
+        Merges array annotations of multiple different objects.
         The merge happens in such a way that the result fits the merged data
-        In general this means concatenating the arrays from the 2 objects.
-        If an annotation is only present in one of the objects, it will be omitted.
+        In general this means concatenating the arrays from the objects.
+        If an annotation is not present in one of the objects, it will be omitted.
         Apart from that the array_annotations need to be sorted according to the sorting of
         the spikes.
         :return Merged array_annotations
@@ -704,7 +713,7 @@ class SpikeTrain(DataObject):
         for key in keys:
             try:
                 self_ann = copy.deepcopy(self.array_annotations[key])
-                other_ann = copy.deepcopy(other.array_annotations[key])
+                other_ann = np.concatenate([copy.deepcopy(other.array_annotations[key]) for other in others])
                 if isinstance(self_ann, pq.Quantity):
                     other_ann.rescale(self_ann.units)
                     arr_ann = np.concatenate([self_ann, other_ann]) * self_ann.units
@@ -717,13 +726,13 @@ class SpikeTrain(DataObject):
                 omitted_keys_self.append(key)
                 continue
 
-        omitted_keys_other = [key for key in other.array_annotations if
+        omitted_keys_other = [key for key in np.unique([key for other in others for key in other.array_annotations]) if
                               key not in self.array_annotations]
 
         if omitted_keys_self or omitted_keys_other:
             warnings.warn("The following array annotations were omitted, because they were only "
                           "present in one of the merged objects: {} from the one that was merged "
-                          "into and {} from the one that was merged into the other"
+                          "into and {} from the ones that were merged into it."
                           "".format(omitted_keys_self, omitted_keys_other), UserWarning)
 
         return merged_array_annotations
