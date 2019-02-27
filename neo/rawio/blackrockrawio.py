@@ -320,7 +320,8 @@ class BlackrockRawIO(BaseRawIO):
         all_spec = [self.__nsx_spec[nsx_nb] for nsx in self.nsx_to_load]
         if self._avail_files['nev']:
             all_spec.append(self.__nev_spec)
-        assert all(all_spec[0] == spec for spec in all_spec), "Files don't have the same internal version"
+        assert all(all_spec[0] == spec for spec in all_spec), \
+            "Files don't have the same internal version"
 
         if len(self.nsx_to_load) > 0 and \
                 self.__nsx_spec[self.nsx_to_load[0]] == '2.1' and \
@@ -1919,7 +1920,7 @@ class BlackrockRawIO(BaseRawIO):
                 # remap nsx seg index
                 for nsx_nb in self.nsx_to_load:
                     data = self.nsx_datas[nsx_nb].pop(j)
-                    self.nsx_datas[nsx_nb][j-1] = data
+                    self.nsx_datas[nsx_nb][j - 1] = data
 
                     data_header = self.__nsx_data_header[nsx_nb].pop(j)
                     self.__nsx_data_header[nsx_nb][j - 1] = data_header
