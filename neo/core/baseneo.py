@@ -365,7 +365,7 @@ class BaseNeo(object):
         """
         return self._necessary_attrs + self._recommended_attrs
 
-    def merge_annotations(self, other):
+    def merge_annotations(self, *others):
         """
         Merge annotations from the other object into this one.
 
@@ -377,14 +377,15 @@ class BaseNeo(object):
             For strings: concatenate with ';'
             Otherwise: fail if the annotations are not equal
         """
+        other_annotations = [other.annotations for other in others]
         merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+                                               *other_annotations)
         self.annotations.update(merged_annotations)
 
-    def merge(self, other):
+    def merge(self, *others):
         """
         Merge the contents of another object into this one.
 
         See :meth:`merge_annotations` for details of the merge operation.
         """
-        self.merge_annotations(other)
+        self.merge_annotations(*others)
