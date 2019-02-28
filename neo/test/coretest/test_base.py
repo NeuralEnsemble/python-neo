@@ -196,7 +196,7 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
                                   'val4': [4, 4.4], 'val5': {1: {1: 1}, 2: 2},
                                   'val6': np.array([4, 5, 6]), 'val7': True}
         self.base3.annotations = {'val2': 2.2, 'val3': 'test3',
-                                  'val4': [44], 'val5': {1: {2: 2}, 2: 2, 3:3},
+                                  'val4': [44], 'val5': {1: {2: 2}, 2: 2, 3: 3},
                                   'val6': np.array([8, 9, 10]), 'val8': False}
 
         ann1 = self.base1.annotations

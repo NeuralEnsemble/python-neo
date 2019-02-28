@@ -1178,7 +1178,8 @@ class TestMerge(unittest.TestCase):
         time_unit = result.units
 
         expected = np.concatenate((self.train1.rescale(time_unit).times,
-                                   train3.rescale(time_unit).times, train4.rescale(time_unit).times))
+                                   train3.rescale(time_unit).times,
+                                   train4.rescale(time_unit).times))
         expected *= time_unit
         sorting = np.argsort(expected)
         expected = expected[sorting]
@@ -1223,13 +1224,13 @@ class TestMerge(unittest.TestCase):
         time_unit = result.units
 
         expected = np.concatenate((self.train1.rescale(time_unit).times,
-                                   train3.rescale(time_unit).times, train4.rescale(time_unit).times))
+                                   train3.rescale(time_unit).times,
+                                   train4.rescale(time_unit).times))
         sorting = np.argsort(expected)
 
-        assert_arrays_equal(result.waveforms,
+        assert_arrays_equal(result.waveforms, self.train1.waveforms.units *
                             np.vstack([st.waveforms.rescale(self.train1.waveforms.units)
-                                       for st in (self.train1, train3, train4)])[sorting] * self.train1.waveforms.units
-                            )
+                                       for st in (self.train1, train3, train4)])[sorting])
 
     def test_correct_shape(self):
         # Array annotations merge warning was already tested, can be ignored now

@@ -678,7 +678,8 @@ class SpikeTrain(DataObject):
                            t_start=self.t_start, t_stop=self.t_stop,
                            sampling_rate=self.sampling_rate, left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
-            wfs_stack = np.vstack([st.waveforms.rescale(self.waveforms.units) for st in all_spiketrains])
+            wfs_stack = np.vstack([st.waveforms.rescale(self.waveforms.units)
+                                   for st in all_spiketrains])
             wfs_stack = wfs_stack[sorting] * self.waveforms.units
             train.waveforms = wfs_stack
         train.segment = self.segment
@@ -710,7 +711,8 @@ class SpikeTrain(DataObject):
         for key in keys:
             try:
                 self_ann = copy.deepcopy(self.array_annotations[key])
-                other_ann = np.concatenate([copy.deepcopy(other.array_annotations[key]) for other in others])
+                other_ann = np.concatenate([copy.deepcopy(other.array_annotations[key])
+                                            for other in others])
                 if isinstance(self_ann, pq.Quantity):
                     other_ann.rescale(self_ann.units)
                     arr_ann = np.concatenate([self_ann, other_ann]) * self_ann.units
@@ -723,8 +725,9 @@ class SpikeTrain(DataObject):
                 omitted_keys_self.append(key)
                 continue
 
-        omitted_keys_other = [key for key in np.unique([key for other in others for key in other.array_annotations]) if
-                              key not in self.array_annotations]
+        omitted_keys_other = [key for key in np.unique([key for other in others
+                                                        for key in other.array_annotations])
+                              if key not in self.array_annotations]
 
         if omitted_keys_self or omitted_keys_other:
             warnings.warn("The following array annotations were omitted, because they were only "
