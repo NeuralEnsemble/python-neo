@@ -1228,9 +1228,10 @@ class TestMerge(unittest.TestCase):
                                    train4.rescale(time_unit).times))
         sorting = np.argsort(expected)
 
-        assert_arrays_equal(result.waveforms, self.train1.waveforms.units *
+        assert_arrays_equal(result.waveforms,
                             np.vstack([st.waveforms.rescale(self.train1.waveforms.units)
-                                       for st in (self.train1, train3, train4)])[sorting])
+                                       for st in (self.train1, train3, train4)])[sorting]
+                            * self.train1.waveforms.units)
 
     def test_correct_shape(self):
         # Array annotations merge warning was already tested, can be ignored now
