@@ -628,9 +628,6 @@ class SpikeTrain(DataObject):
         If the attributes of the :class:`SpikeTrain` objects are not
         compatible, an Exception is raised.
         '''
-        # TODO: unittests for merging multiple spiketrains
-        # TODO: maybe allow for lists of spiketrains as input? would be convenient in many use cases
-        # TODO: improve! better way to loop over self AND others?
         for other in others:
             if self.sampling_rate != other.sampling_rate:
                 raise MergeError("Cannot merge, different sampling rates")
