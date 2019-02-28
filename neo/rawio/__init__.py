@@ -10,6 +10,7 @@ Classes:
 .. autoclass:: neo.rawio.BlackrockRawIO
 
 """
+import os
 
 from neo.rawio.axonrawio import AxonRawIO
 from neo.rawio.blackrockrawio import BlackrockRawIO
@@ -50,8 +51,6 @@ rawiolist = [
     WinEdrRawIO,
     WinWcpRawIO,
 ]
-
-import os
 
 
 def get_rawio_class(filename_or_dirname):
