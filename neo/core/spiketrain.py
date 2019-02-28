@@ -637,9 +637,9 @@ class SpikeTrain(DataObject):
             if self.t_start != other.t_start:
                 raise MergeError("Cannot merge, different t_start")
             if self.t_stop != other.t_stop:
-                raise MemoryError("Cannot merge, different t_stop")
+                raise MergeError("Cannot merge, different t_stop")
             if self.left_sweep != other.left_sweep:
-                raise MemoryError("Cannot merge, different left_sweep")
+                raise MergeError("Cannot merge, different left_sweep")
             if self.segment != other.segment:
                 raise MergeError("Cannot merge these signals as they belong to"
                                  " different segments.")
