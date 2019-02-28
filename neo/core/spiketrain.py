@@ -681,8 +681,8 @@ class SpikeTrain(DataObject):
                            t_start=self.t_start, t_stop=self.t_stop,
                            sampling_rate=self.sampling_rate, left_sweep=self.left_sweep, **kwargs)
         if all(wfs):
-            wfs_stack = np.vstack([st.waveforms for st in all_spiketrains])
-            wfs_stack = wfs_stack[sorting]
+            wfs_stack = np.vstack([st.waveforms.rescale(self.waveforms.units) for st in all_spiketrains])
+            wfs_stack = wfs_stack[sorting] * self.waveforms.units
             train.waveforms = wfs_stack
         train.segment = self.segment
         if train.segment is not None:
