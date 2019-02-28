@@ -1150,6 +1150,47 @@ class TestMerge(unittest.TestCase):
                             np.array([1, 101, 2, 102, 3, 103, 4, 104, 5, 105, 6, 106]))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    def test_merge_multiple(self):
+        self.train1.waveforms = None
+
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3.segment = self.train1.segment
+        train3.array_annotate(index=np.arange(301, 307))
+
+        train4 = self.train1.duplicate_with_new_data(self.train1.times / 2)
+        train4.segment = self.train1.segment
+        train4.array_annotate(index=np.arange(401, 407))
+
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(train3, train4)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
+
+        assert_neo_object_is_compliant(result)
+
+        self.assertEqual(len(result.shape), 1)
+        self.assertEqual(result.shape[0], sum(len(st)
+                                              for st in (self.train1, train3, train4)))
+
+        self.assertEqual(self.train1.sampling_rate, result.sampling_rate)
+
+        time_unit = result.units
+
+        expected = np.concatenate((self.train1.rescale(time_unit).times,
+                                   train3.rescale(time_unit).times, train4.rescale(time_unit).times))
+        expected *= time_unit
+        sorting = np.argsort(expected)
+        expected = expected[sorting]
+        np.testing.assert_array_equal(result.times, expected)
+
+        # Make sure array annotations are merged correctly
+        self.assertTrue('label' not in result.array_annotations)
+        assert_arrays_equal(result.array_annotations['index'],
+                            np.concatenate([st.array_annotations['index']
+                                            for st in (self.train1, train3, train4)])[sorting])
+        self.assertIsInstance(result.array_annotations, ArrayDict)
+
     def test_merge_with_waveforms(self):
         # Array annotations merge warning was already tested, can be ignored now
         with warnings.catch_warnings(record=True) as w:
@@ -1157,6 +1198,38 @@ class TestMerge(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertTrue("array annotations" in str(w[0].message))
         assert_neo_object_is_compliant(result)
+
+    def test_merge_multiple_with_waveforms(self):
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3.segment = self.train1.segment
+        train3.array_annotate(index=np.arange(301, 307))
+        train3.waveforms = self.train1.waveforms / 10
+
+        train4 = self.train1.duplicate_with_new_data(self.train1.times / 2)
+        train4.segment = self.train1.segment
+        train4.array_annotate(index=np.arange(401, 407))
+        train4.waveforms = self.train1.waveforms / 2
+
+        # Array annotations merge warning was already tested, can be ignored now
+        with warnings.catch_warnings(record=True) as w:
+            result = self.train1.merge(train3, train4)
+            self.assertEqual(len(w), 1)
+            self.assertTrue("array annotations" in str(w[0].message))
+
+        assert_neo_object_is_compliant(result)
+        self.assertEqual(len(result.shape), 1)
+        self.assertEqual(result.shape[0], sum(len(st) for st in (self.train1, train3, train4)))
+
+        time_unit = result.units
+
+        expected = np.concatenate((self.train1.rescale(time_unit).times,
+                                   train3.rescale(time_unit).times, train4.rescale(time_unit).times))
+        sorting = np.argsort(expected)
+
+        assert_arrays_equal(result.waveforms,
+                            np.vstack([st.waveforms.rescale(self.train1.waveforms.units)
+                                       for st in (self.train1, train3, train4)])[sorting] * self.train1.waveforms.units
+                            )
 
     def test_correct_shape(self):
         # Array annotations merge warning was already tested, can be ignored now
@@ -1236,6 +1309,56 @@ class TestMerge(unittest.TestCase):
             train3.merge(self.train2)
         with self.assertRaises(MergeError):
             self.train2.merge(train3)
+
+    def test_merge_multiple_raise_merge_errors(self):
+        # different t_start
+        train3 = self.train1.duplicate_with_new_data(self.train1, t_start=-1 * pq.s)
+        train3.segment = self.train1.segment
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
+
+        # different t_stop
+        train3 = self.train1.duplicate_with_new_data(self.train1, t_stop=133 * pq.s)
+        train3.segment = self.train1.segment
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
+
+        # different segment
+        train3 = self.train1.duplicate_with_new_data(self.train1)
+        seg = Segment()
+        train3.segment = seg
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
+
+        # missing waveforms
+        train3 = self.train1.duplicate_with_new_data(self.train1)
+        train3.waveforms = None
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
+
+        # different sampling rate
+        train3 = self.train1.duplicate_with_new_data(self.train1)
+        train3.sampling_rate = 1 * pq.s
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
+
+        # different left sweep
+        train3 = self.train1.duplicate_with_new_data(self.train1)
+        train3.left_sweep = 1 * pq.s
+        with self.assertRaises(MergeError):
+            train3.merge(self.train2, self.train1)
+        with self.assertRaises(MergeError):
+            self.train2.merge(train3, self.train1)
 
 
 class TestDuplicateWithNewData(unittest.TestCase):
