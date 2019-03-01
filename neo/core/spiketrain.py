@@ -665,12 +665,24 @@ class SpikeTrain(DataObject):
         kwargs['array_annotations'] = self._merge_array_annotations(others, sorting=sorting)
 
         for name in ("name", "description", "file_origin"):
-            attr_self = getattr(self, name)
-            attr_other = getattr(other, name)
-            if attr_self == attr_other:
-                kwargs[name] = attr_self
-            else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+            attr = getattr(self, name)
+            for other in others:
+                attr_other = getattr(other, name)
+                if attr is None and attr_other is None:
+                    continue
+                elif attr is None or attr_other is None:
+                    attr = str(attr)
+                    attr_other = str(attr_other)
+                if attr_other not in attr:
+                    attr += ', ' + attr_other
+                    if 'merge' not in attr:
+                        attr = 'merge(' + attr
+            if attr is None:
+                pass
+            elif 'merge' in attr:
+                attr += ')'
+            kwargs[name] = attr
+
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
