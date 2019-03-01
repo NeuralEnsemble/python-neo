@@ -547,7 +547,7 @@ txt_header_keys = [
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
-    ('ApplicationName', '', None),  # also include version number 
+    ('ApplicationName', '', None),  # also include version number
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
@@ -598,7 +598,7 @@ def read_txt_header(filename):
             'Number of channel ids does not match channel names.'
     else:
         info['channel_names'] = [name] * len(info['channel_ids'])
-    
+
     # version and application name
     if 'CheetahRev' in info:
         assert 'ApplicationName' not in info
@@ -631,7 +631,7 @@ def read_txt_header(filename):
             'Number of channel ids does not match input range values.'
 
     # filename and datetime depend on app name and its version
-    if  info['ApplicationName'] == 'Cheetah':
+    if info['ApplicationName'] == 'Cheetah':
         if info['ApplicationVersion'] <= '5.6.4':
             old_date_format = True
         else:
