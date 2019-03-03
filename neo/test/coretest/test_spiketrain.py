@@ -24,12 +24,15 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
+from neo.rawio.examplerawio import ExampleRawIO
+from neo.io.proxyobjects import SpikeTrainProxy
+
 from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain, _check_time_in_range,
                                  _new_spiketrain)
 from neo.core import Segment, Unit
 from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_equal, assert_arrays_almost_equal,
-                            assert_neo_object_is_compliant)
+                            assert_neo_object_is_compliant, assert_same_attributes)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -1336,6 +1339,34 @@ class TestMerge(unittest.TestCase):
         self.assertEqual(merge5.name, 'merge(name3; name1; name2)')
         self.assertEqual(merge5.description, 'merge(desc3; desc1; desc2)')
         self.assertEqual(merge5.file_origin, 'merge(file3; file1; file2)')
+
+    def test_merge_with_proxy(self):
+        self.train1.waveforms = None
+        self.train2.waveforms = None
+
+        reader = ExampleRawIO(filename='my_filename.fake')
+        reader.parse_header()
+
+        proxy_sptr = SpikeTrainProxy(rawio=reader, unit_index=0,
+                                     block_index=0, seg_index=0)
+
+        # change all attributes that have to be the same in order to merge the spiketrains
+        proxy_sptr.segment = self.train1.segment
+        proxy_sptr.sampling_rate = self.train1.sampling_rate
+        proxy_sptr.left_sweep = self.train1.left_sweep
+
+        self.train1.t_stop = proxy_sptr.t_stop
+        self.train2.t_stop = proxy_sptr.t_stop
+
+        loaded_sptr = proxy_sptr.load(load_waveforms=False)
+        loaded_sptr.segment = self.train1.segment
+
+        merge_proxy = self.train1.merge(self.train2, proxy_sptr)
+        merge_loaded = self.train1.merge(self.train2, loaded_sptr)
+
+        assert_neo_object_is_compliant(merge_proxy)
+
+        assert_same_attributes(merge_proxy, merge_loaded)
 
     def test_sampling_rate(self):
         # Array annotations merge warning was already tested, can be ignored now

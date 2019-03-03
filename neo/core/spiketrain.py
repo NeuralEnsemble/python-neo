@@ -20,6 +20,8 @@ the old object.
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+
+import neo
 import sys
 
 import copy
@@ -629,6 +631,9 @@ class SpikeTrain(DataObject):
         compatible, an Exception is raised.
         '''
         for other in others:
+            if type(other) not in [SpikeTrain, neo.io.proxyobjects.SpikeTrainProxy]:
+                raise MergeError("Cannot merge, only SpikeTrain and SpikeTrainProxy objects"
+                                 "can be merged into a SpikeTrain.")
             if self.sampling_rate != other.sampling_rate:
                 raise MergeError("Cannot merge, different sampling rates")
             if self.t_start != other.t_start:
@@ -640,18 +645,13 @@ class SpikeTrain(DataObject):
             if self.segment != other.segment:
                 raise MergeError("Cannot merge these signals as they belong to"
                                  " different segments.")
-            if other.units != self.units:
-                other = other.rescale(self.units)
-        if hasattr(self, "lazy_shape"):
-            merged_lazy_shape = self.lazy_shape[0]
-            for other in others:
-                if hasattr(other, "lazy_shape"):
-                    merged_lazy_shape[0] += other.lazy_shape[0]
-                else:
-                    raise MergeError("Cannot merge a lazy object with a real"
-                                     " object.")
+
         all_spiketrains = [self]
-        all_spiketrains.extend(others)
+        all_spiketrains.extend([st.rescale(self.units) if type(st) is SpikeTrain else
+                                st.load(load_waveforms=self.waveforms
+                                                       is not None).rescale(self.units)
+                                for st in others])
+
         wfs = [st.waveforms is not None for st in all_spiketrains]
         if any(wfs) and not all(wfs):
             raise MergeError("Cannot merge signal with waveform and signal "
@@ -724,8 +724,6 @@ class SpikeTrain(DataObject):
         if train.segment is not None:
             self.segment.spiketrains.append(train)
 
-        if hasattr(self, "lazy_shape"):
-            train.lazy_shape = merged_lazy_shape
         return train
 
     def _merge_array_annotations(self, others, sorting=None):
