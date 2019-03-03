@@ -1280,6 +1280,63 @@ class TestMerge(unittest.TestCase):
                             np.array([1, 2, 3, 4, 5, 6, 101, 102, 103, 104, 105, 106]))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    def test_name_file_origin_description(self):
+        self.train1.waveforms = None
+        self.train2.waveforms = None
+        self.train1.name = 'name1'
+        self.train1.description = 'desc1'
+        self.train1.file_origin = 'file1'
+        self.train2.name = 'name2'
+        self.train2.description = 'desc2'
+        self.train2.file_origin = 'file2'
+
+        train3 = self.train1.duplicate_with_new_data(self.train1.times.magnitude * pq.microsecond)
+        train3.segment = self.train1.segment
+        train3.name = 'name3'
+        train3.description = 'desc3'
+        train3.file_origin = 'file3'
+
+        train4 = self.train1.duplicate_with_new_data(self.train1.times / 2)
+        train4.segment = self.train1.segment
+        train4.name = 'name3'
+        train4.description = 'desc3'
+        train4.file_origin = 'file3'
+
+        # merge two spiketrains with different attributes
+        merge1 = self.train1.merge(self.train2)
+
+        self.assertEqual(merge1.name, 'merge(name1; name2)')
+        self.assertEqual(merge1.description, 'merge(desc1; desc2)')
+        self.assertEqual(merge1.file_origin, 'merge(file1; file2)')
+
+        # merge a merged spiketrain with a regular one
+        merge2 = merge1.merge(train3)
+
+        self.assertEqual(merge2.name, 'merge(name1; name2; name3)')
+        self.assertEqual(merge2.description, 'merge(desc1; desc2; desc3)')
+        self.assertEqual(merge2.file_origin, 'merge(file1; file2; file3)')
+
+        # merge two merged spiketrains
+        merge3 = merge1.merge(merge2)
+
+        self.assertEqual(merge3.name, 'merge(name1; name2; name3)')
+        self.assertEqual(merge3.description, 'merge(desc1; desc2; desc3)')
+        self.assertEqual(merge3.file_origin, 'merge(file1; file2; file3)')
+
+        # merge two spiketrains with identical attributes
+        merge4 = train3.merge(train4)
+
+        self.assertEqual(merge4.name, 'name3')
+        self.assertEqual(merge4.description, 'desc3')
+        self.assertEqual(merge4.file_origin, 'file3')
+
+        # merge a reqular spiketrain with a merged spiketrain
+        merge5 = train3.merge(merge1)
+
+        self.assertEqual(merge5.name, 'merge(name3; name1; name2)')
+        self.assertEqual(merge5.description, 'merge(desc3; desc1; desc2)')
+        self.assertEqual(merge5.file_origin, 'merge(file3; file1; file2)')
+
     def test_sampling_rate(self):
         # Array annotations merge warning was already tested, can be ignored now
         with warnings.catch_warnings(record=True) as w:

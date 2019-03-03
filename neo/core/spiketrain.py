@@ -665,12 +665,50 @@ class SpikeTrain(DataObject):
         kwargs['array_annotations'] = self._merge_array_annotations(others, sorting=sorting)
 
         for name in ("name", "description", "file_origin"):
-            attr_self = getattr(self, name)
-            attr_other = getattr(other, name)
-            if attr_self == attr_other:
-                kwargs[name] = attr_self
-            else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+            attr = getattr(self, name)
+
+            # check if self is already a merged spiketrain
+            # if it is, get rid of the bracket at the end to append more attributes
+            if attr is not None:
+                if attr.startswith('merge(') and attr.endswith(')'):
+                    attr = attr[:-1]
+
+            for other in others:
+                attr_other = getattr(other, name)
+
+                # both attributes are None --> nothing to do
+                if attr is None and attr_other is None:
+                    continue
+
+                # one of the attributes is None --> convert to string in order to merge them
+                elif attr is None or attr_other is None:
+                    attr = str(attr)
+                    attr_other = str(attr_other)
+
+                # check if the other spiketrain is already a merged spiketrain
+                # if it is, append all of its merged attributes that aren't already in attr
+                if attr_other.startswith('merge(') and attr_other.endswith(')'):
+                    for subattr in attr_other[6:-1].split('; '):
+                        if subattr not in attr:
+                            attr += '; ' + subattr
+                            if not attr.startswith('merge('):
+                                attr = 'merge(' + attr
+
+                # if the other attribute is not in the list --> append
+                # if attr doesn't already start with merge add merge( in the beginning
+                elif attr_other not in attr:
+                    attr += '; ' + attr_other
+                    if not attr.startswith('merge('):
+                        attr = 'merge(' + attr
+
+            # close the bracket of merge(...) if necessary
+            if attr is not None:
+                if attr.startswith('merge('):
+                    attr += ')'
+
+            # write attr into kwargs dict
+            kwargs[name] = attr
+
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
