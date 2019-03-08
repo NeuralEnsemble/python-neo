@@ -225,7 +225,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
             if shape is None:
                 # To ensure consistency, times, labels and durations need to have the same size
                 if name in ["times", "labels", "durations"]:
-                    size.append(n if n else 5)
+                    size.append(5)
                 else:
                     size.append(np.random.randint(5) + 1)
             else:
