@@ -225,7 +225,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
             if shape is None:
                 # To ensure consistency, times, labels and durations need to have the same size
                 if name in ["times", "labels", "durations"]:
-                    size.append(5)
+                    size.append(n if n else 5)
                 else:
                     size.append(np.random.randint(5) + 1)
             else:
@@ -286,6 +286,9 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
     for i, attr in enumerate(cls._necessary_attrs + cls._recommended_attrs):
         if seed is not None:
             iseed = seed + i
+        #if cls == Epoch and attr in ['durations', 'labels', 'array_annotations']:
+        #    kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, shape=n)
+        #else:
         kwargs[attr[0]] = get_fake_value(*attr, seed=iseed, obj=cls, n=n)
 
     if 'waveforms' in kwargs:  # everything here is to force the kwargs to have len(time) ==
@@ -381,11 +384,11 @@ def fake_neo(obj_type="Block", cascade=True, seed=None, n=1):
         cls = obj_type
         obj_type = obj_type.__name__
 
-    if cls is Epoch:
-        obj = fake_epoch(seed=seed, n=n)
-    else:
-        kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
-        obj = cls(**kwargs)
+    #if cls is Epoch:
+    #    obj = fake_epoch(seed=seed, n=n)
+    #else:
+    kwargs = get_fake_values(obj_type, annotate=True, seed=seed, n=n)
+    obj = cls(**kwargs)
 
     # if not cascading, we don't need to do any of the stuff after this
     if not cascade:
