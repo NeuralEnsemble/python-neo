@@ -434,3 +434,188 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                epoch2.duplicate_with_new_data(
                                    epoch2.times - epoch.times[0]).time_slice(
                                    t_start=0 * pq.s, t_stop=epoch.durations[0]))
+
+
+class TestUtilsWithProxyObjects(BaseProxyTest):
+    def test__get_events(self):
+        starts_1 = Event(times=[0.5, 10.0, 25.2] * pq.s)
+        starts_1.annotate(event_type='trial start', pick='me')
+        starts_1.array_annotate(trial_id=[1, 2, 3])
+
+        stops_1 = Event(times=[5.5, 14.9, 30.1] * pq.s)
+        stops_1.annotate(event_type='trial stop')
+        stops_1.array_annotate(trial_id=[1, 2, 3])
+
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+
+        proxy_event.annotate(event_type='trial start')
+
+        seg = Segment()
+        seg.events = [starts_1, stops_1, proxy_event]
+
+        # test getting multiple events including a proxy
+        extracted_starts = get_events(seg, properties={'event_type': 'trial start'})
+
+        self.assertEqual(len(extracted_starts), 2)
+
+        # make sure the event is loaded and a neo.Event object is returned
+        self.assertTrue(isinstance(extracted_starts[0], Event))
+        self.assertTrue(isinstance(extracted_starts[1], Event))
+
+    def test__get_epochs(self):
+        a = Epoch([0.5, 10.0, 25.2] * pq.s, durations=[5.1, 4.8, 5.0] * pq.s)
+        a.annotate(epoch_type='a', pick='me')
+        a.array_annotate(trial_id=[1, 2, 3])
+
+        b = Epoch([5.5, 14.9, 30.1] * pq.s, durations=[4.7, 4.9, 5.2] * pq.s)
+        b.annotate(epoch_type='b')
+        b.array_annotate(trial_id=[1, 2, 3])
+
+        proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=1,
+                                 block_index=0, seg_index=0)
+
+        proxy_epoch.annotate(epoch_type='a')
+
+        seg = Segment()
+        seg.epochs = [a, b, proxy_epoch]
+
+        # test getting multiple epochs including a proxy
+        extracted_epochs = get_epochs(seg, properties={'epoch_type': 'a'})
+
+        self.assertEqual(len(extracted_epochs), 2)
+
+        # make sure the epoch is loaded and a neo.Epoch object is returned
+        self.assertTrue(isinstance(extracted_epochs[0], Epoch))
+        self.assertTrue(isinstance(extracted_epochs[1], Epoch))
+
+    def test__add_epoch(self):
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+
+        loaded_event = proxy_event.load()
+
+        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units)
+
+        seg = Segment()
+        seg.events = [regular_event, proxy_event]
+
+        # test cutting with two events one of which is a proxy
+        epoch = add_epoch(seg, regular_event, proxy_event)
+
+        assert_neo_object_is_compliant(epoch)
+        assert_same_annotations(epoch, regular_event)
+        assert_arrays_almost_equal(epoch.times, regular_event.times, 1e-12)
+        assert_arrays_almost_equal(epoch.durations,
+                                   np.ones(regular_event.shape) * loaded_event.units, 1e-12)
+
+    def test__match_events(self):
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+
+        loaded_event = proxy_event.load()
+
+        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units)
+
+        seg = Segment()
+        seg.events = [regular_event, proxy_event]
+
+        # test matching two events one of which is a proxy
+        matched_regular, matched_proxy = match_events(regular_event, proxy_event)
+
+        assert_same_attributes(matched_regular, regular_event)
+        assert_same_attributes(matched_proxy, loaded_event)
+
+    def test__cut_block_by_epochs(self):
+        seg = Segment()
+
+        proxy_anasig = AnalogSignalProxy(rawio=self.reader,
+                                         global_channel_indexes=None,
+                                         block_index=0, seg_index=0)
+        seg.analogsignals.append(proxy_anasig)
+
+        proxy_st = SpikeTrainProxy(rawio=self.reader, unit_index=0,
+                                     block_index=0, seg_index=0)
+        seg.spiketrains.append(proxy_st)
+
+        proxy_event = EventProxy(rawio=self.reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+        seg.events.append(proxy_event)
+
+        proxy_epoch = EpochProxy(rawio=self.reader, event_channel_index=1,
+                                 block_index=0, seg_index=0)
+        proxy_epoch.annotate(pick='me')
+        seg.epochs.append(proxy_epoch)
+
+        loaded_epoch = proxy_epoch.load()
+        loaded_event = proxy_event.load()
+        loaded_st = proxy_st.load()
+        loaded_anasig = proxy_anasig.load()
+
+        block = Block()
+        block.segments = [seg]
+        block.create_many_to_one_relationship()
+
+        cut_block_by_epochs(block, properties={'pick': 'me'})
+
+        assert_neo_object_is_compliant(block)
+        self.assertEqual(len(block.segments), proxy_epoch.shape[0])
+
+        for epoch_idx in range(len(loaded_epoch)):
+            sliced_event = loaded_event.time_slice(t_start=loaded_epoch.times[epoch_idx],
+                                                 t_stop=loaded_epoch.times[epoch_idx]
+                                                        + loaded_epoch.durations[epoch_idx])
+            has_event = len(sliced_event) > 0
+
+            sliced_anasig = loaded_anasig.time_slice(t_start=loaded_epoch.times[epoch_idx],
+                                                   t_stop=loaded_epoch.times[epoch_idx]
+                                                          + loaded_epoch.durations[epoch_idx])
+
+            sliced_st = loaded_st.time_slice(t_start=loaded_epoch.times[epoch_idx],
+                                                   t_stop=loaded_epoch.times[epoch_idx]
+                                                          + loaded_epoch.durations[epoch_idx])
+
+            self.assertEqual(len(block.segments[epoch_idx].events), int(has_event))
+            self.assertEqual(len(block.segments[epoch_idx].spiketrains), 1)
+            self.assertEqual(len(block.segments[epoch_idx].analogsignals), 1)
+
+            self.assertTrue(isinstance(block.segments[epoch_idx].spiketrains[0],
+                                       SpikeTrain))
+            assert_same_attributes(block.segments[epoch_idx].spiketrains[0],
+                                   sliced_st)
+
+            self.assertTrue(isinstance(block.segments[epoch_idx].analogsignals[0],
+                                       AnalogSignal))
+            assert_same_attributes(block.segments[epoch_idx].analogsignals[0],
+                                   sliced_anasig)
+
+            if has_event:
+                self.assertTrue(isinstance(block.segments[epoch_idx].events[0],
+                                           Event))
+                assert_same_attributes(block.segments[epoch_idx].events[0],
+                                   sliced_event)
+
+        block2 = Block()
+        seg2 = Segment()
+        epoch = Epoch(np.arange(10) * pq.s, durations=np.ones((10)) * pq.s)
+        epoch.annotate(pick='me instead')
+        seg2.epochs = [proxy_epoch, epoch]
+        block2.segments = [seg2]
+        block2.create_many_to_one_relationship()
+
+        # test correct loading and slicing of EpochProxy objects
+        # (not tested above since we used the EpochProxy to cut the block)
+
+        cut_block_by_epochs(block2, properties={'pick': 'me instead'})
+
+        for epoch_idx in range(len(epoch)):
+            sliced_epoch = loaded_epoch.time_slice(t_start=epoch.times[epoch_idx],
+                                                   t_stop=epoch.times[epoch_idx]
+                                                          + epoch.durations[epoch_idx])
+            has_epoch = len(sliced_epoch) > 0
+
+            if has_epoch:
+                self.assertTrue(isinstance(block2.segments[epoch_idx].epochs[0],
+                                           Epoch))
+                assert_same_attributes(block2.segments[epoch_idx].epochs[0],
+                                       sliced_epoch)

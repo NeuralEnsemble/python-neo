@@ -1,4 +1,3 @@
-# TODO: compatibility with proxy objects and corresponding unittests
 # TODO: do we want/need this header?
 """
 Convenience functions to extend the functionality of the Neo framework
@@ -193,7 +192,12 @@ def _get_from_list(input_list, prop=None):
     # dictionary is given
     else:
         for ep in input_list:
-            sparse_ep = ep.copy()
+            if isinstance(ep, neo.Epoch) or isinstance(ep, neo.Event):
+                sparse_ep = ep.copy()
+            elif isinstance(ep, neo.io.proxyobjects.EpochProxy) \
+                    or isinstance(ep, neo.io.proxyobjects.EventProxy):
+                # need to load the event/epoch in order to be able to filter by array annotations
+                sparse_ep = ep.load()
             for k in prop.keys():
                 sparse_ep = _filter_event_epoch(sparse_ep, k, prop[k])
                 # if there is nothing left, it cannot filtered
@@ -399,6 +403,12 @@ def add_epoch(
         raise TypeError(
             'Segment has to be of type neo.Segment, not %s' % type(segment))
 
+    # load the full event if a proxyobject has been given as an argument
+    if isinstance(event1, neo.io.proxyobjects.EventProxy):
+        event1 = event1.load()
+    if isinstance(event2, neo.io.proxyobjects.EventProxy):
+        event2 = event2.load()
+
     for event in [event1, event2]:
         if not isinstance(event, neo.Event):
             raise TypeError(
@@ -459,8 +469,11 @@ def match_events(event1, event2):
         events that could be matched against each other. A warning is issued if
         not all events in event1 or event2 could be matched.
     """
-    event1 = event1
-    event2 = event2
+    # load the full event if a proxyobject has been given as an argument
+    if isinstance(event1, neo.io.proxyobjects.EventProxy):
+        event1 = event1.load()
+    if isinstance(event2, neo.io.proxyobjects.EventProxy):
+        event2 = event2.load()
 
     id1, id2 = 0, 0
     match_ev1, match_ev2 = [], []
@@ -688,21 +701,30 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
 
     # cut analogsignals and analogsignalarrays
     for ana_id in range(len(seg.analogsignals)):
-        ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
+        if isinstance(seg.analogsignals[ana_id], neo.AnalogSignal):
+            ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
+        elif isinstance(seg.analogsignals[ana_id], neo.io.proxyobjects.AnalogSignalProxy):
+            ana_time_slice = seg.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
         if reset_time:
             ana_time_slice.t_start = ana_time_slice.t_start + t_shift
         subseg.analogsignals.append(ana_time_slice)
 
     # cut spiketrains
     for st_id in range(len(seg.spiketrains)):
-        st_time_slice = seg.spiketrains[st_id].time_slice(t_start, t_stop)
+        if isinstance(seg.spiketrains[st_id], neo.SpikeTrain):
+            st_time_slice = seg.spiketrains[st_id].time_slice(t_start, t_stop)
+        elif isinstance(seg.spiketrains[st_id], neo.io.proxyobjects.SpikeTrainProxy):
+            st_time_slice = seg.spiketrains[st_id].load(time_slice=(t_start, t_stop))
         if reset_time:
             st_time_slice = shift_spiketrain(st_time_slice, t_shift)
         subseg.spiketrains.append(st_time_slice)
 
     # cut events
     for ev_id in range(len(seg.events)):
-        ev_time_slice = event_time_slice(seg.events[ev_id], t_start, t_stop)
+        if isinstance(seg.events[ev_id], neo.Event):
+            ev_time_slice = event_time_slice(seg.events[ev_id], t_start, t_stop)
+        elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
+            ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
         if reset_time:
             ev_time_slice = shift_event(ev_time_slice, t_shift)
         # appending only non-empty events
@@ -711,7 +733,10 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
 
     # cut epochs
     for ep_id in range(len(seg.epochs)):
-        ep_time_slice = epoch_time_slice(seg.epochs[ep_id], t_start, t_stop)
+        if isinstance(seg.epochs[ep_id], neo.Epoch):
+            ep_time_slice = epoch_time_slice(seg.epochs[ep_id], t_start, t_stop)
+        elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
+            ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
         if reset_time:
             ep_time_slice = shift_epoch(ep_time_slice, t_shift)
         # appending only non-empty epochs
