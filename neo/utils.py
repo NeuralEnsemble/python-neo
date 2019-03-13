@@ -1,39 +1,3 @@
-# TODO: do we want/need this header?
-"""
-Convenience functions to extend the functionality of the Neo framework
-version 0.5.
-
-Authors: Julia Sprenger, Lyuba Zehl, Michael Denker
-
-
-Copyright (c) 2017, Institute of Neuroscience and Medicine (INM-6),
-Forschungszentrum Juelich, Germany
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
-* Neither the names of the copyright holders nor the names of the contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
 import neo
 import copy
 import warnings
@@ -369,7 +333,7 @@ def add_epoch(
 
     Parameters:
     -----------
-    sgement : neo.Segment
+    segment : neo.Segment
         The segment in which the final Epoch object is added.
     event1 : neo.Event
         The Neo Event objects containing the start events of the epochs. If no
@@ -403,7 +367,7 @@ def add_epoch(
         raise TypeError(
             'Segment has to be of type neo.Segment, not %s' % type(segment))
 
-    # load the full event if a proxyobject has been given as an argument
+    # load the full event if a proxy object has been given as an argument
     if isinstance(event1, neo.io.proxyobjects.EventProxy):
         event1 = event1.load()
     if isinstance(event2, neo.io.proxyobjects.EventProxy):
@@ -469,7 +433,7 @@ def match_events(event1, event2):
         events that could be matched against each other. A warning is issued if
         not all events in event1 or event2 could be matched.
     """
-    # load the full event if a proxyobject has been given as an argument
+    # load the full event if a proxy object has been given as an argument
     if isinstance(event1, neo.io.proxyobjects.EventProxy):
         event1 = event1.load()
     if isinstance(event2, neo.io.proxyobjects.EventProxy):
@@ -574,7 +538,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         if len(epochs) > 1:
             warnings.warn(
                 'Segment %s contains multiple epochs with '
-                'requested properties (%s). Subsegments can '
+                'requested properties (%s). Sub-segments can '
                 'have overlapping times' % (seg.name, properties))
 
         elif len(epochs) == 0:
