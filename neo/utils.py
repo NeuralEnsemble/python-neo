@@ -406,7 +406,7 @@ def add_epoch(
         # this needs to be changed to '%s_%i' % (kwargs['name'], i) for i in range(len(times))]
         # when labels become unicode
         kwargs['labels'] = [
-            b'%s_%i' % (kwargs['name'].encode('ascii'), i) for i in range(len(times))]
+            ('%s_%i' % (kwargs['name'], i)).encode('ascii') for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
