@@ -324,8 +324,7 @@ def _is_annotation_list(value, exp_length):
     """
     return (
         (isinstance(value, list) or (
-            isinstance(value, np.ndarray) and value.ndim > 0)) and
-        (len(value) == exp_length))
+            isinstance(value, np.ndarray) and value.ndim > 0)) and (len(value) == exp_length))
 
 
 def add_epoch(
@@ -457,7 +456,7 @@ def match_events(event1, event2):
 
         # shorter epoch possible by later event1 entry
         elif id1 + 1 < len(event1) and event1.times[id1 + 1] < time2:
-                # there is no event in 2 until the next event in 1
+            # there is no event in 2 until the next event in 1
             id1 += 1
 
         # found a match

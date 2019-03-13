@@ -278,7 +278,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         seg.events = [starts, stops]
 
         # test cutting with one event only
-        ep_starts = add_epoch(seg, starts, pre=-300*pq.ms, post=250*pq.ms)
+        ep_starts = add_epoch(seg, starts, pre=-300 * pq.ms, post=250 * pq.ms)
 
         assert_neo_object_is_compliant(ep_starts)
         assert_same_annotations(ep_starts, starts)
