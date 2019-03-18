@@ -225,15 +225,13 @@ class AsciiSignalIO(BaseIO):
             sampling_rate = self.sampling_rate
             t_start = self.t_start
         else:
-            # todo: if the values in timecolumn are not equally spaced
-            #       (within float representation tolerances)
-            #       we should produce an IrregularlySampledSignal
             delta_t = np.diff(sig[:, self.timecolumn])
             mean_delta_t = np.mean(delta_t)
             if (delta_t.max() - delta_t.min()) / mean_delta_t < 1e-6:
-                # equally spaced
+                # equally spaced --> AnalogSignal
                 sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
             else:
+                # not equally spaced --> IrregularlySampledSignal
                 sampling_rate = None
             t_start = sig[0, self.timecolumn] * self.time_units
 
