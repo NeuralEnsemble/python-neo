@@ -18,7 +18,7 @@ import numpy as np
 import quantities as pq
 
 from neo.io.baseio import BaseIO
-from neo.core import AnalogSignal, Segment, Block
+from neo.core import AnalogSignal, IrregularlySampledSignal, Segment, Block
 
 
 class AsciiSignalIO(BaseIO):
@@ -225,10 +225,14 @@ class AsciiSignalIO(BaseIO):
             sampling_rate = self.sampling_rate
             t_start = self.t_start
         else:
-            # todo: if the values in timecolumn are not equally spaced
-            #       (within float representation tolerances)
-            #       we should produce an IrregularlySampledSignal
-            sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
+            delta_t = np.diff(sig[:, self.timecolumn])
+            mean_delta_t = np.mean(delta_t)
+            if (delta_t.max() - delta_t.min()) / mean_delta_t < 1e-6:
+                # equally spaced --> AnalogSignal
+                sampling_rate = 1.0 / np.mean(np.diff(sig[:, self.timecolumn])) / self.time_units
+            else:
+                # not equally spaced --> IrregularlySampledSignal
+                sampling_rate = None
             t_start = sig[0, self.timecolumn] * self.time_units
 
         if self.signal_group_mode == 'all-in-one':
@@ -241,11 +245,17 @@ class AsciiSignalIO(BaseIO):
                 signal = sig[:, mask]
             else:
                 signal = sig
-            anaSig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
-                                  t_start=t_start,
-                                  channel_index=self.usecols or np.arange(signal.shape[1]),
-                                  name='multichannel')
-            seg.analogsignals.append(anaSig)
+            if sampling_rate is None:
+                irr_sig = IrregularlySampledSignal(signal[:, self.timecolumn] * self.time_units,
+                                                   signal * self.units,
+                                                   name='multichannel')
+                seg.irregularlysampledsignals.append(irr_sig)
+            else:
+                ana_sig = AnalogSignal(signal * self.units, sampling_rate=sampling_rate,
+                                       t_start=t_start,
+                                       channel_index=self.usecols or np.arange(signal.shape[1]),
+                                       name='multichannel')
+                seg.analogsignals.append(ana_sig)
         else:
             if self.timecolumn is not None and self.timecolumn < 0:
                 time_col = sig.shape[1] + self.timecolumn
@@ -255,10 +265,17 @@ class AsciiSignalIO(BaseIO):
                 if time_col == i:
                     continue
                 signal = sig[:, i] * self.units
-                anaSig = AnalogSignal(signal, sampling_rate=sampling_rate,
-                                      t_start=t_start, channel_index=i,
-                                      name='Column %d' % i)
-                seg.analogsignals.append(anaSig)
+                if sampling_rate is None:
+                    irr_sig = IrregularlySampledSignal(sig[:, time_col] * self.time_units,
+                                                       signal,
+                                                       t_start=t_start, channel_index=i,
+                                                       name='Column %d' % i)
+                    seg.irregularlysampledsignals.append(irr_sig)
+                else:
+                    ana_sig = AnalogSignal(signal, sampling_rate=sampling_rate,
+                                           t_start=t_start, channel_index=i,
+                                           name='Column %d' % i)
+                    seg.analogsignals.append(ana_sig)
 
         seg.create_many_to_one_relationship()
         return seg
