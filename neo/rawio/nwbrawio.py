@@ -40,7 +40,7 @@ import pynwb
 from pynwb import NWBFile,TimeSeries, get_manager
 from pynwb.base import ProcessingModule
 #from pynwb.misc import UnitTimes #, SpikeUnit
-from pynwb.form.backends.hdf5 import HDF5IO
+##from pynwb.form.backends.hdf5 import HDF5IO
 # Creating TimeSeries
 from pynwb.ecephys import ElectricalSeries, Device, EventDetection
 from pynwb.behavior import SpatialSeries
@@ -52,16 +52,16 @@ from pynwb.spec import NWBAttributeSpec # Attribute Specifications
 from pynwb.spec import NWBDatasetSpec # Dataset Specifications
 from pynwb.spec import NWBGroupSpec
 from pynwb.spec import NWBNamespace
-from pynwb.form.build import GroupBuilder, DatasetBuilder
-from pynwb.form.spec import NamespaceCatalog
+##from pynwb.form.build import GroupBuilder, DatasetBuilder
+##from pynwb.form.spec import NamespaceCatalog
 #
 from pynwb import *
 
 import h5py
 from pynwb import get_manager
-from pynwb.form.backends.hdf5 import HDF5IO
-from pynwb.form import *
-from pynwb.form.build.builders import *
+##from pynwb.form.backends.hdf5 import HDF5IO
+##from pynwb.form import *
+##from pynwb.form.build.builders import *
 
 
 class NWBRawIO(BaseRawIO):
@@ -82,6 +82,8 @@ class NWBRawIO(BaseRawIO):
 
     def _parse_header(self):        
         print("******************** def parse*********************************************")
+        print("pynwb.__version__ = ", pynwb.__version__)
+        
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         print("io = ", io)
 #        io = self.read_builder_NWB()
