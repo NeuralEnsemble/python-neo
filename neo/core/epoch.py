@@ -117,7 +117,7 @@ class Epoch(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.labels = labels
+        obj.labels = np.array(labels)
         obj.durations = durations
         obj.segment = None
         return obj

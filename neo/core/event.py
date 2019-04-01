@@ -102,7 +102,7 @@ class Event(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj.labels = labels
+        obj.labels = np.array(labels)
         obj.segment = None
         return obj
 
