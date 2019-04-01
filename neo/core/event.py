@@ -125,6 +125,7 @@ class Event(DataObject):
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
+        self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -176,6 +177,7 @@ class Event(DataObject):
         '''
         othertimes = other.times.rescale(self.times.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
+        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -192,7 +194,7 @@ class Event(DataObject):
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
 
-        evt = Event(times=times, labels=kwargs['array_annotations']['labels'], **kwargs)
+        evt = Event(times=times, labels=labels, **kwargs)
 
         return evt
 
@@ -203,7 +205,7 @@ class Event(DataObject):
         '''
         # Note: Array annotations cannot be copied
         # because they are linked to their respective timestamps
-        for attr in ("name", "file_origin", "description", "annotations"):
+        for attr in ("labels", "name", "file_origin", "description", "annotations"):
             setattr(self, attr, getattr(other, attr,
                                         None))  # Note: Array annotations cannot be copied
             # because length of data can be changed  # here which would cause inconsistencies  #
@@ -230,7 +232,7 @@ class Event(DataObject):
             pass
         return obj
 
-    def duplicate_with_new_data(self, signal, units=None):
+    def duplicate_with_new_data(self, times, labels, units=None):
         '''
         Create a new :class:`Event` with the same metadata
         but different data
@@ -241,8 +243,9 @@ class Event(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new = self.__class__(times=signal, units=units)
+        new = self.__class__(times=times, units=units)
         new._copy_data_complement(self)
+        new.labels = labels
         # Note: Array annotations cannot be copied here, because length of data can be changed
         return new
 
@@ -264,14 +267,6 @@ class Event(DataObject):
         new_evt = self[indices]
 
         return new_evt
-
-    def set_labels(self, labels):
-        self.array_annotate(labels=labels)
-
-    def get_labels(self):
-        return self.array_annotations['labels']
-
-    labels = property(get_labels, set_labels)
 
     def to_epoch(self, pairwise=False, durations=None):
         """

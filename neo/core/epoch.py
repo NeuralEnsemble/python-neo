@@ -141,6 +141,8 @@ class Epoch(DataObject):
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
+        self.durations = getattr(obj, 'durations', None)
+        self.labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -186,6 +188,8 @@ class Epoch(DataObject):
         '''
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
+        obj.durations = self.durations[i]
+        obj.labels = self.labels[i]
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
@@ -216,7 +220,11 @@ class Epoch(DataObject):
         compatible, and Exception is raised.
         '''
         othertimes = other.times.rescale(self.times.units)
+        otherdurations = other.durations.rescale(self.durations.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
+        durations = np.hstack([self.durations,
+                               otherdurations]) * self.durations.units
+        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -230,8 +238,6 @@ class Epoch(DataObject):
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
-        labels = kwargs['array_annotations']['labels']
-        durations = kwargs['array_annotations']['durations']
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
@@ -242,7 +248,7 @@ class Epoch(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.
-        for attr in ("name", "file_origin", "description", "annotations"):
+        for attr in ("labels", "durations", "name", "file_origin", "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):
@@ -259,7 +265,7 @@ class Epoch(DataObject):
                 setattr(new_ep, k, v)
         return new_ep
 
-    def duplicate_with_new_data(self, signal, units=None):
+    def duplicate_with_new_data(self, times, durations, labels, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata
         but different data (times, durations)
@@ -272,8 +278,10 @@ class Epoch(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new = self.__class__(times=signal, units=units)
+        new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
+        new.labels = labels
+        new.durations = durations
         # Note: Array annotations can not be copied here because length of data can change
         return new
 
@@ -295,19 +303,3 @@ class Epoch(DataObject):
         new_epc = self[indices]
 
         return new_epc
-
-    def set_labels(self, labels):
-        self.array_annotate(labels=labels)
-
-    def get_labels(self):
-        return self.array_annotations['labels']
-
-    labels = property(get_labels, set_labels)
-
-    def set_durations(self, durations):
-        self.array_annotate(durations=durations)
-
-    def get_durations(self):
-        return self.array_annotations['durations']
-
-    durations = property(get_durations, set_durations)

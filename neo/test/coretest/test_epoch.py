@@ -351,9 +351,6 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test0'], targ.annotations['test0'])
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
-        assert_arrays_equal(result.array_annotations['durations'],
-                            np.array([], dtype='float64') * pq.ns)
-        assert_arrays_equal(result.array_annotations['labels'], np.array([], dtype='S'))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_stop(self):
@@ -547,14 +544,14 @@ class TestDuplicateWithNewData(unittest.TestCase):
 
     def test_duplicate_with_new_data(self):
         signal1 = self.epoch
-        new_data = np.sort(np.random.uniform(0, 100, self.epoch.size)) * pq.ms
-        signal1b = signal1.duplicate_with_new_data(new_data)
-        # Note: Labels and Durations are NOT copied any more!!!
+        new_times = np.sort(np.random.uniform(0, 100, self.epoch.size)) * pq.ms
+        new_durations = np.ones_like(new_times)
+        new_labels = np.array(list("zyxwvutsrqponmlkjihgfedcba"[:self.epoch.size]))
+        signal1b = signal1.duplicate_with_new_data(new_times, new_durations, new_labels)
         # After duplicating, array annotations should always be empty,
         # because different length of data would cause inconsistencies
-        # Only labels and durations should be available
-        assert_arrays_equal(signal1b.labels, np.ndarray((0,), dtype='S'))
-        assert_arrays_equal(signal1b.durations.magnitude, np.ndarray((0,)))
+        assert_arrays_equal(signal1b.labels, new_labels)
+        assert_arrays_equal(signal1b.durations, new_durations)
         self.assertTrue('index' not in signal1b.array_annotations)
         self.assertTrue('test' not in signal1b.array_annotations)
         self.assertIsInstance(signal1b.array_annotations, ArrayDict)
