@@ -326,7 +326,7 @@ class NixIOTest(unittest.TestCase):
                             nixvalue = np.array(nixvalue)
                         np.testing.assert_almost_equal(nixvalue, v.magnitude)
                     if isinstance(v, np.ndarray):
-                        self.assertTrue(np.all(v==nixmd[str(k)]))
+                        self.assertTrue(np.all(v == nixmd[str(k)]))
                     else:
                         self.assertEqual(nixmd[str(k)], v,
                                          "Property value mismatch: {}".format(k))
@@ -1408,54 +1408,50 @@ class NixIOReadTest(NixIOTest):
             nix_block = self.nixfile.blocks[bl.annotations['nix_name']]
             for seg in bl.segments:
                 for anasig in seg.analogsignals:
-                    da = nix_block.data_arrays[anasig.annotations['nix_name']+'.0']
+                    da = nix_block.data_arrays[anasig.annotations['nix_name'] + '.0']
                     self.assertIn('anasig_arr_ann', da.metadata)
                     self.assertIn('anasig_arr_ann', anasig.array_annotations)
-                    self.assertTrue(np.all(da.metadata['anasig_arr_ann'] ==
-                                           anasig.array_annotations['anasig_arr_ann'].magnitude))
+                    nix_ann = da.metadata['anasig_arr_ann']
+                    neo_ann = anasig.array_annotations['anasig_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['anasig_arr_ann'].unit,
-                                     units_to_string(
-                                         anasig.array_annotations['anasig_arr_ann'].units))
+                                     units_to_string(neo_ann.units))
                 for irrsig in seg.irregularlysampledsignals:
                     da = nix_block.data_arrays[irrsig.annotations['nix_name'] + '.0']
                     self.assertIn('irrsig_arr_ann', da.metadata)
                     self.assertIn('irrsig_arr_ann', irrsig.array_annotations)
-                    self.assertTrue(np.all(da.metadata['irrsig_arr_ann'] ==
-                                           irrsig.array_annotations[
-                                               'irrsig_arr_ann'].magnitude))
+                    nix_ann = da.metadata['irrsig_arr_ann']
+                    neo_ann = irrsig.array_annotations['irrsig_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['irrsig_arr_ann'].unit,
-                                     units_to_string(
-                                         irrsig.array_annotations['irrsig_arr_ann'].units))
+                                     units_to_string(neo_ann.units))
                 for ev in seg.events:
                     da = nix_block.multi_tags[ev.annotations['nix_name']]
                     self.assertIn('ev_arr_ann', da.metadata)
                     self.assertIn('ev_arr_ann', ev.array_annotations)
-                    self.assertTrue(np.all(da.metadata['ev_arr_ann'] ==
-                                           ev.array_annotations[
-                                               'ev_arr_ann'].magnitude))
+                    nix_ann = da.metadata['ev_arr_ann']
+                    neo_ann = ev.array_annotations['ev_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['ev_arr_ann'].unit,
-                                     units_to_string(
-                                         ev.array_annotations['ev_arr_ann'].units))
+                                     units_to_string(neo_ann.units))
                 for ep in seg.epochs:
                     da = nix_block.multi_tags[ep.annotations['nix_name']]
                     self.assertIn('ep_arr_ann', da.metadata)
                     self.assertIn('ep_arr_ann', ep.array_annotations)
-                    self.assertTrue(np.all(da.metadata['ep_arr_ann'] ==
-                                           ep.array_annotations[
-                                               'ep_arr_ann'].magnitude))
+                    nix_ann = da.metadata['ep_arr_ann']
+                    neo_ann = ep.array_annotations['ep_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['ep_arr_ann'].unit,
-                                     units_to_string(
-                                         ep.array_annotations['ep_arr_ann'].units))
+                                     units_to_string(neo_ann.units))
                 for st in seg.spiketrains:
                     da = nix_block.multi_tags[st.annotations['nix_name']]
                     self.assertIn('st_arr_ann', da.metadata)
                     self.assertIn('st_arr_ann', st.array_annotations)
-                    self.assertTrue(np.all(da.metadata['st_arr_ann'] ==
-                                           st.array_annotations[
-                                               'st_arr_ann'].magnitude))
+                    nix_ann = da.metadata['st_arr_ann']
+                    neo_ann = st.array_annotations['st_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['st_arr_ann'].unit,
-                                     units_to_string(
-                                         st.array_annotations['st_arr_ann'].units))
+                                     units_to_string(neo_ann.units))
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
