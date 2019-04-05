@@ -409,8 +409,9 @@ class NixIO(BaseIO):
 
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray)) or (
-                        isinstance(attr_val, pq.Quantity) and attr_val.shape == ()):
+                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
+                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
+                        attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
                         if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
                                 isinstance(attr_val, pq.Quantity) and (
@@ -467,8 +468,9 @@ class NixIO(BaseIO):
 
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray)) or (
-                        isinstance(attr_val, pq.Quantity) and attr_val.shape == ()):
+                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
+                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
+                        attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
                         if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
                                 isinstance(attr_val, pq.Quantity) and (
@@ -512,8 +514,9 @@ class NixIO(BaseIO):
 
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray)) or (
-                        isinstance(attr_val, pq.Quantity) and attr_val.shape == ()):
+                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
+                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
+                        attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
                         if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
                                 isinstance(attr_val, pq.Quantity) and (
@@ -550,8 +553,9 @@ class NixIO(BaseIO):
 
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray)) or (
-                        isinstance(attr_val, pq.Quantity) and attr_val.shape == ()):
+                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
+                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
+                        attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
                         if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
                                 isinstance(attr_val, pq.Quantity) and (
@@ -591,8 +595,9 @@ class NixIO(BaseIO):
 
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray)) or (
-                        isinstance(attr_val, pq.Quantity) and attr_val.shape == ()):
+                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
+                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
+                        attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
                         if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
                                 isinstance(attr_val, pq.Quantity) and (
