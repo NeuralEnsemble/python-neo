@@ -406,23 +406,15 @@ class NixIO(BaseIO):
             sig_length = 1
 
         array_annotations = {}
-
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
                 if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
                     if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
                         attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
-                        if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
-                                isinstance(attr_val, pq.Quantity) and (
-                                attr_val.shape == () or attr_val.shape == (1,)))):
-                            # Array annotations should only be 1-dimensional
-                            continue
-                        if isinstance(attr_val, dict):
-                            # Dictionaries are not supported as array annotations
-                            continue
                         array_annotations[attr_key] = attr_val
-                        del neo_attrs[attr_key]
+        for key in array_annotations:
+            del neo_attrs[key]
 
         neo_signal = AnalogSignal(
             signal=signaldata, sampling_period=sampling_period,
@@ -465,23 +457,15 @@ class NixIO(BaseIO):
             sig_length = 1
 
         array_annotations = {}
-
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
                 if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
                     if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
                         attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
-                        if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
-                                isinstance(attr_val, pq.Quantity) and (
-                                attr_val.shape == () or attr_val.shape == (1,)))):
-                            # Array annotations should only be 1-dimensional
-                            continue
-                        if isinstance(attr_val, dict):
-                            # Dictionaries are not supported as array annotations
-                            continue
                         array_annotations[attr_key] = attr_val
-                        del neo_attrs[attr_key]
+        for key in array_annotations:
+            del neo_attrs[key]
 
         neo_signal = IrregularlySampledSignal(
             signal=signaldata, times=times, array_annotations=array_annotations, **neo_attrs
@@ -511,23 +495,15 @@ class NixIO(BaseIO):
             sig_length = 1
 
         array_annotations = {}
-
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
                 if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
                     if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
                         attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
-                        if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
-                                isinstance(attr_val, pq.Quantity) and (
-                                attr_val.shape == () or attr_val.shape == (1,)))):
-                            # Array annotations should only be 1-dimensional
-                            continue
-                        if isinstance(attr_val, dict):
-                            # Dictionaries are not supported as array annotations
-                            continue
                         array_annotations[attr_key] = attr_val
-                        del neo_attrs[attr_key]
+        for key in array_annotations:
+            del neo_attrs[key]
 
         neo_event = Event(times=times, labels=labels, array_annotations=array_annotations,
                           **neo_attrs)
@@ -550,23 +526,15 @@ class NixIO(BaseIO):
             sig_length = 1
 
         array_annotations = {}
-
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
                 if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
                     if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
                         attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
-                        if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
-                                isinstance(attr_val, pq.Quantity) and (
-                                attr_val.shape == () or attr_val.shape == (1,)))):
-                            # Array annotations should only be 1-dimensional
-                            continue
-                        if isinstance(attr_val, dict):
-                            # Dictionaries are not supported as array annotations
-                            continue
                         array_annotations[attr_key] = attr_val
-                        del neo_attrs[attr_key]
+        for key in array_annotations:
+            del neo_attrs[key]
 
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
@@ -592,23 +560,15 @@ class NixIO(BaseIO):
             sig_length = 1
 
         array_annotations = {}
-
         if sig_length > 1:
             for attr_key, attr_val in neo_attrs.items():
                 if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
                     if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
                         attr_val = attr_val.flatten()
                     if len(attr_val) == sig_length:
-                        if isinstance(attr_val, list) or (isinstance(attr_val, np.ndarray) and not (
-                                isinstance(attr_val, pq.Quantity) and (
-                                attr_val.shape == () or attr_val.shape == (1,)))):
-                            # Array annotations should only be 1-dimensional
-                            continue
-                        if isinstance(attr_val, dict):
-                            # Dictionaries are not supported as array annotations
-                            continue
                         array_annotations[attr_key] = attr_val
-                        del neo_attrs[attr_key]
+        for key in array_annotations:
+            del neo_attrs[key]
 
         neo_spiketrain = SpikeTrain(times=times, array_annotations=array_annotations, **neo_attrs)
         if nix_mtag.features:
