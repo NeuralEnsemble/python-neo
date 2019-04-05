@@ -312,6 +312,22 @@ class NixIOTest(unittest.TestCase):
                 else:
                     self.assertEqual(nixmd[str(k)], v,
                                      "Property value mismatch: {}".format(k))
+        if hasattr(neoobj, 'array_annotations'):
+            if neoobj.array_annotations:
+                nixmd = nixobj.metadata
+                for k, v, in neoobj.array_annotations.items():
+                    if k in ['labels', 'durations']:
+                        continue
+                    if isinstance(v, pq.Quantity):
+                        nixunit = nixmd.props[str(k)].unit
+                        self.assertEqual(nixunit, units_to_string(v.units))
+                        nixvalue = nixmd[str(k)]
+                        if isinstance(nixvalue, Iterable):
+                            nixvalue = np.array(nixvalue)
+                        np.testing.assert_almost_equal(nixvalue, v.magnitude)
+                    else:
+                        self.assertEqual(nixmd[str(k)], v,
+                                         "Property value mismatch: {}".format(k))
 
     @classmethod
     def create_full_nix_file(cls, filename):
@@ -356,11 +372,16 @@ class NixIOTest(unittest.TestCase):
             asig_definition = cls.rsentence(5, 5)
             asig_md = group.metadata.create_section(asig_name,
                                                     asig_name + ".metadata")
+
+            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(10, pq.uV)
+            asig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            asig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+
             for idx in range(3):
                 da_asig = blk.create_data_array(
                     "{}.{}".format(asig_name, idx),
                     "neo.analogsignal",
-                    data=cls.rquant(100, 1)
+                    data=cls.rquant(100, 10)
                 )
                 da_asig.definition = asig_definition
                 da_asig.unit = "mV"
@@ -385,11 +406,14 @@ class NixIOTest(unittest.TestCase):
             isig_md = group.metadata.create_section(isig_name,
                                                     isig_name + ".metadata")
             isig_times = cls.rquant(200, 1, True)
+            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(10, pq.uV)
+            isig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            isig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             for idx in range(10):
                 da_isig = blk.create_data_array(
                     "{}.{}".format(isig_name, idx),
                     "neo.irregularlysampledsignal",
-                    data=cls.rquant(200, 1)
+                    data=cls.rquant(200, 10)
                 )
                 da_isig.definition = isig_definition
                 da_isig.unit = "mV"
@@ -422,6 +446,10 @@ class NixIOTest(unittest.TestCase):
             )
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property("t_stop", times[-1] + 1.0)
+
+            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(40, pq.uV)
+            mtag_st_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            mtag_st_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -469,6 +497,11 @@ class NixIOTest(unittest.TestCase):
             group.multi_tags.append(mtag_ep)
             mtag_ep.definition = cls.rsentence(2)
             mtag_ep.extents = extents_da
+
+            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(5, pq.uV)
+            mtag_ep.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            mtag_ep.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+
             label_dim = mtag_ep.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
             # reference all signals in the group
@@ -494,6 +527,11 @@ class NixIOTest(unittest.TestCase):
             )
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
+
+            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(5, pq.uV)
+            mtag_ev.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            mtag_ev.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+
             label_dim = mtag_ev.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
             # reference all signals in the group
@@ -589,8 +627,10 @@ class NixIOTest(unittest.TestCase):
 
     @classmethod
     def create_all_annotated(cls):
-        times = cls.rquant(1, pq.s)
-        signal = cls.rquant(1, pq.V)
+        times = cls.rquant(10, pq.s)
+        times_ann = {cls.rword(6): cls.rquant(10, pq.ms)}
+        signal = cls.rquant((10, 10), pq.V)
+        signal_ann = {cls.rword(6): cls.rquant(10, pq.uV)}
         blk = Block()
         blk.annotate(**cls.rdict(3))
         cls.populate_dates(blk)
@@ -600,24 +640,24 @@ class NixIOTest(unittest.TestCase):
         cls.populate_dates(seg)
         blk.segments.append(seg)
 
-        asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz)
+        asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz, array_annotations=signal_ann)
         asig.annotate(**cls.rdict(2))
         seg.analogsignals.append(asig)
 
         isig = IrregularlySampledSignal(times=times, signal=signal,
-                                        time_units=pq.s)
+                                        time_units=pq.s, array_annotations=signal_ann)
         isig.annotate(**cls.rdict(2))
         seg.irregularlysampledsignals.append(isig)
 
-        epoch = Epoch(times=times, durations=times)
+        epoch = Epoch(times=times, durations=times, array_annotations=times_ann)
         epoch.annotate(**cls.rdict(4))
         seg.epochs.append(epoch)
 
-        event = Event(times=times)
+        event = Event(times=times, array_annotations=times_ann)
         event.annotate(**cls.rdict(4))
         seg.events.append(event)
 
-        spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s)
+        spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s, array_annotations=times_ann)
         d = cls.rdict(6)
         d["quantity"] = pq.Quantity(10, "mV")
         d["qarray"] = pq.Quantity(range(10), "mA")
