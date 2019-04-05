@@ -325,6 +325,8 @@ class NixIOTest(unittest.TestCase):
                         if isinstance(nixvalue, Iterable):
                             nixvalue = np.array(nixvalue)
                         np.testing.assert_almost_equal(nixvalue, v.magnitude)
+                    if isinstance(v, np.ndarray):
+                        self.assertTrue(np.all(v==nixmd[str(k)]))
                     else:
                         self.assertEqual(nixmd[str(k)], v,
                                          "Property value mismatch: {}".format(k))
@@ -373,15 +375,15 @@ class NixIOTest(unittest.TestCase):
             asig_md = group.metadata.create_section(asig_name,
                                                     asig_name + ".metadata")
 
-            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(10, pq.uV)
+            arr_ann_name, arr_ann_val = 'anasig_arr_ann', cls.rquant(10, pq.uV)
             asig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             asig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
 
-            for idx in range(3):
+            for idx in range(10):
                 da_asig = blk.create_data_array(
                     "{}.{}".format(asig_name, idx),
                     "neo.analogsignal",
-                    data=cls.rquant(100, 10)
+                    data=cls.rquant(100, 1)
                 )
                 da_asig.definition = asig_definition
                 da_asig.unit = "mV"
@@ -406,14 +408,14 @@ class NixIOTest(unittest.TestCase):
             isig_md = group.metadata.create_section(isig_name,
                                                     isig_name + ".metadata")
             isig_times = cls.rquant(200, 1, True)
-            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(10, pq.uV)
+            arr_ann_name, arr_ann_val = 'irrsig_arr_ann', cls.rquant(7, pq.uV)
             isig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             isig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
-            for idx in range(10):
+            for idx in range(7):
                 da_isig = blk.create_data_array(
                     "{}.{}".format(isig_name, idx),
                     "neo.irregularlysampledsignal",
-                    data=cls.rquant(200, 10)
+                    data=cls.rquant(200, 1)
                 )
                 da_isig.definition = isig_definition
                 da_isig.unit = "mV"
@@ -447,7 +449,7 @@ class NixIOTest(unittest.TestCase):
             mtag_st.metadata = mtag_st_md
             mtag_st_md.create_property("t_stop", times[-1] + 1.0)
 
-            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(40, pq.uV)
+            arr_ann_name, arr_ann_val = 'st_arr_ann', cls.rquant(40, pq.uV)
             mtag_st_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_st_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
 
@@ -498,7 +500,7 @@ class NixIOTest(unittest.TestCase):
             mtag_ep.definition = cls.rsentence(2)
             mtag_ep.extents = extents_da
 
-            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(5, pq.uV)
+            arr_ann_name, arr_ann_val = 'ep_arr_ann', cls.rquant(5, pq.uV)
             mtag_ep.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_ep.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
 
@@ -528,7 +530,7 @@ class NixIOTest(unittest.TestCase):
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
 
-            arr_ann_name, arr_ann_val = cls.rword(6), cls.rquant(5, pq.uV)
+            arr_ann_name, arr_ann_val = 'ev_arr_ann', cls.rquant(5, pq.uV)
             mtag_ev.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_ev.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
 
@@ -1400,6 +1402,60 @@ class NixIOReadTest(NixIOTest):
             neoname = nixblock.metadata["neo_name"]
             neoblock = self.io.read_block(neoname=neoname)
             self.assertEqual(neoblock.annotations["nix_name"], nixblock.name)
+
+    def test_array_annotations_read(self):
+        for bl in self.io.read_all_blocks():
+            nix_block = self.nixfile.blocks[bl.annotations['nix_name']]
+            for seg in bl.segments:
+                for anasig in seg.analogsignals:
+                    da = nix_block.data_arrays[anasig.annotations['nix_name']+'.0']
+                    self.assertIn('anasig_arr_ann', da.metadata)
+                    self.assertIn('anasig_arr_ann', anasig.array_annotations)
+                    self.assertTrue(np.all(da.metadata['anasig_arr_ann'] ==
+                                           anasig.array_annotations['anasig_arr_ann'].magnitude))
+                    self.assertEqual(da.metadata.props['anasig_arr_ann'].unit,
+                                     units_to_string(
+                                         anasig.array_annotations['anasig_arr_ann'].units))
+                for irrsig in seg.irregularlysampledsignals:
+                    da = nix_block.data_arrays[irrsig.annotations['nix_name'] + '.0']
+                    self.assertIn('irrsig_arr_ann', da.metadata)
+                    self.assertIn('irrsig_arr_ann', irrsig.array_annotations)
+                    self.assertTrue(np.all(da.metadata['irrsig_arr_ann'] ==
+                                           irrsig.array_annotations[
+                                               'irrsig_arr_ann'].magnitude))
+                    self.assertEqual(da.metadata.props['irrsig_arr_ann'].unit,
+                                     units_to_string(
+                                         irrsig.array_annotations['irrsig_arr_ann'].units))
+                for ev in seg.events:
+                    da = nix_block.multi_tags[ev.annotations['nix_name']]
+                    self.assertIn('ev_arr_ann', da.metadata)
+                    self.assertIn('ev_arr_ann', ev.array_annotations)
+                    self.assertTrue(np.all(da.metadata['ev_arr_ann'] ==
+                                           ev.array_annotations[
+                                               'ev_arr_ann'].magnitude))
+                    self.assertEqual(da.metadata.props['ev_arr_ann'].unit,
+                                     units_to_string(
+                                         ev.array_annotations['ev_arr_ann'].units))
+                for ep in seg.epochs:
+                    da = nix_block.multi_tags[ep.annotations['nix_name']]
+                    self.assertIn('ep_arr_ann', da.metadata)
+                    self.assertIn('ep_arr_ann', ep.array_annotations)
+                    self.assertTrue(np.all(da.metadata['ep_arr_ann'] ==
+                                           ep.array_annotations[
+                                               'ep_arr_ann'].magnitude))
+                    self.assertEqual(da.metadata.props['ep_arr_ann'].unit,
+                                     units_to_string(
+                                         ep.array_annotations['ep_arr_ann'].units))
+                for st in seg.spiketrains:
+                    da = nix_block.multi_tags[st.annotations['nix_name']]
+                    self.assertIn('st_arr_ann', da.metadata)
+                    self.assertIn('st_arr_ann', st.array_annotations)
+                    self.assertTrue(np.all(da.metadata['st_arr_ann'] ==
+                                           st.array_annotations[
+                                               'st_arr_ann'].magnitude))
+                    self.assertEqual(da.metadata.props['st_arr_ann'].unit,
+                                     units_to_string(
+                                         st.array_annotations['st_arr_ann'].units))
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
