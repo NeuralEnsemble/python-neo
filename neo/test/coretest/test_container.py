@@ -101,6 +101,10 @@ class TestContainerNeo(unittest.TestCase):
         container.create_many_to_many_relationship()
         container.create_relationship()
 
+    def test_filter(self):
+        container = Container()
+        self.assertRaises(TypeError, container.filter, "foo")
+
 
 class Test_Container_merge(unittest.TestCase):
     '''
