@@ -8,8 +8,16 @@ object inherit from.  It provides shared methods for all container types.
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+import logging
+from copy import copy
+try:
+    basestring
+except NameError:
+    basestring = str
 
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
+
+logger = logging.getLogger("Neo")
 
 
 def unique_objs(objs):
@@ -404,6 +412,10 @@ class Container(BaseNeo):
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
         """
+
+        if isinstance(targdict, basestring):
+            raise TypeError("filtering is based on key-value pairs. Only a single string was provided.")
+
         # if objects are specified, get the classes
         if objects:
             data = True
@@ -529,6 +541,7 @@ class Container(BaseNeo):
         # merge containers with the same name
         for container in (self._container_child_containers +
                               self._multi_child_containers):
+            logger.debug(container)
             lookup = dict((obj.name, obj) for obj in getattr(self, container))
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):
@@ -548,9 +561,13 @@ class Container(BaseNeo):
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
+                    # duplicate object, skip
                     continue
                 if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                    # mergeable object with the same name as one in self --> merge and add merged object
                     ind = lookup[obj.name]
+                    if container == "epochs":
+                        raise Exception()
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
                         getattr(self, container)[ind] = newobj
@@ -558,9 +575,12 @@ class Container(BaseNeo):
                         getattr(self, container).append(obj)
                         ids.append(id(obj))
                 else:
-                    lookup[obj.name] = obj
-                    ids.append(id(obj))
-                    getattr(self, container).append(obj)
+                    # object not in self, copy and add
+                    new_obj = copy(obj)
+                    setattr(new_obj, _reference_name(self.__class__.__name__), self)
+                    lookup[obj.name] = new_obj
+                    ids.append(id(new_obj))
+                    getattr(self, container).append(new_obj)
 
         # use the BaseNeo merge as well
         super(Container, self).merge(other)
