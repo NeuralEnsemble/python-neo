@@ -49,6 +49,7 @@ except NameError:
     string_types = str
 
 EMPTYANNOTATION = "EMPTYLIST"
+DATETIMEANNOTATION = "DATETIME"
 
 
 def stringify(value):
@@ -1199,7 +1200,8 @@ class NixIO(BaseIO):
                 section.create_property(name, v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section.create_property(name, calculate_timestamp(v))
+            prop = section.create_property(name, calculate_timestamp(v))
+            prop.definition = DATETIMEANNOTATION
         elif isinstance(v, string_types):
             if len(v):
                 section.create_property(name, v)
@@ -1238,8 +1240,7 @@ class NixIO(BaseIO):
                     values.append(item)
             section.create_property(name, values)
             section.props[name].unit = unit
-            if definition:
-                section.props[name].definition = definition
+            section.props[name].definition = definition
         elif type(v).__module__ == "numpy":
             section.create_property(name, v.item())
         else:
@@ -1274,6 +1275,8 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                if prop.definition == DATETIMEANNOTATION:
+                    values = datetime.fromtimestamp(values)
                 neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
 
