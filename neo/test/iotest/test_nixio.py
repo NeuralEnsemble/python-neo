@@ -1330,6 +1330,27 @@ class NixIOWriteTest(NixIOTest):
 
         # TODO: multi dimensional value (GH Issue #501)
 
+    def test_annotation_types(self):
+        annotations = {
+            "somedate": self.rdate(),
+            "somequantity": self.rquant(10, pq.ms),
+            "somestring": self.rsentence(3),
+            "somebytes": bytes(self.rsentence(4), "utf8"),
+            "npfloat": np.float(10),
+            "nparray": np.array([1, 2, 400]),
+            "emptystr": "",
+        }
+        wblock = Block("annotation_block", **annotations)
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="annotation_block")
+        for k in annotations:
+            orig = annotations[k]
+            readval = rblock.annotations[k]
+            if isinstance(orig, np.ndarray):
+                np.testing.assert_almost_equal(orig, readval)
+            else:
+                self.assertEqual(annotations[k], rblock.annotations[k])
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOReadTest(NixIOTest):
