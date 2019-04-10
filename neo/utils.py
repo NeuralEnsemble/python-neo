@@ -368,6 +368,10 @@ def add_epoch(
     --------
     epoch: neo.Epoch
         An Epoch object with the calculated epochs (one per entry in event1).
+
+    See also:
+    ---------
+    Event.to_epoch()
     """
     if event2 is None:
         event2 = event1
