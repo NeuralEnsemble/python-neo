@@ -170,7 +170,7 @@ def _get_from_list(input_list, prop=None):
                 sparse_ep = ep.copy()
             elif isinstance(ep, neo.io.proxyobjects.EpochProxy) \
                     or isinstance(ep, neo.io.proxyobjects.EventProxy):
-                # need to load the event/epoch in order to be able to filter by array annotations
+                # need to load the Event/Epoch in order to be able to filter by array annotations
                 sparse_ep = ep.load()
             for k in prop.keys():
                 sparse_ep = _filter_event_epoch(sparse_ep, k, prop[k])
@@ -335,10 +335,10 @@ def add_epoch(
         segment, event1, event2=None, pre=0 * pq.s, post=0 * pq.s,
         attach_result=True, **kwargs):
     """
-    Create epochs around a single event, or between pairs of events. Starting
-    and end time of the epoch can be modified using pre and post as offsets
+    Create Epochs around a single Event, or between pairs of events. Starting
+    and end time of the Epoch can be modified using pre and post as offsets
     before the and after the event(s). Additional keywords will be directly
-    forwarded to the epoch intialization.
+    forwarded to the Epoch intialization.
 
     Parameters:
     -----------
@@ -347,15 +347,15 @@ def add_epoch(
     event1 : Event
         The Event objects containing the start events of the epochs. If no
         event2 is specified, these event1 also specifies the stop events, i.e.,
-        the epoch is cut around event1 times.
+        the Epoch is cut around event1 times.
     event2: Event
         The Event objects containing the stop events of the epochs. If no
-        event2 is specified, event1 specifies the stop events, i.e., the epoch
+        event2 is specified, event1 specifies the stop events, i.e., the Epoch
         is cut around event1 times. The number of events in event2 must match
         that of event1.
     pre, post: Quantity (time)
         Time offsets to modify the start (pre) and end (post) of the resulting
-        epoch. Example: pre=-10*ms and post=+25*ms will cut from 10 ms before
+        Epoch. Example: pre=-10*ms and post=+25*ms will cut from 10 ms before
         event1 times to 25 ms after event2 times
     attach_result: bool
         If True, the resulting Epoch object is added to segment.
@@ -500,10 +500,10 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
     fulfilling a set of conditions on the Epoch attributes and annotations. The
     original segments are removed from the block.
 
-    A dictionary contains restrictions on which epochs are considered for
+    A dictionary contains restrictions on which Epochs are considered for
     the cutting procedure. To this end, it is possible to
     specify accepted (valid) values of specific annotations on the source
-    epochs.
+    Epochs.
 
     The resulting cut segments may either retain their original time stamps, or
     be shifted to a common starting time.
@@ -570,7 +570,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
 
 def cut_segment_by_epoch(seg, epoch, reset_time=False):
     """
-    Cuts a Segment according to a Epoch object
+    Cuts a Segment according to an Epoch object
 
     The function returns a list of Segments, where each segment corresponds
     to an epoch in the Epoch object and contains the data of the original
@@ -650,8 +650,8 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     t_stop: Quantity
         Stop time of the sliced time window.
     reset_time: bool
-        If True the times stamps of all sliced objects are set to fall
-        in the range from 0 to the duration of the epoch.
+        If True the time stamps of all sliced objects are set to fall
+        in the range from t_start to t_stop.
         If False, original time stamps are retained.
         Default is False.
 
