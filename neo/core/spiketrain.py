@@ -631,7 +631,7 @@ class SpikeTrain(DataObject):
         compatible, an Exception is raised.
         '''
         for other in others:
-            if type(other) not in [SpikeTrain, neo.io.proxyobjects.SpikeTrainProxy]:
+            if not isinstance(other, (SpikeTrain, neo.io.proxyobjects.SpikeTrainProxy)):
                 raise MergeError("Cannot merge, only SpikeTrain and SpikeTrainProxy objects"
                                  "can be merged into a SpikeTrain.")
             if self.sampling_rate != other.sampling_rate:
