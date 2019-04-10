@@ -14,13 +14,13 @@ import quantities as pq
 
 def get_events(container, **properties):
     """
-    This function returns a list of Neo Event objects, corresponding to given
+    This function returns a list of Event objects, corresponding to given
     key-value pairs in the attributes or annotations of the Event.
 
     Parameter:
     ---------
-    container: neo.Block or neo.Segment
-        The Neo Block or Segment object to extract data from.
+    container: Block or Segment
+        The Block or Segment object to extract data from.
 
     Keyword Arguments:
     ------------------
@@ -79,19 +79,19 @@ def get_events(container, **properties):
         return event_lst
     else:
         raise TypeError(
-            'Container needs to be of type neo.Block or neo.Segment, not %s '
+            'Container needs to be of type Block or Segment, not %s '
             'in order to extract Events.' % (type(container)))
 
 
 def get_epochs(container, **properties):
     """
-    This function returns a list of Neo Epoch objects, corresponding to given
+    This function returns a list of Epoch objects, corresponding to given
     key-value pairs in the attributes or annotations of the Epoch.
 
     Parameters:
     -----------
-    container: neo.Block or neo.Segment
-        The Neo Block or Segment object to extract data from.
+    container: Block or Segment
+        The Block or Segment object to extract data from.
 
     Keyword Arguments:
     ------------------
@@ -151,7 +151,7 @@ def get_epochs(container, **properties):
         return epoch_list
     else:
         raise TypeError(
-            'Container needs to be of type neo.Block or neo.Segment, not %s '
+            'Container needs to be of type Block or Segment, not %s '
             'in order to extract Epochs.' % (type(container)))
 
 
@@ -186,14 +186,14 @@ def _filter_event_epoch(obj, annotation_key, annotation_value):
     """
     Internal function.
 
-    This function returns a copy of a neo Event or Epoch object, which only
+    This function returns a copy of a Event or Epoch object, which only
     contains attributes or annotations corresponding to requested key-value
     pairs.
 
     Parameters:
     -----------
-    obj : neo.Event
-        The neo Event or Epoch object to modify.
+    obj : Event
+        The Event or Epoch object to modify.
     annotation_key : string, int or float
         The name of the annotation used to filter.
     annotation_value : string, int, float, list or np.ndarray
@@ -205,7 +205,7 @@ def _filter_event_epoch(obj, annotation_key, annotation_value):
 
     Returns:
     --------
-    obj : neo.Event or neo.Epoch
+    obj : Event or Epoch
         The Event or Epoch object with every event or epoch removed that does
         not match the filter criteria (i.e., where none of the entries in
         annotation_value match the attribute or annotation annotation_key.
@@ -342,14 +342,14 @@ def add_epoch(
 
     Parameters:
     -----------
-    segment : neo.Segment
+    segment : Segment
         The segment in which the final Epoch object is added.
-    event1 : neo.Event
-        The Neo Event objects containing the start events of the epochs. If no
+    event1 : Event
+        The Event objects containing the start events of the epochs. If no
         event2 is specified, these event1 also specifies the stop events, i.e.,
         the epoch is cut around event1 times.
-    event2: neo.Event
-        The Neo Event objects containing the stop events of the epochs. If no
+    event2: Event
+        The Event objects containing the stop events of the epochs. If no
         event2 is specified, event1 specifies the stop events, i.e., the epoch
         is cut around event1 times. The number of events in event2 must match
         that of event1.
@@ -358,15 +358,15 @@ def add_epoch(
         epoch. Example: pre=-10*ms and post=+25*ms will cut from 10 ms before
         event1 times to 25 ms after event2 times
     attach_result: bool
-        If True, the resulting Neo Epoch object is added to segment.
+        If True, the resulting Epoch object is added to segment.
 
     Keyword Arguments:
     ------------------
-    Passed to the Neo Epoch object.
+    Passed to the Epoch object.
 
     Returns:
     --------
-    epoch: neo.Epoch
+    epoch: Epoch
         An Epoch object with the calculated epochs (one per entry in event1).
 
     See also:
@@ -378,7 +378,7 @@ def add_epoch(
 
     if not isinstance(segment, neo.Segment):
         raise TypeError(
-            'Segment has to be of type neo.Segment, not %s' % type(segment))
+            'Segment has to be of type Segment, not %s' % type(segment))
 
     # load the full event if a proxy object has been given as an argument
     if isinstance(event1, neo.io.proxyobjects.EventProxy):
@@ -389,7 +389,7 @@ def add_epoch(
     for event in [event1, event2]:
         if not isinstance(event, neo.Event):
             raise TypeError(
-                'Events have to be of type neo.Event, not %s' % type(event))
+                'Events have to be of type Event, not %s' % type(event))
 
     if len(event1) != len(event2):
         raise ValueError(
@@ -436,12 +436,12 @@ def match_events(event1, event2):
 
     Parameters:
     -----------
-    event1, event2: neo.Event
+    event1, event2: Event
         The two Event objects to match up.
 
     Returns:
     --------
-    event1, event2: neo.Event
+    event1, event2: Event
         Event objects with identical number of events, containing only those
         events that could be matched against each other. A warning is issued if
         not all events in event1 or event2 could be matched.
@@ -493,10 +493,10 @@ def match_events(event1, event2):
 
 def cut_block_by_epochs(block, properties=None, reset_time=False):
     """
-    This function cuts Neo Segments in a Neo Block according to multiple Neo
+    This function cuts Segments in a Block according to multiple Neo
     Epoch objects.
 
-    The function alters the Neo Block by adding one Neo Segment per Epoch entry
+    The function alters the Block by adding one Segment per Epoch entry
     fulfilling a set of conditions on the Epoch attributes and annotations. The
     original segments are removed from the block.
 
@@ -510,7 +510,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
 
     Parameters
     ----------
-    block: Neo Block
+    block: Block
         Contains the Segments to cut according to the Epoch criteria provided
     properties: dictionary
         A dictionary that contains the Epoch keys and values to filter for.
@@ -543,7 +543,7 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
     """
     if not isinstance(block, neo.Block):
         raise TypeError(
-            'block needs to be a neo Block, not %s' % type(block))
+            'block needs to be a Block, not %s' % type(block))
 
     old_segments = copy.copy(block.segments)
     for seg in old_segments:
@@ -570,10 +570,10 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
 
 def cut_segment_by_epoch(seg, epoch, reset_time=False):
     """
-    Cuts a Neo Segment according to a neo Epoch object
+    Cuts a Segment according to a Epoch object
 
-    The function returns a list of neo Segments, where each segment corresponds
-    to an epoch in the neo Epoch object and contains the data of the original
+    The function returns a list of Segments, where each segment corresponds
+    to an epoch in the Epoch object and contains the data of the original
     Segment cut to that particular Epoch.
 
     The resulting segments may either retain their original time stamps,
@@ -581,9 +581,9 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     Parameters
     ----------
-    seg: Neo Segment
+    seg: Segment
         The Segment containing the original uncut data.
-    epoch: Neo Epoch
+    epoch: Epoch
         For each epoch in this input, one segment is generated according to
          the epoch time and duration.
     reset_time: bool
@@ -594,14 +594,14 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     Returns:
     --------
-    segments: list of Neo Segments
-        Per epoch in the input, a neo.Segment with AnalogSignal and/or
+    segments: list of Segments
+        Per epoch in the input, a Segment with AnalogSignal and/or
         SpikeTrain Objects will be generated and returned. Each Segment will
         receive the annotations of the corresponding epoch in the input.
     """
     if not isinstance(seg, neo.Segment):
         raise TypeError(
-            'Seg needs to be of type neo.Segment, not %s' % type(seg))
+            'Seg needs to be of type Segment, not %s' % type(seg))
 
     if type(seg.parents[0]) != neo.Block:
         raise ValueError(
@@ -609,7 +609,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     if not isinstance(epoch, neo.Epoch):
         raise TypeError(
-            'Epoch needs to be of type neo.Epoch, not %s' % type(epoch))
+            'Epoch needs to be of type Epoch, not %s' % type(epoch))
 
     segments = []
     for ep_id in range(len(epoch)):
@@ -638,13 +638,13 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
 def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     """
-    Creates a time slice of a neo Segment containing slices of all child
+    Creates a time slice of a Segment containing slices of all child
     objects.
 
     Parameters:
     -----------
-    seg: neo Segment
-        The neo Segment object to slice.
+    seg: Segment
+        The Segment object to slice.
     t_start: Quantity
         Starting time of the sliced time window.
     t_stop: Quantity
@@ -658,12 +658,12 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     Keyword Arguments:
     ------------------
         Additional keyword arguments used for initialization of the sliced
-        Neo Segment object.
+        Segment object.
 
     Returns:
     --------
-    seg: Neo Segment
-        Temporal slice of the original Neo Segment from t_start to t_stop.
+    seg: Segment
+        Temporal slice of the original Segment from t_start to t_stop.
     """
     subseg = neo.Segment(**kwargs)
 
@@ -729,7 +729,7 @@ def shift_spiketrain(spiketrain, t_shift):
 
     Parameters:
     -----------
-    spiketrain: Neo SpikeTrain
+    spiketrain: SpikeTrain
         Spiketrain of which a copy will be generated with shifted spikes and
         starting and stopping times
     t_shift: Quantity (time)
@@ -737,7 +737,7 @@ def shift_spiketrain(spiketrain, t_shift):
 
     Returns:
     --------
-    spiketrain: Neo SpikeTrain
+    spiketrain: SpikeTrain
         New instance of a SpikeTrain object starting at t_start (the original
         SpikeTrain is not modified).
     """
@@ -755,7 +755,7 @@ def event_time_slice(event, t_start=None, t_stop=None):
 
     Parameters:
     -----------
-    event: Neo Event
+    event: Event
         The Event to slice.
     t_start, t_stop: Quantity (time)
         Time window in which to retain events. An event at time t is retained
@@ -763,7 +763,7 @@ def event_time_slice(event, t_start=None, t_stop=None):
 
     Returns:
     --------
-    event: Neo Event
+    event: Event
         New instance of an Event object containing only the events in the time
         range.
     """
@@ -787,7 +787,7 @@ def epoch_time_slice(epoch, t_start=None, t_stop=None):
 
     Parameters:
     -----------
-    epoch: Neo Epoch
+    epoch: Epoch
         The Epoch to slice.
     t_start, t_stop: Quantity (time)
         Time window in which to retain epochs. An epoch at time t and
@@ -795,7 +795,7 @@ def epoch_time_slice(epoch, t_start=None, t_stop=None):
 
     Returns:
     --------
-    epoch: Neo Epoch
+    epoch: Epoch
         New instance of an Epoch object containing only the epochs in the time
         range.
     """
@@ -818,14 +818,14 @@ def shift_event(ev, t_shift):
 
     Parameters:
     -----------
-    event: Neo Event
+    event: Event
         Event of which a copy will be generated with shifted times
     t_shift: Quantity (time)
         Amount of time by which to shift the Event.
 
     Returns:
     --------
-    epoch: Neo Event
+    epoch: Event
         New instance of an Event object starting at t_shift later than the
         original Event (the original Event is not modified).
     """
@@ -838,14 +838,14 @@ def shift_epoch(epoch, t_shift):
 
     Parameters:
     -----------
-    epoch: Neo Epoch
+    epoch: Epoch
         Epoch of which a copy will be generated with shifted times
     t_shift: Quantity (time)
         Amount of time by which to shift the Epoch.
 
     Returns:
     --------
-    epoch: Neo Epoch
+    epoch: Epoch
         New instance of an Epoch object starting at t_shift later than the
         original Epoch (the original Epoch is not modified).
     """
