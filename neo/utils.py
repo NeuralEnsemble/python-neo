@@ -12,7 +12,7 @@ import numpy as np
 import quantities as pq
 
 
-def get_events(container, properties=None):
+def get_events(container, **properties):
     """
     This function returns a list of Neo Event objects, corresponding to given
     key-value pairs in the attributes or annotations of the Event.
@@ -21,24 +21,26 @@ def get_events(container, properties=None):
     ---------
     container: neo.Block or neo.Segment
         The Neo Block or Segment object to extract data from.
-    properties: dictionary
-        A dictionary that contains the Event keys and values to filter for.
-        Each key of the dictionary is matched to a attribute or an an
-        annotation of Event. The value of each dictionary entry corresponds to
-        a valid entry or a list of valid entries of the attribute or
-        annotation.
 
-        If the value belonging to the key is a list of entries of the same
-        length as the number of events in the Event object, the list entries
-        are matched to the events in the Event object. The resulting Event
-        object contains only those events where the values match up.
+    Keyword Arguments:
+    ------------------
+    The Event properties to filter for.
+    Each property name is matched to an attribute or an
+    (array-)annotation of the Event. The value of property corresponds
+    to a valid entry or a list of valid entries of the attribute or
+    (array-)annotation.
 
-        Otherwise, the value is compared to the attributes or annotation of the
-        Event object as such, and depending on the comparison, either the
-        complete Event object is returned or not.
+    If the value is a list of entries of the same
+    length as the number of events in the Event object, the list entries
+    are matched to the events in the Event object. The resulting Event
+    object contains only those events where the values match up.
 
-        If None or an empty dictionary is passed, all Event Objects will be
-        returned in a list.
+    Otherwise, the value is compared to the attribute or (array-)annotation
+    of the Event object as such, and depending on the comparison, either the
+    complete Event object is returned or not.
+
+    If no keyword arguments is passed, all Event Objects will
+    be returned in a list.
 
     Returns:
     --------
@@ -81,7 +83,7 @@ def get_events(container, properties=None):
             'in order to extract Events.' % (type(container)))
 
 
-def get_epochs(container, properties=None):
+def get_epochs(container, **properties):
     """
     This function returns a list of Neo Epoch objects, corresponding to given
     key-value pairs in the attributes or annotations of the Epoch.
@@ -90,24 +92,26 @@ def get_epochs(container, properties=None):
     -----------
     container: neo.Block or neo.Segment
         The Neo Block or Segment object to extract data from.
-    properties: dictionary
-        A dictionary that contains the Epoch keys and values to filter for.
-        Each key of the dictionary is matched to an attribute or an an
-        annotation of the Event. The value of each dictionary entry corresponds
-        to a valid entry or a list of valid entries of the attribute or
-        annotation.
 
-        If the value belonging to the key is a list of entries of the same
-        length as the number of epochs in the Epoch object, the list entries
-        are matched to the epochs in the Epoch object. The resulting Epoch
-        object contains only those epochs where the values match up.
+    Keyword Arguments:
+    ------------------
+    The Epoch properties to filter for.
+    Each property name is matched to an attribute or an
+    (array-)annotation of the Epoch. The value of property corresponds
+    to a valid entry or a list of valid entries of the attribute or
+    (array-)annotation.
 
-        Otherwise, the value is compared to the attribute or annotation of the
-        Epoch object as such, and depending on the comparison, either the
-        complete Epoch object is returned or not.
+    If the value is a list of entries of the same
+    length as the number of epochs in the Epoch object, the list entries
+    are matched to the epochs in the Epoch object. The resulting Epoch
+    object contains only those epochs where the values match up.
 
-        If None or an empty dictionary is passed, all Epoch Objects will
-        be returned in a list.
+    Otherwise, the value is compared to the attribute or (array-)annotation
+    of the Epoch object as such, and depending on the comparison, either the
+    complete Epoch object is returned or not.
+
+    If no keyword arguments is passed, all Epoch Objects will
+    be returned in a list.
 
     Returns:
     --------

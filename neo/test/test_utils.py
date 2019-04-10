@@ -57,8 +57,8 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         block.segments = [seg, seg2]
 
         # test getting one whole event via annotation
-        extracted_starts1 = get_events(seg, properties={'event_type': 'trial start'})
-        extracted_starts1b = get_events(block, properties={'pick': 'me'})
+        extracted_starts1 = get_events(seg, event_type='trial start')
+        extracted_starts1b = get_events(block, pick='me')
 
         self.assertEqual(len(extracted_starts1), 1)
         self.assertEqual(len(extracted_starts1b), 1)
@@ -70,17 +70,17 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_same_attributes(extracted_starts1b, starts_1)
 
         # test getting an empty list by searching for a non-existent property
-        empty1 = get_events(seg, properties={'foo': 'bar'})
+        empty1 = get_events(seg, foo='bar')
 
         self.assertEqual(len(empty1), 0)
 
         # test getting an empty list by searching for a non-existent property value
-        empty2 = get_events(seg, properties={'event_type': 'undefined'})
+        empty2 = get_events(seg, event_type='undefined')
 
         self.assertEqual(len(empty2), 0)
 
         # test getting only one event time of one event
-        trial_2 = get_events(block, properties={'trial_id': 2, 'event_type': 'trial start'})
+        trial_2 = get_events(block, trial_id=2, event_type='trial start')
 
         self.assertEqual(len(trial_2), 1)
 
@@ -94,7 +94,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trial_2.array_annotations, ArrayDict)
 
         # test getting only one event time of more than one event
-        trial_2b = get_events(block, properties={'trial_id': 2})
+        trial_2b = get_events(block, trial_id=2)
 
         self.assertEqual(len(trial_2b), 2)
 
@@ -115,8 +115,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trial_2b_stop.array_annotations, ArrayDict)
 
         # test getting more than one event time of one event
-        trials_1_2 = get_events(block, properties={'trial_id': [1, 2],
-                                                   'event_type': 'trial start'})
+        trials_1_2 = get_events(block, trial_id=[1, 2], event_type='trial start')
 
         self.assertEqual(len(trials_1_2), 1)
 
@@ -130,7 +129,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trials_1_2.array_annotations, ArrayDict)
 
         # test getting more than one event time of more than one event
-        trials_1_2b = get_events(block, properties={'trial_id': [1, 2]})
+        trials_1_2b = get_events(block, trial_id=[1, 2])
 
         self.assertEqual(len(trials_1_2b), 2)
 
@@ -176,8 +175,8 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         block.segments = [seg, seg2]
 
         # test getting one whole event via annotation
-        extracted_a_1 = get_epochs(seg, properties={'epoch_type': 'a'})
-        extracted_a_1b = get_epochs(block, properties={'pick': 'me'})
+        extracted_a_1 = get_epochs(seg, epoch_type='a')
+        extracted_a_1b = get_epochs(block, pick='me')
 
         self.assertEqual(len(extracted_a_1), 1)
         self.assertEqual(len(extracted_a_1b), 1)
@@ -189,17 +188,17 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_same_attributes(extracted_a_1b, a_1)
 
         # test getting an empty list by searching for a non-existent property
-        empty1 = get_epochs(seg, properties={'foo': 'bar'})
+        empty1 = get_epochs(seg, foo='bar')
 
         self.assertEqual(len(empty1), 0)
 
         # test getting an empty list by searching for a non-existent property value
-        empty2 = get_epochs(seg, properties={'epoch_type': 'undefined'})
+        empty2 = get_epochs(seg, epoch_type='undefined')
 
         self.assertEqual(len(empty2), 0)
 
         # test getting only one event time of one event
-        trial_2 = get_epochs(block, properties={'trial_id': 2, 'epoch_type': 'a'})
+        trial_2 = get_epochs(block, trial_id=2, epoch_type='a')
 
         self.assertEqual(len(trial_2), 1)
 
@@ -213,7 +212,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trial_2.array_annotations, ArrayDict)
 
         # test getting only one event time of more than one event
-        trial_2b = get_epochs(block, properties={'trial_id': 2})
+        trial_2b = get_epochs(block, trial_id=2)
 
         self.assertEqual(len(trial_2b), 2)
 
@@ -232,7 +231,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trial_2b_b.array_annotations, ArrayDict)
 
         # test getting more than one event time of one event
-        trials_1_2 = get_epochs(block, properties={'trial_id': [1, 2], 'epoch_type': 'a'})
+        trials_1_2 = get_epochs(block, trial_id=[1, 2], epoch_type='a')
 
         self.assertEqual(len(trials_1_2), 1)
 
@@ -246,7 +245,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         self.assertIsInstance(trials_1_2.array_annotations, ArrayDict)
 
         # test getting more than one event time of more than one event
-        trials_1_2b = get_epochs(block, properties={'trial_id': [1, 2]})
+        trials_1_2b = get_epochs(block, trial_id=[1, 2])
 
         self.assertEqual(len(trials_1_2b), 2)
 
@@ -455,7 +454,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         seg.events = [starts_1, stops_1, proxy_event]
 
         # test getting multiple events including a proxy
-        extracted_starts = get_events(seg, properties={'event_type': 'trial start'})
+        extracted_starts = get_events(seg, event_type='trial start')
 
         self.assertEqual(len(extracted_starts), 2)
 
@@ -481,7 +480,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
         seg.epochs = [a, b, proxy_epoch]
 
         # test getting multiple epochs including a proxy
-        extracted_epochs = get_epochs(seg, properties={'epoch_type': 'a'})
+        extracted_epochs = get_epochs(seg, epoch_type='a')
 
         self.assertEqual(len(extracted_epochs), 2)
 
