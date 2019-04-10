@@ -49,6 +49,7 @@ except NameError:
     string_types = str
 
 EMPTYANNOTATION = "EMPTYLIST"
+ARRAYANNOTATION = "ARRAYANNOTATION"
 
 
 def stringify(value):
@@ -397,28 +398,9 @@ class NixIO(BaseIO):
         else:
             t_start = create_quantity(timedim.offset, timedim.unit)
 
-        # find annotations with length equal to signal length and turn them into array-annotations
-        try:
-            sig_length = signaldata.shape[-1]
-        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed if __getitem__[int] is changed
-        except IndexError:
-            sig_length = 1
-
-        array_annotations = {}
-        if sig_length > 1:
-            for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
-                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
-                        attr_val = attr_val.flatten()
-                    if len(attr_val) == sig_length:
-                        array_annotations[attr_key] = attr_val
-        for key in array_annotations:
-            del neo_attrs[key]
-
         neo_signal = AnalogSignal(
             signal=signaldata, sampling_period=sampling_period,
-            t_start=t_start, array_annotations=array_annotations, **neo_attrs
+            t_start=t_start, **neo_attrs
         )
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
@@ -448,27 +430,8 @@ class NixIO(BaseIO):
         timedim = self._get_time_dimension(nix_da_group[0])
         times = create_quantity(timedim.ticks, timedim.unit)
 
-        # find annotations with length equal to signal length and turn them into array-annotations
-        try:
-            sig_length = signaldata.shape[-1]
-        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed if __getitem__[int] is changed
-        except IndexError:
-            sig_length = 1
-
-        array_annotations = {}
-        if sig_length > 1:
-            for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
-                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
-                        attr_val = attr_val.flatten()
-                    if len(attr_val) == sig_length:
-                        array_annotations[attr_key] = attr_val
-        for key in array_annotations:
-            del neo_attrs[key]
-
         neo_signal = IrregularlySampledSignal(
-            signal=signaldata, times=times, array_annotations=array_annotations, **neo_attrs
+            signal=signaldata, times=times, **neo_attrs
         )
         self._neo_map[neo_attrs["nix_name"]] = neo_signal
         # all DAs reference the same sources
@@ -486,27 +449,7 @@ class NixIO(BaseIO):
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
                           dtype="S")
 
-        # find annotations with length equal to event length and turn them into array-annotations
-        try:
-            sig_length = times.shape[-1]
-        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed if __getitem__[int] is changed
-        except IndexError:
-            sig_length = 1
-
-        array_annotations = {}
-        if sig_length > 1:
-            for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
-                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
-                        attr_val = attr_val.flatten()
-                    if len(attr_val) == sig_length:
-                        array_annotations[attr_key] = attr_val
-        for key in array_annotations:
-            del neo_attrs[key]
-
-        neo_event = Event(times=times, labels=labels, array_annotations=array_annotations,
-                          **neo_attrs)
+        neo_event = Event(times=times, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_event
         return neo_event
 
@@ -517,32 +460,12 @@ class NixIO(BaseIO):
         durations = create_quantity(nix_mtag.extents,
                                     nix_mtag.extents.unit)
 
-        # find annotations with length equal to event length and turn them into array-annotations
-        try:
-            sig_length = times.shape[-1]
-        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed if __getitem__[int] is changed
-        except IndexError:
-            sig_length = 1
-
-        array_annotations = {}
-        if sig_length > 1:
-            for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
-                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
-                        attr_val = attr_val.flatten()
-                    if len(attr_val) == sig_length:
-                        array_annotations[attr_key] = attr_val
-        for key in array_annotations:
-            del neo_attrs[key]
-
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
                               dtype="S")
         else:
             labels = None
-        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
-                          array_annotations=array_annotations, **neo_attrs)
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
         return neo_epoch
 
@@ -551,26 +474,7 @@ class NixIO(BaseIO):
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
 
-        # find annotations with length equal to event length and turn them into array-annotations
-        try:
-            sig_length = times.shape[-1]
-        # Note: This is because __getitem__[int] returns a scalar Epoch/Event/SpikeTrain
-        # To be removed if __getitem__[int] is changed
-        except IndexError:
-            sig_length = 1
-
-        array_annotations = {}
-        if sig_length > 1:
-            for attr_key, attr_val in neo_attrs.items():
-                if isinstance(attr_val, (list, np.ndarray, pq.Quantity)):
-                    if isinstance(attr_val, (np.ndarray, pq.Quantity)) and attr_val.shape == ():
-                        attr_val = attr_val.flatten()
-                    if len(attr_val) == sig_length:
-                        array_annotations[attr_key] = attr_val
-        for key in array_annotations:
-            del neo_attrs[key]
-
-        neo_spiketrain = SpikeTrain(times=times, array_annotations=array_annotations, **neo_attrs)
+        neo_spiketrain = SpikeTrain(times=times, **neo_attrs)
         if nix_mtag.features:
             wfda = nix_mtag.features[0].data
             wftime = self._get_time_dimension(wfda)
@@ -826,7 +730,8 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
         if anasig.array_annotations:
             for k, v in anasig.array_annotations.items():
-                self._write_property(metadata, k, v)
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -892,7 +797,8 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
         if irsig.array_annotations:
             for k, v in irsig.array_annotations.items():
-                self._write_property(metadata, k, v)
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -943,7 +849,8 @@ class NixIO(BaseIO):
         if event.array_annotations:
             for k, v in event.array_annotations.items():
                 if k != 'labels':
-                    self._write_property(metadata, k, v)
+                    p = self._write_property(metadata, k, v)
+                    p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1009,7 +916,8 @@ class NixIO(BaseIO):
         if epoch.array_annotations:
             for k, v in epoch.array_annotations.items():
                 if k not in ['durations', 'labels']:
-                    self._write_property(metadata, k, v)
+                    p = self._write_property(metadata, k, v)
+                    p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -1066,7 +974,8 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
         if spiketrain.array_annotations:
             for k, v in spiketrain.array_annotations.items():
-                self._write_property(metadata, k, v)
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
@@ -1274,7 +1183,13 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
-                neo_attrs[prop.name] = values
+                if prop.definition == ARRAYANNOTATION:
+                    if 'array_annotations' in neo_attrs:
+                        neo_attrs['array_annotations'][prop.name] = values
+                    else:
+                        neo_attrs['array_annotations'] = {prop.name: values}
+                else:
+                    neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
 
         if "file_datetime" in neo_attrs:

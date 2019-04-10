@@ -378,6 +378,7 @@ class NixIOTest(unittest.TestCase):
             arr_ann_name, arr_ann_val = 'anasig_arr_ann', cls.rquant(10, pq.uV)
             asig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             asig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            asig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
             for idx in range(10):
                 da_asig = blk.create_data_array(
@@ -411,6 +412,7 @@ class NixIOTest(unittest.TestCase):
             arr_ann_name, arr_ann_val = 'irrsig_arr_ann', cls.rquant(7, pq.uV)
             isig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             isig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            isig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
             for idx in range(7):
                 da_isig = blk.create_data_array(
                     "{}.{}".format(isig_name, idx),
@@ -452,6 +454,7 @@ class NixIOTest(unittest.TestCase):
             arr_ann_name, arr_ann_val = 'st_arr_ann', cls.rquant(40, pq.uV)
             mtag_st_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_st_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            mtag_st_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
             waveforms = cls.rquant((10, 8, 5), 1)
             wfname = "{}.waveforms".format(mtag_st.name)
@@ -503,6 +506,7 @@ class NixIOTest(unittest.TestCase):
             arr_ann_name, arr_ann_val = 'ep_arr_ann', cls.rquant(5, pq.uV)
             mtag_ep.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_ep.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            mtag_ep.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
             label_dim = mtag_ep.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
@@ -533,6 +537,7 @@ class NixIOTest(unittest.TestCase):
             arr_ann_name, arr_ann_val = 'ev_arr_ann', cls.rquant(5, pq.uV)
             mtag_ev.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
             mtag_ev.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            mtag_ev.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
             label_dim = mtag_ev.positions.append_set_dimension()
             label_dim.labels = cls.rsentence(5).split(" ")
