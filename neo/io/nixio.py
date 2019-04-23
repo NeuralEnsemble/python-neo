@@ -24,7 +24,11 @@ from __future__ import absolute_import
 
 import time
 from datetime import datetime
-from collections import Iterable, OrderedDict
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
+from collections import OrderedDict
 import itertools
 from uuid import uuid4
 
