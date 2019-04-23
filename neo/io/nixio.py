@@ -591,6 +591,11 @@ class NixIO(BaseIO):
             for k, v in chx.annotations.items():
                 self._write_property(metadata, k, v)
 
+        coordinates = chx.coordinates
+        if coordinates is not None and np.ndim(coordinates) == 1:
+            # support 1D coordinates for single ChannelIndex
+            coordinates = [coordinates]
+
         for idx, channel in enumerate(chx.index):
             channame = "{}.ChannelIndex{}".format(nix_name, idx)
             nixchan = nixsource.create_source(channame, "neo.channelindex")
@@ -606,8 +611,8 @@ class NixIO(BaseIO):
             if len(chx.channel_ids):
                 chanid = chx.channel_ids[idx]
                 chanmd["channel_id"] = chanid
-            if chx.coordinates is not None:
-                coords = chx.coordinates[idx]
+            if coordinates is not None:
+                coords = coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
                 nixcoords = tuple(c.magnitude.item() for c in coords)
                 chanprop = chanmd.create_property("coordinates", nixcoords)
