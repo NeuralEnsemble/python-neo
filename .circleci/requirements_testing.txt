@@ -3,7 +3,8 @@ h5py
 igor
 klusta
 tqdm
-nixio>=1.4.3
+nixio>=1.5.0b2
+axographio>=0.3.1
 matplotlib
 ipython
 https://github.com/nsdf/nsdf/archive/0.1.tar.gz

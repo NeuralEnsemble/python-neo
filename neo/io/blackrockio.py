@@ -6,15 +6,14 @@ from neo.rawio.blackrockrawio import BlackrockRawIO
 
 class BlackrockIO(BlackrockRawIO, BaseFromRaw):
     """
-    This IO reads .nev/.nsX files of the Blackrock
-    (Cerebus) recording system.
+    Supplementary class for reading BlackRock data using only a single nsx file.
     """
-    name = 'Blackrock IO'
-    description = "This IO reads .nev/.nsX files of the Blackrock " + \
-                  "(Cerebus) recording system."
+    name = 'Blackrock IO for single nsx'
+    description = "This IO reads a pair of corresponding nev and nsX files of the Blackrock " \
+                  "" + "(Cerebus) recording system."
 
-    _prefered_signal_group_mode = 'split-all'
+    _prefered_signal_group_mode = 'group-by-same-units'
 
-    def __init__(self, filename, nsx_to_load=None, **kargs):
-        BlackrockRawIO.__init__(self, filename=filename, nsx_to_load=nsx_to_load, **kargs)
+    def __init__(self, filename, **kargs):
+        BlackrockRawIO.__init__(self, filename=filename, **kargs)
         BaseFromRaw.__init__(self, filename)

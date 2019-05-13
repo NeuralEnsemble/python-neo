@@ -248,18 +248,21 @@ To build a source package::
 
     $ python setup.py sdist
 
-To upload the package to `PyPI`_ (currently Samuel Garcia and Andrew Davison
-have the necessary permissions to do this)::
 
-    $ python setup.py sdist upload
-    $ python setup.py upload_docs --upload-dir=doc/build/html
-
-.. talk about readthedocs
-
-Finally, tag the release in the Git repository and push it::
+Tag the release in the Git repository and push it::
 
     $ git tag <version>
     $ git push --tags origin
+    $ git push --tags upstream
+
+
+To upload the package to `PyPI`_ (currently Samuel Garcia,  Andrew Davison,
+Michael Denker and Julia Sprenger have the necessary permissions to do this)::
+
+    $ twine upload dist/neo-0.X.Y.tar.gz
+
+.. talk about readthedocs
+
     
 
 .. make a release branch

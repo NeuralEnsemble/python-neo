@@ -1,0 +1,41 @@
+=======================
+Neo 0.7.0 release notes
+=======================
+
+26th November 2018
+
+
+Main added features:
+  * array annotations
+
+Other features:
+  * `Event.to_epoch()`
+  * Change the behaviour of `SpikeTrain.__add__` and `SpikeTrain.__sub__`
+  * bug fix for `Epoch.time_slice()`
+
+New IO classes:
+  * RawMCSRawIO (raw multi channel system file format)
+  * OpenEphys format
+  * Intanrawio (both RHD and RHS)
+  * AxographIO
+
+Many bug fixes and improvements in IO:
+  * AxonIO
+  * WinWCPIO
+  * NixIO
+  * ElphyIO
+  * Spike2IO
+  * NeoMatlab
+  * NeuralynxIO
+  * BlackrockIO (V2.3)
+  * NixIO (rewritten)
+
+Removed:
+  * PyNNIO
+
+(Full `list of closed issues`_)
+
+Thanks to Achilleas Koutsou, Andrew Davison, Björn Müller, Chadwick Boulay, erikli, Jeffrey Gill, Julia Sprenger, Lucas (lkoelman), 
+Mark Histed, Michael Denker, Mike Sintsov, Samuel Garcia, Scott W Harden and William Hart for their contributions to this release.
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.7.0+is%3Aclosed

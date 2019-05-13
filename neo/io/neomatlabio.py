@@ -30,9 +30,9 @@ except ImportError as err:
 else:
     if version.LooseVersion(scipy.version.version) < '0.12.0':
         HAVE_SCIPY = False
-        SCIPY_ERR = ImportError("your scipy version is too old to support " +
-                                "MatlabIO, you need at least 0.12.0. " +
-                                "You have %s" % scipy.version.version)
+        SCIPY_ERR = ImportError("your scipy version is too old to support "
+                                + "MatlabIO, you need at least 0.12.0. "
+                                + "You have %s" % scipy.version.version)
     else:
         HAVE_SCIPY = True
         SCIPY_ERR = None
@@ -149,7 +149,8 @@ class NeoMatlabIO(BaseIO):
                 seg = neo.Segment(name='segment' + str(s))
                 bl.segments.append(seg)
                 for a in range(5):
-                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s, sampling_rate=100*pq.Hz)
+                    anasig = neo.AnalogSignal(rand(100)*pq.mV, t_start=0*pq.s,
+                                              sampling_rate=100*pq.Hz)
                     seg.analogsignals.append(anasig)
                 for t in range(7):
                     sptr = neo.SpikeTrain(rand(40)*pq.ms, t_start=0*pq.ms, t_stop=10*pq.ms)
@@ -225,7 +226,7 @@ class NeoMatlabIO(BaseIO):
 
         d = scipy.io.loadmat(self.filename, struct_as_record=False,
                              squeeze_me=True, mat_dtype=True)
-        if not 'block' in d:
+        if 'block' not in d:
             self.logger.exception('No block in ' + self.filename)
             return None
 
@@ -284,8 +285,7 @@ class NeoMatlabIO(BaseIO):
             # ~ struct['units'] = ob.dimensionality.string
             # ~ continue
 
-            if (hasattr(ob, '_quantity_attr') and
-                        ob._quantity_attr == attrname):
+            if (hasattr(ob, '_quantity_attr') and ob._quantity_attr == attrname):
                 struct[attrname] = ob.magnitude
                 struct[attrname + '_units'] = ob.dimensionality.string
                 continue
@@ -327,6 +327,12 @@ class NeoMatlabIO(BaseIO):
             if "sampling_rate" in (at[0] for at in cl._necessary_attrs):
                 # put fake value for now, put correct value later
                 data_complement["sampling_rate"] = 0 * pq.kHz
+            try:
+                len(arr)
+            except TypeError:
+                # strange scipy.io behavior: if len is 1 we get a float
+                arr = np.array(arr)
+                arr = arr.reshape((-1,))  # new view with one dimension
             if "t_stop" in (at[0] for at in cl._necessary_attrs):
                 if len(arr) > 0:
                     data_complement["t_stop"] = arr.max()
@@ -345,26 +351,29 @@ class NeoMatlabIO(BaseIO):
         for attrname in struct._fieldnames:
             # check children
             if attrname in getattr(ob, '_single_child_containers', []):
+                child_struct = getattr(struct, attrname)
                 try:
-                    for c in range(len(getattr(struct, attrname))):
-                        child = self.create_ob_from_struct(
-                            getattr(struct, attrname)[c],
-                            classname_lower_to_upper[attrname[:-1]])
-                        getattr(ob, attrname.lower()).append(child)
+                    # try must only surround len() or other errors are captured
+                    child_len = len(child_struct)
                 except TypeError:
                     # strange scipy.io behavior: if len is 1 there is no len()
                     child = self.create_ob_from_struct(
-                        getattr(struct, attrname),
+                        child_struct,
                         classname_lower_to_upper[attrname[:-1]])
                     getattr(ob, attrname.lower()).append(child)
+                else:
+                    for c in range(child_len):
+                        child = self.create_ob_from_struct(
+                            child_struct[c],
+                            classname_lower_to_upper[attrname[:-1]])
+                        getattr(ob, attrname.lower()).append(child)
                 continue
 
             # attributes
             if attrname.endswith('_units') or attrname == 'units':
                 # linked with another field
                 continue
-            if (hasattr(cl, '_quantity_attr') and
-                        cl._quantity_attr == attrname):
+            if (hasattr(cl, '_quantity_attr') and cl._quantity_attr == attrname):
                 continue
 
             item = getattr(struct, attrname)
@@ -374,7 +383,7 @@ class NeoMatlabIO(BaseIO):
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:
-                    m = '(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
+                    m = r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+).(\d+)'
                     r = re.findall(m, str(item))
                     if len(r) == 1:
                         item = datetime(*[int(e) for e in r[0]])

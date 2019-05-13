@@ -1,2 +1,6 @@
 pycodestyle:
     max-line-length: 99  # Default is 79 in PEP8
+    ignore:
+      - W503 # Change in PEP8, this warning is replaced by W504
+      - E127
+      - E128

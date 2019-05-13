@@ -24,7 +24,7 @@ from __future__ import absolute_import
 
 import time
 from datetime import datetime
-from collections import Iterable
+from collections import Iterable, OrderedDict
 import itertools
 from uuid import uuid4
 
@@ -124,7 +124,7 @@ class NixIO(BaseIO):
             raise ValueError("Invalid mode specified '{}'. "
                              "Valid modes: 'ro' (ReadOnly)', 'rw' (ReadWrite),"
                              " 'ow' (Overwrite).".format(mode))
-        self.nix_file = nix.File.open(self.filename, filemode, backend="h5py")
+        self.nix_file = nix.File.open(self.filename, filemode)
 
         if self.nix_file.mode == nix.FileMode.ReadOnly:
             self._file_version = '0.5.2'
@@ -150,13 +150,18 @@ class NixIO(BaseIO):
         self._ref_map = dict()
         self._signal_map = dict()
 
+        # _names_ok is used to guard against name check duplication
+        self._names_ok = False
+
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.close()
 
-    def read_all_blocks(self):
+    def read_all_blocks(self, lazy=False):
+        if lazy:
+            raise Exception("Lazy loading is not supported for NixIO")
         return list(self._nix_to_neo_block(blk)
                     for blk in self.nix_file.blocks)
 
@@ -186,7 +191,9 @@ class NixIO(BaseIO):
         :param nixname: The name of the Block in NIX
         :param neoname: The name of the original Neo Block
         """
-        assert not lazy, "Lazy loading not supported"
+        if lazy:
+            raise Exception("Lazy loading is not supported for NixIO")
+
         nix_block = None
         if index is not None:
             nix_block = self.nix_file.blocks[index]
@@ -195,7 +202,7 @@ class NixIO(BaseIO):
         elif neoname is not None:
             for blk in self.nix_file.blocks:
                 if ("neo_name" in blk.metadata
-                    and blk.metadata["neo_name"] == neoname):
+                        and blk.metadata["neo_name"] == neoname):
                     nix_block = blk
                     break
             else:
@@ -207,9 +214,8 @@ class NixIO(BaseIO):
             if index >= len(self.nix_file.blocks):
                 return None
             nix_block = self.nix_file.blocks[index]
+            self._block_read_counter += 1
 
-        nix_block = self.nix_file.blocks[self._block_read_counter]
-        self._block_read_counter += 1
         return self._nix_to_neo_block(nix_block)
 
     def iter_blocks(self):
@@ -370,7 +376,6 @@ class NixIO(BaseIO):
         :param nix_da_group: a list of NIX DataArray objects
         :return: a Neo AnalogSignal object
         """
-        nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
         neo_attrs["nix_name"] = metadata.name  # use the common base name
@@ -414,7 +419,6 @@ class NixIO(BaseIO):
         :param nix_da_group: a list of NIX DataArray objects
         :return: a Neo IrregularlySampledSignal object
         """
-        nix_da_group = sorted(nix_da_group, key=lambda d: d.name)
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
         metadata = nix_da_group[0].metadata
         neo_attrs["nix_name"] = metadata.name  # use the common base name
@@ -452,8 +456,11 @@ class NixIO(BaseIO):
         times = create_quantity(nix_mtag.positions, time_unit)
         durations = create_quantity(nix_mtag.extents,
                                     nix_mtag.extents.unit)
-        labels = np.array(nix_mtag.positions.dimensions[0].labels,
-                          dtype="S")
+        if len(nix_mtag.positions.dimensions[0].labels) > 0:
+            labels = np.array(nix_mtag.positions.dimensions[0].labels,
+                              dtype="S")
+        else:
+            labels = None
         neo_epoch = Epoch(times=times, durations=durations, labels=labels,
                           **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
@@ -486,23 +493,37 @@ class NixIO(BaseIO):
             self._ref_map[n].append(neo_spiketrain)
         return neo_spiketrain
 
-    def write_all_blocks(self, neo_blocks):
+    def write_all_blocks(self, neo_blocks, use_obj_names=False):
         """
         Convert all ``neo_blocks`` to the NIX equivalent and write them to the
         file.
 
         :param neo_blocks: List (or iterable) containing Neo blocks
+        :param use_obj_names: If True, will not generate unique object names
+        but will instead try to use the name of each Neo object. If these are
+        not unique, an exception will be raised.
         """
+        if use_obj_names:
+            self._use_obj_names(neo_blocks)
+            self._names_ok = True
         for bl in neo_blocks:
-            self.write_block(bl)
+            self.write_block(bl, use_obj_names)
 
-    def write_block(self, block):
+    def write_block(self, block, use_obj_names=False):
         """
         Convert the provided Neo Block to a NIX Block and write it to
         the NIX file.
 
         :param block: Neo Block to be written
+        :param use_obj_names: If True, will not generate unique object names
+        but will instead try to use the name of each Neo object. If these are
+        not unique, an exception will be raised.
         """
+        if use_obj_names:
+            if not self._names_ok:
+                # _names_ok guards against check duplication
+                # If it's False, it means write_block() was called directly
+                self._use_obj_names([block])
         if "nix_name" in block.annotations:
             nix_name = block.annotations["nix_name"]
         else:
@@ -527,7 +548,8 @@ class NixIO(BaseIO):
                 calculate_timestamp(block.rec_datetime)
             )
         if block.file_datetime:
-            metadata["file_datetime"] = block.file_datetime
+            fdt = calculate_timestamp(block.file_datetime)
+            metadata["file_datetime"] = fdt
         if block.annotations:
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
@@ -577,18 +599,17 @@ class NixIO(BaseIO):
             )
             nixchan.definition = nixsource.definition
             chanmd = nixchan.metadata
-            chanmd["index"] = nix.Value(int(channel))
+            chanmd["index"] = int(channel)
             if len(chx.channel_names):
                 neochanname = stringify(chx.channel_names[idx])
-                chanmd["neo_name"] = nix.Value(neochanname)
+                chanmd["neo_name"] = neochanname
             if len(chx.channel_ids):
                 chanid = chx.channel_ids[idx]
-                chanmd["channel_id"] = nix.Value(chanid)
+                chanmd["channel_id"] = chanid
             if chx.coordinates is not None:
                 coords = chx.coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
-                nixcoords = tuple(nix.Value(c.magnitude.item())
-                                  for c in coords)
+                nixcoords = tuple(c.magnitude.item() for c in coords)
                 chanprop = chanmd.create_property("coordinates", nixcoords)
                 chanprop.unit = coordunits
 
@@ -623,7 +644,8 @@ class NixIO(BaseIO):
                 calculate_timestamp(segment.rec_datetime)
             )
         if segment.file_datetime:
-            metadata["file_datetime"] = segment.file_datetime
+            fdt = calculate_timestamp(segment.file_datetime)
+            metadata["file_datetime"] = fdt
         if segment.annotations:
             for k, v in segment.annotations.items():
                 self._write_property(metadata, k, v)
@@ -1014,11 +1036,13 @@ class NixIO(BaseIO):
         for chx in neoblock.channel_indexes:
             signames = []
             for asig in chx.analogsignals:
-                if "nix_name" not in asig.annotations:
+                if not ("nix_name" in asig.annotations and
+                        asig.annotations["nix_name"] in self._signal_map):
                     self._write_analogsignal(asig, nixblock, None)
                 signames.append(asig.annotations["nix_name"])
             for isig in chx.irregularlysampledsignals:
-                if "nix_name" not in isig.annotations:
+                if not ("nix_name" in isig.annotations and
+                        isig.annotations["nix_name"] in self._signal_map):
                     self._write_irregularlysampledsignal(isig, nixblock, None)
                 signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
@@ -1029,7 +1053,8 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    if "nix_name" not in st.annotations:
+                    if not ("nix_name" in st.annotations and
+                            st.annotations["nix_name"] in nixblock.multi_tags):
                         self._write_spiketrain(st, nixblock, None)
                     stmt = nixblock.multi_tags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
@@ -1052,26 +1077,28 @@ class NixIO(BaseIO):
 
         if isinstance(v, pq.Quantity):
             if len(v.shape):
-                section[name] = list(nix.Value(vv) for vv in v.magnitude)
+                section.create_property(name, tuple(v.magnitude))
             else:
-                section[name] = nix.Value(v.magnitude.item())
+                section.create_property(name, v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section[name] = nix.Value(calculate_timestamp(v))
+            section.create_property(name, calculate_timestamp(v))
         elif isinstance(v, string_types):
-            section[name] = nix.Value(v)
+            if len(v):
+                section.create_property(name, v)
+            else:
+                section.create_property(name, nix.DataType.String)
         elif isinstance(v, bytes):
-            section[name] = nix.Value(v.decode())
+            section.create_property(name, v.decode())
         elif isinstance(v, Iterable):
             values = []
             unit = None
             definition = None
             if len(v) == 0:
-                # empty list can't be saved in NIX property
-                # but we can store an empty string and use the
-                # definition to signify that it should be restored
-                # as an iterable (list)
-                values = ""
+                # NIX supports empty properties but dtype must be specified
+                # Defaulting to String and using definition to signify empty
+                # iterable as opposed to empty string
+                values = nix.DataType.String
                 definition = EMPTYANNOTATION
             elif hasattr(v, "ndim") and v.ndim == 0:
                 values = v.item()
@@ -1080,26 +1107,26 @@ class NixIO(BaseIO):
             else:
                 for item in v:
                     if isinstance(item, string_types):
-                        item = nix.Value(item)
+                        item = item
                     elif isinstance(item, pq.Quantity):
                         unit = str(item.dimensionality)
-                        item = nix.Value(item.magnitude.item())
+                        item = item.magnitude.item()
                     elif isinstance(item, Iterable):
                         self.logger.warn("Multidimensional arrays and nested "
                                          "containers are not currently "
                                          "supported when writing to NIX.")
                         return None
                     else:
-                        item = nix.Value(item)
+                        item = item
                     values.append(item)
-            section[name] = values
+            section.create_property(name, values)
             section.props[name].unit = unit
             if definition:
                 section.props[name].definition = definition
         elif type(v).__module__ == "numpy":
-            section[name] = nix.Value(v.item())
+            section.create_property(name, v.item())
         else:
-            section[name] = nix.Value(v)
+            section.create_property(name, v)
         return section.props[name]
 
     @staticmethod
@@ -1118,15 +1145,20 @@ class NixIO(BaseIO):
         neo_attrs["nix_name"] = nix_obj.name
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
-            for prop in nix_obj.metadata.props:
-                values = list(v.value for v in prop.values)
+            for prop in nix_obj.metadata.inherited_properties():
+                values = prop.values
                 if prop.unit:
                     units = prop.unit
                     values = create_quantity(values, units)
-                if len(values) == 1:
+                if not len(values):
+                    if prop.definition == EMPTYANNOTATION:
+                        values = list()
+                    elif prop.data_type == nix.DataType.String:
+                        values = ""
+                elif len(values) == 1:
                     values = values[0]
-                if values == "" and prop.definition == EMPTYANNOTATION:
-                    values = list()
+                else:
+                    values = list(values)
                 neo_attrs[prop.name] = values
         neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
 
@@ -1147,11 +1179,8 @@ class NixIO(BaseIO):
         :return: A dictionary mapping a base name to a list of DataArrays which
         belong to the same Signal
         """
-        # first sort by name
-        dataarrays = sorted(dataarrays, key=lambda x: x.name)
-
         # now start grouping
-        groups = dict()
+        groups = OrderedDict()
         for da in dataarrays:
             basename = ".".join(da.name.split(".")[:-1])
             if basename not in groups:
@@ -1166,6 +1195,87 @@ class NixIO(BaseIO):
             if hasattr(dim, "label") and dim.label == "time":
                 return dim
         return None
+
+    def _use_obj_names(self, blocks):
+
+        errmsg = "use_obj_names enabled: found conflict or anonymous object"
+
+        allobjs = []
+
+        def check_unique(objs):
+            names = list(o.name for o in objs)
+            if None in names or "" in names:
+                raise ValueError(names)
+            if len(names) != len(set(names)):
+                self._names_ok = False
+                raise ValueError(names)
+            # collect objs if ok
+            allobjs.extend(objs)
+
+        try:
+            check_unique(blocks)
+        except ValueError as ve:
+            raise ValueError("{} in Blocks {}".format(errmsg, ve))
+
+        for blk in blocks:
+            try:
+                # Segments
+                check_unique(blk.segments)
+            except ValueError as ve:
+                raise ValueError("{} at Block '{}' > segments > "
+                                 "{}".format(errmsg, blk.name, ve))
+
+            # collect all signals in all segments
+            signals = []
+            # collect all events, epochs, and spiketrains in all segments
+            eests = []
+            for seg in blk.segments:
+                signals.extend(seg.analogsignals)
+                signals.extend(seg.irregularlysampledsignals)
+                eests.extend(seg.events)
+                eests.extend(seg.epochs)
+                eests.extend(seg.spiketrains)
+
+            try:
+                # AnalogSignals and IrregularlySampledSignals
+                check_unique(signals)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in Signal names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            try:
+                # Events, Epochs, and SpikeTrains
+                check_unique(eests)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in Event, Epoch, and Spiketrain names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            try:
+                # ChannelIndexes
+                check_unique(blk.channel_indexes)
+            except ValueError as ve:
+                raise ValueError(
+                    "{} in ChannelIndex names "
+                    "of Block '{}' {}".format(errmsg, blk.name, ve)
+                )
+
+            for chx in blk.channel_indexes:
+                try:
+                    check_unique(chx.units)
+                except ValueError as ve:
+                    raise ValueError(
+                        "{} in Unit names of Block "
+                        "'{}' > ChannelIndex '{}' {}".format(errmsg, blk.name,
+                                                             chx.name, ve)
+                    )
+
+        # names are OK: assign annotations
+        for o in allobjs:
+            o.annotations["nix_name"] = o.name
 
     def close(self):
         """

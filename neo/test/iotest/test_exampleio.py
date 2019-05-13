@@ -10,6 +10,9 @@ import unittest
 
 from neo.io.exampleio import ExampleIO  # , HAVE_SCIPY
 from neo.test.iotest.common_io_test import BaseTestIO
+from neo.io.proxyobjects import (AnalogSignalProxy,
+                SpikeTrainProxy, EventProxy, EpochProxy)
+from neo import (AnalogSignal, SpikeTrain)
 
 import quantities as pq
 import numpy as np
@@ -31,16 +34,20 @@ class Specific_TestExampleIO(unittest.TestCase):
         r = ExampleIO(filename=None)
         seg = r.read_segment(lazy=True)
         for ana in seg.analogsignals:
-            self.assertEqual(ana.size, 0)
-            assert hasattr(ana, 'lazy_shape')
+            assert isinstance(ana, AnalogSignalProxy)
+            ana = ana.load()
+            assert isinstance(ana, AnalogSignal)
         for st in seg.spiketrains:
-            self.assertEqual(st.size, 0)
-            assert hasattr(st, 'lazy_shape')
+            assert isinstance(st, SpikeTrainProxy)
+            st = st.load()
+            assert isinstance(st, SpikeTrain)
 
         seg = r.read_segment(lazy=False)
         for anasig in seg.analogsignals:
+            assert isinstance(ana, AnalogSignal)
             self.assertNotEqual(anasig.size, 0)
         for st in seg.spiketrains:
+            assert isinstance(st, SpikeTrain)
             self.assertNotEqual(st.size, 0)
 
         # annotations
