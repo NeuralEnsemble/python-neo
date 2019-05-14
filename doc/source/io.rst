@@ -108,27 +108,88 @@ All IOs have a read() method that returns a list of :class:`Block` objects (repr
     >>> print bl[0].segments[0]
     neo.core.Segment
 
+    
+Read a time slice of Segment
+============================
 
-Lazy option (deprecated)
-========================
+Some object support ``time_slice`` arguments in ``read_segment()``.
+This is usefull to read only a subset of a dataset clipped in time.
+By default  ``time_slice=None`` meaning load eveything.
+
+This read everything::
+
+    seg = reader.load_segment(time_slice=None)
+    shape0 = seg.analogsignals[0].shape # total shape
+    shape1 = seg.spiketrains[0].shape  # total shape
+
+    
+This read only the first 5 seconds::
+
+    seg = reader.load_segment(time_slice=(0*pq.s, 5.*pq.s))
+    shape0 = seg.analogsignals[0].shape # more small shape
+    shape1 = seg.spiketrains[0].shape  # more small shape
+
+
+Lazy option and proxy object
+============================
 
 In some cases you may not want to load everything in memory because it could be too big.
-For this scenario, some IOs implement ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero,
-but all the metadata will be loaded. The *lazy_shape* attribute is added to all array-like objects
-(AnalogSignal, IrregularlySampledSignal, SpikeTrain, Epoch, Event).
-In this case, *lazy_shape* is a tuple that has the same value as *shape* with ``lazy=False``.
+For this scenario, some IOs implement ``lazy=True/False``. 
+Since neo 0.7, a new lazy sytem have been added for some IOs (all IOs that inherits rawio).
 To know if a class supports lazy mode use ``ClassIO.support_lazy``.
+
+With ``lazy=True`` all data object (AnalogSignal/SpikeTrain/Event/Epoch) are replace by 
+ProxyObjects (AnalogSignalProxy/SpikeTrainProxy/EventProxy/EpochProxy).
+
+
 By default (if not specified), ``lazy=False``, i.e. all data is loaded.
-The lazy option will be removed in future Neo versions. Similar functionality will be
-implemented using proxy objects.
 
-Example of lazy loading::
+Theses ProxyObjects contain metadata (name, sampling_rate, id, ...) so they can be inspected
+but they do not contain any array-like data.
+All ProxyObjects contain a ``load()`` method to postpone the real load of array like data.
 
-    >>> seg = reader.read_segment(lazy=False)
-    >>> print(seg.analogsignals[0].shape)  # this is (N, M)
-    >>> seg = reader.read_segment(lazy=True)
-    >>> print(seg.analogsignals[0].shape)  # this is 0, the AnalogSignal is empty
-    >>> print(seg.analogsignals[0].lazy_shape)  # this is (N, M)
+Further more the  ``load()`` method have a ``time_slice`` arguments to load only a slice
+from the file. So the consumption of memory can be finely controlled. 
+
+
+Here 2 examples that do read a dataset,  load triggers a do trigger averaging on signals.
+
+The first example is without lazy, so it consume more memory::
+    
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=False)
+    triggers = seg.events[0]
+    anasig = seg.analogsignals[0]  # here anasig contain the whole recording in memory
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        anasig_chunk = anasig.time_slice(t0, t1)
+        all_sig_chunks.append(anasig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
+    
+The second example use lazy so it consume fewer memory::
+
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=True)
+    triggers = seg.events[0].load(time_slice=None)  # this load all trigers in memory
+    anasigproxy = seg.analogsignals[0]  # this is a proxy
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        anasig_chunk = anasigproxy.load(time_slice=(t0, t1))  # here real data are loaded
+        all_sig_chunks.append(anasig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
+
+In addition to ``time_slice`` AnalogSignalProxy contains ``channel_indexes`` arguments.
+This control also slicing in channel. This is usefull in case the channel count is very high.
+
+ .. TODO: add something about magnitude mode when implemented for all objects.
+
+In this example, we read only 3 selected channels::
+
+    seg = reader.read_segment(lazy=True)
+    anasig = seg.analogsignals[0].load(time_slice=None, channel_indexes=[0, 2, 18])
+
 
 .. _neo_io_API:
 
@@ -142,7 +203,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
-    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
+    - some IO are able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports.
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 

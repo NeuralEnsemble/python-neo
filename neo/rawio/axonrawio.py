@@ -182,7 +182,7 @@ class AxonRawIO(BaseRawIO):
                     elif info['nTelegraphEnable'][chan_id] == 1:
                         gain /= info['fTelegraphAdditGain'][chan_id]
                     else:
-                        logger.warning('ignoring buggy nTelegraphEnable')
+                        self.logger.warning('ignoring buggy nTelegraphEnable')
                     offset = info['fInstrumentOffset'][chan_id]
                     offset -= info['fSignalOffset'][chan_id]
                 elif version >= 2.:

@@ -94,10 +94,6 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(seg.spiketrains), 2)
 
         # Testing different parameter combinations
-        block = nio.read_block(lazy=True)
-        self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
-        self.assertEqual(len(block.segments[0].spiketrains[0]), 0)
-
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 2)
@@ -125,10 +121,6 @@ class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(seg.spiketrains), 2)
 
         # Testing different parameter combinations
-        seg = nio.read_segment(seg_index=0, lazy=True)
-        self.assertEqual(seg.analogsignals[0].size, 0)
-        self.assertEqual(seg.spiketrains[0].size, 0)
-
         seg = nio.read_segment(seg_index=0, load_waveforms=True)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.spiketrains), 2)
@@ -156,10 +148,6 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
             self.assertEqual(len(seg.spiketrains), 8)
 
         # Testing different parameter combinations
-        block = nio.read_block(lazy=True)
-        self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
-        self.assertEqual(len(block.segments[0].spiketrains[0]), 0)
-
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 8)
@@ -190,10 +178,6 @@ class TestCheetah_v563(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(seg.spiketrains), 2)
 
         # Testing different parameter combinations
-        seg = nio.read_segment(seg_index=0, lazy=True)
-        self.assertEqual(seg.analogsignals[0].size, 0)
-        self.assertEqual(seg.spiketrains[0].size, 0)
-
         seg = nio.read_segment(seg_index=0, load_waveforms=True)
         self.assertEqual(len(seg.analogsignals), 1)
         self.assertEqual(len(seg.spiketrains), 2)
@@ -220,9 +204,6 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(seg.spiketrains), 0)  # no nse files available
 
         # Testing different parameter combinations
-        block = nio.read_block(lazy=True)
-        self.assertEqual(len(block.segments[0].analogsignals[0]), 0)
-
         block = nio.read_block(load_waveforms=True)
         self.assertEqual(len(block.segments[0].analogsignals), 1)
         self.assertEqual(len(block.segments[0].spiketrains), 0)
