@@ -82,6 +82,8 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         if labels is None:
             labels = np.array([], dtype='S')
+        elif len(labels) != times.size:
+            raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -102,7 +104,7 @@ class Event(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj.labels = np.array(labels)
+        obj._labels = np.array(labels)
         obj.segment = None
         return obj
 
@@ -125,7 +127,7 @@ class Event(DataObject):
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
-        self.labels = getattr(obj, 'labels', None)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -231,6 +233,17 @@ class Event(DataObject):
         except AttributeError:  # If Quantity was returned, not Event
             pass
         return obj
+
+    def set_labels(self, labels):
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                            .format(len(labels), self.size))
+        self._labels = np.array(labels)
+
+    def get_labels(self):
+        return self._labels
+
+    labels = property(get_labels, set_labels)
 
     def duplicate_with_new_data(self, times, labels, units=None):
         '''

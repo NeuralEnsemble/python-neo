@@ -130,6 +130,13 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(epc.array_annotations, ArrayDict)
 
+    def test_Epoch_creation_invalid_durations_labels(self):
+        self.assertRaises(ValueError, Epoch, [1.1, 1.5, 1.7] * pq.ms,
+                          durations=[20, 40, 60, 80] * pq.ns)
+        self.assertRaises(ValueError, Epoch, [1.1, 1.5, 1.7] * pq.ms,
+                          durations=[20, 40, 60] * pq.ns,
+                          labels=["A", "B"])
+
     def test_Epoch_creation_scalar_duration(self):
         # test with scalar for durations
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
@@ -202,6 +209,20 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epcres.array_annotations['index'], np.array([10, 11, 12, 0, 1, 2]))
         self.assertTrue('test' not in epcres.array_annotations)
         self.assertIsInstance(epcres.array_annotations, ArrayDict)
+
+    def test_set_labels_duration(self):
+        epc = Epoch([1.1, 1.5, 1.7] * pq.ms,
+                    durations=20 * pq.ns,
+                    labels=['A', 'B', 'C'])
+        assert_array_equal(epc.durations.magnitude, np.array([20, 20, 20]))
+        epc.durations = [20.0, 21.0, 22.0] * pq.ns
+        assert_array_equal(epc.durations.magnitude, np.array([20, 21, 22]))
+        self.assertRaises(ValueError, setattr, epc, "durations", [25.0, 26.0] * pq.ns)
+
+        assert_array_equal(epc.labels, np.array(['A', 'B', 'C']))
+        epc.labels = ['D', 'E', 'F']
+        assert_array_equal(epc.labels, np.array(['D', 'E', 'F']))
+        self.assertRaises(ValueError, setattr, epc, "labels", ['X', 'Y'])
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}

@@ -117,8 +117,8 @@ class Epoch(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.labels = np.array(labels)
-        obj.durations = durations
+        obj._labels = np.array(labels)
+        obj._durations = durations
         obj.segment = None
         return obj
 
@@ -141,8 +141,8 @@ class Epoch(DataObject):
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
-        self.durations = getattr(obj, 'durations', None)
-        self.labels = getattr(obj, 'labels', None)
+        self._durations = getattr(obj, 'durations', None)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -178,8 +178,8 @@ class Epoch(DataObject):
         '''
 
         obj = super(Epoch, self).rescale(units)
-        obj.segment = self.segment
-
+        obj._durations = obj.durations.rescale(units)
+        obj.segment = self.segment  # not sure we should do this
         return obj
 
     def __getitem__(self, i):
@@ -188,8 +188,8 @@ class Epoch(DataObject):
         '''
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
-        obj.durations = self.durations[i]
-        obj.labels = self.labels[i]
+        obj._durations = self.durations[i]
+        obj._labels = self.labels[i]
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
@@ -248,7 +248,7 @@ class Epoch(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.
-        for attr in ("labels", "durations", "name", "file_origin", "description", "annotations"):
+        for attr in ("name", "file_origin", "description", "annotations"):
             setattr(self, attr, getattr(other, attr, None))
 
     def __deepcopy__(self, memo):
@@ -280,8 +280,8 @@ class Epoch(DataObject):
 
         new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
-        new.labels = labels
-        new.durations = durations
+        new._labels = labels
+        new._durations = durations
         # Note: Array annotations can not be copied here because length of data can change
         return new
 
@@ -303,3 +303,25 @@ class Epoch(DataObject):
         new_epc = self[indices]
 
         return new_epc
+
+    def set_labels(self, labels):
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                             .format(len(labels), self.size))
+        self._labels = np.array(labels)
+
+    def get_labels(self):
+        return self._labels
+
+    labels = property(get_labels, set_labels)
+
+    def set_durations(self, durations):
+        if self.durations is not None and self.durations.size > 0 and len(durations) != self.size:
+            raise ValueError("Durations array has different length to times ({} != {})"
+                             .format(len(durations), self.size))
+        self._durations = durations
+
+    def get_durations(self):
+        return self._durations
+
+    durations = property(get_durations, set_durations)

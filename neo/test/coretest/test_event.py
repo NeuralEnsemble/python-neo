@@ -125,6 +125,16 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(evt.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(evt.array_annotations, ArrayDict)
 
+    def test_Event_creation_invalid_labels(self):
+        self.assertRaises(ValueError, Event, [1.1, 1.5, 1.7] * pq.ms,
+                          labels=["A", "B"])
+
+    def test_Epoch_creation_scalar_duration(self):
+        # test with scalar for durations
+        epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
+                    labels=np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
+        assert_neo_object_is_compliant(epc)
+
     def tests_time_slice(self):
         params = {'test2': 'y1', 'test3': True}
         arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
@@ -376,6 +386,14 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(evtres.array_annotations['index'], np.array([10, 11, 12, 0, 1, 2]))
         self.assertTrue('test' not in evtres.array_annotations)
         self.assertIsInstance(evtres.array_annotations, ArrayDict)
+
+    def test_set_labels(self):
+        evt = Event([1.1, 1.5, 1.7] * pq.ms,
+                    labels=['A', 'B', 'C'])
+        assert_array_equal(evt.labels, np.array(['A', 'B', 'C']))
+        evt.labels = ['D', 'E', 'F']
+        assert_array_equal(evt.labels, np.array(['D', 'E', 'F']))
+        self.assertRaises(ValueError, setattr, evt, "labels", ['X', 'Y'])
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
