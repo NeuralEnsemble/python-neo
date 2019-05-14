@@ -199,6 +199,7 @@ class SpikeTrain(DataObject):
     '''
 
     _single_parent_objects = ('Segment', 'Unit')
+    _single_parent_attrs = ('segment', 'unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))
@@ -415,7 +416,7 @@ class SpikeTrain(DataObject):
             # thus creating a lot of overhead
             # But keeping the reference to the same parent is not desired either, because this would be unidirectional
             # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_objects:
+            if k in self._single_parent_attrs:
                 setattr(new_st, k, None)
                 continue
             try:
@@ -618,12 +619,8 @@ class SpikeTrain(DataObject):
             _t_stop = np.inf
         indices = (self >= _t_start) & (self <= _t_stop)
 
-        # Once deepcopy is fixed:
+        # Time slicing should create a deep copy of the object
         new_st = deepcopy(self[indices])
-        # For now copy manually
-        new_st = copy(self[indices])
-        new_st._copy_data_complement(self[indices], deep_copy=True)
-        new_st.array_annotations = deepcopy(self[indices].array_annotations)
 
         new_st.t_start = max(_t_start, self.t_start)
         new_st.t_stop = min(_t_stop, self.t_stop)

@@ -78,6 +78,7 @@ class Epoch(DataObject):
     '''
 
     _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
@@ -262,7 +263,7 @@ class Epoch(DataObject):
             # thus creating a lot of overhead
             # But keeping the reference to the same parent is not desired either, because this would be unidirectional
             # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_objects:
+            if k in self._single_parent_attrs:
                 setattr(new_ep, k, None)
                 continue
             try:
@@ -305,12 +306,8 @@ class Epoch(DataObject):
 
         indices = (self >= _t_start) & (self <= _t_stop)
 
-        # Once deepcopy is fixed
-        # new_epc = deepcopy(self[indices])
-        # For now a lot of manual copying:
-        new_epc = copy(self[indices])
-        new_epc._copy_data_complement(self[indices])
-        new_epc.array_annotations = deepcopy((self[indices].array_annotations))
+        # Time slicing should create a deep copy of the object
+        new_epc = deepcopy(self[indices])
 
         return new_epc
 

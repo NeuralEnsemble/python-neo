@@ -331,10 +331,12 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
             self.assertEqual(result.description, self.signal1.description)
             self.assertEqual(result.annotations, self.signal1.annotations)
 
-    def test__slice_should_let_access_to_parents_objects(self):
+    def test__slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
         result = self.signal1.time_slice(1 * pq.ms, 3 * pq.ms)
-        self.assertEqual(result.segment, self.signal1.segment)
-        self.assertEqual(result.channel_index, self.signal1.channel_index)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
 
     def test_time_slice_deepcopy_annotations(self):
         params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
@@ -442,17 +444,18 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                            ["channel{0}".format(i) for i in range(n)])
         self.assertEqual(odd_channels.channel_index.analogsignals[0].name, signal.name)
 
+    # TODO: XXX ???
     def test__copy_should_let_access_to_parents_objects(self):
         result = self.signal1.copy()
         self.assertIs(result.segment, self.signal1.segment)
         self.assertIs(result.channel_index, self.signal1.channel_index)
 
-    def test__deepcopy_should_let_access_to_parents_objects(self):
-        result = copy.deepcopy(self.signal1)
-        self.assertIsInstance(result.segment, Segment)
-        self.assertIsInstance(result.channel_index, ChannelIndex)
-        assert_same_sub_schema(result.segment, self.signal1.segment)
-        assert_same_sub_schema(result.channel_index, self.signal1.channel_index)
+    # def test__deepcopy_should_let_access_to_parents_objects(self):
+    #     result = copy.deepcopy(self.signal1)
+    #     self.assertIsInstance(result.segment, Segment)
+    #     self.assertIsInstance(result.channel_index, ChannelIndex)
+    #     assert_same_sub_schema(result.segment, self.signal1.segment)
+    #     assert_same_sub_schema(result.channel_index, self.signal1.channel_index)
 
     def test__getitem_should_return_single_quantity(self):
         result1 = self.signal1[0, 0]

@@ -159,6 +159,7 @@ class AnalogSignal(BaseSignal):
     '''
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
+    _single_parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
@@ -246,7 +247,7 @@ class AnalogSignal(BaseSignal):
             # thus creating a lot of overhead
             # But keeping the reference to the same parent is not desired either, because this would be unidirectional
             # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_objects:
+            if k in self._single_parent_attrs:
                 setattr(new_signal, k, None)
                 continue
             try:
@@ -498,23 +499,8 @@ class AnalogSignal(BaseSignal):
             raise ValueError('t_start, t_stop have to be withing the analog \
                               signal duration')
 
-        # we're going to send the list of indicies so that we get *copy* of the
-        # sliced data
-        obj = super(AnalogSignal, self).__getitem__(np.arange(i, j, 1))
-        # obj = deepcopy(self[i:j])
-
-        # All attributes need to be deepcopied
-        obj._copy_data_complement(self)
-
-        # If there is any data remaining, there will be data for every channel
-        # In this case, array_annotations need to stay available and be deepcopied
-        # super.__getitem__ cannot do this, so it needs to be done here
-        if len(obj) > 0:
-            obj.array_annotations = deepcopy(self.array_annotations)
-
-        # Once deepcopy is fixed:
-        # obj = deepcopy(self[i:j]) # No need to copy array annotations or _copy_data_complement
-        # And set t_start
+        # Time slicing should create a deep copy of the object
+        obj = deepcopy(self[i:j])
 
         obj.t_start = self.t_start + i * self.sampling_period
 

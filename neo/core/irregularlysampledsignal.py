@@ -119,6 +119,7 @@ class IrregularlySampledSignal(BaseSignal):
     '''
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
+    _single_parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
@@ -190,8 +191,8 @@ class IrregularlySampledSignal(BaseSignal):
         cls = self.__class__
         new_signal = cls(self.times, np.array(self), units=self.units,
                          time_units=self.times.units, dtype=self.dtype,
-                         t_start=self.t_start, name=self.name,
-                         file_origin=self.file_origin, description=self.description)
+                         name=self.name, file_origin=self.file_origin,
+                         description=self.description)
         new_signal.__dict__.update(self.__dict__)
         memo[id(self)] = new_signal
         for k, v in self.__dict__.items():
@@ -200,7 +201,7 @@ class IrregularlySampledSignal(BaseSignal):
             # thus creating a lot of overhead
             # But keeping the reference to the same parent is not desired either, because this would be unidirectional
             # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_objects:
+            if k in self._single_parent_attrs:
                 setattr(new_signal, k, None)
                 continue
             try:
@@ -412,13 +413,8 @@ class IrregularlySampledSignal(BaseSignal):
                     break
             count += 1
 
-        # Once deepycopy is fixed:
-        # new_st = deepcopy(self[id_start:id_stop])
-
-        # For now:
-        new_st = copy(self[id_start:id_stop])
-        new_st._copy_data_complement(self[id_start:id_stop])
-        new_st.array_annotations = deepcopy(self[id_start:id_stop].array_annotations)
+        # Time slicing should create a deep copy of the object
+        new_st = deepcopy(self[id_start:id_stop])
 
         return new_st
 
