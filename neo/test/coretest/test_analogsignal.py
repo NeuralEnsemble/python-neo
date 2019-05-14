@@ -339,14 +339,50 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
     def test_time_slice_deepcopy_annotations(self):
         params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
         self.signal1.annotate(**params1)
-        result = self.signal1.time_slice(None,None)
+
+        result = self.signal1.time_slice(None, None)
+
+        # Change annotations of original
         params2 = {'test0': 'y2', 'test2': False}
         self.signal1.annotate(**params2)
         self.signal1.annotations['test1'][0] = 'shallowtest'
 
-        self.assertNotEqual(self.signal1.annotations['test0'],result.annotations['test0'])
-        self.assertNotEqual(self.signal1.annotations['test1'],result.annotations['test1'])
-        self.assertNotEqual(self.signal1.annotations['test2'],result.annotations['test2'])
+        self.assertNotEqual(self.signal1.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.signal1.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.signal1.annotations['test2'], result.annotations['test2'])
+
+        # Change annotations of result
+        params3 = {'test0': 'y3'}
+        result.annotate(**params3)
+        result.annotations['test1'][0] = 'shallowtest2'
+
+        self.assertNotEqual(self.signal1.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.signal1.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.signal1.annotations['test2'], result.annotations['test2'])
+
+    def test_time_slice_deepcopy_array_annotations(self):
+        length = self.signal1.shape[-1]
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+                   'test2': [(-1)**i > 0 for i in range(length)]}
+        self.signal1.array_annotate(**params1)
+        result = self.signal1.time_slice(None, None)
+
+        # Change annotations of original
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        self.signal1.array_annotate(**params2)
+        self.signal1.array_annotations['test1'][0] = 'shallowtest'
+
+        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+
+        # Change annotations of result
+        params3 = {'test0': ['z{}'.format(i) for i in range(1, result.shape[-1]+1)]}
+        result.array_annotate(**params3)
+        result.array_annotations['test1'][0] = 'shallow2'
+        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
 
     def test__slice_should_change_sampling_period(self):
         result1 = self.signal1[:2, 0]
