@@ -410,6 +410,14 @@ class SpikeTrain(DataObject):
         new_st.__dict__.update(self.__dict__)
         memo[id(self)] = new_st
         for k, v in self.__dict__.items():
+            # Single parent objects should not be deepcopied, because this is not expected behavior
+            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
+            # thus creating a lot of overhead
+            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
+            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
+            if k in self._single_parent_objects:
+                setattr(new_st, k, None)
+                continue
             try:
                 setattr(new_st, k, deepcopy(v, memo))
             except TypeError:
