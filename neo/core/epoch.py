@@ -95,8 +95,10 @@ class Epoch(DataObject):
                 raise ValueError("Durations array has different length to times")
         if labels is None:
             labels = np.array([], dtype='S')
-        elif len(labels) != times.size:
-            raise ValueError("Labels array has different length to times")
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -117,7 +119,7 @@ class Epoch(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj._labels = np.array(labels)
+        obj._labels = labels
         obj._durations = durations
         obj.segment = None
         return obj

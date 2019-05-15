@@ -82,8 +82,10 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         if labels is None:
             labels = np.array([], dtype='S')
-        elif len(labels) != times.size:
-            raise ValueError("Labels array has different length to times")
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -104,7 +106,7 @@ class Event(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj._labels = np.array(labels)
+        obj._labels = labels
         obj.segment = None
         return obj
 
