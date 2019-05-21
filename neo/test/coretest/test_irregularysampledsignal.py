@@ -428,7 +428,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test_time_slice_deepcopy_annotations(self):
+    def test__time_slice_deepcopy_annotations(self):
         params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
         self.signal1.annotate(**params1)
 
@@ -452,7 +452,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertNotEqual(self.signal1.annotations['test1'], result.annotations['test1'])
         self.assertNotEqual(self.signal1.annotations['test2'], result.annotations['test2'])
 
-    def test_time_slice_deepcopy_array_annotations(self):
+    def test__time_slice_deepcopy_array_annotations(self):
         length = self.signal1.shape[-1]
         params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
@@ -475,6 +475,19 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
         self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
         self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+
+    def test__time_slice_deepcopy_data(self):
+        result = self.signal1.time_slice(None, None)
+
+        # Change values of original array
+        self.signal1[2] = 7.3*self.signal1.units
+
+        self.assertFalse(all(self.signal1 == result))
+
+        # Change values of sliced array
+        result[3] = 9.5*result.units
+
+        self.assertFalse(all(self.signal1 == result))
 
     def test_time_slice_out_of_boundries(self):
         targdataquant = self.data1quant
@@ -628,7 +641,7 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test__slice_should_set_parents_to_None(self):
+    def test__time_slice_should_set_parents_to_None(self):
         # When timeslicing, a deep copy is made,
         # thus the reference to parent objects should be destroyed
         result = self.signal1.time_slice(1 * pq.ms, 3 * pq.ms)

@@ -169,7 +169,7 @@ class TestEvent(unittest.TestCase):
         self.assertNotEqual(evt.annotations['test1'], result.annotations['test1'])
         self.assertNotEqual(evt.annotations['test2'], result.annotations['test2'])
 
-    def test_time_slice_deepcopy_annotations(self):
+    def test__time_slice_deepcopy_annotations(self):
         params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
         self.evt.annotate(**params1)
         # time_slice spike train, keep sliced spike times
@@ -195,7 +195,7 @@ class TestEvent(unittest.TestCase):
         self.assertNotEqual(self.evt.annotations['test1'], result.annotations['test1'])
         self.assertNotEqual(self.evt.annotations['test2'], result.annotations['test2'])
 
-    def test_time_slice_deepcopy_array_annotations(self):
+    def test__time_slice_deepcopy_array_annotations(self):
         length = self.evt.shape[-1]
         params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
@@ -222,6 +222,19 @@ class TestEvent(unittest.TestCase):
         self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
         self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
         self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+
+    def test__time_slice_deepcopy_data(self):
+        result = self.evt.time_slice(None, None)
+
+        # Change values of original array
+        self.evt[2] = 7.3*self.evt.units
+
+        self.assertFalse(all(self.evt == result))
+
+        # Change values of sliced array
+        result[3] = 9.5*result.units
+
+        self.assertFalse(all(self.evt == result))
 
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
@@ -370,7 +383,7 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['test'], np.arange(105, 107))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test__slice_should_set_parents_to_None(self):
+    def test__time_slice_should_set_parents_to_None(self):
         # When timeslicing, a deep copy is made,
         # thus the reference to parent objects should be destroyed
         result = self.evt.time_slice(1 * pq.ms, 3 * pq.ms)
