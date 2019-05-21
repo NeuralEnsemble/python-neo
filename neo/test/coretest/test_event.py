@@ -102,7 +102,7 @@ class Test__generate_datasets(unittest.TestCase):
 
 class TestEvent(unittest.TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         self.params = {'test2': 'y1', 'test3': True}
         self.arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
         self.evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms, name='test',
