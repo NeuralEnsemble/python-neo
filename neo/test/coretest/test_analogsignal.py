@@ -386,6 +386,9 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
         self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
 
+    def test_time_slice_deepcopy_signal(self):
+        pass
+
     def test__slice_should_change_sampling_period(self):
         result1 = self.signal1[:2, 0]
         result2 = self.signal1[::2, 0]
@@ -450,12 +453,11 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertIs(result.segment, self.signal1.segment)
         self.assertIs(result.channel_index, self.signal1.channel_index)
 
-    # def test__deepcopy_should_let_access_to_parents_objects(self):
-    #     result = copy.deepcopy(self.signal1)
-    #     self.assertIsInstance(result.segment, Segment)
-    #     self.assertIsInstance(result.channel_index, ChannelIndex)
-    #     assert_same_sub_schema(result.segment, self.signal1.segment)
-    #     assert_same_sub_schema(result.channel_index, self.signal1.channel_index)
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+         result = copy.deepcopy(self.signal1)
+         self.assertEqual(result.segment, None)
+         self.assertEqual(result.channel_index, None)
 
     def test__getitem_should_return_single_quantity(self):
         result1 = self.signal1[0, 0]

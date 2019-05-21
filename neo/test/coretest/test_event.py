@@ -5,6 +5,7 @@ Tests of the neo.core.event.Event class
 
 import unittest
 import warnings
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -368,6 +369,17 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['index'], np.arange(5, 7))
         assert_arrays_equal(result.array_annotations['test'], np.arange(105, 107))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test__slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.evt.time_slice(1 * pq.ms, 3 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+        result = deepcopy(self.evt)
+        self.assertEqual(result.segment, None)
 
     def test_slice(self):
         params = {'test2': 'y1', 'test3': True}

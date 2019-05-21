@@ -8,6 +8,7 @@ import unittest
 import os
 import pickle
 import warnings
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -626,6 +627,19 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['anno1'], np.array([23]))
         assert_arrays_equal(result.array_annotations['anno2'], np.array(['A']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test__slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.signal1.time_slice(1 * pq.ms, 3 * pq.ms)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
+
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+         result = deepcopy(self.signal1)
+         self.assertEqual(result.segment, None)
+         self.assertEqual(result.channel_index, None)
 
     def test_as_array(self):
         sig_as_arr = self.signal1.as_array()

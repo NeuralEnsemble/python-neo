@@ -5,6 +5,7 @@ Tests of the neo.core.epoch.Epoch class
 
 import unittest
 import warnings
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -298,19 +299,6 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
-    def test__time_slice_deepcopy_annotations(self):
-        params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
-        epc = Epoch(times=[10, 20, 30] * pq.s, durations=[10, 5, 7] * pq.ms,
-                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'), **params)
-
-        result = epc.time_slice(10 * pq.s, 20 * pq.s)
-        epc.annotate(test0='y2', test2=False)
-        epc.annotations['test1'][0] = 'shallowtest'
-
-        self.assertNotEqual(result.annotations['test0'], epc.annotations['test0'])
-        self.assertNotEqual(result.annotations['test1'], epc.annotations['test1'])
-        self.assertNotEqual(result.annotations['test2'], epc.annotations['test2'])
-
     def test_time_slice_deepcopy_annotations(self):
         params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
         self.epc.annotate(**params1)
@@ -564,6 +552,17 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['index'], np.array([1]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test__slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.epc.time_slice(1 * pq.ms, 3 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+        result = deepcopy(self.epc)
+        self.assertEqual(result.segment, None)
 
     def test_as_array(self):
         times = [2, 3, 4, 5]
