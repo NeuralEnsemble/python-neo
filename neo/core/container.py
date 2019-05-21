@@ -526,6 +526,15 @@ class Container(BaseNeo):
                                           recursive=True)
 
     def __deepcopy__(self, memo):
+        """
+        Creates a deep copy of the container.
+        All contained objects will also be deep copied and relationships
+        between all objects will be identical to the original relationships.
+        Attributes and annotations of the container are deep copied as well.
+
+        :param memo: (dict) Objects that have been deep copied already
+        :return: (Container) Deep copy of input Container
+        """
         cls = self.__class__
         necessary_attrs = {}
         for k in self._necessary_attrs:

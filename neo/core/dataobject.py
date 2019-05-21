@@ -338,6 +338,15 @@ class DataObject(BaseNeo, pq.Quantity):
         return self.duplicate_with_new_data(signal, units=units)
 
     def __deepcopy__(self, memo):
+        """
+            Create a deep copy of the data object.
+            All attributes and annotations are also deep copied.
+            References to parent objects are not kept, they are set to None.
+
+
+            :param memo: (dict) Objects that have been deep copied already
+            :return: (DataObject) Deep copy of the input DataObject
+        """
         cls = self.__class__
         necessary_attrs = {}
         # Units need to be specified explicitly for analogsignals/irregularlysampledsignals
