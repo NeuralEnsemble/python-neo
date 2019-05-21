@@ -106,7 +106,7 @@ class Test__generate_datasets(unittest.TestCase):
 
 class TestEpoch(unittest.TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         self.params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
         self.epc = Epoch(times=[10, 20, 30, 40, 50] * pq.s, durations=[10, 5, 7, 14, 9] * pq.ms,
                     labels=np.array(['btn0', 'btn1', 'btn2', 'btn0', 'btn3'], dtype='S'), **self.params)
