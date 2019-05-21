@@ -250,28 +250,6 @@ class Epoch(DataObject):
     def _copy_annotations(self, other):
         self.annotations = deepcopy(other.annotations)
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_ep = cls(times=self.times, durations=self.durations, labels=self.labels,
-                     units=self.units, name=self.name, description=self.description,
-                     file_origin=self.file_origin)
-        new_ep.__dict__.update(self.__dict__)
-        memo[id(self)] = new_ep
-        for k, v in self.__dict__.items():
-            # Single parent objects should not be deepcopied, because this is not expected behavior
-            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
-            # thus creating a lot of overhead
-            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
-            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_attrs:
-                setattr(new_ep, k, None)
-                continue
-            try:
-                setattr(new_ep, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_ep, k, v)
-        return new_ep
-
     def duplicate_with_new_data(self, signal, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata

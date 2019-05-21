@@ -233,29 +233,6 @@ class AnalogSignal(BaseSignal):
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
         return obj
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_signal = cls(np.array(self), units=self.units, dtype=self.dtype, t_start=self.t_start,
-                         sampling_rate=self.sampling_rate, sampling_period=self.sampling_period,
-                         name=self.name, file_origin=self.file_origin,
-                         description=self.description)
-        new_signal.__dict__.update(self.__dict__)
-        memo[id(self)] = new_signal
-        for k, v in self.__dict__.items():
-            # Single parent objects should not be deepcopied, because this is not expected behavior
-            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
-            # thus creating a lot of overhead
-            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
-            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_attrs:
-                setattr(new_signal, k, None)
-                continue
-            try:
-                setattr(new_signal, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_signal, k, v)
-        return new_signal
-
     def __repr__(self):
         '''
         Returns a string representing the :class:`AnalogSignal`.

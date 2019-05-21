@@ -209,27 +209,6 @@ class Event(DataObject):
                      "annotations"):
             setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_ev = cls(times=self.times, labels=self.labels, units=self.units, name=self.name,
-                     description=self.description, file_origin=self.file_origin)
-        new_ev.__dict__.update(self.__dict__)
-        memo[id(self)] = new_ev
-        for k, v in self.__dict__.items():
-            # Single parent objects should not be deepcopied, because this is not expected behavior
-            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
-            # thus creating a lot of overhead
-            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
-            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_attrs:
-                setattr(new_ev, k, None)
-                continue
-            try:
-                setattr(new_ev, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_ev, k, v)
-        return new_ev
-
     def __getitem__(self, i):
         obj = super(Event, self).__getitem__(i)
         try:

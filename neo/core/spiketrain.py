@@ -402,29 +402,6 @@ class SpikeTrain(DataObject):
         if hasattr(obj, 'lazy_shape'):
             self.lazy_shape = obj.lazy_shape
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_st = cls(np.array(self), self.t_stop, units=self.units, dtype=self.dtype, copy=True,
-                     sampling_rate=self.sampling_rate, t_start=self.t_start,
-                     waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
-                     file_origin=self.file_origin, description=self.description)
-        new_st.__dict__.update(self.__dict__)
-        memo[id(self)] = new_st
-        for k, v in self.__dict__.items():
-            # Single parent objects should not be deepcopied, because this is not expected behavior
-            # and leads to a lot of stuff being copied (e.g. all other children of the parent as well),
-            # thus creating a lot of overhead
-            # But keeping the reference to the same parent is not desired either, because this would be unidirectional
-            # When deepcopying top-down, e.g. a whole block, the links will be handled by the parent
-            if k in self._single_parent_attrs:
-                setattr(new_st, k, None)
-                continue
-            try:
-                setattr(new_st, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_st, k, v)
-        return new_st
-
     def __repr__(self):
         '''
         Returns a string representing the :class:`SpikeTrain`.

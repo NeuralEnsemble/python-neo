@@ -528,8 +528,8 @@ class Container(BaseNeo):
     def __deepcopy__(self, memo):
         cls = self.__class__
         necessary_attrs = {}
-        for k, _, _, _ in self._necessary_attrs:
-            necessary_attrs[k] = getattr(self, k, None)
+        for k in self._necessary_attrs:
+            necessary_attrs[k[0]] = getattr(self, k[0], None)
         new_container = cls(**necessary_attrs)
         new_container.__dict__.update(self.__dict__)
         memo[id(self)] = new_container
