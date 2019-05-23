@@ -430,9 +430,10 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                        t_start=0 * pq.s, t_stop=epoch.durations[epoch_idx]))
 
         assert_same_attributes(block.segments[0].epochs[0],
-                               epoch2.duplicate_with_new_data(
-                                   epoch2.times - epoch.times[0]).time_slice(
-                                   t_start=0 * pq.s, t_stop=epoch.durations[0]))
+                               epoch2.duplicate_with_new_data(epoch2.times - epoch.times[0],
+                                                              epoch2.durations,
+                                                              epoch2.labels)
+                                        .time_slice(t_start=0 * pq.s, t_stop=epoch.durations[0]))
 
 
 class TestUtilsWithProxyObjects(BaseProxyTest):
