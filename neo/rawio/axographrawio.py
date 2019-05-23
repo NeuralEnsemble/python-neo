@@ -729,16 +729,16 @@ class AxographRawIO(BaseRawIO):
 
 class StructFile(BufferedReader):
 
-    def __init__(self, *args, byte_order='>', **kwargs):
+    def __init__(self, *args, **kwargs):
         # As far as I've seen, every AxoGraph file uses big-endian encoding,
         # regardless of the system architecture on which it was created, but
         # here I provide means for controlling byte ordering in case a counter
         # example is found.
-        self.byte_order = byte_order
-        if byte_order == '>':
+        self.byte_order = kwargs.pop('byte_order', '>')
+        if self.byte_order == '>':
             # big-endian
             self.utf_16_decoder = 'utf-16-be'
-        elif byte_order == '<':
+        elif self.byte_order == '<':
             # little-endian
             self.utf_16_decoder = 'utf-16-le'
         else:
@@ -846,7 +846,7 @@ TraceHeaderDescriptionV1 = [
 ]
 
 # documented in AxoGraph_ReadWrite.h
-TraceHeaderDescriptionV2 = TraceHeaderDescriptionV1.copy()
+TraceHeaderDescriptionV2 = list(TraceHeaderDescriptionV1) # make a copy
 TraceHeaderDescriptionV2.insert(3, ('neg_err_bar_index', 'l')) # only difference between versions 1 and 2
 
 GroupHeaderDescriptionV1 = [
