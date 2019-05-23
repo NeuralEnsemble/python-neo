@@ -5,13 +5,13 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from neo.rawio.axographrawio import AxoGraphRawIO
+from neo.rawio.axographrawio import AxographRawIO
 
 from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 
 
-class TestAxoGraphRawIO(BaseTestRawIO, unittest.TestCase, ):
-    rawioclass = AxoGraphRawIO
+class TestAxographRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = AxographRawIO
     files_to_download = [
         'File_axograph.axgd',
     ]
