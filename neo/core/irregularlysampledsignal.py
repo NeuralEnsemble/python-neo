@@ -23,7 +23,7 @@ the old object.
 # needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
-from copy import deepcopy
+from copy import deepcopy, copy
 import numpy as np
 import quantities as pq
 
@@ -119,6 +119,7 @@ class IrregularlySampledSignal(BaseSignal):
     '''
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
+    _single_parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
@@ -185,21 +186,6 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         self.times = getattr(obj, 'times', None)
         return obj
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_signal = cls(self.times, np.array(self), units=self.units,
-                         time_units=self.times.units, dtype=self.dtype,
-                         t_start=self.t_start, name=self.name,
-                         file_origin=self.file_origin, description=self.description)
-        new_signal.__dict__.update(self.__dict__)
-        memo[id(self)] = new_signal
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_signal, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_signal, k, v)
-        return new_signal
 
     def __repr__(self):
         '''
@@ -404,7 +390,8 @@ class IrregularlySampledSignal(BaseSignal):
                     break
             count += 1
 
-        new_st = self[id_start:id_stop]
+        # Time slicing should create a deep copy of the object
+        new_st = deepcopy(self[id_start:id_stop])
 
         return new_st
 

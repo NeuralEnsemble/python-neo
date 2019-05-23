@@ -10,7 +10,7 @@ This module defines :class:`Epoch`, an array of epochs.
 from __future__ import absolute_import, division, print_function
 
 import sys
-from copy import deepcopy
+from copy import deepcopy, copy
 
 import numpy as np
 import quantities as pq
@@ -78,6 +78,7 @@ class Epoch(DataObject):
     '''
 
     _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
@@ -242,22 +243,12 @@ class Epoch(DataObject):
         '''
         # Note: Array annotations cannot be copied because length of data could be changed
         # here which would cause inconsistencies. This is instead done locally.
-        for attr in ("name", "file_origin", "description", "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
+        for attr in ("name", "file_origin", "description"):
+            setattr(self, attr, deepcopy(getattr(other, attr, None)))
+        self._copy_annotations(other)
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_ep = cls(times=self.times, durations=self.durations, labels=self.labels,
-                     units=self.units, name=self.name, description=self.description,
-                     file_origin=self.file_origin)
-        new_ep.__dict__.update(self.__dict__)
-        memo[id(self)] = new_ep
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_ep, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_ep, k, v)
-        return new_ep
+    def _copy_annotations(self, other):
+        self.annotations = deepcopy(other.annotations)
 
     def duplicate_with_new_data(self, signal, units=None):
         '''
@@ -292,7 +283,9 @@ class Epoch(DataObject):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-        new_epc = self[indices]
+
+        # Time slicing should create a deep copy of the object
+        new_epc = deepcopy(self[indices])
 
         return new_epc
 

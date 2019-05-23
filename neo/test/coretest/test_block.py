@@ -774,7 +774,32 @@ class TestBlock(unittest.TestCase):
 
     def test__deepcopy(self):
         blk1_copy = deepcopy(self.blk1)
+
+        # Check links from parents to children
         assert_same_sub_schema(blk1_copy, self.blk1)
+
+        # Check links from children to parents
+        for segment in blk1_copy.segments:
+            self.assertEqual(id(segment.block), id(blk1_copy))
+            for sig in segment.analogsignals:
+                self.assertEqual(id(sig.segment), id(segment))
+            for sptr in segment.spiketrains:
+                self.assertEqual(id(sptr.segment), id(segment))
+
+        for chidx in blk1_copy.channel_indexes:
+            self.assertEqual(id(chidx.block), id(blk1_copy))
+
+            for sig in chidx.analogsignals:
+                self.assertEqual(id(sig.channel_index), id(chidx))
+
+            for sig in chidx.irregularlysampledsignals:
+                self.assertEqual(id(sig.channel_index), id(chidx))
+
+            for unit in chidx.units:
+                self.assertEqual(id(unit.channel_index), id(chidx))
+
+                for sptr in unit.spiketrains:
+                    self.assertEqual(id(sptr.unit), id(unit))
 
 
 if __name__ == "__main__":

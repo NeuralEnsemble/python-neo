@@ -244,6 +244,8 @@ class BaseNeo(object):
     # specified in each child class
     # Parent objects whose children can have a single parent
     _single_parent_objects = ()
+    # Attribute names corresponding to _single_parent_objects
+    _single_parent_attrs = ()
     # Parent objects whose children can have multiple parents
     _multi_parent_objects = ()
 
