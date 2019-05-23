@@ -849,7 +849,9 @@ def shift_epoch(epoch, t_shift):
         New instance of an Epoch object starting at t_shift later than the
         original Epoch (the original Epoch is not modified).
     """
-    return _shift_time_signal(epoch, t_shift)
+    return epoch.duplicate_with_new_data(times=epoch.times + t_shift,
+                                         durations=epoch.durations,
+                                         labels=epoch.labels)
 
 
 def _shift_time_signal(sig, t_shift):

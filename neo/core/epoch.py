@@ -96,8 +96,10 @@ class Epoch(DataObject):
                 raise ValueError("Durations array has different length to times")
         if labels is None:
             labels = np.array([], dtype='S')
-        elif len(labels) != times.size:
-            raise ValueError("Labels array has different length to times")
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -250,7 +252,7 @@ class Epoch(DataObject):
     def _copy_annotations(self, other):
         self.annotations = deepcopy(other.annotations)
 
-    def duplicate_with_new_data(self, signal, units=None):
+    def duplicate_with_new_data(self, times, durations, labels, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata
         but different data (times, durations)
@@ -263,7 +265,7 @@ class Epoch(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new = self.__class__(times=signal, units=units)
+        new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
         # Note: Array annotations can not be copied here because length of data can change
         return new
