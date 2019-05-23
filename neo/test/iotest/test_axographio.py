@@ -11,11 +11,9 @@ import sys
 import unittest
 
 from neo.io import AxographIO
-from neo.io.axographio import HAS_AXOGRAPHIO
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-@unittest.skipUnless(HAS_AXOGRAPHIO, "requires axographio")
 class TestAxographIO(BaseTestIO, unittest.TestCase):
     files_to_test = [
         'File_axograph.axgd'

@@ -1,373 +1,889 @@
 # -*- coding: utf-8 -*-
 """
-ExampleRawIO is a class of a  fake example.
-This is to be used when coding a new RawIO.
-
-
-Rules for creating a new class:
-  1. Step 1: Create the main class
-    * Create a file in **neo/rawio/** that endith with "rawio.py"
-    * Create the class that inherits BaseRawIO
-    * copy/paste all methods that need to be implemented.
-      See the end a neo.rawio.baserawio.BaseRawIO
-    * code hard! The main difficulty **is _parse_header()**.
-      In short you have a create a mandatory dict than
-      contains channel informations::
-
-            self.header = {}
-            self.header['nb_block'] = 2
-            self.header['nb_segment'] = [2, 3]
-            self.header['signal_channels'] = sig_channels
-            self.header['unit_channels'] = unit_channels
-            self.header['event_channels'] = event_channels
-
-  2. Step 2: RawIO test:
-    * create a file in neo/rawio/tests with the same name with "test_" prefix
-    * copy paste neo/rawio/tests/test_examplerawio.py and do the same
-
-  3. Step 3 : Create the neo.io class with the wrapper
-    * Create a file in neo/io/ that endith with "io.py"
-    * Create a that hinerits bot yrou RawIO class and BaseFromRaw class
-    * copy/paste from neo/io/exampleio.py
-
-  4.Step 4 : IO test
-    * create a file in neo/test/iotest with the same previous name with "test_" prefix
-    * copy/paste from neo/test/iotest/test_exampleio.py
-
-
-
+................
 """
 from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
-import struct
-import os
 from io import open, BufferedReader
+from struct import unpack, calcsize
 
 import numpy as np
 
 
-class AxoGraphRawIO(BaseRawIO):
+class AxographRawIO(BaseRawIO):
     """
-    Class for "reading" fake data from an imaginary file.
-
-    For the user, it give acces to raw data (signals, event, spikes) as they
-    are in the (fake) file int16 and int64.
-
-    For a developer, it is just an example showing guidelines for someone who wants
-    to develop a new IO module.
-
-    Two rules for developers:
-      * Respect the Neo RawIO API (:ref:`_neo_rawio_API`)
-      * Follow :ref:`_io_guiline`
-
-    This fake IO:
-        * have 2 blocks
-        * blocks have 2 and 3 segments
-        * have 16 signal_channel sample_rate = 10000
-        * have 3 unit_channel
-        * have 2 event channel: one have *type=event*, the other have
-          *type=epoch*
-
-
-    Usage:
-        >>> import neo.rawio
-        >>> r = neo.rawio.ExampleRawIO(filename='itisafake.nof')
-        >>> r.parse_header()
-        >>> print(r)
-        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
-                            i_start=0, i_stop=1024,  channel_names=channel_names)
-        >>> float_chunk = reader.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
-                            channel_indexes=[0, 3, 6])
-        >>> spike_timestamp = reader.spike_timestamps(unit_index=0, t_start=None, t_stop=None)
-        >>> spike_times = reader.rescale_spike_timestamp(spike_timestamp, 'float64')
-        >>> ev_timestamps, _, ev_labels = reader.event_timestamps(event_channel_index=0)
-
+    ...................
     """
+    name = 'AxographRawIO'
+    description = 'This IO reads .axgd/.axgx files created with AxoGraph'
     extensions = ['axgd', 'axgx']
     rawmode = 'one-file'
 
-    def __init__(self, filename=''):
+    def __init__(self, filename, force_single_segment=False):
         BaseRawIO.__init__(self)
         self.filename = filename
+        self.force_single_segment = force_single_segment
+
+    def _parse_header(self):
+
+        self.header = {}
+
+        self._do_the_heavy_lifting()
+
+        # if not self.force_single_segment and self._safe_to_treat_as_episodic():
+        #     self.logger.debug('convert to multi segment!!!')
+        #     self._convert_to_multi_segment()
+        # else:
+        #     self.logger.debug('single segment!!!')
+        # self.logger.debug('')
+
+        self._generate_minimal_annotations()
 
     def _source_name(self):
         return self.filename
 
-    def _parse_header(self):
-        info = parse_axograph_header(self.filename)
-
-        # fille into header dict
-        # This is mandatory!!!!!
-        self.header = {}
-        self.header['nb_block'] = 2
-        self.header['nb_segment'] = [2, 3]
-        self.header['signal_channels'] = info['sig_channels']
-        self.header['unit_channels'] = info['unit_channels']
-        self.header['event_channels'] = info['event_channels']
-
-        # insert some annotation at some place
-        # at neo.io level IO are free to add some annoations
-        # to any object. To keep this functionality with the wrapper
-        # BaseFromRaw you can add annoations in a nested dict.
-        self._generate_minimal_annotations()
-        # If you are a lazy dev you can stop here.
-        for block_index in range(2):
-            bl_ann = self.raw_annotations['blocks'][block_index]
-            bl_ann['name'] = 'Block #{}'.format(block_index)
-            bl_ann['block_extra_info'] = 'This is the block {}'.format(block_index)
-            for seg_index in range([2, 3][block_index]):
-                seg_ann = bl_ann['segments'][seg_index]
-                seg_ann['name'] = 'Seg #{} Block #{}'.format(
-                    seg_index, block_index)
-                seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(
-                    seg_index, block_index)
-                for c in range(16):
-                    anasig_an = seg_ann['signals'][c]
-                    anasig_an['info'] = 'This is a good signals'
-                for c in range(3):
-                    spiketrain_an = seg_ann['units'][c]
-                    spiketrain_an['quality'] = 'Good!!'
-                for c in range(2):
-                    event_an = seg_ann['events'][c]
-                    if c == 0:
-                        event_an['nickname'] = 'Miss Event 0'
-                    elif c == 1:
-                        event_an['nickname'] = 'MrEpoch 1'
-
     def _segment_t_start(self, block_index, seg_index):
-        # this must return an float scale in second
-        # this t_start will be shared by all object in the segment
-        # except AnalogSignal
-        all_starts = [[0., 15.], [0., 20., 60.]]
-        return all_starts[block_index][seg_index]
+        return self._t_starts[seg_index]
 
     def _segment_t_stop(self, block_index, seg_index):
-        # this must return an float scale in second
-        all_stops = [[10., 25.], [10., 30., 70.]]
-        return all_stops[block_index][seg_index]
+        # TODO: this assumes there is a first signal and all have same length
+        t_stop = self._t_starts[seg_index] + \
+            len(self._raw_signals[seg_index][0]) * self._sampling_period
+        return t_stop
 
-    def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
-        # it is not always the case
-        # this must return an int = the number of sample
+    ###
+    # signal and channel zone
 
-        # Note that channel_indexes can be ignored for most cases
-        # except for several sampling rate.
-        return 100000
+    def _get_signal_size(self, block_index, seg_index, channel_indexes):
+        # TODO: this assumes there is a first signal and all have same length
+        return len(self._raw_signals[seg_index][0])
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        # This give the t_start of signals.
-        # Very often this equal to _segment_t_start but not
-        # always.
-        # this must return an float scale in second
-
-        # Note that channel_indexes can be ignored for most cases
-        # except for several sampling rate.
-
-        # Here this is the same.
-        # this is not always the case
-        return self._segment_t_start(block_index, seg_index)
+        # TODO: this assumes all signals start at the seg start
+        return self._t_starts[seg_index]
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        # this must return a signal chunk limited with
-        # i_start/i_stop (can be None)
-        # channel_indexes can be None (=all channel) or a list or numpy.array
-        # This must return a numpy array 2D (even with one channel).
-        # This must return the orignal dtype. No conversion here.
-        # This must as fast as possible.
-        # Everything that can be done in _parse_header() must not be here.
+        assert block_index == 0, 'AxoGraph files do not support multi-block, block_index {} out of range'.format(block_index)
 
-        # Here we are lucky:  our signals is always zeros!!
-        # it is not always the case
-        # internally signals are int16
-        # convertion to real units is done with self.header['signal_channels']
+        if channel_indexes is None or np.all(channel_indexes == slice(None, None, None)):
+            channel_indexes = range(self.signal_channels_count())
 
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = 100000
+        raw_signals = [self._raw_signals[seg_index][channel_index][slice(i_start, i_stop)] for channel_index in channel_indexes]
+        raw_signals = np.array(raw_signals).T # reads memmap and loads data into memory -- TODO: transpose without loading?
 
-        assert i_start >= 0, "I don't like your jokes"
-        assert i_stop <= 100000, "I don't like your jokes"
-
-        if channel_indexes is None:
-            nb_chan = 16
-        else:
-            nb_chan = len(channel_indexes)
-        raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
         return raw_signals
 
+    ###
+    # spiketrain and unit zone
+
     def _spike_count(self, block_index, seg_index, unit_index):
-        # Must return the nb of spike for given (block_index, seg_index, unit_index)
-        # we are lucky:  our units have all the same nb of spikes!!
-        # it is not always the case
-        nb_spikes = 20
-        return nb_spikes
+        raise (NotImplementedError)
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # In our IO, timstamp are internally coded 'int64' and they
-        # represent the index of the signals 10kHz
-        # we are lucky: spikes have the same discharge in all segments!!
-        # incredible neuron!! This is not always the case
-
-        # the same clip t_start/t_start must be used in _spike_raw_waveforms()
-
-        ts_start = (self._segment_t_start(block_index, seg_index) * 10000)
-
-        spike_timestamps = np.arange(0, 10000, 500) + ts_start
-
-        if t_start is not None or t_stop is not None:
-            # restricte spikes to given limits (in seconds)
-            lim0 = int(t_start * 10000)
-            lim1 = int(t_stop * 10000)
-            mask = (spike_timestamps >= lim0) & (spike_timestamps <= lim1)
-            spike_timestamps = spike_timestamps[mask]
-
-        return spike_timestamps
+        raise (NotImplementedError)
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        # must rescale to second a particular spike_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
-        spike_times = spike_timestamps.astype(dtype)
-        spike_times /= 10000.  # because 10kHz
-        return spike_times
+        raise (NotImplementedError)
+
+    ###
+    # spike waveforms zone
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        # in the original dtype
-        # this must be as fast as possible.
-        # the same clip t_start/t_start must be used in _spike_timestamps()
+        raise (NotImplementedError)
 
-        # If there there is no waveform supported in the
-        # IO them _spike_raw_waveforms must return None
-
-        # In our IO waveforms come from all channels
-        # they are int16
-        # convertion to real units is done with self.header['unit_channels']
-        # Here, we have a realistic case: all waveforms are only noise.
-        # it is not always the case
-        # we 20 spikes with a sweep of 50 (5ms)
-
-        np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2 ** 4, high=2 ** 4, size=20 * 50, dtype='int16')
-        waveforms = waveforms.reshape(20, 1, 50)
-        return waveforms
+    ###
+    # event and epoch zone
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        # event and spike are very similar
-        # we have 2 event channels
-        if event_channel_index == 0:
-            # event channel
-            return 6
-        elif event_channel_index == 1:
-            # epoch channel
-            return 10
+        raise (NotImplementedError)
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        # the main difference between spike channel and event channel
-        # is that for here we have 3 numpy array timestamp, durations, labels
-        # durations must be None for 'event'
-        # label must a dtype ='U'
-
-        # in our IO event are directly coded in seconds
-        seg_t_start = self._segment_t_start(block_index, seg_index)
-        if event_channel_index == 0:
-            timestamp = np.arange(0, 6, dtype='float64') + seg_t_start
-            durations = None
-            labels = np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12')
-        elif event_channel_index == 1:
-            timestamp = np.arange(0, 10, dtype='float64') + .5 + seg_t_start
-            durations = np.ones((10), dtype='float64') * .25
-            labels = np.array(['zoneX'] * 5 + ['zoneZ'] * 5, dtype='U12')
-
-        if t_start is not None:
-            keep = timestamp >= t_start
-            timestamp, labels = timestamp[keep], labels[keep]
-            if durations is not None:
-                durations = durations[keep]
-
-        if t_stop is not None:
-            keep = timestamp <= t_stop
-            timestamp, labels = timestamp[keep], labels[keep]
-            if durations is not None:
-                durations = durations[keep]
-
-        return timestamp, durations, labels
+        raise (NotImplementedError)
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # must rescale to second a particular event_timestamps
-        # with a fixed dtype so the user can choose the precisino he want.
-
-        # really easy here because in our case it is already seconds
-        event_times = event_timestamps.astype(dtype)
-        return event_times
+        raise (NotImplementedError)
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # really easy here because in our case it is already seconds
-        durations = raw_duration.astype(dtype)
-        return durations
+        raise (NotImplementedError)
 
 
-def parse_axograph_header(filename):
 
-    # create signals channels information
-    # This is mandatory!!!!
-    # gain/offset/units are really important because
-    # the scaling to real value will be done with that
-    # at the end real_signal = (raw_signal* gain + offset) * pq.Quantity(units)
-    sig_channels = []
-    for c in range(16):
-        ch_name = 'ch{}'.format(c)
-        # our channel id is c+1 just for fun
-        # Note that chan_id should be realated to
-        # original channel id in the file format
-        # so that the end user should not be lost when reading datasets
-        chan_id = c + 1
-        sr = 10000.  # Hz
-        dtype = 'int16'
-        units = 'uV'
-        gain = 1000. / 2 ** 16
-        offset = 0.
-        # group_id isonly for special cases when channel have diferents
-        # sampling rate for instance. See TdtIO for that.
-        # Here this is the general case :all channel have the same characteritics
-        group_id = 0
-        sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
-    sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
 
-    # creating units channels
-    # This is mandatory!!!!
-    # Note that if there is no waveform at all in the file
-    # then wf_units/wf_gain/wf_offset/wf_left_sweep/wf_sampling_rate
-    # can be set to any value because _spike_raw_waveforms
-    # will return None
-    unit_channels = []
-    for c in range(3):
-        unit_name = 'unit{}'.format(c)
-        unit_id = '#{}'.format(c)
-        wf_units = 'uV'
-        wf_gain = 1000. / 2 ** 16
-        wf_offset = 0.
-        wf_left_sweep = 20
-        wf_sampling_rate = 10000.
-        unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
-                              wf_offset, wf_left_sweep, wf_sampling_rate))
-    unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+    def _safe_to_treat_as_episodic(self):
 
-    # creating event/epoch channel
-    # This is mandatory!!!!
-    # In RawIO epoch and event they are dealt the same way.
-    event_channels = []
-    event_channels.append(('Some events', 'ev_0', 'event'))
-    event_channels.append(('Some epochs', 'ep_1', 'epoch'))
-    event_channels = np.array(event_channels, dtype=_event_channel_dtype)
+        # The purpose of this fuction is to determine if the file lacks any
+        # irregularities in its grouping of traces such that it cannot be
+        # treated as episodic. Even "continuous" recordings can be treated as
+        # single-episode recordings and should be identified as safe by this
+        # function. Recordings in which the user has changed groupings to
+        # create irregularities should be caught by this function.
 
-    info = {}
-    info['sig_channels'] = sig_channels
-    info['unit_channels'] = unit_channels
-    info['event_channels'] = event_channels
+        # First check: If the file is episodic, groups of traces should all
+        # contain the same number of traces, one for each episode. This is
+        # generally true of "continuous" (single-episode) recordings as well,
+        # which normally have 1 trace per group.
+        group_id_to_col_indexes = {}
+        for group_id, group_header in self.info['group_header_info_list'].items():
+            col_indexes = []
+            for trace_index, trace_header in self.info['trace_header_info_list'].items():
+                if trace_header['group_id_for_this_trace'] == group_id:
+                    col_indexes.append(trace_header['y_index'])
+            group_id_to_col_indexes[group_id] = col_indexes
+        num_traces_per_group = {k:len(v) for k,v in group_id_to_col_indexes.items()}
+        all_groups_have_same_number_of_traces = len(np.unique(list(num_traces_per_group.values()))) == 1
 
-    return info
+        if not all_groups_have_same_number_of_traces:
+            self.logger.debug('Will not treat as episodic because groups differ on number of traces')
+            return False
+
+        # Second check: The number of traces in each group should equal n_episodes
+        num_traces_in_each_group = np.unique(list(num_traces_per_group.values()))
+        if num_traces_in_each_group != self.info['n_episodes']:
+            self.logger.debug('Will not treat as episodic because n_episodes does not match number of traces per group')
+            return False
+
+        # Third check: If the file is episodic, all traces within a group
+        # should have identical signal channel parameters (e.g., name, units)
+        # except for their unique ids. This too is generally true of "continuous"
+        # (single-episode) files, which normally have 1 trace per group.
+        signal_channels_with_ids_dropped = self.header['signal_channels'][['name', 'sampling_rate', 'dtype', 'units', 'gain', 'offset', 'group_id']]
+        group_has_uniform_signal_parameters = {}
+        for group_id, col_indexes in group_id_to_col_indexes.items():
+            signal_params_for_group = np.array(signal_channels_with_ids_dropped[np.array(col_indexes)-1]) # subtract 1 because time is missing from signal_channels
+            group_has_uniform_signal_parameters[group_id] = len(np.unique(signal_params_for_group)) == 1
+        all_groups_have_uniform_signal_parameters = np.all(list(group_has_uniform_signal_parameters.values()))
+
+        if not all_groups_have_uniform_signal_parameters:
+            self.logger.debug('Will not treat as episodic because some groups have heterogeneous signal parameters')
+            return False
+
+        # all checks passed
+        return True
+
+
+    def _convert_to_multi_segment(self):
+        # make some magic happen
+        return
+
+
+    def _do_the_heavy_lifting(self):
+
+        with open(self.filename, 'rb') as fid:
+            f = StructFile(fid)
+
+            self.logger.debug('filename: {}'.format(self.filename))
+            self.logger.debug('')
+
+            # the first 4 bytes are always a 4-character file type identifier
+            # - for early versions of AxoGraph, this identifier was 'AxGr'
+            # - starting with AxoGraph X, the identifier is 'axgx'
+            header_id = f.read(4).decode('utf-8')
+            assert header_id in ['AxGr', 'axgx'], 'not an AxoGraph binary file! "{}"'.format(self.filename)
+
+            self.logger.debug('header_id: {}'.format(header_id))
+
+            # the next two numbers store the format version number and the number of data columns to follow
+            # - for 'AxGr' files, these numbers are 2-byte unsigned short ints
+            # - for 'axgx' files, these numbers are 4-byte long ints
+            # - the 4-character identifier changed from 'AxGr' to 'axgx' with format version 3
+            if header_id == 'AxGr':
+                format_ver, n_cols = f.read_f('HH')
+                assert format_ver == 1 or format_ver == 2, 'mismatch between header identifier "{}" and format version "{}"!'.format(header_id, format_ver)
+            elif header_id == 'axgx':
+                format_ver, n_cols = f.read_f('ll')
+                assert format_ver >= 3, 'mismatch between header identifier "{}" and format version "{}"!'.format(header_id, format_ver)
+            else:
+                raise NotImplementedError('unimplemented file header identifier "{}"!'.format(header_id))
+
+            self.logger.debug('format_ver: {}'.format(format_ver))
+            self.logger.debug('n_cols: {}'.format(n_cols))
+            self.logger.debug('')
+
+
+            sigs_memmap = []
+            sig_channels = []
+            for i in range(n_cols):
+
+                self.logger.debug('== COLUMN INDEX {} =='.format(i))
+
+                ##############################################
+                # NUMBER OF DATA POINTS IN COLUMN
+
+                n_points = f.read_f('l')
+
+                self.logger.debug('n_points: {}'.format(n_points))
+
+                ##############################################
+                # COLUMN TYPE
+
+                # depending on the format version, data columns may have a type
+                # - prior to verion 3, column types did not exist and data was stored in a fixed pattern
+                # - beginning with version 3, several data types are available as documented in AxoGraph_ReadWrite.h
+                if format_ver == 1 or format_ver == 2:
+                    col_type = None
+                elif format_ver >= 3:
+                    col_type = f.read_f('l')
+                else:
+                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+
+                self.logger.debug('col_type: {}'.format(col_type))
+
+                ##############################################
+                # COLUMN NAME AND UNITS
+
+                # depending on the format version, column titles are stored differently
+                # - prior to version 3, column titles were stored as fixed-length 80-byte Pascal strings
+                # - beginning with version 3, column titles are stored as variable-length strings (see StructFile.read_string)
+                if format_ver == 1 or format_ver == 2:
+                    title = f.read_f('80p').decode('utf-8')
+                elif format_ver >= 3:
+                    title = f.read_f('S')
+                else:
+                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+
+                self.logger.debug('title: {}'.format(title))
+
+                # units are given in parentheses at the end of a column title, unless units are absent
+                if len(title.split()) > 0 and title.split()[-1][0] == '(' and title.split()[-1][-1] == ')':
+                    name = ' '.join(title.split()[:-1])
+                    units = title.split()[-1].strip('()')
+                else:
+                    name = title
+                    units = ''
+
+                self.logger.debug('name: {}'.format(name))
+                self.logger.debug('units: {}'.format(units))
+
+                ##############################################
+                # READ COLUMN
+
+                if format_ver == 1:
+
+                    # for format version 1, all columns are arrays of floats
+
+                    dtype = 'f'
+                    gain, offset = 1, 0 # data is neither scaled nor off-set
+
+                    if i == 0:
+
+                        # there is no guarantee that this time column is regularly sampled, and
+                        # in fact the test file has slight variations in the intervals between
+                        # samples (due to numerical imprecision, probably), so technically an
+                        # IrregularlySampledSignal is needed here, but I'm going to cheat by
+                        # assuming regularity
+
+                        array = np.memmap(self.filename, mode='r', dtype=f.byte_order+dtype, offset=f.tell(), shape=n_points)
+                        f.seek(array.nbytes, 1) # advance the file position to after the data array
+
+                        first_value, increment = array[0], np.median(np.diff(array)) # here's the cheat
+
+                        self.logger.debug('interval: {}, freq: {}'.format(increment, 1/increment))
+                        self.logger.debug('start: {}, end: {}'.format(first_value, first_value + increment * (n_points-1)))
+
+                        # assume this is the time column
+                        t_start, sampling_period = first_value, increment
+
+                        self.logger.debug('')
+
+                        continue # skip saving memmap and header info for time array
+
+                elif format_ver == 2:
+
+                    # for format version 2, the first column is a "series" of regularly spaced values
+                    # specified merely by a first value and an increment, and all subsequent columns
+                    # are arrays of shorts with a scaling factor
+
+                    if i == 0:
+
+                        # series
+                        first_value, increment = f.read_f('ff')
+
+                        self.logger.debug('interval: {}, freq: {}'.format(increment, 1/increment))
+                        self.logger.debug('start: {}, end: {}'.format(first_value, first_value + increment * (n_points-1)))
+
+                        # assume this is the time column
+                        t_start, sampling_period = first_value, increment
+
+                        self.logger.debug('')
+
+                        continue # skip saving memmap and header info for time array
+
+                    else:
+
+                        # scaled short
+                        dtype = 'h'
+                        gain, offset = f.read_f('f'), 0 # data is scaled without offset
+
+                elif format_ver >= 3:
+
+                    # for format versions 3 and later, the column type determines how the data should be read
+                    # - column types 1, 2, 3, and 8 are not defined in AxoGraph_ReadWrite.h
+                    # - column type 9 is different from the others in that it represents regularly spaced values
+                    #   (such as times at a fixed frequency) specified by a first value and an increment,
+                    #   without storing a large data array
+
+                    if col_type is 9:
+
+                        # series
+                        first_value, increment = f.read_f('dd')
+
+                        self.logger.debug('interval: {}, freq: {}'.format(increment, 1/increment))
+                        self.logger.debug('start: {}, end: {}'.format(first_value, first_value + increment * (n_points-1)))
+
+                        if i == 0:
+
+                            # assume this is the time column
+                            t_start, sampling_period = first_value, increment
+
+                            self.logger.debug('')
+
+                            continue # skip saving memmap and header info for time array
+
+                        else:
+
+                            raise NotImplementedError('series data are supported only for the first data column (time)!')
+
+                    elif col_type is 4:
+
+                        # short
+                        dtype = 'h'
+                        gain, offset = 1, 0 # data is neither scaled nor off-set
+
+                    elif col_type is 5:
+
+                        # long
+                        dtype = 'l'
+                        gain, offset = 1, 0 # data is neither scaled nor off-set
+
+                    elif col_type is 6:
+
+                        # float
+                        dtype = 'f'
+                        gain, offset = 1, 0 # data is neither scaled nor off-set
+
+                    elif col_type is 7:
+
+                        # double
+                        dtype = 'd'
+                        gain, offset = 1, 0 # data is neither scaled nor off-set
+
+                    elif col_type is 10:
+
+                        # scaled short
+                        dtype = 'h'
+                        gain, offset = f.read_f('dd') # data is scaled with offset
+
+                    else:
+
+                        raise NotImplementedError('unimplemented column type "{}"!'.format(col_type))
+
+                else:
+
+                    raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
+
+                array = np.memmap(self.filename, mode='r', dtype=f.byte_order+dtype, offset=f.tell(), shape=n_points)
+                f.seek(array.nbytes, 1) # advance the file position to after the data array
+
+                self.logger.debug('gain: {}, offset: {}'.format(gain, offset))
+                self.logger.debug('initial data: {}'.format(array[:5] * gain + offset))
+
+                channel_id = i # TODO: what is this Neo thing for?
+                group_id = 0   # TODO: what is this Neo thing for?
+                channel_info = (name, channel_id, 1/sampling_period, f.byte_order+dtype, units, gain, offset, group_id) # follows _signal_channel_dtype
+
+                self.logger.debug('channel_info: {}'.format(channel_info))
+                self.logger.debug('')
+
+                sigs_memmap.append(array)
+                sig_channels.append(channel_info)
+
+
+            if format_ver == 1 or format_ver == 2:
+
+                # for format versions 1 and 2, metadata like graph display information
+                # was stored separately in the "resource fork" of the file, so there
+                # is nothing more to do here, and the rest of the file is empty
+
+                rest_of_the_file = f.read()
+                assert rest_of_the_file == b''
+
+            elif format_ver >= 3:
+
+                # for format versions 3 and later, there is a lot more!
+
+                self.logger.debug('== COMMENT ==')
+
+                comment = f.read_f('S')
+
+                self.logger.debug(comment if comment else 'no comment!')
+                self.logger.debug('')
+
+
+                self.logger.debug('== NOTES ==')
+
+                notes = f.read_f('S')
+
+                self.logger.debug(notes if notes else 'no notes!')
+                self.logger.debug('')
+
+
+                self.logger.debug('== TRACES ==')
+
+                n_traces = f.read_f('l')
+
+                self.logger.debug('n_traces: {}'.format(n_traces))
+                self.logger.debug('')
+
+                trace_header_info_list = {}
+                group_ids = []
+                for i in range(n_traces):
+
+                    self.logger.debug('== TRACE #{} =='.format(i+1)) # AxoGraph traces are 1-indexed in GUI
+
+                    trace_header_info = {}
+
+                    if format_ver < 6:
+                        # before format version 6, there was only one version of the
+                        # header, and version numbers were not provided
+                        trace_header_info['trace_header_version'] = 1
+                    else:
+                        # for format versions 6 and later, the header version must be read
+                        trace_header_info['trace_header_version'] = f.read_f('l')
+
+                    if trace_header_info['trace_header_version'] == 1:
+                        TraceHeaderDescription = TraceHeaderDescriptionV1
+                    elif trace_header_info['trace_header_version'] == 2:
+                        TraceHeaderDescription = TraceHeaderDescriptionV2
+                    else:
+                        raise NotImplementedError('unimplemented trace header version "{}"!'.format(trace_header_info['trace_header_version']))
+
+                    for key, fmt in TraceHeaderDescription:
+                        trace_header_info[key] = f.read_f(fmt)
+                    trace_header_info_list[i+1] = trace_header_info # AxoGraph traces are 1-indexed in GUI
+                    group_ids.append(trace_header_info['group_id_for_this_trace'])
+
+                    self.logger.debug(trace_header_info)
+                    self.logger.debug('')
+
+
+                self.logger.debug('== GROUPS ==')
+
+                n_groups = f.read_f('l')
+                group_ids = np.sort(list(set(group_ids))) # remove duplicates and sort
+                assert n_groups == len(group_ids), 'expected group_ids to have length {}: {}'.format(n_groups, group_ids)
+
+                self.logger.debug('n_groups: {}'.format(n_groups))
+                self.logger.debug('group_ids: {}'.format(group_ids))
+                self.logger.debug('')
+
+                group_header_info_list = {}
+                for i in group_ids:
+
+                    self.logger.debug('== GROUP #{} =='.format(i)) # AxoGraph groups are 0-indexed in GUI
+
+                    group_header_info = {}
+
+                    if format_ver < 6:
+                        # before format version 6, there was only one version of the
+                        # header, and version numbers were not provided
+                        group_header_info['group_header_version'] = 1
+                    else:
+                        # for format versions 6 and later, the header version must be read
+                        group_header_info['group_header_version'] = f.read_f('l')
+
+                    if group_header_info['group_header_version'] == 1:
+                        GroupHeaderDescription = GroupHeaderDescriptionV1
+                    else:
+                        raise NotImplementedError('unimplemented group header version "{}"!'.format(group_header_info['group_header_version']))
+
+                    for key, fmt in GroupHeaderDescription:
+                        group_header_info[key] = f.read_f(fmt)
+                    group_header_info_list[i] = group_header_info # AxoGraph groups are 0-indexed in GUI
+
+                    self.logger.debug(group_header_info)
+                    self.logger.debug('')
+
+
+                self.logger.debug('>> UNKNOWN 1 <<')
+
+                unknowns = f.read_f('9l') # 36 bytes of undeciphered data (types here are guesses)
+
+                self.logger.debug(unknowns)
+                self.logger.debug('')
+
+
+                self.logger.debug('== EPISODES ==')
+
+                episodes_in_review = []
+                n_episodes = f.read_f('l')
+                for i in range(n_episodes):
+                    episode_bool = f.read_f('Z')
+                    if episode_bool:
+                        episodes_in_review.append(i+1)
+
+                self.logger.debug('n_episodes: {}'.format(n_episodes))
+                self.logger.debug('episodes_in_review: {}'.format(episodes_in_review))
+
+                if format_ver == 5:
+
+                    # undeciphered data
+                    old_unknown_episode_list = []
+                    n_episodes2 = f.read_f('l')
+                    for i in range(n_episodes2):
+                        episode_bool = f.read_f('Z')
+                        if episode_bool:
+                            old_unknown_episode_list.append(i+1)
+
+                    self.logger.debug('old_unknown_episode_list: {}'.format(old_unknown_episode_list))
+                    if n_episodes2 != n_episodes:
+                        self.logger.debug('n_episodes2 ({}) and n_episodes ({}) differ!'.format(n_episodes2, n_episodes))
+
+                # undeciphered data
+                unknown_episode_list = []
+                n_episodes3 = f.read_f('l')
+                for i in range(n_episodes3):
+                    episode_bool = f.read_f('Z')
+                    if episode_bool:
+                        unknown_episode_list.append(i+1)
+
+                self.logger.debug('unknown_episode_list: {}'.format(unknown_episode_list))
+                if n_episodes3 != n_episodes:
+                    self.logger.debug('n_episodes3 ({}) and n_episodes ({}) differ!'.format(n_episodes3, n_episodes))
+
+                masked_episodes = []
+                n_episodes4 = f.read_f('l')
+                for i in range(n_episodes4):
+                    episode_bool = f.read_f('Z')
+                    if episode_bool:
+                        masked_episodes.append(i+1)
+
+                self.logger.debug('masked_episodes: {}'.format(masked_episodes))
+                if n_episodes4 != n_episodes:
+                    self.logger.debug('n_episodes4 ({}) and n_episodes ({}) differ!'.format(n_episodes4, n_episodes))
+                self.logger.debug('')
+
+
+                self.logger.debug('>> UNKNOWN 2 <<')
+
+                unknowns = f.read_f('d 9l d 4l') # 68 bytes of undeciphered data (types here are guesses)
+
+                self.logger.debug(unknowns)
+                self.logger.debug('')
+
+
+                if format_ver >= 6:
+                    font_categories = ['axis titles', 'axis labels (ticks)', 'notes', 'graph title']
+                else:
+                    font_categories = ['everything (?)'] # would need an old version of AxoGraph to determine how it used these settings
+
+                font_settings_info_list = {}
+                for i in font_categories:
+
+                    self.logger.debug('== FONT SETTINGS FOR {} =='.format(i))
+
+                    font_settings_info = {}
+                    for key, fmt in FontSettingsDescription:
+                        font_settings_info[key] = f.read_f(fmt)
+
+                    # I don't know why two arbitrary values were selected to
+                    # represent this switch, but it seems they were
+                    assert font_settings_info['setting1'] in [FONT_BOLD, FONT_NOT_BOLD], \
+                        'expected setting1 ({}) to have value FONT_BOLD ({}) or FONT_NOT_BOLD ({})'.format(font_settings_info['setting1'], FONT_BOLD, FONT_NOT_BOLD)
+
+                    font_settings_info['size'] = font_settings_info['size'] / 10.0 # size is stored 10 times bigger than real value
+                    font_settings_info['bold'] = bool(font_settings_info['setting1'] == FONT_BOLD)
+                    font_settings_info['italics'] = bool(font_settings_info['setting2'] & FONT_ITALICS)
+                    font_settings_info['underline'] = bool(font_settings_info['setting2'] & FONT_UNDERLINE)
+                    font_settings_info['strikeout'] = bool(font_settings_info['setting2'] & FONT_STRIKEOUT)
+                    font_settings_info_list[i] = font_settings_info
+
+                    self.logger.debug(font_settings_info)
+                    self.logger.debug('')
+
+
+                self.logger.debug('== X-AXIS SETTINGS ==')
+
+                x_axis_settings_info = {}
+                for key, fmt in XAxisSettingsDescription:
+                    x_axis_settings_info[key] = f.read_f(fmt)
+
+                self.logger.debug(x_axis_settings_info)
+                self.logger.debug('')
+
+
+                self.logger.debug('>> UNKNOWN 3 <<')
+
+                unknowns = f.read_f('8l 3d 13l') # 108 bytes of undeciphered data (types here are guesses)
+
+                self.logger.debug(unknowns)
+                self.logger.debug('')
+
+
+                self.logger.debug('=== EVENTS ===')
+
+                n_events, n_events_again = f.read_f('ll')
+
+                self.logger.debug('n_events: {}'.format(n_events))
+
+                event_times = []
+                for i in range(n_events_again):
+                    event_index = f.read_f('l')
+                    event_time = event_index * sampling_period # t_start shouldn't be added
+                    event_times.append(event_time)
+                n_events_yet_again = f.read_f('l')
+                event_list = []
+                for i in range(n_events_yet_again):
+                    title = f.read_f('S')
+                    event_info = {'title': title, 'time': event_times[i]}
+                    event_list.append(event_info)
+
+                for event in event_list:
+                    self.logger.debug(event)
+                self.logger.debug('')
+
+
+                self.logger.debug('>> UNKNOWN 4 <<')
+
+                unknowns = f.read_f('7l') # 28 bytes of undeciphered data (types here are guesses)
+
+                self.logger.debug(unknowns)
+                self.logger.debug('')
+
+
+                self.logger.debug('=== EPOCHS ===')
+
+                n_epochs = f.read_f('l')
+
+                self.logger.debug('n_epochs: {}'.format(n_epochs))
+
+                epoch_list = []
+                for i in range(n_epochs):
+                    epoch_info = {}
+                    for key, fmt in EpochInfoDescription:
+                        epoch_info[key] = f.read_f(fmt)
+                    epoch_list.append(epoch_info)
+
+                for epoch in epoch_list:
+                    self.logger.debug(epoch)
+                self.logger.debug('')
+
+
+                self.logger.debug('>> UNKNOWN 5 (includes y-axis plot ranges) <<')
+
+                rest_of_the_file = f.read()#.decode('utf-8', 'replace') # undeciphered data
+
+                self.logger.debug(rest_of_the_file)
+
+        self.logger.debug('')
+
+
+        # organize header
+        self.header['nb_block'] = 1
+        self.header['nb_segment'] = [1]
+        self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
+        self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
+        self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
+
+
+        # organize data
+        self._sampling_period = sampling_period
+        self._t_starts = {0: t_start} # key is seg_index
+        self._raw_signals = {0: sigs_memmap} # key is seg_index
+#         self._raw_epochs = epoch_list
+#         self._raw_events = event_list
+
+
+        # keep other details
+        self.info = {}
+
+        self.info['header_id'] = header_id
+        self.info['format_ver'] = format_ver
+
+        self.info['n_cols'] = n_cols
+        self.info['n_traces'] = n_traces
+        self.info['n_groups'] = n_groups
+        self.info['n_episodes'] = n_episodes
+        self.info['n_events'] = n_events
+        self.info['n_epochs'] = n_epochs
+
+        self.info['t_start'] = t_start
+        self.info['sampling_period'] = sampling_period
+
+        self.info['comment'] = comment
+        self.info['notes'] = notes
+
+        self.info['trace_header_info_list'] = trace_header_info_list
+        self.info['group_header_info_list'] = group_header_info_list
+        self.info['event_list'] = event_list
+        self.info['epoch_list'] = epoch_list
+
+        self.info['episodes_in_review'] = episodes_in_review
+        self.info['masked_episodes'] = masked_episodes
+
+        self.info['font_settings_info_list'] = font_settings_info_list
+        self.info['x_axis_settings_info'] = x_axis_settings_info
+
+
+class StructFile(BufferedReader):
+
+    def __init__(self, *args, byte_order='>', **kwargs):
+        # As far as I've seen, every AxoGraph file uses big-endian encoding,
+        # regardless of the system architecture on which it was created, but
+        # here I provide means for controlling byte ordering in case a counter
+        # example is found.
+        self.byte_order = byte_order
+        if byte_order == '>':
+            # big-endian
+            self.utf_16_decoder = 'utf-16-be'
+        elif byte_order == '<':
+            # little-endian
+            self.utf_16_decoder = 'utf-16-le'
+        else:
+            # unspecified
+            self.utf_16_decoder = 'utf-16'
+        super(StructFile, self).__init__(*args, **kwargs)
+
+    def read_and_unpack(self, fmt):
+        # Calculate the number of bytes corresponding to the format string, read
+        # in that number of bytes, and unpack them according to the format string.
+        return unpack(self.byte_order + fmt, self.read(calcsize(self.byte_order + fmt)))
+
+    def read_string(self):
+        # The most common string format in AxoGraph files is a variable length
+        # string with UTF-16 encoding, preceded by a 4-byte integer (long)
+        # specifying the length of the string in bytes. Unlike a Pascal string
+        # ('p' format), these strings are not stored in a fixed number of bytes
+        # with padding at the end.
+
+        length = self.read_and_unpack('l')[0] # may be -1, 0, or a positive integer
+        if length > 0:
+            return self.read(length).decode(self.utf_16_decoder)
+        else:
+            return ''
+
+    def read_bool(self):
+        # AxoGraph files encode each boolean as 4-byte integer (long) with value
+        # 1 = True, 0 = False
+        return bool(self.read_and_unpack('l')[0])
+
+    def read_f(self, fmt, offset=None):
+        # A wrapper for read_and_unpack that adds compatibility with two new
+        # format strings:
+        #     'S': a variable length UTF-16 string, readable with read_string
+        #     'Z': a boolean encoded as a 4-byte integer, readable with read_bool
+        # This method does not implement support for numbers before the new format
+        # strings, such as '2Z' to represent 2 bools (use 'ZZ' instead).
+
+        if offset is not None:
+            self.seek(offset)
+
+        # place commas before and after each instance of S or Z
+        for special in ['S', 'Z']:
+            fmt = fmt.replace(special, ',' + special + ',')
+
+        # split S and Z into isolated strings
+        fmt = fmt.split(',')
+
+        # construct a tuple of unpacked data
+        data = ()
+        for subfmt in fmt:
+            if subfmt == 'S':
+                data += (self.read_string(),)
+            elif subfmt == 'Z':
+                data += (self.read_bool(),)
+            else:
+                data += self.read_and_unpack(subfmt)
+
+        if len(data) == 1:
+            return data[0]
+        else:
+            return data
+
+
+FONT_BOLD = 75     # mysterious arbitrary constant
+FONT_NOT_BOLD = 50 # mysterious arbitrary constant
+FONT_ITALICS = 1
+FONT_UNDERLINE = 2
+FONT_STRIKEOUT = 4
+
+TraceHeaderDescriptionV1 = [
+    # these are documented in AxoGraph's developer
+    # documentation in AxoGraph_ReadWrite.h
+    ('x_index', 'l'),
+    ('y_index', 'l'),
+    ('err_bar_index', 'l'),
+    ('group_id_for_this_trace', 'l'),
+    ('hidden', 'Z'), # AxoGraph_ReadWrite.h incorrectly states "shown" instead
+    ('min_x', 'd'),
+    ('max_x', 'd'),
+    ('min_positive_x', 'd'),
+    ('x_is_regularly_spaced', 'Z'),
+    ('x_increases_monotonically', 'Z'),
+    ('x_interval_if_regularly_spaced', 'd'),
+    ('min_y', 'd'),
+    ('max_y', 'd'),
+    ('min_positive_y', 'd'),
+    ('trace_color', 'xBBB'),
+    ('display_joined_line_plot', 'Z'),
+    ('line_thickness', 'd'),
+    ('pen_style', 'l'),
+    ('display_symbol_plot', 'Z'),
+    ('symbol_type', 'l'),
+    ('symbol_size', 'l'),
+    ('draw_every_data_point', 'Z'),
+    ('skip_points_by_distance_instead_of_pixels', 'Z'),
+    ('pixels_between_symbols', 'l'),
+    ('display_histogram_plot', 'Z'),
+    ('histogram_type', 'l'),
+    ('histogram_bar_separation', 'l'),
+    ('display_error_bars', 'Z'),
+    ('display_pos_err_bar', 'Z'),
+    ('display_neg_err_bar', 'Z'),
+    ('err_bar_width', 'l'),
+]
+
+# documented in AxoGraph_ReadWrite.h
+TraceHeaderDescriptionV2 = TraceHeaderDescriptionV1.copy()
+TraceHeaderDescriptionV2.insert(3, ('neg_err_bar_index', 'l')) # only difference between versions 1 and 2
+
+GroupHeaderDescriptionV1 = [
+    # undocumented and reverse engineered
+    ('title', 'S'),
+    ('unknown1', 'h'),    # 2 bytes of undeciphered data (types here are guesses)
+    ('units', 'S'),
+    ('unknown2', 'hll'),  # 10 bytes of undeciphered data (types here are guesses)
+]
+
+FontSettingsDescription = [
+    # undocumented and reverse engineered
+    ('font', 'S'),
+    ('size', 'h'),        # this 2-byte integer must be divided by 10 to get the font size
+    ('unknown1', '5b'),   # 5 bytes of undeciphered data (types here are guesses)
+    ('setting1', 'B'),    # contains bold setting and possibly some other undeciphered data as bitmask
+    ('setting2', 'B'),    # contains italics, underline, strikeout settings as bitmask
+]
+
+XAxisSettingsDescription = [
+    # undocumented and reverse engineered
+    ('unknown1', '3l2d'), # 28 bytes of undeciphered data (types here are guesses)
+    ('plotted_x_range', 'dd'),
+    ('unknown2', 'd'),    # 8 bytes of undeciphered data (types here are guesses)
+    ('auto_x_ticks', 'Z'),
+    ('x_minor_ticks', 'd'),
+    ('x_major_ticks', 'd'),
+    ('x_axis_title', 'S'),
+    ('unknown3', 'h'),    # 2 bytes of undeciphered data (types here are guesses)
+    ('units', 'S'),
+    ('unknown4', 'h'),    # 2 bytes of undeciphered data (types here are guesses)
+]
+
+EpochInfoDescription = [
+    # undocumented and reverse engineered
+    ('title', 'S'),
+    ('t_start', 'd'),
+    ('t_stop', 'd'),
+    ('y_pos', 'd'),
+]
