@@ -217,6 +217,10 @@ class Event(DataObject):
 
     def __getitem__(self, i):
         obj = super(Event, self).__getitem__(i)
+        if self._labels is not None and self._labels.size > 0:
+            obj.labels = self._labels[i]
+        else:
+            obj.labels = self._labels
         try:
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not Event

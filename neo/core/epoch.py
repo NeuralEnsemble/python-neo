@@ -192,7 +192,10 @@ class Epoch(DataObject):
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
         obj._durations = self.durations[i]
-        obj._labels = self.labels[i]
+        if self._labels is not None and self._labels.size > 0:
+            obj._labels = self.labels[i]
+        else:
+            obj._labels = self.labels
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))

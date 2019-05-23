@@ -426,8 +426,10 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             assert_same_attributes(block.segments[epoch_idx].analogsignals[0], anasig_target)
             assert_same_attributes(block.segments[epoch_idx].events[0],
                                    event.duplicate_with_new_data(
-                                       event.times - epoch.times[epoch_idx]).time_slice(
-                                       t_start=0 * pq.s, t_stop=epoch.durations[epoch_idx]))
+                                       event.times - epoch.times[epoch_idx],
+                                       event.labels
+                                    ).time_slice(t_start=0 * pq.s,
+                                                 t_stop=epoch.durations[epoch_idx]))
 
         assert_same_attributes(block.segments[0].epochs[0],
                                epoch2.duplicate_with_new_data(epoch2.times - epoch.times[0],
@@ -515,7 +517,8 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
 
         loaded_event = proxy_event.load()
 
-        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units)
+        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units,
+                              labels=np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12'))
 
         seg = Segment()
         seg.events = [regular_event, proxy_event]
