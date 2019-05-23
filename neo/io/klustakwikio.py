@@ -203,8 +203,8 @@ class KlustaKwikIO(BaseIO):
             names = ['fet%d' % n for n in range(nbFeatures)]
             names.append('spike_time')
 
-            # Load into recarray
-            data = mlab.csv2rec(f, names=names, skiprows=1, delimiter=' ')
+        # Load into recarray
+        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=' ')
 
         # get features
         features = np.array([data['fet%d' % n] for n in range(nbFeatures)])
