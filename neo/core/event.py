@@ -10,7 +10,7 @@ This module defines :class:`Event`, an array of events.
 from __future__ import absolute_import, division, print_function
 
 import sys
-from copy import deepcopy
+from copy import deepcopy, copy
 
 import numpy as np
 import quantities as pq
@@ -73,6 +73,7 @@ class Event(DataObject):
     '''
 
     _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('labels', np.ndarray, 1, np.dtype('S')))
 
@@ -207,26 +208,12 @@ class Event(DataObject):
         Copy the metadata from another :class:`Event`.
         Note: Array annotations can not be copied here because length of data can change
         '''
-        # Note: Array annotations cannot be copied
-        # because they are linked to their respective timestamps
-        for attr in ("labels", "name", "file_origin", "description", "annotations"):
-            setattr(self, attr, getattr(other, attr,
-                                        None))  # Note: Array annotations cannot be copied
-            # because length of data can be changed  # here which would cause inconsistencies  #
-            #  This includes labels and durations!!!
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_ev = cls(times=self.times, labels=self.labels, units=self.units, name=self.name,
-                     description=self.description, file_origin=self.file_origin)
-        new_ev.__dict__.update(self.__dict__)
-        memo[id(self)] = new_ev
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_ev, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_ev, k, v)
-        return new_ev
+        # Note: Array annotations, including labels, cannot be copied
+        # because they are linked to their respective timestamps and length of data can be changed
+        # here which would cause inconsistencies
+        for attr in ("_labels", "name", "file_origin", "description",
+                     "annotations"):
+            setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
     def __getitem__(self, i):
         obj = super(Event, self).__getitem__(i)
@@ -279,7 +266,9 @@ class Event(DataObject):
             _t_stop = np.inf
 
         indices = (self >= _t_start) & (self <= _t_stop)
-        new_evt = self[indices]
+
+        # Time slicing should create a deep copy of the object
+        new_evt = deepcopy(self[indices])
 
         return new_evt
 

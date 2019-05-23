@@ -5,6 +5,7 @@ Tests of the neo.core.event.Event class
 
 import unittest
 import warnings
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -101,6 +102,18 @@ class Test__generate_datasets(unittest.TestCase):
 
 
 class TestEvent(unittest.TestCase):
+
+    def setUp(self):
+        self.params = {'test2': 'y1', 'test3': True}
+        self.arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
+        self.evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms, name='test',
+                    description='tester', file_origin='test.file', test1=1,
+                    array_annotations=self.arr_ann, **self.params)
+        self.evt.annotate(test1=1.1, test0=[1, 2])
+
+    def test_setup_compliant(self):
+        assert_neo_object_is_compliant(self.evt)
+
     def test_Event_creation(self):
         params = {'test2': 'y1', 'test3': True}
         arr_ann = {'names': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
@@ -136,13 +149,8 @@ class TestEvent(unittest.TestCase):
         assert_neo_object_is_compliant(epc)
 
     def tests_time_slice(self):
-        params = {'test2': 'y1', 'test3': True}
-        arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
-        evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms, name='test',
-                    description='tester', file_origin='test.file', test1=1,
-                    array_annotations=arr_ann, **params)
-        evt.annotate(test1=1.1, test0=[1, 2])
-        assert_neo_object_is_compliant(evt)
+
+        evt = self.evt
 
         targ = Event([2.2, 2.9, 3.0] * pq.ms)
         result = evt.time_slice(t_start=2.0, t_stop=3.0)
@@ -157,6 +165,86 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['index'], np.arange(5, 8))
         assert_arrays_equal(result.array_annotations['test'], np.arange(105, 108))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def tests_time_slice_deepcopy_annotations(self):
+        params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms,
+                    name='test', description='tester',
+                    file_origin='test.file', **params)
+        result = evt.time_slice(t_start=2.0, t_stop=3.0)
+        evt.annotate(test0='y2', test2=False)
+        evt.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(evt.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(evt.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(evt.annotations['test2'], result.annotations['test2'])
+
+    def test__time_slice_deepcopy_annotations(self):
+        params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.evt.annotate(**params1)
+        # time_slice spike train, keep sliced spike times
+        t_start = 2.1 * pq.ms
+        t_stop = 3.05 * pq.ms
+        result = self.evt.time_slice(t_start, t_stop)
+
+        # Change annotations of original
+        params2 = {'test0': 'y2', 'test2': False}
+        self.evt.annotate(**params2)
+        self.evt.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(self.evt.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.evt.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.evt.annotations['test2'], result.annotations['test2'])
+
+        # Change annotations of result
+        params3 = {'test0': 'y3'}
+        result.annotate(**params3)
+        result.annotations['test1'][0] = 'shallowtest2'
+
+        self.assertNotEqual(self.evt.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.evt.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.evt.annotations['test2'], result.annotations['test2'])
+
+    def test__time_slice_deepcopy_array_annotations(self):
+        length = self.evt.shape[-1]
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+                   'test2': [(-1)**i > 0 for i in range(length)]}
+        self.evt.array_annotate(**params1)
+        # time_slice spike train, keep sliced spike times
+        t_start = 2.1 * pq.ms
+        t_stop = 3.05 * pq.ms
+        result = self.evt.time_slice(t_start, t_stop)
+
+        # Change annotations of original
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        self.evt.array_annotate(**params2)
+        self.evt.array_annotations['test1'][6] = 'shallowtest'
+
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+
+        # Change annotations of result
+        params3 = {'test0': ['z{}'.format(i) for i in range(5, 8)]}
+        result.array_annotate(**params3)
+        result.array_annotations['test1'][1] = 'shallow2'
+
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+
+    def test__time_slice_deepcopy_data(self):
+        result = self.evt.time_slice(None, None)
+
+        # Change values of original array
+        self.evt[2] = 7.3*self.evt.units
+
+        self.assertFalse(all(self.evt == result))
+
+        # Change values of sliced array
+        result[3] = 9.5*result.units
+
+        self.assertFalse(all(self.evt == result))
 
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
@@ -304,6 +392,17 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['index'], np.arange(5, 7))
         assert_arrays_equal(result.array_annotations['test'], np.arange(105, 107))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test__time_slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.evt.time_slice(1 * pq.ms, 3 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+        result = deepcopy(self.evt)
+        self.assertEqual(result.segment, None)
 
     def test_slice(self):
         params = {'test2': 'y1', 'test3': True}

@@ -5,6 +5,7 @@ Tests of the neo.core.epoch.Epoch class
 
 import unittest
 import warnings
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -105,6 +106,12 @@ class Test__generate_datasets(unittest.TestCase):
 
 
 class TestEpoch(unittest.TestCase):
+
+    def setUp(self):
+        self.params = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.epc = Epoch(times=[10, 20, 30, 40, 50] * pq.s, durations=[10, 5, 7, 14, 9] * pq.ms,
+                    labels=np.array(['btn0', 'btn1', 'btn2', 'btn0', 'btn3'], dtype='S'), **self.params)
+
     def test_Epoch_creation(self):
         params = {'test2': 'y1', 'test3': True}
         arr_ann = {'names': ['a', 'b', 'c'], 'index': np.arange(10, 13)}
@@ -313,6 +320,73 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
+    def test__time_slice_deepcopy_annotations(self):
+        params1 = {'test0': 'y1', 'test1': ['deeptest'], 'test2': True}
+        self.epc.annotate(**params1)
+        # time_slice spike train, keep sliced spike times
+        t_start = 15 * pq.s
+        t_stop = 45 * pq.s
+        result = self.epc.time_slice(t_start, t_stop)
+
+        # Change annotations of original
+        params2 = {'test0': 'y2', 'test2': False}
+        self.epc.annotate(**params2)
+        self.epc.annotations['test1'][0] = 'shallowtest'
+
+        self.assertNotEqual(self.epc.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.epc.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.epc.annotations['test2'], result.annotations['test2'])
+
+        # Change annotations of result
+        params3 = {'test0': 'y3'}
+        result.annotate(**params3)
+        result.annotations['test1'][0] = 'shallowtest2'
+
+        self.assertNotEqual(self.epc.annotations['test0'], result.annotations['test0'])
+        self.assertNotEqual(self.epc.annotations['test1'], result.annotations['test1'])
+        self.assertNotEqual(self.epc.annotations['test2'], result.annotations['test2'])
+
+    def test__time_slice_deepcopy_array_annotations(self):
+        length = self.epc.shape[-1]
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+                   'test2': [(-1)**i > 0 for i in range(length)]}
+        self.epc.array_annotate(**params1)
+        # time_slice spike train, keep sliced spike times
+        t_start = 15 * pq.s
+        t_stop = 45 * pq.s
+        result = self.epc.time_slice(t_start, t_stop)
+
+        # Change annotations of original
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        self.epc.array_annotate(**params2)
+        self.epc.array_annotations['test1'][2] = 'shallowtest'
+
+        self.assertFalse(all(self.epc.array_annotations['test0'][1:4] == result.array_annotations['test0']))
+        self.assertFalse(all(self.epc.array_annotations['test1'][1:4] == result.array_annotations['test1']))
+        self.assertFalse(all(self.epc.array_annotations['test2'][1:4] == result.array_annotations['test2']))
+
+        # Change annotations of result
+        params3 = {'test0': ['z{}'.format(i) for i in range(1, 4)]}
+        result.array_annotate(**params3)
+        result.array_annotations['test1'][1] = 'shallow2'
+
+        self.assertFalse(all(self.epc.array_annotations['test0'][1:4] == result.array_annotations['test0']))
+        self.assertFalse(all(self.epc.array_annotations['test1'][1:4] == result.array_annotations['test1']))
+        self.assertFalse(all(self.epc.array_annotations['test2'][1:4] == result.array_annotations['test2']))
+
+    def test__time_slice_deepcopy_data(self):
+        result = self.epc.time_slice(None, None)
+
+        # Change values of original array
+        self.epc[2] = 7.3*self.epc.units
+
+        self.assertFalse(all(self.epc == result))
+
+        # Change values of sliced array
+        result[3] = 9.5*result.units
+
+        self.assertFalse(all(self.epc == result))
+
     def test_time_slice_out_of_boundries(self):
         params = {'test2': 'y1', 'test3': True}
         arr_ann = {'index': np.arange(3), 'test': ['a', 'b', 'c']}
@@ -509,6 +583,17 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(result.array_annotations['index'], np.array([1]))
         assert_arrays_equal(result.array_annotations['test'], np.array(['b']))
         self.assertIsInstance(result.array_annotations, ArrayDict)
+
+    def test__time_slice_should_set_parents_to_None(self):
+        # When timeslicing, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.epc.time_slice(1 * pq.ms, 3 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__deepcopy_should_set_parents_objects_to_None(self):
+        # Deepcopy should destroy references to parents
+        result = deepcopy(self.epc)
+        self.assertEqual(result.segment, None)
 
     def test_as_array(self):
         times = [2, 3, 4, 5]
