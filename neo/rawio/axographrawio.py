@@ -98,16 +98,28 @@ class AxographRawIO(BaseRawIO):
     # event and epoch zone
 
     def _event_count(self, block_index, seg_index, event_channel_index):
-        raise (NotImplementedError)
+        # Retrieve size of either event or epoch channel:
+        #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
+        return self._raw_event_epoch_timestamps[event_channel_index].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        raise (NotImplementedError)
+        # Retrieve either event or epoch data, unscaled:
+        #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
+        timestamps = self._raw_event_epoch_timestamps[event_channel_index]
+        durations = self._raw_event_epoch_durations[event_channel_index]
+        labels = self._event_epoch_labels[event_channel_index]
+        # TODO filter by time
+        return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        raise (NotImplementedError)
+        # Scale either event or epoch start times to seconds
+        event_times = event_timestamps.astype(dtype) * self._sampling_period # t_start shouldn't be added
+        return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        raise (NotImplementedError)
+        # Scale epoch duration times to seconds
+        epoch_durations = raw_duration.astype(dtype) * self._sampling_period # t_start shouldn't be added
+        return epoch_durations
 
 
 
@@ -628,18 +640,20 @@ class AxographRawIO(BaseRawIO):
 
                 self.logger.debug('n_events: {}'.format(n_events))
 
-                event_times = []
+                raw_event_timestamps = []
+                event_labels = []
                 for i in range(n_events_again):
                     event_index = f.read_f('l')
-                    event_time = event_index * sampling_period # t_start shouldn't be added
-                    event_times.append(event_time)
+                    raw_event_timestamps.append(event_index)
                 n_events_yet_again = f.read_f('l')
-                event_list = []
                 for i in range(n_events_yet_again):
                     title = f.read_f('S')
-                    event_info = {'title': title, 'time': event_times[i]}
-                    event_list.append(event_info)
+                    event_labels.append(title)
 
+                event_list = []
+                for event_label, event_index in zip(event_labels, raw_event_timestamps):
+                    event_time = event_index * sampling_period # t_start shouldn't be added
+                    event_list.append({'title': event_label, 'time': event_time})
                 for event in event_list:
                     self.logger.debug(event)
                 self.logger.debug('')
@@ -666,7 +680,13 @@ class AxographRawIO(BaseRawIO):
                         epoch_info[key] = f.read_f(fmt)
                     epoch_list.append(epoch_info)
 
+                raw_epoch_timestamps = []
+                raw_epoch_durations = []
+                epoch_labels = []
                 for epoch in epoch_list:
+                    raw_epoch_timestamps.append(epoch['t_start']/sampling_period)
+                    raw_epoch_durations.append((epoch['t_stop']-epoch['t_start'])/sampling_period)
+                    epoch_labels.append(epoch['title'])
                     self.logger.debug(epoch)
                 self.logger.debug('')
 
@@ -681,10 +701,13 @@ class AxographRawIO(BaseRawIO):
 
 
         # organize header
+        event_channels = []
+        event_channels.append(('AxoGraph Tags',      '', 'event')) # follows _event_channel_dtype
+        event_channels.append(('AxoGraph Intervals', '', 'epoch')) # follows _event_channel_dtype
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
-        self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
+        self.header['event_channels'] = np.array(event_channels, dtype=_event_channel_dtype)
         self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
 
 
@@ -692,8 +715,9 @@ class AxographRawIO(BaseRawIO):
         self._sampling_period = sampling_period
         self._t_starts = {0: t_start} # key is seg_index
         self._raw_signals = {0: sigs_memmap} # key is seg_index
-#         self._raw_epochs = epoch_list
-#         self._raw_events = event_list
+        self._raw_event_epoch_timestamps = {0: np.array(raw_event_timestamps), 1: np.array(raw_epoch_timestamps)}
+        self._raw_event_epoch_durations = {0: None, 1: np.array(raw_epoch_durations)}
+        self._event_epoch_labels = {0: np.array(event_labels, dtype='U'), 1: np.array(epoch_labels, dtype='U')}
 
 
         # keep other details
