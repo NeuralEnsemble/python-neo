@@ -7,6 +7,8 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
 
+import os
+from datetime import datetime
 from io import open, BufferedReader
 from struct import unpack, calcsize
 
@@ -46,6 +48,11 @@ class AxographRawIO(BaseRawIO):
         if self.info['format_ver'] >= 3:
             blk_annotations['comment'] = self.info['comment']
             blk_annotations['notes'] = self.info['notes']
+            blk_annotations['rec_datetime'] = self._get_rec_datetime()
+
+        # modified time is not ideal but less prone to
+        # cross-platform issues than created time (ctime)
+        blk_annotations['file_datetime'] = datetime.fromtimestamp(os.path.getmtime(self.filename))
 
     def _source_name(self):
         return self.filename
@@ -261,7 +268,36 @@ class AxographRawIO(BaseRawIO):
 
         return
 
+    def _get_rec_datetime(self):
 
+        # Determine the time at which the recording was started from
+        # automatically generated notes. Notes differ depending on whether the
+        # recording was obtained in episodic acquisition mode or in chart mode.
+
+        rec_datetime = None
+        date_string = ''
+        time_string = ''
+        datetime_string = ''
+
+        for note_line in self.info['notes'].split('\n'):
+
+            # episodic acquisition mode
+            if note_line.startswith('Created on '):
+                date_string = note_line.strip('Created on ')
+            if note_line.startswith('Start data acquisition at '):
+                time_string = note_line.strip('Start data acquisition at ')
+
+            # chart mode
+            if note_line.startswith('Created : '):
+                datetime_string = note_line.strip('Created : ')
+
+        if date_string and time_string:
+            datetime_string = ' '.join([date_string, time_string])
+
+        if datetime_string:
+            rec_datetime = datetime.strptime(datetime_string, '%a %b %d %Y %H:%M:%S')
+
+        return rec_datetime
 
     def _scan_axograph_file(self):
 
