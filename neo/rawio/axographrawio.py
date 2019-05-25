@@ -138,7 +138,13 @@ class AxographRawIO(BaseRawIO):
         # function. Recordings in which the user has changed groupings to
         # create irregularities should be caught by this function.
 
-        # First check: If the file is episodic, groups of traces should all
+        # First check: Old AxoGraph file formats do not contain enough metadata
+        # to know for certain that the file is episodic.
+        if self.info['format_ver'] < 3:
+            self.logger.debug('Cannot treat as episodic because old format contains insufficient metadata')
+            return False
+
+        # Second check: If the file is episodic, groups of traces should all
         # contain the same number of traces, one for each episode. This is
         # generally true of "continuous" (single-episode) recordings as well,
         # which normally have 1 trace per group.
@@ -156,13 +162,13 @@ class AxographRawIO(BaseRawIO):
             self.logger.debug('Cannot treat as episodic because groups differ in number of traces')
             return False
 
-        # Second check: The number of traces in each group should equal n_episodes
+        # Third check: The number of traces in each group should equal n_episodes.
         n_traces_per_group = np.unique(list(n_traces_by_group.values()))
         if n_traces_per_group != self.info['n_episodes']:
             self.logger.debug('Cannot treat as episodic because n_episodes does not match number of traces per group')
             return False
 
-        # Third check: If the file is episodic, all traces within a group
+        # Fourth check: If the file is episodic, all traces within a group
         # should have identical signal channel parameters (e.g., name, units)
         # except for their unique ids. This too is generally true of "continuous"
         # (single-episode) files, which normally have 1 trace per group.
@@ -443,6 +449,12 @@ class AxographRawIO(BaseRawIO):
 
                 rest_of_the_file = f.read()
                 assert rest_of_the_file == b''
+
+                raw_event_timestamps = []
+                raw_epoch_timestamps = []
+                raw_epoch_durations = []
+                event_labels = []
+                epoch_labels = []
 
             elif format_ver >= 3:
 
@@ -748,29 +760,30 @@ class AxographRawIO(BaseRawIO):
         self.info['header_id'] = header_id
         self.info['format_ver'] = format_ver
 
-        self.info['n_cols'] = n_cols
-        self.info['n_traces'] = n_traces
-        self.info['n_groups'] = n_groups
-        self.info['n_episodes'] = n_episodes
-        self.info['n_events'] = n_events
-        self.info['n_epochs'] = n_epochs
-
         self.info['t_start'] = t_start
         self.info['sampling_period'] = sampling_period
 
-        self.info['comment'] = comment
-        self.info['notes'] = notes
+        if format_ver >= 3:
+            self.info['n_cols'] = n_cols
+            self.info['n_traces'] = n_traces
+            self.info['n_groups'] = n_groups
+            self.info['n_episodes'] = n_episodes
+            self.info['n_events'] = n_events
+            self.info['n_epochs'] = n_epochs
 
-        self.info['trace_header_info_list'] = trace_header_info_list
-        self.info['group_header_info_list'] = group_header_info_list
-        self.info['event_list'] = event_list
-        self.info['epoch_list'] = epoch_list
+            self.info['comment'] = comment
+            self.info['notes'] = notes
 
-        self.info['episodes_in_review'] = episodes_in_review
-        self.info['masked_episodes'] = masked_episodes
+            self.info['trace_header_info_list'] = trace_header_info_list
+            self.info['group_header_info_list'] = group_header_info_list
+            self.info['event_list'] = event_list
+            self.info['epoch_list'] = epoch_list
 
-        self.info['font_settings_info_list'] = font_settings_info_list
-        self.info['x_axis_settings_info'] = x_axis_settings_info
+            self.info['episodes_in_review'] = episodes_in_review
+            self.info['masked_episodes'] = masked_episodes
+
+            self.info['font_settings_info_list'] = font_settings_info_list
+            self.info['x_axis_settings_info'] = x_axis_settings_info
 
 
 class StructFile(BufferedReader):
