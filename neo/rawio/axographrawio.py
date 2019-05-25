@@ -31,7 +31,7 @@ class AxographRawIO(BaseRawIO):
 
         self.header = {}
 
-        self._do_the_heavy_lifting()
+        self._scan_axograph_file()
 
         if not self.force_single_segment and self._safe_to_treat_as_episodic():
             self.logger.debug('Will treat as episodic')
@@ -192,7 +192,13 @@ class AxographRawIO(BaseRawIO):
             self.logger.debug('Cannot treat as episodic because old format contains insufficient metadata')
             return False
 
-        # Second check: If the file is episodic, groups of traces should all
+        # Second check: If the file is episodic, it should report that it
+        # contains more than 1 episode.
+        if self.info['n_episodes'] == 1:
+            self.logger.debug('Cannot treat as episodic because file reports one episode')
+            return False
+
+        # Third check: If the file is episodic, groups of traces should all
         # contain the same number of traces, one for each episode. This is
         # generally true of "continuous" (single-episode) recordings as well,
         # which normally have 1 trace per group.
@@ -210,13 +216,13 @@ class AxographRawIO(BaseRawIO):
             self.logger.debug('Cannot treat as episodic because groups differ in number of traces')
             return False
 
-        # Third check: The number of traces in each group should equal n_episodes.
+        # Fourth check: The number of traces in each group should equal n_episodes.
         n_traces_per_group = np.unique(list(n_traces_by_group.values()))
         if n_traces_per_group != self.info['n_episodes']:
             self.logger.debug('Cannot treat as episodic because n_episodes does not match number of traces per group')
             return False
 
-        # Fourth check: If the file is episodic, all traces within a group
+        # Fifth check: If the file is episodic, all traces within a group
         # should have identical signal channel parameters (e.g., name, units)
         # except for their unique ids. This too is generally true of "continuous"
         # (single-episode) files, which normally have 1 trace per group.
@@ -236,7 +242,7 @@ class AxographRawIO(BaseRawIO):
         return True
 
     def _convert_to_multi_segment(self):
-        # Reshape signal headers and signal data for episodic data
+        # Reshape signal headers and signal data for an episodic file
 
         self.header['nb_segment'] = [self.info['n_episodes']]
 
@@ -257,7 +263,7 @@ class AxographRawIO(BaseRawIO):
 
 
 
-    def _do_the_heavy_lifting(self):
+    def _scan_axograph_file(self):
 
         with open(self.filename, 'rb') as fid:
             f = StructFile(fid)
@@ -480,7 +486,7 @@ class AxographRawIO(BaseRawIO):
 
                 channel_id = i
                 group_id = 0
-                channel_info = (name, channel_id, 1/sampling_period, f.byte_order+dtype, units, gain, offset, group_id) # follows _signal_channel_dtype
+                channel_info = (name, channel_id, 1/sampling_period, f.byte_order+dtype, units, gain, offset, group_id) # will be cast to _signal_channel_dtype
 
                 self.logger.debug('channel_info: {}'.format(channel_info))
                 self.logger.debug('')
@@ -784,8 +790,8 @@ class AxographRawIO(BaseRawIO):
 
         # organize header
         event_channels = []
-        event_channels.append(('AxoGraph Tags',      '', 'event')) # follows _event_channel_dtype
-        event_channels.append(('AxoGraph Intervals', '', 'epoch')) # follows _event_channel_dtype
+        event_channels.append(('AxoGraph Tags',      '', 'event')) # will be cast to _event_channel_dtype
+        event_channels.append(('AxoGraph Intervals', '', 'epoch')) # will be cast to _event_channel_dtype
         self.header['nb_block'] = 1
         self.header['nb_segment'] = [1]
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
