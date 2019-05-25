@@ -41,8 +41,11 @@ class AxographRawIO(BaseRawIO):
         self.logger.debug('')
 
         self._generate_minimal_annotations()
-
-        # TODO fix blk.channel_indexes name, match id to group id?
+        blk_annotations = self.raw_annotations['blocks'][0]
+        blk_annotations['format_ver'] = self.info['format_ver']
+        if self.info['format_ver'] >= 3:
+            blk_annotations['comment'] = self.info['comment']
+            blk_annotations['notes'] = self.info['notes']
 
     def _source_name(self):
         return self.filename
