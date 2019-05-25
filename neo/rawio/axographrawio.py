@@ -112,21 +112,50 @@ class AxographRawIO(BaseRawIO):
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # Retrieve either event or epoch data, unscaled:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
-        # same for all segments -- TODO verify
+        # same for all segments -- TODO verify episodes can't be tagged
         timestamps = self._raw_event_epoch_timestamps[event_channel_index]
         durations = self._raw_event_epoch_durations[event_channel_index]
         labels = self._event_epoch_labels[event_channel_index]
-        # TODO filter by time
+
+        if durations is None:
+            # events
+            if t_start is not None:
+                # keep if event occurs after t_start ...
+                keep = timestamps >= int(t_start/self._sampling_period)
+                timestamps = timestamps[keep]
+                labels = labels[keep]
+
+            if t_stop is not None:
+                # ... and before t_stop
+                keep = timestamps <= int(t_stop/self._sampling_period)
+                timestamps = timestamps[keep]
+                labels = labels[keep]
+        else:
+            # epochs
+            if t_start is not None:
+                # keep if epoch ends after t_start ...
+                keep = timestamps + durations >= int(t_start/self._sampling_period)
+                timestamps = timestamps[keep]
+                durations = durations[keep]
+                labels = labels[keep]
+
+            if t_stop is not None:
+                # ... and starts before t_stop
+                keep = timestamps <= int(t_stop/self._sampling_period)
+                timestamps = timestamps[keep]
+                durations = durations[keep]
+                labels = labels[keep]
+
         return timestamps, durations, labels
 
     def _rescale_event_timestamp(self, event_timestamps, dtype):
-        # Scale either event or epoch start times to seconds
+        # Scale either event or epoch start times from sample index to seconds
         event_times = event_timestamps.astype(dtype) * self._sampling_period # t_start shouldn't be added
         return event_times
 
     def _rescale_epoch_duration(self, raw_duration, dtype):
-        # Scale epoch duration times to seconds
-        epoch_durations = raw_duration.astype(dtype) * self._sampling_period # t_start shouldn't be added
+        # Scale epoch durations from samples to seconds
+        epoch_durations = raw_duration.astype(dtype) * self._sampling_period
         return epoch_durations
 
     ###
