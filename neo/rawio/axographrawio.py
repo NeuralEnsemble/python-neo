@@ -33,24 +33,27 @@ class AxographRawIO(BaseRawIO):
 
         self._do_the_heavy_lifting()
 
-        # if not self.force_single_segment and self._safe_to_treat_as_episodic():
-        #     self.logger.debug('convert to multi segment!!!')
-        #     self._convert_to_multi_segment()
-        # else:
-        #     self.logger.debug('single segment!!!')
-        # self.logger.debug('')
+        if not self.force_single_segment and self._safe_to_treat_as_episodic():
+            self.logger.debug('Will treat as episodic')
+            self._convert_to_multi_segment()
+        else:
+            self.logger.debug('Will not treat as episodic')
+        self.logger.debug('')
 
         self._generate_minimal_annotations()
+
+        # TODO fix blk.channel_indexes name, match id to group id?
 
     def _source_name(self):
         return self.filename
 
     def _segment_t_start(self, block_index, seg_index):
-        return self._t_starts[seg_index]
+        # same for all segments
+        return self._t_start
 
     def _segment_t_stop(self, block_index, seg_index):
-        # TODO: this assumes there is a first signal and all have same length
-        t_stop = self._t_starts[seg_index] + \
+        # same for all signals in all segments
+        t_stop = self._t_start + \
             len(self._raw_signals[seg_index][0]) * self._sampling_period
         return t_stop
 
@@ -58,12 +61,12 @@ class AxographRawIO(BaseRawIO):
     # signal and channel zone
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
-        # TODO: this assumes there is a first signal and all have same length
+        # same for all signals in all segments
         return len(self._raw_signals[seg_index][0])
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
-        # TODO: this assumes all signals start at the seg start
-        return self._t_starts[seg_index]
+        # same for all signals in all segments
+        return self._t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         assert block_index == 0, 'AxoGraph files do not support multi-block, block_index {} out of range'.format(block_index)
@@ -100,11 +103,13 @@ class AxographRawIO(BaseRawIO):
     def _event_count(self, block_index, seg_index, event_channel_index):
         # Retrieve size of either event or epoch channel:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
+        # same for all segments -- TODO verify
         return self._raw_event_epoch_timestamps[event_channel_index].size
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
         # Retrieve either event or epoch data, unscaled:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
+        # same for all segments -- TODO verify
         timestamps = self._raw_event_epoch_timestamps[event_channel_index]
         durations = self._raw_event_epoch_durations[event_channel_index]
         labels = self._event_epoch_labels[event_channel_index]
@@ -121,12 +126,12 @@ class AxographRawIO(BaseRawIO):
         epoch_durations = raw_duration.astype(dtype) * self._sampling_period # t_start shouldn't be added
         return epoch_durations
 
-
-
+    ###
+    # multi-segment zone
 
     def _safe_to_treat_as_episodic(self):
 
-        # The purpose of this fuction is to determine if the file lacks any
+        # The purpose of this fuction is to determine if the file contains any
         # irregularities in its grouping of traces such that it cannot be
         # treated as episodic. Even "continuous" recordings can be treated as
         # single-episode recordings and should be identified as safe by this
@@ -144,24 +149,24 @@ class AxographRawIO(BaseRawIO):
                 if trace_header['group_id_for_this_trace'] == group_id:
                     col_indexes.append(trace_header['y_index'])
             group_id_to_col_indexes[group_id] = col_indexes
-        num_traces_per_group = {k:len(v) for k,v in group_id_to_col_indexes.items()}
-        all_groups_have_same_number_of_traces = len(np.unique(list(num_traces_per_group.values()))) == 1
+        n_traces_by_group = {k:len(v) for k,v in group_id_to_col_indexes.items()}
+        all_groups_have_same_number_of_traces = len(np.unique(list(n_traces_by_group.values()))) == 1
 
         if not all_groups_have_same_number_of_traces:
-            self.logger.debug('Will not treat as episodic because groups differ on number of traces')
+            self.logger.debug('Cannot treat as episodic because groups differ in number of traces')
             return False
 
         # Second check: The number of traces in each group should equal n_episodes
-        num_traces_in_each_group = np.unique(list(num_traces_per_group.values()))
-        if num_traces_in_each_group != self.info['n_episodes']:
-            self.logger.debug('Will not treat as episodic because n_episodes does not match number of traces per group')
+        n_traces_per_group = np.unique(list(n_traces_by_group.values()))
+        if n_traces_per_group != self.info['n_episodes']:
+            self.logger.debug('Cannot treat as episodic because n_episodes does not match number of traces per group')
             return False
 
         # Third check: If the file is episodic, all traces within a group
         # should have identical signal channel parameters (e.g., name, units)
         # except for their unique ids. This too is generally true of "continuous"
         # (single-episode) files, which normally have 1 trace per group.
-        signal_channels_with_ids_dropped = self.header['signal_channels'][['name', 'sampling_rate', 'dtype', 'units', 'gain', 'offset', 'group_id']]
+        signal_channels_with_ids_dropped = self.header['signal_channels'][[n for n in self.header['signal_channels'].dtype.names if n != 'id']]
         group_has_uniform_signal_parameters = {}
         for group_id, col_indexes in group_id_to_col_indexes.items():
             signal_params_for_group = np.array(signal_channels_with_ids_dropped[np.array(col_indexes)-1]) # subtract 1 because time is missing from signal_channels
@@ -169,16 +174,33 @@ class AxographRawIO(BaseRawIO):
         all_groups_have_uniform_signal_parameters = np.all(list(group_has_uniform_signal_parameters.values()))
 
         if not all_groups_have_uniform_signal_parameters:
-            self.logger.debug('Will not treat as episodic because some groups have heterogeneous signal parameters')
+            self.logger.debug('Cannot treat as episodic because some groups have heterogeneous signal parameters')
             return False
 
         # all checks passed
+        self.logger.debug('Can treat as episodic')
         return True
 
-
     def _convert_to_multi_segment(self):
-        # make some magic happen
+        # Reshape signal headers and signal data for episodic data
+
+        self.header['nb_segment'] = [self.info['n_episodes']]
+
+        # drop repeated signal headers
+        self.header['signal_channels'] = self.header['signal_channels'].reshape(self.info['n_episodes'], -1)[0]
+
+        # reshape signal memmap list
+        new_sigs_memmap = []
+        n_traces_per_group = len(self.header['signal_channels'])
+        sigs_memmap = self._raw_signals[0]
+        for first_index in np.arange(0, len(sigs_memmap), n_traces_per_group):
+            new_sigs_memmap.append(sigs_memmap[first_index:first_index+n_traces_per_group])
+        self._raw_signals = new_sigs_memmap
+
+        self.logger.debug('New number of segments: {}'.format(self.info['n_episodes']))
+
         return
+
 
 
     def _do_the_heavy_lifting(self):
@@ -713,11 +735,11 @@ class AxographRawIO(BaseRawIO):
 
         # organize data
         self._sampling_period = sampling_period
-        self._t_starts = {0: t_start} # key is seg_index
-        self._raw_signals = {0: sigs_memmap} # key is seg_index
-        self._raw_event_epoch_timestamps = {0: np.array(raw_event_timestamps), 1: np.array(raw_epoch_timestamps)}
-        self._raw_event_epoch_durations = {0: None, 1: np.array(raw_epoch_durations)}
-        self._event_epoch_labels = {0: np.array(event_labels, dtype='U'), 1: np.array(epoch_labels, dtype='U')}
+        self._t_start = t_start
+        self._raw_signals = [sigs_memmap] # first index is seg_index
+        self._raw_event_epoch_timestamps = [np.array(raw_event_timestamps), np.array(raw_epoch_timestamps)]
+        self._raw_event_epoch_durations = [None, np.array(raw_epoch_durations)]
+        self._event_epoch_labels = [np.array(event_labels, dtype='U'), np.array(epoch_labels, dtype='U')]
 
 
         # keep other details

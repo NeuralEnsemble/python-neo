@@ -16,8 +16,8 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     #   'group-by-same-units' : one 2D AnalogSignal for each group of channel with same units
     _prefered_signal_group_mode = 'split-all'
 
-    def __init__(self, filename=''):
-        AxographRawIO.__init__(self, filename=filename)
+    def __init__(self, filename='', force_single_segment=False):
+        AxographRawIO.__init__(self, filename=filename, force_single_segment=force_single_segment)
         BaseFromRaw.__init__(self, filename)
 
 
