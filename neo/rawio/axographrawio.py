@@ -777,7 +777,7 @@ class AxographRawIO(BaseRawIO):
                 event_list = []
                 for event_label, event_index in zip(event_labels, raw_event_timestamps):
                     event_time = event_index * sampling_period # t_start shouldn't be added
-                    event_list.append({'title': event_label, 'time': event_time})
+                    event_list.append({'title': event_label, 'index': event_index, 'time': event_time})
                 for event in event_list:
                     self.logger.debug(event)
                 self.logger.debug('')
