@@ -79,7 +79,6 @@ class AxographRawIO(BaseRawIO):
         return self._t_start
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        assert block_index == 0, 'AxoGraph files do not support multi-block, block_index {} out of range'.format(block_index)
 
         if channel_indexes is None or np.all(channel_indexes == slice(None, None, None)):
             channel_indexes = range(self.signal_channels_count())
@@ -93,19 +92,23 @@ class AxographRawIO(BaseRawIO):
     # spiketrain and unit zone
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        raise (NotImplementedError)
+        # not supported
+        return None
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        raise (NotImplementedError)
+        # not supported
+        return None
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        raise (NotImplementedError)
+        # not supported
+        return None
 
     ###
     # spike waveforms zone
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        raise (NotImplementedError)
+        # not supported
+        return None
 
     ###
     # event and epoch zone
