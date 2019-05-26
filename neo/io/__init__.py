@@ -110,8 +110,8 @@ else:
 from neo.io.alphaomegaio import AlphaOmegaIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
-from neo.io.axonio import AxonIO
 from neo.io.axographio import AxographIO
+from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
 from neo.io.bci2000io import BCI2000IO
@@ -152,8 +152,8 @@ iolist = [
     AlphaOmegaIO,
     AsciiSignalIO,
     AsciiSpikeTrainIO,
-    AxonIO,
     AxographIO,
+    AxonIO,
     BCI2000IO,
     BlackrockIO,
     BrainVisionIO,
