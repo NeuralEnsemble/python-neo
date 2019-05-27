@@ -358,13 +358,13 @@ class AxographRawIO(BaseRawIO):
             # events
             if t_start is not None:
                 # keep if event occurs after t_start ...
-                keep = timestamps >= int(t_start/self._sampling_period)
+                keep = timestamps >= int(t_start / self._sampling_period)
                 timestamps = timestamps[keep]
                 labels = labels[keep]
 
             if t_stop is not None:
                 # ... and before t_stop
-                keep = timestamps <= int(t_stop/self._sampling_period)
+                keep = timestamps <= int(t_stop / self._sampling_period)
                 timestamps = timestamps[keep]
                 labels = labels[keep]
         else:
@@ -372,14 +372,14 @@ class AxographRawIO(BaseRawIO):
             if t_start is not None:
                 # keep if epoch ends after t_start ...
                 keep = timestamps + durations >= \
-                    int(t_start/self._sampling_period)
+                    int(t_start / self._sampling_period)
                 timestamps = timestamps[keep]
                 durations = durations[keep]
                 labels = labels[keep]
 
             if t_stop is not None:
                 # ... and starts before t_stop
-                keep = timestamps <= int(t_stop/self._sampling_period)
+                keep = timestamps <= int(t_stop / self._sampling_period)
                 timestamps = timestamps[keep]
                 durations = durations[keep]
                 labels = labels[keep]
@@ -467,7 +467,7 @@ class AxographRawIO(BaseRawIO):
             # subtract 1 from indexes in next statement because time is not
             # included in signal_channels
             signal_params_for_group = np.array(
-                signal_channels_with_ids_dropped[np.array(col_indexes)-1])
+                signal_channels_with_ids_dropped[np.array(col_indexes) - 1])
             group_has_uniform_signal_parameters[group_id] = \
                 len(np.unique(signal_params_for_group)) == 1
         all_groups_have_uniform_signal_parameters = \
@@ -500,7 +500,7 @@ class AxographRawIO(BaseRawIO):
         sig_memmaps = self._raw_signals[0]
         for first_index in np.arange(0, len(sig_memmaps), n_traces_per_group):
             new_sig_memmaps.append(
-                sig_memmaps[first_index:first_index+n_traces_per_group])
+                sig_memmaps[first_index:first_index + n_traces_per_group])
         self._raw_signals = new_sig_memmaps
 
         self.logger.debug('New number of segments: {}'.format(
@@ -681,7 +681,7 @@ class AxographRawIO(BaseRawIO):
                         array = np.memmap(
                             self.filename,
                             mode='r',
-                            dtype=f.byte_order+dtype,
+                            dtype=f.byte_order + dtype,
                             offset=f.tell(),
                             shape=n_points)
 
@@ -694,11 +694,11 @@ class AxographRawIO(BaseRawIO):
 
                         self.logger.debug(
                             'interval: {}, freq: {}'.format(
-                                increment, 1/increment))
+                                increment, 1 / increment))
                         self.logger.debug(
                             'start: {}, end: {}'.format(
                                 first_value,
-                                first_value + increment * (n_points-1)))
+                                first_value + increment * (n_points - 1)))
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
@@ -721,11 +721,11 @@ class AxographRawIO(BaseRawIO):
 
                         self.logger.debug(
                             'interval: {}, freq: {}'.format(
-                                increment, 1/increment))
+                                increment, 1 / increment))
                         self.logger.debug(
                             'start: {}, end: {}'.format(
                                 first_value,
-                                first_value + increment * (n_points-1)))
+                                first_value + increment * (n_points - 1)))
 
                         # assume this is the time column
                         t_start, sampling_period = first_value, increment
@@ -760,11 +760,11 @@ class AxographRawIO(BaseRawIO):
 
                         self.logger.debug(
                             'interval: {}, freq: {}'.format(
-                                increment, 1/increment))
+                                increment, 1 / increment))
                         self.logger.debug(
                             'start: {}, end: {}'.format(
                                 first_value,
-                                first_value + increment * (n_points-1)))
+                                first_value + increment * (n_points - 1)))
 
                         if i == 0:
 
@@ -830,7 +830,7 @@ class AxographRawIO(BaseRawIO):
                 array = np.memmap(
                     self.filename,
                     mode='r',
-                    dtype=f.byte_order+dtype,
+                    dtype=f.byte_order + dtype,
                     offset=f.tell(),
                     shape=n_points)
 
@@ -843,7 +843,7 @@ class AxographRawIO(BaseRawIO):
 
                 # channel_info will be cast to _signal_channel_dtype
                 channel_info = (
-                    name, i, 1/sampling_period, f.byte_order+dtype,
+                    name, i, 1 / sampling_period, f.byte_order + dtype,
                     units, gain, offset, 0)
 
                 self.logger.debug('channel_info: {}'.format(channel_info))
@@ -910,7 +910,7 @@ class AxographRawIO(BaseRawIO):
                 for i in range(n_traces):
 
                     # AxoGraph traces are 1-indexed in GUI, so use i+1 below
-                    self.logger.debug('== TRACE #{} =='.format(i+1))
+                    self.logger.debug('== TRACE #{} =='.format(i + 1))
 
                     trace_header_info = {}
 
@@ -936,7 +936,7 @@ class AxographRawIO(BaseRawIO):
                     for key, fmt in TraceHeaderDescription:
                         trace_header_info[key] = f.read_f(fmt)
                     # AxoGraph traces are 1-indexed in GUI, so use i+1 below
-                    trace_header_info_list[i+1] = trace_header_info
+                    trace_header_info_list[i + 1] = trace_header_info
                     group_ids.append(
                         trace_header_info['group_id_for_this_trace'])
 
@@ -1016,7 +1016,7 @@ class AxographRawIO(BaseRawIO):
                 for i in range(n_episodes):
                     episode_bool = f.read_f('Z')
                     if episode_bool:
-                        episodes_in_review.append(i+1)
+                        episodes_in_review.append(i + 1)
 
                 self.logger.debug('n_episodes: {}'.format(n_episodes))
                 self.logger.debug('episodes_in_review: {}'.format(
@@ -1031,7 +1031,7 @@ class AxographRawIO(BaseRawIO):
                     for i in range(n_episodes2):
                         episode_bool = f.read_f('Z')
                         if episode_bool:
-                            old_unknown_episode_list.append(i+1)
+                            old_unknown_episode_list.append(i + 1)
 
                     self.logger.debug('old_unknown_episode_list: {}'.format(
                         old_unknown_episode_list))
@@ -1046,7 +1046,7 @@ class AxographRawIO(BaseRawIO):
                 for i in range(n_episodes3):
                     episode_bool = f.read_f('Z')
                     if episode_bool:
-                        unknown_episode_list.append(i+1)
+                        unknown_episode_list.append(i + 1)
 
                 self.logger.debug('unknown_episode_list: {}'.format(
                     unknown_episode_list))
@@ -1063,7 +1063,7 @@ class AxographRawIO(BaseRawIO):
                 for i in range(n_episodes4):
                     episode_bool = f.read_f('Z')
                     if episode_bool:
-                        masked_episodes.append(i+1)
+                        masked_episodes.append(i + 1)
 
                 self.logger.debug('masked_episodes: {}'.format(
                     masked_episodes))
@@ -1224,9 +1224,9 @@ class AxographRawIO(BaseRawIO):
                 epoch_labels = []
                 for epoch in epoch_list:
                     raw_epoch_timestamps.append(
-                        epoch['t_start']/sampling_period)
+                        epoch['t_start'] / sampling_period)
                     raw_epoch_durations.append(
-                        (epoch['t_stop']-epoch['t_start'])/sampling_period)
+                        (epoch['t_stop'] - epoch['t_start']) / sampling_period)
                     epoch_labels.append(epoch['title'])
                     self.logger.debug(epoch)
                 self.logger.debug('')
@@ -1249,7 +1249,7 @@ class AxographRawIO(BaseRawIO):
 
         # event_channels will be cast to _event_channel_dtype
         event_channels = []
-        event_channels.append(('AxoGraph Tags',      '', 'event'))
+        event_channels.append(('AxoGraph Tags', '', 'event'))
         event_channels.append(('AxoGraph Intervals', '', 'epoch'))
 
         # organize header
