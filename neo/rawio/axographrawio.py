@@ -510,12 +510,12 @@ class AxographRawIO(BaseRawIO):
 
     def _get_rec_datetime(self):
         """
-        Determine the time at which the recording was started from
-        automatically generated notes. These notes differ depending on whether
-        the recording was obtained in episodic or continuous acquisition mode.
+        Determine the date and time at which the recording was started from
+        automatically generated notes. How these notes should be parsed differs
+        depending on whether the recording was obtained in episodic or
+        continuous acquisition mode.
         """
 
-        rec_datetime = None
         date_string = ''
         time_string = ''
         datetime_string = ''
@@ -536,8 +536,11 @@ class AxographRawIO(BaseRawIO):
             datetime_string = ' '.join([date_string, time_string])
 
         if datetime_string:
-            rec_datetime = datetime.strptime(datetime_string,
-                                             '%a %b %d %Y %H:%M:%S')
+            try:
+                rec_datetime = datetime.strptime(datetime_string,
+                                                 '%a %b %d %Y %H:%M:%S')
+            except ValueError:
+                rec_datetime = None
 
         return rec_datetime
 
