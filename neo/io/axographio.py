@@ -30,8 +30,9 @@ class AxographIO(AxographRawIO, BaseFromRaw):
 
         >>> # get signals
         >>> seg_index = 0  # episode number
-        >>> sigs = [sig for sig in blk.segments[seg_index].analogsignals if sig.name in channel_names]
-        >>> display(my_sigs)
+        >>> sigs = [sig for sig in blk.segments[seg_index].analogsignals
+        ...         if sig.name in channel_names]
+        >>> display(sigs)
 
         >>> # get event markers (same for all segments/episodes)
         >>> ev = blk.segments[0].events[0]
@@ -51,5 +52,5 @@ class AxographIO(AxographRawIO, BaseFromRaw):
     _prefered_signal_group_mode = 'split-all'
 
     def __init__(self, filename='', force_single_segment=False):
-        AxographRawIO.__init__(self, filename=filename, force_single_segment=force_single_segment)
+        AxographRawIO.__init__(self, filename, force_single_segment)
         BaseFromRaw.__init__(self, filename)
