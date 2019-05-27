@@ -1203,7 +1203,7 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('')
 
                 ##############################################
-                # EPOCHS / INTERVALE BARS
+                # EPOCHS / INTERVAL BARS
 
                 self.logger.debug('=== EPOCHS / INTERVAL BARS ===')
 
