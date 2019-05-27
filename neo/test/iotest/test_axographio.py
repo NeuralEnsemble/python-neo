@@ -31,6 +31,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     ioclass = AxographIO
 
     def test_version_1(self):
+        """Test reading a version 1 AxoGraph file"""
+
         filename = self.get_filename_path('AxoGraph Graph File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -53,6 +55,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(sig.sampling_period, 0.0005000010132789612 * pq.s)
 
     def test_version_2(self):
+        """Test reading a version 2 AxoGraph file"""
+
         filename = self.get_filename_path('AxoGraph Digitized File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -81,6 +85,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(sig.sampling_period, 0.00009999999747378750 * pq.s)
 
     def test_version_5(self):
+        """Test reading a version 5 AxoGraph file"""
+
         filename = self.get_filename_path('AxoGraph X File.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -103,6 +109,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(sig.sampling_period, 0.00005 * pq.s)
 
     def test_version_6(self):
+        """Test reading a version 6 AxoGraph file"""
+
         filename = self.get_filename_path('File_axograph.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -125,6 +133,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(sig.sampling_period, 0.00002 * pq.s)
 
     def test_multi_segment(self):
+        """Test reading an episodic file into multiple Segments"""
+
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -132,6 +142,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(len(blk.channel_indexes), 2)
 
     def test_force_single_segment(self):
+        """Test reading an episodic file into one Segment"""
+
         filename = self.get_filename_path('episodic.axgd')
         reader = AxographIO(filename=filename, force_single_segment=True)
         blk = reader.read_block()
@@ -139,6 +151,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(len(blk.channel_indexes), 60)
 
     def test_events_and_epochs(self):
+        """Test loading events and epochs"""
+
         filename = self.get_filename_path('events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
@@ -153,6 +167,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         assert_equal(epoch.labels, [b'test interval 1', b'test interval 2'])
 
     def test_rec_datetime(self):
+        """Test parsing the recording datetime from notes"""
+
         # parsing of rec_datetime differs depending on acquisition mode
 
         # file obtained in episodic acquisition mode has date and time on
@@ -162,7 +178,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
         blk = reader.read_block()
         assert_equal(blk.rec_datetime, datetime(2018, 6, 7, 15, 11, 36))
 
-        # file obtained in chart mode has date and time in single line of notes
+        # file obtained in continuous acquisition mode has date and time in
+        # single line of notes
         filename = self.get_filename_path('events_and_epochs.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
