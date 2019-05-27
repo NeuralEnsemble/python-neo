@@ -1,7 +1,160 @@
 # -*- coding: utf-8 -*-
 """
-................
+AxographRawIO
+=============
+
+RawIO class for reading AxoGraph files (.axgd, .axgx)
+
+Original author: Jeffrey Gill
+
+Documentation of the AxoGraph file format provided by the developer is
+incomplete and in some cases incorrect. The primary sources of official
+documentation are found in two out-of-date documents:
+
+    - AxoGraph X User Manual, provided with AxoGraph and also available online:
+        https://axograph.com/documentation/AxoGraph%20User%20Manual.pdf
+
+    - AxoGraph_ReadWrite.h, a header file that is part of a C++ program
+      provided with AxoGraph, and which is also available here:
+        https://github.com/CWRUChielLab/axographio/blob/master/
+            axographio/include/axograph_readwrite/AxoGraph_ReadWrite.h
+
+These were helpful starting points for building this RawIO, especially for
+reading the beginnings of AxoGraph files, but much of the rest of the file
+format was deciphered by reverse engineering and guess work. Some portions of
+the file format remain undeciphered.
+
+The AxoGraph file format is versatile in that it can represent both time series
+data collected during data acquisition and non-time series data generated
+through manual or automated analysis, such as power spectrum analysis. This
+implementation of an AxoGraph file format reader makes no effort to decoding
+non-time series data. For simplicity, it makes several assumptions that should
+be valid for any file generated directly from episodic or continuous data
+acquisition without significant post-acquisition modification by the user.
+
+Detailed logging is provided during header parsing for debugging purposes:
+    >>> import logging
+    >>> r = AxographRawIO(filename)
+    >>> r.logger.setLevel(logging.DEBUG)
+    >>> r.parse_header()
+
+Background and Terminology
+--------------------------
+
+Acquisition modes:
+    AxoGraph can operate in two main data acquisition modes:
+    - Episodic "protocol-driven" acquisition mode, in which the program records
+      from specified signal channels for a fixed duration each time a trigger
+      is detected. Each trigger-activated recording is called an "episode".
+      From files acquired in this mode, AxographRawIO creates multiple Neo
+      Segments, one for each episode, unless force_single_segment=True.
+    - Continuous "chart recorder" acquisition mode, in which it creates a
+      continuous recording that can be paused and continued by the user
+      whenever they like. From files acquired in this mode, AxographRawIO
+      creates a single Neo Segment.
+
+"Episode": analogous to a Neo Segment
+    See descriptions of acquisition modes above and groups below.
+
+"Column": analogous to a Quantity array
+    A column is a 1-dimensional array of data, stored in any one of a number of
+    data types (e.g., scaled ints or floats). In the oldest version of the
+    AxoGraph file format, even time was stored as a 1-dimensional array. In
+    newer versions, time is stored as a special type of "column" that is really
+    just a starting time and a sampling period.
+
+    Column data appears in series in the file, i.e., all of the first column's
+    data appears before the second column's. As an aside, because of this
+    design choice AxoGraph cannot write data to disk as it is collected but
+    must store it all in memory until data acquisition ends. This also affected
+    how file slicing was implmented for this RawIO: Instead of using a single
+    memmap to address into a 2-dimensional block of data, AxographRawIO
+    constructs multiple 1-dimensional memmaps, one for each column, each with
+    its own offset.
+
+    Each column's data array is preceded by a header containing the column
+    title, which normally contains the units (e.g., "Current (nA)"). Data
+    recorded in episodic acquisition mode will contain a repeating sequence of
+    column names, where each repetition corresponds to an episode (e.g.,
+    "Time", "Column A", "Column B", "Column A", "Column B", etc.).
+
+    AxoGraph offers a spreadsheet view for viewing all column data.
+
+"Trace": analogous to a single-channel Neo AnalogSignal
+    A trace is a 2-dimensional series. Raw data is not stored in the part of
+    the file concerned with traces. Instead, in the header for each trace are
+    indexes pointing to two data columns, defined earlier in the file,
+    corresponding to the trace's x and y data. These indexes can be changed in
+    AxoGraph under the "Assign X and Y Columns" tool, though doing so may
+    violate assumptions made by AxographRawIO.
+
+    For time series data collected under the usual data acquisition modes that
+    has not been modified after collection by the user, the x-index always
+    points to the time column; one trace exists for each non-time column, with
+    the y-index pointing to that column.
+
+    Traces are analogous to AnalogSignals in Neo. However, for simplicity of
+    implementation, AxographRawIO does not actually check the pairing of
+    columns in the trace headers. Instead it assumes the default pairing
+    described above when it creates signal channels while scanning through
+    columns. Older versions of the AxoGraph file format lack trace headers
+    entirely, so this is the most general solution.
+
+    Trace headers contain additional information about the series, such as plot
+    style, which is parsed by AxographRawIO and made available in
+    self.info['trace_header_info_list'] but is otherwise unused.
+
+"Group": analogous to a Neo ChannelIndex for matching channels across Segments
+    A group is a collection of one or more traces. Like traces, raw data is not
+    stored in the part of the file concerned with groups. Instead, each trace
+    header contains an index pointing to the group it is assigned to. Group
+    assignment of traces can be changed in AxoGraph under the "Group Traces"
+    tool, or by using the "Merge Traces" or "Separate Traces" commands, though
+    doing so may violate assumptions made by AxographRawIO.
+
+    Files created in episodic acquisition mode contain multiple traces per
+    group, one for each episode. In that mode, a group corresponds to a signal
+    channel and is analogous to a ChannelIndex in Neo; the traces within the
+    group represent the time series recorded for that channel across episodes
+    and are analogous to AnalogSignals from multiple Segments in Neo.
+
+    In contrast, files created in continuous acquisition mode contain one trace
+    per group, each corresponding to a signal channel. In that mode, groups and
+    traces are basically conceptually synonymous, though the former can still
+    be thought of as analogous to ChannelIndexes in Neo for a single-Segment.
+
+    Group headers are only consulted by AxographRawIO to determine if is safe
+    to interpret a file as episodic and therefore translatable to multiple
+    Segments in Neo. Certain criteria have to be met, such as as all groups
+    containing equal numbers of traces and each group having homogeneous signal
+    parameters. If trace grouping was modified by the user after data
+    acquisition, this may result in the file being interpretted as
+    non-episodic. Older versions of the AxoGraph file format lack group headers
+    entirely, so these files are never deemed safe to interpret as episodic,
+    even if the column names follow a repeating sequence as described above.
+
+"Tag" / "Event marker": analogous to a Neo Event
+    In continuous acquisition mode, the user can press a hot key to tag a
+    moment in time with a short label. Additionally, if the user stops or
+    restarts data acquisition in this mode, a tag is created automatically with
+    the label "Stop" or "Start", respectively. These are displayed by AxoGraph
+    as event markers. AxographRawIO will organize all event markers into a
+    single Neo Event channel with the name "AxoGraph Tags".
+
+    In episodic acquisition mode, the tag hot key behaves differently. The
+    current episode number is recorded in a user-editable notes section of the
+    file, made available by AxographRawIO in self.info['notes']. Because these
+    do not correspond to moments in time, they are not processed into Neo
+    Events.
+
+"Interval bar": analogous to a Neo Epoch
+    After data acquisition, the user can annotate an AxoGraph file with
+    horizontal, labeled bars called interval bars that span a specified period
+    of time. These are not episode specific. AxographRawIO will organize all
+    interval bars into a single Neo Epoch channel with the name "AxoGraph
+    Intervals".
 """
+
 from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
@@ -17,7 +170,45 @@ import numpy as np
 
 class AxographRawIO(BaseRawIO):
     """
-    ...................
+    RawIO class for reading AxoGraph files (.axgd, .axgx)
+
+    Args:
+        filename (string):
+            File name of the AxoGraph file to read.
+        force_single_segment (bool):
+            Episodic files are normally read as multi-Segment Neo objects. This
+            parameter can force AxographRawIO to put all signals into a single
+            Segment. Default: False.
+
+    Example:
+        >>> import neo
+        >>> r = neo.rawio.AxographRawIO(filename=filename)
+        >>> r.parse_header()
+        >>> print(r)
+
+        >>> # get signals
+        >>> raw_chunk = r.get_analogsignal_chunk(block_index=0, seg_index=0,
+        ...                 i_start=0, i_stop=1024, channel_names=channel_names)
+        >>> float_chunk = r.rescale_signal_raw_to_float(raw_chunk, dtype='float64',
+        ...                 channel_names=channel_names)
+        >>> print(float_chunk)
+
+        >>> # get event markers
+        >>> ev_raw_times, _, ev_labels = r.get_event_timestamps(event_channel_index=0)
+        >>> ev_times = r._rescale_event_timestamp(ev_raw_times, dtype='float64')
+        >>> print([ev for ev in zip(ev_times, ev_labels)])
+
+        >>> # get interval bars
+        >>> ep_raw_times, ep_raw_durations, ep_labels = r.get_event_timestamps(event_channel_index=1)
+        >>> ep_times = r._rescale_event_timestamp(ep_raw_times, dtype='float64')
+        >>> ep_durations = r._rescale_epoch_duration(ep_raw_durations, dtype='float64')
+        >>> print([ep for ep in zip(ep_times, ep_durations, ep_labels)])
+
+        >>> # get notes
+        >>> print(r.info['notes'])
+
+        >>> # get other miscellaneous info
+        >>> print(r.info)
     """
     name = 'AxographRawIO'
     description = 'This IO reads .axgd/.axgx files created with AxoGraph'
@@ -117,13 +308,13 @@ class AxographRawIO(BaseRawIO):
 
         # Retrieve size of either event or epoch channel:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
-        # AxoGraph tags can only be inserted in chart mode. When the tag hot
-        # key is pressed in episodic acquisition mode, the notes are updated
-        # with the current episode number instead of an instantaneous event
-        # marker being created. This means that Neo-like Events cannot be
-        # generated by AxoGraph for multi-Segment (episodic) files. Neo-like
-        # Epochs (interval markers) are not episode specific. For these
-        # reasons, this function ignores seg_index.
+        # AxoGraph tags can only be inserted in continuous data acquisition
+        # mode. When the tag hot key is pressed in episodic acquisition mode,
+        # the notes are updated with the current episode number instead of an
+        # instantaneous event marker being created. This means that Neo-like
+        # Events cannot be generated by AxoGraph for multi-Segment (episodic)
+        # files. Furthermore, Neo-like Epochs (interval markers) are not
+        # episode specific. For these reasons, this function ignores seg_index.
 
         return self._raw_event_epoch_timestamps[event_channel_index].size
 
@@ -131,13 +322,13 @@ class AxographRawIO(BaseRawIO):
 
         # Retrieve either event or epoch data, unscaled:
         #   event_channel_index: 0 AxoGraph Tags, 1 AxoGraph Intervals
-        # AxoGraph tags can only be inserted in chart mode. When the tag hot
-        # key is pressed in episodic acquisition mode, the notes are updated
-        # with the current episode number instead of an instantaneous event
-        # marker being created. This means that Neo-like Events cannot be
-        # generated by AxoGraph for multi-Segment (episodic) files. Neo-like
-        # Epochs (interval markers) are not episode specific. For these
-        # reasons, this function ignores seg_index.
+        # AxoGraph tags can only be inserted in continuous data acquisition
+        # mode. When the tag hot key is pressed in episodic acquisition mode,
+        # the notes are updated with the current episode number instead of an
+        # instantaneous event marker being created. This means that Neo-like
+        # Events cannot be generated by AxoGraph for multi-Segment (episodic)
+        # files. Furthermore, Neo-like Epochs (interval markers) are not
+        # episode specific. For these reasons, this function ignores seg_index.
 
         timestamps = self._raw_event_epoch_timestamps[event_channel_index]
         durations = self._raw_event_epoch_durations[event_channel_index]
@@ -188,13 +379,14 @@ class AxographRawIO(BaseRawIO):
     # multi-segment zone
 
     def _safe_to_treat_as_episodic(self):
-
-        # The purpose of this fuction is to determine if the file contains any
-        # irregularities in its grouping of traces such that it cannot be
-        # treated as episodic. Even "continuous" recordings can be treated as
-        # single-episode recordings and should be identified as safe by this
-        # function. Recordings in which the user has changed groupings to
-        # create irregularities should be caught by this function.
+        """
+        The purpose of this fuction is to determine if the file contains any
+        irregularities in its grouping of traces such that it cannot be treated
+        as episodic. Even "continuous" recordings can be treated as
+        single-episode recordings and could be identified as safe by this
+        function. Recordings in which the user has changed groupings to create
+        irregularities should be caught by this function.
+        """
 
         # First check: Old AxoGraph file formats do not contain enough metadata
         # to know for certain that the file is episodic.
@@ -252,7 +444,9 @@ class AxographRawIO(BaseRawIO):
         return True
 
     def _convert_to_multi_segment(self):
-        # Reshape signal headers and signal data for an episodic file
+        """
+        Reshape signal headers and signal data for an episodic file
+        """
 
         self.header['nb_segment'] = [self.info['n_episodes']]
 
@@ -260,22 +454,23 @@ class AxographRawIO(BaseRawIO):
         self.header['signal_channels'] = self.header['signal_channels'].reshape(self.info['n_episodes'], -1)[0]
 
         # reshape signal memmap list
-        new_sigs_memmap = []
+        new_sig_memmaps = []
         n_traces_per_group = len(self.header['signal_channels'])
-        sigs_memmap = self._raw_signals[0]
-        for first_index in np.arange(0, len(sigs_memmap), n_traces_per_group):
-            new_sigs_memmap.append(sigs_memmap[first_index:first_index+n_traces_per_group])
-        self._raw_signals = new_sigs_memmap
+        sig_memmaps = self._raw_signals[0]
+        for first_index in np.arange(0, len(sig_memmaps), n_traces_per_group):
+            new_sig_memmaps.append(sig_memmaps[first_index:first_index+n_traces_per_group])
+        self._raw_signals = new_sig_memmaps
 
         self.logger.debug('New number of segments: {}'.format(self.info['n_episodes']))
 
         return
 
     def _get_rec_datetime(self):
-
-        # Determine the time at which the recording was started from
-        # automatically generated notes. Notes differ depending on whether the
-        # recording was obtained in episodic acquisition mode or in chart mode.
+        """
+        Determine the time at which the recording was started from
+        automatically generated notes. These notes differ depending on whether
+        the recording was obtained in episodic or continuous acquisition mode.
+        """
 
         rec_datetime = None
         date_string = ''
@@ -290,7 +485,7 @@ class AxographRawIO(BaseRawIO):
             if note_line.startswith('Start data acquisition at '):
                 time_string = note_line.strip('Start data acquisition at ')
 
-            # chart mode
+            # continuous acquisition mode
             if note_line.startswith('Created : '):
                 datetime_string = note_line.strip('Created : ')
 
@@ -303,6 +498,10 @@ class AxographRawIO(BaseRawIO):
         return rec_datetime
 
     def _scan_axograph_file(self):
+        """
+        This function traverses the entire AxoGraph file, constructing memmaps
+        for signals and collecting channel information and other metadata
+        """
 
         with open(self.filename, 'rb') as fid:
             f = StructFile(fid)
@@ -336,7 +535,7 @@ class AxographRawIO(BaseRawIO):
             self.logger.debug('')
 
 
-            sigs_memmap = []
+            sig_memmaps = []
             sig_channels = []
             for i in range(n_cols):
 
@@ -369,7 +568,7 @@ class AxographRawIO(BaseRawIO):
 
                 # depending on the format version, column titles are stored differently
                 # - prior to version 3, column titles were stored as fixed-length 80-byte Pascal strings
-                # - beginning with version 3, column titles are stored as variable-length strings (see StructFile.read_string)
+                # - beginning with version 3, column titles are stored as variable-length strings (see StructFile.read_string for details)
                 if format_ver == 1 or format_ver == 2:
                     title = f.read_f('80p').decode('utf-8')
                 elif format_ver >= 3:
@@ -391,11 +590,11 @@ class AxographRawIO(BaseRawIO):
                 self.logger.debug('units: {}'.format(units))
 
                 ##############################################
-                # READ COLUMN
+                # COLUMN DTYPE, SCALE, OFFSET
 
                 if format_ver == 1:
 
-                    # for format version 1, all columns are arrays of floats
+                    # for format version 1, all columns are arrays of 32-bit floats
 
                     dtype = 'f'
                     gain, offset = 1, 0 # data is neither scaled nor off-set
@@ -403,7 +602,7 @@ class AxographRawIO(BaseRawIO):
                     if i == 0:
 
                         # there is no guarantee that this time column is regularly sampled, and
-                        # in fact the test file has slight variations in the intervals between
+                        # in fact the test file for version 1 has slight variations in the intervals between
                         # samples (due to numerical imprecision, probably), so technically an
                         # IrregularlySampledSignal is needed here, but I'm going to cheat by
                         # assuming regularity
@@ -517,20 +716,21 @@ class AxographRawIO(BaseRawIO):
 
                     raise NotImplementedError('unimplemented file format version "{}"!'.format(format_ver))
 
+                ##############################################
+                # COLUMN MEMMAP AND CHANNEL INFO
+
                 array = np.memmap(self.filename, mode='r', dtype=f.byte_order+dtype, offset=f.tell(), shape=n_points)
                 f.seek(array.nbytes, 1) # advance the file position to after the data array
 
                 self.logger.debug('gain: {}, offset: {}'.format(gain, offset))
                 self.logger.debug('initial data: {}'.format(array[:5] * gain + offset))
 
-                channel_id = i
-                group_id = 0
-                channel_info = (name, channel_id, 1/sampling_period, f.byte_order+dtype, units, gain, offset, group_id) # will be cast to _signal_channel_dtype
+                channel_info = (name, i, 1/sampling_period, f.byte_order+dtype, units, gain, offset, 0) # will be cast to _signal_channel_dtype
 
                 self.logger.debug('channel_info: {}'.format(channel_info))
                 self.logger.debug('')
 
-                sigs_memmap.append(array)
+                sig_memmaps.append(array)
                 sig_channels.append(channel_info)
 
 
@@ -656,6 +856,9 @@ class AxographRawIO(BaseRawIO):
 
                 self.logger.debug('== EPISODES ==')
 
+                # a subset of episodes can be selected for "review", or episodes
+                # can be paged through one by one, and the indexes of those
+                # currently in review appear in this list
                 episodes_in_review = []
                 n_episodes = f.read_f('l')
                 for i in range(n_episodes):
@@ -668,7 +871,8 @@ class AxographRawIO(BaseRawIO):
 
                 if format_ver == 5:
 
-                    # undeciphered data
+                    # the test file for version 5 contains this extra list of
+                    # episode indexes with unknown purpose
                     old_unknown_episode_list = []
                     n_episodes2 = f.read_f('l')
                     for i in range(n_episodes2):
@@ -680,7 +884,7 @@ class AxographRawIO(BaseRawIO):
                     if n_episodes2 != n_episodes:
                         self.logger.debug('n_episodes2 ({}) and n_episodes ({}) differ!'.format(n_episodes2, n_episodes))
 
-                # undeciphered data
+                # another list of episode indexes with unknown purpose
                 unknown_episode_list = []
                 n_episodes3 = f.read_f('l')
                 for i in range(n_episodes3):
@@ -692,6 +896,9 @@ class AxographRawIO(BaseRawIO):
                 if n_episodes3 != n_episodes:
                     self.logger.debug('n_episodes3 ({}) and n_episodes ({}) differ!'.format(n_episodes3, n_episodes))
 
+                # episodes can be masked to be removed from the pool of
+                # reviewable episodes completely until unmasked, and the
+                # indexes of those currently masked appear in this list
                 masked_episodes = []
                 n_episodes4 = f.read_f('l')
                 for i in range(n_episodes4):
@@ -767,6 +974,7 @@ class AxographRawIO(BaseRawIO):
 
                 self.logger.debug('n_events: {}'.format(n_events))
 
+                # event / tag timing is stored as an index into time
                 raw_event_timestamps = []
                 event_labels = []
                 for i in range(n_events_again):
@@ -807,6 +1015,10 @@ class AxographRawIO(BaseRawIO):
                         epoch_info[key] = f.read_f(fmt)
                     epoch_list.append(epoch_info)
 
+                # epoch / interval bar timing and duration are stored in
+                # seconds, so here they are converted to (possibly non-integer)
+                # indexes into time to fit into the procrustean beds of
+                # _rescale_event_timestamp and _rescale_epoch_duration
                 raw_epoch_timestamps = []
                 raw_epoch_durations = []
                 epoch_labels = []
@@ -841,7 +1053,7 @@ class AxographRawIO(BaseRawIO):
         # organize data
         self._sampling_period = sampling_period
         self._t_start = t_start
-        self._raw_signals = [sigs_memmap] # first index is seg_index
+        self._raw_signals = [sig_memmaps] # first index is seg_index
         self._raw_event_epoch_timestamps = [np.array(raw_event_timestamps), np.array(raw_epoch_timestamps)]
         self._raw_event_epoch_durations = [None, np.array(raw_epoch_durations)]
         self._event_epoch_labels = [np.array(event_labels, dtype='U'), np.array(epoch_labels, dtype='U')]
@@ -880,6 +1092,10 @@ class AxographRawIO(BaseRawIO):
 
 
 class StructFile(BufferedReader):
+    """
+    A container for the file buffer with some added convenience functions for
+    reading AxoGraph files
+    """
 
     def __init__(self, *args, **kwargs):
         # As far as I've seen, every AxoGraph file uses big-endian encoding,
@@ -899,16 +1115,21 @@ class StructFile(BufferedReader):
         super(StructFile, self).__init__(*args, **kwargs)
 
     def read_and_unpack(self, fmt):
-        # Calculate the number of bytes corresponding to the format string, read
-        # in that number of bytes, and unpack them according to the format string.
+        """
+        Calculate the number of bytes corresponding to the format string, read
+        in that number of bytes, and unpack them according to the format string
+        """
         return unpack(self.byte_order + fmt, self.read(calcsize(self.byte_order + fmt)))
 
     def read_string(self):
-        # The most common string format in AxoGraph files is a variable length
-        # string with UTF-16 encoding, preceded by a 4-byte integer (long)
-        # specifying the length of the string in bytes. Unlike a Pascal string
-        # ('p' format), these strings are not stored in a fixed number of bytes
-        # with padding at the end.
+        """
+        The most common string format in AxoGraph files is a variable length
+        string with UTF-16 encoding, preceded by a 4-byte integer (long)
+        specifying the length of the string in bytes. Unlike a Pascal string
+        ('p' format), these strings are not stored in a fixed number of bytes
+        with padding at the end. This function reads in one of these variable
+        length strings
+        """
 
         length = self.read_and_unpack('l')[0] # may be -1, 0, or a positive integer
         if length > 0:
@@ -917,17 +1138,21 @@ class StructFile(BufferedReader):
             return ''
 
     def read_bool(self):
-        # AxoGraph files encode each boolean as 4-byte integer (long) with value
-        # 1 = True, 0 = False
+        """
+        AxoGraph files encode each boolean as 4-byte integer (long) with value
+        1 = True, 0 = False. This function reads in one of these booleans.
+        """
         return bool(self.read_and_unpack('l')[0])
 
     def read_f(self, fmt, offset=None):
-        # A wrapper for read_and_unpack that adds compatibility with two new
-        # format strings:
-        #     'S': a variable length UTF-16 string, readable with read_string
-        #     'Z': a boolean encoded as a 4-byte integer, readable with read_bool
-        # This method does not implement support for numbers before the new format
-        # strings, such as '2Z' to represent 2 bools (use 'ZZ' instead).
+        """
+        This function is a wrapper for read_and_unpack that adds compatibility
+        with two new format strings:
+            'S': a variable length UTF-16 string, readable with read_string
+            'Z': a boolean encoded as a 4-byte integer, readable with read_bool
+        This method does not implement support for numbers before the new
+        format strings, such as '3Z' to represent 3 bools (use 'ZZZ' instead).
+        """
 
         if offset is not None:
             self.seek(offset)
@@ -962,8 +1187,7 @@ FONT_UNDERLINE = 2
 FONT_STRIKEOUT = 4
 
 TraceHeaderDescriptionV1 = [
-    # these are documented in AxoGraph's developer
-    # documentation in AxoGraph_ReadWrite.h
+    # documented in AxoGraph_ReadWrite.h
     ('x_index', 'l'),
     ('y_index', 'l'),
     ('err_bar_index', 'l'),
@@ -1014,7 +1238,7 @@ FontSettingsDescription = [
     ('font', 'S'),
     ('size', 'h'),        # this 2-byte integer must be divided by 10 to get the font size
     ('unknown1', '5b'),   # 5 bytes of undeciphered data (types here are guesses)
-    ('setting1', 'B'),    # contains bold setting and possibly some other undeciphered data as bitmask
+    ('setting1', 'B'),    # contains bold setting (and possibly some other undeciphered data as bitmask?)
     ('setting2', 'B'),    # contains italics, underline, strikeout settings as bitmask
 ]
 
