@@ -516,6 +516,7 @@ class AxographRawIO(BaseRawIO):
         continuous acquisition mode.
         """
 
+        rec_datetime = None
         date_string = ''
         time_string = ''
         datetime_string = ''
@@ -540,7 +541,7 @@ class AxographRawIO(BaseRawIO):
                 rec_datetime = datetime.strptime(datetime_string,
                                                  '%a %b %d %Y %H:%M:%S')
             except ValueError:
-                rec_datetime = None
+                pass
 
         return rec_datetime
 
