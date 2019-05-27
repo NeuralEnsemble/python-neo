@@ -16,9 +16,9 @@ from neo.rawio.tests.common_rawio_test import BaseTestRawIO
 class TestAxographRawIO(BaseTestRawIO, unittest.TestCase):
     rawioclass = AxographRawIO
     files_to_download = [
-        'AxoGraph Graph File',      # version 1 file, provided with AxoGraph
-        'AxoGraph Digitized File',  # version 2 file, provided with AxoGraph
-        'AxoGraph X File.axgx',     # version 5 file, provided with AxoGraph
+        'AxoGraph_Graph_File',      # version 1 file, provided with AxoGraph
+        'AxoGraph_Digitized_File',  # version 2 file, provided with AxoGraph
+        'AxoGraph_X_File.axgx',     # version 5 file, provided with AxoGraph
         'File_axograph.axgd',       # version 6 file
         'episodic.axgd',
         'events_and_epochs.axgx',

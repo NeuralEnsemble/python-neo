@@ -19,9 +19,9 @@ import quantities as pq
 
 class TestAxographIO(BaseTestIO, unittest.TestCase):
     files_to_test = [
-        'AxoGraph Graph File',      # version 1 file, provided with AxoGraph
-        'AxoGraph Digitized File',  # version 2 file, provided with AxoGraph
-        'AxoGraph X File.axgx',     # version 5 file, provided with AxoGraph
+        'AxoGraph_Graph_File',      # version 1 file, provided with AxoGraph
+        'AxoGraph_Digitized_File',  # version 2 file, provided with AxoGraph
+        'AxoGraph_X_File.axgx',     # version 5 file, provided with AxoGraph
         'File_axograph.axgd',       # version 6 file
         'episodic.axgd',
         'events_and_epochs.axgx',
@@ -32,7 +32,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_1(self):
         """Test reading a version 1 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph Graph File')
+        filename = self.get_filename_path('AxoGraph_Graph_File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
         assert_equal(blk.annotations['format_ver'], 1)
@@ -56,7 +56,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_2(self):
         """Test reading a version 2 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph Digitized File')
+        filename = self.get_filename_path('AxoGraph_Digitized_File')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
         assert_equal(blk.annotations['format_ver'], 2)
@@ -86,7 +86,7 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
     def test_version_5(self):
         """Test reading a version 5 AxoGraph file"""
 
-        filename = self.get_filename_path('AxoGraph X File.axgx')
+        filename = self.get_filename_path('AxoGraph_X_File.axgx')
         reader = AxographIO(filename=filename)
         blk = reader.read_block()
         assert_equal(blk.annotations['format_ver'], 5)
