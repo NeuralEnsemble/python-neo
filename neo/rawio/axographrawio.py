@@ -54,7 +54,7 @@ Acquisition modes:
       creates a single Neo Segment.
 
 "Episode": analogous to a Neo Segment
-    See descriptions of acquisition modes above and groups below.
+    See descriptions of acquisition modes above and of groups below.
 
 "Column": analogous to a Quantity array
     A column is a 1-dimensional array of data, stored in any one of a number of
@@ -125,7 +125,7 @@ Acquisition modes:
 
     Group headers are only consulted by AxographRawIO to determine if is safe
     to interpret a file as episodic and therefore translatable to multiple
-    Segments in Neo. Certain criteria have to be met, such as as all groups
+    Segments in Neo. Certain criteria have to be met, such as all groups
     containing equal numbers of traces and each group having homogeneous signal
     parameters. If trace grouping was modified by the user after data
     acquisition, this may result in the file being interpretted as
@@ -201,16 +201,16 @@ class AxographRawIO(BaseRawIO):
         >>> # get event markers
         >>> ev_raw_times, _, ev_labels = r.get_event_timestamps(
         ...     event_channel_index=0)
-        >>> ev_times = r._rescale_event_timestamp(
+        >>> ev_times = r.rescale_event_timestamp(
         ...     ev_raw_times, dtype='float64')
         >>> print([ev for ev in zip(ev_times, ev_labels)])
 
         >>> # get interval bars
         >>> ep_raw_times, ep_raw_durations, ep_labels = r.get_event_timestamps(
         ...     event_channel_index=1)
-        >>> ep_times = r._rescale_event_timestamp(
+        >>> ep_times = r.rescale_event_timestamp(
         ...     ep_raw_times, dtype='float64')
-        >>> ep_durations = r._rescale_epoch_duration(
+        >>> ep_durations = r.rescale_epoch_duration(
         ...     ep_raw_durations, dtype='float64')
         >>> print([ep for ep in zip(ep_times, ep_durations, ep_labels)])
 
@@ -496,11 +496,11 @@ class AxographRawIO(BaseRawIO):
 
         # reshape signal memmap list
         new_sig_memmaps = []
-        n_traces_per_group = len(self.header['signal_channels'])
+        n_channels = len(self.header['signal_channels'])
         sig_memmaps = self._raw_signals[0]
-        for first_index in np.arange(0, len(sig_memmaps), n_traces_per_group):
+        for first_index in np.arange(0, len(sig_memmaps), n_channels):
             new_sig_memmaps.append(
-                sig_memmaps[first_index:first_index + n_traces_per_group])
+                sig_memmaps[first_index:first_index + n_channels])
         self._raw_signals = new_sig_memmaps
 
         self.logger.debug('New number of segments: {}'.format(
