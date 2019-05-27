@@ -158,8 +158,8 @@ class TestAxographIO(BaseTestIO, unittest.TestCase):
 
         event = blk.segments[0].events[0]
         assert_equal(event.times, [5999, 5999, 23499, 23499,
-                                   26499, 26499, 35999] *
-                     blk.segments[0].analogsignals[0].sampling_period)
+                                   26499, 26499, 35999]
+                     * blk.segments[0].analogsignals[0].sampling_period)
         assert_equal(event.labels, [b'Stop', b'Start', b'Stop', b'Start',
                                     b'Stop', b'Start', b'Stop'])
 
