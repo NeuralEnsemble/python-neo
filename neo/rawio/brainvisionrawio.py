@@ -116,12 +116,13 @@ class BrainVisionRawIO(BaseRawIO):
         self.header['event_channels'] = event_channels
 
         self._generate_minimal_annotations()
-        for c in range(sig_channels.size):
-            coords = vhdr_header['Coordinates']['Ch{}'.format(c + 1)]
-            coords = [float(v) for v in coords.split(',')]
-            if coords[0] > 0.:
-                # if radius is 0 we do not have coordinates.
-                self.raw_annotations['signal_channels'][c]['coordinates'] = coords
+        if 'Coordinates' in vhdr_header:
+            for c in range(sig_channels.size):
+                coords = vhdr_header['Coordinates']['Ch{}'.format(c + 1)]
+                coords = [float(v) for v in coords.split(',')]
+                if coords[0] > 0.:
+                    # if radius is 0 we do not have coordinates.
+                    self.raw_annotations['signal_channels'][c]['coordinates'] = coords
 
     def _source_name(self):
         return self.filename
