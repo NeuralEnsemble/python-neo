@@ -699,7 +699,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # cut events
     for ev_id in range(len(seg.events)):
         if isinstance(seg.events[ev_id], neo.Event):
-            ev_time_slice = event_time_slice(seg.events[ev_id], t_start, t_stop)
+            ev_time_slice = seg.events[ev_id].time_slice(t_start, t_stop)
         elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
             ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
         if reset_time:
@@ -711,7 +711,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
     # cut epochs
     for ep_id in range(len(seg.epochs)):
         if isinstance(seg.epochs[ep_id], neo.Epoch):
-            ep_time_slice = epoch_time_slice(seg.epochs[ep_id], t_start, t_stop)
+            ep_time_slice = seg.epochs[ep_id].time_slice(t_start, t_stop)
         elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
             ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
         if reset_time:
@@ -746,70 +746,6 @@ def shift_spiketrain(spiketrain, t_shift):
         t_start=spiketrain.t_start + t_shift,
         t_stop=spiketrain.t_stop + t_shift)
     return new_st
-
-
-def event_time_slice(event, t_start=None, t_stop=None):
-    """
-    Slices an Event object to retain only those events that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    event: Event
-        The Event to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain events. An event at time t is retained
-        if t_start <= t < t_stop.
-
-    Returns:
-    --------
-    event: Event
-        New instance of an Event object containing only the events in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        event.times >= t_start, event.times < t_stop))[0]
-
-    new_event = _event_epoch_slice_by_valid_ids(event, valid_ids=valid_ids)
-
-    return new_event
-
-
-def epoch_time_slice(epoch, t_start=None, t_stop=None):
-    """
-    Slices an Epoch object to retain only those epochs that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        The Epoch to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain epochs. An epoch at time t and
-        duration d is retained if t_start <= t < t_stop - d.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object containing only the epochs in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        epoch.times >= t_start, epoch.times + epoch.durations < t_stop))[0]
-
-    new_epoch = _event_epoch_slice_by_valid_ids(epoch, valid_ids=valid_ids)
-
-    return new_epoch
 
 
 def shift_event(ev, t_shift):

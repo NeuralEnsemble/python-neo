@@ -367,9 +367,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].analogsignals), 1)
 
             if epoch_idx != 0:
-                self.assertEqual(len(block.segments[epoch_idx].epochs), 0)
-            else:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
+            else:
+                self.assertEqual(len(block.segments[epoch_idx].epochs), 2)
 
             assert_same_attributes(block.segments[epoch_idx].spiketrains[0],
                                    st.time_slice(t_start=epoch.times[epoch_idx],
@@ -384,6 +384,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                                     t_stop=epoch.times[epoch_idx]
                                                            + epoch.durations[epoch_idx]))
         assert_same_attributes(block.segments[0].epochs[0],
+                               epoch.time_slice(t_start=epoch.times[0],
+                                                 t_stop=epoch.times[0] + epoch.durations[0]))
+        assert_same_attributes(block.segments[0].epochs[1],
                                epoch2.time_slice(t_start=epoch.times[0],
                                                 t_stop=epoch.times[0] + epoch.durations[0]))
 
@@ -409,9 +412,9 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
             self.assertEqual(len(block.segments[epoch_idx].spiketrains), 1)
             self.assertEqual(len(block.segments[epoch_idx].analogsignals), 1)
             if epoch_idx != 0:
-                self.assertEqual(len(block.segments[epoch_idx].epochs), 0)
-            else:
                 self.assertEqual(len(block.segments[epoch_idx].epochs), 1)
+            else:
+                self.assertEqual(len(block.segments[epoch_idx].epochs), 2)
 
             assert_same_attributes(block.segments[epoch_idx].spiketrains[0],
                                    st.duplicate_with_new_data(st.times - epoch.times[epoch_idx],
@@ -430,6 +433,11 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
                                        t_start=0 * pq.s, t_stop=epoch.durations[epoch_idx]))
 
         assert_same_attributes(block.segments[0].epochs[0],
+                               epoch.duplicate_with_new_data(epoch.times - epoch.times[0],
+                                                              epoch.durations,
+                                                              epoch.labels)
+                               .time_slice(t_start=0 * pq.s, t_stop=epoch.durations[0]))
+        assert_same_attributes(block.segments[0].epochs[1],
                                epoch2.duplicate_with_new_data(epoch2.times - epoch.times[0],
                                                               epoch2.durations,
                                                               epoch2.labels)
