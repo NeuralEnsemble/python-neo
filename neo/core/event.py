@@ -254,6 +254,29 @@ class Event(DataObject):
 
         return new_evt
 
+    def time_shift(self, t_shift):
+        """
+        Shifts an Event by an amount of time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the Event.
+
+        Returns:
+        --------
+        epoch: Event
+            New instance of an Event object starting at t_shift later than the
+            original Event (the original Event is not modified).
+        """
+        new_evt = self.duplicate_with_new_data(self.times + t_shift)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the Event does not change.
+        new_evt.array_annotate(**self.array_annotations)
+
+        return new_evt
+
     def set_labels(self, labels):
         self.array_annotate(labels=labels)
 

@@ -291,6 +291,31 @@ class Epoch(DataObject):
 
         return new_epc
 
+    def time_shift(self, t_shift):
+        """
+        Shifts an Epoch by an amount of time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the Epoch.
+
+        Returns:
+        --------
+        epoch: Epoch
+            New instance of an Epoch object starting at t_shift later than the
+            original Epoch (the original Epoch is not modified).
+        """
+        new_epc = self.duplicate_with_new_data(times=self.times + t_shift,
+                                               durations=self.durations,
+                                               labels=self.labels)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the Epoch does not change.
+        new_epc.array_annotate(**self.array_annotations)
+
+        return new_epc
+
     def set_labels(self, labels):
         self.array_annotate(labels=labels)
 

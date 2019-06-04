@@ -703,7 +703,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
             ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
         if reset_time:
-            ev_time_slice = shift_event(ev_time_slice, t_shift)
+            ev_time_slice = ev_time_slice.time_shift(t_shift)
         # appending only non-empty events
         if len(ev_time_slice):
             subseg.events.append(ev_time_slice)
@@ -715,7 +715,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
             ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
         if reset_time:
-            ep_time_slice = shift_epoch(ep_time_slice, t_shift)
+            ep_time_slice = ep_time_slice.time_shift(t_shift)
         # appending only non-empty epochs
         if len(ep_time_slice):
             subseg.epochs.append(ep_time_slice)
@@ -746,57 +746,3 @@ def shift_spiketrain(spiketrain, t_shift):
         t_start=spiketrain.t_start + t_shift,
         t_stop=spiketrain.t_stop + t_shift)
     return new_st
-
-
-def shift_event(ev, t_shift):
-    """
-    Shifts an event by an amount of time.
-
-    Parameters:
-    -----------
-    event: Event
-        Event of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Event.
-
-    Returns:
-    --------
-    epoch: Event
-        New instance of an Event object starting at t_shift later than the
-        original Event (the original Event is not modified).
-    """
-    return _shift_time_signal(ev, t_shift)
-
-
-def shift_epoch(epoch, t_shift):
-    """
-    Shifts an epoch by an amount of time.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        Epoch of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Epoch.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object starting at t_shift later than the
-        original Epoch (the original Epoch is not modified).
-    """
-    return epoch.duplicate_with_new_data(times=epoch.times + t_shift,
-                                         durations=epoch.durations,
-                                         labels=epoch.labels)
-
-
-def _shift_time_signal(sig, t_shift):
-    """
-    Internal function.
-    """
-    if not hasattr(sig, 'times'):
-        raise AttributeError(
-            'Can only shift signals, which have an attribute'
-            ' "times", not %s' % type(sig))
-    new_sig = sig.duplicate_with_new_data(signal=sig.times + t_shift)
-    return new_sig
