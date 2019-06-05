@@ -613,8 +613,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     segments = []
     for ep_id in range(len(epoch)):
-        subseg = seg_time_slice(seg,
-                                epoch.times[ep_id],
+        subseg = seg.time_slice(epoch.times[ep_id],
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
@@ -634,90 +633,3 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         segments.append(subseg)
 
     return segments
-
-
-def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
-    """
-    Creates a time slice of a Segment containing slices of all child
-    objects.
-
-    Parameters:
-    -----------
-    seg: Segment
-        The Segment object to slice.
-    t_start: Quantity
-        Starting time of the sliced time window.
-    t_stop: Quantity
-        Stop time of the sliced time window.
-    reset_time: bool
-        If True the time stamps of all sliced objects are set to fall
-        in the range from t_start to t_stop.
-        If False, original time stamps are retained.
-        Default is False.
-
-    Keyword Arguments:
-    ------------------
-        Additional keyword arguments used for initialization of the sliced
-        Segment object.
-
-    Returns:
-    --------
-    seg: Segment
-        Temporal slice of the original Segment from t_start to t_stop.
-    """
-    subseg = neo.Segment(**kwargs)
-
-    for attr in [
-            'file_datetime', 'rec_datetime', 'index',
-            'name', 'description', 'file_origin']:
-        setattr(subseg, attr, getattr(seg, attr))
-
-    subseg.annotations = copy.deepcopy(seg.annotations)
-
-    t_shift = - t_start
-
-    # cut analogsignals and analogsignalarrays
-    for ana_id in range(len(seg.analogsignals)):
-        if isinstance(seg.analogsignals[ana_id], neo.AnalogSignal):
-            ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.analogsignals[ana_id], neo.io.proxyobjects.AnalogSignalProxy):
-            ana_time_slice = seg.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ana_time_slice = ana_time_slice.time_shift(t_shift)
-        subseg.analogsignals.append(ana_time_slice)
-
-    # cut spiketrains
-    for st_id in range(len(seg.spiketrains)):
-        if isinstance(seg.spiketrains[st_id], neo.SpikeTrain):
-            st_time_slice = seg.spiketrains[st_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.spiketrains[st_id], neo.io.proxyobjects.SpikeTrainProxy):
-            st_time_slice = seg.spiketrains[st_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            st_time_slice = st_time_slice.time_shift(t_shift)
-        subseg.spiketrains.append(st_time_slice)
-
-    # cut events
-    for ev_id in range(len(seg.events)):
-        if isinstance(seg.events[ev_id], neo.Event):
-            ev_time_slice = seg.events[ev_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
-            ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ev_time_slice = ev_time_slice.time_shift(t_shift)
-        # appending only non-empty events
-        if len(ev_time_slice):
-            subseg.events.append(ev_time_slice)
-
-    # cut epochs
-    for ep_id in range(len(seg.epochs)):
-        if isinstance(seg.epochs[ep_id], neo.Epoch):
-            ep_time_slice = seg.epochs[ep_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
-            ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ep_time_slice = ep_time_slice.time_shift(t_shift)
-        # appending only non-empty epochs
-        if len(ep_time_slice):
-            subseg.epochs.append(ep_time_slice)
-
-    return subseg

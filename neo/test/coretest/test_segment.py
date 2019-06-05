@@ -23,14 +23,17 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.segment import Segment
-from neo.core import (AnalogSignal, Block,
+from neo.core import (AnalogSignal, Block, Event,
                       Epoch, ChannelIndex, SpikeTrain, Unit)
 from neo.core.container import filterdata
 from neo.test.tools import (assert_neo_object_is_compliant,
-                            assert_same_sub_schema)
+                            assert_same_sub_schema, assert_same_attributes)
 from neo.test.generate_datasets import (fake_neo, get_fake_value,
                                         get_fake_values, get_annotations,
                                         clone_object, TEST_ANNOTATIONS)
+from neo.rawio.examplerawio import ExampleRawIO
+from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
+                EventProxy, EpochProxy)
 
 
 class Test__generate_datasets(unittest.TestCase):
@@ -780,6 +783,163 @@ class TestSegment(unittest.TestCase):
 
         assert_same_sub_schema(result21, [self.trains1a[0]])
         assert_same_sub_schema(result22, [self.trains1a[1]])
+    
+    def test__time_slice(self):
+        time_slice = [.5, 5.6] * pq.s
+
+        epoch2 = Epoch([0.6, 9.5, 16.8, 34.1] * pq.s, durations=[4.5, 4.8, 5.0, 5.0] * pq.s,
+                       t_start=.1 * pq.s)
+        epoch2.annotate(epoch_type='b')
+        epoch2.array_annotate(trial_id=[1, 2, 3, 4])
+
+        event = Event(times=[0.5, 10.0, 25.2] * pq.s, t_start=.1 * pq.s)
+        event.annotate(event_type='trial start')
+        event.array_annotate(trial_id=[1, 2, 3])
+
+        anasig = AnalogSignal(np.arange(50.0) * pq.mV, t_start=.1 * pq.s,
+                              sampling_rate=1.0 * pq.Hz)
+        st = SpikeTrain(np.arange(0.5, 50, 7) * pq.s, t_start=.1 * pq.s, t_stop=50.0 * pq.s,
+                        waveforms=np.array([[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]],
+                                            [[4., 5.], [4.1, 5.1]], [[6., 7.], [6.1, 7.1]],
+                                            [[8., 9.], [8.1, 9.1]], [[12., 13.], [12.1, 13.1]],
+                                            [[14., 15.], [14.1, 15.1]],
+                                            [[16., 17.], [16.1, 17.1]]]) * pq.mV,
+                        array_annotations={'spikenum': np.arange(1, 9)})
+
+        seg = Segment()
+        seg.epochs = [epoch2]
+        seg.events = [event]
+        seg.analogsignals = [anasig]
+        seg.spiketrains = [st]
+
+        block = Block()
+        block.segments = [seg]
+        block.create_many_to_one_relationship()
+
+        # test without resetting the time
+        sliced = seg.time_slice(time_slice[0], time_slice[1])
+
+        assert_neo_object_is_compliant(sliced)
+
+        self.assertEqual(len(sliced.events), 1)
+        self.assertEqual(len(sliced.spiketrains), 1)
+        self.assertEqual(len(sliced.analogsignals), 1)
+        self.assertEqual(len(sliced.epochs), 1)
+
+        assert_same_attributes(sliced.spiketrains[0],
+                               st.time_slice(t_start=time_slice[0],
+                                             t_stop=time_slice[1]))
+        assert_same_attributes(sliced.analogsignals[0],
+                               anasig.time_slice(t_start=time_slice[0],
+                                                 t_stop=time_slice[1]))
+        assert_same_attributes(sliced.events[0],
+                               event.time_slice(t_start=time_slice[0],
+                                                t_stop=time_slice[1]))
+        assert_same_attributes(sliced.epochs[0],
+                               epoch2.time_slice(t_start=time_slice[0],
+                                                t_stop=time_slice[1]))
+
+        seg = Segment()
+        seg.epochs = [epoch2]
+        seg.events = [event]
+        seg.analogsignals = [anasig]
+        seg.spiketrains = [st]
+
+        block = Block()
+        block.segments = [seg]
+        block.create_many_to_one_relationship()
+
+        # test with resetting the time
+        sliced = seg.time_slice(time_slice[0], time_slice[1], reset_time=True)
+
+        assert_neo_object_is_compliant(sliced)
+
+        self.assertEqual(len(sliced.events), 1)
+        self.assertEqual(len(sliced.spiketrains), 1)
+        self.assertEqual(len(sliced.analogsignals), 1)
+        self.assertEqual(len(sliced.epochs), 1)
+
+        assert_same_attributes(sliced.spiketrains[0],
+                               st.time_shift(- time_slice[0]).time_slice(
+                                   t_start=0 * pq.s, t_stop=time_slice[1] - time_slice[0]))
+
+        anasig_target = anasig.copy()
+        anasig_target = anasig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
+                                                 t_stop=time_slice[1] - time_slice[0])
+        assert_same_attributes(sliced.analogsignals[0], anasig_target)
+        assert_same_attributes(sliced.events[0],
+                               event.time_shift(- time_slice[0]).time_slice(
+                                   t_start=0 * pq.s, t_stop=time_slice[1] - time_slice[0]))
+        assert_same_attributes(sliced.epochs[0],
+                               epoch2.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
+                                                    t_stop=time_slice[1] - time_slice[0]))
+
+        seg = Segment()
+
+        reader = ExampleRawIO(filename='my_filename.fake')
+        reader.parse_header()
+        
+        proxy_anasig = AnalogSignalProxy(rawio=reader,
+                                         global_channel_indexes=None,
+                                         block_index=0, seg_index=0)
+        seg.analogsignals.append(proxy_anasig)
+
+        proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0,
+                                     block_index=0, seg_index=0)
+        seg.spiketrains.append(proxy_st)
+
+        proxy_event = EventProxy(rawio=reader, event_channel_index=0,
+                                 block_index=0, seg_index=0)
+        seg.events.append(proxy_event)
+
+        proxy_epoch = EpochProxy(rawio=reader, event_channel_index=1,
+                                 block_index=0, seg_index=0)
+        proxy_epoch.annotate(pick='me')
+        seg.epochs.append(proxy_epoch)
+
+        loaded_epoch = proxy_epoch.load()
+        loaded_event = proxy_event.load()
+        loaded_st = proxy_st.load()
+        loaded_anasig = proxy_anasig.load()
+
+        block = Block()
+        block.segments = [seg]
+        block.create_many_to_one_relationship()
+
+        # test with proxy objects
+        sliced = seg.time_slice(time_slice[0], time_slice[1])
+
+        assert_neo_object_is_compliant(sliced)
+
+        sliced_event = loaded_event.time_slice(t_start=time_slice[0],
+                                             t_stop=time_slice[1])
+        has_event = len(sliced_event) > 0
+
+        sliced_anasig = loaded_anasig.time_slice(t_start=time_slice[0],
+                                             t_stop=time_slice[1])
+
+        sliced_st = loaded_st.time_slice(t_start=time_slice[0],
+                                             t_stop=time_slice[1])
+
+        self.assertEqual(len(sliced.events), int(has_event))
+        self.assertEqual(len(sliced.spiketrains), 1)
+        self.assertEqual(len(sliced.analogsignals), 1)
+
+        self.assertTrue(isinstance(sliced.spiketrains[0],
+                                   SpikeTrain))
+        assert_same_attributes(sliced.spiketrains[0],
+                               sliced_st)
+
+        self.assertTrue(isinstance(sliced.analogsignals[0],
+                                   AnalogSignal))
+        assert_same_attributes(sliced.analogsignals[0],
+                               sliced_anasig)
+
+        if has_event:
+            self.assertTrue(isinstance(sliced.events[0],
+                                       Event))
+            assert_same_attributes(sliced.events[0],
+                               sliced_event)
 
     # to remove
     # def test_segment_take_analogsignal_by_unit(self):
