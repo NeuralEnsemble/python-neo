@@ -256,18 +256,18 @@ class Event(DataObject):
 
     def time_shift(self, t_shift):
         """
-        Shifts an Event by an amount of time.
+        Shifts an :class:`Event` by an amount of time.
 
         Parameters:
         -----------
         t_shift: Quantity (time)
-            Amount of time by which to shift the Event.
+            Amount of time by which to shift the :class:`Event`.
 
         Returns:
         --------
         epoch: Event
-            New instance of an Event object starting at t_shift later than the
-            original Event (the original Event is not modified).
+            New instance of an :class:`Event` object starting at t_shift later than the
+            original :class:`Event` (the original :class:`Event` is not modified).
         """
         new_evt = self.duplicate_with_new_data(self.times + t_shift)
 

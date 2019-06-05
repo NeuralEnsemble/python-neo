@@ -293,18 +293,18 @@ class Epoch(DataObject):
 
     def time_shift(self, t_shift):
         """
-        Shifts an Epoch by an amount of time.
+        Shifts an :class:`Epoch` by an amount of time.
 
         Parameters:
         -----------
         t_shift: Quantity (time)
-            Amount of time by which to shift the Epoch.
+            Amount of time by which to shift the :class:`Epoch`.
 
         Returns:
         --------
-        epoch: Epoch
-            New instance of an Epoch object starting at t_shift later than the
-            original Epoch (the original Epoch is not modified).
+        epoch: :class:`Epoch`
+            New instance of an :class:`Epoch` object starting at t_shift later than the
+            original :class:`Epoch` (the original :class:`Epoch` is not modified).
         """
         new_epc = self.duplicate_with_new_data(times=self.times + t_shift,
                                                durations=self.durations,
