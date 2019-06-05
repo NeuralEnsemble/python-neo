@@ -783,7 +783,7 @@ class TestSegment(unittest.TestCase):
 
         assert_same_sub_schema(result21, [self.trains1a[0]])
         assert_same_sub_schema(result22, [self.trains1a[1]])
-    
+
     def test__time_slice(self):
         time_slice = [.5, 5.6] * pq.s
 
@@ -878,8 +878,7 @@ class TestSegment(unittest.TestCase):
         assert_same_attributes(sliced.analogsignals[0], anasig_target)
         irrsig_target = irrsig.copy()
         irrsig_target = irrsig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                                             t_stop=time_slice[1] -
-                                                                                    time_slice[0])
+                                                t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.irregularlysampledsignals[0], irrsig_target)
         assert_same_attributes(sliced.events[0],
                                event.time_shift(- time_slice[0]).time_slice(
@@ -892,7 +891,7 @@ class TestSegment(unittest.TestCase):
 
         reader = ExampleRawIO(filename='my_filename.fake')
         reader.parse_header()
-        
+
         proxy_anasig = AnalogSignalProxy(rawio=reader,
                                          global_channel_indexes=None,
                                          block_index=0, seg_index=0)

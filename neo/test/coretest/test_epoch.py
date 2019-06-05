@@ -343,7 +343,7 @@ class TestEpoch(unittest.TestCase):
 
         # Change annotations of original
         params2 = {'test0': ['x{}'.format(i) for i in range(length)],
-                   'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.epc.array_annotate(**params2)
         self.epc.array_annotations['test1'][2] = 'shallowtest'
 
@@ -589,7 +589,7 @@ class TestEpoch(unittest.TestCase):
         # Deepcopy should destroy references to parents
         result = deepcopy(self.epc)
         self.assertEqual(result.segment, None)
-    
+
     def test__time_shift_same_attributes(self):
         result = self.epc.time_shift(1 * pq.ms)
         assert_same_attributes(result, self.epc, exclude=['times'])
@@ -609,12 +609,12 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.segment, None)
 
     def test__time_shift_by_zero(self):
-        shifted = self.epc.time_shift(0*pq.ms)
+        shifted = self.epc.time_shift(0 * pq.ms)
         assert_arrays_equal(shifted.times, self.epc.times)
 
     def test__time_shift_same_units(self):
         shifted = self.epc.time_shift(10 * pq.ms)
-        assert_arrays_equal(shifted.times, self.epc.times + 10*pq.ms)
+        assert_arrays_equal(shifted.times, self.epc.times + 10 * pq.ms)
 
     def test__time_shift_different_units(self):
         shifted = self.epc.time_shift(1 * pq.s)

@@ -212,7 +212,7 @@ class TestEvent(unittest.TestCase):
 
         # Change annotations of original
         params2 = {'test0': ['x{}'.format(i) for i in range(length)],
-                   'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.evt.array_annotate(**params2)
         self.evt.array_annotations['test1'][6] = 'shallowtest'
 
@@ -561,12 +561,12 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(result.segment, None)
 
     def test__time_shift_by_zero(self):
-        shifted = self.evt.time_shift(0*pq.ms)
+        shifted = self.evt.time_shift(0 * pq.ms)
         assert_arrays_equal(shifted.times, self.evt.times)
 
     def test__time_shift_same_units(self):
         shifted = self.evt.time_shift(10 * pq.ms)
-        assert_arrays_equal(shifted.times, self.evt.times + 10*pq.ms)
+        assert_arrays_equal(shifted.times, self.evt.times + 10 * pq.ms)
 
     def test__time_shift_different_units(self):
         shifted = self.evt.time_shift(1 * pq.s)

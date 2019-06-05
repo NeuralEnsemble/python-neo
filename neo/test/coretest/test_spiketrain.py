@@ -988,7 +988,7 @@ class TestTimeSlice(unittest.TestCase):
 
         # Change annotations of original
         params2 = {'test0': ['x{}'.format(i) for i in range(length)],
-                   'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.train1.array_annotate(**params2)
         self.train1.array_annotations['test1'][2] = 'shallowtest'
 
@@ -1231,12 +1231,12 @@ class TestTimeShift(unittest.TestCase):
         self.assertEqual(result.unit, None)
 
     def test__time_shift_by_zero(self):
-        shifted = self.train1.time_shift(0*pq.ms)
+        shifted = self.train1.time_shift(0 * pq.ms)
         assert_arrays_equal(shifted.times, self.train1.times)
 
     def test__time_shift_same_units(self):
         shifted = self.train1.time_shift(10 * pq.ms)
-        assert_arrays_equal(shifted.times, self.train1.times + 10*pq.ms)
+        assert_arrays_equal(shifted.times, self.train1.times + 10 * pq.ms)
 
     def test__time_shift_different_units(self):
         shifted = self.train1.time_shift(1 * pq.s)
