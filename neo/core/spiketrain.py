@@ -618,8 +618,8 @@ class SpikeTrain(DataObject):
         Returns:
         --------
         spiketrain: :class:`SpikeTrain`
-            New instance of a :class:`SpikeTrain` object starting at t_start (the original
-            :class:`SpikeTrain` is not modified).
+            New instance of a :class:`SpikeTrain` object starting at t_shift later than the
+            original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).
         """
         new_st = self.duplicate_with_new_data(
             signal=self.times.view(pq.Quantity) + t_shift,
