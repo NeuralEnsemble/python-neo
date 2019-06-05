@@ -301,6 +301,17 @@ class Segment(Container):
                 ana_time_slice = ana_time_slice.time_shift(t_shift)
             subseg.analogsignals.append(ana_time_slice)
 
+        # cut irregularly sampled signals
+        for irr_id in range(len(self.irregularlysampledsignals)):
+            if hasattr(self.irregularlysampledsignals[irr_id], '_rawio'):
+                ana_time_slice = self.irregularlysampledsignals[irr_id].load(
+                    time_slice=(t_start, t_stop))
+            else:
+                ana_time_slice = self.irregularlysampledsignals[irr_id].time_slice(t_start, t_stop)
+            if reset_time:
+                ana_time_slice = ana_time_slice.time_shift(t_shift)
+            subseg.irregularlysampledsignals.append(ana_time_slice)
+
         # cut spiketrains
         for st_id in range(len(self.spiketrains)):
             if hasattr(self.spiketrains[st_id], '_rawio'):

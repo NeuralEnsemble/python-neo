@@ -23,7 +23,7 @@ else:
     HAVE_IPYTHON = True
 
 from neo.core.segment import Segment
-from neo.core import (AnalogSignal, Block, Event,
+from neo.core import (AnalogSignal, Block, Event, IrregularlySampledSignal,
                       Epoch, ChannelIndex, SpikeTrain, Unit)
 from neo.core.container import filterdata
 from neo.test.tools import (assert_neo_object_is_compliant,
@@ -798,6 +798,8 @@ class TestSegment(unittest.TestCase):
 
         anasig = AnalogSignal(np.arange(50.0) * pq.mV, t_start=.1 * pq.s,
                               sampling_rate=1.0 * pq.Hz)
+        irrsig = IrregularlySampledSignal(signal=np.arange(50.0) * pq.mV,
+                                          times=anasig.times, t_start=.1 * pq.s)
         st = SpikeTrain(np.arange(0.5, 50, 7) * pq.s, t_start=.1 * pq.s, t_stop=50.0 * pq.s,
                         waveforms=np.array([[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]],
                                             [[4., 5.], [4.1, 5.1]], [[6., 7.], [6.1, 7.1]],
@@ -810,6 +812,7 @@ class TestSegment(unittest.TestCase):
         seg.epochs = [epoch2]
         seg.events = [event]
         seg.analogsignals = [anasig]
+        seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
         block = Block()
@@ -824,6 +827,7 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(len(sliced.events), 1)
         self.assertEqual(len(sliced.spiketrains), 1)
         self.assertEqual(len(sliced.analogsignals), 1)
+        self.assertEqual(len(sliced.irregularlysampledsignals), 1)
         self.assertEqual(len(sliced.epochs), 1)
 
         assert_same_attributes(sliced.spiketrains[0],
@@ -831,6 +835,9 @@ class TestSegment(unittest.TestCase):
                                              t_stop=time_slice[1]))
         assert_same_attributes(sliced.analogsignals[0],
                                anasig.time_slice(t_start=time_slice[0],
+                                                 t_stop=time_slice[1]))
+        assert_same_attributes(sliced.irregularlysampledsignals[0],
+                               irrsig.time_slice(t_start=time_slice[0],
                                                  t_stop=time_slice[1]))
         assert_same_attributes(sliced.events[0],
                                event.time_slice(t_start=time_slice[0],
@@ -843,6 +850,7 @@ class TestSegment(unittest.TestCase):
         seg.epochs = [epoch2]
         seg.events = [event]
         seg.analogsignals = [anasig]
+        seg.irregularlysampledsignals = [irrsig]
         seg.spiketrains = [st]
 
         block = Block()
@@ -857,6 +865,7 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(len(sliced.events), 1)
         self.assertEqual(len(sliced.spiketrains), 1)
         self.assertEqual(len(sliced.analogsignals), 1)
+        self.assertEqual(len(sliced.irregularlysampledsignals), 1)
         self.assertEqual(len(sliced.epochs), 1)
 
         assert_same_attributes(sliced.spiketrains[0],
@@ -867,6 +876,11 @@ class TestSegment(unittest.TestCase):
         anasig_target = anasig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
                                                  t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.analogsignals[0], anasig_target)
+        irrsig_target = irrsig.copy()
+        irrsig_target = irrsig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
+                                                                             t_stop=time_slice[1] -
+                                                                                    time_slice[0])
+        assert_same_attributes(sliced.irregularlysampledsignals[0], irrsig_target)
         assert_same_attributes(sliced.events[0],
                                event.time_shift(- time_slice[0]).time_slice(
                                    t_start=0 * pq.s, t_stop=time_slice[1] - time_slice[0]))
