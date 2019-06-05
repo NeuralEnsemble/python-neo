@@ -395,6 +395,28 @@ class IrregularlySampledSignal(BaseSignal):
 
         return new_st
 
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`IrregularlySampledSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`IrregularlySampledSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`SpikeTrain`
+            New instance of a :class:`IrregularlySampledSignal` object
+            starting at t_shift later than the original :class:`IrregularlySampledSignal`
+            (the original :class:`IrregularlySampledSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+
+        new_sig.times += t_shift
+
+        return new_sig
+
     def merge(self, other):
         '''
         Merge another signal into this one.
