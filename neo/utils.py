@@ -683,7 +683,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         elif isinstance(seg.analogsignals[ana_id], neo.io.proxyobjects.AnalogSignalProxy):
             ana_time_slice = seg.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
         if reset_time:
-            ana_time_slice.t_start = ana_time_slice.t_start + t_shift
+            ana_time_slice = ana_time_slice.time_shift(t_shift)
         subseg.analogsignals.append(ana_time_slice)
 
     # cut spiketrains
