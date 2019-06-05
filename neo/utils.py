@@ -693,7 +693,7 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
         elif isinstance(seg.spiketrains[st_id], neo.io.proxyobjects.SpikeTrainProxy):
             st_time_slice = seg.spiketrains[st_id].load(time_slice=(t_start, t_stop))
         if reset_time:
-            st_time_slice = shift_spiketrain(st_time_slice, t_shift)
+            st_time_slice = st_time_slice.time_shift(t_shift)
         subseg.spiketrains.append(st_time_slice)
 
     # cut events
@@ -721,28 +721,3 @@ def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
             subseg.epochs.append(ep_time_slice)
 
     return subseg
-
-
-def shift_spiketrain(spiketrain, t_shift):
-    """
-    Shifts a spike train to start at a new time.
-
-    Parameters:
-    -----------
-    spiketrain: SpikeTrain
-        Spiketrain of which a copy will be generated with shifted spikes and
-        starting and stopping times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the SpikeTrain.
-
-    Returns:
-    --------
-    spiketrain: SpikeTrain
-        New instance of a SpikeTrain object starting at t_start (the original
-        SpikeTrain is not modified).
-    """
-    new_st = spiketrain.duplicate_with_new_data(
-        signal=spiketrain.times.view(pq.Quantity) + t_shift,
-        t_start=spiketrain.t_start + t_shift,
-        t_stop=spiketrain.t_stop + t_shift)
-    return new_st

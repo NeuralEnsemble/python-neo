@@ -30,7 +30,9 @@ from neo.core.spiketrain import (check_has_dimensions_time, SpikeTrain, _check_t
 from neo.core import Segment, Unit
 from neo.core.baseneo import MergeError
 from neo.test.tools import (assert_arrays_equal, assert_arrays_almost_equal,
-                            assert_neo_object_is_compliant)
+                            assert_neo_object_is_compliant,
+                            assert_same_attributes, assert_same_annotations,
+                            assert_same_array_annotations)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -881,6 +883,10 @@ class TestTimeSlice(unittest.TestCase):
         self.arr_ann = {'index': np.arange(1, 7), 'label': ['a', 'b', 'c', 'd', 'e', 'f']}
         self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms, waveforms=self.waveforms1,
                                  array_annotations=self.arr_ann)
+        self.seg = Segment()
+        self.unit = Unit()
+        self.train1.segment = self.seg
+        self.train1.unit = self.unit
 
     def test_compliant(self):
         assert_neo_object_is_compliant(self.train1)
@@ -971,7 +977,8 @@ class TestTimeSlice(unittest.TestCase):
 
     def test__time_slice_deepcopy_array_annotations(self):
         length = len(self.train1)
-        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)],
+                   'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
         self.train1.array_annotate(**params1)
         # time_slice spike train, keep sliced spike times
@@ -980,22 +987,29 @@ class TestTimeSlice(unittest.TestCase):
         result = self.train1.time_slice(t_start, t_stop)
 
         # Change annotations of original
-        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)],
+                   'test2': [(-1)**(i+1) > 0 for i in range(length)]}
         self.train1.array_annotate(**params2)
         self.train1.array_annotations['test1'][2] = 'shallowtest'
 
-        self.assertFalse(all(self.train1.array_annotations['test0'][1:4] == result.array_annotations['test0']))
-        self.assertFalse(all(self.train1.array_annotations['test1'][1:4] == result.array_annotations['test1']))
-        self.assertFalse(all(self.train1.array_annotations['test2'][1:4] == result.array_annotations['test2']))
+        self.assertFalse(all(self.train1.array_annotations['test0'][1:4]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.train1.array_annotations['test1'][1:4]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.train1.array_annotations['test2'][1:4]
+                             == result.array_annotations['test2']))
 
         # Change annotations of result
         params3 = {'test0': ['z{}'.format(i) for i in range(1, 4)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][1] = 'shallow2'
 
-        self.assertFalse(all(self.train1.array_annotations['test0'][1:4] == result.array_annotations['test0']))
-        self.assertFalse(all(self.train1.array_annotations['test1'][1:4] == result.array_annotations['test1']))
-        self.assertFalse(all(self.train1.array_annotations['test2'][1:4] == result.array_annotations['test2']))
+        self.assertFalse(all(self.train1.array_annotations['test0'][1:4]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.train1.array_annotations['test1'][1:4]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.train1.array_annotations['test2'][1:4]
+                             == result.array_annotations['test2']))
 
     def test__time_slice_deepcopy_data(self):
         result = self.train1.time_slice(None, None)
@@ -1175,6 +1189,58 @@ class TestTimeSlice(unittest.TestCase):
         result = deepcopy(self.train1)
         self.assertEqual(result.segment, None)
         self.assertEqual(result.unit, None)
+
+
+class TestTimeShift(unittest.TestCase):
+    def setUp(self):
+        self.waveforms1 = np.array(
+            [[[0., 1.], [0.1, 1.1]], [[2., 3.], [2.1, 3.1]], [[4., 5.], [4.1, 5.1]],
+             [[6., 7.], [6.1, 7.1]], [[8., 9.], [8.1, 9.1]],
+             [[10., 11.], [10.1, 11.1]]]) * pq.mV
+        self.data1 = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
+        self.data1quant = self.data1 * pq.ms
+        self.arr_ann = {'index': np.arange(1, 7), 'label': ['a', 'b', 'c', 'd', 'e', 'f']}
+        self.train1 = SpikeTrain(self.data1quant, t_stop=10.0 * pq.ms,
+                                 waveforms=self.waveforms1,
+                                 array_annotations=self.arr_ann)
+        self.seg = Segment()
+        self.unit = Unit()
+        self.train1.segment = self.seg
+        self.train1.unit = self.unit
+
+    def test_compliant(self):
+        assert_neo_object_is_compliant(self.train1)
+
+    def test__time_shift_same_attributes(self):
+        result = self.train1.time_shift(1 * pq.ms)
+        assert_same_attributes(result, self.train1, exclude=['times', 't_start', 't_stop'])
+
+    def test__time_shift_same_annotations(self):
+        result = self.train1.time_shift(1 * pq.ms)
+        assert_same_annotations(result, self.train1)
+
+    def test__time_shift_same_array_annotations(self):
+        result = self.train1.time_shift(1 * pq.ms)
+        assert_same_array_annotations(result, self.train1)
+
+    def test__time_shift_should_set_parents_to_None(self):
+        # When time-shifting, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.train1.time_shift(1 * pq.ms)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.unit, None)
+
+    def test__time_shift_by_zero(self):
+        shifted = self.train1.time_shift(0*pq.ms)
+        assert_arrays_equal(shifted.times, self.train1.times)
+
+    def test__time_shift_same_units(self):
+        shifted = self.train1.time_shift(10 * pq.ms)
+        assert_arrays_equal(shifted.times, self.train1.times + 10*pq.ms)
+
+    def test__time_shift_different_units(self):
+        shifted = self.train1.time_shift(1 * pq.s)
+        assert_arrays_equal(shifted.times, self.train1.times + 1000 * pq.ms)
 
 
 class TestMerge(unittest.TestCase):
