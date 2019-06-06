@@ -61,9 +61,13 @@ class BrainVisionRawIO(BaseRawIO):
         self._raw_signals = sigs.reshape(-1, nb_channel)
 
         sig_channels = []
+        channel_infos = vhdr_header['Channel Infos']
         for c in range(nb_channel):
-            name, ref, res, units = vhdr_header['Channel Infos'][
-                'Ch%d' % (c + 1,)].split(',')
+            try:
+                channel_desc = channel_infos['Ch%d' % (c + 1,)]
+            except KeyError:
+                channel_desc = channel_infos['ch%d' % (c + 1,)]
+            name, ref, res, units = channel_desc.split(',')
             units = units.replace('µ', 'u')
             chan_id = c + 1
             if sig_dtype == np.int16 or sig_dtype == np.int32:
