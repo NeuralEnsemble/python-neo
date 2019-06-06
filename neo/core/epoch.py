@@ -120,8 +120,8 @@ class Epoch(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.labels = labels
-        obj.durations = durations
+        obj._labels = labels
+        obj._durations = durations
         obj.segment = None
         return obj
 
@@ -144,6 +144,8 @@ class Epoch(DataObject):
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
+        self._durations = getattr(obj, 'durations', None)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -179,8 +181,8 @@ class Epoch(DataObject):
         '''
 
         obj = super(Epoch, self).rescale(units)
-        obj.segment = self.segment
-
+        obj._durations = obj.durations.rescale(units)
+        obj.segment = self.segment  # not sure we should do this
         return obj
 
     def __getitem__(self, i):
@@ -189,6 +191,11 @@ class Epoch(DataObject):
         '''
         obj = Epoch(times=super(Epoch, self).__getitem__(i))
         obj._copy_data_complement(self)
+        obj._durations = self.durations[i]
+        if self._labels is not None and self._labels.size > 0:
+            obj._labels = self.labels[i]
+        else:
+            obj._labels = self.labels
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
@@ -219,7 +226,11 @@ class Epoch(DataObject):
         compatible, and Exception is raised.
         '''
         othertimes = other.times.rescale(self.times.units)
+        otherdurations = other.durations.rescale(self.durations.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
+        durations = np.hstack([self.durations,
+                               otherdurations]) * self.durations.units
+        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -233,8 +244,6 @@ class Epoch(DataObject):
         kwargs.update(merged_annotations)
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
-        labels = kwargs['array_annotations']['labels']
-        durations = kwargs['array_annotations']['durations']
 
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
@@ -267,6 +276,8 @@ class Epoch(DataObject):
 
         new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
+        new._labels = labels
+        new._durations = durations
         # Note: Array annotations can not be copied here because length of data can change
         return new
 
@@ -292,17 +303,23 @@ class Epoch(DataObject):
         return new_epc
 
     def set_labels(self, labels):
-        self.array_annotate(labels=labels)
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                             .format(len(labels), self.size))
+        self._labels = np.array(labels)
 
     def get_labels(self):
-        return self.array_annotations['labels']
+        return self._labels
 
     labels = property(get_labels, set_labels)
 
     def set_durations(self, durations):
-        self.array_annotate(durations=durations)
+        if self.durations is not None and self.durations.size > 0 and len(durations) != self.size:
+            raise ValueError("Durations array has different length to times ({} != {})"
+                             .format(len(durations), self.size))
+        self._durations = durations
 
     def get_durations(self):
-        return self.array_annotations['durations']
+        return self._durations
 
     durations = property(get_durations, set_durations)

@@ -229,9 +229,14 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     sparse_array_annotations = {key: value[valid_ids]
                                 for key, value in obj.array_annotations.items() if len(value)}
 
+    if obj.labels is not None and obj.labels.size > 0:
+        labels = obj.labels[valid_ids]
+    else:
+        labels = obj.labels
     if type(obj) is neo.Event:
         sparse_obj = neo.Event(
             times=copy.deepcopy(obj.times[valid_ids]),
+            labels=copy.deepcopy(labels),
             units=copy.deepcopy(obj.units),
             name=copy.deepcopy(obj.name),
             description=copy.deepcopy(obj.description),
@@ -242,6 +247,7 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
         sparse_obj = neo.Epoch(
             times=copy.deepcopy(obj.times[valid_ids]),
             durations=copy.deepcopy(obj.durations[valid_ids]),
+            labels=copy.deepcopy(labels),
             units=copy.deepcopy(obj.units),
             name=copy.deepcopy(obj.name),
             description=copy.deepcopy(obj.description),
@@ -829,7 +835,8 @@ def shift_event(ev, t_shift):
         New instance of an Event object starting at t_shift later than the
         original Event (the original Event is not modified).
     """
-    return _shift_time_signal(ev, t_shift)
+    return ev.duplicate_with_new_data(times=ev.times + t_shift,
+                                      labels=ev.labels)
 
 
 def shift_epoch(epoch, t_shift):
@@ -862,5 +869,5 @@ def _shift_time_signal(sig, t_shift):
         raise AttributeError(
             'Can only shift signals, which have an attribute'
             ' "times", not %s' % type(sig))
-    new_sig = sig.duplicate_with_new_data(signal=sig.times + t_shift)
+    new_sig = sig.duplicate_with_new_data(times=sig.times + t_shift)
     return new_sig

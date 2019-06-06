@@ -137,6 +137,13 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epc.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(epc.array_annotations, ArrayDict)
 
+    def test_Epoch_creation_invalid_durations_labels(self):
+        self.assertRaises(ValueError, Epoch, [1.1, 1.5, 1.7] * pq.ms,
+                          durations=[20, 40, 60, 80] * pq.ns)
+        self.assertRaises(ValueError, Epoch, [1.1, 1.5, 1.7] * pq.ms,
+                          durations=[20, 40, 60] * pq.ns,
+                          labels=["A", "B"])
+
     def test_Epoch_creation_scalar_duration(self):
         # test with scalar for durations
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
@@ -209,6 +216,20 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epcres.array_annotations['index'], np.array([10, 11, 12, 0, 1, 2]))
         self.assertTrue('test' not in epcres.array_annotations)
         self.assertIsInstance(epcres.array_annotations, ArrayDict)
+
+    def test_set_labels_duration(self):
+        epc = Epoch([1.1, 1.5, 1.7] * pq.ms,
+                    durations=20 * pq.ns,
+                    labels=['A', 'B', 'C'])
+        assert_array_equal(epc.durations.magnitude, np.array([20, 20, 20]))
+        epc.durations = [20.0, 21.0, 22.0] * pq.ns
+        assert_array_equal(epc.durations.magnitude, np.array([20, 21, 22]))
+        self.assertRaises(ValueError, setattr, epc, "durations", [25.0, 26.0] * pq.ns)
+
+        assert_array_equal(epc.labels, np.array(['A', 'B', 'C']))
+        epc.labels = ['D', 'E', 'F']
+        assert_array_equal(epc.labels, np.array(['D', 'E', 'F']))
+        self.assertRaises(ValueError, setattr, epc, "labels", ['X', 'Y'])
 
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
@@ -425,9 +446,6 @@ class TestEpoch(unittest.TestCase):
         self.assertEqual(result.annotations['test0'], targ.annotations['test0'])
         self.assertEqual(result.annotations['test1'], targ.annotations['test1'])
         self.assertEqual(result.annotations['test2'], targ.annotations['test2'])
-        assert_arrays_equal(result.array_annotations['durations'],
-                            np.array([], dtype='float64') * pq.ns)
-        assert_arrays_equal(result.array_annotations['labels'], np.array([], dtype='S'))
         self.assertIsInstance(result.array_annotations, ArrayDict)
 
     def test_time_slice_none_stop(self):
@@ -638,7 +656,6 @@ class TestDuplicateWithNewData(unittest.TestCase):
         signal1b = signal1.duplicate_with_new_data(new_times, new_durations, new_labels)
         # After duplicating, array annotations should always be empty,
         # because different length of data would cause inconsistencies
-        # Only labels and durations should be available
         assert_arrays_equal(signal1b.labels, new_labels)
         assert_arrays_equal(signal1b.durations, new_durations)
         self.assertTrue('index' not in signal1b.array_annotations)

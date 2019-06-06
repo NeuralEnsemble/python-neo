@@ -138,6 +138,16 @@ class TestEvent(unittest.TestCase):
         assert_arrays_equal(evt.array_annotations['index'], np.arange(10, 13))
         self.assertIsInstance(evt.array_annotations, ArrayDict)
 
+    def test_Event_creation_invalid_labels(self):
+        self.assertRaises(ValueError, Event, [1.1, 1.5, 1.7] * pq.ms,
+                          labels=["A", "B"])
+
+    def test_Epoch_creation_scalar_duration(self):
+        # test with scalar for durations
+        epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
+                    labels=np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
+        assert_neo_object_is_compliant(epc)
+
     def tests_time_slice(self):
 
         evt = self.evt
@@ -476,6 +486,14 @@ class TestEvent(unittest.TestCase):
         self.assertTrue('test' not in evtres.array_annotations)
         self.assertIsInstance(evtres.array_annotations, ArrayDict)
 
+    def test_set_labels(self):
+        evt = Event([1.1, 1.5, 1.7] * pq.ms,
+                    labels=['A', 'B', 'C'])
+        assert_array_equal(evt.labels, np.array(['A', 'B', 'C']))
+        evt.labels = ['D', 'E', 'F']
+        assert_array_equal(evt.labels, np.array(['D', 'E', 'F']))
+        self.assertRaises(ValueError, setattr, evt, "labels", ['X', 'Y'])
+
     def test__children(self):
         params = {'test2': 'y1', 'test3': True}
         evt = Event([1.1, 1.5, 1.7] * pq.ms,
@@ -592,18 +610,18 @@ class TestDuplicateWithNewData(unittest.TestCase):
         self.data = np.array([0.1, 0.5, 1.2, 3.3, 6.4, 7])
         self.dataquant = self.data * pq.ms
         self.arr_ann = {'index': np.arange(6), 'test': ['a', 'b', 'c', 'd', 'e', 'f']}
-        self.event = Event(self.dataquant, array_annotations=self.arr_ann)
+        self.event = Event(times=self.dataquant, labels=np.array(['a', 'b', 'c', 'd', 'e', 'f']),
+                           array_annotations=self.arr_ann)
 
     def test_duplicate_with_new_data(self):
         signal1 = self.event
-        new_data = np.sort(np.random.uniform(0, 100, (self.event.size))) * pq.ms
-        signal1b = signal1.duplicate_with_new_data(new_data)
-        assert_arrays_almost_equal(np.asarray(signal1b), np.asarray(new_data), 1e-12)
-        # Note: Labels and Durations are NOT copied any more!!!
+        new_times = np.sort(np.random.uniform(0, 100, (self.event.size))) * pq.ms
+        new_labels = np.array(list("zyxwvutsrqponmlkjihgfedcba"[:self.event.size]))
+        signal1b = signal1.duplicate_with_new_data(new_times, new_labels)
+        assert_arrays_almost_equal(np.asarray(signal1b), np.asarray(new_times), 1e-12)
+        assert_arrays_equal(signal1b.labels, new_labels)
         # After duplicating, array annotations should always be empty,
         # because different length of data would cause inconsistencies
-        # Only labels and durations should be available
-        assert_arrays_equal(signal1b.labels, np.ndarray((0,), dtype='S'))
         self.assertTrue('index' not in signal1b.array_annotations)
         self.assertTrue('test' not in signal1b.array_annotations)
         self.assertIsInstance(signal1b.array_annotations, ArrayDict)
