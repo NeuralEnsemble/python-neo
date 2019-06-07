@@ -49,11 +49,9 @@ def get_events(container, **properties):
 
     Example:
     --------
-        >>> event = neo.Event(
-                times = [0.5, 10.0, 25.2] * pq.s)
-        >>> event.annotate(
-                event_type = 'trial start',
-                trial_id = [1, 2, 3])
+        >>> event = neo.Event(times=[0.5, 10.0, 25.2] * pq.s)
+        >>> event.annotate(event_type='trial start',
+                           trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.events = [event]
 
@@ -120,12 +118,10 @@ def get_epochs(container, **properties):
 
     Example:
     --------
-        >>> epoch = neo.Epoch(
-                times = [0.5, 10.0, 25.2] * pq.s,
-                durations = [100, 100, 100] * pq.ms)
-        >>> epoch.annotate(
-                event_type = 'complete trial',
-                trial_id = [1, 2, 3]
+        >>> epoch = neo.Epoch(times=[0.5, 10.0, 25.2] * pq.s,
+                              durations = [100, 100, 100] * pq.ms)
+        >>> epoch.annotate(event_type='complete trial',
+                           trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.epochs = [epoch]
 
