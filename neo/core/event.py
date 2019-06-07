@@ -83,6 +83,10 @@ class Event(DataObject):
             times = np.array([]) * pq.s
         if labels is None:
             labels = np.array([], dtype='S')
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -103,7 +107,7 @@ class Event(DataObject):
             ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
-        obj.labels = labels
+        obj._labels = labels
         obj.segment = None
         return obj
 
@@ -126,6 +130,7 @@ class Event(DataObject):
 
     def __array_finalize__(self, obj):
         super(Event, self).__array_finalize__(obj)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
@@ -177,6 +182,7 @@ class Event(DataObject):
         '''
         othertimes = other.times.rescale(self.times.units)
         times = np.hstack([self.times, othertimes]) * self.times.units
+        labels = np.hstack([self.labels, other.labels])
         kwargs = {}
         for name in ("name", "description", "file_origin"):
             attr_self = getattr(self, name)
@@ -193,7 +199,7 @@ class Event(DataObject):
 
         kwargs['array_annotations'] = self._merge_array_annotations(other)
 
-        evt = Event(times=times, labels=kwargs['array_annotations']['labels'], **kwargs)
+        evt = Event(times=times, labels=labels, **kwargs)
 
         return evt
 
@@ -205,19 +211,34 @@ class Event(DataObject):
         # Note: Array annotations, including labels, cannot be copied
         # because they are linked to their respective timestamps and length of data can be changed
         # here which would cause inconsistencies
-        for attr in ("name", "file_origin", "description",
+        for attr in ("_labels", "name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
     def __getitem__(self, i):
         obj = super(Event, self).__getitem__(i)
+        if self._labels is not None and self._labels.size > 0:
+            obj.labels = self._labels[i]
+        else:
+            obj.labels = self._labels
         try:
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not Event
             pass
         return obj
 
-    def duplicate_with_new_data(self, signal, units=None):
+    def set_labels(self, labels):
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                            .format(len(labels), self.size))
+        self._labels = np.array(labels)
+
+    def get_labels(self):
+        return self._labels
+
+    labels = property(get_labels, set_labels)
+
+    def duplicate_with_new_data(self, times, labels, units=None):
         '''
         Create a new :class:`Event` with the same metadata
         but different data
@@ -228,8 +249,9 @@ class Event(DataObject):
         else:
             units = pq.quantity.validate_dimensionality(units)
 
-        new = self.__class__(times=signal, units=units)
+        new = self.__class__(times=times, units=units)
         new._copy_data_complement(self)
+        new.labels = labels
         # Note: Array annotations cannot be copied here, because length of data can be changed
         return new
 
@@ -269,21 +291,14 @@ class Event(DataObject):
             New instance of an :class:`Event` object starting at t_shift later than the
             original :class:`Event` (the original :class:`Event` is not modified).
         """
-        new_evt = self.duplicate_with_new_data(self.times + t_shift)
+        new_evt = self.duplicate_with_new_data(times=self.times + t_shift,
+                                               labels=self.labels)
 
         # Here we can safely copy the array annotations since we know that
         # the length of the Event does not change.
         new_evt.array_annotate(**self.array_annotations)
 
         return new_evt
-
-    def set_labels(self, labels):
-        self.array_annotate(labels=labels)
-
-    def get_labels(self):
-        return self.array_annotations['labels']
-
-    labels = property(get_labels, set_labels)
 
     def to_epoch(self, pairwise=False, durations=None):
         """

@@ -530,7 +530,8 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
 
         loaded_event = proxy_event.load()
 
-        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units)
+        regular_event = Event(times=loaded_event.times - 1 * loaded_event.units,
+                              labels=np.array(['trigger_a', 'trigger_b'] * 3, dtype='U12'))
 
         seg = Segment()
         seg.events = [regular_event, proxy_event]
