@@ -585,8 +585,8 @@ class Container(BaseNeo):
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
-                    continue
-                if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                    pass
+                elif hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
@@ -598,6 +598,7 @@ class Container(BaseNeo):
                     lookup[obj.name] = obj
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
+                obj.set_parent(self)
 
         # use the BaseNeo merge as well
         super(Container, self).merge(other)
