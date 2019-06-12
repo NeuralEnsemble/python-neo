@@ -7,6 +7,7 @@ Author: Samuel Garcia
 from __future__ import unicode_literals, print_function, division, absolute_import
 
 import os
+import re
 
 import numpy as np
 
@@ -87,13 +88,12 @@ class OpenEphysRawIO(BaseRawIO):
             all_first_timestamps = []
             all_last_timestamps = []
             all_samplerate = []
-            for continuous_filename in info['continuous'][seg_index]:
+            for chan_id, continuous_filename in enumerate(info['continuous'][seg_index]):
                 fullname = os.path.join(self.dirname, continuous_filename)
                 chan_info = read_file_header(fullname)
 
                 s = continuous_filename.replace('.continuous', '').split('_')
                 processor_id, ch_name = s[0], s[1]
-                chan_id = int(ch_name.replace('CH', ''))
 
                 filesize = os.stat(fullname).st_size
                 size = (filesize - HEADER_SIZE) // np.dtype(continuous_dtype).itemsize
@@ -436,6 +436,7 @@ def explore_folder(dirname):
     "100_CH0_N.continuous" ---> seg_index N-1
     """
     filenames = os.listdir(dirname)
+    filenames.sort()
 
     info = {}
     info['nb_segment'] = 0
@@ -467,13 +468,24 @@ def explore_folder(dirname):
 
     # order continuous file by channel number within segment
     for seg_index, continuous_filenames in info['continuous'].items():
-        channel_ids = []
+        chan_ids = {}
         for continuous_filename in continuous_filenames:
             s = continuous_filename.replace('.continuous', '').split('_')
             processor_id, ch_name = s[0], s[1]
-            chan_id = int(ch_name.replace('CH', ''))
-            channel_ids.append(chan_id)
-        order = np.argsort(channel_ids)
+            chan_str = re.split(r'(\d+)', s[1])[0]
+            chan_id = int(ch_name.replace(chan_str, ''))
+            if chan_str in chan_ids.keys():
+                chan_ids[chan_str].append(chan_id)
+            else:
+                chan_ids[chan_str] = [chan_id]
+        order = []
+        for type in chan_ids.keys():
+            order.append(np.argsort(chan_ids[type]))
+        order = [list.tolist() for list in order]
+        for i, sublist in enumerate(order):
+            if i > 0:
+                order[i] = [x+max(order[i-1])+1 for x in order[i]]
+        order = [item for sublist in order for item in sublist]
         continuous_filenames = [continuous_filenames[i] for i in order]
         info['continuous'][seg_index] = continuous_filenames
 
