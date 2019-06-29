@@ -65,13 +65,13 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = []
         event_channels = []
 
-        self.ncs_filenames = OrderedDict()  # chan_id: filename
-        self.nse_ntt_filenames = OrderedDict()  # chan_id: filename
+        self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
+        self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
         self._nev_memmap = {}
         self._spike_memmap = {}
-        self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
+        self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
         self.internal_event_ids = []
         self._empty_ncs = []  # this list contains filenames of empty records
         self._empty_nse_ntt = []
@@ -101,6 +101,8 @@ class NeuralynxRawIO(BaseRawIO):
 
             for idx, chan_id in enumerate(chan_ids):
                 chan_name = chan_names[idx]
+
+                chan_uid = (chan_name, chan_id)
                 if ext == 'ncs':
                     # a signal channels
                     units = 'uV'
@@ -111,7 +113,7 @@ class NeuralynxRawIO(BaseRawIO):
                     group_id = 0
                     sig_channels.append((chan_name, chan_id, info['sampling_rate'],
                                          'int16', units, gain, offset, group_id))
-                    self.ncs_filenames[chan_id] = filename
+                    self.ncs_filenames[chan_uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
                         'recording_opened',
@@ -142,7 +144,7 @@ class NeuralynxRawIO(BaseRawIO):
                     # a file can contain several unit_id (so several unit channel)
                     assert chan_id not in self.nse_ntt_filenames, \
                         'Several nse or ntt files have the same unit_id!!!'
-                    self.nse_ntt_filenames[chan_id] = filename
+                    self.nse_ntt_filenames[chan_uid] = filename
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
@@ -152,14 +154,14 @@ class NeuralynxRawIO(BaseRawIO):
                     else:
                         data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
 
-                    self._spike_memmap[chan_id] = data
+                    self._spike_memmap[chan_uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
                     for unit_id in unit_ids:
                         # a spike channel for each (chan_id, unit_id)
-                        self.internal_unit_ids.append((chan_id, unit_id))
+                        self.internal_unit_ids.append((chan_uid, unit_id))
 
-                        unit_name = "ch{}#{}".format(chan_id, unit_id)
+                        unit_name = "ch{}#{}#{}".format(chan_name, chan_id, unit_id)
                         unit_id = '{}'.format(unit_id)
                         wf_units = 'uV'
                         wf_gain = info['bit_to_microVolt'][idx]
@@ -207,7 +209,7 @@ class NeuralynxRawIO(BaseRawIO):
         # so need to scan all spike and event to
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
-            for chan_id, data in _data_memmap.items():
+            for _, data in _data_memmap.items():
                 ts = data['timestamp']
                 if ts.size == 0:
                     continue
@@ -300,19 +302,21 @@ class NeuralynxRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = slice(None)
+
         channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
-        for i, chan_id in enumerate(channel_ids):
-            data = self._sigs_memmap[seg_index][chan_id]
+        for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
+            data = self._sigs_memmap[seg_index][chan_uid]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
         return sigs_chunk
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -322,8 +326,8 @@ class NeuralynxRawIO(BaseRawIO):
         return nb_spike
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -344,8 +348,8 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
                                  t_start, t_stop):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -430,8 +434,8 @@ class NeuralynxRawIO(BaseRawIO):
             return
 
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
-        chan_id0 = list(ncs_filenames.keys())[0]
-        filename0 = ncs_filenames[chan_id0]
+        chan_uid0 = list(ncs_filenames.keys())[0]
+        filename0 = ncs_filenames[chan_uid0]
 
         data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
 
@@ -468,7 +472,8 @@ class NeuralynxRawIO(BaseRawIO):
         self._sigs_length = []
         self._timestamp_limits = []
         # create segment with subdata block/t_start/t_stop/length
-        for chan_id, ncs_filename in self.ncs_filenames.items():
+        for chan_uid, ncs_filename in self.ncs_filenames.items():
+
             data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
@@ -482,9 +487,11 @@ class NeuralynxRawIO(BaseRawIO):
                     'timestamp'], 'ncs files do not have the same gaps'
 
                 subdata = data[i0:i1]
-                self._sigs_memmap[seg_index][chan_id] = subdata
+                self._sigs_memmap[seg_index][chan_uid] = subdata
 
-                if chan_id == chan_id0:
+
+
+                if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
                     ts1 = subdata[-1]['timestamp'] + \
                           np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
