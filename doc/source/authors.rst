@@ -43,8 +43,8 @@ and may not be the current affiliation of a contributor.
 * Jeffrey Gill [18]
 * Lucas (lkoelman@github)
 * Mark Histed
-* Mike Sintsov
-* Scott W Harden [19]
+* Mike Sintsov [19]
+* Scott W Harden [20]
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -64,6 +64,7 @@ and may not be the current affiliation of a contributor.
 16. Ottawa Hospital Research Institute, Canada
 17. Swinburne University of Technology, Australia
 18. Case Western Reserve University (CWRU) · Department of Biology
-19. Harden Technologies, LLC
+19. IAL Developmental Neurobiology, Kazan Federal University, Kazan, Russia
+20. Harden Technologies, LLC
 
 If we've somehow missed you off the list we're very sorry - please let us know.
