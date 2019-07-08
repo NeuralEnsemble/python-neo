@@ -37,7 +37,7 @@ class BaseProxy(BaseNeo):
 
         BaseNeo.__init__(self, **annotations)
 
-    def load(self, time_slice):
+    def load(self, time_slice=None, **kwargs):
         # should be implemented by subclass
         raise NotImplementedError
 
