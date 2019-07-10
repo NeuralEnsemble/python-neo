@@ -628,7 +628,7 @@ def read_txt_header(filename):
             'Number of channel ids does not match input range values.'
 
     # filename and datetime
-    if info['version'] <= distutils.version.LooseVersion('5.6.4'):
+    if 'version' in info and info['version'] <= distutils.version.LooseVersion('5.6.4'):
         datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         filename_regex = r'## File Name (?P<filename>\S+)'
