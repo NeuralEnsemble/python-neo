@@ -7,6 +7,8 @@ Neo RawIO
 
 .. _neo_rawio_API:
 
+Neo RawIO API
+=============
 
 For performance and memory consumption reasons a new layer has been added to Neo.
 
