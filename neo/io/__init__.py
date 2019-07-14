@@ -39,7 +39,7 @@ Classes:
 
 .. autoclass:: neo.io.ElanIO
 
-.. autoclass:: neo.io.ElphyIO
+.. .. autoclass:: neo.io.ElphyIO
 
 .. autoclass:: neo.io.IgorIO
 
