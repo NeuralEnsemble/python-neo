@@ -23,7 +23,7 @@ class AxonIO(AxonRawIO, BaseFromRaw):
      - `AxonIO.axon_info['section']['ADCSection']` | `AxonIO.axon_info['section']['DACSection']` -- things about the number of channels and channel properties
      - `AxonIO._axon_info['protocol']['nActiveDACChannel']` -- bitmask specifying which DACs are actually active
      - `AxonIO._axon_info['protocol']['nDigitalEnable']` -- bitmask specifying which set of Epoch timings should be used to specify the duration of digital outputs
-    - `AxonIO._axon_info['dictEpochInfoPerDAC']` -- dict of dict. First index is DAC channel and second index is Epoch number (i.e. information about Epoch A in Channel 2 would be in `AxonIO._axon_info['dictEpochInfoPerDAC'][2][0]`)
+     - `AxonIO._axon_info['dictEpochInfoPerDAC']` -- dict of dict. First index is DAC channel and second index is Epoch number (i.e. information about Epoch A in Channel 2 would be in `AxonIO._axon_info['dictEpochInfoPerDAC'][2][0]`)
      - `AxonIO._axon_info['EpochInfo']` -- list of dicts containing information about each Epoch's digital out pattern. Digital out is a bitmask with least significant bit corresponding to Digital Out 0
      - `AxonIO._axon_info['listDACInfo']` -- information about DAC name, scale factor, holding level, etc
      - `AxonIO._t_starts` -- start time of each sweep in a unified time basis

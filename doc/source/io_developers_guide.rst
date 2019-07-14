@@ -22,7 +22,7 @@ For read/write classes you can mix the two levels neo.rawio for reading and neo.
 
 Recipe to develop an IO module for a new data format:
     1. Fully understand the object model. See :doc:`core`. If in doubt ask the `mailing list`_.
-    2. Fully understand :mod:`neo.io.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
+    2. Fully understand :mod:`neo.rawio.examplerawio`, It is a fake IO to explain the API. If in doubt ask the list.
     3. Copy/paste ``examplerawio.py`` and choose clear file and class names for your IO.
     4. implement all methods that **raise(NotImplementedError)** in :mod:`neo.rawio.baserawio`. Return None when the object is not supported (spike/waveform)
     5. Write good docstrings. List dependencies, including minimum version numbers.
@@ -98,7 +98,7 @@ ExampleIO
 
 .. autoclass:: neo.io.ExampleIO
 
-Here is the entire file:
+Here are the entire files:
 
 .. literalinclude:: ../../neo/rawio/examplerawio.py
 

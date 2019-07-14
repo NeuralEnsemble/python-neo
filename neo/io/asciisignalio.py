@@ -36,33 +36,43 @@ class AsciiSignalIO(BaseIO):
         [<AnalogSignal(array([ 39.0625    ,   0.        ,   0.        , ..., -26.85546875 ...
 
     Arguments relevant for reading and writing:
-        delimiter : column delimiter in file, e.g. '\t', one space, two spaces, ',', ';'
-        timecolumn :  None or a valid integer that identifies which column contains
-                      the time vector (counting from zero)
-        units : units of AnalogSignal can be a str or directly a Quantity
-        time_units : where timecolumn is specified, the time units must be specified
-                     as a string or Quantity
-        metadata_filename : the path to a JSON file containing metadata
+        delimiter:
+            column delimiter in file, e.g. '\t', one space, two spaces, ',', ';'
+        timecolumn:
+            None or a valid integer that identifies which column contains the time vector
+            (counting from zero)
+        units:
+            units of AnalogSignal can be a str or directly a Quantity
+        time_units:
+            where timecolumn is specified, the time units must be specified as a string or
+            Quantity
+        metadata_filename:
+            the path to a JSON file containing metadata
 
     Arguments relevant only for reading:
-        usecols : if None take all columns otherwise a list for selected columns
-                  (counting from zero)
-        skiprows : skip n first lines in case they contains header informations
-        sampling_rate : the sampling rate of signals. Ignored if timecolumn is not None
-        t_start : time of the first sample (Quantity). Ignored if timecolumn is not None
-        signal_group_mode : if 'all-in-one', load data as a single, multi-channel AnalogSignal,
-                       if 'split-all' (default for backwards compatibility) load data as
-                       separate, single-channel AnalogSignals
-        method : 'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a
-                 filename and usecolumns as argument and returns a 2D NumPy array.
+        usecols:
+            if None take all columns otherwise a list for selected columns (counting from zero)
+        skiprows:
+            skip n first lines in case they contains header informations
+        sampling_rate:
+            the sampling rate of signals. Ignored if timecolumn is not None
+        t_start:
+            time of the first sample (Quantity). Ignored if timecolumn is not None
+        signal_group_mode:
+            if 'all-in-one', load data as a single, multi-channel AnalogSignal, if 'split-all'
+            (default for backwards compatibility) load data as separate, single-channel
+            AnalogSignals
+        method:
+            'genfromtxt', 'csv', 'homemade' or a user-defined function which takes a filename and
+            usecolumns as argument and returns a 2D NumPy array.
 
-        If specifying both usecols and timecolumn, the latter should identify
-        the column index _after_ removing the unused columns.
+    If specifying both usecols and timecolumn, the latter should identify
+    the column index _after_ removing the unused columns.
 
-        The methods are as follows:
-            - 'genfromtxt' use numpy.genfromtxt
-            - 'csv' use csv module
-            - 'homemade' use an intuitive, more robust but slow method
+    The methods are as follows:
+        - 'genfromtxt' use numpy.genfromtxt
+        - 'csv' use csv module
+        - 'homemade' use an intuitive, more robust but slow method
 
     If `metadata_filename` is provided, the parameters for reading/writing the file
     ("delimiter", "timecolumn", "units", etc.) will be read from that file.
@@ -72,20 +82,21 @@ class AsciiSignalIO(BaseIO):
     If parameters are specified both in the metadata file and as arguments to the IO constructor,
     the former will take precedence.
 
-    Example metadata file:
-    {
-        "filename": "foo.txt",
-        "delimiter": " ",
-        "timecolumn": 0,
-        "units": "pA",
-        "time_units": "ms",
-        "sampling_rate": {
-            "value": 1.0,
-            "units": "kHz"
-        },
-        "method": "genfromtxt",
-        "signal_group_mode": 'all-in-one'
-    }
+    Example metadata file::
+
+        {
+            "filename": "foo.txt",
+            "delimiter": " ",
+            "timecolumn": 0,
+            "units": "pA",
+            "time_units": "ms",
+            "sampling_rate": {
+                "value": 1.0,
+                "units": "kHz"
+            },
+            "method": "genfromtxt",
+            "signal_group_mode": 'all-in-one'
+        }
     """
 
     is_readable = True
