@@ -1160,7 +1160,9 @@ class NixIO(BaseIO):
                 else:
                     values = list(values)
                 neo_attrs[prop.name] = values
-        neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
+        # since the 'neo_name' NIX property becomes the actual object's name,
+        # there's no reason to keep it in the annotations
+        neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
 
         if "file_datetime" in neo_attrs:
             neo_attrs["file_datetime"] = datetime.fromtimestamp(
