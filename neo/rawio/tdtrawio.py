@@ -439,6 +439,8 @@ tbk_field_types = [
     ('CircType', 'int'),
     ('NumChan', 'int'),
     ('StrobeMode', 'int'),
+    ('StrobeBuddy', 'S4'),
+    ('SecTag','S4'),
     ('TankEvType', 'int32'),
     ('NumPoints', 'int'),
     ('DataFormat', 'int'),
@@ -452,21 +454,43 @@ def read_tbk(tbk_filename):
     channel group info.
     """
     with open(tbk_filename, mode='rb') as f:
-        txt_header = f.read()
+        txt_header = f.read().decode('cp437')
 
+    delimInd = [m.start() for m in re.finditer('\[USERNOTEDELIMITER\]', txt_header)]
+    txt_header = txt_header[delimInd[1]:delimInd[2]].replace('[USERNOTEDELIMITER]','')
+
+    lines = txt_header.split('\n')
+    lines = lines[:-1]
     infos = []
-    for chan_grp_header in txt_header.split(b'[STOREHDRITEM]'):
-        if chan_grp_header.startswith(b'[USERNOTEDELIMITER]'):
-            break
+    
+    # adapted from the tdt package, thanks Mark Hanus!
+    # loop through rows    
+    temp_store = OrderedDict()
+    first_pass = True
+    for line in lines:
+        # check if this is a new store
+        if 'StoreName' in line:
+            # save previous store into block_notes
+            if first_pass:
+                first_pass = False
+            else:            
+                infos.append(temp_store)
+            temp_store = OrderedDict()
+        
+        # find delimiters
+        parts = line.split(';')[:-1]
+        
+        # grab field and value between the '=' and ';'
+        field_str = parts[0].split('=')[-1]
+        value = parts[-1].split('=')[-1]
+        
+        # insert new field and value into store struct
+        temp_store[field_str] = value
 
-        # parse into a dict
-        info = OrderedDict()
-        pattern = br'NAME=(\S+);TYPE=(\S+);VALUE=(\S+);'
-        r = re.findall(pattern, chan_grp_header)
-        for name, _type, value in r:
-            info[name.decode('ascii')] = value
-        infos.append(info)
-
+    # insert last store in notes
+    if len(temp_store.items()) > 0:
+        infos.append(temp_store)
+    
     # and put into numpy
     info_channel_groups = np.zeros(len(infos), dtype=tbk_field_types)
     for i, info in enumerate(infos):
