@@ -12,7 +12,10 @@ BaseIO        - abstract class which should be overridden, managing how a
 If you want a model for developing a new IO start from exampleIO.
 """
 
-import collections
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
 import logging
 
 from neo import logging_handler
@@ -126,7 +129,7 @@ class BaseIO(object):
 
     def write(self, bl, **kargs):
         if Block in self.writeable_objects:
-            if isinstance(bl, collections.Sequence):
+            if isinstance(bl, Sequence):
                 assert hasattr(self, 'write_all_blocks'), \
                     '%s does not offer to store a sequence of blocks' % \
                     self.__class__.__name__
