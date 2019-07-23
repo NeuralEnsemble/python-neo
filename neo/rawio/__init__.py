@@ -10,6 +10,7 @@ Classes:
 .. autoclass:: neo.rawio.BlackrockRawIO
 
 """
+import os
 
 from neo.rawio.axographrawio import AxographRawIO
 from neo.rawio.axonrawio import AxonRawIO
@@ -23,6 +24,7 @@ from neo.rawio.neuralynxrawio import NeuralynxRawIO
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
 from neo.rawio.neuroscoperawio import NeuroScopeRawIO
 from neo.rawio.nixrawio import NIXRawIO
+from neo.rawio.openephysrawio import OpenEphysRawIO
 from neo.rawio.plexonrawio import PlexonRawIO
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
 from neo.rawio.rawmcsrawio import RawMCSRawIO
@@ -43,6 +45,7 @@ rawiolist = [
     NeuroExplorerRawIO,
     NeuroScopeRawIO,
     NIXRawIO,
+    OpenEphysRawIO,
     PlexonRawIO,
     RawBinarySignalRawIO,
     RawMCSRawIO,
@@ -51,8 +54,6 @@ rawiolist = [
     WinEdrRawIO,
     WinWcpRawIO,
 ]
-
-import os
 
 
 def get_rawio_class(filename_or_dirname):
