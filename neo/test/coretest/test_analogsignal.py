@@ -478,17 +478,17 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         expected_shape = int(np.rint((window_size * sig.sampling_rate).simplified.magnitude))
 
         # test with random times
-        t_start = (window_size/2).magnitude
-        t_stop = (sig.t_stop.rescale(pq.ms) - window_size/2).magnitude
+        t_start = (window_size / 2).magnitude
+        t_stop = (sig.t_stop.rescale(pq.ms) - window_size / 2).magnitude
         for t in np.random.uniform(t_start, t_stop, size=1000):
             tq = t * pq.ms
-            sliced_sig = sig.time_slice(tq - window_size/2, tq + window_size/2)
+            sliced_sig = sig.time_slice(tq - window_size / 2, tq + window_size / 2)
             self.assertEqual(expected_shape, sliced_sig.shape[0])
 
         # test with times on or close to sample boundaries
         for i in np.random.randint(1000, sig.size - 1000, size=1000):
             tq = i * sig.sampling_period
-            sliced_sig = sig.time_slice(tq - window_size/2, tq + window_size/2)
+            sliced_sig = sig.time_slice(tq - window_size / 2, tq + window_size / 2)
             self.assertEqual(expected_shape, sliced_sig.shape[0])
 
     def test__time_shift_same_attributes(self):
