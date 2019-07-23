@@ -483,6 +483,26 @@ class AnalogSignal(BaseSignal):
 
         return obj
 
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`AnalogSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`AnalogSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object starting at t_shift later than the
+            original :class:`AnalogSignal` (the original :class:`AnalogSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+        new_sig.t_start = new_sig.t_start + t_shift
+
+        return new_sig
+
     def splice(self, signal, copy=False):
         """
         Replace part of the current signal by a new piece of signal.

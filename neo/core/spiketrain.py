@@ -606,6 +606,32 @@ class SpikeTrain(DataObject):
 
         return new_st
 
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`SpikeTrain` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`SpikeTrain`.
+
+        Returns:
+        --------
+        spiketrain: :class:`SpikeTrain`
+            New instance of a :class:`SpikeTrain` object starting at t_shift later than the
+            original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).
+        """
+        new_st = self.duplicate_with_new_data(
+            signal=self.times.view(pq.Quantity) + t_shift,
+            t_start=self.t_start + t_shift,
+            t_stop=self.t_stop + t_shift)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the SpikeTrain does not change.
+        new_st.array_annotate(**self.array_annotations)
+
+        return new_st
+
     def merge(self, other):
         '''
         Merge another :class:`SpikeTrain` into this one.

@@ -25,7 +25,9 @@ from neo.core.event import Event
 from neo.core.epoch import Epoch
 from neo.core import Segment
 from neo.test.tools import (assert_neo_object_is_compliant, assert_arrays_equal,
-                            assert_arrays_almost_equal, assert_same_sub_schema)
+                            assert_arrays_almost_equal, assert_same_sub_schema,
+                            assert_same_attributes, assert_same_annotations,
+                            assert_same_array_annotations)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -106,10 +108,12 @@ class TestEvent(unittest.TestCase):
     def setUp(self):
         self.params = {'test2': 'y1', 'test3': True}
         self.arr_ann = {'index': np.arange(10), 'test': np.arange(100, 110)}
+        self.seg = Segment()
         self.evt = Event([0.1, 0.5, 1.1, 1.5, 1.7, 2.2, 2.9, 3.0, 3.1, 3.3] * pq.ms, name='test',
                     description='tester', file_origin='test.file', test1=1,
                     array_annotations=self.arr_ann, **self.params)
         self.evt.annotate(test1=1.1, test0=[1, 2])
+        self.evt.segment = self.seg
 
     def test_setup_compliant(self):
         assert_neo_object_is_compliant(self.evt)
@@ -207,7 +211,8 @@ class TestEvent(unittest.TestCase):
 
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.evt.shape[-1]
-        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)],
+                   'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
         self.evt.array_annotate(**params1)
         # time_slice spike train, keep sliced spike times
@@ -216,22 +221,29 @@ class TestEvent(unittest.TestCase):
         result = self.evt.time_slice(t_start, t_stop)
 
         # Change annotations of original
-        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)],
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.evt.array_annotate(**params2)
         self.evt.array_annotations['test1'][6] = 'shallowtest'
 
-        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
-        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
-        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8]
+                             == result.array_annotations['test2']))
 
         # Change annotations of result
         params3 = {'test0': ['z{}'.format(i) for i in range(5, 8)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][1] = 'shallow2'
 
-        self.assertFalse(all(self.evt.array_annotations['test0'][5:8] == result.array_annotations['test0']))
-        self.assertFalse(all(self.evt.array_annotations['test1'][5:8] == result.array_annotations['test1']))
-        self.assertFalse(all(self.evt.array_annotations['test2'][5:8] == result.array_annotations['test2']))
+        self.assertFalse(all(self.evt.array_annotations['test0'][5:8]
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.evt.array_annotations['test1'][5:8]
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.evt.array_annotations['test2'][5:8]
+                             == result.array_annotations['test2']))
 
     def test__time_slice_deepcopy_data(self):
         result = self.evt.time_slice(None, None)
@@ -547,6 +559,36 @@ class TestEvent(unittest.TestCase):
 
         evt3 = evt.time_slice(2.2 * pq.ms, None)
         assert_arrays_equal(evt3.times, [3, 4, 5] * pq.ms)
+
+    def test__time_shift_same_attributes(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_attributes(result, self.evt, exclude=['times'])
+
+    def test__time_shift_same_annotations(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_annotations(result, self.evt)
+
+    def test__time_shift_same_array_annotations(self):
+        result = self.evt.time_shift(1 * pq.ms)
+        assert_same_array_annotations(result, self.evt)
+
+    def test__time_shift_should_set_parents_to_None(self):
+        # When time-shifting, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.evt.time_shift(1 * pq.ms)
+        self.assertEqual(result.segment, None)
+
+    def test__time_shift_by_zero(self):
+        shifted = self.evt.time_shift(0 * pq.ms)
+        assert_arrays_equal(shifted.times, self.evt.times)
+
+    def test__time_shift_same_units(self):
+        shifted = self.evt.time_shift(10 * pq.ms)
+        assert_arrays_equal(shifted.times, self.evt.times + 10 * pq.ms)
+
+    def test__time_shift_different_units(self):
+        shifted = self.evt.time_shift(1 * pq.s)
+        assert_arrays_equal(shifted.times, self.evt.times + 1000 * pq.ms)
 
     def test_as_array(self):
         data = [2, 3, 4, 5]
