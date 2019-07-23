@@ -27,6 +27,8 @@ from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
+from neo.io.nixio_fr import NixIO as NixIO_lazy
+from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
 try:
     import nixio as nix
@@ -188,6 +190,8 @@ class NixIOTest(unittest.TestCase):
         nixmd = nixdalist[0].metadata
         self.assertTrue(all(nixmd == da.metadata for da in nixdalist))
         neounit = neosig.units
+        if isinstance(neosig, AnalogSignalProxy):
+            neosig = neosig.load()
         for sig, da in zip(np.transpose(neosig), nixdalist):
             self.compare_attr(neosig, da)
             daquant = create_quantity(da[:], da.unit)
@@ -1287,6 +1291,69 @@ class NixIOWriteTest(NixIOTest):
         self.assertEqual(rblock.annotations["los"], losval)
 
         # TODO: multi dimensional value (GH Issue #501)
+
+    def test_write_proxyobjects(self):
+
+        def generate_complete_block():
+            block = Block()
+            seg = Segment()
+            block.segments.append(seg)
+
+            # add spiketrain
+            waveforms = self.rquant((3, 5, 10), pq.mV)
+            spiketrain = SpikeTrain(times=[1, 1.1, 1.2] * pq.ms, t_stop=1.5 * pq.s,
+                                    name="spikes with wf",
+                                    description="spikes for waveform test",
+                                    waveforms=waveforms)
+            seg.spiketrains.append(spiketrain)
+
+            # add signals
+            asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
+                                sampling_rate=pq.Quantity(10, "Hz"))
+            seg.analogsignals.append(asig)
+            irsig = IrregularlySampledSignal(signal=np.random.random((20, 30)),
+                                             times=self.rquant(20, pq.ms, True),
+                                             units=pq.A)
+            seg.irregularlysampledsignals.append(irsig)
+
+            # add events and epochs
+            epoch = Epoch(times=[1, 1, 10, 3] * pq.ms,
+                          durations=[3, 3, 3, 1] * pq.ms,
+                          labels=np.array(["one", "two", "three", "four"]),
+                          name="test epoch", description="an epoch for testing")
+            seg.epochs.append(epoch)
+            event = Event(times=np.arange(0, 30, 10) * pq.s,
+                          labels=np.array(["0", "1", "2"]),
+                          name="event name",
+                          description="event description")
+            seg.events.append(event)
+
+            # add channel index and unit
+            channel = ChannelIndex([0], channel_names=['mychannelname'], channel_ids=[4], name=['testname'])
+            block.channel_indexes.append(channel)
+            unit = Unit(name='myunit', description='blablabla', file_origin='fileA.nix', myannotation='myannotation')
+            channel.units.append(unit)
+            unit.spiketrains.append(spiketrain)
+
+            # make sure everything is linked properly
+            block.create_relationship()
+
+            return block
+
+        block = generate_complete_block()
+
+        basename, ext = os.path.splitext(self.filename)
+        filename2 = basename + '-2.' + ext
+
+        # writing block to file 1
+        with NixIO(filename2, 'ow') as io:
+            io.write_block(block)
+
+        # reading data as lazy objects from file 1
+        with NixIO_lazy(filename2) as io:
+            block_lazy = io.read_block(lazy=True)
+
+            self.write_and_compare([block_lazy])
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")

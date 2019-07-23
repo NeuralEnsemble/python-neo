@@ -819,14 +819,11 @@ class NixIO(BaseIO):
             return
 
         if isinstance(event, BaseProxy):
-            full_event = event.load()
-            times = full_event.times.magnitude
-            units = units_to_string(full_event.times.units)
-            labels = full_event.labels
-        else:
-            times = event.times.magnitude
-            units = units_to_string(event.times.units)
-            labels = event.labels
+            event = event.load()
+
+        times = event.times.magnitude
+        units = units_to_string(event.times.units)
+        labels = event.labels
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.event.times", data=times
         )
@@ -878,14 +875,12 @@ class NixIO(BaseIO):
             return
 
         if isinstance(epoch, BaseProxy):
-            full_epoch = epoch.load()
-            times = full_epoch.times.magnitude
-            tunits = units_to_string(full_epoch.times.units)
-        else:
-            times = epoch.times.magnitude
-            tunits = units_to_string(epoch.times.units)
+            epoch = epoch.load()
+        times = epoch.times.magnitude
+        tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
+
 
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.epoch.times", data=times
@@ -945,14 +940,11 @@ class NixIO(BaseIO):
             return
 
         if isinstance(spiketrain, BaseProxy):
-            full_spiketrain = spiketrain.load()
-            times = full_spiketrain.times.magnitude
-            tunits = units_to_string(full_spiketrain.times.units)
-            waveforms = full_spiketrain.waveforms
-        else:
-            times = spiketrain.times.magnitude
-            tunits = units_to_string(spiketrain.times.units)
-            waveforms = spiketrain.waveforms
+            spiketrain = spiketrain.load()
+
+        times = spiketrain.times.magnitude
+        tunits = units_to_string(spiketrain.times.units)
+        waveforms = spiketrain.waveforms
 
         timesda = nixblock.create_data_array("{}.times".format(nix_name),
                                              "neo.spiketrain.times", data=times)
