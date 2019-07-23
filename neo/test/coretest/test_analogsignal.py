@@ -466,6 +466,31 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.segment, None)
         self.assertEqual(result.channel_index, None)
 
+    def test__time_slice_close_to_sample_boundaries(self):
+        # see issue 530
+
+        sig = AnalogSignal(np.arange(25000) * pq.uV,
+                           t_start=0 * pq.ms,
+                           sampling_rate=25 * pq.kHz)
+
+        window_size = 3.0 * pq.ms
+
+        expected_shape = int(np.rint((window_size * sig.sampling_rate).simplified.magnitude))
+
+        # test with random times
+        t_start = (window_size/2).magnitude
+        t_stop = (sig.t_stop.rescale(pq.ms) - window_size/2).magnitude
+        for t in np.random.uniform(t_start, t_stop, size=1000):
+            tq = t * pq.ms
+            sliced_sig = sig.time_slice(tq - window_size/2, tq + window_size/2)
+            self.assertEqual(expected_shape, sliced_sig.shape[0])
+
+        # test with times on or close to sample boundaries
+        for i in np.random.randint(1000, sig.size - 1000, size=1000):
+            tq = i * sig.sampling_period
+            sliced_sig = sig.time_slice(tq - window_size/2, tq + window_size/2)
+            self.assertEqual(expected_shape, sliced_sig.shape[0])
+
     def test__time_shift_same_attributes(self):
         result = self.signal1.time_shift(1 * pq.ms)
         assert_same_attributes(result, self.signal1, exclude=['times', 't_start', 't_stop'])
