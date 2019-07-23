@@ -1329,9 +1329,11 @@ class NixIOWriteTest(NixIOTest):
             seg.events.append(event)
 
             # add channel index and unit
-            channel = ChannelIndex([0], channel_names=['mychannelname'], channel_ids=[4], name=['testname'])
+            channel = ChannelIndex([0], channel_names=['mychannelname'], channel_ids=[4],
+                                   name=['testname'])
             block.channel_indexes.append(channel)
-            unit = Unit(name='myunit', description='blablabla', file_origin='fileA.nix', myannotation='myannotation')
+            unit = Unit(name='myunit', description='blablabla', file_origin='fileA.nix',
+                        myannotation='myannotation')
             channel.units.append(unit)
             unit.spiketrains.append(spiketrain)
 
