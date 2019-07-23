@@ -563,8 +563,8 @@ class Container(BaseNeo):
         Annotations are merged such that only items not present in the current
         annotations are added.
 
-        Note that the `other` object will be in an inconsistent state after the
-        merge operation and should not be used further.
+        Note that the other object will be linked inconsistently to other Neo objects
+        after the merge operation and should not be used further.
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
