@@ -562,6 +562,9 @@ class Container(BaseNeo):
 
         Annotations are merged such that only items not present in the current
         annotations are added.
+
+        Note that the other object will be linked inconsistently to other Neo objects
+        after the merge operation and should not be used further.
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
@@ -585,8 +588,8 @@ class Container(BaseNeo):
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
-                    continue
-                if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                    pass
+                elif hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
@@ -598,6 +601,7 @@ class Container(BaseNeo):
                     lookup[obj.name] = obj
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
+                obj.set_parent(self)
 
         # use the BaseNeo merge as well
         super(Container, self).merge(other)
