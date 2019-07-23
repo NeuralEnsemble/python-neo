@@ -447,7 +447,7 @@ class AnalogSignal(BaseSignal):
     def time_index(self, t):
         """Return the array index corresponding to the time `t`"""
         t = t.rescale(self.sampling_period.units)
-        i = (t - self.t_start) / self.sampling_period
+        i = (t - self.t_start) * self.sampling_rate
         i = int(np.rint(i.magnitude))
         return i
 
@@ -455,9 +455,12 @@ class AnalogSignal(BaseSignal):
         '''
         Creates a new AnalogSignal corresponding to the time slice of the
         original AnalogSignal between times t_start, t_stop. Note, that for
-        numerical stability reasons if t_start, t_stop do not fall exactly on
-        the time bins defined by the sampling_period they will be rounded to
-        the nearest sampling bins.
+        numerical stability reasons if t_start does not fall exactly on
+        the time bins defined by the sampling_period it will be rounded to
+        the nearest sampling bin. The time bin for t_stop will be chosen to
+        make the duration of the resultant signal as close as possible to
+        t_stop - t_start. This means that for a given duration, the size
+        of the slice will always be the same.
         '''
 
         # checking start time and transforming to start index
@@ -470,10 +473,11 @@ class AnalogSignal(BaseSignal):
         if t_stop is None:
             j = len(self)
         else:
-            j = self.time_index(t_stop)
+            duration = (t_stop - t_start).rescale(self.sampling_period.units)
+            j = i + int(np.rint(duration * self.sampling_rate))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError('t_start, t_stop have to be withing the analog \
+            raise ValueError('t_start, t_stop have to be within the analog \
                               signal duration')
 
         # Time slicing should create a deep copy of the object
