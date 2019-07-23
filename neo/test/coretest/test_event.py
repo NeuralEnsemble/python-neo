@@ -146,11 +146,13 @@ class TestEvent(unittest.TestCase):
         self.assertRaises(ValueError, Event, [1.1, 1.5, 1.7] * pq.ms,
                           labels=["A", "B"])
 
-    def test_Epoch_creation_scalar_duration(self):
-        # test with scalar for durations
-        epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=20 * pq.ns,
-                    labels=np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
-        assert_neo_object_is_compliant(epc)
+    def test_Event_creation_from_lists(self):
+        evt = Event([1.1, 1.5, 1.7],
+                    ['test event 1', 'test event 2', 'test event 3'],
+                    units=pq.ms)
+        assert_arrays_equal(evt.times, [1.1, 1.5, 1.7] * pq.ms)
+        assert_arrays_equal(evt.labels,
+                            np.array(['test event 1', 'test event 2', 'test event 3']))
 
     def tests_time_slice(self):
 
