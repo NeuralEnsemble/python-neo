@@ -37,6 +37,17 @@ class BaseProxy(BaseNeo):
 
         BaseNeo.__init__(self, **annotations)
 
+    def load(self, time_slice=None, **kwargs):
+        # should be implemented by subclass
+        raise NotImplementedError
+
+    def time_slice(self, t_start, t_stop):
+        '''
+        Load the proxy object within the specified time range. Has the same
+        call signature as AnalogSignal.time_slice, Epoch.time_slice, etc.
+        '''
+        return self.load(time_slice=(t_start, t_stop))
+
 
 class AnalogSignalProxy(BaseProxy):
     '''

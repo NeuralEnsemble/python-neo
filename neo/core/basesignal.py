@@ -20,6 +20,7 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import logging
+from copy import deepcopy
 
 import numpy as np
 import quantities as pq
@@ -180,8 +181,8 @@ class BaseSignal(DataObject):
         for sub_at in all_attr:
             for attr in sub_at:
                 if attr[0] != 'signal':
-                    setattr(self, attr[0], getattr(other, attr[0], None))
-        setattr(self, 'annotations', getattr(other, 'annotations', None))
+                    setattr(self, attr[0], deepcopy(getattr(other, attr[0], None)))
+        setattr(self, 'annotations', deepcopy(getattr(other, 'annotations', None)))
 
         # Note: Array annotations cannot be copied because length of data can be changed  # here
         #  which would cause inconsistencies

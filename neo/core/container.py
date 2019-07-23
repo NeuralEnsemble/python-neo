@@ -13,6 +13,7 @@ try:
 except NameError:
     basestring = str
 
+from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 
 
@@ -523,6 +524,33 @@ class Container(BaseNeo):
             for child in self.container_children:
                 child.create_relationship(force=force, append=append,
                                           recursive=True)
+
+    def __deepcopy__(self, memo):
+        """
+        Creates a deep copy of the container.
+        All contained objects will also be deep copied and relationships
+        between all objects will be identical to the original relationships.
+        Attributes and annotations of the container are deep copied as well.
+
+        :param memo: (dict) Objects that have been deep copied already
+        :return: (Container) Deep copy of input Container
+        """
+        cls = self.__class__
+        necessary_attrs = {}
+        for k in self._necessary_attrs:
+            necessary_attrs[k[0]] = getattr(self, k[0], None)
+        new_container = cls(**necessary_attrs)
+        new_container.__dict__.update(self.__dict__)
+        memo[id(self)] = new_container
+        for k, v in self.__dict__.items():
+            try:
+                setattr(new_container, k, deepcopy(v, memo))
+            except TypeError:
+                setattr(new_container, k, v)
+
+        new_container.create_relationship()
+
+        return new_container
 
     def merge(self, other):
         """
