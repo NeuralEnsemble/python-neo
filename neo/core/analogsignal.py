@@ -466,6 +466,7 @@ class AnalogSignal(BaseSignal):
         # checking start time and transforming to start index
         if t_start is None:
             i = 0
+            t_start = 0 * pq.s
         else:
             i = self.time_index(t_start)
 
