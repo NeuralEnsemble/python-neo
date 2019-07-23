@@ -273,10 +273,9 @@ class Spike2RawIO(BaseRawIO):
                 for group_id, charact in enumerate(unique_characteristics):
                     chan_grp_indexes, = np.nonzero(characteristics == charact)
                     sig_channels['group_id'][chan_grp_indexes] = group_id
-                    
+
                     # check same size for channel in groups
                     for seg_index in range(nb_segment):
-                        #~ sizes = np.array([self._get_signal_size(0, seg_index, [ind]) for ind in chan_grp_indexes])
                         sig_sizes = []
                         for ind in chan_grp_indexes:
                             chan_id = sig_channels[ind]['id']
@@ -284,7 +283,8 @@ class Spike2RawIO(BaseRawIO):
                             sig_sizes.append(sig_size)
                         sig_sizes = np.array(sig_sizes)
                         assert np.all(sig_sizes == sig_sizes[0]),\
-                                    'Signal channel in groups do not have same size, use try_signal_grouping=False'
+                                    'Signal channel in groups do not have same size'\
+                                    ', use try_signal_grouping=False'
                     self._sig_dtypes[group_id] = np.dtype(charact['dtype'])
             else:
                 # if try_signal_grouping fail the user can try to split each channel in
@@ -338,7 +338,6 @@ class Spike2RawIO(BaseRawIO):
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
-        #~ assert len(channel_indexes) == 1
         return channel_indexes
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes):
