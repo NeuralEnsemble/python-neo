@@ -198,8 +198,6 @@ class Epoch(DataObject):
         Get the item or slice :attr:`i`.
         '''
         obj = super(Epoch, self).__getitem__(i)
-        #obj = Epoch(times=super(Epoch, self).__getitem__(i))
-        #obj._copy_data_complement(self)
         obj._durations = self.durations[i]
         if self._labels is not None and self._labels.size > 0:
             obj._labels = self.labels[i]
