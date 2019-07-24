@@ -3,11 +3,53 @@
 :mod:`neo.rawio` provides classes for reading with low level API
 electrophysiological data files.
 
+:attr:`neo.rawio.rawiolist` provides a list of successfully imported rawio
+classes.
+
+Functions:
+
+.. autofunction:: neo.rawio.get_rawio_class
+
 
 Classes:
 
+.. autoclass:: neo.rawio.AxographRawIO
+
+.. autoclass:: neo.rawio.AxonRawIO
 
 .. autoclass:: neo.rawio.BlackrockRawIO
+
+.. autoclass:: neo.rawio.BrainVisionRawIO
+
+.. autoclass:: neo.rawio.ElanRawIO
+
+.. autoclass:: neo.rawio.IntanRawIO
+
+.. autoclass:: neo.rawio.MicromedRawIO
+
+.. autoclass:: neo.rawio.NeuralynxRawIO
+
+.. autoclass:: neo.rawio.NeuroExplorerRawIO
+
+.. autoclass:: neo.rawio.NeuroScopeRawIO
+
+.. autoclass:: neo.rawio.NIXRawIO
+
+.. autoclass:: neo.rawio.OpenEphysRawIO
+
+.. autoclass:: neo.rawio.PlexonRawIO
+
+.. autoclass:: neo.rawio.RawBinarySignalRawIO
+
+.. autoclass:: neo.rawio.RawMCSRawIO
+
+.. autoclass:: neo.rawio.Spike2RawIO
+
+.. autoclass:: neo.rawio.TdtRawIO
+
+.. autoclass:: neo.rawio.WinEdrRawIO
+
+.. autoclass:: neo.rawio.WinWcpRawIO
 
 """
 import os
