@@ -213,7 +213,7 @@ class Event(DataObject):
         # Note: Array annotations, including labels, cannot be copied
         # because they are linked to their respective timestamps and length of data can be changed
         # here which would cause inconsistencies
-        for attr in ("_labels", "name", "file_origin", "description",
+        for attr in ("name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
@@ -225,6 +225,7 @@ class Event(DataObject):
             obj.labels = self._labels
         try:
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            obj._copy_data_complement(self)
         except AttributeError:  # If Quantity was returned, not Event
             obj.times = obj
         return obj
