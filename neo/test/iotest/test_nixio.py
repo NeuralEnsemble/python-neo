@@ -223,6 +223,8 @@ class NixIOTest(unittest.TestCase):
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
         for eest in eestlist:
+            if isinstance(eest, (EventProxy, EpochProxy, SpikeTrainProxy)):
+                eest = eest.load()
             mtag = mtaglist[eest.annotations["nix_name"]]
             if isinstance(eest, Epoch):
                 self.compare_epoch_mtag(eest, mtag)
@@ -230,6 +232,8 @@ class NixIOTest(unittest.TestCase):
                 self.compare_event_mtag(eest, mtag)
             elif isinstance(eest, SpikeTrain):
                 self.compare_spiketrain_mtag(eest, mtag)
+            else:
+                self.fail("Stray object")
 
     def compare_epoch_mtag(self, epoch, mtag):
         self.assertEqual(mtag.type, "neo.epoch")
