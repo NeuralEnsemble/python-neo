@@ -28,10 +28,10 @@ import os
 import logging
 import unittest
 
-from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
                                    download_test_file, create_local_temp_dir)
 
-from neo.rawio.tests import rawio_compliance as compliance
+from neo.test.rawiotest import rawio_compliance as compliance
 
 
 class BaseTestRawIO(object):

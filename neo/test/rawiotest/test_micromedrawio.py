@@ -10,7 +10,7 @@ import unittest
 
 from neo.rawio.micromedrawio import MicromedRawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestMicromedRawIO(BaseTestRawIO, unittest.TestCase, ):

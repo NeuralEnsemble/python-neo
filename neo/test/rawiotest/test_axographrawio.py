@@ -10,7 +10,7 @@ from __future__ import (unicode_literals, print_function, division,
 import unittest
 
 from neo.rawio.axographrawio import AxographRawIO
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestAxographRawIO(BaseTestRawIO, unittest.TestCase):

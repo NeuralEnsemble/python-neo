@@ -7,7 +7,7 @@ import unittest
 
 from neo.rawio.axonrawio import AxonRawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestAxonRawIO(BaseTestRawIO, unittest.TestCase, ):
