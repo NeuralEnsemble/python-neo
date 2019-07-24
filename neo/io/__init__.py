@@ -55,77 +55,151 @@ Classes:
 
 .. autoclass:: neo.io.AlphaOmegaIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.AsciiSignalIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.AsciiSpikeTrainIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.AxographIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.AxonIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.BCI2000IO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.BlackrockIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.BrainVisionIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.BrainwareDamIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.BrainwareF32IO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.BrainwareSrcIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.ElanIO
+
+    .. autoattribute:: extensions
 
 .. .. autoclass:: neo.io.ElphyIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.IgorIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.IntanIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.KlustaKwikIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.KwikIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.MicromedIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeoHdf5IO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NeoMatlabIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NestIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NeuralynxIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroExplorerIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NeuroScopeIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NeuroshareIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NixIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.NSDFIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.OpenEphysIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.PickleIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.PlexonIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.RawBinarySignalIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.RawMCSIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: Spike2IO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.StimfitIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.TdtIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.WinEdrIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.WinWcpIO
+
+    .. autoattribute:: extensions
 
 """
 
