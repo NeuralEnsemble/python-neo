@@ -35,7 +35,7 @@ from neo.test.tools import (assert_same_sub_schema,
                             assert_sub_schema_is_lazy_loaded,
                             assert_children_empty)
 
-from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
                                    download_test_file, create_local_temp_dir)
 
 from neo.test.iotest.tools import (cleanup_test_file,

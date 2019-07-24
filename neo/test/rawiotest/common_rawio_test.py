@@ -21,17 +21,18 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 __test__ = False
 
-# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
-url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
-
 import os
 import logging
 import unittest
 
-from neo.rawio.tests.tools import (can_use_network, make_all_directories,
+from neo.test.rawiotest.tools import (can_use_network, make_all_directories,
                                    download_test_file, create_local_temp_dir)
 
-from neo.rawio.tests import rawio_compliance as compliance
+from neo.test.rawiotest import rawio_compliance as compliance
+
+
+# url_for_tests = "https://portal.g-node.org/neo/" #This is the old place
+url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
 class BaseTestRawIO(object):

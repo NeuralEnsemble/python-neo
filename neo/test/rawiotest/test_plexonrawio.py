@@ -5,16 +5,17 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from neo.rawio.intanrawio import IntanRawIO
+from neo.rawio.plexonrawio import PlexonRawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestIntanRawIO(BaseTestRawIO, unittest.TestCase, ):
-    rawioclass = IntanRawIO
+class TestPlexonRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = PlexonRawIO
     files_to_download = [
-        'intan_rhs_test_1.rhs',
-        'intan_rhd_test_1.rhd',
+        'File_plexon_1.plx',
+        'File_plexon_2.plx',
+        'File_plexon_3.plx',
     ]
     entities_to_test = files_to_download
 
