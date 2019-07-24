@@ -136,10 +136,12 @@ class AnalogSignalProxy(BaseProxy):
         # array annotations for signal can be at 2 places
         # global at signal channel level
         d = self._rawio.raw_annotations['signal_channels']
-        array_annotations.update(create_analogsignal_array_annotations(d, self._global_channel_indexes))
+        array_annotations.update(
+                create_analogsignal_array_annotations(d, self._global_channel_indexes))
         # or specific to block/segment/signals
         d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']
-        array_annotations.update(create_analogsignal_array_annotations(d, self._global_channel_indexes))
+        array_annotations.update(
+                create_analogsignal_array_annotations(d, self._global_channel_indexes))
 
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
@@ -612,7 +614,7 @@ def create_analogsignal_array_annotations(sig_annotations, global_channel_indexe
             common_keys = keys
         else:
             common_keys = [k for k in common_keys if k in keys]
-    
+
     # this is redundant and done at other level
     for k in ['name', 'channel_id', 'file_origin']:
         if k in common_keys:
