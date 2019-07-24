@@ -289,13 +289,12 @@ class OpenEphysRawIO(BaseRawIO):
         sl0 = i_start % RECORD_SIZE
         sl1 = sl0 + (i_stop - i_start)
         
-        channel_indexes = np.arange(self.header['signal_channels'].size)
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_indexes)), dtype='int16')
-        for chan_index in channel_indexes:
+        for i, chan_index in enumerate(channel_indexes):
             data = self._sigs_memmap[seg_index][chan_index]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
