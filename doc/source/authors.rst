@@ -48,6 +48,7 @@ and may not be the current affiliation of a contributor.
 * Chek Yin Choi (hkchekc@github)
 * Alexander Kleinjohann
 * Christian Kothe
+* rishidhingra@github
 
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1

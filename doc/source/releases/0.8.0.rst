@@ -42,7 +42,7 @@ inclued in this release.
 
 Thanks to Achileas Koutsou, Chek Yin Choi, Richard C Gerkin, 
 Alexander Kleinjohann, Björn Müller, Jeffrey Gill, Christian Kothe,
-Mike Sintsov, Michael Denker Julia Sprenger,
+Mike Sintsov, rishidhingra, Michael Denker, Julia Sprenger,
 Andrew Davison and Samuel Garcia for their contributions to this release.
 
 
