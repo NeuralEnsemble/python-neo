@@ -549,12 +549,12 @@ txt_header_keys = [
     (r'Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
-    ('CheetahRev', '', None),  # used  possibility 1 for version
+    ('CheetahRev', '', None),  # only for old version
     ('ProbeName', '', None),
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
-    ('ApplicationName', '', None),  # used  possibility 2 for version
+    ('ApplicationName', '', None),  # also include version number
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
@@ -606,24 +606,18 @@ def read_txt_header(filename):
     else:
         info['channel_names'] = [name] * len(info['channel_ids'])
 
-    # extract application type and version information
+    # version and application name
     if 'CheetahRev' in info:
-        info['ApplicationType'] = 'Cheetah'
-        info['version'] = info['CheetahRev']
-    elif 'ApplicationName' in info:
-        if 'Cheetah' in info['ApplicationName']:
-            info['ApplicationType'] = 'Cheetah'
-            info['version'] = info['ApplicationName'].replace('Cheetah', '')
-        elif 'Pegasus' in info['ApplicationName']:
-            info['ApplicationType'] = 'Pegasus'
-            info['version'] = info['ApplicationName'].replace('Pegasus', '')
+        assert 'ApplicationName' not in info
+        info['ApplicationName'] = 'Cheetah'
+        app_version = info['CheetahRev']
     else:
-        info['ApplicationType'] = None
-        info['version'] = None
-
-    if 'version' is not None:
-        version = info['version'].replace('"', '').strip(' ').rstrip(' ')
-        info['version'] = distutils.version.LooseVersion(version)
+        assert 'ApplicationName' in info
+        pattern = r'(\S*) "([\S ]*)"'
+        match = re.findall(pattern, info['ApplicationName'])
+        assert len(match) == 1, 'impossible to find application name and version'
+        info['ApplicationName'], app_version = match[0]
+    info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
 
     # convert bit_to_microvolt
     if 'bit_to_microVolt' in info:
@@ -643,8 +637,17 @@ def read_txt_header(filename):
         assert len(info['InputRange']) == len(chid_entries), \
             'Number of channel ids does not match input range values.'
 
-    # filename and datetime
-    if (info['ApplicationType'] == 'Cheetah') and (info['version'] <= distutils.version.LooseVersion('5.6.4')):
+    # filename and datetime depend on app name and its version
+    if info['ApplicationName'] == 'Cheetah':
+        if info['ApplicationVersion'] <= '5.6.4':
+            old_date_format = True
+        else:
+            old_date_format = False
+    else:
+        # for other version (pegasus, ..) I don't known the rules
+        old_date_format = (r'## Time Opened' in txt_header)
+
+    if old_date_format:
         datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         filename_regex = r'## File Name (?P<filename>\S+)'
