@@ -15,6 +15,44 @@ Functions:
 
 Classes:
 
+* :attr:`AlphaOmegaIO`
+* :attr:`AsciiSignalIO`
+* :attr:`AsciiSpikeTrainIO`
+* :attr:`AxographIO`
+* :attr:`AxonIO`
+* :attr:`BCI2000IO`
+* :attr:`BlackrockIO`
+* :attr:`BrainVisionIO`
+* :attr:`BrainwareDamIO`
+* :attr:`BrainwareF32IO`
+* :attr:`BrainwareSrcIO`
+* :attr:`ElanIO`
+* :attr:`IgorIO`
+* :attr:`IntanIO`
+* :attr:`KlustaKwikIO`
+* :attr:`KwikIO`
+* :attr:`MicromedIO`
+* :attr:`NeoHdf5IO`
+* :attr:`NeoMatlabIO`
+* :attr:`NestIO`
+* :attr:`NeuralynxIO`
+* :attr:`NeuroExplorerIO`
+* :attr:`NeuroScopeIO`
+* :attr:`NeuroshareIO`
+* :attr:`NixIO`
+* :attr:`NSDFIO`
+* :attr:`OpenEphysIO`
+* :attr:`PickleIO`
+* :attr:`PlexonIO`
+* :attr:`RawBinarySignalIO`
+* :attr:`RawMCSIO`
+* :attr:`Spike2IO`
+* :attr:`StimfitIO`
+* :attr:`TdtIO`
+* :attr:`WinEdrIO`
+* :attr:`WinWcpIO`
+
+
 .. autoclass:: neo.io.AlphaOmegaIO
 
 .. autoclass:: neo.io.AsciiSignalIO
@@ -78,6 +116,8 @@ Classes:
 .. autoclass:: neo.io.RawBinarySignalIO
 
 .. autoclass:: neo.io.RawMCSIO
+
+.. autoclass:: Spike2IO
 
 .. autoclass:: neo.io.StimfitIO
 

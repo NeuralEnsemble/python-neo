@@ -13,6 +13,27 @@ Functions:
 
 Classes:
 
+* :attr:`AxographRawIO`
+* :attr:`AxonRawIO`
+* :attr:`BlackrockRawIO`
+* :attr:`BrainVisionRawIO`
+* :attr:`ElanRawIO`
+* :attr:`IntanRawIO`
+* :attr:`MicromedRawIO`
+* :attr:`NeuralynxRawIO`
+* :attr:`NeuroExplorerRawIO`
+* :attr:`NeuroScopeRawIO`
+* :attr:`NIXRawIO`
+* :attr:`OpenEphysRawIO`
+* :attr:`PlexonRawIO`
+* :attr:`RawBinarySignalRawIO`
+* :attr:`RawMCSRawIO`
+* :attr:`Spike2RawIO`
+* :attr:`TdtRawIO`
+* :attr:`WinEdrRawIO`
+* :attr:`WinWcpRawIO`
+
+
 .. autoclass:: neo.rawio.AxographRawIO
 
 .. autoclass:: neo.rawio.AxonRawIO
