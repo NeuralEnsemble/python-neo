@@ -38,6 +38,7 @@ import numpy as np
 from .baseio import BaseIO
 from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
+from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
 try:
@@ -705,7 +706,11 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(anasig[:].magnitude)
+        if isinstance(anasig, BaseProxy):
+            data = np.transpose(anasig.load()[:].magnitude)
+        else:
+            data = np.transpose(anasig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name,
                                            "neo.analogsignal.metadata")
@@ -718,9 +723,7 @@ class NixIO(BaseIO):
             da.definition = anasig.description
             da.unit = units_to_string(anasig.units)
 
-            timedim = da.append_sampled_dimension(
-                anasig.sampling_period.magnitude.item()
-            )
+            timedim = da.append_sampled_dimension(anasig.sampling_period.magnitude.item())
             timedim.unit = units_to_string(anasig.sampling_period.units)
             tstart = anasig.t_start
             metadata["t_start"] = tstart.magnitude.item()
@@ -776,7 +779,11 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(irsig[:].magnitude)
+        if isinstance(irsig, BaseProxy):
+            data = np.transpose(irsig.load()[:].magnitude)
+        else:
+            data = np.transpose(irsig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(
             nix_name, "neo.irregularlysampledsignal.metadata"
@@ -832,8 +839,12 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(event, BaseProxy):
+            event = event.load()
+
         times = event.times.magnitude
         units = units_to_string(event.times.units)
+        labels = event.labels
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.event.times", data=times
         )
@@ -847,7 +858,7 @@ class NixIO(BaseIO):
         metadata = nixmt.metadata
 
         labeldim = timesda.append_set_dimension()
-        labeldim.labels = event.labels
+        labeldim.labels = labels
 
         neoname = event.name if event.name is not None else ""
         metadata["neo_name"] = neoname
@@ -888,10 +899,13 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(epoch, BaseProxy):
+            epoch = epoch.load()
         times = epoch.times.magnitude
         tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
+
 
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.epoch.times", data=times
@@ -954,12 +968,15 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(spiketrain, BaseProxy):
+            spiketrain = spiketrain.load()
+
         times = spiketrain.times.magnitude
         tunits = units_to_string(spiketrain.times.units)
+        waveforms = spiketrain.waveforms
 
-        timesda = nixblock.create_data_array(
-            "{}.times".format(nix_name), "neo.spiketrain.times", data=times
-        )
+        timesda = nixblock.create_data_array("{}.times".format(nix_name),
+                                             "neo.spiketrain.times", data=times)
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
                                           positions=timesda)
@@ -987,7 +1004,7 @@ class NixIO(BaseIO):
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
 
-        if spiketrain.waveforms is not None:
+        if waveforms is not None:
             wfdata = list(wf.magnitude for wf in
                           list(wfgroup for wfgroup in
                                spiketrain.waveforms))
@@ -1011,9 +1028,9 @@ class NixIO(BaseIO):
             wftime.unit = units_to_string(spiketrain.sampling_period.units)
             wftime.label = "time"
 
-        if spiketrain.left_sweep is not None:
-            self._write_property(wfda.metadata, "left_sweep",
-                                 spiketrain.left_sweep)
+            if spiketrain.left_sweep is not None:
+                self._write_property(wfda.metadata, "left_sweep",
+                                     spiketrain.left_sweep)
 
     def _write_unit(self, neounit, nixchxsource):
         """
