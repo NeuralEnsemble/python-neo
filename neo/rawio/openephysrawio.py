@@ -288,7 +288,7 @@ class OpenEphysRawIO(BaseRawIO):
         block_stop = i_stop // RECORD_SIZE + 1
         sl0 = i_start % RECORD_SIZE
         sl1 = sl0 + (i_stop - i_start)
-        
+
         if channel_indexes is None:
             channel_indexes = slice(None)
         channel_indexes = np.arange(self.header['signal_channels'].size)[channel_indexes]
@@ -487,7 +487,7 @@ def explore_folder(dirname):
         order = [list.tolist() for list in order]
         for i, sublist in enumerate(order):
             if i > 0:
-                order[i] = [x + max(order[i -1]) + 1 for x in order[i]]
+                order[i] = [x + max(order[i - 1]) + 1 for x in order[i]]
         order = [item for sublist in order for item in sublist]
         continuous_filenames = [continuous_filenames[i] for i in order]
         info['continuous'][seg_index] = continuous_filenames
