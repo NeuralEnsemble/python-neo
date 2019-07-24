@@ -549,12 +549,12 @@ txt_header_keys = [
     (r'Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
-    ('CheetahRev', 'version', None),  # used  possibilty 1 for version
+    ('CheetahRev', '', None),  # used  possibility 1 for version
     ('ProbeName', '', None),
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
-    ('ApplicationName Cheetah', 'version', None),  # used  possibilty 2 for version
+    ('ApplicationName', '', None),  # used  possibility 2 for version
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
@@ -605,8 +605,24 @@ def read_txt_header(filename):
             'Number of channel ids does not match channel names.'
     else:
         info['channel_names'] = [name] * len(info['channel_ids'])
-    if 'version' in info:
-        version = info['version'].replace('"', '')
+
+    # extract application type and version information
+    if 'CheetahRev' in info:
+        info['ApplicationType'] = 'Cheetah'
+        info['version'] = info['CheetahRev']
+    elif 'ApplicationName' in info:
+        if 'Cheetah' in info['ApplicationName']:
+            info['ApplicationType'] = 'Cheetah'
+            info['version'] = info['ApplicationName'].replace('Cheetah', '')
+        elif 'Pegasus' in info['ApplicationName']:
+            info['ApplicationType'] = 'Pegasus'
+            info['version'] = info['ApplicationName'].replace('Pegasus', '')
+    else:
+        info['ApplicationType'] = None
+        info['version'] = None
+
+    if 'version' is not None:
+        version = info['version'].replace('"', '').strip(' ').rstrip(' ')
         info['version'] = distutils.version.LooseVersion(version)
 
     # convert bit_to_microvolt
@@ -628,7 +644,7 @@ def read_txt_header(filename):
             'Number of channel ids does not match input range values.'
 
     # filename and datetime
-    if info['version'] <= distutils.version.LooseVersion('5.6.4'):
+    if (info['ApplicationType'] == 'Cheetah') and (info['version'] <= distutils.version.LooseVersion('5.6.4')):
         datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         filename_regex = r'## File Name (?P<filename>\S+)'
