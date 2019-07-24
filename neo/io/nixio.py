@@ -53,6 +53,7 @@ except NameError:
     string_types = str
 
 EMPTYANNOTATION = "EMPTYLIST"
+ARRAYANNOTATION = "ARRAYANNOTATION"
 
 
 def stringify(value):
@@ -432,6 +433,7 @@ class NixIO(BaseIO):
         signaldata = create_quantity(signaldata, unit)
         timedim = self._get_time_dimension(nix_da_group[0])
         times = create_quantity(timedim.ticks, timedim.unit)
+
         neo_signal = IrregularlySampledSignal(
             signal=signaldata, times=times, **neo_attrs
         )
@@ -450,6 +452,7 @@ class NixIO(BaseIO):
         times = create_quantity(nix_mtag.positions, time_unit)
         labels = np.array(nix_mtag.positions.dimensions[0].labels,
                           dtype="S")
+
         neo_event = Event(times=times, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_event
         return neo_event
@@ -460,13 +463,13 @@ class NixIO(BaseIO):
         times = create_quantity(nix_mtag.positions, time_unit)
         durations = create_quantity(nix_mtag.extents,
                                     nix_mtag.extents.unit)
+
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
                               dtype="S")
         else:
             labels = None
-        neo_epoch = Epoch(times=times, durations=durations, labels=labels,
-                          **neo_attrs)
+        neo_epoch = Epoch(times=times, durations=durations, labels=labels, **neo_attrs)
         self._neo_map[nix_mtag.name] = neo_epoch
         return neo_epoch
 
@@ -474,6 +477,7 @@ class NixIO(BaseIO):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
+
         neo_spiketrain = SpikeTrain(times=times, **neo_attrs)
         if nix_mtag.features:
             wfda = nix_mtag.features[0].data
@@ -733,6 +737,10 @@ class NixIO(BaseIO):
         if anasig.annotations:
             for k, v in anasig.annotations.items():
                 self._write_property(metadata, k, v)
+        if anasig.array_annotations:
+            for k, v in anasig.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -796,6 +804,10 @@ class NixIO(BaseIO):
         if irsig.annotations:
             for k, v in irsig.annotations.items():
                 self._write_property(metadata, k, v)
+        if irsig.array_annotations:
+            for k, v in irsig.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -843,6 +855,10 @@ class NixIO(BaseIO):
         if event.annotations:
             for k, v in event.annotations.items():
                 self._write_property(metadata, k, v)
+        if event.array_annotations:
+            for k, v in event.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -905,6 +921,10 @@ class NixIO(BaseIO):
         if epoch.annotations:
             for k, v in epoch.annotations.items():
                 self._write_property(metadata, k, v)
+        if epoch.array_annotations:
+            for k, v in epoch.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -959,6 +979,10 @@ class NixIO(BaseIO):
         if spiketrain.annotations:
             for k, v in spiketrain.annotations.items():
                 self._write_property(metadata, k, v)
+        if spiketrain.array_annotations:
+            for k, v in spiketrain.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
@@ -1155,7 +1179,7 @@ class NixIO(BaseIO):
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.inherited_properties():
-                values = prop.values
+                values = list(prop.values)
                 if prop.unit:
                     units = prop.unit
                     values = create_quantity(values, units)
@@ -1166,6 +1190,11 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                elif prop.definition == ARRAYANNOTATION:
+                    if 'array_annotations' in neo_attrs:
+                        neo_attrs['array_annotations'][prop.name] = values
+                    else:
+                        neo_attrs['array_annotations'] = {prop.name: values}
                 else:
                     values = list(values)
                 neo_attrs[prop.name] = values
