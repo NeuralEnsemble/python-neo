@@ -135,7 +135,6 @@ class TestUnit(unittest.TestCase):
         unit1a.annotate(seed=self.seed2)
         unit1a.spiketrains.append(self.trains2[0])
         unit1a.merge(self.unit2)
-        self.check_creation(self.unit2)
 
         assert_same_sub_schema(self.trains1a + self.trains2,
                                unit1a.spiketrains)

@@ -207,7 +207,6 @@ class TestChannelIndex(unittest.TestCase):
         chx1a.annotate(seed=self.seed2)
         chx1a.analogsignals.append(self.sigarrs2[0])
         chx1a.merge(self.chx2)
-        self.check_creation(self.chx2)
 
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
                                chx1a.analogsignals,

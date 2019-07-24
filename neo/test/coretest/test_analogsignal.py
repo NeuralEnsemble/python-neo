@@ -31,7 +31,8 @@ from neo.core import Segment
 
 from neo.test.tools import (assert_arrays_almost_equal, assert_neo_object_is_compliant,
                             assert_same_sub_schema, assert_objects_equivalent,
-                            assert_same_attributes, assert_same_sub_schema, assert_arrays_equal)
+                            assert_same_attributes, assert_same_sub_schema, assert_arrays_equal,
+                            assert_same_annotations, assert_same_array_annotations)
 from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_neo,
                                         TEST_ANNOTATIONS)
 
@@ -357,27 +358,35 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__time_slice_deepcopy_array_annotations(self):
         length = self.signal1.shape[-1]
-        params1 = {'test0': ['y{}'.format(i) for i in range(length)], 'test1': ['deeptest' for i in range(length)],
+        params1 = {'test0': ['y{}'.format(i) for i in range(length)],
+                   'test1': ['deeptest' for i in range(length)],
                    'test2': [(-1)**i > 0 for i in range(length)]}
         self.signal1.array_annotate(**params1)
         result = self.signal1.time_slice(None, None)
 
         # Change annotations of original
-        params2 = {'test0': ['x{}'.format(i) for i in range(length)], 'test2': [(-1)**(i+1) > 0 for i in range(length)]}
+        params2 = {'test0': ['x{}'.format(i) for i in range(length)],
+                   'test2': [(-1) ** (i + 1) > 0 for i in range(length)]}
         self.signal1.array_annotate(**params2)
         self.signal1.array_annotations['test1'][0] = 'shallowtest'
 
-        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
-        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
-        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+        self.assertFalse(all(self.signal1.array_annotations['test0']
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1']
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2']
+                             == result.array_annotations['test2']))
 
         # Change annotations of result
         params3 = {'test0': ['z{}'.format(i) for i in range(1, result.shape[-1]+1)]}
         result.array_annotate(**params3)
         result.array_annotations['test1'][0] = 'shallow2'
-        self.assertFalse(all(self.signal1.array_annotations['test0'] == result.array_annotations['test0']))
-        self.assertFalse(all(self.signal1.array_annotations['test1'] == result.array_annotations['test1']))
-        self.assertFalse(all(self.signal1.array_annotations['test2'] == result.array_annotations['test2']))
+        self.assertFalse(all(self.signal1.array_annotations['test0']
+                             == result.array_annotations['test0']))
+        self.assertFalse(all(self.signal1.array_annotations['test1']
+                             == result.array_annotations['test1']))
+        self.assertFalse(all(self.signal1.array_annotations['test2']
+                             == result.array_annotations['test2']))
 
     def test__time_slice_deepcopy_data(self):
         result = self.signal1.time_slice(None, None)
@@ -457,6 +466,37 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         self.assertEqual(result.segment, None)
         self.assertEqual(result.channel_index, None)
 
+    def test__time_shift_same_attributes(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_attributes(result, self.signal1, exclude=['times', 't_start', 't_stop'])
+
+    def test__time_shift_same_annotations(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_annotations(result, self.signal1)
+
+    def test__time_shift_same_array_annotations(self):
+        result = self.signal1.time_shift(1 * pq.ms)
+        assert_same_array_annotations(result, self.signal1)
+
+    def test__time_shift_should_set_parents_to_None(self):
+        # When time-shifting, a deep copy is made,
+        # thus the reference to parent objects should be destroyed
+        result = self.signal1.time_shift(1 * pq.ms)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
+
+    def test__time_shift_by_zero(self):
+        shifted = self.signal1.time_shift(0 * pq.ms)
+        assert_arrays_equal(shifted.times, self.signal1.times)
+
+    def test__time_shift_same_units(self):
+        shifted = self.signal1.time_shift(10 * pq.ms)
+        assert_arrays_equal(shifted.times, self.signal1.times + 10 * pq.ms)
+
+    def test__time_shift_different_units(self):
+        shifted = self.signal1.time_shift(1 * pq.s)
+        assert_arrays_equal(shifted.times, self.signal1.times + 1000 * pq.ms)
+
     # TODO: XXX ???
     def test__copy_should_let_access_to_parents_objects(self):
         result = self.signal1.copy()
@@ -465,9 +505,9 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
     def test__deepcopy_should_set_parents_objects_to_None(self):
         # Deepcopy should destroy references to parents
-         result = copy.deepcopy(self.signal1)
-         self.assertEqual(result.segment, None)
-         self.assertEqual(result.channel_index, None)
+        result = copy.deepcopy(self.signal1)
+        self.assertEqual(result.segment, None)
+        self.assertEqual(result.channel_index, None)
 
     def test__getitem_should_return_single_quantity(self):
         result1 = self.signal1[0, 0]

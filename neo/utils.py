@@ -49,11 +49,9 @@ def get_events(container, **properties):
 
     Example:
     --------
-        >>> event = neo.Event(
-                times = [0.5, 10.0, 25.2] * pq.s)
-        >>> event.annotate(
-                event_type = 'trial start',
-                trial_id = [1, 2, 3])
+        >>> event = neo.Event(times=[0.5, 10.0, 25.2] * pq.s)
+        >>> event.annotate(event_type='trial start',
+                           trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.events = [event]
 
@@ -120,12 +118,10 @@ def get_epochs(container, **properties):
 
     Example:
     --------
-        >>> epoch = neo.Epoch(
-                times = [0.5, 10.0, 25.2] * pq.s,
-                durations = [100, 100, 100] * pq.ms)
-        >>> epoch.annotate(
-                event_type = 'complete trial',
-                trial_id = [1, 2, 3]
+        >>> epoch = neo.Epoch(times=[0.5, 10.0, 25.2] * pq.s,
+                              durations = [100, 100, 100] * pq.ms)
+        >>> epoch.annotate(event_type='complete trial',
+                           trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.epochs = [epoch]
 
@@ -619,8 +615,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
 
     segments = []
     for ep_id in range(len(epoch)):
-        subseg = seg_time_slice(seg,
-                                epoch.times[ep_id],
+        subseg = seg.time_slice(epoch.times[ep_id],
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
@@ -640,234 +635,3 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
         segments.append(subseg)
 
     return segments
-
-
-def seg_time_slice(seg, t_start=None, t_stop=None, reset_time=False, **kwargs):
-    """
-    Creates a time slice of a Segment containing slices of all child
-    objects.
-
-    Parameters:
-    -----------
-    seg: Segment
-        The Segment object to slice.
-    t_start: Quantity
-        Starting time of the sliced time window.
-    t_stop: Quantity
-        Stop time of the sliced time window.
-    reset_time: bool
-        If True the time stamps of all sliced objects are set to fall
-        in the range from t_start to t_stop.
-        If False, original time stamps are retained.
-        Default is False.
-
-    Keyword Arguments:
-    ------------------
-        Additional keyword arguments used for initialization of the sliced
-        Segment object.
-
-    Returns:
-    --------
-    seg: Segment
-        Temporal slice of the original Segment from t_start to t_stop.
-    """
-    subseg = neo.Segment(**kwargs)
-
-    for attr in [
-            'file_datetime', 'rec_datetime', 'index',
-            'name', 'description', 'file_origin']:
-        setattr(subseg, attr, getattr(seg, attr))
-
-    subseg.annotations = copy.deepcopy(seg.annotations)
-
-    t_shift = - t_start
-
-    # cut analogsignals and analogsignalarrays
-    for ana_id in range(len(seg.analogsignals)):
-        if isinstance(seg.analogsignals[ana_id], neo.AnalogSignal):
-            ana_time_slice = seg.analogsignals[ana_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.analogsignals[ana_id], neo.io.proxyobjects.AnalogSignalProxy):
-            ana_time_slice = seg.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ana_time_slice.t_start = ana_time_slice.t_start + t_shift
-        subseg.analogsignals.append(ana_time_slice)
-
-    # cut spiketrains
-    for st_id in range(len(seg.spiketrains)):
-        if isinstance(seg.spiketrains[st_id], neo.SpikeTrain):
-            st_time_slice = seg.spiketrains[st_id].time_slice(t_start, t_stop)
-        elif isinstance(seg.spiketrains[st_id], neo.io.proxyobjects.SpikeTrainProxy):
-            st_time_slice = seg.spiketrains[st_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            st_time_slice = shift_spiketrain(st_time_slice, t_shift)
-        subseg.spiketrains.append(st_time_slice)
-
-    # cut events
-    for ev_id in range(len(seg.events)):
-        if isinstance(seg.events[ev_id], neo.Event):
-            ev_time_slice = event_time_slice(seg.events[ev_id], t_start, t_stop)
-        elif isinstance(seg.events[ev_id], neo.io.proxyobjects.EventProxy):
-            ev_time_slice = seg.events[ev_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ev_time_slice = shift_event(ev_time_slice, t_shift)
-        # appending only non-empty events
-        if len(ev_time_slice):
-            subseg.events.append(ev_time_slice)
-
-    # cut epochs
-    for ep_id in range(len(seg.epochs)):
-        if isinstance(seg.epochs[ep_id], neo.Epoch):
-            ep_time_slice = epoch_time_slice(seg.epochs[ep_id], t_start, t_stop)
-        elif isinstance(seg.epochs[ep_id], neo.io.proxyobjects.EpochProxy):
-            ep_time_slice = seg.epochs[ep_id].load(time_slice=(t_start, t_stop))
-        if reset_time:
-            ep_time_slice = shift_epoch(ep_time_slice, t_shift)
-        # appending only non-empty epochs
-        if len(ep_time_slice):
-            subseg.epochs.append(ep_time_slice)
-
-    return subseg
-
-
-def shift_spiketrain(spiketrain, t_shift):
-    """
-    Shifts a spike train to start at a new time.
-
-    Parameters:
-    -----------
-    spiketrain: SpikeTrain
-        Spiketrain of which a copy will be generated with shifted spikes and
-        starting and stopping times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the SpikeTrain.
-
-    Returns:
-    --------
-    spiketrain: SpikeTrain
-        New instance of a SpikeTrain object starting at t_start (the original
-        SpikeTrain is not modified).
-    """
-    new_st = spiketrain.duplicate_with_new_data(
-        signal=spiketrain.times.view(pq.Quantity) + t_shift,
-        t_start=spiketrain.t_start + t_shift,
-        t_stop=spiketrain.t_stop + t_shift)
-    return new_st
-
-
-def event_time_slice(event, t_start=None, t_stop=None):
-    """
-    Slices an Event object to retain only those events that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    event: Event
-        The Event to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain events. An event at time t is retained
-        if t_start <= t < t_stop.
-
-    Returns:
-    --------
-    event: Event
-        New instance of an Event object containing only the events in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        event.times >= t_start, event.times < t_stop))[0]
-
-    new_event = _event_epoch_slice_by_valid_ids(event, valid_ids=valid_ids)
-
-    return new_event
-
-
-def epoch_time_slice(epoch, t_start=None, t_stop=None):
-    """
-    Slices an Epoch object to retain only those epochs that fall in a certain
-    time window.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        The Epoch to slice.
-    t_start, t_stop: Quantity (time)
-        Time window in which to retain epochs. An epoch at time t and
-        duration d is retained if t_start <= t < t_stop - d.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object containing only the epochs in the time
-        range.
-    """
-    if t_start is None:
-        t_start = -np.inf
-    if t_stop is None:
-        t_stop = np.inf
-
-    valid_ids = np.where(np.logical_and(
-        epoch.times >= t_start, epoch.times + epoch.durations < t_stop))[0]
-
-    new_epoch = _event_epoch_slice_by_valid_ids(epoch, valid_ids=valid_ids)
-
-    return new_epoch
-
-
-def shift_event(ev, t_shift):
-    """
-    Shifts an event by an amount of time.
-
-    Parameters:
-    -----------
-    event: Event
-        Event of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Event.
-
-    Returns:
-    --------
-    epoch: Event
-        New instance of an Event object starting at t_shift later than the
-        original Event (the original Event is not modified).
-    """
-    return ev.duplicate_with_new_data(times=ev.times + t_shift,
-                                      labels=ev.labels)
-
-
-def shift_epoch(epoch, t_shift):
-    """
-    Shifts an epoch by an amount of time.
-
-    Parameters:
-    -----------
-    epoch: Epoch
-        Epoch of which a copy will be generated with shifted times
-    t_shift: Quantity (time)
-        Amount of time by which to shift the Epoch.
-
-    Returns:
-    --------
-    epoch: Epoch
-        New instance of an Epoch object starting at t_shift later than the
-        original Epoch (the original Epoch is not modified).
-    """
-    return epoch.duplicate_with_new_data(times=epoch.times + t_shift,
-                                         durations=epoch.durations,
-                                         labels=epoch.labels)
-
-
-def _shift_time_signal(sig, t_shift):
-    """
-    Internal function.
-    """
-    if not hasattr(sig, 'times'):
-        raise AttributeError(
-            'Can only shift signals, which have an attribute'
-            ' "times", not %s' % type(sig))
-    new_sig = sig.duplicate_with_new_data(times=sig.times + t_shift)
-    return new_sig

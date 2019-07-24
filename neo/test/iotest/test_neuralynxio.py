@@ -224,8 +224,10 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
             block = nio.read_block()
 
             for anasig_id, anasig in enumerate(block.segments[0].analogsignals):
-                chid = anasig.channel_index.annotations['channel_id'][anasig_id]
-                filename = nio.ncs_filenames[chid][:-3] + 'txt'
+                chid = anasig.channel_index.channel_ids[anasig_id]
+                chname = anasig.channel_index.channel_names[anasig_id].decode('UTF-8') # need to decode, unless keyerror
+                chuid = (chname, chid)
+                filename = nio.ncs_filenames[chuid][:-3] + 'txt'
                 filename = filename.replace('original_data', 'plain_data')
                 plain_data = np.loadtxt(filename)[:, 5:].flatten()  # first columns are meta info
                 overlap = 512 * 500

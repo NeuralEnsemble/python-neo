@@ -13,7 +13,10 @@ Tests for NixIO
 
 import os
 import shutil
-from collections import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 from datetime import datetime
 
 from tempfile import mkdtemp
@@ -67,12 +70,19 @@ class NixIOTest(unittest.TestCase):
         nix_channels = list(src for src in nixsrc.sources
                             if src.type == "neo.channelindex")
         self.assertEqual(len(neochx.index), len(nix_channels))
-
         if len(neochx.channel_ids):
             nix_chanids = list(src.metadata["channel_id"] for src
                                in nixsrc.sources
                                if src.type == "neo.channelindex")
             self.assertEqual(len(neochx.channel_ids), len(nix_chanids))
+
+        # coordinates can be 1D if there's only one channel
+        if neochx.coordinates is not None:
+            neocoordinates = neochx.coordinates
+            if np.ndim(neocoordinates) == 1:
+                neocoordinates = [neocoordinates]
+        else:
+            neocoordinates = []
 
         for nixchan in nix_channels:
             nixchanidx = nixchan.metadata["index"]
@@ -93,6 +103,13 @@ class NixIOTest(unittest.TestCase):
                 self.assertEqual(neochanid, nixchanid)
             elif "channel_id" in nixchan.metadata:
                 self.fail("Channel ID not loaded")
+
+            if len(neocoordinates):
+                neocoord = neocoordinates[neochanpos]
+                nixcoord = nixchan.metadata.props["coordinates"]
+                nixcoord = create_quantity(nixcoord.values, nixcoord.unit)
+                self.assertTrue(all(neocoord == nixcoord),
+                                msg="{} != {}".format(neocoord, nixcoord))
         nix_units = list(src for src in nixsrc.sources
                          if src.type == "neo.unit")
         self.assertEqual(len(neochx.units), len(nix_units))
@@ -735,6 +752,27 @@ class NixIOWriteTest(NixIOTest):
                              "eight", "xiii"]
 
         chx.coordinates = self.rquant((6, 3), pq.um)
+        self.write_and_compare([block])
+
+        # add an empty channel index and check again
+        newchx = ChannelIndex(np.array([]))
+        block.channel_indexes.append(newchx)
+        self.write_and_compare([block])
+
+    def test_channel_index_coords(self):
+        block = Block(name=self.rword())
+        chxn = ChannelIndex(name=self.rword(),
+                            description=self.rsentence(),
+                            channel_ids=[10, 20, 30],
+                            index=[1, 2, 3])
+        chxn.coordinates = self.rquant((3, 3), pq.mm)
+        chx1 = ChannelIndex(name=self.rword(),
+                            description=self.rsentence(),
+                            channel_ids=[1],
+                            index=[0])
+        chx1.coordinates = self.rquant(2, pq.mm)
+        block.channel_indexes.append(chxn)
+        block.channel_indexes.append(chx1)
         self.write_and_compare([block])
 
         # add an empty channel index and check again
