@@ -108,7 +108,8 @@ class BlackrockRawIO(BaseRawIO):
             ID of nsX file from which to load data, e.g., if set to
             5 only data from the ns5 file are loaded. If None, the Io
             will take the maximum if file is present.
-            Contrary to previsous version of the IO:
+            Contrary to previous version of the IO:
+
               * nsx_to_load is not a list
               * must be set at the init before parse_header()
 
