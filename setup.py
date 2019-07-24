@@ -29,8 +29,8 @@ setup(
     name="neo",
     version=neo_version,
     packages=[
-        'neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest',
-        'neo.rawio', 'neo.rawio.tests'],
+        'neo', 'neo.core', 'neo.io', 'neo.rawio', 'neo.test',
+            'neo.test.coretest', 'neo.test.iotest', 'neo.test.rawiotest'],
     install_requires=install_requires,
     extras_require=extras_require,
     author="Neo authors and contributors",
