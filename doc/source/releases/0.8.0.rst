@@ -15,9 +15,6 @@ Other features:
   * time_shift() method for Epoch/Event/AnalogSignal
   * time_slice more robust
 
-New IO classes:
-  * Axograph
-
 Many bug fixes and improvements in IO:
   * Blackrock
   * Neuroshare
