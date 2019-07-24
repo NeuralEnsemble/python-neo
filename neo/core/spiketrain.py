@@ -22,7 +22,7 @@ the old object.
 from __future__ import absolute_import, division, print_function
 import sys
 
-import copy
+from copy import deepcopy, copy
 import warnings
 
 import numpy as np
@@ -199,6 +199,7 @@ class SpikeTrain(DataObject):
     '''
 
     _single_parent_objects = ('Segment', 'Unit')
+    _single_parent_attrs = ('segment', 'unit')
     _quantity_attr = 'times'
     _necessary_attrs = (('times', pq.Quantity, 1), ('t_start', pq.Quantity, 0),
                         ('t_stop', pq.Quantity, 0))
@@ -401,21 +402,6 @@ class SpikeTrain(DataObject):
         if hasattr(obj, 'lazy_shape'):
             self.lazy_shape = obj.lazy_shape
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_st = cls(np.array(self), self.t_stop, units=self.units, dtype=self.dtype, copy=True,
-                     sampling_rate=self.sampling_rate, t_start=self.t_start,
-                     waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
-                     file_origin=self.file_origin, description=self.description)
-        new_st.__dict__.update(self.__dict__)
-        memo[id(self)] = new_st
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_st, k, copy.deepcopy(v, memo))
-            except TypeError:
-                setattr(new_st, k, v)
-        return new_st
-
     def __repr__(self):
         '''
         Returns a string representing the :class:`SpikeTrain`.
@@ -432,7 +418,7 @@ class SpikeTrain(DataObject):
         sort_indices = np.argsort(self)
         if self.waveforms is not None and self.waveforms.any():
             self.waveforms = self.waveforms[sort_indices]
-        self.array_annotate(**copy.deepcopy(self.array_annotations_at_index(sort_indices)))
+        self.array_annotate(**deepcopy(self.array_annotations_at_index(sort_indices)))
 
         # now sort the times
         # We have sorted twice, but `self = self[sort_indices]` introduces
@@ -475,7 +461,7 @@ class SpikeTrain(DataObject):
                           sampling_rate=self.sampling_rate, t_start=t_start,
                           waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
                           file_origin=self.file_origin, description=self.description,
-                          array_annotations=copy.deepcopy(self.array_annotations),
+                          array_annotations=deepcopy(self.array_annotations),
                           **self.annotations)
 
     def __sub__(self, time):
@@ -513,7 +499,7 @@ class SpikeTrain(DataObject):
                               sampling_rate=self.sampling_rate, t_start=t_start,
                               waveforms=self.waveforms, left_sweep=self.left_sweep, name=self.name,
                               file_origin=self.file_origin, description=self.description,
-                              array_annotations=copy.deepcopy(self.array_annotations),
+                              array_annotations=deepcopy(self.array_annotations),
                               **self.annotations)
 
     def __getitem__(self, i):
@@ -524,7 +510,7 @@ class SpikeTrain(DataObject):
         if hasattr(obj, 'waveforms') and obj.waveforms is not None:
             obj.waveforms = obj.waveforms.__getitem__(i)
         try:
-            obj.array_annotate(**copy.deepcopy(self.array_annotations_at_index(i)))
+            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
         except AttributeError:  # If Quantity was returned, not SpikeTrain
             pass
         return obj
@@ -558,7 +544,7 @@ class SpikeTrain(DataObject):
                      "annotations"):
             attr_value = getattr(other, attr, None)
             if deep_copy:
-                attr_value = copy.deepcopy(attr_value)
+                attr_value = deepcopy(attr_value)
             setattr(self, attr, attr_value)
 
     def duplicate_with_new_data(self, signal, t_start=None, t_stop=None, waveforms=None,
@@ -609,12 +595,40 @@ class SpikeTrain(DataObject):
         if t_stop is None:
             _t_stop = np.inf
         indices = (self >= _t_start) & (self <= _t_stop)
-        new_st = self[indices]
+
+        # Time slicing should create a deep copy of the object
+        new_st = deepcopy(self[indices])
 
         new_st.t_start = max(_t_start, self.t_start)
         new_st.t_stop = min(_t_stop, self.t_stop)
         if self.waveforms is not None:
             new_st.waveforms = self.waveforms[indices]
+
+        return new_st
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`SpikeTrain` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`SpikeTrain`.
+
+        Returns:
+        --------
+        spiketrain: :class:`SpikeTrain`
+            New instance of a :class:`SpikeTrain` object starting at t_shift later than the
+            original :class:`SpikeTrain` (the original :class:`SpikeTrain` is not modified).
+        """
+        new_st = self.duplicate_with_new_data(
+            signal=self.times.view(pq.Quantity) + t_shift,
+            t_start=self.t_start + t_shift,
+            t_stop=self.t_stop + t_shift)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the SpikeTrain does not change.
+        new_st.array_annotate(**self.array_annotations)
 
         return new_st
 
@@ -703,8 +717,8 @@ class SpikeTrain(DataObject):
         keys = self.array_annotations.keys()
         for key in keys:
             try:
-                self_ann = copy.deepcopy(self.array_annotations[key])
-                other_ann = copy.deepcopy(other.array_annotations[key])
+                self_ann = deepcopy(self.array_annotations[key])
+                other_ann = deepcopy(other.array_annotations[key])
                 if isinstance(self_ann, pq.Quantity):
                     other_ann.rescale(self_ann.units)
                     arr_ann = np.concatenate([self_ann, other_ann]) * self_ann.units

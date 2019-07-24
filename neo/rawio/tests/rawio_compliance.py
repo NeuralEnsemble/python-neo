@@ -235,7 +235,10 @@ def benchmark_speed_read_signals(reader):
         for raw_chunk in iter_over_sig_chunks(reader, channel_indexes, chunksize=1024):
             nb_samples += raw_chunk.shape[0]
         t1 = time.perf_counter()
-        speed = (nb_samples * nb_sig) / (t1 - t0) / 1e6
+        if t0 != t1:
+            speed = (nb_samples * nb_sig) / (t1 - t0) / 1e6
+        else:
+            speed = np.inf
         logging.info(
             '{} read ({}signals x {}samples) in {:0.3f} s so speed {:0.3f} MSPS from {}'.format(
                 print_class(reader),

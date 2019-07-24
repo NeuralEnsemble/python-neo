@@ -517,13 +517,6 @@ class BrainwareSrcIO(BaseIO):
         senders = []
         for event in events:
             times.append(event.times.magnitude)
-            # With the introduction of array annotations and the adaptation of labels to use
-            # this infrastructure, even single labels are wrapped into an array to ensure
-            # consistency.
-            # The following lines were 'labels.append(event.labels)' which assumed event.labels
-            # to be a scalar. Thus, I can safely assume the array to have length 1, because
-            # it only wraps this scalar. Now this scalar is accessed as the 0th element of
-            # event.labels
             if event.labels.shape == (1,):
                 labels.append(event.labels[0])
             else:
@@ -775,7 +768,7 @@ class BrainwareSrcIO(BaseIO):
         # char * numchars -- comment text
         text = self.__read_str(numchars2, utf=False)
 
-        comment = Event(times=pq.Quantity(time, units=pq.d), labels=text,
+        comment = Event(times=pq.Quantity(time, units=pq.d), labels=[text],
                         sender=sender, file_origin=self._file_origin)
 
         self._seg0.events.append(comment)

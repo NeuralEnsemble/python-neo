@@ -270,4 +270,5 @@ using the :meth:`array_annotate` method provided by all Neo data objects, e.g.::
 Since Array Annotations may be written to a file or database, there are some
 limitations on the data types of arrays: they must be 1-dimensional (i.e. not nested)
 and contain the same types as annotations:
- ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and ``datetime``.
+
+    ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and ``datetime``.

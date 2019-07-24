@@ -156,7 +156,7 @@ def assert_neo_object_is_compliant(ob, check_type=True):
                              '' % (container, _reference_name(classname))
             if hasattr(child, _reference_name(classname)):
                 parent = getattr(child, _reference_name(classname))
-                assert parent == ob, '%s.%s %s is not symetric with %s.%s' \
+                assert parent == ob, '%s.%s %s is not symmetric with %s.%s' \
                                      '' % (container, _reference_name(classname), i, classname,
                                            container)
 

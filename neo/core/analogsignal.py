@@ -159,6 +159,7 @@ class AnalogSignal(BaseSignal):
     '''
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
+    _single_parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('signal', pq.Quantity, 2),
                         ('sampling_rate', pq.Quantity, 0),
@@ -231,21 +232,6 @@ class AnalogSignal(BaseSignal):
         self._t_start = getattr(obj, '_t_start', 0 * pq.s)
         self._sampling_rate = getattr(obj, '_sampling_rate', None)
         return obj
-
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_signal = cls(np.array(self), units=self.units, dtype=self.dtype, t_start=self.t_start,
-                         sampling_rate=self.sampling_rate, sampling_period=self.sampling_period,
-                         name=self.name, file_origin=self.file_origin,
-                         description=self.description)
-        new_signal.__dict__.update(self.__dict__)
-        memo[id(self)] = new_signal
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_signal, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_signal, k, v)
-        return new_signal
 
     def __repr__(self):
         '''
@@ -490,19 +476,32 @@ class AnalogSignal(BaseSignal):
             raise ValueError('t_start, t_stop have to be withing the analog \
                               signal duration')
 
-        # we're going to send the list of indicies so that we get *copy* of the
-        # sliced data
-        obj = super(AnalogSignal, self).__getitem__(np.arange(i, j, 1))
-
-        # If there is any data remaining, there will be data for every channel
-        # In this case, array_annotations need to stay available
-        # super.__getitem__ cannot do this, so it needs to be done here
-        if len(obj) > 0:
-            obj.array_annotations = self.array_annotations
+        # Time slicing should create a deep copy of the object
+        obj = deepcopy(self[i:j])
 
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`AnalogSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`AnalogSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object starting at t_shift later than the
+            original :class:`AnalogSignal` (the original :class:`AnalogSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+        new_sig.t_start = new_sig.t_start + t_shift
+
+        return new_sig
 
     def splice(self, signal, copy=False):
         """
