@@ -36,9 +36,13 @@ Warning:
     compatibility reasons. In next release, all IOs will be 
     signal_group_mode='group-same-units'
   * last release supporting python2.7
-    
+
+See all [github PR](https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2018-11-27+milestone%3A0.8.0)
+inclued in this release.
 
 Thanks to Achileas Koutsou, Chek Yin Choi, Richard C Gerkin, 
 Alexander Kleinjohann, Björn Müller, Jeffrey Gill, Christian Kothe,
 Mike Sintsov, Michael Denker Julia Sprenger,
 Andrew Davison and Samuel Garcia for their contributions to this release.
+
+
