@@ -6,6 +6,8 @@ Tests of the neo.core.segment.Segment class
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
+from copy import deepcopy
+
 from datetime import datetime
 
 import unittest
@@ -834,6 +836,23 @@ class TestSegment(unittest.TestCase):
     #              self.sigarrs1a[1][:, np.array([True])]]
     #     assert_same_sub_schema(result21, targ1)
     #     assert_same_sub_schema(result23, targ3)
+
+    def test__deepcopy(self):
+        childconts = ('analogsignals',
+                      'epochs', 'events',
+                      'irregularlysampledsignals',
+                      'spiketrains')
+
+        seg1_copy = deepcopy(self.seg1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(seg1_copy, self.seg1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        # No need to cascade, all children are leaves, i.e. don't have any children
+        for childtype in childconts:
+            for child in getattr(seg1_copy, childtype, []):
+                self.assertEqual(id(child.segment), id(seg1_copy))
 
 
 if __name__ == "__main__":

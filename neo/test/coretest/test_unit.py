@@ -7,6 +7,7 @@ Tests of the neo.core.unit.Unit class
 from __future__ import absolute_import, division, print_function
 
 import unittest
+from copy import deepcopy
 
 import numpy as np
 
@@ -550,6 +551,19 @@ class TestUnit(unittest.TestCase):
         #
         #     self.assertEqual(res, targ)
 
+    def test__deepcopy(self):
+        childconts = ('spiketrains',)
+
+        unit1_copy = deepcopy(self.unit1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(unit1_copy, self.unit1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        # No need to cascade, all children are leaves, i.e. don't have any children
+        for childtype in childconts:
+            for child in getattr(unit1_copy, childtype, []):
+                self.assertEqual(id(child.unit), id(unit1_copy))
 
 if __name__ == "__main__":
     unittest.main()
