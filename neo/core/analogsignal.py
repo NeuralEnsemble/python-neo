@@ -473,8 +473,8 @@ class AnalogSignal(BaseSignal):
         if t_stop is None:
             j = len(self)
         else:
-            duration = (t_stop - t_start).rescale(self.sampling_period.units)
-            j = i + int(np.rint(duration * self.sampling_rate))
+            delta = (t_stop - t_start) * self.sampling_rate
+            j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
             raise ValueError('t_start, t_stop have to be within the analog \
