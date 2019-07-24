@@ -71,7 +71,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC4.txt',
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt,',
+        'Cheetah_v5.7.4/README.txt',
         'Pegasus_v2.1.1/Events_0008.nev']
 
 
