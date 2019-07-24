@@ -108,7 +108,8 @@ class BaseFromRaw(BaseIO):
         if signal_group_mode is None:
             signal_group_mode = self._prefered_signal_group_mode
             if self._prefered_signal_group_mode == 'split-all':
-                self.logger.warning("the default signal_group_mode will be 'split-all' in next release")
+                self.logger.warning("the default signal_group_mode will'\
+                        'be 'split-all' in next release")
 
         if units_group_mode is None:
             units_group_mode = self._prefered_units_group_mode
