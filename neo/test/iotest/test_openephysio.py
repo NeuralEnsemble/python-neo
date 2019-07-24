@@ -12,7 +12,7 @@ import quantities as pq
 
 from neo.io import OpenEphysIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.rawio.tests.test_openephysrawio import TestOpenEphysRawIO
+from neo.test.rawiotest.test_openephysrawio import TestOpenEphysRawIO
 
 
 class TestOpenEphysIO(BaseTestIO, unittest.TestCase, ):
