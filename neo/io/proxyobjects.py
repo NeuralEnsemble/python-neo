@@ -609,7 +609,7 @@ def create_analogsignal_array_annotations(sig_annotations, global_channel_indexe
     # intersection of keys across channels
     common_keys = None
     for ind in global_channel_indexes:
-        keys = list(sig_annotations[ind].keys())
+        keys = [k for k, v in sig_annotations[ind].items() if not isinstance(v, (list, tuple, np.ndarray))]
         if common_keys is None:
             common_keys = keys
         else:
