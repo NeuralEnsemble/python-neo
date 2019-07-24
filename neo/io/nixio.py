@@ -848,9 +848,8 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
         if event.array_annotations:
             for k, v in event.array_annotations.items():
-                if k != 'labels':
-                    p = self._write_property(metadata, k, v)
-                    p.definition = ARRAYANNOTATION
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -915,9 +914,8 @@ class NixIO(BaseIO):
                 self._write_property(metadata, k, v)
         if epoch.array_annotations:
             for k, v in epoch.array_annotations.items():
-                if k not in ['durations', 'labels']:
-                    p = self._write_property(metadata, k, v)
-                    p.definition = ARRAYANNOTATION
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
