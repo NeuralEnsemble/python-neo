@@ -104,14 +104,12 @@ class BlackrockRawIO(BaseRawIO):
             File name of the .nev file (without extension). If None,
             filename is used.
             Default: None.
-        nsx_to_load (int):
-            ID of nsX file from which to load data, e.g., if set to
-            5 only data from the ns5 file are loaded. If None, the Io
-            will take the maximum if file is present.
-            Contrary to previous version of the IO:
-
-              * nsx_to_load is not a list
-              * must be set at the init before parse_header()
+        nsx_to_load (int, list, 'max', 'all' (=None)) default None:
+            IDs of nsX file from which to load data, e.g., if set to
+            5 only data from the ns5 file are loaded.
+            If 'all', then all nsX will be loaded.
+            Contrary to previsous version of the IO  (<0.7), nsx_to_load
+            must be set at the init before parse_header().
 
     Examples:
         >>> reader = BlackrockRawIO(filename='FileSpec2.3001', nsx_to_load=5)
