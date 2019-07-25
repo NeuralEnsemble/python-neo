@@ -5,13 +5,13 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from neo.rawio.rawmcsrawio import RawMCSRawIO
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.rawio.winwcprawio import WinWcpRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestRawMCSRawIO(BaseTestRawIO, unittest.TestCase, ):
-    rawioclass = RawMCSRawIO
-    entities_to_test = ['raw_mcs_with_header_1.raw']
+class TestWinWcpRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = WinWcpRawIO
+    entities_to_test = ['File_winwcp_1.wcp']
     files_to_download = entities_to_test
 
 

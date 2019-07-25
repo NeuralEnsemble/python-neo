@@ -392,3 +392,15 @@ class BaseNeo(object):
         See :meth:`merge_annotations` for details of the merge operation.
         """
         self.merge_annotations(other)
+
+    def set_parent(self, obj):
+        """
+        Set the appropriate "parent" attribute of this object
+        according to the type of "obj"
+        """
+        if obj.__class__.__name__ not in self._single_parent_objects:
+            raise TypeError("{} can only have parents of type {}, not {}".format(
+                self.__class__.__name__, self._single_parent_objects, obj.__class__.__name__))
+        loc = self._single_parent_objects.index(obj.__class__.__name__)
+        parent_attr = self._single_parent_attrs[loc]
+        setattr(self, parent_attr, obj)

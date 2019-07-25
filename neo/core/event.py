@@ -276,6 +276,30 @@ class Event(DataObject):
 
         return new_evt
 
+    def time_shift(self, t_shift):
+        """
+        Shifts an :class:`Event` by an amount of time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`Event`.
+
+        Returns:
+        --------
+        epoch: Event
+            New instance of an :class:`Event` object starting at t_shift later than the
+            original :class:`Event` (the original :class:`Event` is not modified).
+        """
+        new_evt = self.duplicate_with_new_data(times=self.times + t_shift,
+                                               labels=self.labels)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the Event does not change.
+        new_evt.array_annotate(**self.array_annotations)
+
+        return new_evt
+
     def to_epoch(self, pairwise=False, durations=None):
         """
         Returns a new Epoch object based on the times and labels in the Event object.

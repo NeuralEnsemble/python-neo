@@ -446,23 +446,26 @@ class AnalogSignal(BaseSignal):
 
     def time_index(self, t):
         """Return the array index corresponding to the time `t`"""
-        t = t.rescale(self.sampling_period.units)
-        i = (t - self.t_start) / self.sampling_period
-        i = int(np.rint(i.magnitude))
+        i = (t - self.t_start) * self.sampling_rate
+        i = int(np.rint(i.simplified.magnitude))
         return i
 
     def time_slice(self, t_start, t_stop):
         '''
         Creates a new AnalogSignal corresponding to the time slice of the
         original AnalogSignal between times t_start, t_stop. Note, that for
-        numerical stability reasons if t_start, t_stop do not fall exactly on
-        the time bins defined by the sampling_period they will be rounded to
-        the nearest sampling bins.
+        numerical stability reasons if t_start does not fall exactly on
+        the time bins defined by the sampling_period it will be rounded to
+        the nearest sampling bin. The time bin for t_stop will be chosen to
+        make the duration of the resultant signal as close as possible to
+        t_stop - t_start. This means that for a given duration, the size
+        of the slice will always be the same.
         '''
 
         # checking start time and transforming to start index
         if t_start is None:
             i = 0
+            t_start = 0 * pq.s
         else:
             i = self.time_index(t_start)
 
@@ -470,10 +473,11 @@ class AnalogSignal(BaseSignal):
         if t_stop is None:
             j = len(self)
         else:
-            j = self.time_index(t_stop)
+            delta = (t_stop - t_start) * self.sampling_rate
+            j = i + int(np.rint(delta.simplified.magnitude))
 
         if (i < 0) or (j > len(self)):
-            raise ValueError('t_start, t_stop have to be withing the analog \
+            raise ValueError('t_start, t_stop have to be within the analog \
                               signal duration')
 
         # Time slicing should create a deep copy of the object
@@ -482,6 +486,26 @@ class AnalogSignal(BaseSignal):
         obj.t_start = self.t_start + i * self.sampling_period
 
         return obj
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`AnalogSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`AnalogSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object starting at t_shift later than the
+            original :class:`AnalogSignal` (the original :class:`AnalogSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+        new_sig.t_start = new_sig.t_start + t_shift
+
+        return new_sig
 
     def splice(self, signal, copy=False):
         """

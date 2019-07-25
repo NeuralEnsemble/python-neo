@@ -82,6 +82,11 @@ class TestBaseNeo(unittest.TestCase):
     TestCase to make sure basic initialization and methods work
     '''
 
+    def assertDictContainsSubset(self, a, b):
+        """Checks that all the key/value pairs in a exist in b"""
+        # the implementation in unittest.TestCase has been deprecated
+        assert set(a.items()).issubset(set(b.items()))
+
     def test_init(self):
         '''test to make sure initialization works properly'''
         base = BaseNeo(name='a base', description='this is a test')
