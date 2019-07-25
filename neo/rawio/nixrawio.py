@@ -361,16 +361,17 @@ class NIXRawIO(BaseRawIO):
 
     def _add_annotate(self, tar_ann, props, otype):
         values = props.values
-        list_of_param = []
+        list_of_param = ['neo_name']
         if otype == 'seg':
-            list_of_param = ['index']
+            list_of_param.append('index')
         elif otype == 'asig':
-            list_of_param = ['units', 'copy', 'sampling_rate', 't_start']
+            list_of_param.extend(['units', 'copy', 'sampling_rate', 't_start'])
         elif otype == 'st':
-            list_of_param = ['units', 'copy', 'sampling_rate',
-                             't_start', 't_stop', 'waveforms', 'left_sweep']
+            list_of_param.extend(['units', 'copy', 'sampling_rate',
+                             't_start', 't_stop', 'waveforms', 'left_sweep'])
         elif otype == 'ev':
-            list_of_param = ['times', 'labels', 'units', 'durations', 'copy']
+            list_of_param.extend(['times', 'labels',
+                                  'units', 'durations', 'copy'])
         if len(values) == 1:
             values = values[0]
         if props.name not in list_of_param:
