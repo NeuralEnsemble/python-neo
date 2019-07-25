@@ -29,6 +29,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
+        'Cheetah_v6.3.2/incomplete_blocks'
     ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
@@ -70,7 +71,10 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC4.txt',
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt']
+        'Cheetah_v5.7.4/README.txt',
+        'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
+        'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
+        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
 
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
@@ -235,6 +239,27 @@ class TestData(CommonNeuralynxIOTest, unittest.TestCase):
                 np.testing.assert_allclose(plain_data[:overlap],
                                            anasig.magnitude[:overlap, 0] * gain_factor_0,
                                            rtol=0.01)
+
+class TestIncompleteBlocks(CommonNeuralynxIOTest, unittest.TestCase):
+    def test_incomplete_block_handling_v632(self):
+        dirname = self.get_filename_path('Cheetah_v6.3.2/incomplete_blocks')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        block = nio.read_block()
+
+        # known gap values
+        n_gaps = 2
+        # so 3 segments, 3 anasigs by Channelindex
+        self.assertEqual(len(block.segments), n_gaps + 1)
+        self.assertEqual(len(block.channel_indexes[0].analogsignals), n_gaps + 1)
+
+        for t, gt in zip(nio._sigs_t_start,  [8408.806811, 8427.832053, 8487.768561]):
+            self.assertEqual(np.round(t, 4), np.round(gt,4))
+        for t, gt in zip(nio._sigs_t_stop, [8427.830803, 8487.768029, 8515.816549]):
+            self.assertEqual(np.round(t, 4), np.round(gt,4))
+
+
+
 
 
 class TestGaps(CommonNeuralynxIOTest, unittest.TestCase):
