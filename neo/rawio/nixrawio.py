@@ -8,8 +8,9 @@ Author: Chek Yin Choi
 """
 
 from __future__ import print_function, division, absolute_import
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
-                                 _unit_channel_dtype, _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype,
+                        _unit_channel_dtype, _event_channel_dtype)
+from ..io.nixio import NixIO
 import numpy as np
 import warnings
 try:
@@ -43,7 +44,6 @@ class NIXRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         sig_channels = []
         size_list = []
@@ -180,23 +180,26 @@ class NIXRawIO(BaseRawIO):
             bl_ann = self.raw_annotations['blocks'][blk_idx]
             props = blk.metadata.inherited_properties()
             bl_ann.update(self._filter_properties(props, "block"))
-            for seg_index, seg in enumerate(blk.groups):
-                seg_ann = bl_ann['segments'][seg_index]
-                props = seg.metadata.inherited_properties()
+            for grp_idx, grp in enumerate(blk.groups):
+                seg_ann = bl_ann['segments'][grp_idx]
+                props = grp.metadata.inherited_properties()
                 seg_ann.update(self._filter_properties(props, "segment"))
-                ansig_idx = 0
-                for da in seg.data_arrays:
-                    if da.type == 'neo.analogsignal' and seg_ann['signals'] != []:
-                        sig_ann = seg_ann['signals'][ansig_idx]
-                        sig_chan_ann = self.raw_annotations['signal_channels'][ansig_idx]
-                        props == da.metadata.inherited_properties()
+                sig_idx = 0
+                groupdas = NixIO._group_signals(grp.data_arrays)
+                for nix_name, signals in groupdas.items():
+                    da = signals[0]
+                    if da.type == 'neo.analogsignal' and seg_ann['signals']:
+                        # collect and group DataArrays
+                        sig_ann = seg_ann['signals'][sig_idx]
+                        # sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
+                        props = da.metadata.inherited_properties()
                         sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                        sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
-                        ansig_idx += 1
+                        # sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
+                        sig_idx += 1
                 sp_idx = 0
                 ev_idx = 0
-                for mt in seg.multi_tags:
-                    if mt.type == 'neo.spiketrain' and seg_ann['units'] != []:
+                for mt in grp.multi_tags:
+                    if mt.type == 'neo.spiketrain' and seg_ann['units']:
                         st_ann = seg_ann['units'][sp_idx]
                         props = mt.metadata.inherited_properties()
                         st_ann.update(self._filter_properties(props, 'spiketrain'))
@@ -209,6 +212,12 @@ class NIXRawIO(BaseRawIO):
                             props = mt.metadata.inherited_properties()
                             event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
+
+                # populate ChannelIndex annotations
+                for srcidx, source in enumerate(blk.sources):
+                    chx_ann = self.raw_annotations["signal_channels"][srcidx]
+                    props = source.metadata.inherited_properties()
+                    chx_ann.update(self._filter_properties(props, "channelindex"))
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
