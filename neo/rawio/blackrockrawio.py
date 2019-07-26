@@ -1857,15 +1857,12 @@ class BlackrockRawIO(BaseRawIO):
             'digital_input_port': {
                 'name': 'digital_input_port',
                 'field': 'digital_input',
-                'mask': self.__is_set(data['packet_insertion_reason'], 0)
-                        & ~self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': data['packet_insertion_reason'] == 1,
                 'desc': "Events of the digital input port"},
             'serial_input_port': {
                 'name': 'serial_input_port',
                 'field': 'digital_input',
-                'mask':
-                    self.__is_set(data['packet_insertion_reason'], 0)
-                    & self.__is_set(data['packet_insertion_reason'], 7),
+                'mask': data['packet_insertion_reason'] == 129,
                 'desc': "Events of the serial input port"}}
 
         # analog input events via threshold crossings
