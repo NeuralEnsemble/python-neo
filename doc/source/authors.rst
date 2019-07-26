@@ -69,3 +69,17 @@ and may not be the current affiliation of a contributor.
 20. Harden Technologies, LLC
 
 If we've somehow missed you off the list we're very sorry - please let us know.
+
+
+Acknowledgements
+----------------
+
+.. image:: https://www.braincouncil.eu/wp-content/uploads/2018/11/wsi-imageoptim-EU-Logo.jpg
+   :alt: "EU Logo"
+   :height: 104px
+   :width: 156px
+   :align: right
+
+Neo was developed in part in the Human Brain Project,
+funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
+under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).
