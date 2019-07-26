@@ -5,16 +5,16 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 
 import unittest
 
-from neo.rawio.winedrrawio import WinEdrRawIO
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.rawio.intanrawio import IntanRawIO
+
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
-class TestWinEdrRawIO(BaseTestRawIO, unittest.TestCase, ):
-    rawioclass = WinEdrRawIO
+class TestIntanRawIO(BaseTestRawIO, unittest.TestCase, ):
+    rawioclass = IntanRawIO
     files_to_download = [
-        'File_WinEDR_1.EDR',
-        'File_WinEDR_2.EDR',
-        'File_WinEDR_3.EDR',
+        'intan_rhs_test_1.rhs',
+        'intan_rhd_test_1.rhd',
     ]
     entities_to_test = files_to_download
 

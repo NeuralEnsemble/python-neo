@@ -43,7 +43,7 @@ class OpenEphysRawIO(BaseRawIO):
     In contrast to previous code for reading this format, here all data use memmap so it should
     be super fast and light compared to legacy code.
 
-    When the acquisition is stopped and restarted then files are named *_2, *_3.
+    When the acquisition is stopped and restarted then files are named ``*_2``, ``*_3``.
     In that case this class creates a new Segment. Note that timestamps are reset in this
     situation.
 

@@ -161,6 +161,16 @@ class TestEpoch(unittest.TestCase):
         assert_arrays_equal(epc.labels,
                             np.array(['test epoch 1', 'test epoch 2', 'test epoch 3'], dtype='S'))
 
+    def test_Epoch_creation_from_lists(self):
+        epc = Epoch([1.1, 1.5, 1.7],
+                    [20.0, 20.0, 20.0],
+                    ['test event 1', 'test event 2', 'test event 3'],
+                    units=pq.ms)
+        assert_arrays_equal(epc.times, [1.1, 1.5, 1.7] * pq.ms)
+        assert_arrays_equal(epc.durations, [20.0, 20.0, 20.0] * pq.ms)
+        assert_arrays_equal(epc.labels,
+                            np.array(['test event 1', 'test event 2', 'test event 3']))
+
     def test_Epoch_repr(self):
         params = {'test2': 'y1', 'test3': True}
         epc = Epoch([1.1, 1.5, 1.7] * pq.ms, durations=[20, 40, 60] * pq.ns,
@@ -654,13 +664,13 @@ class TestEpoch(unittest.TestCase):
         self.assertIsInstance(epc_as_q, pq.Quantity)
         assert_array_equal(times * pq.ms, epc_as_q)
 
-    def test_getitem(self):
+    def test_getitem_scalar(self):
         times = [2, 3, 4, 5]
         durations = [0.1, 0.2, 0.3, 0.4]
         labels = ["A", "B", "C", "D"]
         epc = Epoch(times * pq.ms, durations=durations * pq.ms, labels=labels)
         single_epoch = epc[2]
-        self.assertIsInstance(single_epoch, Epoch)
+        self.assertIsInstance(single_epoch, pq.Quantity)
         assert_array_equal(single_epoch.times, np.array([4.0]))
         assert_array_equal(single_epoch.durations, np.array([0.3]))
         assert_array_equal(single_epoch.labels, np.array(["C"]))

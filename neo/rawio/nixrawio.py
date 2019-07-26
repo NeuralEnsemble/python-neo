@@ -8,8 +8,9 @@ Author: Chek Yin Choi
 """
 
 from __future__ import print_function, division, absolute_import
-from neo.rawio.baserawio import (BaseRawIO, _signal_channel_dtype,
-                                 _unit_channel_dtype, _event_channel_dtype)
+from .baserawio import (BaseRawIO, _signal_channel_dtype,
+                        _unit_channel_dtype, _event_channel_dtype)
+from ..io.nixio import NixIO
 import numpy as np
 import warnings
 try:
@@ -19,6 +20,15 @@ try:
 except ImportError:
     HAVE_NIX = False
     nix = None
+
+
+neo_attributes = {
+    "segment": ["index"],
+    "analogsignal": ["units", "copy", "sampling_rate", "t_start"],
+    "spiketrain": ["units", "copy", "sampling_rate", "t_start", "t_stop",
+                   "waveforms", "left_sweep"],
+    "event": ["times", "labels", "units", "durations", "copy"]
+}
 
 
 class NIXRawIO(BaseRawIO):
@@ -34,7 +44,6 @@ class NIXRawIO(BaseRawIO):
         return self.filename
 
     def _parse_header(self):
-
         self.file = nix.File.open(self.filename, nix.FileMode.ReadOnly)
         sig_channels = []
         size_list = []
@@ -169,37 +178,46 @@ class NIXRawIO(BaseRawIO):
         self._generate_minimal_annotations()
         for blk_idx, blk in enumerate(self.file.blocks):
             bl_ann = self.raw_annotations['blocks'][blk_idx]
-            for props in blk.metadata.inherited_properties():
-                self._add_annotate(bl_ann, props, 'blk')
-            for seg_index, seg in enumerate(blk.groups):
-                seg_ann = bl_ann['segments'][seg_index]
-                for props in seg.metadata.inherited_properties():
-                    self._add_annotate(seg_ann, props, 'seg')
-                ansig_idx = 0
-                for da in seg.data_arrays:
-                    if da.type == 'neo.analogsignal' and seg_ann['signals'] != []:
-                        ana_an = seg_ann['signals'][ansig_idx]
-                        sigch_an = self.raw_annotations['signal_channels'][ansig_idx]
-                        for props in da.metadata.inherited_properties():
-                            self._add_annotate(ana_an, props, 'asig')
-                            self._add_annotate(sigch_an, props, 'asig')
-                        ansig_idx += 1
+            props = blk.metadata.inherited_properties()
+            bl_ann.update(self._filter_properties(props, "block"))
+            for grp_idx, grp in enumerate(blk.groups):
+                seg_ann = bl_ann['segments'][grp_idx]
+                props = grp.metadata.inherited_properties()
+                seg_ann.update(self._filter_properties(props, "segment"))
+                sig_idx = 0
+                groupdas = NixIO._group_signals(grp.data_arrays)
+                for nix_name, signals in groupdas.items():
+                    da = signals[0]
+                    if da.type == 'neo.analogsignal' and seg_ann['signals']:
+                        # collect and group DataArrays
+                        sig_ann = seg_ann['signals'][sig_idx]
+                        # sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
+                        props = da.metadata.inherited_properties()
+                        sig_ann.update(self._filter_properties(props, 'analogsignal'))
+                        # sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
+                        sig_idx += 1
                 sp_idx = 0
                 ev_idx = 0
-                for mt in seg.multi_tags:
-                    if mt.type == 'neo.spiketrain' and seg_ann['units'] != []:
-                        spiketrain_an = seg_ann['units'][sp_idx]
-                        for props in mt.metadata.inherited_properties():
-                            self._add_annotate(spiketrain_an, props, 'st')
+                for mt in grp.multi_tags:
+                    if mt.type == 'neo.spiketrain' and seg_ann['units']:
+                        st_ann = seg_ann['units'][sp_idx]
+                        props = mt.metadata.inherited_properties()
+                        st_ann.update(self._filter_properties(props, 'spiketrain'))
                         sp_idx += 1
                     # if order is preserving, the annotations
                     # should go to the right place, need test
                     if mt.type == "neo.event" or mt.type == "neo.epoch":
                         if seg_ann['events'] != []:
-                            event_an = seg_ann['events'][ev_idx]
-                            for props in mt.metadata.inherited_properties():
-                                self._add_annotate(event_an, props, 'ev')
+                            event_ann = seg_ann['events'][ev_idx]
+                            props = mt.metadata.inherited_properties()
+                            event_ann.update(self._filter_properties(props, 'event'))
                             ev_idx += 1
+
+                # populate ChannelIndex annotations
+                for srcidx, source in enumerate(blk.sources):
+                    chx_ann = self.raw_annotations["signal_channels"][srcidx]
+                    props = source.metadata.inherited_properties()
+                    chx_ann.update(self._filter_properties(props, "channelindex"))
 
     def _segment_t_start(self, block_index, seg_index):
         t_start = 0
@@ -359,23 +377,20 @@ class NIXRawIO(BaseRawIO):
         # supposing unit is second, other possibilities maybe mS microS...
         return durations  # return in seconds
 
-    def _add_annotate(self, tar_ann, props, otype):
-        values = props.values
-        list_of_param = []
-        if otype == 'seg':
-            list_of_param = ['index']
-        elif otype == 'asig':
-            list_of_param = ['units', 'copy', 'sampling_rate', 't_start']
-        elif otype == 'st':
-            list_of_param = ['units', 'copy', 'sampling_rate',
-                             't_start', 't_stop', 'waveforms', 'left_sweep']
-        elif otype == 'ev':
-            list_of_param = ['times', 'labels', 'units', 'durations', 'copy']
-        if len(values) == 1:
-            values = values[0]
-        if props.name not in list_of_param:
-            tar_ann[str(props.name)] = values
-        else:
-            warntxt = "Name of annotation {} shadows parameter " \
-                        "and is therefore dropped".format(props.name)
-            warnings.warn(warntxt)
+    def _filter_properties(self, properties, neo_type):
+        """
+        Takes a collection of NIX metadata properties and the name of a Neo
+        type and returns a dictionary representing the Neo object annotations.
+        Properties that represent the attributes of the Neo object type are
+        filtered, based on the global 'neo_attributes' dictionary.
+        """
+        annotations = dict()
+        attrs = neo_attributes.get(neo_type, list())
+        for prop in properties:
+            # filter neo_name explicitly
+            if not (prop.name in attrs or prop.name == "neo_name"):
+                values = prop.values
+                if len(values) == 1:
+                    values = values[0]
+                annotations[str(prop.name)] = values
+        return annotations

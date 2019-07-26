@@ -3,11 +3,112 @@
 :mod:`neo.rawio` provides classes for reading with low level API
 electrophysiological data files.
 
+:attr:`neo.rawio.rawiolist` provides a list of successfully imported rawio
+classes.
+
+Functions:
+
+.. autofunction:: neo.rawio.get_rawio_class
+
 
 Classes:
 
+* :attr:`AxographRawIO`
+* :attr:`AxonRawIO`
+* :attr:`BlackrockRawIO`
+* :attr:`BrainVisionRawIO`
+* :attr:`ElanRawIO`
+* :attr:`IntanRawIO`
+* :attr:`MicromedRawIO`
+* :attr:`NeuralynxRawIO`
+* :attr:`NeuroExplorerRawIO`
+* :attr:`NeuroScopeRawIO`
+* :attr:`NIXRawIO`
+* :attr:`OpenEphysRawIO`
+* :attr:`PlexonRawIO`
+* :attr:`RawBinarySignalRawIO`
+* :attr:`RawMCSRawIO`
+* :attr:`Spike2RawIO`
+* :attr:`TdtRawIO`
+* :attr:`WinEdrRawIO`
+* :attr:`WinWcpRawIO`
+
+
+.. autoclass:: neo.rawio.AxographRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.AxonRawIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.rawio.BlackrockRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.BrainVisionRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.ElanRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.IntanRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.MicromedRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.NeuralynxRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.NeuroExplorerRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.NeuroScopeRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.NIXRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.OpenEphysRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.PlexonRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.RawBinarySignalRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.RawMCSRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.Spike2RawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.TdtRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.WinEdrRawIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.rawio.WinWcpRawIO
+
+    .. autoattribute:: extensions
 
 """
 import os

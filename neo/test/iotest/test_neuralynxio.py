@@ -29,6 +29,7 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
+        'Pegasus_v2.1.1'
     ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
@@ -70,7 +71,8 @@ class CommonNeuralynxIOTest(BaseTestIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC4.txt',
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt']
+        'Cheetah_v5.7.4/README.txt',
+        'Pegasus_v2.1.1/Events_0008.nev']
 
 
 class TestCheetah_v551(CommonNeuralynxIOTest, unittest.TestCase):
@@ -214,6 +216,34 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
 
         block = nio.read_block(signal_group_mode='group-by-same-units')
         self.assertEqual(len(block.channel_indexes), 1)
+
+
+class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
+    pegasus_version = '2.1.1'
+    files_to_test = []
+
+    def test_read_block(self):
+        dirname = self.get_filename_path('Pegasus_v2.1.1')
+        nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
+        block = nio.read_block()
+
+        # Everything put in one segment
+        seg = block.segments[0]
+        self.assertEqual(len(seg.analogsignals), 0)  # no ncs file available
+        self.assertGreater(len(block.segments[0].events), 1)  # single nev file available
+        self.assertEqual(len(seg.spiketrains), 0)  # no nse files available
+
+        # Testing different parameter combinations
+        block = nio.read_block(load_waveforms=True)
+        self.assertEqual(len(block.segments[0].spiketrains), 0)
+        self.assertGreater(len(block.segments[0].events), 1)
+
+        block = nio.read_block(signal_group_mode='split-all')
+        self.assertEqual(len(block.channel_indexes), 0)
+
+        block = nio.read_block(signal_group_mode='group-by-same-units')
+        self.assertEqual(len(block.channel_indexes), 0)
 
 
 class TestData(CommonNeuralynxIOTest, unittest.TestCase):

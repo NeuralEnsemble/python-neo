@@ -13,7 +13,7 @@ Guidelines for IO implementation
 There are two ways to add a new IO module:
   * By directly adding a new IO class in a module within :mod:`neo.io`: the reader/writer will deal directly with Neo objects
   * By adding a RawIO class in a module within :mod:`neo.rawio`: the reader should work with raw buffers from the file and provide
-    some internal headers for the scale/units/name/... 
+    some internal headers for the scale/units/name/...
     You can then generate an IO module simply by inheriting from your RawIO class and from :class:`neo.io.BaseFromRaw`
 
 For read only classes, we encourage you to write a :class:`RawIO` class because it allows slice reading,
@@ -64,7 +64,7 @@ Each test must have at least one class that inherits ``BaseTestRawIO`` and that 
 
 Here is an example test script taken from the distribution: :file:`test_axonrawio.py`:
 
-.. literalinclude:: ../../neo/rawio/tests/test_axonrawio.py
+.. literalinclude:: ../../neo/test/rawiotest/test_axonrawio.py
 
 
 Logging
