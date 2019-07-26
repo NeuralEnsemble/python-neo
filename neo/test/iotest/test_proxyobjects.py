@@ -84,6 +84,12 @@ class TestAnalogSignalProxy(BaseProxyTest):
 
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
 
+        # test array_annotations
+        assert 'info' in proxy_anasig.array_annotations
+        assert proxy_anasig.array_annotations['info'].size == 16
+        assert 'info' in anasig_float.array_annotations
+        assert anasig_float.array_annotations['info'].size == 16
+
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
                     global_channel_indexes=slice(0, 10, 2), block_index=0, seg_index=0)
