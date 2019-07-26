@@ -616,8 +616,8 @@ def create_analogsignal_array_annotations(sig_annotations, global_channel_indexe
         else:
             common_keys = [k for k in common_keys if k in keys]
 
-    # this is redundant and done at other level
-    for k in ['name', 'channel_id', 'file_origin']:
+    # this is redundant and done with other name
+    for k in ['name', 'channel_id']:
         if k in common_keys:
             common_keys.remove(k)
 
