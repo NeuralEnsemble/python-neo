@@ -147,11 +147,16 @@ class BaseFromRaw(BaseIO):
                 chidx_annotations = check_annotations(chidx_annotations)
                 # this should be done with array_annotation soon:
                 ch_names = all_channels[ind_abs]['name'].astype('S')
-                neo_channel_index = ChannelIndex(index=ind_within,
-                                                 channel_names=ch_names,
-                                                 channel_ids=all_channels[ind_abs]['id'],
-                                                 name='Channel group {}'.format(i),
-                                                 **chidx_annotations)
+                chidx_kwargs = dict(index=ind_within,
+                                    channel_names=ch_names,
+                                    channel_ids=all_channels[ind_abs]['id'],
+                                    name='Channel group {}'.format(i))
+                for k, v in chidx_annotations.items():
+                    if k not in chidx_kwargs:
+                        chidx_kwargs[k] = v
+                    else:
+                        warnings.warn('Name of annotation {} shadows parameter and is therefore dropped'.format(k))
+                neo_channel_index = ChannelIndex(**chidx_kwargs)
 
                 bl.channel_indexes.append(neo_channel_index)
 
