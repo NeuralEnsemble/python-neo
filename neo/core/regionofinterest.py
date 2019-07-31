@@ -12,10 +12,6 @@ class CircularRegionOfInterest(RegionOfInterest):
 
     def is_inside(self, circle_x, circle_y, rad, x, y):
 
-        # Compare radius of circle
-        # with distance of its center
-        # from given point
-
         if ((x - circle_x) * (x - circle_x) +
                 (y - circle_y) * (y - circle_y) <= rad * rad):
             return True
@@ -99,13 +95,11 @@ class PolygonRegionOfInterest(RegionOfInterest):
             if i[1] > max_y:
                 max_y = i[1]
 
-        print('min_x', min_x, 'max_x', max_x, 'min_y', min_y, 'max_y', max_y)
-
         list_coord = []
         for y in range(min_y, max_y):
             for x in range(min_x, max_y):
                 list_coord.append((x, y))
 
-        points = self.polygon_ray_casting(self.nodes, list_coord)
+        pixel_list = self.polygon_ray_casting(self.nodes, list_coord)
 
-        return points
+        return pixel_list

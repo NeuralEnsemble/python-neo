@@ -1,5 +1,5 @@
 from neo.core import ImageSequence
-from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
+from neo.core import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 import matplotlib.pyplot as plt
 import quantities as pq
 
@@ -17,10 +17,10 @@ for frame in range(50):
 
 image_seq = ImageSequence(l, sampling_rate=500 * pq.Hz, spatial_scale='m', units='V')
 
-result = image_seq.signal_from_region(CircularRegionOfInterest(50, 50, 25).return_list_pixel(),
-                                      CircularRegionOfInterest(10, 10, 5).return_list_pixel(),
+result = image_seq.signal_from_region(CircularRegionOfInterest(50, 50, 25),
+                                      CircularRegionOfInterest(10, 10, 5),
                                       PolygonRegionOfInterest((50, 25), (50, 45), (14, 65),
-                                                              (90, 80)).return_list_pixel())
+                                                              (90, 80)))
 
 for i in range(len(result)):
     plt.figure()

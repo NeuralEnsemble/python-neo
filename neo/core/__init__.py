@@ -40,14 +40,16 @@ from neo.core.event import Event
 from neo.core.epoch import Epoch
 
 from neo.core.imagesequence import ImageSequence
-from neo.core.regionofinterest import RegionOfInterest
+from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
 
 from neo.core.spiketrain import SpikeTrain
 
 # Block should always be first in this list
 objectlist = [Block, Segment, ChannelIndex,
               AnalogSignal, IrregularlySampledSignal,
-              Event, Epoch, Unit, SpikeTrain, ImageSequence, RegionOfInterest]
+              Event, Epoch, Unit, SpikeTrain, ImageSequence,
+              RectangularRegionOfInterest, CircularRegionOfInterest,
+              PolygonRegionOfInterest]
 
 objectnames = [ob.__name__ for ob in objectlist]
 class_by_name = dict(zip(objectnames, objectlist))
