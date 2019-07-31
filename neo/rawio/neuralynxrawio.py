@@ -444,7 +444,7 @@ class NeuralynxRawIO(BaseRawIO):
 
         if self.use_cache:
             gap_indexes = self._cache.get('gap_indexes')
-            lost_indexes =  self._cache.get('lost_indexes')
+            lost_indexes = self._cache.get('lost_indexes')
 
         # detect gaps on first file
         if (gap_indexes is None) or (lost_indexes is None):
@@ -459,34 +459,34 @@ class NeuralynxRawIO(BaseRawIO):
             # I guess this is a round problem
             # So this is the same with a tolerance of 1 or 2 ticks
             max_tolerance = 2
-            mask = np.abs((deltas0 - good_delta).astype('int64'))>max_tolerance
+            mask = np.abs((deltas0 - good_delta).astype('int64')) > max_tolerance
 
             gap_indexes, = np.nonzero(mask)
 
             if self.use_cache:
                 self.add_in_cache(gap_indexes=gap_indexes)
 
-
             # update for lost_indexes
             # Sometimes NLX writes a faulty block, but it then validates how much samples it wrote
             # the validation field is in delta0['nb_valid'], it should be equal to BLOCK_SIZE
-            
+
             lost_indexes, = np.nonzero(data0['nb_valid'] < BLOCK_SIZE)
 
             if self.use_cache:
                 self.add_in_cache(lost_indexes=lost_indexes)
 
-        gap_candidates = np.unique([0] + [data0.size] + \
-                                   (gap_indexes+1).tolist() +\
-                                   lost_indexes.tolist()) # linear
+        gap_candidates = np.unique([0]
+                                   + [data0.size]
+                                   + (gap_indexes + 1).tolist()
+                                   + lost_indexes.tolist())  # linear
 
-        gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T # 2D (n_segments, 2)
+        gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
 
         # construct proper gap ranges free of lost samples artifacts
-        minimal_segment_length = 1 # in blocks
+        minimal_segment_length = 1  # in blocks
         goodpairs = np.diff(gap_pairs, 1).reshape(-1) > minimal_segment_length
-        gap_pairs = gap_pairs[goodpairs] # ensures a segment is at least a block wide
-        
+        gap_pairs = gap_pairs[goodpairs]  # ensures a segment is at least a block wide
+
         self._nb_segment = len(gap_pairs)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
@@ -512,8 +512,7 @@ class NeuralynxRawIO(BaseRawIO):
 
                 if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + \
-                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
