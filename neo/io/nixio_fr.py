@@ -17,8 +17,10 @@ class NixIO(NIXRawIO, BaseFromRaw):
 
     def read_block(self, block_index=0, lazy=False, signal_group_mode=None,
                    units_group_mode=None, load_waveforms=False):
-        bl = super().read_block(block_index, lazy, signal_group_mode,
-                                units_group_mode, load_waveforms)
+        bl = super(NixIO, self).read_block(block_index, lazy,
+                                           signal_group_mode,
+                                           units_group_mode,
+                                           load_waveforms)
         for chx in bl.channel_indexes:
             if "nix_name" in chx.annotations:
                 nixname = chx.annotations["nix_name"]
