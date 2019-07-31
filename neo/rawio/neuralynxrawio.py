@@ -409,21 +409,27 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
 
-    def pick_signal_channels(self, channels):
+    def pick_signal_channels(self, channels, sort=True):
         """ 
         Given a list of channels filter the header to read only the selected channels
         Args:
         channels:
             list of channel names
             'all': all original channel names
+        sort: bool, if True, then keeps the order of the requested channels
         """
 
         # if all, then copy back the original header
-        if (type(channels) == str) and channels == 'all':
+        if (type(channels) == str) and (channels == 'all'):
             self.header = self._header.copy()
+            return
 
         sigs = np.array(list(filter(lambda x: x[0] in channels,
                                     self._header['signal_channels'])))
+
+        if sort:
+            # keep order with sorting the array elements
+            sigs = np.array(sorted(sigs, key=lambda x: list(channels).index(x[0])))
 
         self.header['signal_channels'] = sigs
 

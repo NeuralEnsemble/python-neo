@@ -221,14 +221,21 @@ class TestCheetah_v574(CommonNeuralynxIOTest, unittest.TestCase):
         self.assertEqual(len(block.channel_indexes), 1)
 
     def test_pick_signal_channels(self):
-        channels_to_read = ('CSC1', 'CSC3', 'CSC5')
+        channels_to_read = ('CSC5', 'CSC3', 'CSC1')
         dirname = self.get_filename_path('Cheetah_v5.7.4/original_data')
         nio = NeuralynxIO(dirname=dirname, use_cache=False)
+
         nio.pick_signal_channels(channels_to_read)
 
         seg = nio.read_segment(0, 0)
         an = seg.analogsignals[0]
         self.assertEqual(tuple(an.array_annotations['channel_names']), channels_to_read)
+
+        nio.pick_signal_channels('all')
+        seg = nio.read_segment(0, 0)
+        an = seg.analogsignals[0]
+        self.assertEqual(tuple(an.array_annotations['channel_names']),
+                         ('CSC1', 'CSC2', 'CSC3', 'CSC4', 'CSC5'))
 
 
 class TestPegasus_v211(CommonNeuralynxIOTest, unittest.TestCase):
