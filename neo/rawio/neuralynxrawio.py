@@ -512,7 +512,8 @@ class NeuralynxRawIO(BaseRawIO):
 
                 if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] \
+                            + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
