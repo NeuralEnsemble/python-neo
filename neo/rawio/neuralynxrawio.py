@@ -55,7 +55,6 @@ class NeuralynxRawIO(BaseRawIO):
     def __init__(self, dirname='', **kargs):
         self.dirname = dirname
         BaseRawIO.__init__(self, **kargs)
-        self._header = self.header
 
     def _source_name(self):
         return self.dirname
@@ -249,6 +248,7 @@ class NeuralynxRawIO(BaseRawIO):
         self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
         self.header['event_channels'] = event_channels
+        self._header = self.header.copy()  # store the original header
 
         # Annotations
         self._generate_minimal_annotations()
@@ -409,25 +409,23 @@ class NeuralynxRawIO(BaseRawIO):
         event_times -= self.global_t_start
         return event_times
 
-
-    def pick_channels(self, channels):
+    def pick_signal_channels(self, channels):
         """ 
-        Given a list of channels construct a header to read only selected channels
+        Given a list of channels filter the header to read only the selected channels
+        Args:
         channels:
             list of channel names
-            'all': all original channel names 
+            'all': all original channel names
         """
 
+        # if all, then copy back the original header
         if (type(channels) == str) and channels == 'all':
-            self.header = self._header
+            self.header = self._header.copy()
 
         sigs = np.array(list(filter(lambda x: x[0] in channels,
                                     self._header['signal_channels'])))
 
         self.header['signal_channels'] = sigs
-
-
-
 
     def read_ncs_files(self, ncs_filenames):
         """
