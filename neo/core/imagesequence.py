@@ -35,7 +35,7 @@ class ImageSequence(DataObject):
         image_data = np.stack(image_data)
 
         if len(image_data.shape) != 3:
-            raise ValueError('list doest have the good number of dimension')
+            raise ValueError('list doesn\'t have the good number of dimension')
 
         obj = pq.Quantity(image_data, units=units, dtype=dtype, copy=copy).view(cls)
 
