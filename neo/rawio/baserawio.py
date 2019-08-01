@@ -421,38 +421,115 @@ class BaseRawIO(object):
         else:
             return [None]
 
-    def channel_name_to_index(self, channel_names):
+    def channel_name_to_index(self, channel_names, user_order=False, strict_selection=True):
         """
         Transform channel_names to channel_indexes.
         Based on self.header['signal_channels']
+        Args:
+             channel_names: list, requested channel names
+             user_order: bool (False), keep the output index order
+                the same as requested
+             strict_selection: bool (True), check whether all the requested channel names
+                were present in the header
         """
         ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['name'], channel_names))
-        assert len(channel_indexes) == len(channel_names), 'not match'
+        chnames = ch['name']
+        channel_indexes, = np.nonzero(np.in1d(chnames, channel_names))
+
+        if user_order and (len(channel_indexes) > 0):
+            lch = list(channel_names)
+            channel_indexes = sorted(channel_indexes, key=lambda x: lch.index(chnames[x]))
+            channel_indexes = np.array(channel_indexes)
+
+        if strict_selection:
+            assert len(channel_indexes) == len(channel_names), \
+                'selection {} doesn\'t match header names {}'.format(channel_names, chnames)
+
         return channel_indexes
 
-    def channel_id_to_index(self, channel_ids):
+    def channel_id_to_index(self, channel_ids, user_order=False, strict_selection=True):
         """
         Transform channel_ids to channel_indexes.
         Based on self.header['signal_channels']
+        Args:
+             channel_ids: list, requested channel ids
+             user_order: bool (False), keep the output index order
+                the same as requested
+             strict_selection: bool (True), check whether all the requested channel ids
+                were present in the header
         """
         ch = self.header['signal_channels']
-        channel_indexes, = np.nonzero(np.in1d(ch['id'], channel_ids))
-        assert len(channel_indexes) == len(channel_ids), 'not match'
+        chids = ch['id']
+        channel_indexes, = np.nonzero(np.in1d(chids, channel_ids))
+
+        if user_order and (len(channel_indexes) > 0):
+            lch = list(channel_ids)
+            channel_indexes = sorted(channel_indexes, key=lambda x: lch.index(chids[x]))
+            channel_indexes = np.array(channel_indexes)
+
+        if strict_selection:
+            assert len(channel_indexes) == len(channel_ids), \
+                'selection {} doesn\'t match header ids {}'.format(channel_ids, chids)
+
         return channel_indexes
 
-    def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids):
+    def _get_channel_indexes(self, channel_indexes, channel_names, channel_ids,
+                             user_order=False, strict_selection=True):
         """
         select channel_indexes from channel_indexes/channel_names/channel_ids
         depending which is not None
         """
+
+        check = (channel_indexes is None) + (channel_names is None) + (channel_ids is None)
+        assert(check == 2), 'multiple options for channel selection'
+
         if channel_indexes is None and channel_names is not None:
-            channel_indexes = self.channel_name_to_index(channel_names)
+            channel_indexes = self.channel_name_to_index(channel_names, user_order, strict_selection)
 
         if channel_indexes is None and channel_ids is not None:
-            channel_indexes = self.channel_id_to_index(channel_ids)
+            channel_indexes = self.channel_id_to_index(channel_ids, user_order, strict_selection)
 
         return channel_indexes
+
+    def pick_signal_channels(self,
+                             channel_indexes=None,
+                             channel_names=None,
+                             channel_ids=None,
+                             user_order=True,
+                             strict_selection=False):
+        """
+        Reduces IO header based on the channel_indexes/channel_names/channel_ids
+        Disclaimer: At the moment, this is a one-way operation, after selected,
+                    header could not be restored, and the user should re-init
+                    the IO from scratch, e.g. io = neo.io.MyIO(myfilename)
+
+        Args:
+            channel_ids: list (None), signal ADC indexes
+            channel_names: list (None), signal names
+            channel_indexes: list (None), absolute signal indexes in header
+            user_order: bool (True), if to keep the order of user request,
+                returns header order otherwise
+            strict_selection: bool (False), check if output size matches to the
+                user request size
+
+        Example of a header:
+            array([('CSC1', 0, 32000., 'int16', 'uV', -0.03051758, 0., 0),
+                   ('CSC2', 1, 32000., 'int16', 'uV', -0.03051758, 0., 0),
+                   ('CSC3', 2, 32000., 'int16', 'uV', -0.03051758, 0., 0),
+                   ('CSC4', 3, 32000., 'int16', 'uV', -0.03051758, 0., 0),
+                   ('CSC5', 4, 32000., 'int16', 'uV', -0.03051758, 0., 0)],
+                  dtype=[('name', '<U64'),
+                         ('id', '<i8'),
+                         ('sampling_rate', '<f8'),
+                         ('dtype', '<U16'),
+                         ('units', '<U64'),
+                         ('gain', '<f8'),
+                         ('offset', '<f8'),
+                         ('group_id', '<i8')])
+        """
+        channel_indexes = self._get_channel_indexes(channel_indexes, channel_names, channel_ids,
+                                                    user_order, strict_selection)
+        self.header['signal_channels'] = self.header['signal_channels'][channel_indexes]
 
     def get_signal_size(self, block_index, seg_index, channel_indexes=None):
         if self._several_channel_groups:
