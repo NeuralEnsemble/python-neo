@@ -374,8 +374,8 @@ class Container(BaseNeo):
         Get dictionary containing the names of child containers in the current
         object as keys and the number of children of that type as values.
         """
-        return dict((name, len(getattr(self, name)))
-                    for name in self._child_containers)
+        return {name: len(getattr(self, name))
+                    for name in self._child_containers}
 
     def filter(self, targdict=None, data=True, container=False, recursive=True,
                objects=None, **kwargs):
@@ -569,7 +569,7 @@ class Container(BaseNeo):
         # merge containers with the same name
         for container in (self._container_child_containers +
                               self._multi_child_containers):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            lookup = {obj.name: obj for obj in getattr(self, container)}
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):
                 if id(obj) in ids:
@@ -584,7 +584,7 @@ class Container(BaseNeo):
         # for data objects, ignore the name and just add them
         for container in self._data_child_containers:
             objs = getattr(self, container)
-            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
+            lookup = {obj.name: i for i, obj in enumerate(objs)}
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
@@ -617,7 +617,7 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append('%s %s' % (len(objs), container))
+                vals.append('{} {}'.format(len(objs), container))
         pp.text(', '.join(vals))
 
         if self._has_repr_pretty_attrs_():
@@ -627,7 +627,7 @@ class Container(BaseNeo):
         for container in self._repr_pretty_containers:
             pp.breakable()
             objs = getattr(self, container)
-            pp.text("# %s (N=%s)" % (container, len(objs)))
+            pp.text("# {} (N={})".format(container, len(objs)))
             for (i, obj) in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)

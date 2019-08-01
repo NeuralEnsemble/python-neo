@@ -284,7 +284,7 @@ class TestUtilsWithoutProxyObjects(unittest.TestCase):
         assert_arrays_almost_equal(ep_starts.times, starts.times - 300 * pq.ms, 1e-12)
         assert_arrays_almost_equal(ep_starts.durations,
                                    (550 * pq.ms).rescale(ep_starts.durations.units)
-                                   * np.ones((len(starts))), 1e-12)
+                                   * np.ones(len(starts)), 1e-12)
 
         # test cutting with two events
         ep_trials = add_epoch(seg, starts, stops)
@@ -613,7 +613,7 @@ class TestUtilsWithProxyObjects(BaseProxyTest):
 
         block2 = Block()
         seg2 = Segment()
-        epoch = Epoch(np.arange(10) * pq.s, durations=np.ones((10)) * pq.s)
+        epoch = Epoch(np.arange(10) * pq.s, durations=np.ones(10) * pq.s)
         epoch.annotate(pick='me instead')
         seg2.epochs = [proxy_epoch, epoch]
         block2.segments = [seg2]

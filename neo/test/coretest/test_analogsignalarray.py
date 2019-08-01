@@ -33,8 +33,8 @@ from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_ne
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0

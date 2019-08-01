@@ -106,7 +106,7 @@ class Event(DataObject):
         # reference dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
                                                                           pq.UnitTime)):
-            ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
+            ValueError("Unit {} has dimensions {}, not [time]".format(units, dim.simplified))
 
         obj = pq.Quantity(times, units=dim).view(cls)
         obj._labels = labels
@@ -192,7 +192,7 @@ class Event(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
 
         print('Event: merge annotations')
         merged_annotations = merge_annotations(self.annotations, other.annotations)

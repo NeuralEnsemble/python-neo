@@ -264,7 +264,7 @@ class BaseSignal(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
