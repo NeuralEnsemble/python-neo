@@ -285,7 +285,8 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: {} vs {}'.format(self.ndim, other.ndim))
+            raise ValueError('Dimensionality does not match: {} vs {}'.format(
+                self.ndim, other.ndim))
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):

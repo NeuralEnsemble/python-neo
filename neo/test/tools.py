@@ -40,7 +40,8 @@ def assert_arrays_equal(a, b, dtype=False):
             assert np.all(a.flatten() == b.flatten()), "{} != {}".format(a, b)
 
     if dtype:
-        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
+            a, b, a.dtype, b.dtype)
 
 
 def assert_arrays_almost_equal(a, b, threshold, dtype=False):
@@ -66,7 +67,8 @@ def assert_arrays_almost_equal(a, b, threshold, dtype=False):
                                        "" % (a, b, (abs(a - b)).max(), threshold)
 
     if dtype:
-        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(a, b, a.dtype, b.dtype)
+        assert a.dtype == b.dtype, "{} and {} not same dtype {} and {}".format(
+            a, b, a.dtype, b.dtype)
 
 
 def file_digest(filename):
@@ -116,7 +118,8 @@ def assert_neo_object_is_compliant(ob, check_type=True):
         attrname, attrtype = ioattr[0], ioattr[1]
         # ~ if attrname != '':
         if not hasattr(ob, '_quantity_attr'):
-            assert hasattr(ob, attrname), '{} neo obect does not have {}'.format(classname, attrname)
+            assert hasattr(ob, attrname), '{} neo obect does not have {}'.format(
+                classname, attrname)
 
     # test attributes types
     for ioattr in ob._all_attrs:

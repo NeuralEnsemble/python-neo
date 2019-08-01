@@ -3400,7 +3400,8 @@ class ElphyFile(object):
         if hasattr(title, 'decode'):
             title = title.decode()
         if title not in factories:
-            title = "format is not implemented ('{}' not in {})".format(title, str(factories.keys()))
+            title = "format is not implemented ('{}' not in {})".format(
+                title, str(factories.keys()))
         return title
 
     def set_nomenclature(self):
