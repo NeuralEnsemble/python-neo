@@ -480,9 +480,6 @@ class BaseRawIO(object):
         depending which is not None
         """
 
-        check = (channel_indexes is None) + (channel_names is None) + (channel_ids is None)
-        assert(check == 2), 'multiple options for channel selection'
-
         if channel_indexes is None and channel_names is not None:
             channel_indexes = self.channel_name_to_index(channel_names, user_order, strict_selection)
 
