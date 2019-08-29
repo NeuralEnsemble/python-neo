@@ -3,32 +3,35 @@ import struct
 import numpy
 import os
 import math
-import matplotlib.pyplot as plt
+
 
 
 def read(name, type, nb, dictionary, file):
+
     if type == 'int32':
-        dictionary[name] = int.from_bytes(file.read(4), byteorder=sys.byteorder, signed=True)
+        #dictionary[name] = int.from_bytes(file.read(4), byteorder=sys.byteorder, signed=True)
+        dictionary[name] = struct.unpack("i", file.read(4))[0]
     if type == 'float32':
         l = struct.unpack('f', file.read(4))
         dictionary[name] = l[0]
     if type == 'uint8':
-        l = ''
+        l = []
         for i in range(nb):
-            l += (chr(ord(file.read(1))))
+            k = (str(struct.unpack('B', file.read(1))))
+            l.append((chr(int(k.replace(',)', '').replace('(', '')))))
         dictionary[name] = l
     if type == 'uint16':
         l = []
         for i in range(nb):
-            l.append(int.from_bytes(file.read(2), byteorder=sys.byteorder, signed=False))
+            l.append(struct.unpack('H', file.read(2)))
         dictionary[name] = l
     if type == 'short':
-        dictionary[name] = int.from_bytes(file.read(2), byteorder=sys.byteorder)
+        dictionary[name] = struct.unpack('h', file.read(2))
 
     return dictionary
 
-
 def read_header(file_name):
+
     file = open(file_name, "rb")
 
     i = [
@@ -40,7 +43,7 @@ def read_header(file_name):
             ['username', 'uint8', 32],['recordingdate', 'uint8', 16],['x1roi', 'int32', 1],
             ['y1roi', 'int32', 1], ['x2roi', 'int32', 1], ['y2roi', 'int32', 1],['stimoffs', 'int32', 1],
             ['stimsize', 'int32', 1], ['frameoffs', 'int32', 1], ['framesize', 'int32', 1], ['refoffs', 'int32', 1],
-            ['refsize', 'int32', 1], ['refwidth', 'int32', 1], ['refheight', 'int32', 1], ['wichblocks', 'uint16', 16],
+            ['refsize', 'int32', 1], ['refwidth', 'int32', 1], ['refheight', 'int32', 1], ['whichblocks', 'uint16', 16],
             ['whichframe', 'uint16', 16], ['loclip', 'int32', 1], ['hiclip', 'int32', 1], ['lopass', 'int32', 1],
             ['hipass', 'int32', 1], ['operationsperformed', 'uint8', 64], ['magnifiaction', 'float32', 1],
             ['gain', 'uint16', 1], ['wavelength', 'uint16', 1], ['exposuretime', 'int32', 1], ['nrepetitions', 'int32', 1],
@@ -53,23 +56,22 @@ def read_header(file_name):
         dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
 
     if dic['filesubtype'] == 13:
-        # later
         i = [
-                ["includerefframe", "int32", 1],["temp", "uint8", 128],["ntrials", "int32", 1],
-                ["scalefactors", "int32", 1], ["cameragain", "short", 1],["ampgain", "short", 1],
-                ["samplingrate", "short", 1], ["average", "short", 1],["exposuretime", "short", 1],
-                ["samplingaverage", "short", 1], ["presentaverage", "short", 1],["framesperstim", "short", 1],
-                ["trialsperblock", "short", 1], ["sizeofanalogbufferinframes", "short", 1],
+                ["includesrefframe", "int32", 1], ["temp", "uint8", 128], ["ntrials", "int32", 1],
+                ["scalefactors", "int32", 1], ["cameragain", "short", 1], ["ampgain", "short", 1],
+                ["samplingrate", "short", 1], ["average", "short", 1], ["exposuretime", "short", 1],
+                ["samplingaverage", "short", 1], ["presentaverage", "short", 1], ["framesperstim", "short", 1],
+                ["trialsperblock", "short", 1], ["sizeofanalogbufferinfbyteorder=sys.byteorderrames", "short", 1],
                 ["cameratrials", "short", 1], ["filler", "uint8", 106], ["dyedaqreserved", "uint8", 106]
             ]
         for x in i:
             dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
         #nottested
         #  p.listofstimuli=temp(1:max(find(temp~=0)))';  % up to first non-zero stimulus
-        header["listofstimuli"] = header["temp"][0:np.argwhere(x!=0).max(0)]
+        dic["listofstimuli"] = dic["temp"][0:numpy.argwhere(x!=0).max(0)]
     else:
         i = [
-                ["inclidesreframe", "int32", 1], ["listofstimuli", "uint8", 256], ["nvideoframesperdataframe", "int32", 1],
+                ["includesrefframe", "int32", 1], ["listofstimuli", "uint8", 256], ["nvideoframesperdataframe", "int32", 1],
                 ["ntrials", "int32", 1], ["scalefactor", "int32", 1], ["meanampgain", "float32", 1],
                 ["meanampdc", "float32", 1], ["vdaqreserved", "uint8", 256]
             ]
@@ -85,6 +87,7 @@ def read_header(file_name):
 
 
 def load(*arg):
+
     # file(s) name(s) can  be one (or multiple string)
     nblocks = len(arg)
     header = read_header(arg[0])
@@ -102,13 +105,17 @@ def load(*arg):
 
     # [["dtype","nbytes","datatype","type_out"],[...]]
     l = [
-            [11, 1, "uchar", "unint8"], [12, 2, "ushort", "uint16"],
+            [11, 1, "uchar", "uint8"], [12, 2, "ushort", "uint16"],
             [13, 4, "ulong", "uint32"], [14, 4, "float", "single"]
         ]
+
     for i in l:
         if dtype == i[0]:
             nbytes, datatype, type_out = i[1], i[2], i[3]
+
+
     if framesize != ni * nj * nbytes:
+        print("BAD HEADER!!! framesize does not match framewidth*frameheight*nbytes!")
         framesize = ni * nj * nbytes
     if (filesize - lenh) > (framesize * nfr * nstim):
         nfr2 = nfr + 1
@@ -125,15 +132,14 @@ def load(*arg):
         bin = numpy.arange(math.floor((k - 1 / nbin * nblocks) + 1), math.floor((k / nbin * nblocks) + 1))
         sbin = bin.size
         for j in range(1, sbin + 1):
-            file = open(arg[(bin[j - 1] - 1)], 'rb')
+            file = open(arg[int((bin[j - 1] - 1))], 'rb')
             for i in range(1, ncond + 1):
 
                 framestart = conds[i - 1] * nfr2 - nfr
                 offset = framestart * ni * nj * nbytes + lenh
                 file.seek(offset, 0)
-                a = [int.from_bytes(file.read(nbytes), byteorder=sys.byteorder, signed=False) for m in
-                     range(ni * nj * nfr)]
 
+                a = [struct.unpack('i', file.read(nbytes)) for m in range(ni * nj * nfr)]
                 a = numpy.reshape(numpy.array(a, dtype=type_out, order='F'), (ni * nj, nfr), order='F')
                 a = numpy.reshape(a, (ni, nj, nfr), order='F')
                 
@@ -141,16 +147,15 @@ def load(*arg):
                         #not tested
                         framestart = (conds(i)-1)*nfr2
                         offset = framestart*ni*nj*nbytes + lenh
-                        
+
                         file.seek(offset)
-                        ref = []
                         for m in range(ni*nj):
-                                ref.append(int.from_bytes(file.read(nbytes), byteorder=sys.byteorder, signed=False))
+                            ref = [struct.unpack('i', file.read(nbytes)) for m in range(ni * nj)]
                         ref = numpy.array(ref, dtype=type_out)
                         for y in range(len(ref)):
-                            ref[y]*=scalefactor
-                        ref = numpy.reshape(ref,(ni,nj))
-                        b = numpy.tile(ref,[1,1,nfr])
+                            ref[y] *= scalefactor
+                        ref = numpy.reshape(ref, (ni, nj))
+                        b = numpy.tile(ref, [1, 1, nfr])
                         for y in range(a):
                             b.append([])
                             for x in range(a[y]):
