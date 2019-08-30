@@ -12,21 +12,20 @@ def read(name, type, nb, dictionary, file):
         #dictionary[name] = int.from_bytes(file.read(4), byteorder=sys.byteorder, signed=True)
         dictionary[name] = struct.unpack("i", file.read(4))[0]
     if type == 'float32':
-        l = struct.unpack('f', file.read(4))
+        l = struct.unpack('f', file.read(4))[0]
         dictionary[name] = l[0]
     if type == 'uint8':
         l = []
         for i in range(nb):
-            k = (str(struct.unpack('B', file.read(1))))
-            l.append((chr(int(k.replace(',)', '').replace('(', '')))))
+            l.append(struct.unpack('B', file.read(1))[0])
         dictionary[name] = l
     if type == 'uint16':
         l = []
         for i in range(nb):
-            l.append(struct.unpack('H', file.read(2)))
+            l.append((struct.unpack('H', file.read(2)))[0])
         dictionary[name] = l
     if type == 'short':
-        dictionary[name] = struct.unpack('h', file.read(2))
+        dictionary[name] = struct.unpack('h', file.read(2))[0]
 
     return dictionary
 
@@ -105,14 +104,13 @@ def load(*arg):
 
     # [["dtype","nbytes","datatype","type_out"],[...]]
     l = [
-            [11, 1, "uchar", "uint8"], [12, 2, "ushort", "uint16"],
-            [13, 4, "ulong", "uint32"], [14, 4, "float", "single"]
+            [11, 1, "uchar", "uint8","B"], [12, 2, "ushort", "uint16","H"],
+            [13, 4, "ulong", "uint32","I"], [14, 4, "float", "single","f"]
         ]
 
     for i in l:
         if dtype == i[0]:
-            nbytes, datatype, type_out = i[1], i[2], i[3]
-
+            nbytes, datatype, type_out, struct_type = i[1], i[2], i[3], i[4]
 
     if framesize != ni * nj * nbytes:
         print("BAD HEADER!!! framesize does not match framewidth*frameheight*nbytes!")
@@ -139,7 +137,7 @@ def load(*arg):
                 offset = framestart * ni * nj * nbytes + lenh
                 file.seek(offset, 0)
 
-                a = [struct.unpack('i', file.read(nbytes)) for m in range(ni * nj * nfr)]
+                a = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj * nfr)]
                 a = numpy.reshape(numpy.array(a, dtype=type_out, order='F'), (ni * nj, nfr), order='F')
                 a = numpy.reshape(a, (ni, nj, nfr), order='F')
                 
@@ -149,8 +147,8 @@ def load(*arg):
                         offset = framestart*ni*nj*nbytes + lenh
 
                         file.seek(offset)
-                        for m in range(ni*nj):
-                            ref = [struct.unpack('i', file.read(nbytes)) for m in range(ni * nj)]
+
+                        ref = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj)]
                         ref = numpy.array(ref, dtype=type_out)
                         for y in range(len(ref)):
                             ref[y] *= scalefactor
