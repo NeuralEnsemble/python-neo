@@ -5,19 +5,17 @@ import os
 import math
 
 
-
 def read(name, type, nb, dictionary, file):
 
     if type == 'int32':
         #dictionary[name] = int.from_bytes(file.read(4), byteorder=sys.byteorder, signed=True)
         dictionary[name] = struct.unpack("i", file.read(4))[0]
     if type == 'float32':
-        l = struct.unpack('f', file.read(4))[0]
-        dictionary[name] = l[0]
+        dictionary[name] = struct.unpack('f', file.read(4))[0]
     if type == 'uint8':
         l = []
         for i in range(nb):
-            l.append(struct.unpack('B', file.read(1))[0])
+            l.append(chr(struct.unpack('B', file.read(1))[0]))
         dictionary[name] = l
     if type == 'uint16':
         l = []
