@@ -29,6 +29,8 @@ try:
 except ImportError:
     import unittest
 
+from numpy.testing import SkipTest
+
 from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant,
@@ -122,7 +124,7 @@ class BaseTestIO(object):
 
         ''' % self.ioclass.__name__
         if not self.use_network:
-            raise unittest.SkipTest("Requires download of data from the web")
+            raise SkipTest("Requires download of data from the web")
 
         url = url_for_tests + self.shortname
         try:
