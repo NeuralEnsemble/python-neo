@@ -102,8 +102,8 @@ def load(*arg):
 
     # [["dtype","nbytes","datatype","type_out"],[...]]
     l = [
-            [11, 1, "uchar", "uint8","B"], [12, 2, "ushort", "uint16","H"],
-            [13, 4, "ulong", "uint32","I"], [14, 4, "float", "single","f"]
+            [11, 1, "uchar", "uint8","B"], [12, 2, "ushort", "uint16", "H"],
+            [13, 4, "ulong", "uint32","I"], [14, 4, "float", "single", "f"]
         ]
 
     for i in l:
@@ -141,7 +141,7 @@ def load(*arg):
                 
                 if includesrefframe:
                         #not tested
-                        framestart = (conds(i)-1)*nfr2
+                        framestart = (conds[i]-1)*nfr2
                         offset = framestart*ni*nj*nbytes + lenh
 
                         file.seek(offset)
@@ -152,13 +152,13 @@ def load(*arg):
                             ref[y] *= scalefactor
                         ref = numpy.reshape(ref, (ni, nj))
                         b = numpy.tile(ref, [1, 1, nfr])
-                        for y in range(a):
+                        for y in range(len(a)):
                             b.append([])
-                            for x in range(a[y]):
+                            for x in range(len(a[y])):
                                 b[y+1].append([])
                                 for frame in range(len(a[y][x])):
                                     b[y+1][x][frame] = (a[y][x][frame]/gain) - (scalefactor*dc/gain)
-                        a = b                      
+                        a = b
                 if sbin == 1:
                     data[k - 1][i - 1] = a
                 else:

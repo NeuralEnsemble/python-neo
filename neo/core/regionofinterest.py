@@ -4,11 +4,11 @@ class RegionOfInterest:
 
 class CircularRegionOfInterest(RegionOfInterest):
 
-    def __init__(self, y, x, r):
+    def __init__(self, x, y, radius):
 
         self.y = y
         self.x = x
-        self.r = r
+        self.radius = radius
 
     def is_inside(self, circle_x, circle_y, rad, x, y):
 
@@ -21,10 +21,10 @@ class CircularRegionOfInterest(RegionOfInterest):
     def return_list_pixel(self):
 
         pixel_in_list = []
-        for y in range(self.y - self.r, self.y + self.r + 1):
-            for x in range(self.x - self.r, self.x + self.r + 1):
+        for y in range(self.y - self.radius, self.y + self.radius + 1):
+            for x in range(self.x - self.radius, self.x + self.radius + 1):
 
-                if self.is_inside(self.x, self.y, self.r, x, y):
+                if self.is_inside(self.x, self.y, self.radius, x, y):
                     pixel_in_list.append([x, y])
 
         return pixel_in_list
@@ -94,7 +94,6 @@ class PolygonRegionOfInterest(RegionOfInterest):
                 min_y = i[1]
             if i[1] > max_y:
                 max_y = i[1]
-
         list_coord = []
         for y in range(min_y, max_y):
             for x in range(min_x, max_y):

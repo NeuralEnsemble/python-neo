@@ -1,12 +1,14 @@
 from neo.core.regionofinterest import RegionOfInterest
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core.dataobject import DataObject
+
 import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo
+from neo.core.basesignal import BaseSignal
 
 
-class ImageSequence(DataObject):
+class ImageSequence(BaseSignal):
     # format ImageSequence subclass dataobject
     # should be a 3d numerical array
     # format data[image_index][y][x]
@@ -25,7 +27,7 @@ class ImageSequence(DataObject):
                         ('spatial_scale', pq.Quantity, 0))
     _recommended_attrs = BaseNeo._recommended_attrs
 
-    def __new__(cls, image_data=None, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
+    def __new__(cls, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
                 sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
                 **annotations):
 
@@ -38,19 +40,21 @@ class ImageSequence(DataObject):
             raise ValueError('list doesn\'t have the good number of dimension')
 
         obj = pq.Quantity(image_data, units=units, dtype=dtype, copy=copy).view(cls)
-
+        obj.segment = None
         # function from analogsignal.py in neo/core directory
         obj.sampling_rate = _get_sampling_rate(sampling_rate, sampling_period)
         obj.spatial_scale = spatial_scale
 
         return obj
 
-    def __init__(self, image_data=None, units=None, sampling_rate=None, sampling_period=None, spatial_scale=None):
 
-        self.__image_data = image_data
-        self.__sampling_rate = sampling_rate
-        self.__spatial_scale = spatial_scale
-        self.__units = units
+    def __array_finalize__spec(self, obj):
+
+        self.sampling_rate = getattr(obj, 'sampling_rate', None)
+        self.spatial_scale = getattr(obj, 'spatial_scale', None)
+        self.units = getattr(obj, 'units', None)
+
+        return obj
 
     def signal_from_region(self, *region):
 
@@ -60,17 +64,14 @@ class ImageSequence(DataObject):
         region_pixel = []
         for i in range(len(region)):
             region_pixel.append(region[i].return_list_pixel())
-
         analogsignal_list = []
         for i in region_pixel:
             data = []
-            for frame in range(len(self.__image_data)):
+            for frame in range(len(self)):
                 picture_data = 0
-                count = 0
                 for v in i:
-                    picture_data += self.__image_data[frame][v[0]][v[1]]
-                    count += 1
-                data.append((picture_data * 1.0) / count)
-            analogsignal_list.append(AnalogSignal(data, self.units, sampling_rate=self.__sampling_rate))
+                    picture_data += self.view(pq.Quantity)[frame][v[0]][v[1]]
+                data.append((picture_data * 1.0) / len(i))
+            analogsignal_list.append(AnalogSignal(data, self.units, self.sampling_rate))
 
         return analogsignal_list
