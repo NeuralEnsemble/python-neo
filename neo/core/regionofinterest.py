@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 class RegionOfInterest:
     pass
-
 
 class CircularRegionOfInterest(RegionOfInterest):
 

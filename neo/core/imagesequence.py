@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from neo.core.regionofinterest import RegionOfInterest
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core.dataobject import DataObject
@@ -62,16 +63,23 @@ class ImageSequence(BaseSignal):
             raise ValueError('no region of interest have been given')
 
         region_pixel = []
-        for i in range(len(region)):
-            region_pixel.append(region[i].return_list_pixel())
+        for i,b in enumerate(region):
+            r = region[i].return_list_pixel()
+            if r == []:
+                raise ValueError('region '+str(i)+'is empty')
+            else:
+                region_pixel.append(r)
         analogsignal_list = []
         for i in region_pixel:
             data = []
             for frame in range(len(self)):
-                picture_data = 0
+                picture_data = []
                 for v in i:
-                    picture_data += self.view(pq.Quantity)[frame][v[0]][v[1]]
-                data.append((picture_data * 1.0) / len(i))
-            analogsignal_list.append(AnalogSignal(data, self.units, self.sampling_rate))
+                    picture_data.append(self.view(pq.Quantity)[frame][v[0]][v[1]])
+                average = picture_data[0]
+                for b in range(1, len(picture_data)):
+                    average += picture_data[b]
+                data.append((average * 1.0) / len(i))
+            analogsignal_list.append(AnalogSignal(data, units=self.units, sampling_rate=self.sampling_rate))
 
         return analogsignal_list
