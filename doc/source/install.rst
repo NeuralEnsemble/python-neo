@@ -10,7 +10,7 @@ Dependencies
   
     * Python_ >= 2.7
     * numpy_ >= 1.7.1
-    * quantities_ >= 0.9.0
+    * quantities_ >= 0.12.1
 
 For Debian/Ubuntu, you can install these using::
 
@@ -28,7 +28,7 @@ Neo will still install but the IO module that uses them will fail on loading:
    * h5py >= 2.5 for Hdf5IO, KwikIO
    * klusta for KwikIO
    * igor >= 0.2 for IgorIO
-   * nixio >= 1.2 for NixIO
+   * nixio >= 1.5 for NixIO
    * stfio for StimfitIO
 
 
@@ -47,14 +47,19 @@ on).
     
 To download and install manually, download:
 
-    https://github.com/NeuralEnsemble/python-neo/archive/neo-0.5.2.zip
-
-Then::
-
-    $ unzip neo-0.5.2.zip
-    $ cd neo-0.5.2
-    $ python setup.py install
+    |neo_github_url|
     
+
+Then:
+
+.. parsed-literal::
+    
+    $ unzip neo-|release|.zip
+    $ cd neo-|release|
+    $ python setup.py install
+
+
+
 or::
 
     $ python3 setup.py install

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Class for reading data created by IGOR Pro 
+Class for reading data created by IGOR Pro
 (WaveMetrics, Inc., Portland, OR, USA)
 
 Depends on: igor (https://pypi.python.org/pypi/igor/)
@@ -18,9 +18,11 @@ import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import Block, Segment, AnalogSignal
+
 try:
     import igor.binarywave as bw
     import igor.packed as pxp
+
     HAVE_IGOR = True
 except ImportError:
     HAVE_IGOR = False
@@ -28,10 +30,9 @@ except ImportError:
 
 class IgorIO(BaseIO):
     """
-    Class for reading Igor Binary Waves (.ibw) written by WaveMetrics’ 
+    Class for reading Igor Binary Waves (.ibw)
+    or Packed Experiment (.pxp) files written by WaveMetrics’
     IGOR Pro software.
-
-    Support for Packed Experiment (.pxp) files is planned.
 
     It requires the `igor` Python package by W. Trevor King.
 
@@ -43,10 +44,10 @@ class IgorIO(BaseIO):
 
     """
 
-    is_readable = True   # This class can only read data
+    is_readable = True  # This class can only read data
     is_writable = False  # write is not supported
     supported_objects = [Block, Segment, AnalogSignal]
-    readable_objects = [Block, Segment , AnalogSignal]
+    readable_objects = [Block, Segment, AnalogSignal]
     writeable_objects = []
     has_header = False
     is_streameable = False
@@ -54,7 +55,7 @@ class IgorIO(BaseIO):
     extensions = ['ibw', 'pxp']
     mode = 'file'
 
-    def __init__(self, filename=None, parse_notes=None) :
+    def __init__(self, filename=None, parse_notes=None):
         """
 
 
@@ -73,22 +74,26 @@ class IgorIO(BaseIO):
         self.extension = filename.split('.')[-1]
         self.parse_notes = parse_notes
 
-    def read_block(self, lazy=False, cascade=True):
+    def read_block(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+
         block = Block(file_origin=self.filename)
-        if cascade:
-            block.segments.append(self.read_segment(lazy=lazy, cascade=cascade))
-            block.segments[-1].block = block
+        block.segments.append(self.read_segment(lazy=lazy))
+        block.segments[-1].block = block
         return block
 
-    def read_segment(self, lazy=False, cascade=True):
+    def read_segment(self, lazy=False):
+        assert not lazy, 'Do not support lazy'
+
         segment = Segment(file_origin=self.filename)
-        if cascade:
-            segment.analogsignals.append(
-                self.read_analogsignal(lazy=lazy, cascade=cascade))
-            segment.analogsignals[-1].segment = segment
+        segment.analogsignals.append(
+            self.read_analogsignal(lazy=lazy))
+        segment.analogsignals[-1].segment = segment
         return segment
 
-    def read_analogsignal(self, path=None, lazy=False, cascade=True):
+    def read_analogsignal(self, path=None, lazy=False):
+        assert not lazy, 'Do not support lazy'
+
         if not HAVE_IGOR:
             raise Exception(("`igor` package not installed. "
                              "Try `pip install igor`"))
@@ -101,7 +106,7 @@ class IgorIO(BaseIO):
         elif self.extension == 'pxp':
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."
-            _,filesystem = pxp.load(self.filename)
+            _, filesystem = pxp.load(self.filename)
             path = path.split(':')
             location = filesystem['root']
             for element in path:
@@ -112,14 +117,10 @@ class IgorIO(BaseIO):
         if "padding" in content:
             assert content['padding'].size == 0, \
                 "Cannot handle non-empty padding"
-        if lazy:
-            # not really lazy, since the `igor` module loads the data anyway
-            signal = np.array((), dtype=content['wData'].dtype)
-        else:
-            signal = content['wData']
+        signal = content['wData']
         note = content['note']
         header = content['wave_header']
-        name = header['bname']
+        name = str(header['bname'].decode('utf-8'))
         units = "".join([x.decode() for x in header['dataUnits']])
         try:
             time_units = "".join([x.decode() for x in header['xUnits']])
@@ -146,8 +147,6 @@ class IgorIO(BaseIO):
         signal = AnalogSignal(signal, units=units, copy=False, t_start=t_start,
                               sampling_period=sampling_period, name=name,
                               file_origin=self.filename, **annotations)
-        if lazy:
-            signal.lazy_shape = content['wData'].shape
         return signal
 
 
@@ -162,7 +161,7 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
         kvsep - character which separates the key and value within an item
 
     Returns:
-        a function which takes the string to be parsed as the sole argument 
+        a function which takes the string to be parsed as the sole argument
         and returns a dict.
 
     Example:
@@ -171,7 +170,9 @@ def key_value_string_parser(itemsep=";", kvsep=":"):
         >>> parse("a:2;b:3")
         {'a': 2, 'b': 3}
     """
+
     def parser(s):
         items = s.split(itemsep)
         return dict(item.split(kvsep, 1) for item in items if item)
+
     return parser

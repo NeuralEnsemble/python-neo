@@ -24,7 +24,6 @@ from neo.core.baseneo import (BaseNeo, _check_annotations,
                               merge_annotations, merge_annotation)
 from neo.test.tools import assert_arrays_equal
 
-
 if sys.version_info[0] >= 3:
     _bytes = bytes
 
@@ -38,6 +37,7 @@ class Test_check_annotations(unittest.TestCase):
     '''
     TestCase to make sure _check_annotations works
     '''
+
     def setUp(self):
         self.values = [1, 2.2, 3 + 2j,
                        'test', r'test', b'test',
@@ -81,6 +81,12 @@ class TestBaseNeo(unittest.TestCase):
     '''
     TestCase to make sure basic initialization and methods work
     '''
+
+    def assertDictContainsSubset(self, a, b):
+        """Checks that all the key/value pairs in a exist in b"""
+        # the implementation in unittest.TestCase has been deprecated
+        assert set(a.items()).issubset(set(b.items()))
+
     def test_init(self):
         '''test to make sure initialization works properly'''
         base = BaseNeo(name='a base', description='this is a test')
@@ -134,6 +140,7 @@ class Test_BaseNeo_merge_annotations_merge(unittest.TestCase):
     '''
     TestCase to make sure merge_annotations and merge methods work
     '''
+
     def setUp(self):
         self.name1 = 'a base 1'
         self.name2 = 'a base 2'
@@ -390,6 +397,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for core built-in
     python data types
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -464,6 +472,7 @@ class TestBaseNeoStandardLibraryTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for data types from
     the python standard library that are not core built-in data types
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -524,6 +533,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for data type
     inside python built-in container types
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -580,6 +590,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
     '''
     TestCase to make sure annotations are properly checked for numpy arrays
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -778,6 +789,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
     '''
     TestCase to make sure annotations are properly checked for numpy scalars
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -976,6 +988,7 @@ class TestBaseNeoQuantitiesArrayTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for quantities
     arrays
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -1014,6 +1027,7 @@ class TestBaseNeoQuantitiesScalarTypes(unittest.TestCase):
     TestCase to make sure annotations are properly checked for quantities
     scalars
     '''
+
     def setUp(self):
         '''create the instance to be tested, called before every test'''
         self.base = BaseNeo()
@@ -1059,15 +1073,19 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
 
     def test_my_class(self):
         '''test to make sure user defined class type data is rejected'''
+
         class Foo(object):
             pass
+
         value = Foo()
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
     def test_my_class_list(self):
         '''test to make sure user defined class type data is rejected'''
+
         class Foo(object):
             pass
+
         value = [Foo(), Foo(), Foo()]
         self.assertRaises(ValueError, self.base.annotate, data=value)
 

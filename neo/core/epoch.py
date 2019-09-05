@@ -10,26 +10,32 @@ This module defines :class:`Epoch`, an array of epochs.
 from __future__ import absolute_import, division, print_function
 
 import sys
+from copy import deepcopy, copy
 
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
+from neo.core.dataobject import DataObject, ArrayDict
 
 PY_VER = sys.version_info[0]
 
-def _new_epoch(cls, times=None, durations=None, labels=None, units=None,
-                name=None, description=None, file_origin=None, annotations = None, segment=None):
+
+def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
+               description=None, file_origin=None, array_annotations=None, annotations=None,
+               segment=None):
     '''
     A function to map epoch.__new__ to function that
-    does not do the unit checking. This is needed for pickle to work. 
+    does not do the unit checking. This is needed for pickle to work.
     '''
-    e = Epoch( times=times, durations=durations, labels=labels, units=units, name=name, file_origin=file_origin,
-                 description=description, **annotations)
+    e = Epoch(times=times, durations=durations, labels=labels, units=units, name=name,
+              file_origin=file_origin, description=description,
+              array_annotations=array_annotations, **annotations)
     e.segment = segment
     return e
 
-class Epoch(BaseNeo, pq.Quantity):
+
+class Epoch(DataObject):
     '''
     Array of epochs.
 
@@ -52,15 +58,21 @@ class Epoch(BaseNeo, pq.Quantity):
               dtype='|S4')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D) The starts of the time periods.
-        :durations: (quantity array 1D) The length of the time period.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the
-            time periods.
+        :times: (quantity array 1D, numpy array 1D or list) The start times
+           of each time period.
+        :durations: (quantity array 1D, numpy array 1D, list, or quantity scalar)
+           The length(s) of each time period.
+           If a scalar, the same value is used for all time periods.
+        :labels: (numpy.array 1D dtype='S' or list) Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
         :description: (str) Text description,
         :file_origin: (str) Filesystem path or URL of the original data file.
+
+    *Optional attributes/properties*:
+        :array_annotations: (dict) Dict mapping strings to numpy arrays containing annotations \
+                                   for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`,
@@ -68,19 +80,32 @@ class Epoch(BaseNeo, pq.Quantity):
     '''
 
     _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'times'
-    _necessary_attrs = (('times', pq.Quantity, 1),
-                        ('durations', pq.Quantity, 1),
+    _necessary_attrs = (('times', pq.Quantity, 1), ('durations', pq.Quantity, 1),
                         ('labels', np.ndarray, 1, np.dtype('S')))
 
-    def __new__(cls, times=None, durations=None, labels=None, units=None,
-                name=None, description=None, file_origin=None, **annotations):
+    def __new__(cls, times=None, durations=None, labels=None, units=None, name=None,
+                description=None, file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
+        elif isinstance(times, (list, tuple)):
+            times = np.array(times)
+        if isinstance(durations, (list, tuple)):
+            durations = np.array(durations)
         if durations is None:
             durations = np.array([]) * pq.s
+        elif durations.size != times.size:
+            if durations.size == 1:
+                durations = durations * np.ones_like(times.magnitude)
+            else:
+                raise ValueError("Durations array has different length to times")
         if labels is None:
             labels = np.array([], dtype='S')
+        else:
+            labels = np.array(labels)
+            if labels.size != times.size and labels.size:
+                raise ValueError("Labels array has different length to times")
         if units is None:
             # No keyword units, so get from `times`
             try:
@@ -93,45 +118,52 @@ class Epoch(BaseNeo, pq.Quantity):
                 dim = units.dimensionality
             else:
                 dim = pq.quantity.validate_dimensionality(units)
+        if not hasattr(durations, "dimensionality"):
+            durations = pq.Quantity(durations, dim)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
-        if (len(dim) != 1 or list(dim.values())[0] != 1 or
-                not isinstance(list(dim.keys())[0], pq.UnitTime)):
-            ValueError("Unit %s has dimensions %s, not [time]" %
-                       (units, dim.simplified))
+        if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
+                                                                          pq.UnitTime)):
+            ValueError("Unit %s has dimensions %s, not [time]" % (units, dim.simplified))
 
         obj = pq.Quantity.__new__(cls, times, units=dim)
-        obj.durations = durations
-        obj.labels = labels
+        obj._labels = labels
+        obj._durations = durations
         obj.segment = None
         return obj
 
-    def __init__(self, times=None, durations=None, labels=None, units=None,
-                 name=None, description=None, file_origin=None, **annotations):
+    def __init__(self, times=None, durations=None, labels=None, units=None, name=None,
+                 description=None, file_origin=None, array_annotations=None, **annotations):
         '''
         Initialize a new :class:`Epoch` instance.
         '''
-        BaseNeo.__init__(self, name=name, file_origin=file_origin,
-                         description=description, **annotations)
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
+
     def __reduce__(self):
         '''
-        Map the __new__ function onto _new_BaseAnalogSignal, so that pickle
+        Map the __new__ function onto _new_epoch, so that pickle
         works
         '''
         return _new_epoch, (self.__class__, self.times, self.durations, self.labels, self.units,
-                            self.name, self.file_origin, self.description,
-                            self.annotations, self.segment)      
+                            self.name, self.file_origin, self.description, self.array_annotations,
+                            self.annotations, self.segment)
 
     def __array_finalize__(self, obj):
         super(Epoch, self).__array_finalize__(obj)
-        self.durations = getattr(obj, 'durations', None)
-        self.labels = getattr(obj, 'labels', None)
+        self._durations = getattr(obj, 'durations', None)
+        self._labels = getattr(obj, 'labels', None)
         self.annotations = getattr(obj, 'annotations', None)
         self.name = getattr(obj, 'name', None)
         self.file_origin = getattr(obj, 'file_origin', None)
         self.description = getattr(obj, 'description', None)
         self.segment = getattr(obj, 'segment', None)
+        # Add empty array annotations, because they cannot always be copied,
+        # but do not overwrite existing ones from slicing etc.
+        # This ensures the attribute exists
+        if not hasattr(self, 'array_annotations'):
+            self.array_annotations = ArrayDict(self._get_arr_ann_length())
 
     def __repr__(self):
         '''
@@ -143,9 +175,51 @@ class Epoch(BaseNeo, pq.Quantity):
         else:
             labels = self.labels
 
-        objs = ['%s@%s for %s' % (label, time, dur) for
-                label, time, dur in zip(labels, self.times, self.durations)]
+        objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
+                zip(labels, self.times, self.durations)]
         return '<Epoch: %s>' % ', '.join(objs)
+
+    def _repr_pretty_(self, pp, cycle):
+        super(Epoch, self)._repr_pretty_(pp, cycle)
+
+    def rescale(self, units):
+        '''
+        Return a copy of the :class:`Epoch` converted to the specified
+        units
+        '''
+
+        obj = super(Epoch, self).rescale(units)
+        obj._durations = obj.durations.rescale(units)
+        obj.segment = self.segment  # not sure we should do this
+        return obj
+
+    def __getitem__(self, i):
+        '''
+        Get the item or slice :attr:`i`.
+        '''
+        obj = super(Epoch, self).__getitem__(i)
+        obj._durations = self.durations[i]
+        if self._labels is not None and self._labels.size > 0:
+            obj._labels = self.labels[i]
+        else:
+            obj._labels = self.labels
+        try:
+            # Array annotations need to be sliced accordingly
+            obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            obj._copy_data_complement(self)
+        except AttributeError:  # If Quantity was returned, not Epoch
+            obj.times = obj
+            obj.durations = obj._durations
+            obj.labels = obj._labels
+        return obj
+
+    def __getslice__(self, i, j):
+        '''
+        Get a slice from :attr:`i` to :attr:`j`.attr[0]
+
+        Doesn't get called in Python 3, :meth:`__getitem__` is called instead
+        '''
+        return self.__getitem__(slice(i, j))
 
     @property
     def times(self):
@@ -176,26 +250,45 @@ class Epoch(BaseNeo, pq.Quantity):
             else:
                 kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
 
-        merged_annotations = merge_annotations(self.annotations,
-                                               other.annotations)
+        merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
+
+        kwargs['array_annotations'] = self._merge_array_annotations(other)
+
         return Epoch(times=times, durations=durations, labels=labels, **kwargs)
 
     def _copy_data_complement(self, other):
         '''
         Copy the metadata from another :class:`Epoch`.
+        Note: Array annotations can not be copied here because length of data can change
         '''
-        for attr in ("labels", "durations", "name", "file_origin",
-                     "description", "annotations"):
-            setattr(self, attr, getattr(other, attr, None))
+        # Note: Array annotations cannot be copied because length of data could be changed
+        # here which would cause inconsistencies. This is instead done locally.
+        for attr in ("name", "file_origin", "description"):
+            setattr(self, attr, deepcopy(getattr(other, attr, None)))
+        self._copy_annotations(other)
 
-    def duplicate_with_new_data(self, signal):
+    def _copy_annotations(self, other):
+        self.annotations = deepcopy(other.annotations)
+
+    def duplicate_with_new_data(self, times, durations, labels, units=None):
         '''
         Create a new :class:`Epoch` with the same metadata
         but different data (times, durations)
+
+        Note: Array annotations can not be copied here because length of data can change
         '''
-        new = self.__class__(times=signal)
+
+        if units is None:
+            units = self.units
+        else:
+            units = pq.quantity.validate_dimensionality(units)
+
+        new = self.__class__(times=times, durations=durations, labels=labels, units=units)
         new._copy_data_complement(self)
+        new._labels = labels
+        new._durations = durations
+        # Note: Array annotations can not be copied here because length of data can change
         return new
 
     def time_slice(self, t_start, t_stop):
@@ -214,24 +307,54 @@ class Epoch(BaseNeo, pq.Quantity):
 
         indices = (self >= _t_start) & (self <= _t_stop)
 
-        new_epc = self[indices]
-        new_epc.durations = self.durations[indices]
-        new_epc.labels = self.labels[indices]
+        # Time slicing should create a deep copy of the object
+        new_epc = deepcopy(self[indices])
+
         return new_epc
 
-    def as_array(self, units=None):
+    def time_shift(self, t_shift):
         """
-        Return the epoch start times as a plain NumPy array.
+        Shifts an :class:`Epoch` by an amount of time.
 
-        If `units` is specified, first rescale to those units.
-        """
-        if units:
-            return self.rescale(units).magnitude
-        else:
-            return self.magnitude
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`Epoch`.
 
-    def as_quantity(self):
+        Returns:
+        --------
+        epoch: :class:`Epoch`
+            New instance of an :class:`Epoch` object starting at t_shift later than the
+            original :class:`Epoch` (the original :class:`Epoch` is not modified).
         """
-        Return the epoch start times as a quantities array.
-        """
-        return self.view(pq.Quantity)
+        new_epc = self.duplicate_with_new_data(times=self.times + t_shift,
+                                               durations=self.durations,
+                                               labels=self.labels)
+
+        # Here we can safely copy the array annotations since we know that
+        # the length of the Epoch does not change.
+        new_epc.array_annotate(**self.array_annotations)
+
+        return new_epc
+
+    def set_labels(self, labels):
+        if self.labels is not None and self.labels.size > 0 and len(labels) != self.size:
+            raise ValueError("Labels array has different length to times ({} != {})"
+                             .format(len(labels), self.size))
+        self._labels = np.array(labels)
+
+    def get_labels(self):
+        return self._labels
+
+    labels = property(get_labels, set_labels)
+
+    def set_durations(self, durations):
+        if self.durations is not None and self.durations.size > 0 and len(durations) != self.size:
+            raise ValueError("Durations array has different length to times ({} != {})"
+                             .format(len(durations), self.size))
+        self._durations = durations
+
+    def get_durations(self):
+        return self._durations
+
+    durations = property(get_durations, set_durations)

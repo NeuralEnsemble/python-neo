@@ -67,10 +67,10 @@ def proc_src(filename):
     example: filename = 'file1_src_py2.npz'
              src file name = 'file1.src'
     '''
-    with np.load(filename) as srcobj:
-        srcfile = srcobj.items()[0][1]
+    with np.load(filename, allow_pickle=True) as srcobj:
+        srcfile = list(srcobj.items())[0][1]
 
-    filename = os.path.basename(filename[:-12]+'.src')
+    filename = os.path.basename(filename[:-12] + '.src')
 
     block = Block(file_origin=filename)
 
@@ -108,7 +108,7 @@ def proc_src_comments(srcfile, filename):
 
     timeStamps = np.array(timeStamps, dtype=np.float32)
     t_start = timeStamps.min()
-    timeStamps = pq.Quantity(timeStamps-t_start, units=pq.d).rescale(pq.s)
+    timeStamps = pq.Quantity(timeStamps - t_start, units=pq.d).rescale(pq.s)
     texts = np.array(texts, dtype='S')
     senders = np.array(senders, dtype='S')
     t_start = brainwaresrcio.convert_brainwaresrc_timestamp(t_start.tolist())
@@ -223,8 +223,8 @@ def proc_src_condition_unit(spikeunit, sweepLen, side, ADperiod, respWin,
     '''Get the unit in a condition in a src file that has been processed by
     the official matlab function.  See proc_src for details'''
     if not damaIndexes:
-        damaIndexes = [0]*len(spikeunit)
-        timeStamps = [0]*len(spikeunit)
+        damaIndexes = [0] * len(spikeunit)
+        timeStamps = [0] * len(spikeunit)
 
     trains = []
     for sweep, damaIndex, timeStamp in zip(spikeunit, damaIndexes,

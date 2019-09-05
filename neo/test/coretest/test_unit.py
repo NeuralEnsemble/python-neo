@@ -7,6 +7,7 @@ Tests of the neo.core.unit.Unit class
 from __future__ import absolute_import, division, print_function
 
 import unittest
+from copy import deepcopy
 
 import numpy as np
 
@@ -110,7 +111,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(unit.name, targ1)
 
         targ2 = get_fake_value('description', str,
-                               seed=seed+1, obj=Unit)
+                               seed=seed + 1, obj=Unit)
         self.assertEqual(unit.description, targ2)
 
         targ3 = get_fake_value('file_origin', str)
@@ -134,7 +135,6 @@ class TestUnit(unittest.TestCase):
         unit1a.annotate(seed=self.seed2)
         unit1a.spiketrains.append(self.trains2[0])
         unit1a.merge(self.unit2)
-        self.check_creation(self.unit2)
 
         assert_same_sub_schema(self.trains1a + self.trains2,
                                unit1a.spiketrains)
@@ -207,7 +207,7 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(self.targobj.size, targ)
 
     def test__filter_none(self):
-        targ = []
+        targ = self.targobj.spiketrains
 
         res1 = self.targobj.filter()
         res2 = self.targobj.filter({})
@@ -302,8 +302,8 @@ class TestUnit(unittest.TestCase):
 
         name0 = self.trains2[0].name
         res0 = self.targobj.filter([{'j': 5}, {}])
-        res1 = self.targobj.filter({}, j=0)
-        res2 = self.targobj.filter([{}], i=0)
+        res1 = self.targobj.filter({}, j=5)
+        res2 = self.targobj.filter([{}], i=5)
         res3 = self.targobj.filter({'name': name0}, j=1)
         res4 = self.targobj.filter(targdict={'name': name0}, j=1)
         res5 = self.targobj.filter(name=name0, targdict={'j': 1})
@@ -350,6 +350,11 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res3, targ)
         assert_same_sub_schema(res4, targ)
         assert_same_sub_schema(res5, targ)
+
+    def test__filter_no_annotation_but_object(self):
+        targ = self.targobj.spiketrains
+        res = self.targobj.filter(objects=SpikeTrain)
+        assert_same_sub_schema(res, targ)
 
     def test__filter_single_annotation_obj_single(self):
         targ = [self.trains1a[1]]
@@ -478,9 +483,9 @@ class TestUnit(unittest.TestCase):
 
         name1 = self.trains1a[0].name
         name2 = self.trains2[0].name
-        res0 = filterdata(data, [{'j': 0}, {}])
-        res1 = filterdata(data, {}, i=0)
-        res2 = filterdata(data, [{}], i=0)
+        res0 = filterdata(data, [{'j': 5}, {}])
+        res1 = filterdata(data, {}, i=5)
+        res2 = filterdata(data, [{}], i=5)
         res3 = filterdata(data, name=name1, targdict={'j': 1})
         res4 = filterdata(data, {'name': name1}, j=1)
         res5 = filterdata(data, targdict={'name': name1}, j=1)
@@ -530,21 +535,34 @@ class TestUnit(unittest.TestCase):
         assert_same_sub_schema(res4, targ)
         assert_same_sub_schema(res5, targ)
 
-    # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
-    # def test__pretty(self):
-    #     res = pretty(self.unit1)
-    #     ann = get_annotations()
-    #     ann['seed'] = self.seed1
-    #     ann = pretty(ann).replace('\n ', '\n  ')
-    #     targ = ("Unit with " +
-    #             ("%s spiketrains\n" % len(self.trains1a)) +
-    #             ("name: '%s'\ndescription: '%s'\n" % (self.unit1.name,
-    #                                                   self.unit1.description)
-    #              ) +
-    #             ("annotations: %s" % ann))
-    #
-    #     self.assertEqual(res, targ)
+        # @unittest.skipUnless(HAVE_IPYTHON, "requires IPython")
+        # def test__pretty(self):
+        #     res = pretty(self.unit1)
+        #     ann = get_annotations()
+        #     ann['seed'] = self.seed1
+        #     ann = pretty(ann).replace('\n ', '\n  ')
+        #     targ = ("Unit with " +
+        #             ("%s spiketrains\n" % len(self.trains1a)) +
+        #             ("name: '%s'\ndescription: '%s'\n" % (self.unit1.name,
+        #                                                   self.unit1.description)
+        #              ) +
+        #             ("annotations: %s" % ann))
+        #
+        #     self.assertEqual(res, targ)
 
+    def test__deepcopy(self):
+        childconts = ('spiketrains',)
+
+        unit1_copy = deepcopy(self.unit1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(unit1_copy, self.unit1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        # No need to cascade, all children are leaves, i.e. don't have any children
+        for childtype in childconts:
+            for child in getattr(unit1_copy, childtype, []):
+                self.assertEqual(id(child.unit), id(unit1_copy))
 
 if __name__ == "__main__":
     unittest.main()

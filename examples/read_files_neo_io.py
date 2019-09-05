@@ -7,41 +7,41 @@ import urllib
 
 import neo
 
+url_repo = 'https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/'
 
 # Plexon files
-distantfile = 'https://portal.g-node.org/neo/plexon/File_plexon_3.plx'
+distantfile = url_repo + 'plexon/File_plexon_3.plx'
 localfile = './File_plexon_3.plx'
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
 reader = neo.io.PlexonIO(filename='File_plexon_3.plx')
 # read the blocks
-blks = reader.read(cascade=True, lazy=False)
-print (blks)
+blks = reader.read(lazy=False)
+print(blks)
 # access to segments
 for blk in blks:
     for seg in blk.segments:
-        print (seg)
+        print(seg)
         for asig in seg.analogsignals:
-            print (asig)
+            print(asig)
         for st in seg.spiketrains:
-            print (st)
-
+            print(st)
 
 # CED Spike2 files
-distantfile = 'https://portal.g-node.org/neo/spike2/File_spike2_1.smr'
+distantfile = url_repo + 'spike2/File_spike2_1.smr'
 localfile = './File_spike2_1.smr'
 urllib.request.urlretrieve(distantfile, localfile)
 
 # create a reader
 reader = neo.io.Spike2IO(filename='File_spike2_1.smr')
 # read the block
-bl = reader.read(cascade=True, lazy=False)[0]
-print (bl)
+bl = reader.read(lazy=False)[0]
+print(bl)
 # access to segments
 for seg in bl.segments:
-    print (seg)
+    print(seg)
     for asig in seg.analogsignals:
-        print (asig)
+        print(asig)
     for st in seg.spiketrains:
-        print (st)
+        print(st)

@@ -11,14 +11,14 @@ import sys
 import unittest
 
 try:
-    from neo.io import ElphyIO
+    from neo.io.elphyio import ElphyIO
 except ImportError:
     ElphyIO = None
 from neo.test.iotest.common_io_test import BaseTestIO
 
 
-#@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
-@unittest.skip("ElphyIO not yet updated to the new API")
+# @unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
+# @unittest.skip("ElphyIO not yet updated to the new API")
 class TestElphyIO(BaseTestIO, unittest.TestCase):
     ioclass = ElphyIO
     files_to_test = ['ElphyExample.DAT',

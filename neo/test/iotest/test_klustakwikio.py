@@ -23,12 +23,12 @@ from neo.io.klustakwikio import KlustaKwikIO, HAVE_MLAB
 
 
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testFilenameParser(unittest.TestCase):
     """Tests that filenames can be loaded with or without basename.
 
     The test directory contains two basenames and some decoy files with
     malformed group numbers."""
+
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
                                     'files_for_testing_neo',
@@ -58,13 +58,13 @@ class testFilenameParser(unittest.TestCase):
 
         # this test is in flux, should probably have it default to
         # basename = os.path.split(dirname)[1] when dirname is a directory
-        #~ dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
-        #~ kio = KlustaKwikIO(filename=dirname)
-        #~ fetfiles = kio._fp.read_filenames('fet')
+        # dirname = os.path.normpath('./files_for_tests/klustakwik/test1')
+        # kio = KlustaKwikIO(filename=dirname)
+        # fetfiles = kio._fp.read_filenames('fet')
 
-        #~ # It will just choose one of the two basenames, depending on which
-        #~ # is first, so just assert that it did something without error.
-        #~ self.assertNotEqual(len(fetfiles), 0)
+        # It will just choose one of the two basenames, depending on which
+        # is first, so just assert that it did something without error.
+        # self.assertNotEqual(len(fetfiles), 0)
 
     def test3(self):
         """Tests that files can be loaded by basename2"""
@@ -80,9 +80,9 @@ class testFilenameParser(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testRead(unittest.TestCase):
     """Tests that data can be read from KlustaKwik files"""
+
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
                                     'files_for_testing_neo',
@@ -145,7 +145,6 @@ class testRead(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWrite(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -215,32 +214,38 @@ class testWrite(unittest.TestCase):
 
         # Check files contain correct content
         # Spike times on group 0
-        data = file(os.path.join(self.dirname, 'base1.fet.0')).readlines()
+        with open(os.path.join(self.dirname, 'base1.fet.0'), mode='r') as f:
+            data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [0, 2, 4, 6, 1, 3, 11, 106])
 
         # Clusters on group 0
-        data = file(os.path.join(self.dirname, 'base1.clu.0')).readlines()
+        with open(os.path.join(self.dirname, 'base1.clu.0'), mode='r') as f:
+            data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [2, 0, 0, 0, 1, 1, 1, 0])
 
         # Spike times on group 1
-        data = file(os.path.join(self.dirname, 'base1.fet.1')).readlines()
+        with open(os.path.join(self.dirname, 'base1.fet.1'), mode='r') as f:
+            data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [0, 50, 90, 100])
 
         # Clusters on group 1
-        data = file(os.path.join(self.dirname, 'base1.clu.1')).readlines()
+        with open(os.path.join(self.dirname, 'base1.clu.1')) as f:
+            data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [1, -1, -1, -1])
 
         # Spike times on group 2
-        data = file(os.path.join(self.dirname, 'base1.fet.2')).readlines()
-        data = [int(d) for d in data]
+        with open(os.path.join(self.dirname, 'base1.fet.2')) as f:
+            data = f.readlines()
+            data = [int(d) for d in data]
         self.assertEqual(data, [0, 5, 9])
 
         # Clusters on group 2
-        data = file(os.path.join(self.dirname, 'base1.clu.2')).readlines()
+        with open(os.path.join(self.dirname, 'base1.clu.2')) as f:
+            data = f.readlines()
         data = [int(d) for d in data]
         self.assertEqual(data, [1, 0, 0])
 
@@ -249,7 +254,6 @@ class testWrite(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class testWriteWithFeatures(unittest.TestCase):
     def setUp(self):
         self.dirname = os.path.join(tempfile.gettempdir(),
@@ -334,7 +338,6 @@ class testWriteWithFeatures(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_MLAB, "requires matplotlib")
-@unittest.skipIf(sys.version_info[0] > 2, "not Python 3 compatible")
 class CommonTests(BaseTestIO, unittest.TestCase):
     ioclass = KlustaKwikIO
 
@@ -342,7 +345,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
     files_to_test = [
         'test2/base',
         'test2/base2',
-        ]
+    ]
 
     # Will fetch from g-node if they don't already exist locally
     # How does it know to do this before any of the other tests?
@@ -367,7 +370,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
         'test3/base1.fet.0',
         'test3/base1.fet.1',
         'test3/base1.fet.2'
-        ]
+    ]
 
 
 def delete_test_session(dirname=None):

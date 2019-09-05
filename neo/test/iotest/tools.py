@@ -15,7 +15,6 @@ from neo.core import Block, Segment
 from neo.test.generate_datasets import generate_from_supported_objects
 
 
-
 def close_object_safe(obj):
     """
     Close an object safely, ignoring errors
@@ -90,7 +89,11 @@ def get_test_file_full_path(ioclass, filename=None,
         cleanup_test_file(ioclass, filename)
 
     return filename
-get_test_file_full_path.__test__ = False # prevent this being treated as a test if imported into a test file
+
+
+# prevent this being treated as a test if imported into a test file
+get_test_file_full_path.__test__ = False
+
 
 def create_generic_io_object(ioclass, filename=None, directory=None,
                              return_path=False, clean=False):
@@ -236,7 +239,7 @@ def iter_generic_readers(ioclass, filenames, directory=None, target=None,
         if not return_path and not return_ioobj:
             yield res
         else:
-            res = (res, )
+            res = (res,)
 
         if return_path:
             res = res + (path,)
@@ -269,7 +272,7 @@ def create_generic_writer(ioobj, target=None):
         return getattr(ioobj, 'write_' + target.lower())
 
 
-def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
+def read_generic(ioobj, target=None, lazy=False, readall=False,
                  return_reader=False):
     """
     Read the target object from a file using the given neo io object ioobj.
@@ -280,8 +283,7 @@ def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
     respectively.
     If target is a string, use 'write_'+target.
 
-    The cascade and lazy parameters are passed to the reader.  Defaults
-    are True and False, respectively.
+    The lazy parameters is passed to the reader.  Defaults is True.
 
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
@@ -290,7 +292,7 @@ def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
     object. yield obj, reader.  Default is False.
     """
     obj_reader = create_generic_reader(ioobj, target=target, readall=readall)
-    obj = obj_reader(cascade=cascade, lazy=lazy)
+    obj = obj_reader(lazy=lazy)
     if return_reader:
         return obj, obj_reader
     return obj
@@ -299,7 +301,7 @@ def read_generic(ioobj, target=None, cascade=True, lazy=False, readall=False,
 def iter_read_objects(ioclass, filenames, directory=None, target=None,
                       return_path=False, return_ioobj=False,
                       return_reader=False, clean=False, readall=False,
-                      cascade=True, lazy=False):
+                      lazy=False):
     """
     Iterate over objects read from a list of filenames.
 
@@ -327,8 +329,7 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
     If clean is True, try to delete existing versions of the file
     before creating the io object.  Default is False.
 
-    The cascade and lazy parameters are passed to the reader.  Defaults
-    are True and False, respectively.
+    The lazy parameter is passed to the reader.  Defaults is True.
 
     If readall is True, use the read_all_ method instead of the read_ method.
     Default is False.
@@ -340,11 +341,11 @@ def iter_read_objects(ioclass, filenames, directory=None, target=None,
                                                         return_ioobj=True,
                                                         clean=clean,
                                                         readall=readall):
-        obj = obj_reader(cascade=cascade, lazy=lazy)
+        obj = obj_reader(lazy=lazy)
         if not return_path and not return_ioobj and not return_reader:
             yield obj
         else:
-            obj = (obj, )
+            obj = (obj,)
 
         if return_path:
             obj = obj + (path,)

@@ -15,7 +15,7 @@ It is not only file-oriented, it can also read/write objects from a database.
 
 At the moment, there are 3 families of IO modules:
     1. for reading closed manufacturers' formats (Spike2, Plexon, AlphaOmega, BlackRock, Axon, ...)
-    2. for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, PyNN, ...)
+    2. for reading(/writing) formats from open source tools (KlustaKwik, Elan, WinEdr, WinWcp, ...)
     3. for reading/writing Neo structure in neutral formats (HDF5, .mat, ...) but with Neo structure inside (NeoHDF5, NeoMatlab, ...)
 
 Combining **1** for reading and **3** for writing is a good example of use: converting your datasets
@@ -33,7 +33,7 @@ Depending on the file format, i.e. if it is streamable or not, the whole :class:
 particular :class:`Segment` objects can be accessed individually.
 Within a :class:`Segment`, the same hierarchical organisation applies.
 A :class:`Segment` embeds several objects, such as :class:`SpikeTrain`,
-:class:`AnalogSignal`, :class:`AnaloSignalArray`, :class:`EpochArray`, :class:`EventArray`
+:class:`AnalogSignal`, :class:`IrregularlySampledSignal`, :class:`Epoch`, :class:`Event`
 (basically, all the different Neo objects).
 
 Depending on the file format, these objects can sometimes be loaded separately, without the need to load the whole file.
@@ -108,60 +108,87 @@ All IOs have a read() method that returns a list of :class:`Block` objects (repr
     >>> print bl[0].segments[0]
     neo.core.Segment
 
+    
+Read a time slice of Segment
+============================
 
-Lazy and cascade options
-========================
+Some object support ``time_slice`` arguments in ``read_segment()``.
+This is usefull to read only a subset of a dataset clipped in time.
+By default  ``time_slice=None`` meaning load eveything.
+
+This read everything::
+
+    seg = reader.load_segment(time_slice=None)
+    shape0 = seg.analogsignals[0].shape # total shape
+    shape1 = seg.spiketrains[0].shape  # total shape
+
+    
+This read only the first 5 seconds::
+
+    seg = reader.load_segment(time_slice=(0*pq.s, 5.*pq.s))
+    shape0 = seg.analogsignals[0].shape # more small shape
+    shape1 = seg.spiketrains[0].shape  # more small shape
+
+
+Lazy option and proxy object
+============================
 
 In some cases you may not want to load everything in memory because it could be too big.
-For this scenario, two options are available:
+For this scenario, some IOs implement ``lazy=True/False``. 
+Since neo 0.7, a new lazy sytem have been added for some IOs (all IOs that inherits rawio).
+To know if a class supports lazy mode use ``ClassIO.support_lazy``.
 
-  * ``lazy=True/False``. With ``lazy=True`` all arrays will have a size of zero, but all the metadata will be loaded. lazy_shape attribute is added to all object that
-    inheritate Quantitities or numpy.ndarray (AnalogSignal, AnalogSignalArray, SpikeTrain)  and to object that have array like attributes (EpochArray, EventArray)
-    In that cases, lazy_shape is a tuple that have the same shape with lazy=False.
-  * ``cascade=True/False``. With ``cascade=False`` only one object is read (and *one_to_many* and *many_to_many* relationship are not read).
+With ``lazy=True`` all data object (AnalogSignal/SpikeTrain/Event/Epoch) are replace by 
+ProxyObjects (AnalogSignalProxy/SpikeTrainProxy/EventProxy/EpochProxy).
 
-By default (if they are not specified), ``lazy=False`` and ``cascade=True``, i.e. all data is loaded.
 
-Example cascade::
+By default (if not specified), ``lazy=False``, i.e. all data is loaded.
 
-    >>> seg = reader.read_segment( cascade=True)
-    >>> print(len(seg.analogsignals))  # this is N
-    >>> seg = reader.read_segment(cascade=False)
-    >>> print(len(seg.analogsignals))  # this is zero
+Theses ProxyObjects contain metadata (name, sampling_rate, id, ...) so they can be inspected
+but they do not contain any array-like data.
+All ProxyObjects contain a ``load()`` method to postpone the real load of array like data.
 
-Example lazy::
+Further more the  ``load()`` method have a ``time_slice`` arguments to load only a slice
+from the file. So the consumption of memory can be finely controlled. 
 
-    >>> seg = reader.read_segment(lazy=False)
-    >>> print(seg.analogsignals[0].shape)  # this is N
-    >>> seg = reader.read_segment(lazy=True)
-    >>> print(seg.analogsignals[0].shape)  # this is zero, the AnalogSignal is empty
-    >>> print(seg.analogsignals[0].lazy_shape)  # this is N
 
-Some IOs support advanced forms of lazy loading, cascading or both (these features are currently limited to the HDF5 IO, which supports both forms).
+Here 2 examples that do read a dataset,  load triggers a do trigger averaging on signals.
 
-* For lazy loading, these IOs have a :meth:`load_lazy_object` method that takes a single parameter: a data object previously loaded by the same IO
-  in lazy mode. It returns the fully loaded object, without links to container objects (Segment etc.). Continuing the lazy example above::
+The first example is without lazy, so it consume more memory::
+    
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=False)
+    triggers = seg.events[0]
+    anasig = seg.analogsignals[0]  # here anasig contain the whole recording in memory
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        anasig_chunk = anasig.time_slice(t0, t1)
+        all_sig_chunks.append(anasig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
+    
+The second example use lazy so it consume fewer memory::
 
-    >>> lazy_sig = seg.analogsignals[0]  # Empty signal
-    >>> full_sig = reader.load_lazy_object(lazy_sig)
-    >>> print(lazy_sig.lazy_shape, full_sig.shape)  # Identical
-    >>> print(lazy_sig.segment)  # Has the link to the object "seg"
-    >>> print(full_sig.segment)  # Does not have the link: None
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=True)
+    triggers = seg.events[0].load(time_slice=None)  # this load all trigers in memory
+    anasigproxy = seg.analogsignals[0]  # this is a proxy
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        anasig_chunk = anasigproxy.load(time_slice=(t0, t1))  # here real data are loaded
+        all_sig_chunks.append(anasig_chunk)
+    apply_my_fancy_average(all_sig_chunks)
 
-* For lazy cascading, IOs have a :meth:`load_lazy_cascade` method. This method is not called directly when interacting with the IO, but its
-  presence can be used to check if an IO supports lazy cascading. To use lazy cascading, the cascade parameter is set to ``'lazy'``::
+In addition to ``time_slice`` AnalogSignalProxy contains ``channel_indexes`` arguments.
+This control also slicing in channel. This is usefull in case the channel count is very high.
 
-    >>> block = reader.read(cascade='lazy')
+ .. TODO: add something about magnitude mode when implemented for all objects.
 
-  You do not have to do anything else, lazy cascading is now active for the object you just loaded. You can interact with the object in the same way
-  as if it was loaded with ``cascade=True``. However, only the objects that are actually accessed are loaded as soon as they are needed::
+In this example, we read only 3 selected channels::
 
-    >>> print(block.channelindexes[0].name)  # The first ChannelIndex is loaded
-    >>> print(block.segments[0].analogsignals[1])  # The first Segment and its second AnalogSignal are loaded
-
-  Once an object has been loaded with lazy cascading, it stays in memory::
-
-    >>> print(block.segments[0].analogsignals[0])  # The first Segment is already in memory, its first AnalogSignal is loaded
+    seg = reader.read_segment(lazy=True)
+    anasig = seg.analogsignals[0].load(time_slice=None, channel_indexes=[0, 2, 18])
 
 
 .. _neo_io_API:
@@ -176,8 +203,7 @@ The :mod:`neo.io` API is designed to be simple and intuitive:
     - each IO class supports part of the :mod:`neo.core` hierachy, though not necessarily all of it (see :attr:`supported_objects`).
     - each IO class has a :meth:`read()` method that returns a list of :class:`Block` objects. If the IO only supports :class:`Segment` reading, the list will contain one block with all segments from the file.
     - each IO class that supports writing has a :meth:`write()` method that takes as a parameter a list of blocks, a single block or a single segment, depending on the IO's :attr:`writable_objects`.
-    - each IO is able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data. lazy_shape attribute is added to provide information on real size.
-    - each IO is able to do a *cascade* load: if ``True`` (default) all child objects are loaded, otherwise only the top level object is loaded.
+    - some IO are able to do a *lazy* load: all metadata (e.g. :attr:`sampling_rate`) are read, but not the actual numerical data.
     - each IO is able to save and load all required attributes (metadata) of the objects it supports.
     - each IO can freely add user-defined or manufacturer-defined metadata to the :attr:`annotations` attribute of an object.
 

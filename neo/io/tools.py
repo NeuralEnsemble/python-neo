@@ -5,7 +5,10 @@ Tools for IO coder:
     SPikeTrains
 """
 
-import collections
+try:
+    from collections.abc import MutableSequence
+except ImportError:
+    from collections import MutableSequence
 
 import numpy as np
 
@@ -16,12 +19,12 @@ from neo.core import (AnalogSignal, Block,
                       Segment, SpikeTrain, Unit)
 
 
-#def finalize_block(block):
+# def finalize_block(block):
 #    populate_RecordingChannel(block)
 #    block.create_many_to_one_relationship()
 
-    # Special case this tricky many-to-many relationship
-    # we still need links from recordingchannel to analogsignal
+# Special case this tricky many-to-many relationship
+# we still need links from recordingchannel to analogsignal
 #    for chx in block.channel_indexes:
 #        for rc in chx.recordingchannels:
 #            rc.create_many_to_one_relationship()
@@ -72,14 +75,14 @@ from neo.core import (AnalogSignal, Block,
 #         recordingchannels[ind].channel_indexes.append(chx)
 
 
-#def iteritems(D):
+# def iteritems(D):
 #    try:
 #        return D.iteritems()  # Python 2
 #    except AttributeError:
 #        return D.items()  # Python 3
 
 
-class LazyList(collections.MutableSequence):
+class LazyList(MutableSequence):
     """ An enhanced list that can load its members on demand. Behaves exactly
     like a regular list for members that are Neo objects. Each item should
     contain the information that ``load_lazy_cascade`` needs to load the
