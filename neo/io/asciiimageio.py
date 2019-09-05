@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
-import inspect
 from .baseio import BaseIO
 from neo.core import ImageSequence, Segment, Block
 import numpy as np
@@ -35,20 +33,21 @@ class AsciiImageIO(BaseIO):
     def __init__(self, file_name=None, **kwargs):
         BaseIO.__init__(self, file_name, **kwargs)
 
-    def read(self, lazy=False, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
+    def read(self, lazy=False, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
+                   spatial_scale=None, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, units=units, sampling_rate=sampling_rate,
+        return [self.read_block(lazy=lazy, nb_frame=nb_frame, nb_row=nb_row,
+                                nb_column=nb_column, units=units, sampling_rate=sampling_rate,
                                 spatial_scale=spatial_scale, **kwargs)]
 
     def read_block(self, lazy=False, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
                    spatial_scale=None, **kwargs):
 
         data = open(self.filename, 'r').read()
-
+        print("read block")
         liste_value = []
         record = []
-
         for i in range(len(data)):
 
             if data[i] == "\n" or data[i] == "\t":
@@ -68,7 +67,7 @@ class AsciiImageIO(BaseIO):
                     data[i][y].append(liste_value[nb])
                     nb += 1
 
-        print("read block")
+
         image_sequence = ImageSequence(np.array(data, dtype='float'), units=units,
                                        sampling_rate=sampling_rate, spatial_scale=spatial_scale)
         print("creating segment")

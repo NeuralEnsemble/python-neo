@@ -7,11 +7,15 @@ def read_sequence(file_name=None, path=None, nb_frame=None, nb_row=None, nb_colu
     # check parameter
     frame = inspect.currentframe()
     args, _, _, values = inspect.getargvalues(frame)
+    """
     for i in args:
         if values[i] == None:
             raise ValueError(str(i) + ' require a value')
-
-    file = open(path + '/' + file_name + '.txt', 'r')
+    """
+    if path==None:
+        file = open(file_name + '.txt', 'r')
+    else:
+        file = open(path + '/' + file_name + '.txt', 'r')
     data = file.read()
 
     liste_value = []
@@ -25,8 +29,7 @@ def read_sequence(file_name=None, path=None, nb_frame=None, nb_row=None, nb_colu
         else:
             record.append(data[i])
 
-    for i in range(1, len(liste_value)):
-        liste_value[i] = float(liste_value[i])
+
 
     # number of frame and resolution of image need to be told in the metadata in order to
     # be extracted properly
