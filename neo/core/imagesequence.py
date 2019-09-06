@@ -34,6 +34,8 @@ class ImageSequence(BaseSignal):
 
         if spatial_scale is None:
             raise ValueError('spatial_scale is required')
+        if units == None:
+            raise ValueError("units is required")
 
         image_data = np.stack(image_data)
 

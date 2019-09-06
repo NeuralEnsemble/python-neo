@@ -247,6 +247,7 @@ class BlkIO(BaseIO):
             image_sequence = ImageSequence(data[0][stim], units=units, sampling_rate=sampling_rate, spatial_scale=spatial_scale)
             segment = Segment(file_origin=self.filename, description=("stim nb:"+str(stim)))
             segment.imagesequences = [image_sequence]
+            segment.block = block
             block.segments.append(segment)
 
         return block
