@@ -67,7 +67,6 @@ class AsciiImageIO(BaseIO):
                     data[i][y].append(liste_value[nb])
                     nb += 1
 
-
         image_sequence = ImageSequence(np.array(data, dtype='float'), units=units,
                                        sampling_rate=sampling_rate, spatial_scale=spatial_scale)
         print("creating segment")

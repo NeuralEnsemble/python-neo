@@ -251,5 +251,3 @@ class BlkIO(BaseIO):
             block.segments.append(segment)
 
         return block
-
-

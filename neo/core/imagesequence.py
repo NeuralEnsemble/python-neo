@@ -1,7 +1,26 @@
 # -*- coding: utf-8 -*-
+"""
+This module implements :class:`ImageSequence`, a 3D array.
+
+:class:`ImageSequence` inherits from :class:`basesignal.BaseSignal` which
+derives from :class:`BaseNeo`, and from :class:`quantites.Quantity`which
+in turn inherits from :class:`numpy.array`.
+
+Inheritance from :class:`numpy.array` is explained here:
+http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
+
+In brief:
+* Initialization of a new object from constructor happens in :meth:`__new__`.
+This is where user-specified attributes are set.
+
+* :meth:`__array_finalize__` is called for all new objects, including those
+created by slicing. This is where attributes are copied over from
+the old object.
+
+"""
+
 from neo.core.regionofinterest import RegionOfInterest
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
-from neo.core.dataobject import DataObject
 
 import quantities as pq
 import numpy as np
@@ -10,6 +29,56 @@ from neo.core.basesignal import BaseSignal
 
 
 class ImageSequence(BaseSignal):
+    """
+    Array of three dimension organize as [frame][row][column].
+
+    Inherits from :class:`quantities.Quantity`, which in turn inherits from
+    :class:`numpy.ndarray`.
+
+    *usage*::
+
+        >>> from neo.core import ImageSequence
+        >>> import quantities as pq
+        >>>
+        >>> img_sequence_array = [[[column for column in range(20)]for row in range(20)]for frame in range(10)]
+        >>> image_sequence = ImageSequence(img_sequence_array, units='V',
+        ...                                sampling_rate=1*pq.Hz, spatial_scale=1*pq.micrometer)
+        >>> image_sequence.all()
+        ImageSequence
+
+    *Required attributes/properties*:
+        :image_data: (numpy array 3D, or list[frame][row][column]
+            The data itself
+        :units: (quantity units)
+        :sampling_rate: *or* **sampling_period** (quantity scalar) Number of
+                                                samples per unit time or
+                                                interval beween to samples.
+                                                If both are specified, they are
+                                                checked for consistency.
+        :spatial_scale: (quantity scalar) size for a pixel.
+
+    *Recommended attributes/properties*:
+        :name: (str) A label for the dataset.
+        :description: (str) Text description.
+        :file_origin: (str) Filesystem path or URL of the original data file.
+
+    *Optional attributes/properties*:
+        :dtype: (numpy dtype or str) Override the dtype of the signal array.
+        :copy: (bool) True by default.
+        :array_annotations: (dict) Dict mapping strings to numpy
+        arrays containing annotations for all data points
+
+    Note: Any other additional arguments are assumed to be user-specific
+    metadata and stored in :attr:`annotations`.
+
+    *Properties available on this object*:
+        :sampling_rate: (quantity scalar) Number of samples per unit time.
+            (1/:attr:`sampling_period`)
+        :sampling_period: (quantity scalar) Interval between two samples.
+            (1/:attr:`quantity scalar`)
+        :spatial_scales: size of a pixel
+        
+     """
     # format ImageSequence subclass dataobject
     # should be a 3d numerical array
     # format data[image_index][y][x]
@@ -32,6 +101,16 @@ class ImageSequence(BaseSignal):
                 sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
                 **annotations):
 
+        """
+        Constructs new :class:`ImageSequence` from data.
+
+        This is called whenever a new class:`ImageSequence` is created from
+        the constructor, but not when slicing.
+
+        __array_finalize__ is called on the new object.
+
+        """
+
         if spatial_scale is None:
             raise ValueError('spatial_scale is required')
         if units == None:
@@ -50,7 +129,6 @@ class ImageSequence(BaseSignal):
 
         return obj
 
-
     def __array_finalize__spec(self, obj):
 
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
@@ -61,11 +139,12 @@ class ImageSequence(BaseSignal):
 
     def signal_from_region(self, *region):
 
+
         if len(region) == 0:
             raise ValueError('no region of interest have been given')
 
         region_pixel = []
-        for i,b in enumerate(region):
+        for i, b in enumerate(region):
             r = region[i].return_list_pixel()
             if r == []:
                 raise ValueError('region '+str(i)+'is empty')

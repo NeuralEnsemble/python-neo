@@ -22,6 +22,7 @@ Classes:
 .. autoclass:: Epoch
 
 .. autoclass:: SpikeTrain
+.. autoclass:: ImageSequence
 
 """
 
@@ -39,10 +40,10 @@ from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core.event import Event
 from neo.core.epoch import Epoch
 
+from neo.core.spiketrain import SpikeTrain
+
 from neo.core.imagesequence import ImageSequence
 from neo.core.regionofinterest import RectangularRegionOfInterest, CircularRegionOfInterest, PolygonRegionOfInterest
-
-from neo.core.spiketrain import SpikeTrain
 
 # Block should always be first in this list
 objectlist = [Block, Segment, ChannelIndex,

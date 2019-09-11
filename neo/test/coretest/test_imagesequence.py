@@ -3,6 +3,7 @@ from neo.core import ImageSequence
 from neo.core.regionofinterest import CircularRegionOfInterest, RectangularRegionOfInterest, PolygonRegionOfInterest
 import quantities as pq
 import numpy as np
+from neo.core import Block,Segment
 
 
 class TestImageSequence(unittest.TestCase):
@@ -34,7 +35,7 @@ class TestImageSequence(unittest.TestCase):
             ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz)
 
     def test_units(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             ImageSequence(self.data, sampling_rate=500 * pq.Hz, spatial_scale='m')
 
     # test method will be remove are rename
@@ -69,7 +70,13 @@ class TestMethodImageSequence(unittest.TestCase):
         self.assertIsInstance(l, list)
         for i in range(len(l)):
             self.assertIsInstance(l[i], object)
+        with self.assertRaises(ValueError):
+            ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region(RectangularRegionOfInterest(1, 1, 1, 1))
+        with self.assertRaises(ValueError):
+            ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region()
 
+        m = ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').view()
+        print(m.sampling_rate)
 
 if __name__ == "__main__":
     unittest.main()

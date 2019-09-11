@@ -54,7 +54,6 @@ class TiffIO(BaseIO):
             return sorted(l, key=alphanum_key)
 
         # find all the images in the given directory
-        # (done) TODO: only load files with the extension .tif or .tiff (see the glob module)
         file_name_list = []
         # name of extensions to track
         types = ["*.tif", "*.tiff"]
@@ -69,7 +68,12 @@ class TiffIO(BaseIO):
         list_data_image = []
         for file_name in file_name_list:
             list_data_image.append(np.array(Image.open(self.filename + "/" + file_name), dtype=np.float))
-        # todo: find out if this works for colour TIFFs, not just monochrome
+        list_data_image = np.array(list_data_image)
+        if len(list_data_image.shape) == 4:
+            list_data_image = []
+            for file_name in file_name_list:
+                list_data_image.append(np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float))
+
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),
                                        units=units,
