@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Class for reading output files from NEST simulations
+using NEST versions 2.x
 ( http://www.nest-simulator.org/ ).
 Tested with NEST2.10.0
 
