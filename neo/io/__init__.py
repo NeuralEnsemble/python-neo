@@ -133,7 +133,11 @@ Classes:
 
     .. autoattribute:: extensions
 
-.. autoclass:: neo.io.NestIO
+.. autoclass:: neo.io.Nest2IO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.Nest3IO
 
     .. autoattribute:: extensions
 
@@ -243,7 +247,8 @@ from neo.io.kwikio import KwikIO
 from neo.io.micromedio import MicromedIO
 from neo.io.hdf5io import NeoHdf5IO
 from neo.io.neomatlabio import NeoMatlabIO
-from neo.io.nestio import NestIO
+from neo.io.nest2io import Nest2IO
+from neo.io.nest3io import Nest3IO
 from neo.io.neuralynxio import NeuralynxIO
 from neo.io.neuralynxio_v1 import NeuralynxIO as OldNeuralynxIO
 from neo.io.neuroexplorerio import NeuroExplorerIO
@@ -285,7 +290,8 @@ iolist = [
     NixIO,  # place NixIO before NeoHdf5IO to make it the default for .h5 files
     NeoHdf5IO,
     NeoMatlabIO,
-    NestIO,
+    Nest2IO,
+    Nest3IO,
     NeuralynxIO,
     NeuroExplorerIO,
     NeuroScopeIO,
