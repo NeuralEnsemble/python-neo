@@ -31,7 +31,7 @@ value_type_dict = {'V': pq.mV,
                    'no type': pq.dimensionless}
 
 
-class NestIO(BaseIO):
+class Nest2IO(BaseIO):
     """
     Class for reading NEST output files. GDF files for the spike data and DAT
     files for analog signals are possible.

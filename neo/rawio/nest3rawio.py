@@ -82,13 +82,11 @@ class Nest3RawIO(BaseRawIO):
 
         # block annotations: global information on simulation
         block_ann = { 'nest_version': self.reader.nest_version,
-                      'sionlib_rec_backend_version' : self.reader.sionlib_rec_backend_version }
+                      'sionlib_rec_backend_version' : self.reader.sionlib_rec_backend_version,
+                      'sim_resolution': self.reader.resolution * 1e-3}  # in s
 
         # segment annotations: global information on simulation
-        seg_ann = { 'sim_resolution' : self.reader.resolution * 1e-3, # in s
-                    'sim_t_start' : self.reader.t_start * 1e-3, # in s
-                    'sim_t_stop' : self.reader.t_end * 1e-3, # in s
-                    'sim_unit' : 'seconds' }
+        seg_ann = {}
 
         # loop through data
         unit_channels = []
@@ -98,49 +96,51 @@ class Nest3RawIO(BaseRawIO):
             for nid in neuron_ids:
 
                 # spike data as units
-                if rec_dev.name == u'spike_detector':
-                    unit_name = 'unit{}'.format(c)
-                    unit_id = '#{}'.format(c)
-                    wf_units = 'uV'
-                    wf_gain = 1000. / 2 ** 16
-                    wf_offset = 0.
-                    wf_left_sweep = 20
-                    wf_sampling_rate = 10000.
+                if rec_dev.name == b'spike_detector':
+                    unit_name = 'sd{}unit{}'.format(rec_dev.gid, nid)
+                    unit_id = '{}#{}'.format(rec_dev.gid, nid)
+                    wf_units = ''
+                    wf_gain = 0.0
+                    wf_offset = 0.0
+                    wf_left_sweep = 0
+                    wf_sampling_rate = 0.0
                     unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
                 # analog data as signals
-                elif rec_dev.name == u'multimeter':
-                    ch_name
-                    chan_id
-                    sr
-                    dtype
-                    units
-                    gain
-                    offset
-                    group_id
-                    sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+                # elif rec_dev.name == b'multimeter':
+                #     ch_name =
+                #     chan_id
+                #     sr
+                #     dtype
+                #     units
+                #     gain
+                #     offset
+                #     group_id
+                #     sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
 
 
-            
 
 
-            
+
+
             #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin, i.rows, i.dtype, i.t_start, i.t_stop
 
+        unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        self.header['unit_channels'] = unit_channels
 
-            
+        # # signals and units are not global but specific to to the recording devices
+        self.header['signal_channels'] = np.array([], dtype=_signal_channel_dtype)
+        # self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
 
-
-
+        # # no events or epochs
+        self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
 
 
         # minimal annotations from BaseRawIO
         self._generate_minimal_annotations()
 
-
-
-        
+        self.raw_annotations['blocks'][0].update(block_ann)
 
         # # global information on simulation
         # self.nest_version =  self.reader.nest_version
@@ -159,19 +159,17 @@ class Nest3RawIO(BaseRawIO):
         #     self.header['nb_segment'].append(
         #         np.max([1, rec_dev.double_n_val + rec_dev.long_n_val]))
 
-        # # signals and units are not global but specific to to the recording devices
-        # self.header['signal_channels'] = np.array([], dtype=_signal_channel_dtype)
-        # self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
 
-        # # no events or epochs
-        # self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
 
-        # # minimal annotations from BaseRawIO
+        # minimal annotations from BaseRawIO
         # self._generate_minimal_annotations()
+
+        # bl_ann = self.raw_annotations['blocks'][block_index]
 
         # # annotate blocks with information on the recording device
         # for block_index,rec_dev in enumerate(self.reader):
         #     ba = self.raw_annotations['blocks'][block_index]
+
         #     ba['gid'] = rec_dev.gid
         #     ba['rec_dev'] = rec_dev.name
         #     ba['label'] = rec_dev.label
@@ -203,10 +201,11 @@ class Nest3RawIO(BaseRawIO):
         # this must return an float scale in second
         # this t_start will be shared by all object in the segment
         # except AnalogSignal
-        gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
-        t_start_rec_dev = self.reader[gid_rec_dev].t_start * self.sim_resolution
-        t_start = np.max([self.sim_t_start, t_start_rec_dev])
-        return t_start
+        # gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
+        # t_start_rec_dev = self.reader[gid_rec_dev].t_start * self.sim_resolution
+        # t_start = np.max([self.sim_t_start, t_start_rec_dev])
+        # return t_start
+        return  self.reader.t_start * 1e-3
 
 
     def _segment_t_stop(self, block_index, seg_index):
@@ -214,10 +213,12 @@ class Nest3RawIO(BaseRawIO):
         # INDEPENDENT OF SEG_INDEX
 
         # this must return an float scale in second
-        gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
-        t_stop_rec_dev = self.reader[gid_rec_dev].t_stop * self.sim_resolution
-        t_stop = np.min([self.sim_t_stop, t_stop_rec_dev])
-        return t_stop
+        # gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
+        # t_stop_rec_dev = self.reader[gid_rec_dev].t_stop * self.sim_resolution
+        # t_stop = np.min([self.sim_t_stop, t_stop_rec_dev])
+        # return t_stop
+
+        return  self.reader.t_end * 1e-3
 
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
@@ -246,8 +247,9 @@ class Nest3RawIO(BaseRawIO):
 
         # Here this is the same.
         # this is not always the case
-        return self._segment_t_start(block_index, seg_index)
-    
+        return 0
+        # return self._segment_t_start(block_index, seg_index)
+
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
         # TODO
@@ -255,7 +257,7 @@ class Nest3RawIO(BaseRawIO):
         # i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel) or a list or numpy.array
         # This must return a numpy array 2D (even with one channel).
-        # This must return the orignal dtype. No conversion here.
+        # This must return the original dtype. No conversion here.
         # This must as fast as possible.
         # Everything that can be done in _parse_header() must not be here.
 
@@ -281,41 +283,51 @@ class Nest3RawIO(BaseRawIO):
 
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        # DONE
-
         # Must return the nb of spike for given (block_index, seg_index, unit_index)
+        sd_id, nid = self.header['unit_channels'][unit_index][1].split('#')
+        sd_id, nid = int(sd_id), int(nid)
 
-        rec_dev = self.raw_annotations['blocks'][block_index]['rec_dev']
-        assert rec_dev == b'spike_detector', \
-            'This block does not contain data from a spike_detector!'
+        assert self.reader[sd_id].name == b'spike_detector', \
+            'This unit was not recorded by a spike_detector!'
 
-        gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
-        gids_nrns = np.asarray(self.reader[gid_rec_dev])['f0']
+        data = np.asarray(self.reader[sd_id])
+        return np.sum(data['f0'] == nid)
 
-        nb_spikes = sum(gids_nrns == unit_index)
-        return nb_spikes
 
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # DONE
-        # ALREADY IN S
+        sim_resolution = self.raw_annotations['blocks'][block_index]['sim_resolution']
+        # extract spike detector id and n....
+        sd_id, nid = self.header['unit_channels'][unit_index][1].split('#')
+        sd_id, nid = int(sd_id), int(nid)
 
-        # the same clip t_start/t_start must be used in _spike_raw_waveforms()
+        assert self.reader[sd_id].name == b'spike_detector', \
+            'This unit was not recorded by a spike_detector!'
 
+        data = np.asarray(self.reader[sd_id])
+        idx = np.argwhere(data['f0'] == nid)
 
-        rec_dev = self.raw_annotations['blocks'][block_index]['rec_dev']
-        assert rec_dev == b'spike_detector', \
-            'This block does not contain data from a spike_detector!'
+        # TODO: Check if first and last possible spike is within the limits below
+        sd_t_start = self.reader[sd_id].t_start * sim_resolution
+        sd_t_stop = self.reader[sd_id].t_stop * sim_resolution
 
-        gid_rec_dev = self.raw_annotations['blocks'][block_index]['gid']
-        data = np.asarray(self.reader[gid_rec_dev])
+        spike_start = max(sd_t_start, self.segment_t_start(block_index, seg_index))
+        spike_stop = min(sd_t_stop, self.segment_t_stop(block_index, seg_index))
 
-        idx = np.argwhere(data['f0'] == unit_index)
+        if t_start is None:
+            t_start = spike_start
+        if t_stop is None:
+            t_stop = spike_stop
 
-        # TODO: IS THIS CORRECT?
-        # step * resolution + offset, result in s
-        all_spike_timestamps = data['f1'][idx] * self.sim_resolution + data['f2'][idx] * 1e-3
+        assert sd_t_start <= t_start, 't_start ({}) must be larger than or equal to beginning of spike recording ({}).' \
+                                      ''.format(t_start,spike_start)
+        assert sd_t_stop >= t_stop, 't_stop ({}) must be smaller than or equal to end of spike recording ({}).' \
+                                    ''.format(t_stop, spike_stop)
 
+        # # TODO: IS THIS CORRECT?
+        # # step * resolution + offset, result in s
+        all_spike_timestamps = data['f1'][idx] * sim_resolution + data['f2'][idx] * 1e-3
+        #
         mask = (all_spike_timestamps >= t_start) & (all_spike_timestamps <= t_stop)
         spike_timestamps = all_spike_timestamps[mask]
 
@@ -323,36 +335,12 @@ class Nest3RawIO(BaseRawIO):
 
 
     def _rescale_spike_timestamp(self, spike_timestamps, dtype):
-        # DONE
         # SPIKE_TIMESTAMPS ARE ALREADY IN S BECAUSE OF STEP AND OFFSET, THIS CHANGES ONLY DTYPE
-
         spike_times = spike_timestamps.astype(dtype)
         return spike_times
 
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index, t_start, t_stop):
-        # this must return a 3D numpy array (nb_spike, nb_channel, nb_sample)
-        # in the original dtype
-        # this must be as fast as possible.
-        # the same clip t_start/t_start must be used in _spike_timestamps()
-
-        # If there there is no waveform supported in the
-        # IO them _spike_raw_waveforms must return None
-
-        # In our IO waveforms come from all channels
-        # they are int16
-        # convertion to real units is done with self.header['unit_channels']
-        # Here, we have a realistic case: all waveforms are only noise.
-        # it is not always the case
-        # we 20 spikes with a sweep of 50 (5ms)
-
-        # trick to get how many spike in the slice
-        ts = self._get_spike_timestamps(block_index, seg_index, unit_index, t_start, t_stop)
-        nb_spike = ts.size
-
-        np.random.seed(2205)  # a magic number (my birthday)
-        waveforms = np.random.randint(low=-2**4, high=2**4, size=nb_spike * 50, dtype='int16')
-        waveforms = waveforms.reshape(nb_spike, 1, 50)
         return None
 
 
@@ -361,7 +349,6 @@ class Nest3RawIO(BaseRawIO):
 
 
     def _get_event_timestamps(self, block_index, seg_index, event_channel_index, t_start, t_stop):
-        #return timestamp, durations, labels
         return None
 
 
