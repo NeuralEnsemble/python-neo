@@ -631,8 +631,11 @@ class SpikeTrain(DataObject):
         compatible, an Exception is raised.
         '''
         for other in others:
-            if not isinstance(other, (SpikeTrain, neo.io.proxyobjects.SpikeTrainProxy)):
-                raise MergeError("Cannot merge, only SpikeTrain and SpikeTrainProxy objects"
+            if isinstance(other, neo.io.proxyobjects.SpikeTrainProxy):
+                raise MergeError("Cannot merge, SpikeTrainProxy objects cannot be merged"
+                                 "into regular SpikeTrain objects, please load them first.")
+            elif not isinstance(other, SpikeTrain):
+                raise MergeError("Cannot merge, only SpikeTrain"
                                  "can be merged into a SpikeTrain.")
             if self.sampling_rate != other.sampling_rate:
                 raise MergeError("Cannot merge, different sampling rates")
@@ -647,10 +650,7 @@ class SpikeTrain(DataObject):
                                  " different segments.")
 
         all_spiketrains = [self]
-        all_spiketrains.extend([st.rescale(self.units) if type(st) is SpikeTrain else
-                                st.load(load_waveforms=self.waveforms
-                                                       is not None).rescale(self.units)
-                                for st in others])
+        all_spiketrains.extend([st.rescale(self.units) for st in others])
 
         wfs = [st.waveforms is not None for st in all_spiketrains]
         if any(wfs) and not all(wfs):

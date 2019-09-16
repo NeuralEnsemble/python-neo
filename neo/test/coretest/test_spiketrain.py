@@ -1340,34 +1340,6 @@ class TestMerge(unittest.TestCase):
         self.assertEqual(merge5.description, 'merge(desc3; desc1; desc2)')
         self.assertEqual(merge5.file_origin, 'merge(file3; file1; file2)')
 
-    def test_merge_with_proxy(self):
-        self.train1.waveforms = None
-        self.train2.waveforms = None
-
-        reader = ExampleRawIO(filename='my_filename.fake')
-        reader.parse_header()
-
-        proxy_sptr = SpikeTrainProxy(rawio=reader, unit_index=0,
-                                     block_index=0, seg_index=0)
-
-        # change all attributes that have to be the same in order to merge the spiketrains
-        proxy_sptr.segment = self.train1.segment
-        proxy_sptr.sampling_rate = self.train1.sampling_rate
-        proxy_sptr.left_sweep = self.train1.left_sweep
-
-        self.train1.t_stop = proxy_sptr.t_stop
-        self.train2.t_stop = proxy_sptr.t_stop
-
-        loaded_sptr = proxy_sptr.load(load_waveforms=False)
-        loaded_sptr.segment = self.train1.segment
-
-        merge_proxy = self.train1.merge(self.train2, proxy_sptr)
-        merge_loaded = self.train1.merge(self.train2, loaded_sptr)
-
-        assert_neo_object_is_compliant(merge_proxy)
-
-        assert_same_attributes(merge_proxy, merge_loaded)
-
     def test_sampling_rate(self):
         # Array annotations merge warning was already tested, can be ignored now
         with warnings.catch_warnings(record=True) as w:
