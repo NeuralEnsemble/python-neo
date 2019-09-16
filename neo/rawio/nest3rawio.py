@@ -108,23 +108,20 @@ class Nest3RawIO(BaseRawIO):
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
                 # analog data as signals
-                # elif rec_dev.name == b'multimeter':
-                #     ch_name =
-                #     chan_id
-                #     sr
-                #     dtype
-                #     units
-                #     gain
-                #     offset
-                #     group_id
-                #     sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+                elif rec_dev.name == b'multimeter':
+                    for obs in rec_dev.double_observables + rec_dev.long_observables:
+                        ch_name = 'sd{}unit{}'.format(rec_dev.gid, nid)
+                        chan_id = '{}#{}'.format(rec_dev.gid, nid)
+                        sr = 0
+                        dtype = float if obs in rec_dev.double_observables else int # or rec_dev.dtype
+                        units = 0
+                        gain = 0
+                        offset = 0
+                        group_id = 0
+                        sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
 
-
-
-
-
-
-            #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin, i.rows, i.dtype, i.t_start, i.t_stop
+            #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin,
+            # i.rows, i.dtype, i.t_start, i.t_stop
 
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         self.header['unit_channels'] = unit_channels
