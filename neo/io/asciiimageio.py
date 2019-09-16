@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 from .baseio import BaseIO
 from neo.core import ImageSequence, Segment, Block
 import numpy as np
@@ -7,7 +8,24 @@ import numpy as np
 
 class AsciiImageIO(BaseIO):
     """
-    Neo IO module for optical imaging data stored as a TXT file of images.
+    IO class for reading ImageSequence in a text file
+
+    *Usage*:
+        >>> from neo import io
+        >>> import quantities as pq
+        >>> r = io.AsciiImageIO(file_name='File_asciiimage_1.txt',nb_frame=511, nb_row=100,
+        ...                     nb_column=100,units='mm', sampling_rate=1.0*pq.Hz,
+        ...                     spatial_scale=1.0*pq.mm)
+        >>> block = r.read_block()
+        read block
+        creating segment
+        returning block
+        >>> block
+        Block with 1 segments
+        file_origin: 'File_asciiimage_1.txt
+        # segments (N=1)
+        0: Segment with 1 imagesequences # analogsignals (N=0)
+
     """
 
     name = 'AsciiImage IO'
@@ -30,19 +48,25 @@ class AsciiImageIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, file_name=None, **kwargs):
-        BaseIO.__init__(self, file_name, **kwargs)
+    def __init__(self, file_name=None, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
+                 spatial_scale=None, **kwargs):
 
-    def read(self, lazy=False, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
-                   spatial_scale=None, **kwargs):
+        BaseIO.__init__(self, file_name, **kwargs)
+        self.nb_frame = nb_frame
+        self.nb_row = nb_row
+        self.nb_column = nb_column
+        self.units = units
+        self.sampling_rate = sampling_rate
+        self.spatial_scale = spatial_scale
+
+    def read(self, lazy=False, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, nb_frame=nb_frame, nb_row=nb_row,
-                                nb_column=nb_column, units=units, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale, **kwargs)]
+        return [self.read_block(lazy=lazy, nb_frame=self.nb_frame, nb_row=self.nb_row,
+                                nb_column=self.nb_column, units=self.units, sampling_rate=self.sampling_rate,
+                                spatial_scale=self.spatial_scale, **kwargs)]
 
-    def read_block(self, lazy=False, nb_frame=None, nb_row=None, nb_column=None, units=None, sampling_rate=None,
-                   spatial_scale=None, **kwargs):
+    def read_block(self, lazy=False, **kwargs):
 
         data = open(self.filename, 'r').read()
         print("read block")
@@ -59,16 +83,16 @@ class AsciiImageIO(BaseIO):
 
         data = []
         nb = 0
-        for i in range(nb_frame):
+        for i in range(self.nb_frame):
             data.append([])
-            for y in range(nb_row):
+            for y in range(self.nb_row):
                 data[i].append([])
-                for x in range(nb_column):
+                for x in range(self.nb_column):
                     data[i][y].append(liste_value[nb])
                     nb += 1
 
-        image_sequence = ImageSequence(np.array(data, dtype='float'), units=units,
-                                       sampling_rate=sampling_rate, spatial_scale=spatial_scale)
+        image_sequence = ImageSequence(np.array(data, dtype='float'), units=self.units,
+                                       sampling_rate=self.sampling_rate, spatial_scale=self.spatial_scale)
         print("creating segment")
         segment = Segment(file_origin=self.filename)
         segment.imagesequences = [image_sequence]

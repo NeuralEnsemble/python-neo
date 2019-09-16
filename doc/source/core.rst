@@ -24,7 +24,7 @@ associated metadata (units, sampling frequency, etc.).
   * :py:class:`SpikeTrain`: A set of action potentials (spikes) emitted by the same unit in a period of time (with optional waveforms).
   * :py:class:`Event`: An array of time points representing one or more events in the data.
   * :py:class:`Epoch`: An array of time intervals representing one or more periods of time in the data.
-  * :py:class:`ImageSequence`: A 3 dimension array representing multiple images.
+  * :py:class:`ImageSequence`: A three dimension array representing multiple images.
 
 Container objects
 -----------------

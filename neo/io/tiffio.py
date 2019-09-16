@@ -1,7 +1,6 @@
  # -*- coding: utf-8 -*-
 """
 Neo IO module for optical imaging data stored as a folder of TIFF images.
-
 """
 
 import os
@@ -12,9 +11,40 @@ from .baseio import BaseIO
 import glob
 import re
 
+
 class TiffIO(BaseIO):
     """
     Neo IO module for optical imaging data stored as a folder of TIFF images.
+
+    *Usage*:
+        >>> from neo import io
+        >>> import quantities as pq
+        >>> r = io.TiffIO("dir_tiff",spatial_scale=1.0*pq.mm, units='V',
+        ...               sampling_rate=1.0*pq.Hz)
+        >>> block = r.read_block()
+        read block
+        creating segment
+        returning block
+        >>> block
+        Block with 1 segments
+        file_origin: 'test'
+        # segments (N=1)
+        0: Segment with 1 imagesequences
+            annotations: {'tiff_file_names': ['file_tif_1_.tiff',
+                'file_tif_2.tiff',
+                'file_tif_3.tiff',
+                'file_tif_4.tiff',
+                'file_tif_5.tiff',
+                'file_tif_6.tiff',
+                'file_tif_7.tiff',
+                'file_tif_8.tiff',
+                'file_tif_9.tiff',
+                'file_tif_10.tiff',
+                'file_tif_11.tiff',
+                'file_tif_12.tiff',
+                'file_tif_13.tiff',
+                'file_tif_14.tiff']}
+            # analogsignals (N=0)
     """
     name = 'TIFF IO'
     description = "Neo IO module for optical imaging data stored as a folder of TIFF images."
@@ -36,17 +66,20 @@ class TiffIO(BaseIO):
 
     mode = 'dir'
 
-    def __init__(self, directory_path=None, **kwargs):
+    def __init__(self, directory_path=None,units=None, sampling_rate=None,
+                   spatial_scale=None, **kwargs):
         BaseIO.__init__(self, directory_path, **kwargs)
+        self.units = units
+        self.sampling_rate = sampling_rate
+        self.spatial_scale = spatial_scale
 
-    def read(self, lazy=False, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
+    def read(self, lazy=False, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, units=units, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale, **kwargs)]
+        return [self.read_block(lazy=lazy, units=self.units, sampling_rate=self.sampling_rate,
+                                spatial_scale=self.spatial_scale, **kwargs)]
 
-    def read_block(self, lazy=False, units=None, sampling_rate=None,
-                   spatial_scale=None, **kwargs):
+    def read_block(self, lazy=False, **kwargs):
         # to sort file
         def natural_sort(l):
             convert = lambda text: int(text) if text.isdigit() else text.lower()
@@ -76,9 +109,9 @@ class TiffIO(BaseIO):
 
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),
-                                       units=units,
-                                       sampling_rate=sampling_rate,
-                                       spatial_scale=spatial_scale)
+                                       units=self.units,
+                                       sampling_rate=self.sampling_rate,
+                                       spatial_scale=self.spatial_scale)
         print("creating segment")
         segment = Segment(file_origin=self.filename)
         segment.annotate(tiff_file_names=file_name_list)

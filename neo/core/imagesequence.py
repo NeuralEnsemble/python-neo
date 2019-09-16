@@ -16,7 +16,6 @@ This is where user-specified attributes are set.
 * :meth:`__array_finalize__` is called for all new objects, including those
 created by slicing. This is where attributes are copied over from
 the old object.
-
 """
 
 from neo.core.regionofinterest import RegionOfInterest
@@ -26,6 +25,7 @@ import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo
 from neo.core.basesignal import BaseSignal
+from neo.core.dataobject import DataObject
 
 
 class ImageSequence(BaseSignal):
@@ -40,14 +40,19 @@ class ImageSequence(BaseSignal):
         >>> from neo.core import ImageSequence
         >>> import quantities as pq
         >>>
-        >>> img_sequence_array = [[[column for column in range(20)]for row in range(20)]for frame in range(10)]
+        >>> img_sequence_array = [[[column for column in range(20)]for row in range(20)]
+        ...                         for frame in range(10)]
         >>> image_sequence = ImageSequence(img_sequence_array, units='V',
         ...                                sampling_rate=1*pq.Hz, spatial_scale=1*pq.micrometer)
-        >>> image_sequence.all()
-        ImageSequence
+        >>> image_sequence
+        ImageSequence 10 frame with 20 px of height and 20  px of width; units V; datatype int64
+        sampling rate: 1.0
+        spatial_scale: 1.0
+        >>> image_sequence.spatial_scale
+        array(1.) * um
 
     *Required attributes/properties*:
-        :image_data: (numpy array 3D, or list[frame][row][column]
+        :image_data: (three dimension numpy array, or a three dimension list)
             The data itself
         :units: (quantity units)
         :sampling_rate: *or* **sampling_period** (quantity scalar) Number of
@@ -77,18 +82,7 @@ class ImageSequence(BaseSignal):
         :sampling_period: (quantity scalar) Interval between two samples.
             (1/:attr:`quantity scalar`)
         :spatial_scales: size of a pixel
-        
      """
-    # format ImageSequence subclass dataobject
-    # should be a 3d numerical array
-    # format data[image_index][y][x]
-    # meta data sampling interval/frame rate , spatia scale
-    #
-    # should contain a method  which take one or more regionofinterest as argument
-    # and returns an analogicsignal
-    #
-    # exemples c2_avg  1 px =25ym  1 frame 2ms
-
     _single_parent_objects = ('Segment')
     _single_parent_attrs = ('segment')
     _quantity_attr = 'image_data'
@@ -100,7 +94,6 @@ class ImageSequence(BaseSignal):
     def __new__(cls, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
                 sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
                 **annotations):
-
         """
         Constructs new :class:`ImageSequence` from data.
 
@@ -108,16 +101,11 @@ class ImageSequence(BaseSignal):
         the constructor, but not when slicing.
 
         __array_finalize__ is called on the new object.
-
         """
-
         if spatial_scale is None:
             raise ValueError('spatial_scale is required')
-        if units == None:
-            raise ValueError("units is required")
 
         image_data = np.stack(image_data)
-
         if len(image_data.shape) != 3:
             raise ValueError('list doesn\'t have the good number of dimension')
 
@@ -129,6 +117,16 @@ class ImageSequence(BaseSignal):
 
         return obj
 
+    def __init__(self, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
+                 sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
+                 **annotations):
+        '''
+               Initializes a newly constructed :class:`ImageSequence` instance.
+        '''
+
+        DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
+                            array_annotations=array_annotations, **annotations)
+
     def __array_finalize__spec(self, obj):
 
         self.sampling_rate = getattr(obj, 'sampling_rate', None)
@@ -139,14 +137,13 @@ class ImageSequence(BaseSignal):
 
     def signal_from_region(self, *region):
 
-
         if len(region) == 0:
             raise ValueError('no region of interest have been given')
 
         region_pixel = []
         for i, b in enumerate(region):
             r = region[i].return_list_pixel()
-            if r == []:
+            if not r:
                 raise ValueError('region '+str(i)+'is empty')
             else:
                 region_pixel.append(r)
@@ -164,3 +161,25 @@ class ImageSequence(BaseSignal):
             analogsignal_list.append(AnalogSignal(data, units=self.units, sampling_rate=self.sampling_rate))
 
         return analogsignal_list
+
+    def _repr_pretty_(self, pp, cycle):
+        '''
+               Handle pretty-printing the :class:`ImageSequence`.
+        '''
+        pp.text("{cls} {frame} frame with {width} px of width and {height} px of height; "
+                "units {units}; datatype {dtype} ".format(cls=self.__class__.__name__,
+                                                          frame=self.shape[0],
+                                                          height=self.shape[1],
+                                                          width=self.shape[2],
+                                                          units=self.units.dimensionality.string,
+                                                          dtype=self.dtype))
+
+        def _pp(line):
+            pp.breakable()
+            with pp.group(indent=1):
+                pp.text(line)
+
+        for line in ["sampling rate: {0}".format(self.sampling_rate),
+                     "spatial_scale: {0}".format(self.spatial_scale)]:
+            _pp(line)
+

@@ -13,6 +13,27 @@ class BlkIO(BaseIO):
 
     """
     Neo IO module for optical imaging data stored as BLK file
+
+    *Usage*:
+        >>> from neo import io
+        >>> import quantities as pq
+        >>> r = io.BlkIO("file_blk_1.BLK",units='V',sampling_rate=1.0*pq.Hz,
+        ...              spatial_scale=1.0*pq.Hz)
+        >>> block = r.read_block()
+        reading the header
+        reading block
+        returning block
+        >>> block
+        Block with 6 segments
+        file_origin: 'file_blk_1.BLK'
+        # segments (N=6)
+        0 : Segment with 1 imagesequences description: 'stim nb:0' # analogsignals (N=0)
+        1: Segment with 1 imagesequences description: 'stim nb:1' # analogsignals (N=0)
+        2: Segment with 1 imagesequences description: 'stim nb:2' # analogsignals (N=0)
+        3: Segment with 1 imagesequences description: 'stim nb:3' # analogsignals (N=0)
+        4: Segment with 1 imagesequences description: 'stim nb:4' # analogsignals (N=0)
+        5: Segment with 1 imagesequences description: 'stim nb:5' # analogsignals (N=0)
+
     """
 
     name = 'BLK IO'
@@ -34,16 +55,19 @@ class BlkIO(BaseIO):
 
     mode = 'file'
 
-    def __init__(self, file_name=None, **kwargs):
+    def __init__(self, file_name=None, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
         BaseIO.__init__(self, file_name, **kwargs)
+        self.units = units
+        self.sampling_rate = sampling_rate
+        self.spatial_scale = spatial_scale
 
-    def read(self, lazy=False, units=None, sampling_rate=None, spatial_scale=None, **kwargs):
+    def read(self, lazy=False, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loadign')
-        return [self.read_block(lazy=lazy, units=units, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale, **kwargs)]
+        return [self.read_block(lazy=lazy, units=self.units, sampling_rate=self.sampling_rate,
+                                spatial_scale=self.spatial_scale, **kwargs)]
 
-    def read_block(self, lazy=False, units=None, sampling_rate=None, spatial_scale=None, **kargs):
+    def read_block(self, lazy=False, **kargs):
 
         def read(name, type, nb, dictionary, file):
 
@@ -129,10 +153,10 @@ class BlkIO(BaseIO):
 
         
 
-        """  
-        start of the reading process 
-        """
+
+        # start of the reading process
         nblocks = 1
+        print("reading the header")
         header = read_header(self.filename)
         nstim = header['nstimuli']
         ni = header['framewidth']
@@ -171,6 +195,7 @@ class BlkIO(BaseIO):
         ncond = len(conds)
         data = [[[np.zeros((ni, nj, nfr), type_out)] for x in range(ncond)] for i in range(nbin)]
         for k in range(1, nbin + 1):
+            print("reading block")
             bin = np.arange(math.floor((k - 1 / nbin * nblocks) + 1), math.floor((k / nbin * nblocks) + 1))
             sbin = bin.size
             for j in range(1, sbin + 1):
@@ -241,13 +266,16 @@ class BlkIO(BaseIO):
                     a[frame] = np.rot90(np.fliplr(a[frame]))
                 data[block][stim] = a
 
-
         block = Block(file_origin=self.filename)
         for stim in range(len(data[0])):
-            image_sequence = ImageSequence(data[0][stim], units=units, sampling_rate=sampling_rate, spatial_scale=spatial_scale)
+            image_sequence = ImageSequence(data[0][stim], units=self.units,
+                                           sampling_rate=self.sampling_rate,
+                                           spatial_scale=self.spatial_scale)
             segment = Segment(file_origin=self.filename, description=("stim nb:"+str(stim)))
             segment.imagesequences = [image_sequence]
             segment.block = block
             block.segments.append(segment)
+
+        print("returning block")
 
         return block
