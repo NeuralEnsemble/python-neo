@@ -61,6 +61,8 @@ class Nest3RawIO(BaseRawIO):
     extensions = ['sion']
     rawmode = 'one-file'
 
+    _obs_colid_mapping = {}  # {gid: column_id]
+
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
         self.filename = filename
@@ -88,6 +90,8 @@ class Nest3RawIO(BaseRawIO):
         # segment annotations: global information on simulation
         seg_ann = {}
 
+        # TODO: Create one Channel_Index per recording device. Add 'label' annotation (rec_dev.label)
+
         # loop through data
         unit_channels = []
         sig_channels = []
@@ -97,7 +101,7 @@ class Nest3RawIO(BaseRawIO):
 
                 # spike data as units
                 if rec_dev.name == b'spike_detector':
-                    unit_name = 'sd{}unit{}'.format(rec_dev.gid, nid)
+                    unit_name = 'rd{}unit{}'.format(rec_dev.gid, nid)
                     unit_id = '{}#{}'.format(rec_dev.gid, nid)
                     wf_units = ''
                     wf_gain = 0.0
@@ -109,25 +113,33 @@ class Nest3RawIO(BaseRawIO):
 
                 # analog data as signals
                 elif rec_dev.name == b'multimeter':
-                    for obs in rec_dev.double_observables + rec_dev.long_observables:
-                        ch_name = 'sd{}unit{}'.format(rec_dev.gid, nid)
-                        chan_id = '{}#{}'.format(rec_dev.gid, nid)
-                        sr = 0
-                        dtype = float if obs in rec_dev.double_observables else int # or rec_dev.dtype
-                        units = 0
-                        gain = 0
-                        offset = 0
-                        group_id = 0
-                        sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+                    gid = rec_dev.gid
+                    self._obs_colid_mapping[gid] = {}
+                    sampling_rate = self._get_sampling_rate(rec_dev) # in s
+                    for cols, observables in zip(['f3', 'f4'], [rec_dev.double_observables, rec_dev.long_observables]):
+                        for col_id, obs in enumerate(observables):
+                            ch_name = 'rd{}unit{}signal{}'.format(rec_dev.gid, nid, obs.decode())
+                            chan_id = nid  #'{}#{}#{}'.format(rec_dev.gid, nid, obs.decode())
+                            sr = sampling_rate
+                            dtype = np.asarray(self.reader[gid])[cols].dtype  # float if obs in rec_dev.double_observables else int # or
+                            units = self._get_signal_unit(obs)
+                            gain = 1.
+                            offset = 0.
+                            group_id = 0 # TODO: should this be recording device specific?
+                            sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+
+                            self._obs_colid_mapping[gid][obs.decode()] = (cols, col_id)
 
             #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin,
             # i.rows, i.dtype, i.t_start, i.t_stop
+
+
 
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
         self.header['unit_channels'] = unit_channels
 
         # # signals and units are not global but specific to to the recording devices
-        self.header['signal_channels'] = np.array([], dtype=_signal_channel_dtype)
+        self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
         # self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
 
         # # no events or epochs
@@ -138,6 +150,29 @@ class Nest3RawIO(BaseRawIO):
         self._generate_minimal_annotations()
 
         self.raw_annotations['blocks'][0].update(block_ann)
+
+        seg_ann = self.raw_annotations['blocks'][0]['segments'][0]
+        seg_ann['name'] = 'Seg #{} Block #{}'.format(0, 0)
+        seg_ann['seg_extra_info'] = 'This is the seg {} of block {}'.format(0, 0)
+
+        # for rec_dev in self.reader:
+        #     neuron_ids = np.unique(np.array(self.reader[rec_dev.gid])['f0'])
+        #     for nid in neuron_ids:
+        #
+        #
+        # for c in range(len(sig_channels)):
+        #     anasig_an = seg_ann['signals'][c]
+        #     anasig_an['info'] = 'This is a good signals'
+        # for c in range(3):
+        #     spiketrain_an = seg_ann['units'][c]
+        #     spiketrain_an['quality'] = 'Good!!'
+        # for c in range(2):
+        #     event_an = seg_ann['events'][c]
+        #     if c == 0:
+        #         event_an['nickname'] = 'Miss Event 0'
+        #     elif c == 1:
+        #         event_an['nickname'] = 'MrEpoch 1'
+
 
         # # global information on simulation
         # self.nest_version =  self.reader.nest_version
@@ -253,6 +288,7 @@ class Nest3RawIO(BaseRawIO):
         # this must return a signal chunk limited with
         # i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel) or a list or numpy.array
+
         # This must return a numpy array 2D (even with one channel).
         # This must return the original dtype. No conversion here.
         # This must as fast as possible.
@@ -263,20 +299,36 @@ class Nest3RawIO(BaseRawIO):
         # internally signals are int16
         # convertion to real units is done with self.header['signal_channels']
 
-        if i_start is None:
-            i_start = 0
-        if i_stop is None:
-            i_stop = 100000
+        # TODO: This needs performance optimization
+        res = []
+        for channel_index in channel_indexes:
+            rd_id, nid, signal = self.header['signal_channels'][channel_index][1].split('#')
+            rd_id, nid = int(rd_id), int(nid)
 
-        assert i_start >= 0, "I don't like your jokes"
-        assert i_stop <= 100000, "I don't like your jokes"
+            col, col_id = self._obs_colid_mapping[rd_id][signal]
 
-        if channel_indexes is None:
-            nb_chan = 16
-        else:
-            nb_chan = len(channel_indexes)
-        raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
-        return raw_signals
+            data = np.asarray(self.reader[rd_id])
+            idx = np.argwhere(data['f0'] == nid)
+
+            if i_start is None:
+                i_start = 0
+            if i_stop is None:
+                i_stop = sum(idx)
+
+            res.append(np.sort(data[idx])[i_start: i_stop][col][col_id])
+
+        return np.asarray(res)
+
+
+        # assert i_start >= 0, "I don't like your jokes"
+        # assert i_stop <= 100000, "I don't like your jokes"
+
+        # if channel_indexes is None:
+        #     nb_chan = 16
+        # else:
+        #     nb_chan = len(channel_indexes)
+        # raw_signals = np.zeros((i_stop - i_start, nb_chan), dtype='int16')
+        # return raw_signals
 
 
     def _spike_count(self, block_index, seg_index, unit_index):
@@ -362,3 +414,22 @@ class Nest3RawIO(BaseRawIO):
         # really easy here because in our case it is already seconds
         durations = raw_duration.astype(dtype)
         return durations
+
+    def _get_sampling_rate(self, rec_dev):
+        gid = rec_dev.gid
+        data = np.asarray(self.reader[gid])
+
+        sampling_rate = np.unique(np.diff(np.sort(np.unique(data['f1'])))) * self.reader.resolution * 1e-3
+        # TODO: Does the offset (data['f2']) play a role here?
+
+        # sanity check
+        assert len(sampling_rate)==1, 'Inconsistent sampling times of recording device {}'.format(gid)
+
+        return sampling_rate # in s
+
+    def _get_signal_unit(self, obs):
+        if obs==b'V_m':
+            return 'mV'
+        if obs in [b'I_syn_ex', b'I_syn_in']:
+            return 'pA'
+        raise ValueError('Unit can not be extracted from recordable name {}'.format(obs))
