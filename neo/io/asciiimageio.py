@@ -62,13 +62,12 @@ class AsciiImageIO(BaseIO):
     def read(self, lazy=False, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, nb_frame=self.nb_frame, nb_row=self.nb_row,
-                                nb_column=self.nb_column, units=self.units, sampling_rate=self.sampling_rate,
-                                spatial_scale=self.spatial_scale, **kwargs)]
+        return [self.read_block(lazy=lazy, **kwargs)]
 
     def read_block(self, lazy=False, **kwargs):
 
-        data = open(self.filename, 'r').read()
+        file = open(self.filename, 'r')
+        data = file.read()
         print("read block")
         liste_value = []
         record = []
@@ -93,6 +92,7 @@ class AsciiImageIO(BaseIO):
 
         image_sequence = ImageSequence(np.array(data, dtype='float'), units=self.units,
                                        sampling_rate=self.sampling_rate, spatial_scale=self.spatial_scale)
+        file.close()
         print("creating segment")
         segment = Segment(file_origin=self.filename)
         segment.imagesequences = [image_sequence]

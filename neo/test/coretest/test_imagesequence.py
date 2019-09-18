@@ -35,13 +35,14 @@ class TestImageSequence(unittest.TestCase):
             ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz)
 
     def test_units(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             ImageSequence(self.data, sampling_rate=500 * pq.Hz, spatial_scale='m')
 
     # test method will be remove are rename
 
     def test_something(self):
-        l = ImageSequence(self.data, sampling_rate=500 * pq.Hz, units='V', spatial_scale='m')
+        l = ImageSequence(self.data, sampling_rate=500 * pq.Hz, units='V',
+                          spatial_scale='m')
 
         self.assertEqual(l.sampling_rate, 500 * pq.Hz)
         self.assertEqual(l.spatial_scale, 'm')
@@ -75,8 +76,6 @@ class TestMethodImageSequence(unittest.TestCase):
         with self.assertRaises(ValueError):
             ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region()
 
-        m = ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').view()
-        print(m.sampling_rate)
 
 if __name__ == "__main__":
     unittest.main()

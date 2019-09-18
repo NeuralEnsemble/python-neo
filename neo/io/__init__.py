@@ -17,9 +17,9 @@ Classes:
 
 .. autoclass:: neo.io.AlphaOmegaIO
 
-.. autoclass:: neo.io.AsciiSignalIO
-
 .. autoclass:: neo.io.AsciiImageIO
+
+.. autoclass:: neo.io.AsciiSignalIO
 
 .. autoclass:: neo.io.AsciiSpikeTrainIO
 
@@ -85,9 +85,9 @@ Classes:
 
 .. autoclass:: neo.io.StimfitIO
 
-.. autoclass:: neo.io.TiffIO
-
 .. autoclass:: neo.io.TdtIO
+
+.. autoclass:: neo.io.TiffIO
 
 .. autoclass:: neo.io.WinEdrIO
 
@@ -114,8 +114,8 @@ else:
     # print("\n loading with API...")
 
 from neo.io.alphaomegaio import AlphaOmegaIO
-from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciiimageio import AsciiImageIO
+from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonio import AxonIO
@@ -152,15 +152,15 @@ from neo.io.rawbinarysignalio import RawBinarySignalIO
 from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
-from neo.io.tiffio import TiffIO
 from neo.io.tdtio import TdtIO
+from neo.io.tiffio import TiffIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
 iolist = [
     AlphaOmegaIO,
-    AsciiSignalIO,
     AsciiImageIO,
+    AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxographIO,
     AxonIO,
@@ -195,8 +195,8 @@ iolist = [
     RawMCSIO,
     Spike2IO,
     StimfitIO,
-    TiffIO,
     TdtIO,
+    TiffIO,
     WinEdrIO,
     WinWcpIO
 ]

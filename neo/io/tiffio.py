@@ -4,6 +4,12 @@ Neo IO module for optical imaging data stored as a folder of TIFF images.
 """
 
 import os
+try:
+    from PIL import Image
+    have_pil = True
+except ImportError:
+    have_pil = False
+
 from PIL import Image
 import numpy as np
 from neo.core import ImageSequence, Segment, Block
@@ -68,6 +74,10 @@ class TiffIO(BaseIO):
 
     def __init__(self, directory_path=None,units=None, sampling_rate=None,
                    spatial_scale=None, **kwargs):
+
+        if not have_pil:
+            raise Exception("Please install the pillow package to use TiffIO")
+
         BaseIO.__init__(self, directory_path, **kwargs)
         self.units = units
         self.sampling_rate = sampling_rate
@@ -76,8 +86,7 @@ class TiffIO(BaseIO):
     def read(self, lazy=False, **kwargs):
         if lazy:
             raise ValueError('This IO module does not support lazy loading')
-        return [self.read_block(lazy=lazy, units=self.units, sampling_rate=self.sampling_rate,
-                                spatial_scale=self.spatial_scale, **kwargs)]
+        return [self.read_block(lazy=lazy, **kwargs)]
 
     def read_block(self, lazy=False, **kwargs):
         # to sort file
