@@ -274,6 +274,8 @@ class BlkIO(BaseIO):
             segment = Segment(file_origin=self.filename, description=("stim nb:"+str(stim)))
             segment.imagesequences = [image_sequence]
             segment.block = block
+            for key in header:
+                block.annotations[key] = header[key]
             block.segments.append(segment)
 
         print("returning block")

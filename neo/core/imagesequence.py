@@ -183,3 +183,12 @@ class ImageSequence(BaseSignal):
                      "spatial_scale: {0}".format(self.spatial_scale)]:
             _pp(line)
 
+    def _check_consistency(self, other):
+        '''
+        Check if the attributes of another :class:`ImageSequence`
+        are compatible with this one.
+        '''
+        if isinstance(other, ImageSequence):
+            for attr in ("sampling_rate", "spatial_scale"):
+                if getattr(self, attr) != getattr(other, attr):
+                    raise ValueError("Inconsistent values of %s" % attr)

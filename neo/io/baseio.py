@@ -20,7 +20,7 @@ from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       ChannelIndex,
-                      Segment, SpikeTrain, Unit)
+                      Segment, SpikeTrain, Unit, ImageSequence)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -157,6 +157,9 @@ class BaseIO(object):
     def read_analogsignal(self, **kargs):
         assert (AnalogSignal in self.readable_objects), read_error
 
+    def read_imagesequence(self, **kargs):
+        assert (ImageSequence in self.readable_objects), read_error
+
     def read_irregularlysampledsignal(self, **kargs):
         assert (IrregularlySampledSignal in self.readable_objects), read_error
 
@@ -184,6 +187,9 @@ class BaseIO(object):
 
     def write_analogsignal(self, anasig, **kargs):
         assert (AnalogSignal in self.writeable_objects), write_error
+
+    def write_imagesequence(self, imseq, **kargs):
+        assert (ImageSequence in self.writeable_objects), write_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert (IrregularlySampledSignal in self.writeable_objects), write_error
