@@ -127,7 +127,12 @@ class Spike2RawIO(BaseRawIO):
                     # detect gaps
                     inter_block_sizes = data_blocks['start_time'][1:] - \
                         data_blocks['end_time'][:-1]
-                    gaps_block_ind, = np.nonzero(inter_block_sizes > interval)
+                    # Due to rounding errors, have to check if the value is larger
+                    # which means its not close and larger
+                    gaps_block_ind, = np.nonzero(np.logical_and(
+                        inter_block_sizes > interval,
+                        np.logical_not(np.isclose(inter_block_sizes, interval))
+                    ))
                     all_gaps_block_ind[chan_id] = gaps_block_ind
 
         # find t_start/t_stop for each seg based on gaps indexe
