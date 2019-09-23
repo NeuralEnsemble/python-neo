@@ -62,6 +62,8 @@ class Nest3RawIO(BaseRawIO):
     rawmode = 'one-file'
 
     _obs_colid_mapping = {}  # {gid: column_id]
+    signal_recording_devices = [b'multimeter']
+    spike_recording_devices = [b'spike_detector']
 
     def __init__(self, filename=''):
         BaseRawIO.__init__(self)
@@ -91,19 +93,35 @@ class Nest3RawIO(BaseRawIO):
         seg_ann = {}
 
         # TODO: Create one Channel_Index per recording device. Add 'label' annotation (rec_dev.label)
-
+        # TODO: Pre-sort data now already for faster time range selection later
         # loop through data
         unit_channels = []
         sig_channels = []
-        for rec_dev in self.reader:
-            neuron_ids = np.unique(np.array(self.reader[rec_dev.gid])['f0'])
-            for nid in neuron_ids:
 
-                # spike data as units
-                if rec_dev.name == b'spike_detector':
-                    unit_name = 'rd{}unit{}'.format(rec_dev.gid, nid)
-                    unit_id = '{}#{}'.format(rec_dev.gid, nid)
-                    wf_units = ''
+        # usefull to get local channel index in nsX from the global channel index
+        local_sig_indexes = []
+        self._nids_per_rec_dev = {}
+
+        # sorting data for faster access later
+        self._sorted_data = {}
+        for rec_dev in self.reader:
+            gid = rec_dev.gid
+            original_data = np.asarray(self.reader[gid])
+            sorting_order = np.lexsort((original_data['f0'],original_data['f1']))
+            self._sorted_data[gid] = original_data[sorting_order,...] # primary sorting time, secondary sorting channels
+
+        for rec_dev in self.reader:
+            gid = rec_dev.gid
+            data = self._sorted_data[gid]
+
+
+            # spike data as units
+            if rec_dev.name in self.spike_recording_devices:
+                neuron_ids = np.unique(data['f0'])
+                for nid in neuron_ids:
+                    unit_name = 'rd{}unit{}'.format(gid, nid)
+                    unit_id = '{}#{}'.format(gid, nid)
+                    wf_units = ''  # There are no waveforms recorded in this format.
                     wf_gain = 0.0
                     wf_offset = 0.0
                     wf_left_sweep = 0
@@ -111,39 +129,47 @@ class Nest3RawIO(BaseRawIO):
                     unit_channels.append((unit_name, unit_id, wf_units, wf_gain,
                                           wf_offset, wf_left_sweep, wf_sampling_rate))
 
-                # analog data as signals
-                elif rec_dev.name == b'multimeter':
-                    gid = rec_dev.gid
+            # analog data as signals
+            elif rec_dev.name in self.signal_recording_devices:
+                samples_per_timestep = np.searchsorted(self._sorted_data['f0'], self._sorted_data['f0'][0],
+                                                       side='right', sorter=None)
+                neuron_ids = self._sorted_data['f1'][:samples_per_timestep]
+                for nid in neuron_ids:
                     self._obs_colid_mapping[gid] = {}
                     sampling_rate = self._get_sampling_rate(rec_dev) # in s
                     for cols, observables in zip(['f3', 'f4'], [rec_dev.double_observables, rec_dev.long_observables]):
                         for col_id, obs in enumerate(observables):
-                            ch_name = 'rd{}unit{}signal{}'.format(rec_dev.gid, nid, obs.decode())
+                            ch_name = 'rd{}unit{}signal{}'.format(gid, nid, obs.decode())
                             chan_id = nid  #'{}#{}#{}'.format(rec_dev.gid, nid, obs.decode())
                             sr = sampling_rate
-                            dtype = np.asarray(self.reader[gid])[cols].dtype  # float if obs in rec_dev.double_observables else int # or
+                            dtype = data[cols].dtype  # float if obs in rec_dev.double_observables else int # or
                             units = self._get_signal_unit(obs)
                             gain = 1.
                             offset = 0.
-                            group_id = 0 # TODO: should this be recording device specific?
+                            group_id = gid
                             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
 
-                            self._obs_colid_mapping[gid][obs.decode()] = (cols, col_id)
+                            # self._obs_colid_mapping[gid][obs.decode()] = (cols, col_id)
+
+                            local_sig_indexes.append((cols, col_id))
+
+            self._nids_per_rec_dev[gid] = neuron_ids
+        self._local_sig_indexes = np.array(local_sig_indexes)
 
             #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin,
             # i.rows, i.dtype, i.t_start, i.t_stop
 
-
-
+        # finalize header
         unit_channels = np.array(unit_channels, dtype=_unit_channel_dtype)
+        event_channels = np.array([], dtype=_event_channel_dtype)
+        sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+
+        self.header = {}
+        self.header['nb_block'] = 1
+        self.header['nb_segment'] = [1]
+        self.header['signal_channels'] = sig_channels
         self.header['unit_channels'] = unit_channels
-
-        # # signals and units are not global but specific to to the recording devices
-        self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
-        # self.header['unit_channels'] = np.array([], dtype=_unit_channel_dtype)
-
-        # # no events or epochs
-        self.header['event_channels'] = np.array([], dtype=_event_channel_dtype)
+        self.header['event_channels'] = event_channels
 
 
         # minimal annotations from BaseRawIO
@@ -254,18 +280,19 @@ class Nest3RawIO(BaseRawIO):
 
 
     def _get_signal_size(self, block_index, seg_index, channel_indexes=None):
-        # TODO
-        #
-        # we are lucky: signals in all segment have the same shape!! (10.0 seconds)
-        # it is not always the case
-        # this must return an int = the number of sample
+        # the channel_indexes belong to the same recording device (checked by baserawio)
+        # number of samples available in requested channels
+        rd_id, _ = self._get_gid_and_local_indexes(channel_indexes)
 
-        # Note that channel_indexes can be ignored for most cases
-        # except for several sampling rate.
-        return rows
+        # all channels for this recording device have the same number of samples
+        # the samples per channel are therefore the total samples / number of channels (nids)
+        return len(self._sorted_data[rd_id]) / self._nids_per_rec_dev[rd_id]
 
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
+
+        rd_id, local_ids = self._get_gid_and_local_indexes(channel_indexes)
+
         # DONE
         # same as _segment_t_start
         #
@@ -284,7 +311,8 @@ class Nest3RawIO(BaseRawIO):
 
 
     def _get_analogsignal_chunk(self, block_index, seg_index, i_start, i_stop, channel_indexes):
-        # TODO
+        # channel_indexes is checked by BaseRawIO to belong to a single group_id and characteristics
+
         # this must return a signal chunk limited with
         # i_start/i_stop (can be None)
         # channel_indexes can be None (=all channel) or a list or numpy.array
@@ -300,24 +328,52 @@ class Nest3RawIO(BaseRawIO):
         # convertion to real units is done with self.header['signal_channels']
 
         # TODO: This needs performance optimization
-        res = []
-        for channel_index in channel_indexes:
-            rd_id, nid, signal = self.header['signal_channels'][channel_index][1].split('#')
-            rd_id, nid = int(rd_id), int(nid)
 
-            col, col_id = self._obs_colid_mapping[rd_id][signal]
 
-            data = np.asarray(self.reader[rd_id])
-            idx = np.argwhere(data['f0'] == nid)
 
-            if i_start is None:
-                i_start = 0
-            if i_stop is None:
-                i_stop = sum(idx)
+        rd_id, local_ids = self._get_gid_and_local_indexes(channel_indexes)
+        # local_ids = col, col_id
 
-            res.append(np.sort(data[idx])[i_start: i_stop][col][col_id])
+        # all signals have the same number of samples for a signal recording device
+        samples_per_nid = self._get_signal_size(block_index, seg_index, channel_indexes = [0])
+        nids = self.header['signal_channels'][channel_indexes][:,1]
 
-        return np.asarray(res)
+        if i_start is None:
+            i_start = 0
+        if i_stop is None:
+            i_stop = samples_per_nid
+
+        mask_per_time_step = np.where(self._nids_per_rec_dev[rd_id]==nids)[0]
+        nid_mask = np.repeat(mask_per_time_step, samples_per_nid)
+        time_mask = slice(i_start*samples_per_nid, i_stop*samples_per_nid)
+        mask = np.logical_and(nid_mask, time_mask)
+
+        data = self._sorted_data[mask].reshape((samples_per_nid,len(nids)))
+
+        return data
+
+        # data = np.asarray(self.reader[rd_id]) # sorted by time, nid
+        #
+        # # Extract signal values of all selected nids
+        #
+        #
+        # for channel_index in channel_indexes:
+        #     rd_id, nid, signal = self.header['signal_channels'][channel_index][1].split('#')
+        #     rd_id, nid = int(rd_id), int(nid)
+        #
+        #
+        #
+        #
+        #     idx = np.argwhere(data['f0'] == nid)
+
+            # if i_start is None:
+            #     i_start = 0
+            # if i_stop is None:
+            #     i_stop = sum(idx)
+
+        #     res.append(np.sort(data[idx])[i_start: i_stop][col][col_id])
+        #
+        # return np.asarray(res)
 
 
         # assert i_start >= 0, "I don't like your jokes"
@@ -336,8 +392,8 @@ class Nest3RawIO(BaseRawIO):
         sd_id, nid = self.header['unit_channels'][unit_index][1].split('#')
         sd_id, nid = int(sd_id), int(nid)
 
-        assert self.reader[sd_id].name == b'spike_detector', \
-            'This unit was not recorded by a spike_detector!'
+        assert self.reader[sd_id].name in self.spike_recording_devices, \
+            'This unit was not recorded by a spike detector!'
 
         data = np.asarray(self.reader[sd_id])
         return np.sum(data['f0'] == nid)
@@ -350,8 +406,8 @@ class Nest3RawIO(BaseRawIO):
         sd_id, nid = self.header['unit_channels'][unit_index][1].split('#')
         sd_id, nid = int(sd_id), int(nid)
 
-        assert self.reader[sd_id].name == b'spike_detector', \
-            'This unit was not recorded by a spike_detector!'
+        assert self.reader[sd_id].name in self.spike_recording_devices, \
+            'This unit was not recorded by a spike detector!'
 
         data = np.asarray(self.reader[sd_id])
         idx = np.argwhere(data['f0'] == nid)
@@ -416,14 +472,15 @@ class Nest3RawIO(BaseRawIO):
         return durations
 
     def _get_sampling_rate(self, rec_dev):
+
+        assert rec_dev.name in self.signal_recording_devices, 'Recording device {} does not have a sampling rate {}'.format(rec_dev.name)
+
         gid = rec_dev.gid
-        data = np.asarray(self.reader[gid])
+        data = self._sorted_data[gid]
 
-        sampling_rate = np.unique(np.diff(np.sort(np.unique(data['f1'])))) * self.reader.resolution * 1e-3
+        samples_per_nid = len(data['f1']) / len(self._nids_per_rec_dev[gid])
+        sampling_rate = (data['f1'][-1] - data['f1'][0]) / (samples_per_nid - 1) * self.reader.resolution * 1e-3
         # TODO: Does the offset (data['f2']) play a role here?
-
-        # sanity check
-        assert len(sampling_rate)==1, 'Inconsistent sampling times of recording device {}'.format(gid)
 
         return sampling_rate # in s
 
@@ -433,3 +490,18 @@ class Nest3RawIO(BaseRawIO):
         if obs in [b'I_syn_ex', b'I_syn_in']:
             return 'pA'
         raise ValueError('Unit can not be extracted from recordable name {}'.format(obs))
+
+
+    ### templates from other RawIOs
+
+    def _get_gid_and_local_indexes(self, channel_indexes):
+        # internal helper to get rd gid and local channel indexes from global channel indexes
+        # when this is called channel_indexes are always in the same group_id this is checked at BaseRaw level
+        if channel_indexes is None:
+            channel_indexes = slice(None)
+        gid = self.header['signal_channels'][channel_indexes]['group_id'][0]
+        if channel_indexes is None:
+            local_indexes = slice(None)
+        else:
+            local_indexes = self._local_sig_indexes[channel_indexes]
+        return gid, local_indexes

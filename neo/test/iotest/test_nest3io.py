@@ -18,7 +18,7 @@ import quantities as pq
 import numpy as np
 
 
-# This run standart tests, this is mandatory for all IO
+# This run standard tests, this is mandatory for all IO
 
 
 class TestExampleIO(BaseTestIO, unittest.TestCase):
@@ -30,6 +30,14 @@ class TestExampleIO(BaseTestIO, unittest.TestCase):
 
 
 class Specific_TestNest3IO(unittest.TestCase):
+
+    def test_dummy(self):
+        io = Nest3IO(filename='/home/julia/repositories/python/nestio_sionlib/output_event_time.sion')
+        bl = io.read_block()
+        print(bl.segments[0].spiketrains[10].times)
+        print(bl.segments[0].analogsignals)
+
+
     # def test_read_segment_lazy(self):
     #     r = ExampleIO(filename=None)
     #     seg = r.read_segment(lazy=True)
