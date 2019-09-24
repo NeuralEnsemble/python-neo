@@ -68,8 +68,6 @@ class ImageSequence(BaseSignal):
     *Optional attributes/properties*:
         :dtype: (numpy dtype or str) Override the dtype of the signal array.
         :copy: (bool) True by default.
-        :array_annotations: (dict) Dict mapping strings to numpy
-        arrays containing annotations for all data points
 
     Note: Any other additional arguments are assumed to be user-specific
     metadata and stored in :attr:`annotations`.
@@ -81,8 +79,8 @@ class ImageSequence(BaseSignal):
             (1/:attr:`quantity scalar`)
         :spatial_scales: size of a pixel
      """
-    _single_parent_objects = ('Segment')
-    _single_parent_attrs = ('segment')
+    _single_parent_objects = ('Segment',)
+    _single_parent_attrs = ('segment',)
     _quantity_attr = 'image_data'
     _necessary_attrs = (('image_data', pq.Quantity, 3),
                         ('sampling_rate', pq.Quantity, 0),
@@ -90,7 +88,7 @@ class ImageSequence(BaseSignal):
     _recommended_attrs = BaseNeo._recommended_attrs
 
     def __new__(cls, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
-                sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
+                sampling_rate=None, name=None, description=None, file_origin=None,
                 **annotations):
         """
         Constructs new :class:`ImageSequence` from data.
@@ -116,13 +114,13 @@ class ImageSequence(BaseSignal):
         return obj
 
     def __init__(self, image_data, units=None, dtype=None, copy=True, spatial_scale=None, sampling_period=None,
-                 sampling_rate=None, name=None, description=None, file_origin=None, array_annotations=None,
+                 sampling_rate=None, name=None, description=None, file_origin=None,
                  **annotations):
         '''
                Initializes a newly constructed :class:`ImageSequence` instance.
         '''
         DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
-                            array_annotations=array_annotations, **annotations)
+                            **annotations)
 
     def __array_finalize__spec(self, obj):
 
