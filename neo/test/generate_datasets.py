@@ -13,7 +13,7 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Segment, SpikeTrain, Unit, class_by_name)
+                      Segment, SpikeTrain, Unit, class_by_name, ImageSequence)
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject
@@ -247,7 +247,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
     # Array annotations need to be a dict containing arrays
     if name == 'array_annotations' and datatype == dict:
         # Make sure that array annotations have the correct length
-        if obj in ['AnalogSignal', 'IrregularlySampledSignal']:
+        if obj in ['AnalogSignal', 'IrregularlySampledSignal', 'ImageSequence']:
             length = n if n is not None else 1
         elif obj in ['IrregularlySampledSignal', 'SpikeTrain', 'Epoch', 'Event']:
             length = n

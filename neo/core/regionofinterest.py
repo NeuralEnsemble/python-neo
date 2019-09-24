@@ -2,6 +2,7 @@
 class RegionOfInterest:
     pass
 
+
 class CircularRegionOfInterest(RegionOfInterest):
 
     def __init__(self, x, y, radius):
@@ -72,8 +73,9 @@ class PolygonRegionOfInterest(RegionOfInterest):
             c = 0
             for i in range(0, nvert):
                 j = i - 1 if i != 0 else nvert - 1
-                if (((verty[i] > testy) != (verty[j] > testy)) and
-                        (testx < (vertx[j] - vertx[i]) * (testy - verty[i]) / (verty[j] - verty[i]) + vertx[i])):
+                if (((verty[i]*1.0 > testy*1.0) != (verty[j]*1.0 > testy*1.0)) and
+                        (testx*1.0 < (vertx[j]*1.0 - vertx[i]*1.0) * (testy*1.0 - verty[i]*1.0) /
+                        (verty[j]*1.0 - verty[i]*1.0) + vertx[i]*1.0)):
                     c += 1
             # If odd, that means that we are inside the polygon
             if c % 2 == 1:

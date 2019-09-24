@@ -18,9 +18,7 @@ created by slicing. This is where attributes are copied over from
 the old object.
 """
 
-from neo.core.regionofinterest import RegionOfInterest
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
-
 import quantities as pq
 import numpy as np
 from neo.core.baseneo import BaseNeo
@@ -123,7 +121,6 @@ class ImageSequence(BaseSignal):
         '''
                Initializes a newly constructed :class:`ImageSequence` instance.
         '''
-
         DataObject.__init__(self, name=name, file_origin=file_origin, description=description,
                             array_annotations=array_annotations, **annotations)
 
@@ -136,6 +133,12 @@ class ImageSequence(BaseSignal):
         return obj
 
     def signal_from_region(self, *region):
+
+        """
+            Method that takes 1 or multiple regionofinterest, use the method of each region
+            of interest to get the list of pixel to average.
+            return a list of :class:`AnalogSignal` for each regionofinterest
+        """
 
         if len(region) == 0:
             raise ValueError('no region of interest have been given')

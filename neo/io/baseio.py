@@ -20,7 +20,9 @@ from neo.core import (AnalogSignal, Block,
                       Epoch, Event,
                       IrregularlySampledSignal,
                       ChannelIndex,
-                      Segment, SpikeTrain, Unit, ImageSequence)
+                      Segment, SpikeTrain, Unit, ImageSequence,
+                      RectangularRegionOfInterest, CircularRegionOfInterest,
+                      PolygonRegionOfInterest)
 
 read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
@@ -160,6 +162,15 @@ class BaseIO(object):
     def read_imagesequence(self, **kargs):
         assert (ImageSequence in self.readable_objects), read_error
 
+    def read_rectangularregionofinterest(self, **kargs):
+        assert (RectangularRegionOfInterest in self.readable_objects), read_error
+
+    def read_circularregionofinterest(self, **kargs):
+        assert (CircularRegionOfInterest in self.readable_objects), read_error
+
+    def read_polygonregionofinterest(self, **kargs):
+        assert (PolygonRegionOfInterest in self.readable_objects), read_error
+
     def read_irregularlysampledsignal(self, **kargs):
         assert (IrregularlySampledSignal in self.readable_objects), read_error
 
@@ -190,6 +201,15 @@ class BaseIO(object):
 
     def write_imagesequence(self, imseq, **kargs):
         assert (ImageSequence in self.writeable_objects), write_error
+
+    def write_rectangularregionofinterest(self, rectroi,**kargs):
+        assert (RectangularRegionOfInterest in self.writeable_objects), read_error
+
+    def write_circularregionofinterest(self, circroi,**kargs):
+        assert (CircularRegionOfInterest in self.writeable_objects), read_error
+
+    def write_polygonregionofinterest(self, polyroi, **kargs):
+        assert (PolygonRegionOfInterest in self.writeable_objects), read_error
 
     def write_irregularlysampledsignal(self, irsig, **kargs):
         assert (IrregularlySampledSignal in self.writeable_objects), write_error
