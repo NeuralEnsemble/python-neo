@@ -458,7 +458,7 @@ def parse_axon_soup(filename):
             f.seek(sections['StringsSection']['uBlockIndex'] * BLOCKSIZE)
             big_string = f.read(sections['StringsSection']['uBytes'])
             goodstart = -1
-            for key in [b'AXENGN', b'clampex', b'Clampex',
+            for key in [b'AXENGN', b'clampex', b'Clampex', b'EDR3',
                         b'CLAMPEX', b'axoscope', b'AxoScope', b'Clampfit']:
                 # goodstart = big_string.lower().find(key)
                 goodstart = big_string.find(b'\x00' + key)
