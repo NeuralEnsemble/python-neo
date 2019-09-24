@@ -12,7 +12,6 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype,
                         _unit_channel_dtype, _event_channel_dtype)
 from ..io.nixio import NixIO
 import numpy as np
-import warnings
 try:
     import nixio as nix
 
@@ -22,6 +21,9 @@ except ImportError:
     nix = None
 
 
+# When reading metadata properties, the following keys are ignored since they
+# are used to store Neo object properties.
+# This dictionary is used in the _filter_properties() method.
 neo_attributes = {
     "segment": ["index"],
     "analogsignal": ["units", "copy", "sampling_rate", "t_start"],
@@ -191,10 +193,10 @@ class NIXRawIO(BaseRawIO):
                     if da.type == 'neo.analogsignal' and seg_ann['signals']:
                         # collect and group DataArrays
                         sig_ann = seg_ann['signals'][sig_idx]
-                        # sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
+                        sig_chan_ann = self.raw_annotations['signal_channels'][sig_idx]
                         props = da.metadata.inherited_properties()
                         sig_ann.update(self._filter_properties(props, 'analogsignal'))
-                        # sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
+                        sig_chan_ann.update(self._filter_properties(props, 'analogsignal'))
                         sig_idx += 1
                 sp_idx = 0
                 ev_idx = 0
