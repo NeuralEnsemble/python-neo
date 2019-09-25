@@ -16,7 +16,14 @@ from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
 
 import numpy as np
 
-import nestio # TODO from https://github.com/apeyser/nestio-tools (bring to setup.py, maybe change of name?)
+
+try:
+    import nestio  # TODO from https://github.com/apeyser/nestio-tools (bring to setup.py, maybe change of name?)
+    HAVE_NESTIO = True
+except ImportError:
+    HAVE_NESTIO = False
+    nestio = None
+
 
 
 class Nest3RawIO(BaseRawIO):
@@ -131,9 +138,10 @@ class Nest3RawIO(BaseRawIO):
 
             # analog data as signals
             elif rec_dev.name in self.signal_recording_devices:
-                samples_per_timestep = np.searchsorted(self._sorted_data['f0'], self._sorted_data['f0'][0],
-                                                       side='right', sorter=None)
-                neuron_ids = self._sorted_data['f1'][:samples_per_timestep]
+                samples_per_timestep = np.searchsorted(data['f1'], data['f1'][0], side='right', sorter=None)
+                neuron_ids = data['f0'][:samples_per_timestep]
+                self._nids_per_rec_dev[gid] = neuron_ids
+
                 for nid in neuron_ids:
                     self._obs_colid_mapping[gid] = {}
                     sampling_rate = self._get_sampling_rate(rec_dev) # in s
@@ -153,7 +161,7 @@ class Nest3RawIO(BaseRawIO):
 
                             local_sig_indexes.append((cols, col_id))
 
-            self._nids_per_rec_dev[gid] = neuron_ids
+
         self._local_sig_indexes = np.array(local_sig_indexes)
 
             #i.gid, i.name, i.label, i.double_n_val, i.double_observables, i.long_n_val, i.long_observables, i.origin,
@@ -286,7 +294,9 @@ class Nest3RawIO(BaseRawIO):
 
         # all channels for this recording device have the same number of samples
         # the samples per channel are therefore the total samples / number of channels (nids)
-        return len(self._sorted_data[rd_id]) / self._nids_per_rec_dev[rd_id]
+        sig_size = len(self._sorted_data[rd_id]) / len(self._nids_per_rec_dev[rd_id])
+        assert sig_size == int(sig_size), 'Error in signal size extraction'
+        return int(sig_size)
 
 
     def _get_signal_t_start(self, block_index, seg_index, channel_indexes):
@@ -334,21 +344,67 @@ class Nest3RawIO(BaseRawIO):
         rd_id, local_ids = self._get_gid_and_local_indexes(channel_indexes)
         # local_ids = col, col_id
 
+        # checking for consistent col, as this defines the dtype of the signal
+        assert all(local_ids[:,0]==local_ids[0,0]), 'Attempting to load signals with different data types into single AnalogSignal'
+        datacolumn_id = local_ids[0,0]
+
         # all signals have the same number of samples for a signal recording device
-        samples_per_nid = self._get_signal_size(block_index, seg_index, channel_indexes = [0])
-        nids = self.header['signal_channels'][channel_indexes][:,1]
+        samples_per_nid = self._get_signal_size(block_index, seg_index, channel_indexes=[0])
+        nids = self.header['signal_channels'][channel_indexes]['id']
 
         if i_start is None:
             i_start = 0
         if i_stop is None:
             i_stop = samples_per_nid
 
-        mask_per_time_step = np.where(self._nids_per_rec_dev[rd_id]==nids)[0]
-        nid_mask = np.repeat(mask_per_time_step, samples_per_nid)
-        time_mask = slice(i_start*samples_per_nid, i_stop*samples_per_nid)
+        # extracting all rows containing requested times and nids
+        # mask_per_time_step = np.in1d(self._nids_per_rec_dev[rd_id], nids)
+        # nid_mask = np.repeat(mask_per_time_step, samples_per_nid)
+        nid_mask = True
+        time_mask = np.zeros(self._sorted_data[rd_id].shape[0], dtype=bool)
+        time_mask[i_start*samples_per_nid: i_stop*samples_per_nid] = True
         mask = np.logical_and(nid_mask, time_mask)
 
-        data = self._sorted_data[mask].reshape((samples_per_nid,len(nids)))
+        # Extract relevant data packets
+        data = self._sorted_data[rd_id][mask]#.reshape((samples_per_nid,len(nids))) # (t, nid)
+
+
+        # unfolding 2d data structure using advanced indexing: nid->channel_index
+        m =np.searchsorted(self._nids_per_rec_dev, nids) # this has len(channel_indexes)
+        l = len(data) / self._nids_per_rec_dev[rd_id]
+        ma = np.array([m+i*len(self._nids_per_rec_dev[rd_id]) for i in range(l)])
+        data_signals = data[datacolumn_id][ma]
+
+        return data_signals.reshape((samples_per_nid, len(channel_indexes)))
+
+
+        def get_local_signal(data, local_id):
+            col, col_id = local_id
+            return data[col][col_id]
+
+        # np.empty(shape=(le))
+
+        vget_local = np.vectorize(get_local_signal)
+
+        data = vget_local(data, local_ids)
+        # Problem: Indexing into array with named dtype is not compatible with advanced indexing.
+        # New approach: used flattened representation of original data and use advanced indexing there
+
+        # Update:
+        # signals will be separated for int and float dtype (as defined by baserawio common characteristics check)
+
+
+
+
+
+
+
+        # Extract relevant data columns from packets
+        #  note: nids can have more than one signal recorded per row. see col and col_id
+        # this function should be vectorized
+        # for col, col_id in local_ids:
+        #     data[col][col_id]
+
 
         return data
 
