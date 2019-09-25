@@ -30,6 +30,7 @@ Neo will still install but the IO module that uses them will fail on loading:
    * igor >= 0.2 for IgorIO
    * nixio >= 1.5 for NixIO
    * stfio for StimfitIO
+   * pillow for TiffIO
 
 
 Installing from the Python Package Index

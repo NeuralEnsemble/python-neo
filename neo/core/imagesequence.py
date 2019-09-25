@@ -28,7 +28,8 @@ from neo.core.dataobject import DataObject
 
 class ImageSequence(BaseSignal):
     """
-    Array of three dimension organize as [frame][row][column].
+    Representation of a sequence of images, as an array of three dimensions
+    organized as [frame][row][column].
 
     Inherits from :class:`quantities.Quantity`, which in turn inherits from
     :class:`numpy.ndarray`.
@@ -50,7 +51,7 @@ class ImageSequence(BaseSignal):
         array(1.) * um
 
     *Required attributes/properties*:
-        :image_data: (three dimension numpy array, or a three dimension list)
+        :image_data: (3D NumPy array, or a list of 2D arrays)
             The data itself
         :units: (quantity units)
         :sampling_rate: *or* **sampling_period** (quantity scalar) Number of
@@ -77,7 +78,7 @@ class ImageSequence(BaseSignal):
             (1/:attr:`sampling_period`)
         :sampling_period: (quantity scalar) Interval between two samples.
             (1/:attr:`quantity scalar`)
-        :spatial_scales: size of a pixel
+        :spatial_scale: size of a pixel
      """
     _single_parent_objects = ('Segment',)
     _single_parent_attrs = ('segment',)
@@ -143,7 +144,7 @@ class ImageSequence(BaseSignal):
 
         region_pixel = []
         for i, b in enumerate(region):
-            r = region[i].return_list_pixel()
+            r = region[i].pixels_in_region()
             if not r:
                 raise ValueError('region '+str(i)+'is empty')
             else:

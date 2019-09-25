@@ -10,7 +10,6 @@ try:
 except ImportError:
     have_pil = False
 
-from PIL import Image
 import numpy as np
 from neo.core import ImageSequence, Segment, Block
 from .baseio import BaseIO

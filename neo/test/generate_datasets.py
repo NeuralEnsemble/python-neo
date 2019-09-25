@@ -13,7 +13,8 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Segment, SpikeTrain, Unit, ImageSequence, class_by_name)
+                      Segment, SpikeTrain, Unit, ImageSequence, CircularRegionOfInterest,
+                      RectangularRegionOfInterest, PolygonRegionOfInterest, class_by_name)
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject

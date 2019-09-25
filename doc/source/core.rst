@@ -4,7 +4,7 @@ Neo core
 
 .. currentmodule:: neo.core
 
-This figure shows the main data types in Neo:
+This figure shows the main data types in Neo, with the exception of the newly added ImageSequence and RegionOfInterest classes:
 
 .. image:: images/base_schematic.png
    :height: 500 px
@@ -41,8 +41,8 @@ There is a simple hierarchy of containers:
     Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
 
 
-Grouping objects
-----------------
+Grouping/linking objects
+------------------------
 
 These objects express the relationships between data items, such as which signals
 were recorded on which electrodes, which spike trains were obtained from which
@@ -61,6 +61,10 @@ cut across the simple container hierarchy.
   * :py:class:`Unit`: links the :class:`SpikeTrain` objects within a :class:`Block`,
     possibly across multiple Segments, that were emitted by the same cell.
     A :class:`Unit` is linked to the :class:`ChannelIndex` object from which the spikes were detected.
+
+  * :py:class:`CircularRegionOfInterest`, :py:class:`RectangularRegionOfInterest` and :py:class:`PolygonRegionOfInterest`
+    are three subclasses that link :class:`ImageSequence` objects to signals (:class:`AnalogSignal` objects)
+    extracted from them.
 
 
 NumPy compatibility
@@ -184,6 +188,8 @@ Relationship:
     :width: 750 px
 
 :download:`Click here for a better quality SVG diagram <./images/simple_generated_diagram.svg>`
+
+.. note:: This figure has not yet been updated to include :class:`ImageSequence` and :class:`RegionOfInterest`.
 
 For more details, see the :doc:`api_reference`.
 
