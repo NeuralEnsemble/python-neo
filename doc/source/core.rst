@@ -24,7 +24,7 @@ associated metadata (units, sampling frequency, etc.).
   * :py:class:`SpikeTrain`: A set of action potentials (spikes) emitted by the same unit in a period of time (with optional waveforms).
   * :py:class:`Event`: An array of time points representing one or more events in the data.
   * :py:class:`Epoch`: An array of time intervals representing one or more periods of time in the data.
-  * :py:class:`ImageSequence`: A three dimension array representing multiple images.
+  * :py:class:`ImageSequence`: A three dimensional array representing a sequence of images.
 
 Container objects
 -----------------
@@ -194,7 +194,7 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`. 
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
       Note : Neo annotations are not the same as the *__annotations__* attribute introduced in Python 3.6.
 
 Example: SpikeTrain

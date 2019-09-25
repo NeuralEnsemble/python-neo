@@ -24,6 +24,10 @@ Classes:
 .. autoclass:: SpikeTrain
 .. autoclass:: ImageSequence
 
+.. autoclass:: RectangularRegionOfInterest
+.. autoclass:: CircularRegionOfInterest
+.. autoclass:: PolygonRegionOfInterest
+
 """
 
 # needed for python 3 compatibility
