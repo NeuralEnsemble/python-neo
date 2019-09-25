@@ -98,6 +98,7 @@ class Block(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
+        self.regionsofinterest = []
 
     @property
     def data_children_recur(self):

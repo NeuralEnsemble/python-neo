@@ -17,6 +17,8 @@ Classes:
 
 .. autoclass:: neo.io.AlphaOmegaIO
 
+.. autoclass:: neo.io.AsciiImageIO
+
 .. autoclass:: neo.io.AsciiSignalIO
 
 .. autoclass:: neo.io.AsciiSpikeTrainIO
@@ -28,6 +30,8 @@ Classes:
 .. autoclass:: neo.io.BCI2000IO
 
 .. autoclass:: neo.io.BlackrockIO
+
+.. autoclass:: neo.io.BlkIO
 
 .. autoclass:: neo.io.BrainVisionIO
 
@@ -83,6 +87,8 @@ Classes:
 
 .. autoclass:: neo.io.TdtIO
 
+.. autoclass:: neo.io.TiffIO
+
 .. autoclass:: neo.io.WinEdrIO
 
 .. autoclass:: neo.io.WinWcpIO
@@ -108,12 +114,14 @@ else:
     # print("\n loading with API...")
 
 from neo.io.alphaomegaio import AlphaOmegaIO
+from neo.io.asciiimageio import AsciiImageIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
+from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
@@ -145,17 +153,20 @@ from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
+from neo.io.tiffio import TiffIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
 iolist = [
     AlphaOmegaIO,
+    AsciiImageIO,
     AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxographIO,
     AxonIO,
     BCI2000IO,
     BlackrockIO,
+    BlkIO,
     BrainVisionIO,
     BrainwareDamIO,
     BrainwareF32IO,
@@ -185,6 +196,7 @@ iolist = [
     Spike2IO,
     StimfitIO,
     TdtIO,
+    TiffIO,
     WinEdrIO,
     WinWcpIO
 ]

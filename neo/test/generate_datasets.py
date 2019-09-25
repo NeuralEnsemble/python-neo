@@ -13,7 +13,7 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Segment, SpikeTrain, Unit, class_by_name)
+                      Segment, SpikeTrain, Unit, ImageSequence, class_by_name)
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject
@@ -322,8 +322,8 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
                 n = 1
         elif cls in [SpikeTrain, Event, Epoch]:
             n = len(kwargs['times'])
-        # Array annotate any DataObject
-        if issubclass(cls, DataObject):
+        # Array annotate any DataObject except ImageSequence
+        if issubclass(cls, DataObject) and cls is not ImageSequence:
             new_seed = iseed + 1 if iseed is not None else iseed
             kwargs['array_annotations'] = get_fake_value('array_annotations', dict, seed=new_seed,
                                                          obj=cls, n=n)
