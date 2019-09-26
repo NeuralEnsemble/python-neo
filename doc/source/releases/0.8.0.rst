@@ -1,0 +1,45 @@
+=======================
+Neo 0.8.0 release notes
+=======================
+
+XXth July 2019
+
+Main added features:
+  * Proxy object implementation and new lazy mode
+  * new neo.utils module
+  
+Other features:
+  * Event and Epoch do not use array_annotations machinery
+  * deep copy annotations when slicing
+  * numpy 1.16 compatibility
+  * time_shift() method for Epoch/Event/AnalogSignal
+  * time_slice more robust
+
+Many bug fixes and improvements in IO:
+  * Blackrock
+  * Neuroshare
+  * NixIOFr
+  * NixIO (array annotation + 1d coordinates)
+  * AsciiSignal (fix + json metadata + IrregularlySampledSignals + write proxy)
+  * Spike2 (group same sampling rate)
+  * Brainvision
+  * NeuralynxIO
+
+Warning:
+  * Some IOs (base on rawio) when loading can choose to split each 
+    channel into separted AnalogSignal or to group then.
+    The default behavior (either signal_group_mode='split-all'
+    or 'group-same-units') was not the same for all IOs for retro
+    compatibility reasons. In next release, all IOs will be 
+    signal_group_mode='group-same-units'
+  * last release supporting python2.7
+
+See all [github PR](https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2018-11-27+milestone%3A0.8.0)
+inclued in this release.
+
+Thanks to Achileas Koutsou, Chek Yin Choi, Richard C Gerkin, 
+Alexander Kleinjohann, Björn Müller, Jeffrey Gill, Christian Kothe,
+Mike Sintsov, rishidhingra, Michael Denker, Julia Sprenger,
+Andrew Davison and Samuel Garcia for their contributions to this release.
+
+
