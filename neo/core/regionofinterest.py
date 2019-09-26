@@ -80,7 +80,7 @@ class RectangularRegionOfInterest(RegionOfInterest):
 
     def is_inside(self, x, y):
         if (self.x - self.width/2.0 <= x < self.x + self.width/2.0
-            and self.y - self.height/2.0 <= y < self.y + self.height/2.0):
+                and self.y - self.height/2.0 <= y < self.y + self.height/2.0):
             return True
         else:
             return False
@@ -120,8 +120,8 @@ class PolygonRegionOfInterest(RegionOfInterest):
 
     def polygon_ray_casting(self, bounding_points, bounding_box_positions):
 
-        ## from https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
-        ## user  Noresourses
+        # from https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
+        # user  Noresourses
 
         # Arrays containing the x- and y-coordinates of the polygon's vertices.
         vertx = [point[0] for point in bounding_points]
@@ -139,7 +139,7 @@ class PolygonRegionOfInterest(RegionOfInterest):
                 j = i - 1 if i != 0 else nvert - 1
                 if (((verty[i]*1.0 > testy*1.0) != (verty[j]*1.0 > testy*1.0)) and
                         (testx*1.0 < (vertx[j]*1.0 - vertx[i]*1.0) * (testy*1.0 - verty[i]*1.0) /
-                        (verty[j]*1.0 - verty[i]*1.0) + vertx[i]*1.0)):
+                         (verty[j]*1.0 - verty[i]*1.0) + vertx[i]*1.0)):
                     c += 1
             # If odd, that means that we are inside the polygon
             if c % 2 == 1:

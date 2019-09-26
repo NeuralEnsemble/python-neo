@@ -3,7 +3,7 @@ from neo.core import ImageSequence
 from neo.core.regionofinterest import CircularRegionOfInterest, RectangularRegionOfInterest, PolygonRegionOfInterest
 import quantities as pq
 import numpy as np
-from neo.core import Block,Segment
+from neo.core import Block, Segment
 
 
 class TestImageSequence(unittest.TestCase):
@@ -16,7 +16,6 @@ class TestImageSequence(unittest.TestCase):
                 self.data[frame].append([])
                 for x in range(50):
                     self.data[frame][y].append(x)
-
 
     def test_sampling_rate(self):
         # test if error is raise when not giving sample_rate
@@ -38,9 +37,7 @@ class TestImageSequence(unittest.TestCase):
         with self.assertRaises(TypeError):
             ImageSequence(self.data, sampling_rate=500 * pq.Hz, spatial_scale='m')
 
-    # test method will be remove are rename
-
-    def test_something(self):
+    def test_wrong_dimensions(self):
         l = ImageSequence(self.data, sampling_rate=500 * pq.Hz, units='V',
                           spatial_scale='m')
 
@@ -48,7 +45,8 @@ class TestImageSequence(unittest.TestCase):
         self.assertEqual(l.spatial_scale, 'm')
         # giving wrong dimension test if it give an error
         with self.assertRaises(ValueError):
-            ImageSequence([[0, 1, 2, 4, 2], [0, 1, 2, 4, 5]], sampling_rate=500 * pq.Hz, units='V', spatial_scale='m')
+            ImageSequence([[0, 1, 2, 4, 2], [0, 1, 2, 4, 5]],
+                          sampling_rate=500 * pq.Hz, units='V', spatial_scale='m')
 
 
 class TestMethodImageSequence(unittest.TestCase):
@@ -64,17 +62,18 @@ class TestMethodImageSequence(unittest.TestCase):
                     self.data[frame][y].append(x)
 
     def test_signal_from_region(self):
-
         self.fake_region_of_interest()
         l = ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region(
             self.rect_ROI)
         self.assertIsInstance(l, list)
         for i in range(len(l)):
             self.assertIsInstance(l[i], object)
+        with self.assertRaises(ValueError):  # no pixels in region
+            ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz,
+                          spatial_scale='m').signal_from_region(RectangularRegionOfInterest(1, 1, 0, 0))
         with self.assertRaises(ValueError):
-            ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region(RectangularRegionOfInterest(1, 1, 1, 1))
-        with self.assertRaises(ValueError):
-            ImageSequence(self.data, units='V', sampling_rate=500 * pq.Hz, spatial_scale='m').signal_from_region()
+            ImageSequence(self.data, units='V', sampling_rate=500 *
+                          pq.Hz, spatial_scale='m').signal_from_region()
 
 
 if __name__ == "__main__":

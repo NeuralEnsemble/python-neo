@@ -132,7 +132,6 @@ class ImageSequence(BaseSignal):
         return obj
 
     def signal_from_region(self, *region):
-
         """
             Method that takes 1 or multiple regionofinterest, use the method of each region
             of interest to get the list of pixel to average.
@@ -160,7 +159,8 @@ class ImageSequence(BaseSignal):
                 for b in range(1, len(picture_data)):
                     average += picture_data[b]
                 data.append((average * 1.0) / len(i))
-            analogsignal_list.append(AnalogSignal(data, units=self.units, sampling_rate=self.sampling_rate))
+            analogsignal_list.append(AnalogSignal(data, units=self.units,
+                                                  sampling_rate=self.sampling_rate))
 
         return analogsignal_list
 
