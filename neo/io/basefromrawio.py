@@ -210,7 +210,7 @@ class BaseFromRaw(BaseIO):
                      signal_group_mode=None, load_waveforms=False, time_slice=None,
                      strict_slicing=True):
         """
-        :param block_index: int default 0. In case of several block block_index can be specified.
+        :param block_index: int default 0. In case of several blocks block_index can be specified.
 
         :param seg_index: int default 0. Index of segment.
 
@@ -229,7 +229,7 @@ class BaseFromRaw(BaseIO):
             All object AnalogSignal, SpikeTrain, Event, Epoch will load only in the slice.
 
         :param strict_slicing: True by default.
-             Control if an error is raise or not when one of  time_slice member (t_start or t_stop)
+             Control if an error is raised or not when t_start or t_stop
              is outside the real time range of the segment.
         """
 

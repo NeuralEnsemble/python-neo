@@ -7,9 +7,9 @@ system.
 
 Dependencies
 ============
-  
+
     * Python_ >= 2.7
-    * numpy_ >= 1.7.1
+    * numpy_ >= 1.10.0
     * quantities_ >= 0.12.1
 
 For Debian/Ubuntu, you can install these using::
@@ -40,20 +40,20 @@ Installing from the Python Package Index
 If you have pip_ installed::
 
     $ pip install neo
-    
+
 This will automatically download and install the latest release (again
 you may need to have administrator privileges on the machine you are installing
 on).
-    
+
 To download and install manually, download:
 
     |neo_github_url|
-    
+
 
 Then:
 
 .. parsed-literal::
-    
+
     $ unzip neo-|release|.zip
     $ cd neo-|release|
     $ python setup.py install
@@ -63,7 +63,7 @@ Then:
 or::
 
     $ python3 setup.py install
-    
+
 depending on which version of Python you are using.
 
 
