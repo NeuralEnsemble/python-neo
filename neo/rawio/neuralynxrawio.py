@@ -440,46 +440,67 @@ class NeuralynxRawIO(BaseRawIO):
         data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
 
         gap_indexes = None
+        lost_indexes = None
+
         if self.use_cache:
             gap_indexes = self._cache.get('gap_indexes')
+            lost_indexes = self._cache.get('lost_indexes')
 
         # detect gaps on first file
-        if gap_indexes is None:
+        if (gap_indexes is None) or (lost_indexes is None):
+
             # this can be long!!!!
             timestamps0 = data0['timestamp']
             deltas0 = np.diff(timestamps0)
 
             # It should be that:
             # gap_indexes, = np.nonzero(deltas0!=good_delta)
-            # but for a file I have found many deltas0==15999 deltas0==16000
+            # but for a file I have found many deltas0==15999, 16000, 16001 (for sampling at 32000)
             # I guess this is a round problem
             # So this is the same with a tolerance of 1 or 2 ticks
-            mask = deltas0 != good_delta
-            for tolerance in (1, 2):
-                mask &= (deltas0 != good_delta - tolerance)
-                mask &= (deltas0 != good_delta + tolerance)
+            max_tolerance = 2
+            mask = np.abs((deltas0 - good_delta).astype('int64')) > max_tolerance
+
             gap_indexes, = np.nonzero(mask)
 
             if self.use_cache:
                 self.add_in_cache(gap_indexes=gap_indexes)
 
-        gap_bounds = [0] + (gap_indexes + 1).tolist() + [data0.size]
-        self._nb_segment = len(gap_bounds) - 1
+            # update for lost_indexes
+            # Sometimes NLX writes a faulty block, but it then validates how much samples it wrote
+            # the validation field is in delta0['nb_valid'], it should be equal to BLOCK_SIZE
 
+            lost_indexes, = np.nonzero(data0['nb_valid'] < BLOCK_SIZE)
+
+            if self.use_cache:
+                self.add_in_cache(lost_indexes=lost_indexes)
+
+        gap_candidates = np.unique([0]
+                                   + [data0.size]
+                                   + (gap_indexes + 1).tolist()
+                                   + lost_indexes.tolist())  # linear
+
+        gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
+
+        # construct proper gap ranges free of lost samples artifacts
+        minimal_segment_length = 1  # in blocks
+        goodpairs = np.diff(gap_pairs, 1).reshape(-1) > minimal_segment_length
+        gap_pairs = gap_pairs[goodpairs]  # ensures a segment is at least a block wide
+
+        self._nb_segment = len(gap_pairs)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
         self._sigs_t_stop = []
         self._sigs_length = []
         self._timestamp_limits = []
+
         # create segment with subdata block/t_start/t_stop/length
         for chan_uid, ncs_filename in self.ncs_filenames.items():
 
             data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
-            for seg_index in range(self._nb_segment):
-                i0 = gap_bounds[seg_index]
-                i1 = gap_bounds[seg_index + 1]
+            for seg_index, (i0, i1) in enumerate(gap_pairs):
 
                 assert data[i0]['timestamp'] == data0[i0][
                     'timestamp'], 'ncs files do not have the same gaps'
@@ -489,12 +510,10 @@ class NeuralynxRawIO(BaseRawIO):
                 subdata = data[i0:i1]
                 self._sigs_memmap[seg_index][chan_uid] = subdata
 
-
-
                 if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + \
-                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] \
+                            + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)

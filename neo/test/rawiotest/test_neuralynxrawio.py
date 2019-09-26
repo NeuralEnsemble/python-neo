@@ -19,6 +19,7 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.5.1/original_data',
         'Cheetah_v5.6.3/original_data',
         'Cheetah_v5.7.4/original_data',
+        'Cheetah_v6.3.2/incomplete_blocks'
     ]
     files_to_download = [
         'Cheetah_v5.5.1/original_data/CheetahLogFile.txt',
@@ -59,7 +60,10 @@ class TestNeuralynxRawIO(BaseTestRawIO, unittest.TestCase, ):
         'Cheetah_v5.7.4/plain_data/CSC4.txt',
         'Cheetah_v5.7.4/plain_data/CSC5.txt',
         'Cheetah_v5.7.4/plain_data/Events.txt',
-        'Cheetah_v5.7.4/README.txt']
+        'Cheetah_v5.7.4/README.txt',
+        'Cheetah_v6.3.2/incomplete_blocks/CSC1_reduced.ncs',
+        'Cheetah_v6.3.2/incomplete_blocks/Events.nev',
+        'Cheetah_v6.3.2/incomplete_blocks/README.txt']
 
 
 if __name__ == "__main__":

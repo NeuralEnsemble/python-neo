@@ -58,10 +58,12 @@ class Epoch(DataObject):
               dtype='|S4')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D) The start times of each time period.
-        :durations: (quantity array 1D or quantity scalar) The length(s) of each time period.
+        :times: (quantity array 1D, numpy array 1D or list) The start times
+           of each time period.
+        :durations: (quantity array 1D, numpy array 1D, list, or quantity scalar)
+           The length(s) of each time period.
            If a scalar, the same value is used for all time periods.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the time periods.
+        :labels: (numpy.array 1D dtype='S' or list) Names or labels for the time periods.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset,
@@ -87,6 +89,10 @@ class Epoch(DataObject):
                 description=None, file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
+        elif isinstance(times, (list, tuple)):
+            times = np.array(times)
+        if isinstance(durations, (list, tuple)):
+            durations = np.array(durations)
         if durations is None:
             durations = np.array([]) * pq.s
         elif durations.size != times.size:
@@ -112,6 +118,8 @@ class Epoch(DataObject):
                 dim = units.dimensionality
             else:
                 dim = pq.quantity.validate_dimensionality(units)
+        if not hasattr(durations, "dimensionality"):
+            durations = pq.Quantity(durations, dim)
         # check to make sure the units are time
         # this approach is much faster than comparing the
         # reference dimensionality
@@ -189,8 +197,7 @@ class Epoch(DataObject):
         '''
         Get the item or slice :attr:`i`.
         '''
-        obj = Epoch(times=super(Epoch, self).__getitem__(i))
-        obj._copy_data_complement(self)
+        obj = super(Epoch, self).__getitem__(i)
         obj._durations = self.durations[i]
         if self._labels is not None and self._labels.size > 0:
             obj._labels = self.labels[i]
@@ -199,8 +206,11 @@ class Epoch(DataObject):
         try:
             # Array annotations need to be sliced accordingly
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            obj._copy_data_complement(self)
         except AttributeError:  # If Quantity was returned, not Epoch
-            pass
+            obj.times = obj
+            obj.durations = obj._durations
+            obj.labels = obj._labels
         return obj
 
     def __getslice__(self, i, j):

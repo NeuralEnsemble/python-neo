@@ -55,8 +55,8 @@ class Event(DataObject):
               dtype='|S5')
 
     *Required attributes/properties*:
-        :times: (quantity array 1D) The time of the events.
-        :labels: (numpy.array 1D dtype='S') Names or labels for the events.
+        :times: (quantity array 1D, numpy array 1D or list) The times of the events.
+        :labels: (numpy.array 1D dtype='S' or list) Names or labels for the events.
 
     *Recommended attributes/properties*:
         :name: (str) A label for the dataset.
@@ -81,6 +81,8 @@ class Event(DataObject):
                 file_origin=None, array_annotations=None, **annotations):
         if times is None:
             times = np.array([]) * pq.s
+        elif isinstance(times, (list, tuple)):
+            times = np.array(times)
         if labels is None:
             labels = np.array([], dtype='S')
         else:
@@ -211,7 +213,7 @@ class Event(DataObject):
         # Note: Array annotations, including labels, cannot be copied
         # because they are linked to their respective timestamps and length of data can be changed
         # here which would cause inconsistencies
-        for attr in ("_labels", "name", "file_origin", "description",
+        for attr in ("name", "file_origin", "description",
                      "annotations"):
             setattr(self, attr, deepcopy(getattr(other, attr, None)))
 
@@ -223,8 +225,9 @@ class Event(DataObject):
             obj.labels = self._labels
         try:
             obj.array_annotate(**deepcopy(self.array_annotations_at_index(i)))
+            obj._copy_data_complement(self)
         except AttributeError:  # If Quantity was returned, not Event
-            pass
+            obj.times = obj
         return obj
 
     def set_labels(self, labels):
