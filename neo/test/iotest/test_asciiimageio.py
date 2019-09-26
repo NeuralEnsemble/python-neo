@@ -28,8 +28,8 @@ class TestAsciiImageIO(unittest.TestCase):
         file.close()
 
         object = AsciiImageIO(file_name='txt_test_file.txt',
-                     nb_frame=20, nb_row=50, nb_column=50, units='V',
-                     sampling_rate=1 * pq.Hz, spatial_scale=1 * pq.micrometer)
+                              nb_frame=20, nb_row=50, nb_column=50, units='V',
+                              sampling_rate=1 * pq.Hz, spatial_scale=1 * pq.micrometer)
         block = object.read_block()
         self.assertEqual(len(block.segments), 1)
         self.assertEqual(len(block.segments[0].imagesequences), 1)
@@ -38,6 +38,7 @@ class TestAsciiImageIO(unittest.TestCase):
 
         file.close()
         os.remove(file_name)
+
 
 if __name__ == "__main__":
     unittest.main()

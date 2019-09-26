@@ -27,13 +27,14 @@ class BlkIO(BaseIO):
         Block with 6 segments
         file_origin: 'file_blk_1.BLK'
         # segments (N=6)
-        0 : Segment with 1 imagesequences description: 'stim nb:0' # analogsignals (N=0)
+        0: Segment with 1 imagesequences description: 'stim nb:0' # analogsignals (N=0)
         1: Segment with 1 imagesequences description: 'stim nb:1' # analogsignals (N=0)
         2: Segment with 1 imagesequences description: 'stim nb:2' # analogsignals (N=0)
         3: Segment with 1 imagesequences description: 'stim nb:3' # analogsignals (N=0)
         4: Segment with 1 imagesequences description: 'stim nb:4' # analogsignals (N=0)
         5: Segment with 1 imagesequences description: 'stim nb:5' # analogsignals (N=0)
 
+    Many thanks to Thomas Deneux for the MATLAB code on which this was based.
     """
 
     name = 'BLK IO'
@@ -96,24 +97,54 @@ class BlkIO(BaseIO):
             file = open(file_name, "rb")
 
             i = [
-                ['file_size', 'int32', 1], ['checksum_header', 'int32', 1], ['check_data', 'int32', 1],
-                ['lenheader', 'int32', 1], ['versionid', 'float32', 1], ['filetype', 'int32', 1],
+                ['file_size', 'int32', 1],
+                ['checksum_header', 'int32', 1],
+                ['check_data', 'int32', 1],
+                ['lenheader', 'int32', 1],
+                ['versionid', 'float32', 1],
+                ['filetype', 'int32', 1],
                 ['filesubtype', 'int32', 1],
-                ['datatype', 'int32', 1], ['sizeof', 'int32', 1], ['framewidth', 'int32', 1],
+                ['datatype', 'int32', 1],
+                ['sizeof', 'int32', 1],
+                ['framewidth', 'int32', 1],
                 ['frameheight', 'int32', 1],
-                ['nframesperstim', 'int32', 1], ['nstimuli', 'int32', 1], ['initialxbinfactor', 'int32', 1],
-                ['initialybinfactor', 'int32', 1], ['xbinfactor', 'int32', 1], ['ybinfactor', 'int32', 1],
-                ['username', 'uint8', 32], ['recordingdate', 'uint8', 16], ['x1roi', 'int32', 1],
-                ['y1roi', 'int32', 1], ['x2roi', 'int32', 1], ['y2roi', 'int32', 1], ['stimoffs', 'int32', 1],
-                ['stimsize', 'int32', 1], ['frameoffs', 'int32', 1], ['framesize', 'int32', 1], ['refoffs', 'int32', 1],
-                ['refsize', 'int32', 1], ['refwidth', 'int32', 1], ['refheight', 'int32', 1],
+                ['nframesperstim', 'int32', 1],
+                ['nstimuli', 'int32', 1],
+                ['initialxbinfactor', 'int32', 1],
+                ['initialybinfactor', 'int32', 1],
+                ['xbinfactor', 'int32', 1],
+                ['ybinfactor', 'int32', 1],
+                ['username', 'uint8', 32],
+                ['recordingdate', 'uint8', 16],
+                ['x1roi', 'int32', 1],
+                ['y1roi', 'int32', 1],
+                ['x2roi', 'int32', 1],
+                ['y2roi', 'int32', 1],
+                ['stimoffs', 'int32', 1],
+                ['stimsize', 'int32', 1],
+                ['frameoffs', 'int32', 1],
+                ['framesize', 'int32', 1],
+                ['refoffs', 'int32', 1],
+                ['refsize', 'int32', 1],
+                ['refwidth', 'int32', 1],
+                ['refheight', 'int32', 1],
                 ['whichblocks', 'uint16', 16],
-                ['whichframe', 'uint16', 16], ['loclip', 'int32', 1], ['hiclip', 'int32', 1], ['lopass', 'int32', 1],
-                ['hipass', 'int32', 1], ['operationsperformed', 'uint8', 64], ['magnification', 'float32', 1],
-                ['gain', 'uint16', 1], ['wavelength', 'uint16', 1], ['exposuretime', 'int32', 1],
+                ['whichframe', 'uint16', 16],
+                ['loclip', 'int32', 1],
+                ['hiclip', 'int32', 1],
+                ['lopass', 'int32', 1],
+                ['hipass', 'int32', 1],
+                ['operationsperformed', 'uint8', 64],
+                ['magnification', 'float32', 1],
+                ['gain', 'uint16', 1],
+                ['wavelength', 'uint16', 1],
+                ['exposuretime', 'int32', 1],
                 ['nrepetitions', 'int32', 1],
-                ['acquisitiondelay', 'int32', 1], ['interstiminterval', 'int32', 1], ['creationdate', 'uint8', 16],
-                ['datafilename', 'uint8', 64], ['orareserved', 'uint8', 256]
+                ['acquisitiondelay', 'int32', 1],
+                ['interstiminterval', 'int32', 1],
+                ['creationdate', 'uint8', 16],
+                ['datafilename', 'uint8', 64],
+                ['orareserved', 'uint8', 256]
             ]
 
             dic = {}
@@ -122,12 +153,23 @@ class BlkIO(BaseIO):
 
             if dic['filesubtype'] == 13:
                 i = [
-                    ["includesrefframe", "int32", 1], ["temp", "uint8", 128], ["ntrials", "int32", 1],
-                    ["scalefactors", "int32", 1], ["cameragain", "short", 1], ["ampgain", "short", 1],
-                    ["samplingrate", "short", 1], ["average", "short", 1], ["exposuretime", "short", 1],
-                    ["samplingaverage", "short", 1], ["presentaverage", "short", 1], ["framesperstim", "short", 1],
-                    ["trialsperblock", "short", 1], ["sizeofanalogbufferinframes", "short", 1],
-                    ["cameratrials", "short", 1], ["filler", "uint8", 106], ["dyedaqreserved", "uint8", 106]
+                    ["includesrefframe", "int32", 1],
+                    ["temp", "uint8", 128],
+                    ["ntrials", "int32", 1],
+                    ["scalefactors", "int32", 1],
+                    ["cameragain", "short", 1],
+                    ["ampgain", "short", 1],
+                    ["samplingrate", "short", 1],
+                    ["average", "short", 1],
+                    ["exposuretime", "short", 1],
+                    ["samplingaverage", "short", 1],
+                    ["presentaverage", "short", 1],
+                    ["framesperstim", "short", 1],
+                    ["trialsperblock", "short", 1],
+                    ["sizeofanalogbufferinframes", "short", 1],
+                    ["cameratrials", "short", 1],
+                    ["filler", "uint8", 106],
+                    ["dyedaqreserved", "uint8", 106]
                 ]
                 for x in i:
                     dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
@@ -136,10 +178,14 @@ class BlkIO(BaseIO):
                 dic["listofstimuli"] = dic["temp"][0:np.argwhere(x != 0).max(0)]
             else:
                 i = [
-                    ["includesrefframe", "int32", 1], ["listofstimuli", "uint8", 256],
+                    ["includesrefframe", "int32", 1],
+                    ["listofstimuli", "uint8", 256],
                     ["nvideoframesperdataframe", "int32", 1],
-                    ["ntrials", "int32", 1], ["scalefactor", "int32", 1], ["meanampgain", "float32", 1],
-                    ["meanampdc", "float32", 1], ["vdaqreserved", "uint8", 256]
+                    ["ntrials", "int32", 1],
+                    ["scalefactor", "int32", 1],
+                    ["meanampgain", "float32", 1],
+                    ["meanampdc", "float32", 1],
+                    ["vdaqreserved", "uint8", 256]
                 ]
                 for x in i:
                     dic = read(name=x[0], type=x[1], nb=x[2], dictionary=dic, file=file)
@@ -150,9 +196,6 @@ class BlkIO(BaseIO):
             file.close()
 
             return dic
-
-        
-
 
         # start of the reading process
         nblocks = 1
@@ -196,7 +239,8 @@ class BlkIO(BaseIO):
         data = [[[np.zeros((ni, nj, nfr), type_out)] for x in range(ncond)] for i in range(nbin)]
         for k in range(1, nbin + 1):
             print("reading block")
-            bin = np.arange(math.floor((k - 1 / nbin * nblocks) + 1), math.floor((k / nbin * nblocks) + 1))
+            bin = np.arange(math.floor((k - 1 / nbin * nblocks) + 1),
+                            math.floor((k / nbin * nblocks) + 1))
             sbin = bin.size
             for j in range(1, sbin + 1):
                 file = open(self.filename, 'rb')
@@ -206,8 +250,10 @@ class BlkIO(BaseIO):
                     offset = framestart * ni * nj * nbytes + lenh
                     file.seek(offset, 0)
 
-                    a = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj * nfr)]
-                    a = np.reshape(np.array(a, dtype=type_out, order='F'), (ni * nj, nfr), order='F')
+                    a = [(struct.unpack(struct_type, file.read(nbytes)))[0]
+                         for m in range(ni * nj * nfr)]
+                    a = np.reshape(np.array(a, dtype=type_out, order='F'),
+                                   (ni * nj, nfr), order='F')
                     a = np.reshape(a, (ni, nj, nfr), order='F')
 
                     if includesrefframe:
@@ -217,7 +263,8 @@ class BlkIO(BaseIO):
 
                         file.seek(offset)
 
-                        ref = [(struct.unpack(struct_type, file.read(nbytes)))[0] for m in range(ni * nj)]
+                        ref = [(struct.unpack(struct_type, file.read(nbytes)))[0]
+                               for m in range(ni * nj)]
                         ref = np.array(ref, dtype=type_out)
                         for y in range(len(ref)):
                             ref[y] *= scalefactor
@@ -228,7 +275,8 @@ class BlkIO(BaseIO):
                             for x in range(len(a[y])):
                                 b[y + 1].append([])
                                 for frame in range(len(a[y][x])):
-                                    b[y + 1][x][frame] = (a[y][x][frame] / gain) - (scalefactor * dc / gain)
+                                    b[y + 1][x][frame] = (a[y][x][frame] / gain) - \
+                                        (scalefactor * dc / gain)
                         a = b
                     if sbin == 1:
                         data[k - 1][i - 1] = a
@@ -241,12 +289,12 @@ class BlkIO(BaseIO):
 
                 file.close()
 
-        ### data format [block][stim][width][height][frame]]
-        ### data structure should be [block][stim][frame][width][height] in order to be easy to use with neo
-        ### each file is a block
-        ### each stim could be a segment
-        ### then an image sequence [frame][width][height]
-        ### image need to be rotated
+        # data format [block][stim][width][height][frame]]
+        # data structure should be [block][stim][frame][width][height] in order to be easy to use with neo
+        # each file is a block
+        # each stim could be a segment
+        # then an image sequence [frame][width][height]
+        # image need to be rotated
 
         # changing order of data for compatibility
         # [block][stim][width][height][frame]]

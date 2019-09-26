@@ -7,8 +7,8 @@ import shutil
 from neo.io.tiffio import TiffIO
 import quantities as pq
 
-class TestTiffIO(unittest.TestCase):
 
+class TestTiffIO(unittest.TestCase):
 
     def test_read_group_of_tiff_grayscale(self):
         directory = 'test_tiff'

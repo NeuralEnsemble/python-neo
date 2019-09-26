@@ -33,7 +33,7 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
                                         clone_object, TEST_ANNOTATIONS)
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
-                EventProxy, EpochProxy)
+                                 EventProxy, EpochProxy)
 
 
 class Test__generate_datasets(unittest.TestCase):
@@ -856,7 +856,7 @@ class TestSegment(unittest.TestCase):
                                                 t_stop=time_slice[1]))
         assert_same_attributes(sliced.epochs[0],
                                epoch2.time_slice(t_start=time_slice[0],
-                                                t_stop=time_slice[1]))
+                                                 t_stop=time_slice[1]))
 
         seg = Segment()
         seg.epochs = [epoch2]
@@ -886,18 +886,18 @@ class TestSegment(unittest.TestCase):
 
         anasig_target = anasig.copy()
         anasig_target = anasig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                 t_stop=time_slice[1] - time_slice[0])
+                                                                             t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.analogsignals[0], anasig_target)
         irrsig_target = irrsig.copy()
         irrsig_target = irrsig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                t_stop=time_slice[1] - time_slice[0])
+                                                                             t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.irregularlysampledsignals[0], irrsig_target)
         assert_same_attributes(sliced.events[0],
                                event.time_shift(- time_slice[0]).time_slice(
                                    t_start=0 * pq.s, t_stop=time_slice[1] - time_slice[0]))
         assert_same_attributes(sliced.epochs[0],
                                epoch2.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                    t_stop=time_slice[1] - time_slice[0]))
+                                                                             t_stop=time_slice[1] - time_slice[0]))
 
         seg = Segment()
 
@@ -910,7 +910,7 @@ class TestSegment(unittest.TestCase):
         seg.analogsignals.append(proxy_anasig)
 
         proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0,
-                                     block_index=0, seg_index=0)
+                                   block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_st)
 
         proxy_event = EventProxy(rawio=reader, event_channel_index=0,
@@ -937,14 +937,14 @@ class TestSegment(unittest.TestCase):
         assert_neo_object_is_compliant(sliced)
 
         sliced_event = loaded_event.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                               t_stop=time_slice[1])
         has_event = len(sliced_event) > 0
 
         sliced_anasig = loaded_anasig.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                                 t_stop=time_slice[1])
 
         sliced_st = loaded_st.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                         t_stop=time_slice[1])
 
         self.assertEqual(len(sliced.events), int(has_event))
         self.assertEqual(len(sliced.spiketrains), 1)
@@ -964,7 +964,7 @@ class TestSegment(unittest.TestCase):
             self.assertTrue(isinstance(sliced.events[0],
                                        Event))
             assert_same_attributes(sliced.events[0],
-                               sliced_event)
+                                   sliced_event)
 
     # to remove
     # def test_segment_take_analogsignal_by_unit(self):

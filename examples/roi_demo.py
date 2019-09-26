@@ -8,7 +8,6 @@ from neo.core import CircularRegionOfInterest, RectangularRegionOfInterest, Poly
 from numpy.random import rand
 
 
-
 def plot_roi(roi, shape):
     img = rand(120, 100)
     pir = np.array(roi.pixels_in_region()).T
@@ -27,12 +26,13 @@ plt.subplot(1, 3, 1)
 plot_roi(roi, shape)
 
 roi = RectangularRegionOfInterest(x=50.3, y=40.2, width=40.1, height=50.3)
-shape = plt.Rectangle((roi.x - roi.width/2.0, roi.y - roi.height/2.0), roi.width, roi.height, color='r', fill=False)
+shape = plt.Rectangle((roi.x - roi.width/2.0, roi.y - roi.height/2.0),
+                      roi.width, roi.height, color='r', fill=False)
 plt.subplot(1, 3, 2)
 plot_roi(roi, shape)
 
 roi = PolygonRegionOfInterest(
-    (20.3, 30.2), (80.7,30.1), (55.2, 59.4)
+    (20.3, 30.2), (80.7, 30.1), (55.2, 59.4)
 )
 shape = plt.Polygon(np.array(roi.vertices), closed=True, color='r', fill=False)
 plt.subplot(1, 3, 3)

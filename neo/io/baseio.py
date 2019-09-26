@@ -205,10 +205,10 @@ class BaseIO(object):
     def write_imagesequence(self, imseq, **kargs):
         assert (ImageSequence in self.writeable_objects), write_error
 
-    def write_rectangularregionofinterest(self, rectroi,**kargs):
+    def write_rectangularregionofinterest(self, rectroi, **kargs):
         assert (RectangularRegionOfInterest in self.writeable_objects), read_error
 
-    def write_circularregionofinterest(self, circroi,**kargs):
+    def write_circularregionofinterest(self, circroi, **kargs):
         assert (CircularRegionOfInterest in self.writeable_objects), read_error
 
     def write_polygonregionofinterest(self, polyroi, **kargs):

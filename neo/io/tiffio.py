@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Neo IO module for optical imaging data stored as a folder of TIFF images.
 """
@@ -71,8 +71,8 @@ class TiffIO(BaseIO):
 
     mode = 'dir'
 
-    def __init__(self, directory_path=None,units=None, sampling_rate=None,
-                   spatial_scale=None, **kwargs):
+    def __init__(self, directory_path=None, units=None, sampling_rate=None,
+                 spatial_scale=None, **kwargs):
 
         if not have_pil:
             raise Exception("Please install the pillow package to use TiffIO")
@@ -104,16 +104,18 @@ class TiffIO(BaseIO):
         file_name_list = [item for sublist in file_name_list for item in sublist]
         # delete path in the name of file
         file_name_list = [file_name[len(self.filename)+1::] for file_name in file_name_list]
-        #sorting file
+        # sorting file
         file_name_list = natural_sort(file_name_list)
         list_data_image = []
         for file_name in file_name_list:
-            list_data_image.append(np.array(Image.open(self.filename + "/" + file_name), dtype=np.float))
+            list_data_image.append(
+                np.array(Image.open(self.filename + "/" + file_name), dtype=np.float))
         list_data_image = np.array(list_data_image)
         if len(list_data_image.shape) == 4:
             list_data_image = []
             for file_name in file_name_list:
-                list_data_image.append(np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float))
+                list_data_image.append(
+                    np.array(Image.open(self.filename + "/" + file_name).convert('L'), dtype=np.float))
 
         print("read block")
         image_sequence = ImageSequence(np.stack(list_data_image),

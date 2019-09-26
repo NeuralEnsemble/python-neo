@@ -176,9 +176,9 @@ class TestBlock(unittest.TestCase):
                       for seg in self.segs2]
 
         self.img_seqs1 = [[imgseq for imgseq in seg.imagesequences]
-                           for seg in self.segs1]
+                          for seg in self.segs1]
         self.img_seqs2 = [[imgseq for imgseq in seg.imagesequences]
-                           for seg in self.segs2]
+                          for seg in self.segs2]
 
         self.sigarrs1 = sum(self.sigarrs1, [])
         self.sigarrs2 = sum(self.sigarrs2, [])
@@ -321,7 +321,7 @@ class TestBlock(unittest.TestCase):
                                self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
-                               self.trains1[1::2]+
+                               self.trains1[1::2] +
                                self.img_seqs1[2:],
                                exclude=['channel_index'])
 
