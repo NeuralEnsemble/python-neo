@@ -1049,14 +1049,15 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         signal_for_splicing = AnalogSignal([0.1, 0.1, 0.1], t_start=3 * pq.ms,
                                            sampling_rate=self.signal1.sampling_rate, units=pq.uA,
                                            array_annotations={'anno1': [0], 'anno2': ['C']})
-        result = self.signal1[:, 0].splice(signal_for_splicing, copy=False)
+        original_1d_signal = self.signal1[:, 0]
+        original_1d_signal.channel_index = self.signal1.channel_index
+        result = original_1d_signal.splice(signal_for_splicing, copy=False)
         targ = np.arange(55).reshape((11, 5))
         targ[3:6, 0] = 100.
         assert_array_equal(self.signal1.magnitude, targ)
         assert_array_equal(self.signal1[:, 0], result)  # in-place
         self.assertEqual(result.segment, self.signal1.segment)
-        # TODO: This is not fulfilled any more. Needs to be investigated.
-        # self.assertEqual(result.channel_index, self.signal1.channel_index)
+        self.assertEqual(result.channel_index, self.signal1.channel_index)
         assert_array_equal(self.signal1.array_annotations['anno1'], np.arange(5))
         assert_array_equal(self.signal1.array_annotations['anno2'], np.array(['a', 'b', 'c', 'd', 'e']))
         assert_array_equal(result.array_annotations['anno1'], np.arange(1))
