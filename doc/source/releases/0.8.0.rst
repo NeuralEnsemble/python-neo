@@ -32,6 +32,41 @@ use ``SomeIO.support_lazy``.
 
 For more details,  see :ref:`section-lazy`.
 
+Image sequence data
+-------------------
+
+Another new feature, although one that is more experimental, is support for image sequence data,
+coming from calcium imaging of neuronal activity, voltage-sensitive dye imaging, etc.
+
+The new :class:`ImageSequence` object contains a sequence of image frames as a 3D array.
+As with other Neo data objects, the object also holds metadata such as the sampling rate/frame duration
+and the spatial scale (physical size represented by one pixel).
+
+Three new IO modules, :class:`TiffIO`, :class:`AsciiImageIO` and :class:`BlkIO`, allow
+reading such data from file, e.g.::
+
+    from quantities import Hz, mm, dimensionless
+    from neo.io import TiffIO
+
+    data = TiffIO(data_path).read(units=dimensionless, sampling_rate=25 * Hz,
+                                  spatial_scale=0.05 * mm)
+    images = data[0].segments[0].imagesequences[0]
+
+:class:`ImageSequence` is a subclass of the NumPy :class:`ndarray`, and
+so can be manipulated in the same ways, e.g.::
+
+    images /= images.max()
+    background = np.mean(images, axis=0)
+    preprocessed_images = images - background
+
+Since a common operation with image sequences is to extract time series from regions of interest,
+Neo also provides various region-of-interest classes which perform this operation,
+returning an :class:`AnalogSignal` object::
+
+    roi = CircularRegionOfInterest(x=50, y=50, radius=10)
+    signal = preprocessed_images.signal_from_region(roi)[0]
+
+
 Other new features
 ------------------
 
