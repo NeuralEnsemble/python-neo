@@ -2,7 +2,7 @@
 Neo 0.8.0 release notes
 =======================
 
-27th September 2019
+30th September 2019
 
 Lazy loading
 ------------
