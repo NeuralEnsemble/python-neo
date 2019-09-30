@@ -440,8 +440,8 @@ class AnalogSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {0}".format(self.sampling_rate),
-                     "time: {0} to {1}".format(self.t_start, self.t_stop)]:
+        for line in ["sampling rate: {}".format(self.sampling_rate),
+                     "time: {} to {}".format(self.t_start, self.t_stop)]:
             _pp(line)
 
     def time_index(self, t):

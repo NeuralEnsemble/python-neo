@@ -348,7 +348,7 @@ class AxonRawIO(BaseRawIO):
                         i_end = i_last + epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum
                         dif = i_end - i_begin
-                        sig[i_begin:i_end] = np.ones((dif)) * \
+                        sig[i_begin:i_end] = np.ones(dif) * \
                             (epoch['fEpochInitLevel'] + epoch['fEpochLevelInc'] * epiNum)
                         i_last += epoch['lEpochInitDuration'] + \
                             epoch['lEpochDurationInc'] * epiNum

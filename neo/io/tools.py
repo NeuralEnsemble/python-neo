@@ -88,8 +88,8 @@ class LazyList(MutableSequence):
     contain the information that ``load_lazy_cascade`` needs to load the
     respective object.
     """
-    _container_objects = set(
-        [Block, Segment, ChannelIndex, Unit])
+    _container_objects = {
+        Block, Segment, ChannelIndex, Unit}
     _neo_objects = _container_objects.union(
         [AnalogSignal, Epoch, Event,
          IrregularlySampledSignal, SpikeTrain])

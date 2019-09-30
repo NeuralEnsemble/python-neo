@@ -186,7 +186,7 @@ class ElphySignal(BaseSignal):
         self.units = [x_unit, y_unit]
 
     def __str__(self):
-        return "%s ep_%s ch_%s [%s, %s]" % (
+        return "{} ep_{} ch_{} [{}, {}]".format(
             self.layout.file.name, self.episode, self.channel, self.x_unit, self.y_unit)
 
     def __repr__(self):
@@ -227,7 +227,7 @@ class ElphyTag(BaseSignal):
         self.units = [x_unit, None]
 
     def __str__(self):
-        return "%s : ep_%s tag_ch_%s [%s]" % (
+        return "{} : ep_{} tag_ch_{} [{}]".format(
             self.layout.file.name, self.episode, self.number, self.x_unit)
 
     def __repr__(self):
@@ -280,7 +280,7 @@ class ElphyEvent(object):
         self.ch_number = ch_number
 
     def __str__(self):
-        return "%s : ep_%s evt_ch_%s [%s]" % (
+        return "{} : ep_{} evt_ch_{} [{}]".format(
             self.layout.file.name, self.episode, self.number, self.x_unit)
 
     def __repr__(self):
@@ -437,7 +437,7 @@ class ElphyBlock(BaseBlock):
         self.sub_blocks = list()
 
     def __repr__(self):
-        return "%s : size = %s, start = %s, end = %s" % (
+        return "{} : size = {}, start = {}, end = {}".format(
             self.identifier, self.size, self.start, self.end)
 
     def add_sub_block(self, block):
@@ -530,7 +530,7 @@ class ClassicFileInfo(FileInfoBlock):
     """
 
     def detect_protocol_from_name(self, path):
-        pattern = "\d{4}(\d+|\D)\D"
+        pattern = r"\d{4}(\d+|\D)\D"
         codes = {
             'r': 'sparsenoise',
             'o': 'movingbar',
@@ -1921,7 +1921,7 @@ class ElphyLayout(object):
         data = np.empty([len(reshape), n_samples], dtype=(int, int))
         for index, bit_mask in enumerate(bit_masks):
             tmp = self.filter_bytes(databytes, bit_mask)
-            tp = '%s%s%s' % (order, datatypes[index], reshape[index])
+            tp = '{}{}{}'.format(order, datatypes[index], reshape[index])
             data[index] = np.frombuffer(tmp, dtype=tp)
 
         return data.T
@@ -2177,7 +2177,7 @@ class Acquis1Layout(ElphyLayout):
         Y0 = self.header.Y0_ar[ch - 1]
         # TODO: see why this kind of exception exists
         if dY is None or Y0 is None:
-            raise Exception('bad Y-scale factors for episode %s channel %s' % (ep, ch))
+            raise Exception('bad Y-scale factors for episode {} channel {}'.format(ep, ch))
         return ElphyScaleFactor(dY, Y0)
 
     def x_unit(self, ep, ch):
@@ -3370,7 +3370,7 @@ class ElphyFile(object):
         try:
             self.file = open(self.path, 'rb')
         except Exception as e:
-            raise Exception("python couldn't open file %s : %s" % (self.path, e))
+            raise Exception("python couldn't open file {} : {}".format(self.path, e))
         self.file_size = path.getsize(self.file.name)
         self.creation_date = datetime.fromtimestamp(path.getctime(self.file.name))
         self.modification_date = datetime.fromtimestamp(path.getmtime(self.file.name))
@@ -3400,7 +3400,8 @@ class ElphyFile(object):
         if hasattr(title, 'decode'):
             title = title.decode()
         if title not in factories:
-            title = "format is not implemented ('%s' not in %s)" % (title, str(factories.keys()))
+            title = "format is not implemented ('{}' not in {})".format(
+                title, str(factories.keys()))
         return title
 
     def set_nomenclature(self):
@@ -3448,7 +3449,7 @@ class ElphyFile(object):
         try:
             self.file = open(self.path, 'wb')
         except Exception as e:
-            raise Exception("python couldn't open file %s : %s" % (self.path, e))
+            raise Exception("python couldn't open file {} : {}".format(self.path, e))
         self.file_size = 0
         self.creation_date = datetime.now()
         self.modification_date = datetime.now()
@@ -3810,7 +3811,7 @@ class ElphyIO(BaseIO):
             self.elphy_file.open()
         except Exception as e:
             self.elphy_file.close()
-            raise Exception("cannot open file %s : %s" % (self.filename, e))
+            raise Exception("cannot open file {} : {}".format(self.filename, e))
 
         # create a segment containing all analog,
         # tag and event channels for the episode
@@ -4216,7 +4217,7 @@ class ElphyIO(BaseIO):
                 t_stop=signal.t_stop * getattr(pq, signal.x_unit.strip()),
                 # sampling_rate = signal.sampling_frequency * pq.kHz,
                 sampling_period=signal.sampling_period * getattr(pq, signal.x_unit.strip()),
-                channel_name="episode %s, channel %s" % (int(episode + 1), int(channel + 1))
+                channel_name="episode {}, channel {}".format(int(episode + 1), int(channel + 1))
             )
             analog_signal.segment = segment
             segment.analogsignals.append(analog_signal)
@@ -4244,7 +4245,7 @@ class ElphyIO(BaseIO):
         """
         n_spikes = self.elphy_file.n_spikes
         group = ChannelIndex(
-            name="episode %s, group of %s electrodes" % (episode, n_spikes)
+            name="episode {}, group of {} electrodes".format(episode, n_spikes)
         )
         for spk in range(0, n_spikes):
             channel = self.read_channelindex(episode, spk)
@@ -4260,7 +4261,7 @@ class ElphyIO(BaseIO):
             episode : number of elphy episode, roughly corresponding to a segment.
             chl : electrode number.
         """
-        channel = ChannelIndex(name="episode %s, electrodes %s" % (episode, chl), index=[0])
+        channel = ChannelIndex(name="episode {}, electrodes {}".format(episode, chl), index=[0])
         return channel
 
     def read_event(self, episode, evt):
@@ -4276,7 +4277,7 @@ class ElphyIO(BaseIO):
         event = self.elphy_file.get_event(episode, evt)
         neo_event = Event(
             times=event.times * pq.s,
-            channel_name="episode %s, event channel %s" % (episode + 1, evt + 1)
+            channel_name="episode {}, event channel {}".format(episode + 1, evt + 1)
         )
         return neo_event
 
@@ -4305,7 +4306,7 @@ class ElphyIO(BaseIO):
             # electrode providing the spiketrain
             # event though it is redundant with
             # waveforms
-            'label': "episode %s, electrode %s" % (episode, spk),
+            'label': "episode {}, electrode {}".format(episode, spk),
             'electrode_id': spk
         }
         # new spiketrain
