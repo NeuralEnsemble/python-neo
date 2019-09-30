@@ -16,12 +16,14 @@ Functions:
 Classes:
 
 * :attr:`AlphaOmegaIO`
+* :attr:`AsciiImageIO`
 * :attr:`AsciiSignalIO`
 * :attr:`AsciiSpikeTrainIO`
 * :attr:`AxographIO`
 * :attr:`AxonIO`
 * :attr:`BCI2000IO`
 * :attr:`BlackrockIO`
+* :attr:`BlkIO`
 * :attr:`BrainVisionIO`
 * :attr:`BrainwareDamIO`
 * :attr:`BrainwareF32IO`
@@ -49,11 +51,16 @@ Classes:
 * :attr:`Spike2IO`
 * :attr:`StimfitIO`
 * :attr:`TdtIO`
+* :attr:`TiffIO`
 * :attr:`WinEdrIO`
 * :attr:`WinWcpIO`
 
 
 .. autoclass:: neo.io.AlphaOmegaIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.AsciiImageIO
 
     .. autoattribute:: extensions
 
@@ -78,6 +85,10 @@ Classes:
     .. autoattribute:: extensions
 
 .. autoclass:: neo.io.BlackrockIO
+
+    .. autoattribute:: extensions
+
+.. autoclass:: neo.io.BlkIO
 
     .. autoattribute:: extensions
 
@@ -193,6 +204,10 @@ Classes:
 
     .. autoattribute:: extensions
 
+.. autoclass:: neo.io.TiffIO
+
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.WinEdrIO
 
     .. autoattribute:: extensions
@@ -222,12 +237,14 @@ else:
     # print("\n loading with API...")
 
 from neo.io.alphaomegaio import AlphaOmegaIO
+from neo.io.asciiimageio import AsciiImageIO
 from neo.io.asciisignalio import AsciiSignalIO
 from neo.io.asciispiketrainio import AsciiSpikeTrainIO
 from neo.io.axographio import AxographIO
 from neo.io.axonio import AxonIO
 from neo.io.blackrockio import BlackrockIO
 from neo.io.blackrockio_v4 import BlackrockIO as OldBlackrockIO
+from neo.io.blkio import BlkIO
 from neo.io.bci2000io import BCI2000IO
 from neo.io.brainvisionio import BrainVisionIO
 from neo.io.brainwaredamio import BrainwareDamIO
@@ -259,17 +276,20 @@ from neo.io.rawmcsio import RawMCSIO
 from neo.io.spike2io import Spike2IO
 from neo.io.stimfitio import StimfitIO
 from neo.io.tdtio import TdtIO
+from neo.io.tiffio import TiffIO
 from neo.io.winedrio import WinEdrIO
 from neo.io.winwcpio import WinWcpIO
 
 iolist = [
     AlphaOmegaIO,
+    AsciiImageIO,
     AsciiSignalIO,
     AsciiSpikeTrainIO,
     AxographIO,
     AxonIO,
     BCI2000IO,
     BlackrockIO,
+    BlkIO,
     BrainVisionIO,
     BrainwareDamIO,
     BrainwareF32IO,
@@ -299,6 +319,7 @@ iolist = [
     Spike2IO,
     StimfitIO,
     TdtIO,
+    TiffIO,
     WinEdrIO,
     WinWcpIO
 ]

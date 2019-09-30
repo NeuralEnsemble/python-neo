@@ -33,7 +33,7 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
                                         clone_object, TEST_ANNOTATIONS)
 from neo.rawio.examplerawio import ExampleRawIO
 from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
-                EventProxy, EpochProxy)
+                                 EventProxy, EpochProxy)
 
 
 class Test__generate_datasets(unittest.TestCase):
@@ -144,6 +144,9 @@ class TestSegment(unittest.TestCase):
         self.evts1 = self.seg1.events
         self.evts2 = self.seg2.events
 
+        self.img_seqs1 = self.seg1.imagesequences
+        self.img_seqs2 = self.seg2.imagesequences
+
         self.sigarrs1a = clone_object(self.sigarrs1, n=2)
         self.irsigs1a = clone_object(self.irsigs1)
 
@@ -151,6 +154,8 @@ class TestSegment(unittest.TestCase):
 
         self.epcs1a = clone_object(self.epcs1)
         self.evts1a = clone_object(self.evts1)
+
+        self.img_seqs1a = clone_object(self.img_seqs1)
 
     def test_init(self):
         seg = Segment(name='a segment', index=3)
@@ -260,11 +265,13 @@ class TestSegment(unittest.TestCase):
         childobjs = ('AnalogSignal',
                      'Epoch', 'Event',
                      'IrregularlySampledSignal',
-                     'SpikeTrain')
+                     'SpikeTrain',
+                     'ImageSequence')
         childconts = ('analogsignals',
                       'epochs', 'events',
                       'irregularlysampledsignals',
-                      'spiketrains')
+                      'spiketrains',
+                      'imagesequences')
         self.assertEqual(self.seg1._container_child_objects, ())
         self.assertEqual(self.seg1._data_child_objects, childobjs)
         self.assertEqual(self.seg1._single_parent_objects, ('Block',))
@@ -288,7 +295,8 @@ class TestSegment(unittest.TestCase):
         totchildren = (self.nchildren * 2 +  # epoch/event
                        self.nchildren +  # analogsignal
                        self.nchildren ** 2 +  # spiketrain
-                       self.nchildren)  # irregsignal
+                       self.nchildren +  # irregsignal
+                       self.nchildren)   # imagesequence
         self.assertEqual(len(self.seg1._single_children), totchildren)
         self.assertEqual(len(self.seg1.data_children), totchildren)
         self.assertEqual(len(self.seg1.children), totchildren)
@@ -302,7 +310,8 @@ class TestSegment(unittest.TestCase):
         children = (self.sigarrs1a +
                     self.epcs1a + self.evts1a +
                     self.irsigs1a +
-                    self.trains1a)
+                    self.trains1a +
+                    self.img_seqs1a)
         assert_same_sub_schema(list(self.seg1._single_children), children)
         assert_same_sub_schema(list(self.seg1.data_children), children)
         assert_same_sub_schema(list(self.seg1.data_children_recur), children)
@@ -316,7 +325,8 @@ class TestSegment(unittest.TestCase):
         targ1 = {"epochs": self.nchildren, "events": self.nchildren,
                  "irregularlysampledsignals": self.nchildren,
                  "spiketrains": self.nchildren ** 2,
-                 "analogsignals": self.nchildren}
+                 "analogsignals": self.nchildren,
+                 "imagesequences": self.nchildren}
         self.assertEqual(self.targobj.size, targ1)
 
     def test__filter_none(self):
@@ -327,6 +337,7 @@ class TestSegment(unittest.TestCase):
         targ.extend(self.targobj.events)
         targ.extend(self.targobj.irregularlysampledsignals)
         targ.extend(self.targobj.spiketrains)
+        targ.extend(self.targobj.imagesequences)
 
         res0 = self.targobj.filter()
         res1 = self.targobj.filter({})
@@ -355,7 +366,8 @@ class TestSegment(unittest.TestCase):
                 [self.epcs1a[0]] +
                 [self.evts1a[0]] +
                 self.irsigs1a +
-                self.trains1a)
+                self.trains1a +
+                [self.img_seqs1a[0]])
 
         res0 = self.targobj.filter(j=0)
         res1 = self.targobj.filter({'j': 0})
@@ -412,6 +424,7 @@ class TestSegment(unittest.TestCase):
                 [self.evts1a[0]] +
                 self.irsigs1a +
                 self.trains1a +
+                [self.img_seqs1a[0]] +
                 [self.epcs1a[1]])
 
         res0 = self.targobj.filter(name=self.epcs1a[1].name, j=0)
@@ -532,7 +545,7 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(res2, targ)
 
     def test__filter_single_annotation_norecur(self):
-        targ = [self.epcs1a[1], self.evts1a[1]]
+        targ = [self.epcs1a[1], self.evts1a[1], self.img_seqs1a[1]]
         res0 = self.targobj.filter(j=1,
                                    recursive=False)
         assert_same_sub_schema(res0, targ)
@@ -568,7 +581,7 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container(self):
-        targ = [self.epcs1a[1], self.evts1a[1]]
+        targ = [self.epcs1a[1], self.evts1a[1], self.img_seqs1a[1]]
         res0 = self.targobj.filter(j=1,
                                    container=True)
         assert_same_sub_schema(res0, targ)
@@ -580,7 +593,7 @@ class TestSegment(unittest.TestCase):
         assert_same_sub_schema(res0, targ)
 
     def test__filter_single_annotation_container_norecur(self):
-        targ = [self.epcs1a[1], self.evts1a[1]]
+        targ = [self.epcs1a[1], self.evts1a[1], self.img_seqs1a[1]]
         res0 = self.targobj.filter(j=1,
                                    container=True, recursive=False)
         assert_same_sub_schema(res0, targ)
@@ -625,6 +638,7 @@ class TestSegment(unittest.TestCase):
                 [self.evts1a[0]] +
                 self.irsigs1a +
                 self.trains1a +
+                [self.img_seqs1a[0]] +
                 [self.epcs1a[1]])
 
         res0 = filterdata(data, name=self.epcs1a[1].name, j=0)
@@ -842,7 +856,7 @@ class TestSegment(unittest.TestCase):
                                                 t_stop=time_slice[1]))
         assert_same_attributes(sliced.epochs[0],
                                epoch2.time_slice(t_start=time_slice[0],
-                                                t_stop=time_slice[1]))
+                                                 t_stop=time_slice[1]))
 
         seg = Segment()
         seg.epochs = [epoch2]
@@ -872,18 +886,18 @@ class TestSegment(unittest.TestCase):
 
         anasig_target = anasig.copy()
         anasig_target = anasig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                 t_stop=time_slice[1] - time_slice[0])
+                                                                             t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.analogsignals[0], anasig_target)
         irrsig_target = irrsig.copy()
         irrsig_target = irrsig_target.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                t_stop=time_slice[1] - time_slice[0])
+                                                                             t_stop=time_slice[1] - time_slice[0])
         assert_same_attributes(sliced.irregularlysampledsignals[0], irrsig_target)
         assert_same_attributes(sliced.events[0],
                                event.time_shift(- time_slice[0]).time_slice(
                                    t_start=0 * pq.s, t_stop=time_slice[1] - time_slice[0]))
         assert_same_attributes(sliced.epochs[0],
                                epoch2.time_shift(- time_slice[0]).time_slice(t_start=0 * pq.s,
-                                                    t_stop=time_slice[1] - time_slice[0]))
+                                                                             t_stop=time_slice[1] - time_slice[0]))
 
         seg = Segment()
 
@@ -896,7 +910,7 @@ class TestSegment(unittest.TestCase):
         seg.analogsignals.append(proxy_anasig)
 
         proxy_st = SpikeTrainProxy(rawio=reader, unit_index=0,
-                                     block_index=0, seg_index=0)
+                                   block_index=0, seg_index=0)
         seg.spiketrains.append(proxy_st)
 
         proxy_event = EventProxy(rawio=reader, event_channel_index=0,
@@ -923,14 +937,14 @@ class TestSegment(unittest.TestCase):
         assert_neo_object_is_compliant(sliced)
 
         sliced_event = loaded_event.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                               t_stop=time_slice[1])
         has_event = len(sliced_event) > 0
 
         sliced_anasig = loaded_anasig.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                                 t_stop=time_slice[1])
 
         sliced_st = loaded_st.time_slice(t_start=time_slice[0],
-                                             t_stop=time_slice[1])
+                                         t_stop=time_slice[1])
 
         self.assertEqual(len(sliced.events), int(has_event))
         self.assertEqual(len(sliced.spiketrains), 1)
@@ -950,7 +964,7 @@ class TestSegment(unittest.TestCase):
             self.assertTrue(isinstance(sliced.events[0],
                                        Event))
             assert_same_attributes(sliced.events[0],
-                               sliced_event)
+                                   sliced_event)
 
     # to remove
     # def test_segment_take_analogsignal_by_unit(self):
