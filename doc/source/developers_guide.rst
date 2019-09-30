@@ -39,14 +39,15 @@ Requirements
 ------------
 
     * Python_ 2.7, 3.4 or later
-    * numpy_ >= 1.7.1
-    * quantities_ >= 0.9.0
-    * nose_ >= 0.11.1 (for running tests)
-    * Sphinx_ >= 0.6.4 (for building documentation)
-    * (optional) tox_ >= 0.9 (makes it easier to test with multiple Python versions)
+    * numpy_ >= 1.10.0
+    * quantities_ >= 0.12.1
+    * nose_ >= 1.1.2 (for running tests)
+    * Sphinx_ (for building documentation)
     * (optional) coverage_ >= 2.85 (for measuring test coverage)
     * (optional) scipy >= 0.12 (for MatlabIO)
     * (optional) h5py >= 2.5 (for KwikIO, NeoHdf5IO)
+    * (optional) nixio (for NixIO)
+    * (optional) pillow (for TiffIO)
 
 We strongly recommend you develop within a virtual environment (from virtualenv, venv or conda).
 It is best to have at least one virtual environment with Python 2.7 and one with Python 3.x.
@@ -63,7 +64,7 @@ To get a local copy of the repository::
 
     $ cd /some/directory
     $ git clone git@github.com:<username>/python-neo.git
-    
+
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
@@ -263,7 +264,7 @@ Michael Denker and Julia Sprenger have the necessary permissions to do this)::
 
 .. talk about readthedocs
 
-    
+
 
 .. make a release branch
 
