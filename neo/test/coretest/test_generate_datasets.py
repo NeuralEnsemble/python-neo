@@ -466,7 +466,7 @@ class Test__get_fake_value(unittest.TestCase):
 
     def test__other_valueerror(self):
         name = 'test__other_fail'
-        datatype = set([1, 2, 3, 4])
+        datatype = {1, 2, 3, 4}
 
         self.assertRaises(ValueError, get_fake_value, name, datatype)
 
@@ -474,8 +474,8 @@ class Test__get_fake_value(unittest.TestCase):
 class Test__get_fake_values(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
         self.annotations['seed'] = 0
 
     def subcheck__get_fake_values(self, cls):
@@ -562,8 +562,8 @@ class Test__get_fake_values(unittest.TestCase):
 
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
 
     def check__generate_datasets(self, cls):
         clsname = cls.__name__

@@ -72,7 +72,7 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), 'type(%s) %s != type(%s) %s' % (a, type(a),
+    assert type(a) == type(b), 'type({}) {} != type({}) {}'.format(a, type(a),
                                                                b, type(b))
     if isinstance(a, dict):
         return merge_annotations(a, b)
@@ -86,7 +86,7 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, '%s != %s' % (a, b)
+        assert a == b, '{} != {}'.format(a, b)
         return a
 
 
@@ -308,7 +308,7 @@ class BaseNeo(object):
                 else:
                     pp.breakable()
                 with pp.group(indent=1):
-                    pp.text("{0}: ".format(key))
+                    pp.text("{}: ".format(key))
                     pp.pretty(value)
 
     def _repr_pretty_(self, pp, cycle):

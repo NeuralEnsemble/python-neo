@@ -23,11 +23,7 @@ __test__ = False
 
 import os
 from copy import copy
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,

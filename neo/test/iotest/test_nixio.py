@@ -132,9 +132,9 @@ class NixIOTest(unittest.TestCase):
             # AnalogSignals referencing CHX
             neoasigs = list(sig.annotations["nix_name"]
                             for sig in neochx.analogsignals)
-            nixasigs = list(set(da.metadata.name for da in nixblock.data_arrays
+            nixasigs = list({da.metadata.name for da in nixblock.data_arrays
                                 if da.type == "neo.analogsignal" and
-                                nixchx in da.sources))
+                                nixchx in da.sources})
 
             self.assertEqual(len(neoasigs), len(nixasigs))
 
@@ -142,9 +142,9 @@ class NixIOTest(unittest.TestCase):
             neoisigs = list(sig.annotations["nix_name"] for sig in
                             neochx.irregularlysampledsignals)
             nixisigs = list(
-                set(da.metadata.name for da in nixblock.data_arrays
+                {da.metadata.name for da in nixblock.data_arrays
                     if da.type == "neo.irregularlysampledsignal" and
-                    nixchx in da.sources)
+                    nixchx in da.sources}
             )
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units

@@ -1876,7 +1876,7 @@ class NeuralynxIO(BaseIO):
 
                 if matching_key in parameter_dict:
                     warnings.warn(
-                        'Multiple entries for %s in text header of %s' % (
+                        'Multiple entries for {} in text header of {}'.format(
                             matching_key, filename))
                 else:
                     parameter_dict[matching_key] = minor_value
@@ -2133,10 +2133,10 @@ class NeuralynxIO(BaseIO):
             for d in event_types:
                 d.pop('timestamp')
             self.parameters_nev[filename]['event_types'] = [dict(y) for y in
-                                                            set(tuple(
+                                                            {tuple(
                                                                 x.items())
                                                                 for x in
-                                                                event_types)]
+                                                                event_types}]
 
     # ________________ File Checks __________________________________
 

@@ -41,7 +41,7 @@ def check_has_dimensions_time(*values):
         dim = value.dimensionality
         if (len(dim) != 1 or list(dim.values())[0] != 1 or not isinstance(list(dim.keys())[0],
                                                                           pq.UnitTime)):
-            errmsgs.append("value %s has dimensions %s, not [time]" % (value, dim.simplified))
+            errmsgs.append("value {} has dimensions {}, not [time]".format(value, dim.simplified))
     if errmsgs:
         raise ValueError("\n".join(errmsgs))
 
@@ -57,7 +57,7 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
     '''
 
     if t_start > t_stop:
-        raise ValueError("t_stop (%s) is before t_start (%s)" % (t_stop, t_start))
+        raise ValueError("t_stop ({}) is before t_start ({})".format(t_stop, t_start))
 
     if not value.size:
         return
@@ -68,9 +68,9 @@ def _check_time_in_range(value, t_start, t_stop, view=False):
         t_stop = t_stop.view(np.ndarray)
 
     if value.min() < t_start:
-        raise ValueError("The first spike (%s) is before t_start (%s)" % (value, t_start))
+        raise ValueError("The first spike ({}) is before t_start ({})".format(value, t_start))
     if value.max() > t_stop:
-        raise ValueError("The last spike (%s) is after t_stop (%s)" % (value, t_stop))
+        raise ValueError("The last spike ({}) is after t_stop ({})".format(value, t_stop))
 
 
 def _check_waveform_dimensions(spiketrain):
@@ -678,7 +678,7 @@ class SpikeTrain(DataObject):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 

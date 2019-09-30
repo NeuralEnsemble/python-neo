@@ -22,12 +22,12 @@ class ChannelIndex(Container):
 
     This container has several purposes:
 
-      * Grouping all :class:`AnalogSignal`\s and
-        :class:`IrregularlySampledSignal`\s inside a :class:`Block` across
-        :class:`Segment`\s;
+      * Grouping all :class:`AnalogSignal`\\s and
+        :class:`IrregularlySampledSignal`\\s inside a :class:`Block` across
+        :class:`Segment`\\s;
       * Indexing a subset of the channels within an :class:`AnalogSignal` and
-        :class:`IrregularlySampledSignal`\s;
-      * Container of :class:`Unit`\s. Discharges of multiple neurons
+        :class:`IrregularlySampledSignal`\\s;
+      * Container of :class:`Unit`\\s. Discharges of multiple neurons
         (:class:`Unit`\'s) can be seen on the same channel.
 
     *Usage 1* providing channel IDs across multiple :class:`Segment`::

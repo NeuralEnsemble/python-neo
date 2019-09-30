@@ -40,8 +40,8 @@ from neo.test.generate_datasets import (get_fake_value, get_fake_values, fake_ne
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict(
-            [(str(x), TEST_ANNOTATIONS[x]) for x in range(len(TEST_ANNOTATIONS))])
+        self.annotations = {
+            str(x): TEST_ANNOTATIONS[x] for x in range(len(TEST_ANNOTATIONS))}
 
     def test__fake_neo__cascade(self):
         self.annotations['seed'] = None
@@ -662,16 +662,16 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
                               units="mV", name="test")
         self.assertEqual(signal.shape, (100, n))
         signal.channel_index = ChannelIndex(index=np.arange(n, dtype=int),
-                                            channel_names=["channel{0}".format(i) for i in
+                                            channel_names=["channel{}".format(i) for i in
                                                            range(n)])
         signal.channel_index.analogsignals.append(signal)
         odd_channels = signal[:, 1::2]
         self.assertEqual(odd_channels.shape, (100, n // 2))
         assert_array_equal(odd_channels.channel_index.index, np.arange(n // 2, dtype=int))
         assert_array_equal(odd_channels.channel_index.channel_names,
-                           ["channel{0}".format(i) for i in range(1, n, 2)])
+                           ["channel{}".format(i) for i in range(1, n, 2)])
         assert_array_equal(signal.channel_index.channel_names,
-                           ["channel{0}".format(i) for i in range(n)])
+                           ["channel{}".format(i) for i in range(n)])
         self.assertEqual(odd_channels.channel_index.analogsignals[0].name, signal.name)
 
     def test__index_dim1_and_slice_dim0_should_return_single_channel_analogsignal(self):

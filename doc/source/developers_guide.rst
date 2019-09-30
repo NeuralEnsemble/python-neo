@@ -3,7 +3,7 @@ Developers' guide
 =================
 
 These instructions are for developing on a Unix-like platform, e.g. Linux or
-Mac OS X, with the bash shell. If you develop on Windows, please get in touch.
+macOS, with the bash shell. If you develop on Windows, please get in touch.
 
 
 Mailing lists
@@ -38,7 +38,7 @@ a GitHub account and then set to watch the repository at `GitHub Repository`_
 Requirements
 ------------
 
-    * Python_ 2.7, 3.4 or later
+    * Python_ 2.7, 3.5 or later
     * numpy_ >= 1.10.0
     * quantities_ >= 0.12.1
     * nose_ >= 1.1.2 (for running tests)
@@ -64,7 +64,7 @@ To get a local copy of the repository::
 
     $ cd /some/directory
     $ git clone git@github.com:<username>/python-neo.git
-
+    
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
@@ -200,7 +200,7 @@ open a pull request on GitHub
 Python version
 --------------
 
-Neo core should work with both Python 2.7 and Python 3 (version 3.4 or newer).
+Neo core should work with both Python 2.7 and Python 3 (version 3.5 or newer).
 Neo IO modules should ideally work with both Python 2 and 3, but certain
 modules may only work with one or the other (see :doc:`install`).
 
@@ -223,7 +223,7 @@ Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 2.7, and 3.4 or newer.
+Python 2.7, and 3.5 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.
@@ -264,7 +264,7 @@ Michael Denker and Julia Sprenger have the necessary permissions to do this)::
 
 .. talk about readthedocs
 
-
+    
 
 .. make a release branch
 
@@ -279,7 +279,6 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 
 .. _Python: http://www.python.org
 .. _nose: http://somethingaboutorange.com/mrl/projects/nose/
-.. _unittest2: http://pypi.python.org/pypi/unittest2
 .. _Setuptools: https://pypi.python.org/pypi/setuptools/
 .. _tox: http://codespeak.net/tox/
 .. _coverage: http://nedbatchelder.com/code/coverage/
