@@ -33,7 +33,7 @@ patch (see below) and attach it to the ticket.
 
 To keep track of changes to the code and to tickets, you can register for
 a GitHub account and then set to watch the repository at `GitHub Repository`_
-(see https://help.github.com/articles/watching-repositories/).
+(see https://help.github.com/en/articles/watching-and-unwatching-repositories).
 
 Requirements
 ------------
@@ -58,13 +58,13 @@ Getting the source code
 We use the Git version control system. The best way to contribute is through
 GitHub_. You will first need a GitHub account, and you should then fork the
 repository at `GitHub Repository`_
-(see http://help.github.com/fork-a-repo/).
+(see http://help.github.com/en/articles/fork-a-repo).
 
 To get a local copy of the repository::
 
     $ cd /some/directory
     $ git clone git@github.com:<username>/python-neo.git
-    
+
 Now you need to make sure that the ``neo`` package is on your PYTHONPATH.
 You can do this either by installing Neo::
 
@@ -194,7 +194,7 @@ You can then push your changes to your online repository on GitHub::
 
 Once you think your changes are ready to be included in the main Neo repository,
 open a pull request on GitHub
-(see https://help.github.com/articles/using-pull-requests).
+(see https://help.github.com/en/articles/about-pull-requests).
 
 
 Python version
@@ -264,7 +264,7 @@ Michael Denker and Julia Sprenger have the necessary permissions to do this)::
 
 .. talk about readthedocs
 
-    
+
 
 .. make a release branch
 
@@ -277,24 +277,24 @@ See :ref:`io_dev_guide` for implementation of a new IO.
 
 
 
-.. _Python: http://www.python.org
-.. _nose: http://somethingaboutorange.com/mrl/projects/nose/
+.. _Python: https://www.python.org
+.. _nose: https://nose.readthedocs.io/
 .. _Setuptools: https://pypi.python.org/pypi/setuptools/
 .. _tox: http://codespeak.net/tox/
-.. _coverage: http://nedbatchelder.com/code/coverage/
-.. _`PEP 8`: http://www.python.org/dev/peps/pep-0008/
+.. _coverage: https://coverage.readthedocs.io/
+.. _`PEP 8`: https://www.python.org/dev/peps/pep-0008/
 .. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues
 .. _`Porting to Python 3`: http://python3porting.com/
-.. _`NeuralEnsemble Google group`: http://groups.google.com/group/neuralensemble
+.. _`NeuralEnsemble Google group`: https://groups.google.com/forum/#!forum/neuralensemble
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
-.. _Sphinx: http://sphinx.pocoo.org/
-.. _numpy: http://numpy.scipy.org/
-.. _quantities: http://pypi.python.org/pypi/quantities
-.. _PEP257: http://www.python.org/dev/peps/pep-0257/
-.. _PEP394: http://www.python.org/dev/peps/pep-0394/
-.. _PyPI: http://pypi.python.org
-.. _GitHub: http://github.com
+.. _Sphinx: http://www.sphinx-doc.org/
+.. _numpy: https://numpy.org/
+.. _quantities: https://pypi.org/project/quantities/
+.. _PEP257: https://www.python.org/dev/peps/pep-0257/
+.. _PEP394: https://www.python.org/dev/peps/pep-0394/
+.. _PyPI: https://pypi.org
+.. _GitHub: https://github.com
 .. _`GitHub Repository`: https://github.com/NeuralEnsemble/python-neo/
-.. _pep8: https://pypi.python.org/pypi/pep8
-.. _flake8: https://pypi.python.org/pypi/flake8/
-.. _pyflakes: https://pypi.python.org/pypi/pyflakes/
+.. _pep8: https://pypi.org/project/pep8/
+.. _flake8: https://pypi.org/project/flake8/
+.. _pyflakes: https://pypi.org/project/pyflakes/

@@ -78,9 +78,9 @@ To install the latest version of Neo from the Git repository::
     $ python setup.py install
 
 
-.. _`Python`: http://python.org/
-.. _`numpy`: http://numpy.scipy.org/
-.. _`quantities`: http://pypi.python.org/pypi/quantities
-.. _`pip`: http://pypi.python.org/pypi/pip
+.. _`Python`: https://www.python.org/
+.. _`numpy`: https://numpy.org/
+.. _`quantities`: https://pypi.org/project/quantities/
+.. _`pip`: https://pypi.org/project/pip/
 .. _`setuptools`: http://pypi.python.org/pypi/setuptools
-.. _Anaconda: https://www.continuum.io/downloads
+.. _Anaconda: https://www.anaconda.com/distribution/

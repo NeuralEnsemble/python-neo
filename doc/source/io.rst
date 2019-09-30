@@ -298,4 +298,4 @@ For more complex logging, please see the documentation for the logging_ module.
           Further, the handler is only attached if there are no handlers already attached to the root logger or the :mod:`neo` logger, so adding your own logger will override the default one.
           Additional functions and/or classes may get logging during bugfix releases, so code relying on particular modules not having logging may break at any time without warning.
 
-.. _`logging`: http://docs.python.org/library/logging.html
+.. _`logging`: https://docs.python.org/3/library/logging.html

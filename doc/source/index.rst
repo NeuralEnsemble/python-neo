@@ -82,10 +82,10 @@ Citation
 .. _Elephant: http://neuralensemble.org/elephant
 .. _G-node: http://www.g-node.org/
 .. _Neuroshare: http://neuroshare.org/
-.. _SpykeViewer: https://spyke-viewer.readthedocs.org/en/latest/
+.. _SpykeViewer: https://spyke-viewer.readthedocs.io/en/latest/
 .. _NiBabel: https://nipy.org/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
-.. _quantities: http://pypi.python.org/pypi/quantities
+.. _quantities: https://pypi.org/project/quantities/
 .. _`NeuralEnsemble mailing list`: https://groups.google.com/forum/#!forum/neuralensemble
 .. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues
 .. _tridesclous: https://github.com/tridesclous/tridesclous

@@ -74,6 +74,7 @@ Other new features
   * Numpy 1.16+ compatibility
   * :meth:`time_shift()` method for :class:`Epoch`/:class:`Event`/:class:`AnalogSignal`
   * :meth:`time_slice()` method is now more robust
+  * dropped support for Python 3.4
 
 See all `pull requests`_ included in this release and the `list of closed issues`_.
 
@@ -100,7 +101,7 @@ Bug fixes and improvements in IO modules
 Acknowledgements
 ----------------
 
-Thanks to Achileas Koutsou, Chek Yin Choi, Richard C. Gerkin,
+Thanks to Achileas Koutsou, Chek Yin Choi, Richard C. Gerkin, Hugo van Kemenade,
 Alexander Kleinjohann, Björn Müller, Jeffrey Gill, Christian Kothe,
 Mike Sintsov, @rishidhingra, Michael Denker, Julia Sprenger, Corentin Fragnaud,
 Andrew Davison and Samuel Garcia for their contributions to this release.
