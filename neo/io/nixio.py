@@ -38,7 +38,7 @@ import numpy as np
 
 from .baseio import BaseIO
 from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
-                    IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
+                    IrregularlySampledSignal, Epoch, Event, SpikeTrain, ImageSequence, Unit)
 from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
@@ -739,6 +739,8 @@ class NixIO(BaseIO):
             self._write_epoch(epoch, nixblock, nixgroup)
         for spiketrain in segment.spiketrains:
             self._write_spiketrain(spiketrain, nixblock, nixgroup)
+        for imagesequence in segment.imagesequences:
+            self._write_imagesequence(imagesequence, nixblock, nixgroup)
 
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
@@ -808,6 +810,71 @@ class NixIO(BaseIO):
             for k, v in anasig.array_annotations.items():
                 p = self._write_property(metadata, k, v)
                 p.definition = ARRAYANNOTATION
+
+        self._signal_map[nix_name] = nixdas
+
+    def _write_imagesequence(self, imgseq, nixblock, nixgroup):
+
+        if "nix_name" in imgseq.annotations:
+            nix_name = imgseq.annotations["nix_name"]
+        else:
+            nix_name = "neo.imagesequence.{}".format(self._generate_nix_name())
+            imgseq.annotate(nix_name=nix_name)
+
+        if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
+            # AnalogSignal is in multiple Segments.
+            # Append DataArrays to Group and return.
+            dalist = list()
+            for idx in itertools.count():
+                daname = "{}.{}".format(nix_name, idx)
+                if daname in nixblock.data_arrays:
+                    dalist.append(nixblock.data_arrays[daname])
+                else:
+                    break
+            nixgroup.data_arrays.extend(dalist)
+            return
+
+        if isinstance(imgseq, BaseProxy):
+            data = np.transpose(imgseq.load()[:].magnitude)
+        else:
+            data = np.transpose(imgseq[:].magnitude)
+
+        parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
+        metadata = parentmd.create_section(nix_name,
+                                           "neo.imagesequence.metadata")
+        nixdas = list()
+        for idx, row in enumerate(data):
+            daname = "{}.{}".format(nix_name, idx)
+            da = nixblock.create_data_array(daname, "neo.imagesequence",
+                                            data=row)
+            da.metadata = metadata
+            da.definition = imgseq.description
+            da.unit = units_to_string(imgseq.units)
+
+            timedim = da.append_sampled_dimension(imgseq.sampling_period.magnitude.item())
+            timedim.unit = units_to_string(imgseq.sampling_period.units)
+
+            """
+            tstart = imgseq.t_start
+            metadata["t_start"] = tstart.magnitude.item()
+            metadata.props["t_start"].unit = units_to_string(tstart.units)
+            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
+            timedim.label = "time"
+            """
+            # spatial scale
+            spatial_scale = imgseq.spatial_scale
+            metadata["spatial_scale"] = spatial_scale.magnitude.item()
+            metadata.props["spatial_scale"].unit = units_to_string(spatial_scale.units)
+
+            nixdas.append(da)
+            if nixgroup:
+                nixgroup.data_arrays.append(da)
+
+        neoname = imgseq.name if imgseq.name is not None else ""
+        metadata["neo_name"] = neoname
+        if imgseq.annotations:
+            for k, v in imgseq.annotations.items():
+                self._write_property(metadata, k, v)
 
         self._signal_map[nix_name] = nixdas
 
