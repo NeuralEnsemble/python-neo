@@ -312,7 +312,7 @@ class NixIO(BaseIO):
         # MultiTag positions and extents, this filter will be necessary
         dataarrays = list(filter(
             lambda da: da.type in ("neo.analogsignal",
-                                   "neo.irregularlysampledsignal"),
+                                   "neo.irregularlysampledsignal", "neo.imagesequence",),
             nix_group.data_arrays))
         dataarrays = self._group_signals(dataarrays)
         # descend into DataArrays
@@ -325,6 +325,11 @@ class NixIO(BaseIO):
             elif das[0].type == "neo.irregularlysampledsignal":
                 newisig = self._nix_to_neo_irregularlysampledsignal(das)
                 neo_segment.irregularlysampledsignals.append(newisig)
+                # parent reference
+                newisig.segment = neo_segment
+            elif das[0].type == "neo.imagesequence":
+                newisig = self._nix_to_neo_imagesequence(das)
+                neo_segment.imagesequence.append(newisig)
                 # parent reference
                 newisig.segment = neo_segment
 
@@ -441,6 +446,40 @@ class NixIO(BaseIO):
                 self._ref_map[n] = list()
             self._ref_map[n].append(neo_signal)
         return neo_signal
+
+    def _nix_to_neo_imagesequence(self, nix_da_group):
+        """
+        Convert a group of NIX DataArrays to a Neo AnalogSignal. This method
+        expects a list of data arrays that all represent the same,
+        multidimensional Neo AnalogSignal object.
+
+        :param nix_da_group: a list of NIX DataArray objects
+        :return: a Neo AnalogSignal object
+        """
+
+        neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
+        metadata = nix_da_group[0].metadata
+        neo_attrs["nix_name"] = metadata.name  # use the common base name
+        unit = nix_da_group[0].unit
+        imgseq = np.array([d[:] for d in nix_da_group]).transpose()
+        imgseq = create_quantity(imgseq, unit)
+
+
+
+
+        neo_seq = ImageSequence(
+            image_data=imgseq, sampling_rate=sampling_rate,
+            spatial_scale=spatial_scale, **neo_attrs
+        )
+
+        self._neo_map[neo_attrs["nix_name"]] = neo_seq
+        # all DAs reference the same sources
+        srcnames = list(src.name for src in nix_da_group[0].sources)
+        for n in srcnames:
+            if n not in self._ref_map:
+                self._ref_map[n] = list()
+            self._ref_map[n].append(neo_seq)
+        return neo_seq
 
     def _nix_to_neo_irregularlysampledsignal(self, nix_da_group):
         """
@@ -701,8 +740,10 @@ class NixIO(BaseIO):
             self._write_epoch(epoch, nixblock, nixgroup)
         for spiketrain in segment.spiketrains:
             self._write_spiketrain(spiketrain, nixblock, nixgroup)
+
         for imagesequence in segment.imagesequences:
             self._write_imagesequence(imagesequence, nixblock, nixgroup)
+
 
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
@@ -784,8 +825,7 @@ class NixIO(BaseIO):
             imgseq.annotate(nix_name=nix_name)
 
         if "{}.0".format(nix_name) in nixblock.data_arrays and nixgroup:
-            # AnalogSignal is in multiple Segments.
-            # Append DataArrays to Group and return.
+
             dalist = list()
             for idx in itertools.count():
                 daname = "{}.{}".format(nix_name, idx)
@@ -809,24 +849,22 @@ class NixIO(BaseIO):
             daname = "{}.{}".format(nix_name, idx)
             da = nixblock.create_data_array(daname, "neo.imagesequence",
                                             data=row)
+
             da.metadata = metadata
             da.definition = imgseq.description
             da.unit = units_to_string(imgseq.units)
 
-            timedim = da.append_sampled_dimension(imgseq.sampling_period.magnitude.item())
-            timedim.unit = units_to_string(imgseq.sampling_period.units)
 
-            """
-            tstart = imgseq.t_start
-            metadata["t_start"] = tstart.magnitude.item()
-            metadata.props["t_start"].unit = units_to_string(tstart.units)
-            timedim.offset = tstart.rescale(timedim.unit).magnitude.item()
-            timedim.label = "time"
-            """
-            # spatial scale
-            spatial_scale = imgseq.spatial_scale
-            metadata["spatial_scale"] = spatial_scale.magnitude.item()
-            metadata.props["spatial_scale"].unit = units_to_string(spatial_scale.units)
+
+
+
+
+
+
+
+
+
+
 
             nixdas.append(da)
             if nixgroup:
@@ -837,7 +875,11 @@ class NixIO(BaseIO):
         if imgseq.annotations:
             for k, v in imgseq.annotations.items():
                 self._write_property(metadata, k, v)
-
+        if imgseq.array_annotations:
+            for k, v in imgseq.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
+        print(nixdas)
         self._signal_map[nix_name] = nixdas
 
     def _write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
