@@ -24,6 +24,7 @@ from __future__ import absolute_import
 
 import time
 from datetime import datetime
+
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -464,19 +465,13 @@ class NixIO(BaseIO):
         imgseq = np.array([d[:] for d in nix_da_group]).transpose()
         imgseq = create_quantity(imgseq, unit)
 
-        print(metadata.props)
-        print(metadata.name)
-
-        sampling_rates = create_quantity(metadata["sampling_rate"],metadata["sampling_rate_unit"])
+        sampling_rate = neo_attrs["sampling_rate"]
         del neo_attrs["sampling_rate"]
-        del neo_attrs["sampling_rate_unit"]
-        spatial_scales = create_quantity(metadata["spatial_scale"],metadata["spatial_scale_unit"])
+        spatial_scale = neo_attrs["spatial_scale"]
         del neo_attrs["spatial_scale"]
-        del neo_attrs["spatial_scale_unit"]
-        print(neo_attrs)
 
-        neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rates,
-                                spatial_scale=spatial_scales, **neo_attrs)
+        neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
+                                spatial_scale=spatial_scale, **neo_attrs)
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq
         # all DAs reference the same sources
@@ -750,7 +745,6 @@ class NixIO(BaseIO):
         for imagesequence in segment.imagesequences:
             self._write_imagesequence(imagesequence, nixblock, nixgroup)
 
-
     def _write_analogsignal(self, anasig, nixblock, nixgroup):
         """
         Convert the provided ``anasig`` (AnalogSignal) to a list of NIX
@@ -851,33 +845,19 @@ class NixIO(BaseIO):
         metadata = parentmd.create_section(nix_name,
                                            "neo.imagesequence.metadata")
 
-        metadata.create_property("sampling_rate", [imgseq.sampling_rate.magnitude.item()])
-        metadata.create_property("sampling_rate_unit", [units_to_string(imgseq.sampling_rate.units)])
-        metadata.create_property("spatial_scale", [imgseq.spatial_scale.magnitude.item()])
-        metadata.create_property("spatial_scale_unit", [units_to_string(imgseq.spatial_scale.units)])
-        #print(metadata.props)
-
         nixdas = list()
         for idx, row in enumerate(data):
             daname = "{}.{}".format(nix_name, idx)
-            da = nixblock.create_data_array(daname, "neo.imagesequence",
-                                            data=row)
+            da = nixblock.create_data_array(daname, "neo.imagesequence", data=row)
 
             da.metadata = metadata
             da.definition = imgseq.description
             da.unit = units_to_string(imgseq.units)
 
-
-
-
-
-
-
-
-
-
-
-
+            metadata["sampling_rate"] = imgseq.sampling_rate.magnitude.item()
+            metadata.props["sampling_rate"].unit = units_to_string(imgseq.sampling_rate.units)
+            metadata["spatial_scale"] = imgseq.spatial_scale.magnitude.item()
+            metadata.props["spatial_scale"].unit = units_to_string(imgseq.spatial_scale.units)
 
             nixdas.append(da)
             if nixgroup:
@@ -1052,7 +1032,6 @@ class NixIO(BaseIO):
         tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
-
 
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.epoch.times", data=times
