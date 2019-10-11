@@ -450,12 +450,12 @@ class NixIO(BaseIO):
 
     def _nix_to_neo_imagesequence(self, nix_da_group):
         """
-        Convert a group of NIX DataArrays to a Neo AnalogSignal. This method
+        Convert a group of NIX DataArrays to a Neo ImageSequence. This method
         expects a list of data arrays that all represent the same,
-        multidimensional Neo AnalogSignal object.
+        multidimensional Neo ImageSequence object.
 
         :param nix_da_group: a list of NIX DataArray objects
-        :return: a Neo AnalogSignal object
+        :return: a Neo ImageSequence object
         """
 
         neo_attrs = self._nix_attr_to_neo(nix_da_group[0])
@@ -817,6 +817,16 @@ class NixIO(BaseIO):
         self._signal_map[nix_name] = nixdas
 
     def _write_imagesequence(self, imgseq, nixblock, nixgroup):
+        """
+       Convert the provided ``imgseq`` (ImageSequence) to a list of NIX
+       DataArray objects and write them to the NIX file. All DataArray objects
+       created from the same ImageSequence have their metadata section point to
+       the same object.
+
+       :param anasig: The Neo ImageSequence to be written
+       :param nixblock: NIX Block where the DataArrays will be created
+       :param nixgroup: NIX Group where the DataArrays will be attached
+       """
 
         if "nix_name" in imgseq.annotations:
             nix_name = imgseq.annotations["nix_name"]
@@ -868,10 +878,6 @@ class NixIO(BaseIO):
         if imgseq.annotations:
             for k, v in imgseq.annotations.items():
                 self._write_property(metadata, k, v)
-        if imgseq.array_annotations:
-            for k, v in imgseq.array_annotations.items():
-                p = self._write_property(metadata, k, v)
-                p.definition = ARRAYANNOTATION
         self._signal_map[nix_name] = nixdas
 
     def _write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
