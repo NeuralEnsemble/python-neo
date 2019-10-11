@@ -328,10 +328,10 @@ class NixIO(BaseIO):
                 # parent reference
                 newisig.segment = neo_segment
             elif das[0].type == "neo.imagesequence":
-                newisig = self._nix_to_neo_imagesequence(das)
-                neo_segment.imagesequence.append(newisig)
+                new_imgseq = self._nix_to_neo_imagesequence(das)
+                neo_segment.imagesequences.append(new_imgseq)
                 # parent reference
-                newisig.segment = neo_segment
+                new_imgseq.segment = neo_segment
 
         # descend into MultiTags
         for mtag in nix_group.multi_tags:
@@ -464,13 +464,19 @@ class NixIO(BaseIO):
         imgseq = np.array([d[:] for d in nix_da_group]).transpose()
         imgseq = create_quantity(imgseq, unit)
 
+        print(metadata.props)
+        print(metadata.name)
 
+        sampling_rates = create_quantity(metadata["sampling_rate"],metadata["sampling_rate_unit"])
+        del neo_attrs["sampling_rate"]
+        del neo_attrs["sampling_rate_unit"]
+        spatial_scales = create_quantity(metadata["spatial_scale"],metadata["spatial_scale_unit"])
+        del neo_attrs["spatial_scale"]
+        del neo_attrs["spatial_scale_unit"]
+        print(neo_attrs)
 
-
-        neo_seq = ImageSequence(
-            image_data=imgseq, sampling_rate=sampling_rate,
-            spatial_scale=spatial_scale, **neo_attrs
-        )
+        neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rates,
+                                spatial_scale=spatial_scales, **neo_attrs)
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq
         # all DAs reference the same sources
@@ -844,6 +850,13 @@ class NixIO(BaseIO):
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name,
                                            "neo.imagesequence.metadata")
+
+        metadata.create_property("sampling_rate", [imgseq.sampling_rate.magnitude.item()])
+        metadata.create_property("sampling_rate_unit", [units_to_string(imgseq.sampling_rate.units)])
+        metadata.create_property("spatial_scale", [imgseq.spatial_scale.magnitude.item()])
+        metadata.create_property("spatial_scale_unit", [units_to_string(imgseq.spatial_scale.units)])
+        #print(metadata.props)
+
         nixdas = list()
         for idx, row in enumerate(data):
             daname = "{}.{}".format(nix_name, idx)
@@ -879,7 +892,6 @@ class NixIO(BaseIO):
             for k, v in imgseq.array_annotations.items():
                 p = self._write_property(metadata, k, v)
                 p.definition = ARRAYANNOTATION
-        print(nixdas)
         self._signal_map[nix_name] = nixdas
 
     def _write_irregularlysampledsignal(self, irsig, nixblock, nixgroup):
