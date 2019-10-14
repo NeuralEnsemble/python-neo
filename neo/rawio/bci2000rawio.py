@@ -47,7 +47,19 @@ class BCI2000RawIO(BaseRawIO):
             dtype = file_info['DataFormat']
             units = 'uV'
             gain = param_defs['SourceChGain']['value'][chan_ix]
+            
+            if isinstance(gain, str):
+                r = re.findall('(\d+)(\D+)', gain)
+                # some files have strange units attached to gain
+                # in that case it is ignored
+                if len(r) ==1:
+                    gain = r[0][0]
+                gain = float(gain)
+            
             offset = param_defs['SourceChOffset']['value'][chan_ix]
+            if isinstance(offset, str):
+                offset = float(offset)
+            
             group_id = 0
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
         self.header['signal_channels'] = np.array(sig_channels, dtype=_signal_channel_dtype)
