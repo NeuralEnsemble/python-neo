@@ -27,30 +27,33 @@ class TestNWBIO(unittest.TestCase, ):
     ioclass = NWBIO
     files_to_download =  [
         # My NWB files
-#              '/home/elodie/NWB_Files/NWB_File_python_3_pynwb_101_ephys_data_bis.nwb', # File created with the latest version of pynwb=1.0.1 only with ephys data File on my github page
+              '/home/elodie/NWB_Files/NWB_File_python_3_pynwb_101_ephys_data_bis.nwb', # File created with the latest version of pynwb=1.0.1 only with ephys data File on my github page
 #               '/home/elodie/NWB_Files/NWB_File_python_3_pynwb_101_ephys_data_1_timestamp.nwb',
         # Files from Allen Institute
         # NWB files downloadable from http://download.alleninstitute.org/informatics-archive/prerelease/
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-2.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-3.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-4.nwb'
-              '/home/elodie/NWB_Files/NWB_org/H19.29.141.11.21.01.nwb'
+###              '/home/elodie/NWB_Files/NWB_org/H19.29.141.11.21.01.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/behavior_ophys_session_775614751.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/ecephys_session_785402239.nwb'
+#              '/home/elodie/env_NWB_py3/my_notebook/my_first_test_neo_to_nwb.nwb'
     ]
     entities_to_test = files_to_download
 
     def test_read_analogsignal(self):
-        sig_neo = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV', sampling_rate=1*pq.Hz)
+##        sig_neo = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV', sampling_rate=1*pq.Hz)
+        sig_neo = AnalogSignal(signal=[1, 2, 3], units='V', t_start=np.array(3.0)*pq.s, sampling_rate=1*pq.Hz)
         self.assertTrue(isinstance(sig_neo, AnalogSignal))
         r = NWBIO(filename=self.files_to_download[0], mode='r')
-        obj_nwb = r._handle_timeseries(False, 'name', 1)
-        self.assertTrue(isinstance(obj_nwb, AnalogSignal))
-        self.assertEqual(isinstance(obj_nwb, AnalogSignal), isinstance(sig_neo, AnalogSignal))
-        self.assertTrue(obj_nwb.shape, sig_neo.shape)
-        self.assertTrue(obj_nwb.sampling_rate, sig_neo.sampling_rate)
-        self.assertTrue(obj_nwb.units, sig_neo.units)
-        self.assertIsNotNone(obj_nwb, sig_neo)
+#        obj_nwb = r._handle_timeseries(False, 'name', 1)
+        obj_nwb = r._handle_timeseries('name', 1)        
+#        self.assertTrue(isinstance(obj_nwb, AnalogSignal))
+#        self.assertEqual(isinstance(obj_nwb, AnalogSignal), isinstance(sig_neo, AnalogSignal))
+#        self.assertTrue(obj_nwb.shape, sig_neo.shape)
+#        self.assertTrue(obj_nwb.sampling_rate, sig_neo.sampling_rate)
+#        self.assertTrue(obj_nwb.units, sig_neo.units)
+#        self.assertIsNotNone(obj_nwb, sig_neo)
 
     def test_read_irregularlysampledsignal(self, **kargs):
         irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3], units='mV', time_units='ms')
@@ -58,7 +61,7 @@ class TestNWBIO(unittest.TestCase, ):
         self.assertTrue(isinstance(irsig0, IrregularlySampledSignal))
         self.assertTrue(isinstance(irsig1, IrregularlySampledSignal))
         r = NWBIO(filename=self.files_to_download[0], mode='r')
-        irsig_nwb = r._handle_epochs_group(False, 'name')
+        irsig_nwb = r._handle_epochs_group('name')
         self.assertTrue(irsig_nwb, IrregularlySampledSignal)
         self.assertTrue(irsig_nwb, irsig0)
         self.assertTrue(irsig_nwb, irsig1)
@@ -66,7 +69,7 @@ class TestNWBIO(unittest.TestCase, ):
     def test_read_event(self, **kargs):
         evt_neo = Event(np.arange(0, 30, 10)*pq.s, labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
         r = NWBIO(filename=self.files_to_download[0], mode='r')
-        event_nwb = r._handle_epochs_group(False, 'name')
+        event_nwb = r._handle_epochs_group('name')        
         self.assertTrue(event_nwb, evt_neo)
         self.assertIsNotNone(event_nwb, evt_neo)
 
@@ -75,7 +78,7 @@ class TestNWBIO(unittest.TestCase, ):
                     durations=[10, 5, 7]*pq.ms,
                     labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
         r = NWBIO(filename=self.files_to_download[0], mode='r')
-        epoch_nwb = r._handle_epochs_group(False, 'name')
+        epoch_nwb = r._handle_epochs_group('name')
         self.assertTrue(epoch_nwb, Epoch)
         self.assertTrue(epoch_nwb, epc_neo)
         self.assertIsNotNone(epoch_nwb, epc_neo)
@@ -87,7 +90,7 @@ class TestNWBIO(unittest.TestCase, ):
         sig0_neo = AnalogSignal(signal=[.01, 3.3, 9.3], units='uV', sampling_rate=1*pq.Hz)
         seg.analogsignals.append(sig0_neo)
         r = NWBIO(filename=self.files_to_download[0], mode='r')
-        seg_nwb = r._handle_epochs_group(False, 'name')
+        seg_nwb = r._handle_epochs_group('name')
         self.assertTrue(seg, Segment)
         self.assertTrue(seg_nwb, Segment)
         self.assertTrue(seg_nwb, seg)
