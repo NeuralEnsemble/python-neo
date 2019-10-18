@@ -1569,6 +1569,19 @@ class NixIOReadTest(NixIOTest):
                     self.assertEqual(da.metadata.props['st_arr_ann'].unit,
                                      units_to_string(neo_ann.units))
 
+    def test_read_blocks_are_writable(self):
+        filename = os.path.join(self.tempdir, "testnixio_out.nix")
+        writer = NixIO(filename, "ow")
+
+        blocks = self.io.read_all_blocks()
+
+        try:
+            writer.write_all_blocks(blocks)
+        except Exception as exc:
+            self.fail('The following exception was raised when'
+                      + ' writing the blocks loaded with NixIO:\n'
+                      + str(exc))
+
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
 class NixIOContextTests(NixIOTest):

@@ -1234,14 +1234,13 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
-                elif prop.definition == ARRAYANNOTATION:
+                if prop.definition == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
                         neo_attrs['array_annotations'] = {prop.name: values}
                 else:
-                    values = list(values)
-                neo_attrs[prop.name] = values
+                    neo_attrs[prop.name] = values
         # since the 'neo_name' NIX property becomes the actual object's name,
         # there's no reason to keep it in the annotations
         neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
