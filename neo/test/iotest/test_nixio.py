@@ -787,6 +787,7 @@ class NixIOWriteTest(NixIOTest):
 
         asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
                             sampling_rate=pq.Quantity(10, "Hz"))
+        asig.array_annotate(arr_ann=np.random.random((15,)))
         seg.analogsignals.append(asig)
         self.write_and_compare([block])
 
@@ -1495,6 +1496,19 @@ class NixIOReadTest(NixIOTest):
                     self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['st_arr_ann'].unit,
                                      units_to_string(neo_ann.units))
+
+    def test_read_blocks_are_writable(self):
+        filename = os.path.join(self.tempdir, "testnixio_out.nix")
+        writer = NixIO(filename, "ow")
+
+        blocks = self.io.read_all_blocks()
+
+        try:
+            writer.write_all_blocks(blocks)
+        except Exception as exc:
+            self.fail('The following exception was raised when'
+                      + ' writing the blocks loaded with NixIO:\n'
+                      + str(exc))
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
