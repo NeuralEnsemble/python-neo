@@ -787,7 +787,6 @@ class NixIOWriteTest(NixIOTest):
 
         asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
                             sampling_rate=pq.Quantity(10, "Hz"))
-        asig.array_annotate(arr_ann=np.random.random((15,)))
         seg.analogsignals.append(asig)
         self.write_and_compare([block])
 
