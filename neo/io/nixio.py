@@ -1190,8 +1190,6 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
-                else:
-                    values = list(values)
                 if prop.definition == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
