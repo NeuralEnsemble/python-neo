@@ -500,7 +500,7 @@ class BaseTestIO(object):
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s' % os.path.basename(path))
+                exc.args += ('from %s' % os.path.basename(path), )
                 raise
 
     def test_readed_with_lazy_is_compliant(self):
