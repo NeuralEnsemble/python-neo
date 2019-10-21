@@ -193,5 +193,4 @@ class ImageSequence(BaseSignal):
         if isinstance(other, ImageSequence):
             for attr in ("sampling_rate", "spatial_scale"):
                 if getattr(self, attr) != getattr(other, attr):
-                    raise ValueError("Inconsistent values of %s" % attr)
-
+                    raise ValueError("Inconsistent values of %s" % attr)             
