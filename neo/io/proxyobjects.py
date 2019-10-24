@@ -12,6 +12,7 @@ ineherits neo.rawio.
 
 import numpy as np
 import quantities as pq
+import loggging
 
 from neo.core.baseneo import BaseNeo
 
@@ -488,7 +489,7 @@ proxyobjectlist = [AnalogSignalProxy, SpikeTrainProxy, EventProxy,
 
 
 unit_convert = {'Volts': 'V', 'volts': 'V', 'Volt': 'V',
-                'volt': 'V', ' Volt': 'V', 'microV': 'V'}
+                'volt': 'V', ' Volt': 'V', 'microV': 'uV', 'µV': 'uV'}
 
 
 def ensure_signal_units(units):
