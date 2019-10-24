@@ -28,7 +28,7 @@ from neo.rawio.spike2rawio import Spike2RawIO
 from neo.rawio.tdtrawio import TdtRawIO
 from neo.rawio.winedrrawio import WinEdrRawIO
 from neo.rawio.winwcprawio import WinWcpRawIO
-from neo.rawio.nwbrawio import NWBRawIO #, NWBReader # NWB format
+#from neo.rawio.nwbrawio import NWBRawIO #, NWBReader # NWB format
 
 rawiolist = [
     AxonRawIO,
@@ -48,7 +48,7 @@ rawiolist = [
     TdtRawIO,
     WinEdrRawIO,
     WinWcpRawIO,
-    NWBRawIO, # NWB format
+#    NWBRawIO, # NWB format
 ]
 
 import os
