@@ -6,7 +6,7 @@ Tests of neo.rawio.bci2000rawio
 import unittest
 
 from neo.rawio.bci2000rawio import BCI2000RawIO
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestBCI2000RawIO(BaseTestRawIO, unittest.TestCase, ):

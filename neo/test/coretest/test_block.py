@@ -33,8 +33,8 @@ from neo.test.generate_datasets import (get_fake_value, get_fake_values,
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = {str(x): TEST_ANNOTATIONS[x] for x in
+                                 range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
@@ -175,6 +175,11 @@ class TestBlock(unittest.TestCase):
         self.evts2 = [[evt for evt in seg.events]
                       for seg in self.segs2]
 
+        self.img_seqs1 = [[imgseq for imgseq in seg.imagesequences]
+                          for seg in self.segs1]
+        self.img_seqs2 = [[imgseq for imgseq in seg.imagesequences]
+                          for seg in self.segs2]
+
         self.sigarrs1 = sum(self.sigarrs1, [])
         self.sigarrs2 = sum(self.sigarrs2, [])
 
@@ -187,6 +192,9 @@ class TestBlock(unittest.TestCase):
         self.epcs2 = sum(self.epcs2, [])
         self.evts1 = sum(self.evts1, [])
         self.evts2 = sum(self.evts2, [])
+
+        self.img_seqs1 = sum(self.img_seqs1, [])
+        self.img_seqs2 = sum(self.img_seqs2, [])
 
     def test_block_init(self):
         blk = Block(name='a block')
@@ -283,14 +291,14 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(self.blk1._multi_children), 0)
         self.assertEqual(len(self.blk1.data_children), 0)
         self.assertEqual(len(self.blk1.data_children_recur),
-                         1 * self.nchildren ** 3 + 4 * self.nchildren ** 2)
+                         1 * self.nchildren ** 3 + 5 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.container_children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.container_children_recur),
                          2 * self.nchildren + 1 * self.nchildren ** 2)
         self.assertEqual(len(self.blk1.children), 2 * self.nchildren)
         self.assertEqual(len(self.blk1.children_recur),
                          2 * self.nchildren +
-                         5 * self.nchildren ** 2 +
+                         6 * self.nchildren ** 2 +
                          1 * self.nchildren ** 3)
 
         self.assertEqual(self.blk1._multi_children, ())
@@ -309,10 +317,12 @@ class TestBlock(unittest.TestCase):
                                self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] +
                                self.trains1[::2] +
+                               self.img_seqs1[:2] +
                                self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
-                               self.trains1[1::2],
+                               self.trains1[1::2] +
+                               self.img_seqs1[2:],
                                exclude=['channel_index'])
 
         assert_same_sub_schema(list(self.blk1.children),
@@ -322,10 +332,12 @@ class TestBlock(unittest.TestCase):
                                self.epcs1[:2] + self.evts1[:2] +
                                self.irsigs1[::2] +
                                self.trains1[::2] +
+                               self.img_seqs1[:2] +
                                self.sigarrs1[1::2] +
                                self.epcs1[2:] + self.evts1[2:] +
                                self.irsigs1[1::2] +
                                self.trains1[1::2] +
+                               self.img_seqs1[2:] +
                                self.segs1 + self.chxs1 +
                                self.units1[:2] +
                                self.units1[2:],
@@ -345,6 +357,7 @@ class TestBlock(unittest.TestCase):
             targ.extend(seg.events)
             targ.extend(seg.irregularlysampledsignals)
             targ.extend(seg.spiketrains)
+            targ.extend(seg.imagesequences)
 
         res1 = self.targobj.filter()
         res2 = self.targobj.filter({})
@@ -370,10 +383,12 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_annotation_single(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
+                [self.img_seqs1[1]] +
                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
-                self.trains1[1::2])
+                self.trains1[1::2] +
+                [self.img_seqs1[3]])
 
         res0 = self.targobj.filter(j=1)
         res1 = self.targobj.filter({'j': 1})
@@ -428,10 +443,12 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_multi(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
+                [self.img_seqs1[1]] +
                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
+                [self.img_seqs1[3]] +
                 [self.trains1[0]])
 
         name = self.trains1[0].name
@@ -570,10 +587,12 @@ class TestBlock(unittest.TestCase):
 
     def test__filter_single_annotation_container(self):
         targ = ([self.epcs1[1], self.evts1[1]] +
+                [self.img_seqs1[1]] +
                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
+                [self.img_seqs1[3]] +
                 [self.segs1[1], self.chxs1[1],
                  self.units1[1],
                  self.units1[3]])
@@ -645,10 +664,12 @@ class TestBlock(unittest.TestCase):
         data = self.targobj.children_recur
 
         targ = ([self.epcs1[1], self.evts1[1]] +
+                [self.img_seqs1[1]] +
                 self.sigarrs1[1::2] +
                 [self.epcs1[3], self.evts1[3]] +
                 self.irsigs1[1::2] +
                 self.trains1[1::2] +
+                [self.img_seqs1[3]] +
                 [self.segs1[1], self.chxs1[1],
                  self.units1[1],
                  self.units1[3],
@@ -670,21 +691,21 @@ class TestBlock(unittest.TestCase):
 
         name1 = self.sigarrs1[0].name
         name2 = self.sigarrs2[0].name
-        res0 = filterdata(data, [{'j': 5}, {}])
-        res1 = filterdata(data, {}, i=5)
-        res2 = filterdata(data, [{}], i=5)
+        res0 = filterdata(data, [{'j': 6}, {}])
+        res1 = filterdata(data, {}, i=6)
+        res2 = filterdata(data, [{}], i=6)
         res3 = filterdata(data, name=name1, targdict={'j': 1})
         res4 = filterdata(data, {'name': name1}, j=1)
         res5 = filterdata(data, targdict={'name': name1}, j=1)
-        res6 = filterdata(data, name=name2, j=5)
-        res7 = filterdata(data, {'name': name2, 'j': 5})
-        res8 = filterdata(data, targdict={'name': name2, 'j': 5})
-        res9 = filterdata(data, {'name': name2}, j=5)
-        res10 = filterdata(data, targdict={'name': name2}, j=5)
-        res11 = filterdata(data, name=name2, targdict={'j': 5})
-        res12 = filterdata(data, {'name': name1}, j=5)
-        res13 = filterdata(data, targdict={'name': name1}, j=5)
-        res14 = filterdata(data, name=name1, targdict={'j': 5})
+        res6 = filterdata(data, name=name2, j=6)
+        res7 = filterdata(data, {'name': name2, 'j': 6})
+        res8 = filterdata(data, targdict={'name': name2, 'j': 6})
+        res9 = filterdata(data, {'name': name2}, j=6)
+        res10 = filterdata(data, targdict={'name': name2}, j=6)
+        res11 = filterdata(data, name=name2, targdict={'j': 6})
+        res12 = filterdata(data, {'name': name1}, j=6)
+        res13 = filterdata(data, targdict={'name': name1}, j=6)
+        res14 = filterdata(data, name=name1, targdict={'j': 6})
 
         assert_same_sub_schema(res0, targ)
         assert_same_sub_schema(res1, targ)
@@ -774,7 +795,32 @@ class TestBlock(unittest.TestCase):
 
     def test__deepcopy(self):
         blk1_copy = deepcopy(self.blk1)
+
+        # Check links from parents to children
         assert_same_sub_schema(blk1_copy, self.blk1)
+
+        # Check links from children to parents
+        for segment in blk1_copy.segments:
+            self.assertEqual(id(segment.block), id(blk1_copy))
+            for sig in segment.analogsignals:
+                self.assertEqual(id(sig.segment), id(segment))
+            for sptr in segment.spiketrains:
+                self.assertEqual(id(sptr.segment), id(segment))
+
+        for chidx in blk1_copy.channel_indexes:
+            self.assertEqual(id(chidx.block), id(blk1_copy))
+
+            for sig in chidx.analogsignals:
+                self.assertEqual(id(sig.channel_index), id(chidx))
+
+            for sig in chidx.irregularlysampledsignals:
+                self.assertEqual(id(sig.channel_index), id(chidx))
+
+            for unit in chidx.units:
+                self.assertEqual(id(unit.channel_index), id(chidx))
+
+                for sptr in unit.spiketrains:
+                    self.assertEqual(id(sptr.unit), id(unit))
 
 
 if __name__ == "__main__":

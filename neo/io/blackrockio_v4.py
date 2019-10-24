@@ -383,7 +383,7 @@ class BlackrockIO(BaseIO):
         if nsx_file_id['file_id'].decode() == 'NEURALSG':
             spec = '2.1'
         elif nsx_file_id['file_id'].decode() == 'NEURALCD':
-            spec = '{0}.{1}'.format(
+            spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
             raise IOError('Unsupported NSX file type.')
@@ -404,10 +404,10 @@ class BlackrockIO(BaseIO):
 
         nev_file_id = np.fromfile(filename, count=1, dtype=dt0)[0]
         if nev_file_id['file_id'].decode() == 'NEURALEV':
-            spec = '{0}.{1}'.format(
+            spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise IOError('NEV file type {0} is not supported'.format(
+            raise IOError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec
@@ -732,7 +732,7 @@ class BlackrockIO(BaseIO):
         dt0 = [
             ('timestamp', 'uint32'),
             ('packet_id', 'uint16'),
-            ('value', 'S{0}'.format(data_size - 6))]
+            ('value', 'S{}'.format(data_size - 6))]
 
         raw_data = np.memmap(filename, mode='r', offset=header_size, dtype=dt0)
 
@@ -945,7 +945,7 @@ class BlackrockIO(BaseIO):
                     ('analog_input_channel_3', 'int16'),
                     ('analog_input_channel_4', 'int16'),
                     ('analog_input_channel_5', 'int16'),
-                    ('unused', 'S{0}'.format(data_size - 20))],
+                    ('unused', 'S{}'.format(data_size - 20))],
                 # Version>=2.3
                 'b': [
                     ('timestamp', 'uint32'),
@@ -953,14 +953,14 @@ class BlackrockIO(BaseIO):
                     ('packet_insertion_reason', 'uint8'),
                     ('reserved', 'uint8'),
                     ('digital_input', 'uint16'),
-                    ('unused', 'S{0}'.format(data_size - 10))]},
+                    ('unused', 'S{}'.format(data_size - 10))]},
             'Spikes': {
                 'a': [
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('unit_class_nb', 'uint8'),
                     ('reserved', 'uint8'),
-                    ('waveform', 'S{0}'.format(data_size - 8))]},
+                    ('waveform', 'S{}'.format(data_size - 8))]},
             'Comments': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -968,7 +968,7 @@ class BlackrockIO(BaseIO):
                     ('char_set', 'uint8'),
                     ('flag', 'uint8'),
                     ('data', 'uint32'),
-                    ('comment', 'S{0}'.format(data_size - 12))]},
+                    ('comment', 'S{}'.format(data_size - 12))]},
             'VideoSync': {
                 'a': [
                     ('timestamp', 'uint32'),
@@ -998,7 +998,7 @@ class BlackrockIO(BaseIO):
                     ('timestamp', 'uint32'),
                     ('packet_id', 'uint16'),
                     ('config_change_type', 'uint16'),
-                    ('config_changed', 'S{0}'.format(data_size - 8))]}}
+                    ('config_changed', 'S{}'.format(data_size - 8))]}}
 
         return __nev_data_types
 
@@ -1020,7 +1020,7 @@ class BlackrockIO(BaseIO):
             'max_res': self.__nev_basic_header['timestamp_resolution'],
             'channel_ids': self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
             'channel_labels': self.__channel_labels[self.__nev_spec](),
-            'event_unit': pq.CompoundUnit("1.0/{0} * s".format(
+            'event_unit': pq.CompoundUnit("1.0/{} * s".format(
                 self.__nev_basic_header['timestamp_resolution'])),
             'nb_units': dict(zip(
                 self.__nev_ext_header[b'NEUEVWAV']['electrode_id'],
@@ -1033,7 +1033,7 @@ class BlackrockIO(BaseIO):
             'waveform_dtypes': self.__get_waveforms_dtype(),
             'waveform_sampling_rate':
                 self.__nev_basic_header['sample_resolution'] * pq.Hz,
-            'waveform_time_unit': pq.CompoundUnit("1.0/{0} * s".format(
+            'waveform_time_unit': pq.CompoundUnit("1.0/{} * s".format(
                 self.__nev_basic_header['sample_resolution'])),
             'waveform_unit': pq.uV}
 
@@ -1155,7 +1155,7 @@ class BlackrockIO(BaseIO):
         # get the dtype of waveform (this is stupidly complicated)
         if self.__is_set(
                 np.array(self.__nev_basic_header['additionnal_flags']), 0):
-            dtype_waveforms = dict((k, 'int16') for k in all_el_ids)
+            dtype_waveforms = {k: 'int16' for k in all_el_ids}
         else:
             # extract bytes per waveform
             waveform_bytes = \
@@ -1196,9 +1196,9 @@ class BlackrockIO(BaseIO):
         wf_dtypes = self.__get_waveforms_dtype()
         nb_bytes_wf = self.__nev_basic_header['bytes_in_data_packets'] - 8
 
-        wf_sizes = dict([
-            (ch, int(nb_bytes_wf / np.dtype(dt).itemsize)) for ch, dt in
-            wf_dtypes.items()])
+        wf_sizes = {
+            ch: int(nb_bytes_wf / np.dtype(dt).itemsize) for ch, dt in
+            wf_dtypes.items()}
 
         return wf_sizes
 
@@ -1223,7 +1223,7 @@ class BlackrockIO(BaseIO):
 
         # TODO: Double check if this is the correct assumption (10 samples)
         # default value: threshold crossing after 10 samples of waveform
-        wf_left_sweep = dict([(ch, 10 * wf_t_unit) for ch in all_ch])
+        wf_left_sweep = {ch: 10 * wf_t_unit for ch in all_ch}
 
         # non-default: threshold crossing at center of waveform
         # wf_size = self.__nev_params('waveform_size')
@@ -1282,7 +1282,7 @@ class BlackrockIO(BaseIO):
                 * self.__nsx_basic_header[nsx_nb]['channel_count'],
             'sampling_rate':
                 30000 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+            'time_unit': pq.CompoundUnit("1.0/{}*s".format(
                 30000 / self.__nsx_basic_header[nsx_nb]['period']))}
 
         return nsx_parameters[param_name]
@@ -1312,7 +1312,7 @@ class BlackrockIO(BaseIO):
             'sampling_rate':
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
                 / self.__nsx_basic_header[nsx_nb]['period'] * pq.Hz,
-            'time_unit': pq.CompoundUnit("1.0/{0}*s".format(
+            'time_unit': pq.CompoundUnit("1.0/{}*s".format(
                 self.__nsx_basic_header[nsx_nb]['timestamp_resolution']
                 / self.__nsx_basic_header[nsx_nb]['period']))}
 
@@ -1366,22 +1366,22 @@ class BlackrockIO(BaseIO):
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < n_stop <= t_stops[d_bl - 1]:
                 self._print_verbose(
-                    "User n_start ({0}) is smaller than the corresponding "
-                    "t_start of the available ns{1} datablock "
-                    "({2}).".format(n_start, nsx_nb, t_starts[d_bl - 1]))
+                    "User n_start ({}) is smaller than the corresponding "
+                    "t_start of the available ns{} datablock "
+                    "({}).".format(n_start, nsx_nb, t_starts[d_bl - 1]))
                 return data_parameters[param_name]
             elif t_starts[d_bl - 1] <= n_start < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_stop ({0}) is larger than the corresponding "
-                    "t_stop of the available ns{1} datablock "
-                    "({2}).".format(n_stop, nsx_nb, t_stops[d_bl - 1]))
+                    "User n_stop ({}) is larger than the corresponding "
+                    "t_stop of the available ns{} datablock "
+                    "({}).".format(n_stop, nsx_nb, t_stops[d_bl - 1]))
                 return data_parameters[param_name]
             elif n_start < t_starts[d_bl - 1] < t_stops[d_bl - 1] < n_stop:
                 self._print_verbose(
-                    "User n_start ({0}) is smaller than the corresponding "
-                    "t_start and user n_stop ({1}) is larger than the "
-                    "corresponding t_stop of the available ns{2} datablock "
-                    "({3}).".format(
+                    "User n_start ({}) is smaller than the corresponding "
+                    "t_start and user n_stop ({}) is larger than the "
+                    "corresponding t_stop of the available ns{} datablock "
+                    "({}).".format(
                         n_start, n_stop, nsx_nb,
                         (t_starts[d_bl - 1], t_stops[d_bl - 1])))
                 return data_parameters[param_name]
@@ -1417,12 +1417,12 @@ class BlackrockIO(BaseIO):
         # analog input events via threshold crossings
         for ch in range(5):
             event_types.update({
-                'analog_input_channel_{0}'.format(ch + 1): {
-                    'name': 'analog_input_channel_{0}'.format(ch + 1),
-                    'field': 'analog_input_channel_{0}'.format(ch + 1),
+                'analog_input_channel_{}'.format(ch + 1): {
+                    'name': 'analog_input_channel_{}'.format(ch + 1),
+                    'field': 'analog_input_channel_{}'.format(ch + 1),
                     'mask': self.__is_set(
                         data['packet_insertion_reason'], ch + 1),
-                    'desc': "Values of analog input channel {0} in mV "
+                    'desc': "Values of analog input channel {} in mV "
                             "(+/- 5000)".format(ch + 1)}})
 
         # TODO: define field and desc
@@ -1466,14 +1466,14 @@ class BlackrockIO(BaseIO):
         if un_id == 0:
             return 'unclassified'
         elif 1 <= un_id <= 16:
-            return '{0}'.format(un_id)
+            return '{}'.format(un_id)
         elif 17 <= un_id <= 244:
             raise ValueError(
-                "Unit id {0} is not used by daq system".format(un_id))
+                "Unit id {} is not used by daq system".format(un_id))
         elif un_id == 255:
             return 'noise'
         else:
-            raise ValueError("Unit id {0} cannot be classified".format(un_id))
+            raise ValueError("Unit id {} cannot be classified".format(un_id))
 
     def __is_set(self, flag, pos):
         """
@@ -1792,9 +1792,9 @@ class BlackrockIO(BaseIO):
 
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
+        name = "Unit {}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
-        desc = 'SpikeTrain from channel: {0}, unit: {1}'.format(
+        desc = 'SpikeTrain from channel: {}, unit: {}'.format(
             channel_id, self.__get_unit_classification(unit_id))
 
         # get spike times for given time interval
@@ -1888,7 +1888,7 @@ class BlackrockIO(BaseIO):
             return None
 
         description = \
-            "AnalogSignal from channel: {0}, label: {1}, nsx: {2}".format(
+            "AnalogSignal from channel: {}, label: {}, nsx: {}".format(
                 channel_id, labels[idx_ch], nsx_nb)
 
         # TODO: Find a more time/memory efficient way to handle lazy loading
@@ -1953,9 +1953,9 @@ class BlackrockIO(BaseIO):
         """
         # define a name for spiketrain
         # (unique identifier: 1000 * elid + unit_nb)
-        name = "Unit {0}".format(1000 * channel_id + unit_id)
+        name = "Unit {}".format(1000 * channel_id + unit_id)
         # define description for spiketrain
-        desc = 'Unit from channel: {0}, id: {1}'.format(
+        desc = 'Unit from channel: {}, id: {}'.format(
             channel_id, self.__get_unit_classification(unit_id))
 
         un = Unit(
@@ -1985,7 +1985,7 @@ class BlackrockIO(BaseIO):
 
         if index is not None:
             chidx.index = index
-            chidx.name = "ChannelIndex {0}".format(chidx.index)
+            chidx.name = "ChannelIndex {}".format(chidx.index)
         else:
             chidx.name = "ChannelIndex"
 
@@ -2164,7 +2164,7 @@ class BlackrockIO(BaseIO):
         else:
             seg.index = index
         if name is None:
-            seg.name = "Segment {0}".format(seg.index)
+            seg.name = "Segment {}".format(seg.index)
         else:
             seg.name = name
         if description is None:
@@ -2243,12 +2243,12 @@ class BlackrockIO(BaseIO):
 
                         if not_existing_units:
                             self._print_verbose(
-                                "Units {0} on channel {1} do not "
+                                "Units {} on channel {} do not "
                                 "exist".format(not_existing_units, ch_id))
                     else:
                         self._print_verbose(
                             "There are no units specified for channel "
-                            "{0}".format(ch_id))
+                            "{}".format(ch_id))
 
         if nsx_to_load is not None:
             for nsx_nb in nsx_to_load:

@@ -146,7 +146,7 @@ def parse_mcs_raw_header(filename):
                             break
                     assert split_pos is not None, 'Impossible to find units and scaling'
                     info['signal_gain'] = float(v[:split_pos])
-                    info['signal_units'] = v[split_pos:].replace(u'µ', u'u')
+                    info['signal_units'] = v[split_pos:].replace('µ', 'u')
                     info['signal_offset'] = -info['signal_gain'] * info['adc_zero']
 
                 elif key == b'Streams':

@@ -37,6 +37,17 @@ class BaseProxy(BaseNeo):
 
         BaseNeo.__init__(self, **annotations)
 
+    def load(self, time_slice=None, **kwargs):
+        # should be implemented by subclass
+        raise NotImplementedError
+
+    def time_slice(self, t_start, t_stop):
+        '''
+        Load the proxy object within the specified time range. Has the same
+        call signature as AnalogSignal.time_slice, Epoch.time_slice, etc.
+        '''
+        return self.load(time_slice=(t_start, t_stop))
+
 
 class AnalogSignalProxy(BaseProxy):
     '''
@@ -122,6 +133,15 @@ class AnalogSignalProxy(BaseProxy):
             'channel_names': np.array(sig_chans['name'], copy=True),
             'channel_ids': np.array(sig_chans['id'], copy=True),
         }
+        # array annotations for signal can be at 2 places
+        # global at signal channel level
+        d = self._rawio.raw_annotations['signal_channels']
+        array_annotations.update(create_analogsignal_array_annotations(
+                                                d, self._global_channel_indexes))
+        # or specific to block/segment/signals
+        d = self._rawio.raw_annotations['blocks'][block_index]['segments'][seg_index]['signals']
+        array_annotations.update(create_analogsignal_array_annotations(
+                                                d, self._global_channel_indexes))
 
         BaseProxy.__init__(self, array_annotations=array_annotations, **annotations)
 
@@ -577,3 +597,33 @@ def consolidate_time_slice(time_slice, seg_t_start, seg_t_stop, strict_slicing):
     t_stop = ensure_second(t_stop)
 
     return (t_start, t_stop)
+
+
+def create_analogsignal_array_annotations(sig_annotations, global_channel_indexes):
+    """
+    Create array_annotations from raw_annoations.
+    Since raw_annotation are not np.array but nested dict, this func
+    try to find keys in raw_annotation that are shared by all channel
+    and make array_annotation with it.
+    """
+    # intersection of keys across channels
+    common_keys = None
+    for ind in global_channel_indexes:
+        keys = [k for k, v in sig_annotations[ind].items() if not \
+                    isinstance(v, (list, tuple, np.ndarray))]
+        if common_keys is None:
+            common_keys = keys
+        else:
+            common_keys = [k for k in common_keys if k in keys]
+
+    # this is redundant and done with other name
+    for k in ['name', 'channel_id']:
+        if k in common_keys:
+            common_keys.remove(k)
+
+    array_annotations = {}
+    for k in common_keys:
+        values = [sig_annotations[ind][k] for ind in global_channel_indexes]
+        array_annotations[k] = np.array(values)
+
+    return array_annotations

@@ -58,7 +58,7 @@ def proc_f32(filename):
     chx.units.append(unit)
 
     try:
-        with np.load(filename) as f32obj:
+        with np.load(filename, allow_pickle=True) as f32obj:
             f32file = list(f32obj.items())[0][1].flatten()
     except IOError as exc:
         if 'as a pickle' in exc.message:

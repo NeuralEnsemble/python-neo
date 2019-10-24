@@ -14,12 +14,8 @@ extras_require = {
     'neomatlabio': ['scipy>=0.12.0'],
     'nixio': ['nixio>=1.5.0b2'],
     'stimfitio': ['stfio'],
-    'axographio': ['axographio']
+    'tiffio': ['pillow']
 }
-
-if os.environ.get('TRAVIS') == 'true' and \
-        os.environ.get('TRAVIS_PYTHON_VERSION').startswith('2.6'):
-    install_requires.append('unittest2>=0.5.1')
 
 with open("neo/version.py") as fp:
     d = {}
@@ -30,8 +26,8 @@ setup(
     name="neo",
     version=neo_version,
     packages=[
-        'neo', 'neo.core', 'neo.io', 'neo.test', 'neo.test.iotest',
-        'neo.rawio', 'neo.rawio.tests'],
+        'neo', 'neo.core', 'neo.io', 'neo.rawio', 'neo.test',
+        'neo.test.coretest', 'neo.test.iotest', 'neo.test.rawiotest'],
     install_requires=install_requires,
     extras_require=extras_require,
     author="Neo authors and contributors",
@@ -41,7 +37,8 @@ setup(
                 "neurophysiology file formats",
     long_description=long_description,
     license="BSD-3-Clause",
-    url='http://neuralensemble.org/neo',
+    url='https://neuralensemble.org/neo',
+    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*",
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -51,8 +48,6 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering']

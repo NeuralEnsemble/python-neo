@@ -4,7 +4,7 @@ Neo core
 
 .. currentmodule:: neo.core
 
-This figure shows the main data types in Neo:
+This figure shows the main data types in Neo, with the exception of the newly added ImageSequence and RegionOfInterest classes:
 
 .. image:: images/base_schematic.png
    :height: 500 px
@@ -24,7 +24,7 @@ associated metadata (units, sampling frequency, etc.).
   * :py:class:`SpikeTrain`: A set of action potentials (spikes) emitted by the same unit in a period of time (with optional waveforms).
   * :py:class:`Event`: An array of time points representing one or more events in the data.
   * :py:class:`Epoch`: An array of time intervals representing one or more periods of time in the data.
-
+  * :py:class:`ImageSequence`: A three dimensional array representing a sequence of images.
 
 Container objects
 -----------------
@@ -41,8 +41,8 @@ There is a simple hierarchy of containers:
     Contains :class:`Segment`, :class:`Unit` and :class:`ChannelIndex` objects.
 
 
-Grouping objects
-----------------
+Grouping/linking objects
+------------------------
 
 These objects express the relationships between data items, such as which signals
 were recorded on which electrodes, which spike trains were obtained from which
@@ -61,6 +61,10 @@ cut across the simple container hierarchy.
   * :py:class:`Unit`: links the :class:`SpikeTrain` objects within a :class:`Block`,
     possibly across multiple Segments, that were emitted by the same cell.
     A :class:`Unit` is linked to the :class:`ChannelIndex` object from which the spikes were detected.
+
+  * :py:class:`CircularRegionOfInterest`, :py:class:`RectangularRegionOfInterest` and :py:class:`PolygonRegionOfInterest`
+    are three subclasses that link :class:`ImageSequence` objects to signals (:class:`AnalogSignal` objects)
+    extracted from them.
 
 
 NumPy compatibility
@@ -185,6 +189,8 @@ Relationship:
 
 :download:`Click here for a better quality SVG diagram <./images/simple_generated_diagram.svg>`
 
+.. note:: This figure has not yet been updated to include :class:`ImageSequence` and :class:`RegionOfInterest`.
+
 For more details, see the :doc:`api_reference`.
 
 Initialization
@@ -194,7 +200,7 @@ Neo objects are initialized with "required", "recommended", and "additional" arg
 
     - Required arguments MUST be provided at the time of initialization. They are used in the construction of the object.
     - Recommended arguments may be provided at the time of initialization. They are accessible as Python attributes. They can also be set or modified after initialization.
-    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`. 
+    - Additional arguments are defined by the user and are not part of the Neo object model. A primary goal of the Neo project is extensibility. These additional arguments are entries in an attribute of the object: a Python dict called :py:attr:`annotations`.
       Note : Neo annotations are not the same as the *__annotations__* attribute introduced in Python 3.6.
 
 Example: SpikeTrain
@@ -270,4 +276,5 @@ using the :meth:`array_annotate` method provided by all Neo data objects, e.g.::
 Since Array Annotations may be written to a file or database, there are some
 limitations on the data types of arrays: they must be 1-dimensional (i.e. not nested)
 and contain the same types as annotations:
- ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and ``datetime``.
+
+    ``integer``, ``float``, ``complex``, ``Quantity``, ``string``, ``date``, ``time`` and ``datetime``.

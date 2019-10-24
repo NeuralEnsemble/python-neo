@@ -5,14 +5,17 @@ Release notes
 
 .. toctree::
    :maxdepth: 1
-   
+
+   releases/0.8.0.rst
+   releases/0.7.2.rst
+   releases/0.7.1.rst
    releases/0.7.0.rst
    releases/0.6.0.rst
    releases/0.5.2.rst
    releases/0.5.1.rst
    releases/0.5.0.rst
-   
-   
+
+
 
 ..   releases/0.2.0.rst
 ..   releases/0.2.1.rst
@@ -73,8 +76,8 @@ Version 0.2.1
  * added :func:`time_slice()` method to the :class:`SpikeTrain` and :class:`AnalogSignalArray` classes.
  * improvements to annotation data type handling
  * added PickleIO, allowing saving Neo objects in the Python pickle format.
- * added ElphyIO (see http://www.unic.cnrs-gif.fr/software.html)
- * added BrainVisionIO (see http://www.brainvision.com/)
+ * added ElphyIO (see http://neuro-psi.cnrs.fr/spip.php?article943)
+ * added BrainVisionIO (see https://brainvision.com/)
  * improvements to PlexonIO
  * added :func:`merge()` method to the :class:`Block` and :class:`Segment` classes
  * development was mostly moved to GitHub, although the issue tracker is still at neuralensemble.org/neo
@@ -96,4 +99,4 @@ New features compared to neo 0.1:
 
 
 
-.. _quantities: http://pypi.python.org/pypi/quantities
+.. _quantities: https://pypi.org/project/quantities/

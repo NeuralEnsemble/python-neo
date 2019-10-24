@@ -67,7 +67,7 @@ def proc_src(filename):
     example: filename = 'file1_src_py2.npz'
              src file name = 'file1.src'
     '''
-    with np.load(filename) as srcobj:
+    with np.load(filename, allow_pickle=True) as srcobj:
         srcfile = list(srcobj.items())[0][1]
 
     filename = os.path.basename(filename[:-12] + '.src')

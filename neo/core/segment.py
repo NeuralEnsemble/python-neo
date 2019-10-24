@@ -14,6 +14,8 @@ from datetime import datetime
 
 import numpy as np
 
+from copy import deepcopy
+
 from neo.core.container import Container
 
 
@@ -76,7 +78,7 @@ class Segment(Container):
 
     _data_child_objects = ('AnalogSignal',
                            'Epoch', 'Event',
-                           'IrregularlySampledSignal', 'SpikeTrain')
+                           'IrregularlySampledSignal', 'SpikeTrain', 'ImageSequence')
     _single_parent_objects = ('Block',)
     _recommended_attrs = ((('file_datetime', datetime),
                            ('rec_datetime', datetime),
@@ -251,3 +253,99 @@ class Segment(Container):
             self.take_slice_of_analogsignalarray_by_unit(unit_list)
         # TODO copy others attributes
         return seg
+
+    def time_slice(self, t_start=None, t_stop=None, reset_time=False, **kwargs):
+        """
+        Creates a time slice of a Segment containing slices of all child
+        objects.
+
+        Parameters:
+        -----------
+        t_start: Quantity
+            Starting time of the sliced time window.
+        t_stop: Quantity
+            Stop time of the sliced time window.
+        reset_time: bool
+            If True the time stamps of all sliced objects are set to fall
+            in the range from t_start to t_stop.
+            If False, original time stamps are retained.
+            Default is False.
+
+        Keyword Arguments:
+        ------------------
+            Additional keyword arguments used for initialization of the sliced
+            Segment object.
+
+        Returns:
+        --------
+        subseg: Segment
+            Temporal slice of the original Segment from t_start to t_stop.
+        """
+        subseg = Segment(**kwargs)
+
+        for attr in ['file_datetime', 'rec_datetime', 'index',
+                     'name', 'description', 'file_origin']:
+            setattr(subseg, attr, getattr(self, attr))
+
+        subseg.annotations = deepcopy(self.annotations)
+
+        t_shift = - t_start
+
+        # cut analogsignals and analogsignalarrays
+        for ana_id in range(len(self.analogsignals)):
+            if hasattr(self.analogsignals[ana_id], '_rawio'):
+                ana_time_slice = self.analogsignals[ana_id].load(time_slice=(t_start, t_stop))
+            else:
+                ana_time_slice = self.analogsignals[ana_id].time_slice(t_start, t_stop)
+            if reset_time:
+                ana_time_slice = ana_time_slice.time_shift(t_shift)
+            subseg.analogsignals.append(ana_time_slice)
+
+        # cut irregularly sampled signals
+        for irr_id in range(len(self.irregularlysampledsignals)):
+            if hasattr(self.irregularlysampledsignals[irr_id], '_rawio'):
+                ana_time_slice = self.irregularlysampledsignals[irr_id].load(
+                    time_slice=(t_start, t_stop))
+            else:
+                ana_time_slice = self.irregularlysampledsignals[irr_id].time_slice(t_start, t_stop)
+            if reset_time:
+                ana_time_slice = ana_time_slice.time_shift(t_shift)
+            subseg.irregularlysampledsignals.append(ana_time_slice)
+
+        # cut spiketrains
+        for st_id in range(len(self.spiketrains)):
+            if hasattr(self.spiketrains[st_id], '_rawio'):
+                st_time_slice = self.spiketrains[st_id].load(time_slice=(t_start, t_stop))
+            else:
+                st_time_slice = self.spiketrains[st_id].time_slice(t_start, t_stop)
+            if reset_time:
+                st_time_slice = st_time_slice.time_shift(t_shift)
+            subseg.spiketrains.append(st_time_slice)
+
+        # cut events
+        for ev_id in range(len(self.events)):
+            if hasattr(self.events[ev_id], '_rawio'):
+                ev_time_slice = self.events[ev_id].load(time_slice=(t_start, t_stop))
+            else:
+                ev_time_slice = self.events[ev_id].time_slice(t_start, t_stop)
+            if reset_time:
+                ev_time_slice = ev_time_slice.time_shift(t_shift)
+            # appending only non-empty events
+            if len(ev_time_slice):
+                subseg.events.append(ev_time_slice)
+
+        # cut epochs
+        for ep_id in range(len(self.epochs)):
+            if hasattr(self.epochs[ep_id], '_rawio'):
+                ep_time_slice = self.epochs[ep_id].load(time_slice=(t_start, t_stop))
+            else:
+                ep_time_slice = self.epochs[ep_id].time_slice(t_start, t_stop)
+            if reset_time:
+                ep_time_slice = ep_time_slice.time_shift(t_shift)
+            # appending only non-empty epochs
+            if len(ep_time_slice):
+                subseg.epochs.append(ep_time_slice)
+
+        subseg.create_relationship()
+
+        return subseg

@@ -98,6 +98,9 @@ class Block(Container):
         self.file_datetime = file_datetime
         self.rec_datetime = rec_datetime
         self.index = index
+        self.regionsofinterest = []   # temporary workaround.
+        # the goal is to store all sub-classes of RegionOfInterest in a single list
+        # but this will need substantial changes to container handling
 
     @property
     def data_children_recur(self):

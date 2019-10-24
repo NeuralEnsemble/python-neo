@@ -53,7 +53,7 @@ class Test_check_annotations(unittest.TestCase):
                        np.array([True, False])]
 
     def test__check_annotations__invalid_ValueError(self):
-        value = set([])
+        value = set()
         self.assertRaises(ValueError, _check_annotations, value)
 
     def test__check_annotations__invalid_dtype_ValueError(self):
@@ -81,6 +81,11 @@ class TestBaseNeo(unittest.TestCase):
     '''
     TestCase to make sure basic initialization and methods work
     '''
+
+    def assertDictContainsSubset(self, a, b):
+        """Checks that all the key/value pairs in a exist in b"""
+        # the implementation in unittest.TestCase has been deprecated
+        assert set(a.items()).issubset(set(b.items()))
 
     def test_init(self):
         '''test to make sure initialization works properly'''
@@ -567,7 +572,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
 
     def test_python_set(self):
         '''test to make sure set type data is rejected'''
-        value = set([None, 10, 9.2, complex(23, 11)])
+        value = {None, 10, 9.2, complex(23, 11)}
         self.assertRaises(ValueError, self.base.annotate, data=value)
 
     def test_python_frozenset(self):
@@ -1092,7 +1097,7 @@ class Test_pprint(unittest.TestCase):
         description = 'this is a test'
         obj = BaseNeo(name=name, description=description)
         res = pretty(obj)
-        targ = "BaseNeo name: '%s' description: '%s'" % (name, description)
+        targ = "BaseNeo name: '{}' description: '{}'".format(name, description)
         self.assertEqual(res, targ)
 
 

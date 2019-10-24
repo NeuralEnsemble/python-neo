@@ -23,7 +23,7 @@ the old object.
 # needed for Python 3 compatibility
 from __future__ import absolute_import, division, print_function
 
-from copy import deepcopy
+from copy import deepcopy, copy
 import numpy as np
 import quantities as pq
 
@@ -119,6 +119,7 @@ class IrregularlySampledSignal(BaseSignal):
     '''
 
     _single_parent_objects = ('Segment', 'ChannelIndex')
+    _single_parent_attrs = ('segment', 'channel_index')
     _quantity_attr = 'signal'
     _necessary_attrs = (('times', pq.Quantity, 1), ('signal', pq.Quantity, 2))
 
@@ -186,26 +187,11 @@ class IrregularlySampledSignal(BaseSignal):
         self.times = getattr(obj, 'times', None)
         return obj
 
-    def __deepcopy__(self, memo):
-        cls = self.__class__
-        new_signal = cls(self.times, np.array(self), units=self.units,
-                         time_units=self.times.units, dtype=self.dtype,
-                         t_start=self.t_start, name=self.name,
-                         file_origin=self.file_origin, description=self.description)
-        new_signal.__dict__.update(self.__dict__)
-        memo[id(self)] = new_signal
-        for k, v in self.__dict__.items():
-            try:
-                setattr(new_signal, k, deepcopy(v, memo))
-            except TypeError:
-                setattr(new_signal, k, v)
-        return new_signal
-
     def __repr__(self):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
-        return '<%s(%s at times %s)>' % (
+        return '<{}({} at times {})>'.format(
             self.__class__.__name__, super(IrregularlySampledSignal, self).__repr__(), self.times)
 
     def __getitem__(self, i):
@@ -299,7 +285,8 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: %s vs %s' % (self.ndim, other.ndim))
+            raise ValueError('Dimensionality does not match: {} vs {}'.format(
+                self.ndim, other.ndim))
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):
@@ -307,7 +294,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError('Times do not match: %s vs %s' % (self.times, other.times))
+            raise ValueError('Times do not match: {} vs {}'.format(self.times, other.times))
 
     def __rsub__(self, other, *args):
         '''
@@ -334,7 +321,7 @@ class IrregularlySampledSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sample times: {0}".format(self.times)]:
+        for line in ["sample times: {}".format(self.times)]:
             _pp(line)
 
     @property
@@ -404,9 +391,32 @@ class IrregularlySampledSignal(BaseSignal):
                     break
             count += 1
 
-        new_st = self[id_start:id_stop]
+        # Time slicing should create a deep copy of the object
+        new_st = deepcopy(self[id_start:id_stop])
 
         return new_st
+
+    def time_shift(self, t_shift):
+        """
+        Shifts a :class:`IrregularlySampledSignal` to start at a new time.
+
+        Parameters:
+        -----------
+        t_shift: Quantity (time)
+            Amount of time by which to shift the :class:`IrregularlySampledSignal`.
+
+        Returns:
+        --------
+        new_sig: :class:`SpikeTrain`
+            New instance of a :class:`IrregularlySampledSignal` object
+            starting at t_shift later than the original :class:`IrregularlySampledSignal`
+            (the original :class:`IrregularlySampledSignal` is not modified).
+        """
+        new_sig = deepcopy(self)
+
+        new_sig.times += t_shift
+
+        return new_sig
 
     def merge(self, other):
         '''
@@ -444,7 +454,7 @@ class IrregularlySampledSignal(BaseSignal):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 
