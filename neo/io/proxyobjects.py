@@ -12,7 +12,7 @@ ineherits neo.rawio.
 
 import numpy as np
 import quantities as pq
-import loggging
+import logging
 
 from neo.core.baseneo import BaseNeo
 
