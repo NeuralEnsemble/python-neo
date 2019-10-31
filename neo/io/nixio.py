@@ -319,6 +319,8 @@ class NixIO(BaseIO):
                     self._nix_to_neo_analogsignal(das)
                 elif das[0].type == "neo.irregularlysampledsignal":
                     self._nix_to_neo_irregularlysampledsignal(das)
+                elif das[0].type == "neo.imagesequence":
+                    self._nix_to_neo_imagesequence(das)
         for mt in nix_block.multi_tags:
             if mt.type == "neo.spiketrain" and mt.name not in self._neo_map:
                 self._nix_to_neo_spiketrain(mt)
