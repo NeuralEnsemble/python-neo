@@ -29,8 +29,6 @@ import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, Event, AnalogSignal,
                       IrregularlySampledSignal, ChannelIndex, Block)
-
-# neo imports
 from collections import OrderedDict
 
 # Standard Python imports
@@ -47,85 +45,17 @@ from pynwb.base import ProcessingModule
 from pynwb.ecephys import ElectricalSeries, Device, EventDetection
 from pynwb.behavior import SpatialSeries
 from pynwb.image import ImageSeries
-#from pynwb.core import set_parents
-from pynwb.spec import NWBAttributeSpec # Attribute Specifications
-from pynwb.spec import NWBDatasetSpec # Dataset Specifications
-from pynwb.spec import NWBGroupSpec
-from pynwb.spec import NWBNamespace
-from pynwb.spec import NWBNamespaceBuilder
+from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, NWBNamespaceBuilder
+
+# hdmf imports
 from hdmf.spec import LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,\
                        NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
 from hdmf import *
 
-# allensdk package
-#import allensdk
-#from allensdk import *
-#from pynwb import load_namespaces
-#from allensdk.brain_observatory.nwb.metadata import load_LabMetaData_extension
-#from allensdk.brain_observatory.behavior.schemas import OphysBehaviorMetaDataSchema, OphysBehaviorTaskParametersSchema
-#load_LabMetaData_extension(OphysBehaviorMetaDataSchema, 'AIBS_ophys_behavior')
-#load_LabMetaData_extension(OphysBehaviorTaskParametersSchema, 'AIBS_ophys_behavior')
-
-
-neo_extension = {"fs": {"neo": {
-    "info": {
-        "name": "Neo TimeSeries extension",
-        "version": "0.9.0",
-        "date": "2019",
-        "authors": "Elodie Legouée, Andrew Davison",
-        "contacts": "elodie.legouee@unic.cnrs-gif.fr, andrew.davison@unic.cnrs-gif.fr",
-        "description": ("Extension defining a new TimeSeries type, named 'MultiChannelTimeSeries'")
-    },
-
-    "schema": {
-        "<MultiChannelTimeSeries>/": {
-            "description": "Similar to ElectricalSeries, but without the restriction to volts",
-            "merge": ["core:<TimeSeries>/"],
-            "attributes": {
-                "ancestry": {
-                    "data_type": "text",
-                    "dimensions": ["2"],
-                    "value": ["TimeSeries", "MultiChannelTimeSeries"],
-                    "const": True},
-                "help": {
-                    "data_type": "text",
-                    "value": "A multi-channel time series",
-                    "const": True}},
-            "data": {
-                "description": ("Multiple measurements are recorded at each point of time."),
-                "dimensions": ["num_times", "num_channels"],
-                "data_type": "float32"},
-        },
-
-        "<AnnotatedIntervalSeries>/": {
-            "description": "Represents a series of annotated time intervals",
-            "merge": ["core:<AnnotationSeries>/"],
-            "attributes": {
-                "ancestry": {
-                    "data_type": "text",
-                    "dimensions": ["3"],
-                    "value": ["TimeSeries", "AnnotationSeries", "AnnotatedIntervalSeries"],
-                    "const": True},
-                "help": {
-                    "data_type": "text",
-                    "value": "A series of annotated time intervals",
-                    "const": True}},
-            "durations": {
-                "description": ("Durations for intervals whose start times are stored in timestamps."),
-                "data_type": "float64!",
-                "dimensions": ["num_times"],
-                "attributes": {
-                    "unit": {
-                        "description": ("The string \"Seconds\""),
-                        "data_type": "text", "value": "Seconds"}}
-            },
-        }
-    }
-}}}
 
 class NWBIO(BaseIO):
     """
-    Class for "reading" experimental data from a .nwb file.
+    Class for "reading" experimental data from a .nwb file, and "writing" a .nwb file
     """
 
     is_readable = True
@@ -148,22 +78,15 @@ class NWBIO(BaseIO):
         """
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
-#        if mode=='r':
-#            self.read_block()
-#        else:
-#            self.write_block()
-##        if mode=='w':
-##            self.write_block(self.block)
 
     def read_block(self, lazy=False, cascade=True, **kwargs):
-#        print("*** read_block ***")
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         _file = io.read()
         self._lazy = lazy
 
         file_access_dates = _file.file_create_date
         identifier = _file.identifier
-        if identifier == '_neo': # this is an automatically generated name used if block.name is None
+        if identifier == '_neo':
             identifier = None
         description = _file.session_description
         if description == "no description":
@@ -186,12 +109,9 @@ class NWBIO(BaseIO):
         return block
 
     def write_block(self, block, **kwargs):
-#        print("*** ----------- write_block ------------ ***")
-
         start_time = datetime.now()
-        self._file = NWBFile(self.filename,            
+        nwbfile = NWBFile(self.filename,
                                session_start_time=start_time,
-#                               identifier=block.name or "_neo",
                                identifier='test',
                                file_create_date=None,
                                timestamps_reference_time=None,
@@ -219,9 +139,7 @@ class NWBIO(BaseIO):
                                epoch_tags=set(),
                                trials=None,
                                invalid_times=None,
-                               time_intervals=None,
                                units=None,
-                               modules=None,
                                electrodes=None,
                                electrode_groups=None,
                                ic_electrodes=None,
@@ -229,66 +147,71 @@ class NWBIO(BaseIO):
                                imaging_planes=None,
                                ogen_sites=None,
                                devices=None,
-                               #subject=None
+                               subject=None
                                )
-        io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
-#        print("io_nwb = ", io_nwb)
 
-        file_access_dates = self._file.file_create_date
-        identifier = self._file.identifier
-        if identifier == '_neo':  # this is an automatically generated name used if block.name is None
-            identifier = None
-        description = self._file.session_description
-        if description == "no description":
-            description = None
-
-#        print("block.segments = ", block.segments)
         for segment in block.segments:
-            print("segment = ", segment)
-            self._write_segment(self._file, segment)            
+            self._write_segment(nwbfile, segment)
 
-        print("END loop block.segment")
-        io_nwb.write(self._file)
-        print("io_nwb.write")
+        io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
+        io_nwb.write(nwbfile)
         io_nwb.close()
-        print("io_nwb.close")
 
     def _handle_general_group(self, block):
         pass
 
     def _handle_epochs_group(self, _file, block):
         # Note that an NWB Epoch corresponds to a Neo Segment, not to a Neo Epoch.
-        epochs = _file.acquisition
-        for key in epochs:
-            timeseries = []
-            current_shape = _file.get_acquisition(key).data.shape[0] # or 1 if multielectrode ?
-            times = np.zeros(current_shape)
+        epochs = _file.epochs
+        timeseries=[]
+        if epochs is not None:
+            t_start = epochs[0][1] * pq.second
+            t_stop = epochs[0][2] * pq.second
+        else:
+            timeseries.append(self._handle_timeseries(_file, self.name, timeseries))
+        segment = Segment(name=self.name)
 
-            for j in range(0, current_shape):# to do w/ ecephys data (e.g. multielectrode: how is it organised?)
-                times[j]=1./_file.get_acquisition(key).rate*j+_file.get_acquisition(key).starting_time
-                if times[j] == _file.get_acquisition(key).starting_time:
-                    t_start = times[j] * pq.second
-                elif times[j]==times[-1]:
-                    t_stop = times[j] * pq.second
-                else:
-                    timeseries.append(self._handle_timeseries(_file, key, times[j]))                    
-            segment = Segment(name=j)
-            for obj in timeseries:
-                obj.segment = segment
-                if isinstance(obj, AnalogSignal):
-                    segment.analogsignals.append(obj)
-                elif isinstance(obj, IrregularlySampledSignal):
-                    segment.irregularlysampledsignals.append(obj)
-                elif isinstance(obj, Event):
-                    segment.events.append(obj)
-                elif isinstance(obj, Epoch):
-                    segment.epochs.append(obj)
-            segment.block = block
-            block.segments.append(segment)
+        for obj in timeseries:
+            obj.segment = segment
+            if isinstance(obj, AnalogSignal):
+                segment.analogsignals.append(obj)
+            elif isinstance(obj, IrregularlySampledSignal):
+                segment.irregularlysampledsignals.append(obj)
+            elif isinstance(obj, Event):
+                segment.events.append(obj)
+            elif isinstance(obj, Epoch):
+                segment.epochs.append(obj)
+        segment.block = block
+        block.segments.append(segment)
 
-            segment.times=times
-            return segment, obj, times
-
+#        for key in epochs:
+#            timeseries = []
+#            current_shape = _file.get_acquisition(key).data.shape[0] # or 1 if multielectrode ?
+#            times = np.zeros(current_shape)
+#
+#            for j in range(0, current_shape):# to do w/ ecephys data (e.g. multielectrode: how is it organised?)
+#                times[j]=1./_file.get_acquisition(key).rate*j+_file.get_acquisition(key).starting_time
+#                if times[j] == _file.get_acquisition(key).starting_time:
+#                    t_start = times[j] * pq.second
+#                elif times[j]==times[-1]:
+#                    t_stop = times[j] * pq.second
+#                else:
+#                    timeseries.append(self._handle_timeseries(_file, key, times[j]))                    
+#            segment = Segment(name=j)
+#            for obj in timeseries:
+#                obj.segment = segment
+#                if isinstance(obj, AnalogSignal):
+#                    segment.analogsignals.append(obj)
+#                elif isinstance(obj, IrregularlySampledSignal):
+#                    segment.irregularlysampledsignals.append(obj)
+#                elif isinstance(obj, Event):
+#                    segment.events.append(obj)
+#                elif isinstance(obj, Epoch):
+#                    segment.epochs.append(obj)
+#            segment.block = block
+#            block.segments.append(segment)
+#            segment.times=times
+#            return segment, obj, times
 
     def _handle_timeseries(self, _file, name, timeseries):
         for i in _file.acquisition:
@@ -370,43 +293,31 @@ class NWBIO(BaseIO):
     def _handle_analysis_group(self, block):
         pass
 
-    def _write_segment(self, _file, segment):
+    def _write_segment(self, nwbfile, segment):
         start_time = segment.t_start
         stop_time = segment.t_stop
 
-        nwb_epoch = self._file.add_epoch(       
-                                        self._file,
+        nwb_epoch = nwbfile.add_epoch(
+                                        nwbfile,
                                         segment.name,
                                         start_time=float(start_time),
                                         stop_time=float(stop_time),
                                         )
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
-            #print("signal = ", signal)
-            print("i = ", i)
-            self._write_signal(signal, nwb_epoch, i, segment)
-        self._write_spiketrains(segment.spiketrains, segment)
+            self._write_signal(nwbfile, signal, nwb_epoch, i, segment)
+        self._write_spiketrains(nwbfile, segment.spiketrains, segment)        
         for i, event in enumerate(segment.events):
-#            print("event = ", event)
-            self._write_event(event, nwb_epoch, i)
+            self._write_event(nwbfile, event, nwb_epoch, i)
         for i, neo_epoch in enumerate(segment.epochs):
-#            print("neo_epoch = ", neo_epoch)
-            self._write_neo_epoch(neo_epoch, nwb_epoch, i)
+            self._write_neo_epoch(nwbfile, neo_epoch, nwb_epoch, i)
 
-
-    def _write_signal(self, signal, epoch, i, segment):
-        # i=index
-        print("-------------------------------- segment.ind = ", segment.index)
-        print("*** def _write_signal ***")
-        print("segment.name = ", segment.name) # index
-
-#        print("i = ", i)
-
+    def _write_signal(self, nwbfile, signal, epoch, i, segment):     
         signal_name = signal.name or "signal{0}".format(i)
         ts_name = "{0}".format(signal_name)
 
+        """
         # Create a builder for the namespace
         ns_builder_signal = NWBNamespaceBuilder('Extension to neo signal', "neo_signal")
-#        print("ns_builder_signal = ", ns_builder_signal)
         ns_builder_signal.include_type('TimeSeries', namespace='core')
 
         # Group Specifications
@@ -419,15 +330,12 @@ class NWBIO(BaseIO):
                            neurodata_type_inc='TimeSeries',
                            neurodata_type_def='MultiChannelTimeSeries'
                           )
-        print("ts_signal = ", ts_signal)
-        print("   ")
 
         # Add the extension
         ext_source_signal = 'nwb_neo_extension_signal.specs.yaml'
         ns_builder_signal.add_spec(ext_source_signal,
                             ts_signal
                             )
-#        print("ns_builder_signal = ", ns_builder_signal)
 
         # Save the namespace and extensions
         ns_path_signal = "nwb_neo_extension_signal.namespace.yaml"
@@ -436,67 +344,21 @@ class NWBIO(BaseIO):
         # Incorporating extensions
         load_namespaces(ns_path_signal)
 
-#        NWBSignalSeries = get_class('MultiChannelTimeSeries', 'neo_signal') # Classe abstraite !
         # TimeSeries
         NWBSignalSeries = get_class('TimeSeries', 'neo_signal') # class pynwb.base.TimeSeries
         # NWB File
-        #NWBSignalSeries = get_class('NWBFile', namespace='core') # class pynwb.base.TimeSeries
-#        print("NWBSignalSeries = ", NWBSignalSeries)
+###        NWBSignalSeries = get_class('NWBFile', namespace='core') # class pynwb.base.TimeSeries
 
-        # NWB File
-#        self._file
-
-###        pynwb.file = NWB File
-#        ts = NWBSignalSeries(
-#                            identifier='',
-#                            session_description='session_description',
-#                            session_start_time=datetime(2019, 10,22)
-#                                )
-
-#        # TimeSeries
-#        ts = NWBSignalSeries(
-#                                name='',
-#                                data=np.arange(10),
-#                                resolution=3.0,
-#                                rate=10.0,
-#                                unit='unit of data',
-#                            )
-
-    
-#        MultiChannelTimeSeries = pynwb.core.NWBDataInterface(name='test_multi')
-#        print("MultiChannelTimeSeries = ", MultiChannelTimeSeries)
-
-
-
-
-        #ts = NWBSignalSeries('MultiChannelTimeSeries', time_series=self._file ,rate=1.0)
         ts = NWBSignalSeries(
-###        ts = TimeSeries(
                         'MultiChannelTimeSeries123_index_%d_%s' % (i, segment.name), #index
-                        #'MultiChannelTimeSeries123_%d_%s' % (ind, segment.name), #index
-#                        'MultiChannelTimeSeries123_%s' % (segment.name), #index
                         #'TimeSeries', # name of the class
-                        [ts_signal], 
+                        [ts_signal],
+                        #'',
+                        #session_start_time=datetime.now(),
                         rate=1.0
                        )
-        ##ts = NWBSignalSeries('MultiChannelTimeSeries', time_series=MultiChannelTimeSeries ,rate=1.0) 
-        print("   ")
-        print("ts = ", ts)
-        print("   ")
-#        print("self._file = ", self._file)
-        print("self._file.acquisition = ", self._file.acquisition)
-#        print("self._file.epochs = ", self._file.epochs)
-     #   self._file.add_acquisition(ts)
-#        print("ok")
 
-        ###test_ac = self._file.add_acquisition(ts)
-#        test_ac = self._file.get_acquisition('MultiChannelTimeSeries')
-#        print("test_ac = ", test_ac)
-
-
-        """
-        # create a builder for the namespace
-        ns_builder = NWBNamespaceBuilder("Extension for use in my laboratory", "mylab")
+#        nwbfile.add_acquisition(ts)
         """
 
 
@@ -505,22 +367,25 @@ class NWBIO(BaseIO):
                       "resolution": float('nan')}
 
         if isinstance(signal, AnalogSignal):
-            print("isinstance(signal, AnalogSignal)")
-            test_ac = self._file.add_acquisition(ts)
-            print("test_ac = ", test_ac)
-
             sampling_rate = signal.sampling_rate.rescale("Hz")
-            signal.sampling_rate = sampling_rate
-            ts_signal.add_dataset(
-                            doc='',
-                            neurodata_type_def='MultiChannelTimeSeries',
-                          )
+            signal.sampling_rate = sampling_rate          
+
+            # All signals should go in /acquisition
+            tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, rate=float(sampling_rate))
+            ts = nwbfile.add_acquisition(tS)        
+        elif isinstance(signal, IrregularlySampledSignal):
+            tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, timestamps=signal.times.rescale('second').magnitude)
+            ts = nwbfile.add_acquisition(tS)
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(signal.__class__.__name__))
-        print("END def _write_signal")
 
-    def _write_spiketrains(self, spiketrains, segment):
-        print("*** def _write_spiketrains ***")
+        nwbfile.add_epoch(
+                            epoch,
+                            start_time=time_in_seconds(segment.t_start),
+                            stop_time=time_in_seconds(segment.t_stop),
+                          )
+
+    def _write_spiketrains(self, nwbfile, spiketrains, segment):
         """
         mod = NWBGroupSpec('A custom TimeSeries interface',
                             attributes=[],
@@ -536,60 +401,63 @@ class NWBIO(BaseIO):
                       )
         """
 
-#    def _write_event(self, _file, event, nwb_epoch):
-    def _write_event(self, event, nwb_epoch, i):
-        print("*** def _write_event ***")
+        mod = nwbfile.add_unit_column("Modules", "description Modules")
+
+        # create interfaces
+        spiketrain_group = nwbfile.add_unit_column("UnitTimes", "description")        
+
+        fmt = 'unit_{{0:0{0}d}}_{1}'.format(len(str(len(spiketrains))), segment.name)
+        for i, spiketrain in enumerate(spiketrains):
+            unit = fmt.format(i)
+            ug = nwbfile.add_unit(
+                                   spike_times=spiketrain.rescale('second').magnitude,
+                                   Modules='',
+                                   UnitTimes='',
+                                  )
+
+    def _write_event(self, nwbfile, event, nwb_epoch, i):
+        event_name = event.name or "event{0}".format(i)
+        ts_name = "{0}".format(event_name)
 
         """
-        event_name = event.name or "event{0}".format(i)
-#        print("event_name = ", event_name)
-        ts_name = "{0}".format(event_name)
-#        print("ts_name = ", ts_name)
-
         ts = NWBGroupSpec('A custom TimeSeries interface',
                            attributes=[],
                            datasets=[],
                            groups=[],
                            neurodata_type_inc='TimeSeries',
                            neurodata_type_def='AnnotationSeries')
-#        print("ts = ", ts)
-
         ext_source = 'nwb_neo_extension.specs.yaml'
         ts.add_dataset(
                         doc='',
                         neurodata_type_def='AnnotationSeries',
                       )
-
-        self._file.add_epoch(            
+        nwbfile.add_epoch(                
                                time_in_seconds(event.times[0]),
                                time_in_seconds(event.times[1]),
                                 )
         """
 
+        tS = TimeSeries(
+                        name=ts_name,
+                        data=event, 
+                        timestamps=event.times.rescale('second').magnitude,
+                        description=event.description or "",
+                        )
+        ts = nwbfile.add_acquisition(tS)
 
-    def _write_neo_epoch(self, neo_epoch, nwb_epoch, i):
-        print("*** def _write_neo_epoch ***")
+        nwbfile.add_epoch(nwb_epoch,
+                          start_time=time_in_seconds(event.times[0]),
+                          stop_time=time_in_seconds(event.times[1]),
+                          )
+
+    def _write_neo_epoch(self, nwbfile, neo_epoch, nwb_epoch, i):
         neo_epoch_name = neo_epoch.name or "intervalseries{0}".format(i)
-#        print("neo_epoch_name = ", neo_epoch_name)
-#        ts_name = "{0}_{1}".format(neo_epoch.segment.name, neo_epoch_name)
-#        print("ts_name = ", ts_name)
+        ts_name = "{0}".format(neo_epoch_name)        
 
-#        ts.set_dataset("timestamps", neo_epoch.times.rescale('second').magnitude)
-#        ts.set_dataset("durations", neo_epoch.durations.rescale('second').magnitude)
-#        ts.set_dataset("data", neo_epoch.labels)
-#        ts.set_attr("source", neo_epoch.name or "unknown")
-#        ts.set_attr("description", neo_epoch.description or "")
-
-#        print("   ")
-###        neo_AnnotatedIntervalSeries = neo_extension["fs"]["neo"]["schema"]["<AnnotatedIntervalSeries>/"]
-###        print("neo_AnnotatedIntervalSeries = ", neo_AnnotatedIntervalSeries)
-
-
-        
+        """
         # Create a builder for the namespace
         ns_builder_neo_epoch = NWBNamespaceBuilder('Extension to neo epoch', "neo_epoch")
 #        ns_builder = NWBNamespaceBuilder('Extension to neo epoch', "neo_AnnotatedIntervalSeries")
-#        print("ns_builder = ", ns_builder)
         ns_builder_neo_epoch.include_type('TimeSeries', namespace='core')
 #        ns_builder.include_type('neo_AnnotatedIntervalSeries', namespace='core')        
 
@@ -603,14 +471,10 @@ class NWBIO(BaseIO):
                            neurodata_type_inc='TimeSeries',
                            neurodata_type_def='AnnotatedIntervalSeries'
                           )
-#        print("ts = ", ts)
-#        print("   ")
-
 
         # Add the extension
         ext_source_neo_epoch = 'nwb_neo_extension.specs.yaml'
         ns_builder_neo_epoch.add_spec(ext_source_neo_epoch,
-
                             ts_neo_epoch
                             )
 
@@ -619,19 +483,27 @@ class NWBIO(BaseIO):
 
         # Save the namespace and extensions
         ns_path_neo_epoch = "nwb_neo_extension.namespace.yaml"
-#        print("   ")
         ns_builder_neo_epoch.export(ns_path_neo_epoch)
 #        ns_builder.export("AnnotatedIntervalSeries")
 
         load_namespaces(ns_path_neo_epoch)
 
-#        AutoNeoEpochSeries = get_class('AnnotatedIntervalSeries', 'neo_epoch')
-        AutoNeoEpochSeries = get_class('TimeSeries', 'neo_epoch')
-#        print("AutoNeoEpochSeries = ", AutoNeoEpochSeries)
+######        AutoNeoEpochSeries = get_class('TimeSeries', 'neo_epoch')
+        """
 
-        print("END def _write_neo_epoch")
-        
+        tS = TimeSeries(
+                        name=ts_name,
+                        data=neo_epoch,
+                        timestamps=neo_epoch.times.rescale('second').magnitude,
+                        description=neo_epoch.description or "",
+                        )
+        ts = nwbfile.add_acquisition(tS)
 
+        nwbfile.add_epoch(
+                             nwb_epoch,
+                             start_time=time_in_seconds(neo_epoch.times[0]),
+                             stop_time=time_in_seconds(neo_epoch.times[-1]),
+                             )
 
 def time_in_seconds(t):
     return float(t.rescale("second"))
