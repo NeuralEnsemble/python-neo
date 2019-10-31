@@ -13,6 +13,7 @@ Tests for NixIO
 
 import os
 import shutil
+
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -27,11 +28,13 @@ import numpy as np
 import quantities as pq
 
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
-                      IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
+                      IrregularlySampledSignal, Unit, SpikeTrain,
+                      Event, Epoch, ImageSequence)
 from neo.test.iotest.common_io_test import BaseTestIO
 from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
 from neo.io.nixio_fr import NixIO as NixIO_lazy
-from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
+from neo.io.proxyobjects import (AnalogSignalProxy, SpikeTrainProxy,
+                                 EventProxy, EpochProxy)
 
 try:
     import nixio as nix
@@ -42,6 +45,7 @@ except ImportError:
 
 try:
     from unittest import mock
+
     SKIPMOCK = False
 except ImportError:
     SKIPMOCK = True
@@ -133,18 +137,17 @@ class NixIOTest(unittest.TestCase):
             neoasigs = list(sig.annotations["nix_name"]
                             for sig in neochx.analogsignals)
             nixasigs = list({da.metadata.name for da in nixblock.data_arrays
-                                if da.type == "neo.analogsignal" and
-                                nixchx in da.sources})
+                             if da.type == "neo.analogsignal" and
+                             nixchx in da.sources})
 
             self.assertEqual(len(neoasigs), len(nixasigs))
-
             # IrregularlySampledSignals referencing CHX
             neoisigs = list(sig.annotations["nix_name"] for sig in
                             neochx.irregularlysampledsignals)
             nixisigs = list(
                 {da.metadata.name for da in nixblock.data_arrays
-                    if da.type == "neo.irregularlysampledsignal" and
-                    nixchx in da.sources}
+                 if da.type == "neo.irregularlysampledsignal" and
+                 nixchx in da.sources}
             )
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
@@ -177,7 +180,8 @@ class NixIOTest(unittest.TestCase):
 
     def compare_segment_group(self, neoseg, nixgroup):
         self.compare_attr(neoseg, nixgroup)
-        neo_signals = neoseg.analogsignals + neoseg.irregularlysampledsignals
+        neo_signals = neoseg.analogsignals + neoseg.irregularlysampledsignals \
+            + neoseg.imagesequences
         self.compare_signals_das(neo_signals, nixgroup.data_arrays)
         neo_eests = neoseg.epochs + neoseg.events + neoseg.spiketrains
         self.compare_eests_mtags(neo_eests, nixgroup.multi_tags)
@@ -190,7 +194,10 @@ class NixIOTest(unittest.TestCase):
             for da in data_arrays:
                 if da.metadata.name == nixname:
                     dalist.append(da)
-            _, nsig = np.shape(sig)
+            if nixname[:17] == "neo.imagesequence" or nixname[11:15] == "imgs":
+                _, _, nsig = np.shape(sig)
+            else:
+                _, nsig = np.shape(sig)
             totalsignals += nsig
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
@@ -215,8 +222,9 @@ class NixIOTest(unittest.TestCase):
             np.testing.assert_almost_equal(sig, daquant)
             nixunit = create_quantity(1, da.unit)
             self.assertEqual(neounit, nixunit)
-            timedim = da.dimensions[0]
+
             if isinstance(neosig, AnalogSignal):
+                timedim = da.dimensions[0]
                 self.assertEqual(timedim.dimension_type,
                                  nix.DimensionType.Sample)
                 neosp = neosig.sampling_period
@@ -230,12 +238,23 @@ class NixIOTest(unittest.TestCase):
                 nixts = create_quantity(timedim.offset, tsunit)
                 self.assertEqual(neots, nixts)
             elif isinstance(neosig, IrregularlySampledSignal):
+                timedim = da.dimensions[0]
                 self.assertEqual(timedim.dimension_type,
                                  nix.DimensionType.Range)
                 np.testing.assert_almost_equal(neosig.times.magnitude,
                                                timedim.ticks)
                 self.assertEqual(timedim.unit,
                                  units_to_string(neosig.times.units))
+            elif isinstance(neosig, ImageSequence):
+
+                sampling_rate = create_quantity(da.metadata["sampling_rate"],
+                                                da.metadata.props["sampling_rate"].unit)
+                neosr = neosig.sampling_rate
+                self.assertEqual(sampling_rate, neosr)
+                spatial_scale = create_quantity(da.metadata["spatial_scale"],
+                                                da.metadata.props["spatial_scale"].unit)
+                neosps = neosig.spatial_scale
+                self.assertEqual(spatial_scale, neosps)
 
     def compare_eests_mtags(self, eestlist, mtaglist):
         self.assertEqual(len(eestlist), len(mtaglist))
@@ -309,10 +328,12 @@ class NixIOTest(unittest.TestCase):
                              nix.DimensionType.Sample)
 
     def compare_attr(self, neoobj, nixobj):
-        if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal)):
+        if isinstance(neoobj, (AnalogSignal, IrregularlySampledSignal,
+                               ImageSequence)):
             nix_name = ".".join(nixobj.name.split(".")[:-1])
         else:
             nix_name = nixobj.name
+
         self.assertEqual(neoobj.annotations["nix_name"], nix_name)
         self.assertEqual(neoobj.description, nixobj.definition)
         if hasattr(neoobj, "rec_datetime") and neoobj.rec_datetime:
@@ -401,7 +422,8 @@ class NixIOTest(unittest.TestCase):
                                                     asig_name + ".metadata")
 
             arr_ann_name, arr_ann_val = 'anasig_arr_ann', cls.rquant(10, pq.uV)
-            asig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            asig_md.create_property(arr_ann_name,
+                                    arr_ann_val.magnitude.flatten())
             asig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             asig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
@@ -425,7 +447,39 @@ class NixIOTest(unittest.TestCase):
                 siggroup.append(da_asig)
             asig_md["t_start.dim"] = "ms"
             allsignalgroups.append(siggroup)
+        # imagesequence
+        for n in range(5):
+            imgseqgroup = list()
+            imgseq_name = "{}_imgs{}".format(cls.rword(10), n)
+            imgseq_definition = cls.rsentence(5, 5)
+            imgseq_md = group.metadata.create_section(imgseq_name,
+                                                      imgseq_name + ".metadata")
 
+            arr_ann_name, arr_ann_val = 'imgseq_arr_ann', cls.rquant(10, pq.V)
+            imgseq_md.create_property(arr_ann_name,
+                                      arr_ann_val.magnitude.flatten())
+            imgseq_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
+            imgseq_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
+
+            for idx in range(10):
+                da_imgseq = blk.create_data_array(
+                    "{}.{}".format(imgseq_name, idx),
+                    "neo.imagesequence",
+                    data=cls.rquant((20, 10), 1)
+                )
+                da_imgseq.definition = imgseq_definition
+                da_imgseq.unit = "mV"
+
+                da_imgseq.metadata = imgseq_md
+                imgseq_md["sampling_rate"] = 10
+                imgseq_md.props["sampling_rate"].unit = units_to_string(pq.V)
+                imgseq_md["spatial_scale"] = 10
+                imgseq_md.props["spatial_scale"].unit = units_to_string(pq.micrometer)
+
+                group.data_arrays.append(da_imgseq)
+                imgseqgroup.append(da_imgseq)
+
+            allsignalgroups.append(imgseqgroup)
         # irregularlysampledsignals
         for n in range(2):
             siggroup = list()
@@ -435,7 +489,8 @@ class NixIOTest(unittest.TestCase):
                                                     isig_name + ".metadata")
             isig_times = cls.rquant(200, 1, True)
             arr_ann_name, arr_ann_val = 'irrsig_arr_ann', cls.rquant(7, pq.uV)
-            isig_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            isig_md.create_property(arr_ann_name,
+                                    arr_ann_val.magnitude.flatten())
             isig_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             isig_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
             for idx in range(7):
@@ -457,6 +512,7 @@ class NixIOTest(unittest.TestCase):
                 siggroup.append(da_isig)
             allsignalgroups.append(siggroup)
 
+
         # SpikeTrains with Waveforms
         for n in range(4):
             stname = "{}-st{}".format(cls.rword(20), n)
@@ -477,7 +533,8 @@ class NixIOTest(unittest.TestCase):
             mtag_st_md.create_property("t_stop", times[-1] + 1.0)
 
             arr_ann_name, arr_ann_val = 'st_arr_ann', cls.rquant(40, pq.uV)
-            mtag_st_md.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            mtag_st_md.create_property(arr_ann_name,
+                                       arr_ann_val.magnitude.flatten())
             mtag_st_md.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             mtag_st_md.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
@@ -517,7 +574,6 @@ class NixIOTest(unittest.TestCase):
                 data=extents
             )
             extents_da.unit = "s"
-
             mtag_ep = blk.create_multi_tag(
                 epname, "neo.epoch", times_da
             )
@@ -529,7 +585,8 @@ class NixIOTest(unittest.TestCase):
             mtag_ep.extents = extents_da
 
             arr_ann_name, arr_ann_val = 'ep_arr_ann', cls.rquant(5, pq.uV)
-            mtag_ep.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            mtag_ep.metadata.create_property(arr_ann_name,
+                                             arr_ann_val.magnitude.flatten())
             mtag_ep.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             mtag_ep.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
@@ -559,8 +616,10 @@ class NixIOTest(unittest.TestCase):
             group.multi_tags.append(mtag_ev)
             mtag_ev.definition = cls.rsentence(2)
 
-            arr_ann_name, arr_ann_val = 'ev_arr_ann', cls.rquant(5, pq.uV)
-            mtag_ev.metadata.create_property(arr_ann_name, arr_ann_val.magnitude.flatten())
+            arr_ann_name, arr_ann_val = 'ev_arr_ann',\
+                                        cls.rquant(5, pq.uV)
+            mtag_ev.metadata.create_property(arr_ann_name,
+                                             arr_ann_val.magnitude.flatten())
             mtag_ev.metadata.props[arr_ann_name].unit = str(arr_ann_val.dimensionality)
             mtag_ev.metadata.props[arr_ann_name].definition = 'ARRAYANNOTATION'
 
@@ -672,16 +731,19 @@ class NixIOTest(unittest.TestCase):
         cls.populate_dates(seg)
         blk.segments.append(seg)
 
-        asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz, array_annotations=signal_ann)
+        asig = AnalogSignal(signal=signal, sampling_rate=pq.Hz,
+                            array_annotations=signal_ann)
         asig.annotate(**cls.rdict(2))
         seg.analogsignals.append(asig)
 
         isig = IrregularlySampledSignal(times=times, signal=signal,
-                                        time_units=pq.s, array_annotations=signal_ann)
+                                        time_units=pq.s,
+                                        array_annotations=signal_ann)
         isig.annotate(**cls.rdict(2))
         seg.irregularlysampledsignals.append(isig)
 
-        epoch = Epoch(times=times, durations=times, array_annotations=times_ann)
+        epoch = Epoch(times=times, durations=times,
+                      array_annotations=times_ann)
         epoch.annotate(**cls.rdict(4))
         seg.epochs.append(epoch)
 
@@ -689,7 +751,8 @@ class NixIOTest(unittest.TestCase):
         event.annotate(**cls.rdict(4))
         seg.events.append(event)
 
-        spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s, array_annotations=times_ann)
+        spiketrain = SpikeTrain(times=times, t_stop=pq.s, units=pq.s,
+                                array_annotations=times_ann)
         d = cls.rdict(6)
         d["quantity"] = pq.Quantity(10, "mV")
         d["qarray"] = pq.Quantity(range(10), "mA")
@@ -828,6 +891,17 @@ class NixIOWriteTest(NixIOTest):
         )
         self.write_and_compare([block, anotherblock])
 
+    def test_imagesequence_write(self):
+        block = Block()
+        seg = Segment()
+        block.segments.append(seg)
+
+        imgseq = ImageSequence(image_data=self.rquant((19, 10, 15), pq.V),
+                               sampling_rate=pq.Quantity(10, "Hz"),
+                               spatial_scale=pq.Quantity(10, "micrometer"))
+        seg.imagesequences.append(imgseq)
+        self.write_and_compare([block])
+
     def test_signals_compound_units(self):
         block = Block()
         seg = Segment()
@@ -871,6 +945,22 @@ class NixIOWriteTest(NixIOTest):
         )
 
         self.write_and_compare([block, anotherblock])
+
+    def test_imagesequence_compound_units(self):
+        block = Block()
+        seg = Segment()
+        block.segments.append(seg)
+
+        units = pq.CompoundUnit("1/30000*V")
+        srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
+        size = pq.Quantity(10, pq.CompoundUnit("1.0/10 * micrometer"))
+        imgseq = ImageSequence(image_data=self.rquant((10, 20,10), units),
+                               sampling_rate=srate,
+                               spatial_scale=size)
+        seg.imagesequences.append(imgseq)
+
+        self.write_and_compare([block])
+
 
     def test_epoch_write(self):
         block = Block()
@@ -952,6 +1042,7 @@ class NixIOWriteTest(NixIOTest):
         nblocks = 2
         nsegs = 2
         nanasig = 4
+        nimgseq = 4
         nirrseg = 2
         nepochs = 3
         nevents = 4
@@ -961,6 +1052,7 @@ class NixIOWriteTest(NixIOTest):
 
         times = self.rquant(1, pq.s)
         signal = self.rquant(1, pq.V)
+
         blocks = []
         for blkidx in range(nblocks):
             blk = Block()
@@ -971,6 +1063,10 @@ class NixIOWriteTest(NixIOTest):
                 for anaidx in range(nanasig):
                     seg.analogsignals.append(AnalogSignal(signal=signal,
                                                           sampling_rate=pq.Hz))
+                for imgseqdx in range(nimgseq):
+                    seg.imagesequences.append(ImageSequence(image_data=self.rquant((10, 20, 10), pq.V),
+                                                            sampling_rate=pq.Hz,
+                                                            spatial_scale=pq.micrometer))
                 for irridx in range(nirrseg):
                     seg.irregularlysampledsignals.append(
                         IrregularlySampledSignal(times=times,
@@ -1002,6 +1098,7 @@ class NixIOWriteTest(NixIOTest):
         nblocks = 2
         nsegs = 2
         nanasig = 4
+        nimgseq = 2
         nirrseg = 2
         nepochs = 3
         nevents = 4
@@ -1024,6 +1121,17 @@ class NixIOWriteTest(NixIOTest):
                         signal=signal, sampling_rate=pq.Hz
                     )
                     seg.analogsignals.append(asig)
+                # imagesequence
+                for imgseqdx in range(nimgseq):
+                    imseq = ImageSequence(
+                        name="{}:imgs{}".format(seg.name, imgseqdx),
+                        image_data=np.random.rand(20, 10, 10)
+                        ,units=pq.mV,
+                        sampling_rate=pq.Hz, spatial_scale=pq.micrometer
+                    )
+                    print(imseq.units)
+                    print(self.rquant((10, 20, 10), pq.mV))
+                    seg.imagesequences.append(imseq)
                 for irridx in range(nirrseg):
                     isig = IrregularlySampledSignal(
                         name="{}:is{}".format(seg.name, irridx),
@@ -1031,6 +1139,7 @@ class NixIOWriteTest(NixIOTest):
                         signal=signal,
                         time_units=pq.s
                     )
+                    print(isig,"isig")
                     seg.irregularlysampledsignals.append(isig)
                 for epidx in range(nepochs):
                     seg.epochs.append(
@@ -1060,10 +1169,10 @@ class NixIOWriteTest(NixIOTest):
 
         # put guard on _generate_nix_name
         if not SKIPMOCK:
+            print("passing")
             nixgenmock = mock.Mock(name="_generate_nix_name",
                                    wraps=self.io._generate_nix_name)
             self.io._generate_nix_name = nixgenmock
-
         self.writer.write_block(blocks[0], use_obj_names=True)
         self.compare_blocks([blocks[0]], self.reader.blocks)
         self.compare_blocks(self.writer.read_all_blocks(), self.reader.blocks)
@@ -1122,6 +1231,12 @@ class NixIOWriteTest(NixIOTest):
         seg.analogsignals.append(
             AnalogSignal(name="signal", signal=signal, sampling_rate=pq.Hz)
         )
+        seg.imagesequences.append(
+            ImageSequence(name='signal',
+                          image_data=self.rquant((10, 20, 10), pq.V),
+                          sampling_rate=pq.Hz,
+                          spatial_scale=pq.micrometer))
+
         seg.irregularlysampledsignals.append(
             IrregularlySampledSignal(name="signal", signal=signal, times=times)
         )
@@ -1168,6 +1283,9 @@ class NixIOWriteTest(NixIOTest):
         othersignal = IrregularlySampledSignal(name="i1", signal=[0, 0, 0],
                                                units="mV", times=[1, 2, 3],
                                                time_units="ms")
+        imgseq = ImageSequence(name="img1", image_data=self.rquant((10, 20, 10), pq.mV),
+                               sampling_period=pq.Quantity(1, "ms"),
+                               spatial_scale=pq.meter)
         event = Event(name="Evee", times=[0.3, 0.42], units="year")
         epoch = Epoch(name="epoche", times=[0.1, 0.2] * pq.min,
                       durations=[0.5, 0.5] * pq.min)
@@ -1179,6 +1297,7 @@ class NixIOWriteTest(NixIOTest):
             seg = Segment(segname)
             blk.segments.append(seg)
             seg.analogsignals.append(signal)
+            seg.imagesequences.append(imgseq)
             seg.irregularlysampledsignals.append(othersignal)
             seg.events.append(event)
             seg.epochs.append(epoch)
@@ -1390,12 +1509,18 @@ class NixIOWriteTest(NixIOTest):
 
             # add spiketrain
             waveforms = self.rquant((3, 5, 10), pq.mV)
-            spiketrain = SpikeTrain(times=[1, 1.1, 1.2] * pq.ms, t_stop=1.5 * pq.s,
+            spiketrain = SpikeTrain(times=[1, 1.1, 1.2] * pq.ms,
+                                    t_stop=1.5 * pq.s,
                                     name="spikes with wf",
                                     description="spikes for waveform test",
                                     waveforms=waveforms)
             seg.spiketrains.append(spiketrain)
+            # add imagesequence
+            imgseq = ImageSequence(name="img1", image_data=self.rquant((10, 20, 10), pq.mV),
+                                   sampling_period=pq.Quantity(1, "ms"),
+                                   spatial_scale=pq.meter)
 
+            seg.imagesequences.append(imgseq)
             # add signals
             asig = AnalogSignal(signal=self.rquant((19, 15), pq.mV),
                                 sampling_rate=pq.Quantity(10, "Hz"))
@@ -1418,10 +1543,12 @@ class NixIOWriteTest(NixIOTest):
             seg.events.append(event)
 
             # add channel index and unit
-            channel = ChannelIndex([0], channel_names=['mychannelname'], channel_ids=[4],
+            channel = ChannelIndex([0], channel_names=['mychannelname'],
+                                   channel_ids=[4],
                                    name=['testname'])
             block.channel_indexes.append(channel)
-            unit = Unit(name='myunit', description='blablabla', file_origin='fileA.nix',
+            unit = Unit(name='myunit', description='blablabla',
+                        file_origin='fileA.nix',
                         myannotation='myannotation')
             channel.units.append(unit)
             unit.spiketrains.append(spiketrain)
@@ -1523,6 +1650,7 @@ class NixIOReadTest(NixIOTest):
         for bl in self.io.read_all_blocks():
             nix_block = self.nixfile.blocks[bl.annotations['nix_name']]
             for seg in bl.segments:
+                print(seg.imagesequences)
                 for anasig in seg.analogsignals:
                     da = nix_block.data_arrays[anasig.annotations['nix_name'] + '.0']
                     self.assertIn('anasig_arr_ann', da.metadata)
@@ -1540,6 +1668,15 @@ class NixIOReadTest(NixIOTest):
                     neo_ann = irrsig.array_annotations['irrsig_arr_ann']
                     self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['irrsig_arr_ann'].unit,
+                                     units_to_string(neo_ann.units))
+                for imgseq in seg.imagesequences:
+                    da = nix_block.data_arrays[imgseq.annotations['nix_name'] + '.0']
+                    self.assertIn('imgseq_arr_ann', da.metadata)
+                    self.assertIn('imgseq_arr_ann', imgseq.array_annotations)
+                    nix_ann = da.metadata['imgseq_arr_ann']
+                    neo_ann = imgseq.array_annotations['imgseq_arr_ann']
+                    self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
+                    self.assertEqual(da.metadata.props['imgseq_arr_ann'].unit,
                                      units_to_string(neo_ann.units))
                 for ev in seg.events:
                     da = nix_block.multi_tags[ev.annotations['nix_name']]
