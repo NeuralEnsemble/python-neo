@@ -143,6 +143,12 @@ class Testcheck_has_dimensions_time(unittest.TestCase):
         check_has_dimensions_time(d)
         self.assertRaises(ValueError, check_has_dimensions_time, a, b, c, d)
 
+    # Regression test for #763
+    # This test ensures the function works for compound units
+    def test__check_has_dimensions_time_compound_unit(self):
+        a = np.arange(3) * pq.CompoundUnit("1/10*s")
+        check_has_dimensions_time(a)
+
 
 class Testcheck_time_in_range(unittest.TestCase):
     def test__check_time_in_range_empty_array(self):
