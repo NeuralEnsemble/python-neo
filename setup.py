@@ -5,8 +5,8 @@ from setuptools import setup
 import os
 
 long_description = open("README.rst").read()
-install_requires = ['numpy>=1.7.1',
-                    'quantities>=0.9.0']
+install_requires = ['numpy>=1.10.0,!=1.16.0',
+                    'quantities>=0.12.1']
 extras_require = {
     'hdf5io': ['h5py'],
     'igorproio': ['igor'],
@@ -50,5 +50,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering']
 )
