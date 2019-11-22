@@ -69,7 +69,8 @@ class NWBIO(BaseIO):
     name = 'NWB'
     description = 'This IO reads/writes experimental data from/to an .nwb dataset'
     extensions = ['nwb']
-    mode = 'one-file'
+#    mode = 'one-file'
+    mode = 'file'
 
     def __init__(self, filename, mode):
         """
@@ -79,8 +80,46 @@ class NWBIO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
 
+
+
+
+   
+    def read_all_blocks(self, blocks, lazy=False, **kwargs):
+#    def read_all_blocks(self, **kwargs):        
+#    def read_all_blocks(self, *blocks, lazy=False, **kwargs):
+        """
+        Read all blocks from the file
+        """
+
+        print("*** def read_all_blocks ***")
+
+        if Block in self.readable_objects:
+            print("Block = ", Block)
+          #  print("blocks = ", blocks)
+            print("   ")
+            for block in blocks:
+                print("-------------------------")
+                print("*-* block.name = ", block.name)
+                print("block = ", block) 
+                self.read_block(block)
+                print("blocks = ", blocks)
+                print("   ")
+        print("Test")
+        print("   ")
+        print("   ")
+        print("   ")
+        return list(self.read_block(block)
+                for block in blocks
+                )
+
+
     def read_block(self, lazy=False, cascade=True, **kwargs):
-        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
+        """
+        Read a Block from the file
+        """
+
+        print("*** def read_block ***")
+        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO   
         _file = io.read()
         self._lazy = lazy
 
@@ -91,6 +130,7 @@ class NWBIO(BaseIO):
         description = _file.session_description
         if description == "no description":
             description = None
+ 
         block = Block(name=identifier,
                       description=description,
                       file_origin=self.filename,
@@ -98,6 +138,7 @@ class NWBIO(BaseIO):
                       rec_datetime=_file.session_start_time,
                       file_access_dates=file_access_dates,
                       file_read_log='')
+
         if cascade:
             self._handle_general_group(block)
             self._handle_epochs_group(_file, block)
@@ -106,13 +147,45 @@ class NWBIO(BaseIO):
             self._handle_processing_group(block)
             self._handle_analysis_group(block)
         self._lazy = False
+        print("--- block in read_block() = ", block)
+        print("END def read_block")
+        print("   ")
         return block
 
+
+
+
+
+    def write_all_blocks(self, blocks):
+#    def write_all_blocks(self, *blocks, **kwargs): 
+        """
+        Write list of blocks to the file
+        """
+
+        print("*** def write_all_blocks ***")
+
+        print("blocks = ", blocks)
+        if Block in self.writeable_objects:
+            print("Block = ", Block)
+            for block in blocks:
+                print("block = ", block)
+                self.write_block(block)
+                print("END loop Block in def write_all_blocks")
+
+
+
+
+#    def write_block(self, *block, **kwargs):
     def write_block(self, block, **kwargs):
+        """
+        Write a Block to the file
+        """
+
+        print("*** def write_block ***")
         start_time = datetime.now()
         nwbfile = NWBFile(self.filename,
                                session_start_time=start_time,
-                               identifier='test',
+                               identifier='',
                                file_create_date=None,
                                timestamps_reference_time=None,
                                experimenter=None,
@@ -150,12 +223,38 @@ class NWBIO(BaseIO):
                                subject=None
                                )
 
-        for segment in block.segments:
+        
+#        for num_blk in range(len(block.name)): # loop on blocks
+##        for num_blk in block: # loop on blocks
+#            print("num_blk = ", num_blk)
+#
+#            name_block = 'block_%d' %num_blk
+#            print("name_block = ", name_block)
+#            print("block.segments = ", block.segments)
+#
+#            for segment in block.segments: # loop on segments
+#                print("segment = ", segment)
+#                self._write_segment(nwbfile, segment)
+#                print("OK")
+
+
+        print("*************************************************block = ", block)
+        print("block.segments = ", block.segments)
+####################################################################
+ ##       return list(block.segments)
+
+        for segment in block.segments:    
+            print("------ segment = ", segment)
             self._write_segment(nwbfile, segment)
+            print("END of loop on segment")
+            return list(block.segments)    #########################
 
         io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
+        print("io_nwb = ", io_nwb)
         io_nwb.write(nwbfile)
+        print("Write the file")
         io_nwb.close()
+        print("Close the file")
 
     def _handle_general_group(self, block):
         pass
@@ -294,6 +393,7 @@ class NWBIO(BaseIO):
         pass
 
     def _write_segment(self, nwbfile, segment):
+        print("*** def _write_segment ***")
         start_time = segment.t_start
         stop_time = segment.t_stop
 
@@ -304,6 +404,13 @@ class NWBIO(BaseIO):
                                         stop_time=float(stop_time),
                                         )
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
+            print("++++++++++++++++++++++++ signal = ", signal)
+            print("segment.analogsignals", segment.analogsignals)
+            print("signal.name = ", signal.name) ####
+            ########################################################################
+#            return list(signal for segment.analogsignals in signal)  ##################################################################################
+            return list(segment.analogsignals for signal in segment.analogsignals)
+
             self._write_signal(nwbfile, signal, nwb_epoch, i, segment)
         self._write_spiketrains(nwbfile, segment.spiketrains, segment)        
         for i, event in enumerate(segment.events):
@@ -311,8 +418,11 @@ class NWBIO(BaseIO):
         for i, neo_epoch in enumerate(segment.epochs):
             self._write_neo_epoch(nwbfile, neo_epoch, nwb_epoch, i)
 
-    def _write_signal(self, nwbfile, signal, epoch, i, segment):     
+    def _write_signal(self, nwbfile, signal, epoch, i, segment):
+        print("*** def _write_signal ***")
+        print("signal", signal)
         signal_name = signal.name or "signal{0}".format(i)
+        print("signal_name = ", signal_name)
         ts_name = "{0}".format(signal_name)
 
         """
@@ -361,29 +471,28 @@ class NWBIO(BaseIO):
 #        nwbfile.add_acquisition(ts)
         """
 
-
         conversion = _decompose_unit(signal.units)
         attributes = {"conversion": conversion,
                       "resolution": float('nan')}
 
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
-            signal.sampling_rate = sampling_rate          
+            signal.sampling_rate = sampling_rate
 
             # All signals should go in /acquisition
             tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, rate=float(sampling_rate))
-            ts = nwbfile.add_acquisition(tS)        
+            ts = nwbfile.add_acquisition(tS) 
         elif isinstance(signal, IrregularlySampledSignal):
             tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, timestamps=signal.times.rescale('second').magnitude)
             ts = nwbfile.add_acquisition(tS)
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(signal.__class__.__name__))
-
         nwbfile.add_epoch(
                             epoch,
                             start_time=time_in_seconds(segment.t_start),
                             stop_time=time_in_seconds(segment.t_stop),
                           )
+        print("END def _write_signal")
 
     def _write_spiketrains(self, nwbfile, spiketrains, segment):
         """
