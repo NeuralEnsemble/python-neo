@@ -118,7 +118,7 @@ class NWBIO(BaseIO):
         Read a Block from the file
         """
 
-        print("*** def read_block ***")
+        print("**** def read_block ****")
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO   
         _file = io.read()
         self._lazy = lazy
