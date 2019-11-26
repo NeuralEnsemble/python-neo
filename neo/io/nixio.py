@@ -465,7 +465,6 @@ class NixIO(BaseIO):
         neo_attrs["nix_name"] = metadata.name  # use the common base name
         unit = nix_da_group[0].unit
         imgseq = np.array([d[:] for d in nix_da_group]).transpose()
-        imgseq = create_quantity(imgseq, unit)
 
         sampling_rate = neo_attrs["sampling_rate"]
         del neo_attrs["sampling_rate"]
@@ -473,7 +472,8 @@ class NixIO(BaseIO):
         del neo_attrs["spatial_scale"]
 
         neo_seq = ImageSequence(image_data=imgseq, sampling_rate=sampling_rate,
-                                spatial_scale=spatial_scale, **neo_attrs)
+                                spatial_scale=spatial_scale,units=unit,
+                                **neo_attrs)
 
         self._neo_map[neo_attrs["nix_name"]] = neo_seq
         # all DAs reference the same sources
@@ -1424,6 +1424,7 @@ class NixIO(BaseIO):
             for seg in blk.segments:
                 signals.extend(seg.analogsignals)
                 signals.extend(seg.irregularlysampledsignals)
+                signals.extend(seg.imagesequences)
                 eests.extend(seg.events)
                 eests.extend(seg.epochs)
                 eests.extend(seg.spiketrains)
