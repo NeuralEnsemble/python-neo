@@ -199,10 +199,7 @@ class NixIOTest(unittest.TestCase):
             for da in data_arrays:
                 if da.metadata.name == nixname:
                     dalist.append(da)
-            if nixname[:17] == "neo.imagesequence" or nixname[11:15] == "imgs":
-                _, _, nsig = np.shape(sig)
-            else:
-                _, nsig = np.shape(sig)
+                nsig = np.shape(sig)[-1]
             totalsignals += nsig
             self.assertEqual(nsig, len(dalist))
             self.compare_signal_dalist(sig, dalist)
@@ -517,8 +514,6 @@ class NixIOTest(unittest.TestCase):
                 group.data_arrays.append(da_isig)
                 siggroup.append(da_isig)
             allsignalgroups.append(siggroup)
-
-
         # SpikeTrains with Waveforms
         for n in range(4):
             stname = "{}-st{}".format(cls.rword(20), n)
@@ -902,9 +897,10 @@ class NixIOWriteTest(NixIOTest):
         seg = Segment()
         block.segments.append(seg)
 
-        imgseq = ImageSequence(image_data=self.rquant((19, 10, 15), pq.V),
+        imgseq = ImageSequence(image_data=self.rquant((19, 10, 15), 1),
                                sampling_rate=pq.Quantity(10, "Hz"),
-                               spatial_scale=pq.Quantity(10, "micrometer"))
+                               spatial_scale=pq.Quantity(10, "micrometer"),
+                               units=pq.V)
         seg.imagesequences.append(imgseq)
         self.write_and_compare([block])
 
@@ -960,13 +956,11 @@ class NixIOWriteTest(NixIOTest):
         units = pq.CompoundUnit("1/30000*V")
         srate = pq.Quantity(10, pq.CompoundUnit("1.0/10 * Hz"))
         size = pq.Quantity(10, pq.CompoundUnit("1.0/10 * micrometer"))
-        imgseq = ImageSequence(image_data=self.rquant((10, 20,10), units),
-                               sampling_rate=srate,
-                               spatial_scale=size)
+        imgseq = ImageSequence(image_data=self.rquant((10, 20, 10), units),
+                               sampling_rate=srate, spatial_scale=size)
         seg.imagesequences.append(imgseq)
 
         self.write_and_compare([block])
-
 
     def test_epoch_write(self):
         block = Block()
@@ -1070,7 +1064,8 @@ class NixIOWriteTest(NixIOTest):
                     seg.analogsignals.append(AnalogSignal(signal=signal,
                                                           sampling_rate=pq.Hz))
                 for imgseqdx in range(nimgseq):
-                    seg.imagesequences.append(ImageSequence(image_data=self.rquant((10, 20, 10), pq.V),
+                    seg.imagesequences.append(ImageSequence(image_data=self.rquant(
+                                                            (10, 20, 10), pq.V),
                                                             sampling_rate=pq.Hz,
                                                             spatial_scale=pq.micrometer))
                 for irridx in range(nirrseg):
@@ -1130,13 +1125,10 @@ class NixIOWriteTest(NixIOTest):
                 # imagesequence
                 for imgseqdx in range(nimgseq):
                     imseq = ImageSequence(
-                        name="{}:imgs{}".format(seg.name, imgseqdx),
-                        image_data=np.random.rand(20, 10, 10)
-                        ,units=pq.mV,
-                        sampling_rate=pq.Hz, spatial_scale=pq.micrometer
-                    )
-                    print(imseq.units)
-                    print(self.rquant((10, 20, 10), pq.mV))
+                         name="{}:imgs{}".format(seg.name, imgseqdx),
+                         image_data=np.random.rand(20, 10, 10), units=pq.mV,
+                         sampling_rate=pq.Hz, spatial_scale=pq.micrometer
+                     )
                     seg.imagesequences.append(imseq)
                 for irridx in range(nirrseg):
                     isig = IrregularlySampledSignal(
@@ -1145,7 +1137,6 @@ class NixIOWriteTest(NixIOTest):
                         signal=signal,
                         time_units=pq.s
                     )
-                    print(isig,"isig")
                     seg.irregularlysampledsignals.append(isig)
                 for epidx in range(nepochs):
                     seg.epochs.append(
@@ -1175,7 +1166,6 @@ class NixIOWriteTest(NixIOTest):
 
         # put guard on _generate_nix_name
         if not SKIPMOCK:
-            print("passing")
             nixgenmock = mock.Mock(name="_generate_nix_name",
                                    wraps=self.io._generate_nix_name)
             self.io._generate_nix_name = nixgenmock
@@ -1522,7 +1512,8 @@ class NixIOWriteTest(NixIOTest):
                                     waveforms=waveforms)
             seg.spiketrains.append(spiketrain)
             # add imagesequence
-            imgseq = ImageSequence(name="img1", image_data=self.rquant((10, 20, 10), pq.mV),
+            imgseq = ImageSequence(name="img1",
+                                   image_data=self.rquant((10, 20, 10), pq.mV),
                                    sampling_period=pq.Quantity(1, "ms"),
                                    spatial_scale=pq.meter)
 
@@ -1679,7 +1670,7 @@ class NixIOReadTest(NixIOTest):
         for bl in self.io.read_all_blocks():
             nix_block = self.nixfile.blocks[bl.annotations['nix_name']]
             for seg in bl.segments:
-                print(seg.imagesequences)
+
                 for anasig in seg.analogsignals:
                     da = nix_block.data_arrays[anasig.annotations['nix_name'] + '.0']
                     self.assertIn('anasig_arr_ann', da.metadata)
