@@ -79,8 +79,8 @@ class NWBIO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
    
-    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
-#    def read_all_blocks(self, lazy=False, **kwargs):        
+#    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
+    def read_all_blocks(self, lazy=False, **kwargs):        
 ###    def read_all_blocks(self, *blocks, lazy=False, **kwargs):
         """
         Read all blocks from the file
@@ -90,26 +90,25 @@ class NWBIO(BaseIO):
 
         if Block in self.readable_objects:
             print("Block = ", Block)
-          #  print("blocks = ", blocks)
+#            print("block = ", block)
             print("   ")
-            for block in blocks:
-                print("-------------------------")
-                print("*-* block.name = ", block.name)
-                print("block = ", block) 
-                self.read_block(block)
-                print("blocks = ", blocks)
-                print("   ")
-        print("Test")
-        print("   ")
-        print("   ")
-        print("   ")
-        return list(self.read_block(block)
-                for block in blocks
-                )
+#            for block in blocks:
 
+#            print("*-* block.name = ", block.name)
+#            print("block = ", block) 
+###            self.read_block(block)
+            self.read_block()
+#            print("blocks = ", blocks)
+        return [self.read_block()]
+###        return list(self.read_block())
+        print("-------------------------")
+
+#        return list(self.read_block(block)
+#                for block in blocks
+#                )
 
     def read_block(self, lazy=False, cascade=True, **kwargs): ### OK
-#    def read_block(self, blocks, lazy=False, cascade=True, **kwargs):
+#    def read_block(self, *blocks, lazy=False, cascade=True, **kwargs):
         """
         Read a Block from the file
         """
@@ -143,7 +142,9 @@ class NWBIO(BaseIO):
             self._handle_processing_group(block)
             self._handle_analysis_group(block)
         self._lazy = False
+
         print("--- block in read_block() = ", block)
+        print("*-* block.name = ", block.name)
         print("END def read_block")
         print("   ")
         return block
@@ -162,7 +163,7 @@ class NWBIO(BaseIO):
                 self.write_block(block)
                 print("END loop Block in def write_all_blocks")
             return list(block.segments)
-
+            #return [self.write_block()]
         print("END DEF WRITE_ALL_BLOCKS")
 
 
@@ -226,12 +227,11 @@ class NWBIO(BaseIO):
 #            for signal in segment.analogsignals: ###
     
             self._write_segment(nwbfile, segment)
-    
-            print("END of loop on segment block.segments = ", block.segments)
-            print("---------------------------------------------------------------")            
 #                return list(segment.analogsignals) ###
             print("Write the file") 
             io_nwb.write(nwbfile)
+            print("END of loop on segment block.segments = ", block.segments)
+            print("---------------------------------------------------------------")
             return list(block.segments)
 
         io_nwb.close()
@@ -360,6 +360,7 @@ class NWBIO(BaseIO):
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
             print("i = ", i)
             self._write_signal(nwbfile, signal, nwb_epoch, i, segment)
+            #print("segment.analogsignals = ", segment.analogsignals) ### Ok
             print("END _write_segment")
 
         self._write_spiketrains(nwbfile, segment.spiketrains, segment)        
@@ -433,7 +434,8 @@ class NWBIO(BaseIO):
             tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, rate=float(sampling_rate))
             #print("tS = ", tS)
 ######            return list(segment.analogsignals for signal in segment.analogsignals)
-            
+            # print("analogsignal = ", segment.analogsignals) # OK
+
             ts = nwbfile.add_acquisition(tS)
         
         elif isinstance(signal, IrregularlySampledSignal):
@@ -446,7 +448,6 @@ class NWBIO(BaseIO):
                             start_time=time_in_seconds(segment.t_start),
                             stop_time=time_in_seconds(segment.t_stop),
                           )
-
         print("END def _write_signal")
 
     def _write_spiketrains(self, nwbfile, spiketrains, segment):

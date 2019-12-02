@@ -19,7 +19,8 @@ class TestNWBIO(unittest.TestCase, ):
         # My NWB files
 #              '/home/elodie/NWB_Files/NWB_File_python_3_pynwb_101_ephys_data_bis.nwb', # File created with the latest version of pynwb=1.0.1 only with ephys data File on my github page
 ###              '/Users/legouee/NWBwork/my_notebook/NWB_File_python_3_pynwb_101_ephys_data_bis.nwb'
-              '/Users/legouee/NWBwork/my_notebook/My_first_dataset.nwb'
+#              '/Users/legouee/NWBwork/my_notebook/My_first_dataset.nwb'
+              '/Users/legouee/NWBwork/my_notebook/My_first_dataset_neo8.nwb'
 
         # Files from Allen Institute
         # NWB files downloadable from http://download.alleninstitute.org/informatics-archive/prerelease/
