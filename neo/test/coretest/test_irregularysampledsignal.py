@@ -710,6 +710,12 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         self.assertIs(result.segment, self.signal1.segment)
         self.assertIs(result.channel_index, self.signal1.channel_index)
 
+    def test_resample_regularly(self):
+        factors = [1, 2, 10]
+        for factor in factors:
+            result = self.signal1.resample_regularly(self.signal1.shape[0]*factor)
+            np.testing.assert_allclose(self.signal1.magnitude, result.magnitude[::factor], rtol=1e-7, atol=0)
+
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
     def setUp(self):

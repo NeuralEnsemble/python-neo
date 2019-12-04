@@ -1158,6 +1158,78 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_arrays_equal(result3.array_annotations['label'], np.array(['abc', 'def']))
         self.assertIsInstance(result3.array_annotations, ArrayDict)
 
+    def test_decimate(self):
+        # generate signal long enough for decimating
+        data = np.sin(np.arange(1500)/30).reshape(500, 3) * pq.mV
+        signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
+
+        # test decimation using different decimation factors
+        factors = [1, 9, 10, 11]
+        for factor in factors:
+            desired = signal[::factor].magnitude
+            result = signal.decimate(factor)
+
+            self.assertEqual(np.ceil(signal.shape[0] / factor), result.shape[0])
+            self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
+            self.assertAlmostEqual(signal.sampling_rate, factor*result.sampling_rate)
+            # only comparing center values due to border effects
+            np.testing.assert_allclose(desired[3:-3], result.magnitude[3:-3], rtol=0.05, atol=0.1)
+
+    def test_downsample_regularly(self):
+        # generate signal long enough for resampling
+        data = np.sin(np.arange(1500)/30).reshape(3, 500).T * pq.mV
+        signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
+
+        # test resampling using different numbers of desired samples
+        sample_counts = [10, 100, 400]
+        for sample_count in sample_counts:
+            sample_ids = np.linspace(0, signal.shape[0], sample_count, dtype=int, endpoint=False)
+            desired = signal.magnitude[sample_ids]
+            result = signal.resample_regularly(sample_count)
+
+            self.assertEqual(sample_count, result.shape[0])
+            self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
+            self.assertAlmostEqual(sample_count/signal.shape[0] * signal.sampling_rate, result.sampling_rate)
+            # only comparing center values due to border effects
+            np.testing.assert_allclose(desired[3:-3], result.magnitude[3:-3], rtol=0.05, atol=0.1)
+
+    def test_upsample_regularly(self):
+        # generate signal long enough for resampling
+        data = np.sin(np.arange(1500)/100).T * pq.mV
+        signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
+
+        # test resampling using different numbers of desired samples
+        factor = 2
+        sample_count = factor*signal.shape[0]
+        desired = np.interp(np.arange(sample_count)/factor, np.arange(signal.shape[0]),
+                            signal.magnitude.flatten()).reshape(-1,1)
+        result = signal.resample_regularly(sample_count)
+
+        self.assertEqual(sample_count, result.shape[0])
+        self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
+        self.assertAlmostEqual(sample_count/signal.shape[0] * signal.sampling_rate, result.sampling_rate)
+        # only comparing center values due to border effects
+        np.testing.assert_allclose(desired[10:-10], result.magnitude[10:-10], rtol=0.0, atol=0.1)
+
+    def test_compare_resample_and_decimate(self):
+        # generate signal long enough for resampling
+        data = np.sin(np.arange(1500)/30).reshape(3, 500).T * pq.mV
+        signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
+
+        # test resampling using different numbers of desired samples
+        sample_counts = [10, 100, 250]
+        for sample_count in sample_counts:
+            downsampling_factor = int(signal.shape[0]/sample_count)
+            assert downsampling_factor == signal.shape[0]/sample_count, 'Downsampling factor needs to be integer.'
+            desired = signal.decimate(downsampling_factor=downsampling_factor)
+            result = signal.resample_regularly(sample_count)
+
+            self.assertEqual(desired.shape[0], result.shape[0])
+            self.assertEqual(desired.shape[-1], result.shape[-1])  # preserve number of recording traces
+            self.assertAlmostEqual(desired.sampling_rate, result.sampling_rate)
+            # only comparing center values due to border effects
+            np.testing.assert_allclose(desired.magnitude[3:-3], result.magnitude[3:-3], rtol=0.05, atol=0.1)
+
 
 class TestAnalogSignalEquality(unittest.TestCase):
     def test__signals_with_different_data_complement_should_be_not_equal(self):
