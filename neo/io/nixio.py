@@ -292,8 +292,7 @@ class NixIO(BaseIO):
             newchx.block = neo_block
 
         # create object links
-        neo_block.create_many_to_one_relationship()
-        neo_block.create_many_to_many_relationship()
+        neo_block.create_relationship()
 
         # reset maps
         self._neo_map = dict()
