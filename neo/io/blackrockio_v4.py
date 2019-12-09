@@ -1984,7 +1984,7 @@ class BlackrockIO(BaseIO):
             file_origin=self.filename)
 
         if index is not None:
-            chidx.index = index
+            chidx.index = np.array(index)
             chidx.name = "ChannelIndex {}".format(chidx.index)
         else:
             chidx.name = "ChannelIndex"
