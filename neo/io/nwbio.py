@@ -58,18 +58,21 @@ class NWBIO(BaseIO):
     Class for "reading" experimental data from a .nwb file, and "writing" a .nwb file
     """
 
-    is_readable = True
-    is_writable = True
-    is_streameable = False
     supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                         SpikeTrain, Epoch, Event]
+                         SpikeTrain, Epoch, Event] # maybe to remove at the end : already declared in neo.core.objectlist
     readable_objects  = supported_objects
     writeable_objects = supported_objects
+
     has_header = False
-    name = 'NWB'
+
+    name = 'NeoNWB IO'
     description = 'This IO reads/writes experimental data from/to an .nwb dataset'
     extensions = ['nwb']
-    mode = 'file'
+    mode = 'one-file'
+
+    is_readable = True
+    is_writable = True
+    is_streameable = False    
 
     def __init__(self, filename, mode):
         """
