@@ -13,7 +13,8 @@ from numpy.random import rand
 import quantities as pq
 
 from neo.core import (AnalogSignal, Block, Epoch, Event, IrregularlySampledSignal, ChannelIndex,
-                      Segment, SpikeTrain, Unit, class_by_name)
+                      Segment, SpikeTrain, Unit, ImageSequence, CircularRegionOfInterest,
+                      RectangularRegionOfInterest, PolygonRegionOfInterest, class_by_name)
 
 from neo.core.baseneo import _container_name
 from neo.core.dataobject import DataObject
@@ -167,14 +168,14 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         obj = obj.__name__
 
     if (name in ['name', 'file_origin', 'description'] and (datatype != str or dim)):
-        raise ValueError('%s must be str, not a %sD %s' % (name, dim, datatype))
+        raise ValueError('{} must be str, not a {}D {}'.format(name, dim, datatype))
 
     if name == 'file_origin':
         return 'test_file.txt'
     if name == 'name':
-        return '%s%s' % (obj, get_fake_value('', datatype, seed=seed))
+        return '{}{}'.format(obj, get_fake_value('', datatype, seed=seed))
     if name == 'description':
-        return 'test %s %s' % (obj, get_fake_value('', datatype, seed=seed))
+        return 'test {} {}'.format(obj, get_fake_value('', datatype, seed=seed))
 
     if seed is not None:
         np.random.seed(seed)
@@ -189,7 +190,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         return datetime.fromtimestamp(1000000000 * np.random.random())
 
     if (name in ['t_start', 't_stop', 'sampling_rate'] and (datatype != pq.Quantity or dim)):
-        raise ValueError('%s must be a 0D Quantity, not a %sD %s' % (name, dim, datatype))
+        raise ValueError('{} must be a 0D Quantity, not a {}D {}'.format(name, dim, datatype))
 
     # only put array types below here
 
@@ -263,7 +264,7 @@ def get_fake_value(name, datatype, dim=0, dtype='float', seed=None, units=None, 
         return arr_ann
 
     # we have gone through everything we know, so it must be something invalid
-    raise ValueError('Unknown name/datatype combination %s %s' % (name, datatype))
+    raise ValueError('Unknown name/datatype combination {} {}'.format(name, datatype))
 
 
 def get_fake_values(cls, annotate=True, seed=None, n=None):
@@ -322,8 +323,8 @@ def get_fake_values(cls, annotate=True, seed=None, n=None):
                 n = 1
         elif cls in [SpikeTrain, Event, Epoch]:
             n = len(kwargs['times'])
-        # Array annotate any DataObject
-        if issubclass(cls, DataObject):
+        # Array annotate any DataObject except ImageSequence
+        if issubclass(cls, DataObject) and cls is not ImageSequence:
             new_seed = iseed + 1 if iseed is not None else iseed
             kwargs['array_annotations'] = get_fake_value('array_annotations', dict, seed=new_seed,
                                                          obj=cls, n=n)
@@ -337,7 +338,7 @@ def get_annotations():
     Returns a dict containing the default values for annotations for
     a class from neo.core.
     '''
-    return dict([(str(i), ann) for i, ann in enumerate(TEST_ANNOTATIONS)])
+    return {str(i): ann for i, ann in enumerate(TEST_ANNOTATIONS)}
 
 
 def fake_epoch(seed=None, n=1):

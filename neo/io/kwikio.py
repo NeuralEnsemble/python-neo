@@ -189,7 +189,7 @@ class KwikIO(BaseIO):
             A KwikModel object obtained by klusta.kwik.KwikModel(fname)
         """
         try:
-            if ((not (cluster_id in model.cluster_ids))):
+            if (not (cluster_id in model.cluster_ids)):
                 raise ValueError
         except ValueError:
             print("Exception: cluster_id (%d) not found !! " % cluster_id)

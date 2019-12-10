@@ -112,14 +112,19 @@ class ExampleRawIO(BaseRawIO):
         # at the end real_signal = (raw_signal* gain + offset) * pq.Quantity(units)
         sig_channels = []
         for c in range(16):
+#            print("range(16) = ", range(16))
             ch_name = 'ch{}'.format(c)
+#            print("format(c) = ", format(c))
+#            print("ch_name = ", ch_name)
             # our channel id is c+1 just for fun
             # Note that chan_id should be realated to
             # original channel id in the file format
             # so that the end user should not be lost when reading datasets
             chan_id = c + 1
+#            print("chan_id = ", chan_id)
             sr = 10000.  # Hz
             dtype = 'int16'
+#            print("dtype = ", dtype)
             units = 'uV'
             gain = 1000. / 2 ** 16
             offset = 0.
@@ -128,7 +133,9 @@ class ExampleRawIO(BaseRawIO):
             # Here this is the general case :all channel have the same characteritics
             group_id = 0
             sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id))
+#            print("sig_channels.append = ", sig_channels.append((ch_name, chan_id, sr, dtype, units, gain, offset, group_id)))
         sig_channels = np.array(sig_channels, dtype=_signal_channel_dtype)
+#        print("sig_channels = ", sig_channels)
 
         # creating units channels
         # This is mandatory!!!!
@@ -163,8 +170,14 @@ class ExampleRawIO(BaseRawIO):
         self.header['nb_block'] = 2
         self.header['nb_segment'] = [2, 3]
         self.header['signal_channels'] = sig_channels
+        print("self.header['signal_channels] = ", self.header['signal_channels'])
+        print("self.header['signal_channels].size = ", self.header['signal_channels'].size)
         self.header['unit_channels'] = unit_channels
+        print("self.header['unit_channels] = ", self.header['unit_channels'])
+        print("self.header['unit_channels].size = ", self.header['unit_channels'].size)
         self.header['event_channels'] = event_channels
+        print("self.header['event_channels] = ", self.header['event_channels'])
+        print("self.header['event_channels].size = ", self.header['event_channels'].size)
 
         # insert some annotation at some place
         # at neo.io level IO are free to add some annoations
@@ -276,6 +289,7 @@ class ExampleRawIO(BaseRawIO):
         ts_start = (self._segment_t_start(block_index, seg_index) * 10000)
 
         spike_timestamps = np.arange(0, 10000, 500) + ts_start
+        print("spike_timestamps = ", spike_timestamps)
 
         if t_start is not None or t_stop is not None:
             # restricte spikes to given limits (in seconds)

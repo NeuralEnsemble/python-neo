@@ -31,6 +31,8 @@ except ImportError:
 from collections import OrderedDict
 import itertools
 from uuid import uuid4
+import warnings
+from distutils.version import LooseVersion as Version
 
 import quantities as pq
 import numpy as np
@@ -55,6 +57,7 @@ except NameError:
 
 EMPTYANNOTATION = "EMPTYLIST"
 ARRAYANNOTATION = "ARRAYANNOTATION"
+MIN_NIX_VER = Version("1.5.0")
 
 
 def stringify(value):
@@ -86,6 +89,36 @@ def calculate_timestamp(dt):
     return int(dt)
 
 
+def check_nix_version():
+    if not HAVE_NIX:
+        raise Exception(
+            "Failed to import NIX. "
+            "The NixIO requires the Python package for NIX "
+            "(nixio on PyPi). Try `pip install nixio`."
+
+        )
+
+    # nixio version numbers have a 'v' prefix which breaks the comparison
+    nixverstr = nix.__version__.lstrip("v")
+    try:
+        nixver = Version(nixverstr)
+    except ValueError:
+        warnings.warn(
+            "Could not understand NIX Python version {}. "
+            "The NixIO requires version {} of the Python package for NIX. "
+            "The IO may not work correctly.".format(nixverstr,
+                                                    str(MIN_NIX_VER))
+        )
+        return
+
+    if nixver < MIN_NIX_VER:
+        raise Exception(
+            "NIX version not supported. "
+            "The NixIO requires version {} or higher of the Python package "
+            "for NIX. Found version {}".format(str(MIN_NIX_VER), nixverstr)
+        )
+
+
 class NixIO(BaseIO):
     """
     Class for reading and writing NIX files.
@@ -104,20 +137,13 @@ class NixIO(BaseIO):
     extensions = ["h5", "nix"]
     mode = "file"
 
-    nix_version = nix.__version__ if HAVE_NIX else "NIX NOT FOUND"
-
     def __init__(self, filename, mode="rw"):
         """
         Initialise IO instance and NIX file.
 
         :param filename: Full path to the file
         """
-
-        if not HAVE_NIX:
-            raise Exception("Failed to import NIX. "
-                            "The NixIO requires the Python bindings for NIX "
-                            "(nixio on PyPi). Try `pip install nixio`.")
-
+        check_nix_version()
         BaseIO.__init__(self, filename)
         self.filename = filename
         if mode == "ro":
@@ -1086,13 +1112,13 @@ class NixIO(BaseIO):
         for chx in neoblock.channel_indexes:
             signames = []
             for asig in chx.analogsignals:
-                if not ("nix_name" in asig.annotations and
-                        asig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in asig.annotations
+                        and asig.annotations["nix_name"] in self._signal_map):
                     self._write_analogsignal(asig, nixblock, None)
                 signames.append(asig.annotations["nix_name"])
             for isig in chx.irregularlysampledsignals:
-                if not ("nix_name" in isig.annotations and
-                        isig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in isig.annotations
+                        and isig.annotations["nix_name"] in self._signal_map):
                     self._write_irregularlysampledsignal(isig, nixblock, None)
                 signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
@@ -1103,10 +1129,11 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    if not ("nix_name" in st.annotations and
-                            st.annotations["nix_name"] in nixblock.multi_tags):
+                    mtags = nixblock.multi_tags
+                    if not ("nix_name" in st.annotations
+                            and st.annotations["nix_name"] in mtags):
                         self._write_spiketrain(st, nixblock, None)
-                    stmt = nixblock.multi_tags[st.annotations["nix_name"]]
+                    stmt = mtags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
                     stmt.sources.append(unitsource)
 
@@ -1207,14 +1234,13 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
-                elif prop.definition == ARRAYANNOTATION:
+                if prop.definition == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
                         neo_attrs['array_annotations'] = {prop.name: values}
                 else:
-                    values = list(values)
-                neo_attrs[prop.name] = values
+                    neo_attrs[prop.name] = values
         # since the 'neo_name' NIX property becomes the actual object's name,
         # there's no reason to keep it in the annotations
         neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
@@ -1338,8 +1364,8 @@ class NixIO(BaseIO):
         """
         Closes the open nix file and resets maps.
         """
-        if (hasattr(self, "nix_file") and
-                self.nix_file and self.nix_file.is_open()):
+        if (hasattr(self, "nix_file")
+                and self.nix_file and self.nix_file.is_open()):
             self.nix_file.close()
             self.nix_file = None
             self._neo_map = None

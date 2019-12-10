@@ -36,6 +36,7 @@ def _normalize_array_annotations(value, length):
         for key in value.keys():
             if isinstance(value[key], dict):
                 raise ValueError("Nested dicts are not allowed as array annotations")
+
             value[key] = _normalize_array_annotations(value[key], length)
 
     elif value is None:

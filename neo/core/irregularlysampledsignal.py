@@ -191,7 +191,7 @@ class IrregularlySampledSignal(BaseSignal):
         '''
         Returns a string representing the :class:`IrregularlySampledSignal`.
         '''
-        return '<%s(%s at times %s)>' % (
+        return '<{}({} at times {})>'.format(
             self.__class__.__name__, super(IrregularlySampledSignal, self).__repr__(), self.times)
 
     def __getitem__(self, i):
@@ -285,7 +285,8 @@ class IrregularlySampledSignal(BaseSignal):
             return
         # dimensionality should match
         if self.ndim != other.ndim:
-            raise ValueError('Dimensionality does not match: %s vs %s' % (self.ndim, other.ndim))
+            raise ValueError('Dimensionality does not match: {} vs {}'.format(
+                self.ndim, other.ndim))
         # if if the other array does not have a times property,
         # then it should be okay to add it directly
         if not hasattr(other, 'times'):
@@ -293,7 +294,7 @@ class IrregularlySampledSignal(BaseSignal):
 
         # if there is a times property, the times need to be the same
         if not (self.times == other.times).all():
-            raise ValueError('Times do not match: %s vs %s' % (self.times, other.times))
+            raise ValueError('Times do not match: {} vs {}'.format(self.times, other.times))
 
     def __rsub__(self, other, *args):
         '''
@@ -320,7 +321,7 @@ class IrregularlySampledSignal(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sample times: {0}".format(self.times)]:
+        for line in ["sample times: {}".format(self.times)]:
             _pp(line)
 
     @property
@@ -453,7 +454,7 @@ class IrregularlySampledSignal(BaseSignal):
             if attr_self == attr_other:
                 kwargs[name] = attr_self
             else:
-                kwargs[name] = "merge(%s, %s)" % (attr_self, attr_other)
+                kwargs[name] = "merge({}, {})".format(attr_self, attr_other)
         merged_annotations = merge_annotations(self.annotations, other.annotations)
         kwargs.update(merged_annotations)
 

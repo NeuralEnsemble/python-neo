@@ -23,11 +23,7 @@ __test__ = False
 
 import os
 from copy import copy
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 from neo.core import Block, Segment
 from neo.test.tools import (assert_same_sub_schema,
@@ -500,7 +496,7 @@ class BaseTestIO(object):
                 assert_neo_object_is_compliant(obj)
             # intercept exceptions and add more information
             except BaseException as exc:
-                exc.args += ('from %s' % os.path.basename(path))
+                exc.args += ('from %s' % os.path.basename(path), )
                 raise
 
     def test_readed_with_lazy_is_compliant(self):

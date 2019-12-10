@@ -350,9 +350,9 @@ class NeoHdf5IO(BaseIO):
             channel_indexes = channel_indexes[:]
             for ci1 in channel_indexes:
                 # this works only on analogsignals
-                signal_group1 = set(tuple(x[1]) for x in ci1._channels)
+                signal_group1 = {tuple(x[1]) for x in ci1._channels}
                 for ci2 in channel_indexes:  # need to take irregularly sampled signals
-                    signal_group2 = set(tuple(x[1]) for x in ci2._channels)  # into account too
+                    signal_group2 = {tuple(x[1]) for x in ci2._channels}  # into account too
                     if signal_group1 != signal_group2:
                         if signal_group2.issubset(signal_group1):
                             channel_indexes.remove(ci2)

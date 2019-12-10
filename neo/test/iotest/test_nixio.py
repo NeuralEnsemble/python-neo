@@ -132,9 +132,9 @@ class NixIOTest(unittest.TestCase):
             # AnalogSignals referencing CHX
             neoasigs = list(sig.annotations["nix_name"]
                             for sig in neochx.analogsignals)
-            nixasigs = list(set(da.metadata.name for da in nixblock.data_arrays
+            nixasigs = list({da.metadata.name for da in nixblock.data_arrays
                                 if da.type == "neo.analogsignal" and
-                                nixchx in da.sources))
+                                nixchx in da.sources})
 
             self.assertEqual(len(neoasigs), len(nixasigs))
 
@@ -142,9 +142,9 @@ class NixIOTest(unittest.TestCase):
             neoisigs = list(sig.annotations["nix_name"] for sig in
                             neochx.irregularlysampledsignals)
             nixisigs = list(
-                set(da.metadata.name for da in nixblock.data_arrays
+                {da.metadata.name for da in nixblock.data_arrays
                     if da.type == "neo.irregularlysampledsignal" and
-                    nixchx in da.sources)
+                    nixchx in da.sources}
             )
             self.assertEqual(len(neoisigs), len(nixisigs))
             # SpikeTrains referencing CHX and Units
@@ -1381,7 +1381,6 @@ class NixIOWriteTest(NixIOTest):
 
         # TODO: multi dimensional value (GH Issue #501)
 
-    @unittest.SkipTest  # NIXRawIO requires fixing
     def test_write_proxyobjects(self):
 
         def generate_complete_block():
@@ -1569,6 +1568,19 @@ class NixIOReadTest(NixIOTest):
                     self.assertTrue(np.all(nix_ann == neo_ann.magnitude))
                     self.assertEqual(da.metadata.props['st_arr_ann'].unit,
                                      units_to_string(neo_ann.units))
+
+    def test_read_blocks_are_writable(self):
+        filename = os.path.join(self.tempdir, "testnixio_out.nix")
+        writer = NixIO(filename, "ow")
+
+        blocks = self.io.read_all_blocks()
+
+        try:
+            writer.write_all_blocks(blocks)
+        except Exception as exc:
+            self.fail('The following exception was raised when'
+                      + ' writing the blocks loaded with NixIO:\n'
+                      + str(exc))
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")

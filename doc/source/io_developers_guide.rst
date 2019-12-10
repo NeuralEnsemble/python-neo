@@ -105,5 +105,5 @@ Here are the entire files:
 .. literalinclude:: ../../neo/io/exampleio.py
 
 
-.. _`mailing list`: http://groups.google.com/group/neuralensemble
-.. _gin-gnode: https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+.. _`mailing list`: https://groups.google.com/forum/#!forum/neuralensemble
+.. _gin-gnode: https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
