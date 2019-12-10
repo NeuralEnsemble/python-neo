@@ -372,7 +372,7 @@ class OpenEphysRawIO(BaseRawIO):
 
 
 continuous_dtype = [('timestamp', 'int64'), ('nb_sample', 'uint16'),
-    ('rec_num', 'uint16'), ('samples', 'int16', RECORD_SIZE),
+    ('rec_num', 'uint16'), ('samples', '>i2', RECORD_SIZE),
     ('markers', 'uint8', 10)]
 
 events_dtype = [('timestamp', 'int64'), ('sample_pos', 'int16'),
