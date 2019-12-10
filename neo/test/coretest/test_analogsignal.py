@@ -24,6 +24,13 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
+try:
+    import scipy
+except ImportError:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 from numpy.testing import assert_array_equal
 from neo.core.analogsignal import AnalogSignal, _get_sampling_rate
 from neo.core.channelindex import ChannelIndex
@@ -1158,7 +1165,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         assert_arrays_equal(result3.array_annotations['label'], np.array(['abc', 'def']))
         self.assertIsInstance(result3.array_annotations, ArrayDict)
 
-    def test_decimate(self):
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_downsample(self):
         # generate signal long enough for decimating
         data = np.sin(np.arange(1500)/30).reshape(500, 3) * pq.mV
         signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
@@ -1167,7 +1175,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         factors = [1, 9, 10, 11]
         for factor in factors:
             desired = signal[::factor].magnitude
-            result = signal.decimate(factor)
+            result = signal.downsample(factor)
 
             self.assertEqual(np.ceil(signal.shape[0] / factor), result.shape[0])
             self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
@@ -1175,7 +1183,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
             # only comparing center values due to border effects
             np.testing.assert_allclose(desired[3:-3], result.magnitude[3:-3], rtol=0.05, atol=0.1)
 
-    def test_downsample_regularly(self):
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_resample_less_samples(self):
         # generate signal long enough for resampling
         data = np.sin(np.arange(1500)/30).reshape(3, 500).T * pq.mV
         signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
@@ -1185,7 +1194,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         for sample_count in sample_counts:
             sample_ids = np.linspace(0, signal.shape[0], sample_count, dtype=int, endpoint=False)
             desired = signal.magnitude[sample_ids]
-            result = signal.resample_regularly(sample_count)
+            result = signal.resample(sample_count)
 
             self.assertEqual(sample_count, result.shape[0])
             self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
@@ -1193,7 +1202,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
             # only comparing center values due to border effects
             np.testing.assert_allclose(desired[3:-3], result.magnitude[3:-3], rtol=0.05, atol=0.1)
 
-    def test_upsample_regularly(self):
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_resample_more_samples(self):
         # generate signal long enough for resampling
         data = np.sin(np.arange(1500)/100).T * pq.mV
         signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
@@ -1203,7 +1213,7 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         sample_count = factor*signal.shape[0]
         desired = np.interp(np.arange(sample_count)/factor, np.arange(signal.shape[0]),
                             signal.magnitude.flatten()).reshape(-1,1)
-        result = signal.resample_regularly(sample_count)
+        result = signal.resample(sample_count)
 
         self.assertEqual(sample_count, result.shape[0])
         self.assertEqual(signal.shape[-1], result.shape[-1])  # preserve number of recording traces
@@ -1211,7 +1221,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         # only comparing center values due to border effects
         np.testing.assert_allclose(desired[10:-10], result.magnitude[10:-10], rtol=0.0, atol=0.1)
 
-    def test_compare_resample_and_decimate(self):
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_compare_resample_and_downsample(self):
         # generate signal long enough for resampling
         data = np.sin(np.arange(1500)/30).reshape(3, 500).T * pq.mV
         signal = AnalogSignal(data, sampling_rate=30000 * pq.Hz)
@@ -1221,8 +1232,8 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
         for sample_count in sample_counts:
             downsampling_factor = int(signal.shape[0]/sample_count)
             assert downsampling_factor == signal.shape[0]/sample_count, 'Downsampling factor needs to be integer.'
-            desired = signal.decimate(downsampling_factor=downsampling_factor)
-            result = signal.resample_regularly(sample_count)
+            desired = signal.downsample(downsampling_factor=downsampling_factor)
+            result = signal.resample(sample_count)
 
             self.assertEqual(desired.shape[0], result.shape[0])
             self.assertEqual(desired.shape[-1], result.shape[-1])  # preserve number of recording traces
