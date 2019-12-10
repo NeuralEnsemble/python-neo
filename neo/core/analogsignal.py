@@ -24,10 +24,11 @@ from __future__ import absolute_import, division, print_function
 import logging
 
 try:
-    SCIPY_AVAIL = True
     import scipy.signal
-except ImportError:
-    SCIPY_AVAIL = False
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
 
 import numpy as np
 import quantities as pq
@@ -546,7 +547,7 @@ class AnalogSignal(BaseSignal):
             self[i:j, :] = signal
             return self
 
-    def decimate(self, downsampling_factor, **kwargs):
+    def downsample(self, downsampling_factor, **kwargs):
         """
         Downsample the data of a signal.
         This function is a wrapper of scipy.signal.decimate and accepts the same set of keyword arguments,
@@ -565,7 +566,7 @@ class AnalogSignal(BaseSignal):
             The original :class:`AnalogSignal` is not modified.
         """
 
-        if not SCIPY_AVAIL:
+        if not HAVE_SCIPY:
             raise ImportError('Decimating requires availability of scipy.signal')
 
         # Resampling is only permitted along the time axis (axis=0)
@@ -581,7 +582,7 @@ class AnalogSignal(BaseSignal):
 
         return downsampled_signal
 
-    def resample_regularly(self, sample_count, **kwargs):
+    def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
         This function is a wrapper of scipy.signal.resample and accepts the same set of keyword arguments,
@@ -600,7 +601,7 @@ class AnalogSignal(BaseSignal):
             The original :class:`AnalogSignal` is not modified.
         """
 
-        if not SCIPY_AVAIL:
+        if not HAVE_SCIPY:
             raise ImportError('Resampling requires availability of scipy.signal')
 
         # Resampling is only permitted along the time axis (axis=0)

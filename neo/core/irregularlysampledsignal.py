@@ -24,11 +24,13 @@ the old object.
 from __future__ import absolute_import, division, print_function
 
 from copy import deepcopy, copy
+
 try:
-    SCIPY_AVAIL = True
     import scipy.signal
-except ImportError:
-    SCIPY_AVAIL = False
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
 
 import numpy as np
 import quantities as pq
@@ -353,7 +355,7 @@ class IrregularlySampledSignal(BaseSignal):
         else:
             raise NotImplementedError
 
-    def resample(self, at=None, interpolation=None):
+    def resample_irregularly(self, at=None, interpolation=None):
         '''
         Resample the signal, returning either an :class:`AnalogSignal` object
         or another :class:`IrregularlySampledSignal` object.
@@ -369,7 +371,7 @@ class IrregularlySampledSignal(BaseSignal):
         # further interpolation methods could be added
         raise NotImplementedError
 
-    def resample_regularly(self, sample_count, **kwargs):
+    def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
         This function is a wrapper of scipy.signal.resample and accepts the same set of keyword arguments,
@@ -388,7 +390,7 @@ class IrregularlySampledSignal(BaseSignal):
             The original :class:`AnalogSignal` is not modified.
         """
 
-        if not SCIPY_AVAIL:
+        if not HAVE_SCIPY:
             raise ImportError('Resampling requires availability of scipy.signal')
 
         # Resampling is only permitted along the time axis (axis=0)
