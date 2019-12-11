@@ -89,9 +89,6 @@ class NWBIO(BaseIO):
         with our description 1 block = 1 segment
         """
 
-
-        assert not lazy, 'Do not support lazy'
-
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         self._file = io.read()
 
@@ -107,7 +104,6 @@ class NWBIO(BaseIO):
         """
         Load the first block in the file.
         """
-        assert not lazy, 'Do not support lazy'
         return self.read_all_blocks(lazy=lazy)[0]
 
 
@@ -115,42 +111,6 @@ class NWBIO(BaseIO):
         """
         Main method to load a block
         """
-        print("*** def read_all_blocks ***")
-
-#        blocks = []
-#        block = Block()
-###        blocks = [block()]
-
-
-        if Block in self.readable_objects: # Ok
-#        for Block in self.readable_objects:
-#            for block in blocks:   
-
-#            blocks.append(self.read_block())
-            self.read_block() # Ok
-
-#            print("END loop")
-#            print("   ")
-
-
-#            return [self.read_block(group=block, _file=_file)] # OK
-###            return blocks
-#        return [blocks]
-#        return [self.read_block()]
-
-###            return list(self.read_block())
-#        return ([self.read_block()]
-#                    for block in blocks
-#                    )
-
-
-######    def read_block(self, lazy=False, cascade=True, **kwargs): ### OK
-#    def read_block(self, _file, lazy=False, cascade=True, **kwargs):
-    def read_block(self, *blocks, lazy=False, cascade=True, **kwargs): 
-        """
-        Read the first block of the file
-        """
-        print("**** def read_block ****")
         self._lazy = lazy
 
         file_access_dates = _file.file_create_date
