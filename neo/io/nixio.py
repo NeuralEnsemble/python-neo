@@ -56,6 +56,7 @@ except NameError:
     string_types = str
 
 EMPTYANNOTATION = "EMPTYLIST"
+DATETIMEANNOTATION = "DATETIME"
 ARRAYANNOTATION = "ARRAYANNOTATION"
 MIN_NIX_VER = Version("1.5.0")
 
@@ -1162,7 +1163,8 @@ class NixIO(BaseIO):
                 section.create_property(name, v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
         elif isinstance(v, datetime):
-            section.create_property(name, calculate_timestamp(v))
+            prop = section.create_property(name, calculate_timestamp(v))
+            prop.definition = DATETIMEANNOTATION
         elif isinstance(v, string_types):
             if len(v):
                 section.create_property(name, v)
@@ -1201,8 +1203,7 @@ class NixIO(BaseIO):
                     values.append(item)
             section.create_property(name, values)
             section.props[name].unit = unit
-            if definition:
-                section.props[name].definition = definition
+            section.props[name].definition = definition
         elif type(v).__module__ == "numpy":
             section.create_property(name, v.item())
         else:
@@ -1242,6 +1243,8 @@ class NixIO(BaseIO):
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
                         neo_attrs['array_annotations'] = {prop.name: values}
+                elif prop.definition == DATETIMEANNOTATION:
+                    values = datetime.fromtimestamp(values)
                 else:
                     neo_attrs[prop.name] = values
         # since the 'neo_name' NIX property becomes the actual object's name,
