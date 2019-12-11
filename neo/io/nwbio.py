@@ -78,43 +78,65 @@ class NWBIO(BaseIO):
         """
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
-   
-#    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
-    def read_all_blocks(self, lazy=False, **kwargs):        
-###    def read_all_blocks(self, *blocks, lazy=False, **kwargs):
+
+        """
+        if mode == "r":
+#            io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
+#            _file = io.read()
+            self.read_all_blocks()
+        if mode == "w":
+            print("OK for write part")
+#            blocks=[]
+#            self.write_all_blocks(blocks)
+#        else:
+#            raise ValueError("Invalid mode specified")
+        """
+
+
+    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
+#    def read_all_blocks(self, lazy=False, **kwargs):  
+
         """
         Read all blocks from the file
         """
-
         print("*** def read_all_blocks ***")
 
-        if Block in self.readable_objects:
-            print("Block = ", Block)
-#            print("block = ", block)
-            print("   ")
-#            for block in blocks:
+#        blocks = []
+#        block = Block()
+###        blocks = [block()]
 
-#            print("*-* block.name = ", block.name)
-#            print("block = ", block) 
-###            self.read_block(block)
-            self.read_block()
-#            print("blocks = ", blocks)
-        return [self.read_block()]
-###        return list(self.read_block())
-        print("-------------------------")
 
-#        return list(self.read_block(block)
-#                for block in blocks
-#                )
+        if Block in self.readable_objects: # Ok
+#        for Block in self.readable_objects:
+#            for block in blocks:   
 
-    def read_block(self, lazy=False, cascade=True, **kwargs): ### OK
-#    def read_block(self, *blocks, lazy=False, cascade=True, **kwargs):
+#            blocks.append(self.read_block())
+            self.read_block() # Ok
+
+#            print("END loop")
+#            print("   ")
+
+
+#            return [self.read_block(group=block, _file=_file)] # OK
+###            return blocks
+#        return [blocks]
+#        return [self.read_block()]
+
+###            return list(self.read_block())
+#        return ([self.read_block()]
+#                    for block in blocks
+#                    )
+
+
+######    def read_block(self, lazy=False, cascade=True, **kwargs): ### OK
+#    def read_block(self, _file, lazy=False, cascade=True, **kwargs):
+    def read_block(self, *blocks, lazy=False, cascade=True, **kwargs): 
         """
-        Read a Block from the file
+        Read the first block of the file
         """
-
         print("**** def read_block ****")
-        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO   
+
+        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         _file = io.read()
         self._lazy = lazy
 
@@ -125,7 +147,7 @@ class NWBIO(BaseIO):
         description = _file.session_description
         if description == "no description":
             description = None
- 
+
         block = Block(name=identifier,
                       description=description,
                       file_origin=self.filename,
@@ -133,6 +155,7 @@ class NWBIO(BaseIO):
                       rec_datetime=_file.session_start_time,
                       file_access_dates=file_access_dates,
                       file_read_log='')
+
 
         if cascade:
             self._handle_general_group(block)
@@ -143,11 +166,14 @@ class NWBIO(BaseIO):
             self._handle_analysis_group(block)
         self._lazy = False
 
-        print("--- block in read_block() = ", block)
-        print("*-* block.name = ", block.name)
-        print("END def read_block")
-        print("   ")
         return block
+
+
+#        print("--- block in read_block() = ", block)
+#        print("*-* block.name = ", block.name)
+#        print("END def read_block")
+#        return block
+
 
 
     def write_all_blocks(self, blocks):
@@ -167,7 +193,8 @@ class NWBIO(BaseIO):
         print("END DEF WRITE_ALL_BLOCKS")
 
 
-    def write_block(self, block, **kwargs):
+#    def write_block(self, block, **kwargs):
+    def write_block(self, block=None, **kwargs):        
         """
         Write a Block to the file
         """
@@ -241,8 +268,9 @@ class NWBIO(BaseIO):
     def _handle_general_group(self, block):
         pass
 
-    def _handle_epochs_group(self, _file, block):
+    def _handle_epochs_group(self, _file, block): # Ok
         # Note that an NWB Epoch corresponds to a Neo Segment, not to a Neo Epoch.
+        print("--- def _handle_epochs_group ---")
         epochs = _file.epochs
         timeseries=[]
         if epochs is not None:
@@ -266,6 +294,7 @@ class NWBIO(BaseIO):
         block.segments.append(segment)
 
     def _handle_timeseries(self, _file, name, timeseries):
+        print("--- def _handle_timeseries ---")
         for i in _file.acquisition:
             data_group = _file.get_acquisition(i).data*_file.get_acquisition(i).conversion
             dtype = data_group.dtype
@@ -320,9 +349,11 @@ class NWBIO(BaseIO):
             return obj
 
     def _handle_acquisition_group(self, lazy, _file, block):
+        print("--- def _handle_acquisition_group ---")
         acq = _file.acquisition
 
     def _handle_stimulus_group(self, lazy, _file, block):
+        print("--- def _handle_stimulus_group ---")
         sti = _file.stimulus
         for name in sti:
             segment_name_sti = _file.epochs
@@ -451,6 +482,7 @@ class NWBIO(BaseIO):
         print("END def _write_signal")
 
     def _write_spiketrains(self, nwbfile, spiketrains, segment):
+        print("--- def _write_spiketrains ---")
         """
         mod = NWBGroupSpec('A custom TimeSeries interface',
                             attributes=[],
@@ -481,6 +513,7 @@ class NWBIO(BaseIO):
                                   )
 
     def _write_event(self, nwbfile, event, nwb_epoch, i):
+        print("--- def _write_event ---")
         event_name = event.name or "event{0}".format(i)
         ts_name = "{0}".format(event_name)
 
@@ -518,6 +551,7 @@ class NWBIO(BaseIO):
                           )
 
     def _write_neo_epoch(self, nwbfile, neo_epoch, nwb_epoch, i):
+        print("--- _write_neo_epoch ---")
         neo_epoch_name = neo_epoch.name or "intervalseries{0}".format(i)
         ts_name = "{0}".format(neo_epoch_name)        
 
