@@ -58,18 +58,21 @@ class NWBIO(BaseIO):
     Class for "reading" experimental data from a .nwb file, and "writing" a .nwb file
     """
 
-    is_readable = True
-    is_writable = True
-    is_streameable = False
     supported_objects = [Block, Segment, AnalogSignal, IrregularlySampledSignal,
-                         SpikeTrain, Epoch, Event]
+                         SpikeTrain, Epoch, Event] # maybe to remove at the end : already declared in neo.core.objectlist
     readable_objects  = supported_objects
     writeable_objects = supported_objects
+
     has_header = False
-    name = 'NWB'
+
+    name = 'NeoNWB IO'
     description = 'This IO reads/writes experimental data from/to an .nwb dataset'
     extensions = ['nwb']
-    mode = 'file'
+    mode = 'one-file'
+
+    is_readable = True
+    is_writable = True
+    is_streameable = False    
 
     def __init__(self, filename, mode):
         """
@@ -78,26 +81,39 @@ class NWBIO(BaseIO):
         """
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
-
+   
+    def read_all_blocks(self, lazy=False, **kwargs):        
         """
-        if mode == "r":
-#            io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
-#            _file = io.read()
-            self.read_all_blocks()
-        if mode == "w":
-            print("OK for write part")
-#            blocks=[]
-#            self.write_all_blocks(blocks)
-#        else:
-#            raise ValueError("Invalid mode specified")
+        Loads all blocks in the file that are attached to the root.
+        Here, we assume that a neo block is a sub-part of a branch, into a NWB file; 
+        with our description 1 block = 1 segment
         """
 
 
-    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
-#    def read_all_blocks(self, lazy=False, **kwargs):  
+        assert not lazy, 'Do not support lazy'
 
+        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
+        self._file = io.read()
+
+        # here, we assume that a neo block is a sub-part of a branck, into a NWB file; 
+        # with our description 1 block = 1 segment 
+        blocks = []
+        for node in self._file.acquisition:
+            blocks.append(self._read_block(self._file, node))
+        return blocks
+
+    
+    def read_block(self, lazy=False, **kargs):
         """
-        Read all blocks from the file
+        Load the first block in the file.
+        """
+        assert not lazy, 'Do not support lazy'
+        return self.read_all_blocks(lazy=lazy)[0]
+
+
+    def _read_block(self, _file, node, lazy=False, cascade=True, **kwargs): ### OK
+        """
+        Main method to load a block
         """
         print("*** def read_all_blocks ***")
 
@@ -135,9 +151,6 @@ class NWBIO(BaseIO):
         Read the first block of the file
         """
         print("**** def read_block ****")
-
-        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
-        _file = io.read()
         self._lazy = lazy
 
         file_access_dates = _file.file_create_date

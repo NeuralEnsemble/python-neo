@@ -213,3 +213,4 @@ class ChannelIndex(Container):
         # we do not copy the list of units, since these are related to
         # the entire set of channels in the parent ChannelIndex
         return obj
+    
