@@ -82,43 +82,42 @@ class NWBIO(BaseIO):
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
    
-#    def read_all_blocks(self, blocks, lazy=False, **kwargs): ### OK
     def read_all_blocks(self, lazy=False, **kwargs):        
-###    def read_all_blocks(self, *blocks, lazy=False, **kwargs):
         """
-        Read all blocks from the file
+        Loads all blocks in the file that are attached to the root.
+        Here, we assume that a neo block is a sub-part of a branch, into a NWB file; 
+        with our description 1 block = 1 segment
         """
 
         print("*** def read_all_blocks ***")
 
-        if Block in self.readable_objects:
-            print("Block = ", Block)
-#            print("block = ", block)
-            print("   ")
-#            for block in blocks:
+        assert not lazy, 'Do not support lazy'
 
-#            print("*-* block.name = ", block.name)
-#            print("block = ", block) 
-###            self.read_block(block)
-            self.read_block()
-#            print("blocks = ", blocks)
-        return [self.read_block()]
-###        return list(self.read_block())
-        print("-------------------------")
+        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
+        self._file = io.read()
 
-#        return list(self.read_block(block)
-#                for block in blocks
-#                )
+        # here, we assume that a neo block is a sub-part of a branck, into a NWB file; 
+        # with our description 1 block = 1 segment 
+        blocks = []
+        for node in self._file.acquisition:
+            blocks.append(self._read_block(self._file, node))
+        return blocks
 
-    def read_block(self, lazy=False, cascade=True, **kwargs): ### OK
-#    def read_block(self, *blocks, lazy=False, cascade=True, **kwargs):
+    
+    def read_block(self, lazy=False, **kargs):
         """
-        Read a Block from the file
+        Load the first block in the file.
+        """
+        assert not lazy, 'Do not support lazy'
+        return self.read_all_blocks(lazy=lazy)[0]
+
+
+    def _read_block(self, _file, node, lazy=False, cascade=True, **kwargs): ### OK
+        """
+        Main method to load a block
         """
 
         print("**** def read_block ****")
-        io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO   
-        _file = io.read()
         self._lazy = lazy
 
         file_access_dates = _file.file_create_date
