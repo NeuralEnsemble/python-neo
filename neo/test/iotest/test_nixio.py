@@ -29,7 +29,8 @@ import quantities as pq
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
+from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
+                          dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
 from neo.io.nixio_fr import NixIO as NixIO_lazy
 from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
@@ -319,9 +320,10 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(neoobj.rec_datetime,
                              datetime.fromtimestamp(nixobj.created_at))
         if hasattr(neoobj, "file_datetime") and neoobj.file_datetime:
-            self.assertEqual(neoobj.file_datetime,
-                             datetime.fromtimestamp(
-                                 nixobj.metadata["file_datetime"]))
+            nixdt = dt_from_nix(nixobj.metadata["file_datetime"],
+                                DATETIMEANNOTATION)
+            assert neoobj.file_datetime == nixdt
+            self.assertEqual(neoobj.file_datetime, nixdt)
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
@@ -1317,7 +1319,7 @@ class NixIOWriteTest(NixIOTest):
         # datetime
         dt = self.rdate()
         writeprop(section, "dt", dt)
-        self.assertEqual(datetime.fromtimestamp(section["dt"]), dt)
+        self.assertEqual(section["dt"], dt_to_nix(dt)[0])
 
         # string
         randstr = self.rsentence()
@@ -1454,7 +1456,6 @@ class NixIOWriteTest(NixIOTest):
             "sometime": time(13, 37, 42),
             "somequantity": self.rquant(10, pq.ms),
             "somestring": self.rsentence(3),
-            "somebytes": bytes(self.rsentence(4), "utf8"),
             "npfloat": np.float(10),
             "nparray": np.array([1, 2, 400]),
             "emptystr": "",

@@ -22,8 +22,7 @@ Neo: https://github.com/G-Node/python-neo/wiki
 
 from __future__ import absolute_import
 
-import time
-from datetime import datetime
+from datetime import date, time, datetime
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -55,9 +54,13 @@ try:
 except NameError:
     string_types = str
 
+datetime_types = (date, time, datetime)
+
 EMPTYANNOTATION = "EMPTYLIST"
-DATETIMEANNOTATION = "DATETIME"
 ARRAYANNOTATION = "ARRAYANNOTATION"
+DATETIMEANNOTATION = "DATETIME"
+DATEANNOTATION = "DATE"
+TIMEANNOTATION = "TIME"
 MIN_NIX_VER = Version("1.5.0")
 
 
@@ -84,10 +87,37 @@ def units_to_string(pqunit):
     return dim
 
 
-def calculate_timestamp(dt):
+def dt_to_nix(dt):
+    """
+    Converts date, time, and datetime objects to an ISO string representation
+    appropriate for storing in NIX. Returns the converted value and the
+    annotation type definition for converting back to the original value
+    type.
+    """
     if isinstance(dt, datetime):
-        return int(time.mktime(dt.timetuple()))
-    return int(dt)
+        return dt.isoformat(), DATETIMEANNOTATION
+    if isinstance(dt, date):
+        return dt.isoformat(), DATEANNOTATION
+    if isinstance(dt, time):
+        return dt.isoformat(), TIMEANNOTATION
+    # Unknown: returning as is
+    return dt
+
+
+def dt_from_nix(nixdt, annotype):
+    """
+    Inverse function of 'dt_to_nix()'. Requires the stored annotation type to
+    distinguish between the three source types (date, time, and datetime).
+    """
+    if annotype == DATEANNOTATION:
+        return date.fromisoformat(nixdt)
+    if annotype == TIMEANNOTATION:
+        return time.fromisoformat(nixdt)
+    if annotype == DATETIMEANNOTATION:
+        return datetime.fromisoformat(nixdt)
+    # Unknown type: older (or newer) IO version?
+    # Returning as is to avoid data loss.
+    return nixdt
 
 
 def check_nix_version():
@@ -308,7 +338,6 @@ class NixIO(BaseIO):
         neo_segment.rec_datetime = datetime.fromtimestamp(
             nix_group.created_at
         )
-
         self._neo_map[nix_group.name] = neo_segment
 
         # this will probably get all the DAs anyway, but if we change any part
@@ -583,12 +612,12 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixblock.definition = block.description
         if block.rec_datetime:
-            nixblock.force_created_at(
-                calculate_timestamp(block.rec_datetime)
-            )
+            nix_rec_dt = int(block.rec_datetime.timestamp())
+            nixblock.force_created_at(nix_rec_dt)
         if block.file_datetime:
-            fdt = calculate_timestamp(block.file_datetime)
-            metadata["file_datetime"] = fdt
+            fdt, annotype = dt_to_nix(block.file_datetime)
+            fdtprop = metadata.create_property("file_datetime", fdt)
+            fdtprop.definition = annotype
         if block.annotations:
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
@@ -684,12 +713,12 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixgroup.definition = segment.description
         if segment.rec_datetime:
-            nixgroup.force_created_at(
-                calculate_timestamp(segment.rec_datetime)
-            )
+            nix_rec_dt = int(segment.rec_datetime.timestamp())
+            nixgroup.force_created_at(nix_rec_dt)
         if segment.file_datetime:
-            fdt = calculate_timestamp(segment.file_datetime)
-            metadata["file_datetime"] = fdt
+            fdt, annotype = dt_to_nix(segment.file_datetime)
+            fdtprop = metadata.create_property("file_datetime", fdt)
+            fdtprop.definition = annotype
         if segment.annotations:
             for k, v in segment.annotations.items():
                 self._write_property(metadata, k, v)
@@ -1162,9 +1191,10 @@ class NixIO(BaseIO):
             else:
                 section.create_property(name, v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
-        elif isinstance(v, datetime):
-            prop = section.create_property(name, calculate_timestamp(v))
-            prop.definition = DATETIMEANNOTATION
+        elif isinstance(v, datetime_types):
+            value, annotype = dt_to_nix(v)
+            prop = section.create_property(name, value)
+            prop.definition = annotype
         elif isinstance(v, string_types):
             if len(v):
                 section.create_property(name, v)
@@ -1238,23 +1268,20 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                if prop.definition in (DATEANNOTATION, TIMEANNOTATION,
+                                       DATETIMEANNOTATION):
+                    values = dt_from_nix(values, prop.definition)
                 if prop.definition == ARRAYANNOTATION:
                     if 'array_annotations' in neo_attrs:
                         neo_attrs['array_annotations'][prop.name] = values
                     else:
                         neo_attrs['array_annotations'] = {prop.name: values}
-                elif prop.definition == DATETIMEANNOTATION:
-                    values = datetime.fromtimestamp(values)
                 else:
                     neo_attrs[prop.name] = values
         # since the 'neo_name' NIX property becomes the actual object's name,
         # there's no reason to keep it in the annotations
         neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
 
-        if "file_datetime" in neo_attrs:
-            neo_attrs["file_datetime"] = datetime.fromtimestamp(
-                neo_attrs["file_datetime"]
-            )
         return neo_attrs
 
     @staticmethod
@@ -1286,9 +1313,7 @@ class NixIO(BaseIO):
         return None
 
     def _use_obj_names(self, blocks):
-
         errmsg = "use_obj_names enabled: found conflict or anonymous object"
-
         allobjs = []
 
         def check_unique(objs):
