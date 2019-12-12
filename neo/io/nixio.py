@@ -63,6 +63,10 @@ DATEANNOTATION = "DATE"
 TIMEANNOTATION = "TIME"
 MIN_NIX_VER = Version("1.5.0")
 
+datefmt = "%Y-%m-%d"
+timefmt = "%H:%M:%S.%f"
+datetimefmt = datefmt + "T" + timefmt
+
 
 def stringify(value):
     if value is None:
@@ -95,11 +99,11 @@ def dt_to_nix(dt):
     type.
     """
     if isinstance(dt, datetime):
-        return dt.isoformat(), DATETIMEANNOTATION
+        return dt.strftime(datetimefmt), DATETIMEANNOTATION
     if isinstance(dt, date):
-        return dt.isoformat(), DATEANNOTATION
+        return dt.strftime(datefmt), DATEANNOTATION
     if isinstance(dt, time):
-        return dt.isoformat(), TIMEANNOTATION
+        return dt.strftime(timefmt), TIMEANNOTATION
     # Unknown: returning as is
     return dt
 
@@ -110,11 +114,14 @@ def dt_from_nix(nixdt, annotype):
     distinguish between the three source types (date, time, and datetime).
     """
     if annotype == DATEANNOTATION:
-        return date.fromisoformat(nixdt)
+        dt = datetime.strptime(nixdt, datefmt)
+        return dt.date()
     if annotype == TIMEANNOTATION:
-        return time.fromisoformat(nixdt)
+        dt = datetime.strptime(nixdt, timefmt)
+        return dt.time()
     if annotype == DATETIMEANNOTATION:
-        return datetime.fromisoformat(nixdt)
+        dt = datetime.strptime(nixdt, datetimefmt)
+        return dt
     # Unknown type: older (or newer) IO version?
     # Returning as is to avoid data loss.
     return nixdt
@@ -612,7 +619,7 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixblock.definition = block.description
         if block.rec_datetime:
-            nix_rec_dt = int(block.rec_datetime.timestamp())
+            nix_rec_dt = int(block.rec_datetime.strftime("%s"))
             nixblock.force_created_at(nix_rec_dt)
         if block.file_datetime:
             fdt, annotype = dt_to_nix(block.file_datetime)
@@ -713,7 +720,7 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixgroup.definition = segment.description
         if segment.rec_datetime:
-            nix_rec_dt = int(segment.rec_datetime.timestamp())
+            nix_rec_dt = int(segment.rec_datetime.strftime("%s"))
             nixgroup.force_created_at(nix_rec_dt)
         if segment.file_datetime:
             fdt, annotype = dt_to_nix(segment.file_datetime)
