@@ -17,7 +17,7 @@ try:
     from collections.abc import Iterable
 except ImportError:
     from collections import Iterable
-from datetime import datetime
+from datetime import date, time, datetime
 
 from tempfile import mkdtemp
 
@@ -29,7 +29,8 @@ import quantities as pq
 from neo.core import (Block, Segment, ChannelIndex, AnalogSignal,
                       IrregularlySampledSignal, Unit, SpikeTrain, Event, Epoch)
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.io.nixio import NixIO, create_quantity, units_to_string, neover
+from neo.io.nixio import (NixIO, create_quantity, units_to_string, neover,
+                          dt_from_nix, dt_to_nix, DATETIMEANNOTATION)
 from neo.io.nixio_fr import NixIO as NixIO_lazy
 from neo.io.proxyobjects import AnalogSignalProxy, SpikeTrainProxy, EventProxy, EpochProxy
 
@@ -319,9 +320,10 @@ class NixIOTest(unittest.TestCase):
             self.assertEqual(neoobj.rec_datetime,
                              datetime.fromtimestamp(nixobj.created_at))
         if hasattr(neoobj, "file_datetime") and neoobj.file_datetime:
-            self.assertEqual(neoobj.file_datetime,
-                             datetime.fromtimestamp(
-                                 nixobj.metadata["file_datetime"]))
+            nixdt = dt_from_nix(nixobj.metadata["file_datetime"],
+                                DATETIMEANNOTATION)
+            assert neoobj.file_datetime == nixdt
+            self.assertEqual(neoobj.file_datetime, nixdt)
         if neoobj.annotations:
             nixmd = nixobj.metadata
             for k, v, in neoobj.annotations.items():
@@ -1317,7 +1319,7 @@ class NixIOWriteTest(NixIOTest):
         # datetime
         dt = self.rdate()
         writeprop(section, "dt", dt)
-        self.assertEqual(datetime.fromtimestamp(section["dt"]), dt)
+        self.assertEqual(section["dt"], dt_to_nix(dt)[0])
 
         # string
         randstr = self.rsentence()
@@ -1445,6 +1447,29 @@ class NixIOWriteTest(NixIOTest):
             block_lazy = io.read_block(lazy=True)
 
             self.write_and_compare([block_lazy])
+
+    def test_annotation_types(self):
+        annotations = {
+            "somedate": self.rdate(),
+            "now": datetime.now(),
+            "today": date.today(),
+            "sometime": time(13, 37, 42),
+            "somequantity": self.rquant(10, pq.ms),
+            "somestring": self.rsentence(3),
+            "npfloat": np.float(10),
+            "nparray": np.array([1, 2, 400]),
+            "emptystr": "",
+        }
+        wblock = Block("annotation_block", **annotations)
+        self.writer.write_block(wblock)
+        rblock = self.writer.read_block(neoname="annotation_block")
+        for k in annotations:
+            orig = annotations[k]
+            readval = rblock.annotations[k]
+            if isinstance(orig, np.ndarray):
+                np.testing.assert_almost_equal(orig, readval)
+            else:
+                self.assertEqual(annotations[k], rblock.annotations[k])
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
