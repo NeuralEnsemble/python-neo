@@ -359,9 +359,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test_mean_interpolation_NotImplementedError(self):
         self.assertRaises(NotImplementedError, self.signal1.mean, True)
 
-    def test_resample_irregularly_NotImplementedError(self):
-        self.assertRaises(NotImplementedError, self.signal1.resample_irregularly, True)
-
     def test__rescale_same(self):
         result = self.signal1.copy()
         result = result.rescale(pq.mV)

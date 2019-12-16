@@ -355,33 +355,18 @@ class IrregularlySampledSignal(BaseSignal):
         else:
             raise NotImplementedError
 
-    def resample_irregularly(self, at=None, interpolation=None):
-        '''
-        Resample the signal, returning either an :class:`AnalogSignal` object
-        or another :class:`IrregularlySampledSignal` object.
-
-        Arguments:
-            :at: either a :class:`Quantity` array containing the times at
-                 which samples should be created (times must be within the
-                 signal duration, there is no extrapolation), a sampling rate
-                 with dimensions (1/Time) or a sampling interval
-                 with dimensions (Time).
-            :interpolation: one of: None, 'linear'
-        '''
-        # further interpolation methods could be added
-        raise NotImplementedError
-
     def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
-        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword arguments,
-        except for specifying the axis of resampling which is fixed to the first axis here, and the sample positions. .
+        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
 
         Parameters:
         -----------
         sample_count: integer
-            Number of desired samples. The resulting signal starts at the same sample as the original and is sampled
-            regularly.
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
 
         Returns:
         --------
@@ -399,13 +384,16 @@ class IrregularlySampledSignal(BaseSignal):
         if 't' in kwargs:
             kwargs.pop('t')
 
-        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count, t=self.times.magnitude,
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times.magnitude,
                                                                 axis=0, **kwargs)
 
-        new_sampling_rate = (sample_count - 1) / ((resampled_times[-1] - resampled_times[0]) * self.times.units)
-        resampled_signal = AnalogSignal(resampled_data, units=self.units, dtype=self.dtype, t_start=self.t_start,
+        new_sampling_rate = (sample_count - 1) / self.duration
+        resampled_signal = AnalogSignal(resampled_data, units=self.units, dtype=self.dtype,
+                                        t_start=self.t_start,
                                         sampling_rate=new_sampling_rate,
-                                        array_annotations=self.array_annotations.copy(), **self.annotations.copy())
+                                        array_annotations=self.array_annotations.copy(),
+                                        **self.annotations.copy())
 
         # since the number of channels stays the same, we can also copy array annotations here
         resampled_signal.array_annotations = self.array_annotations.copy()

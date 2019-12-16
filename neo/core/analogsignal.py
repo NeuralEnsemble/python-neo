@@ -550,14 +550,14 @@ class AnalogSignal(BaseSignal):
     def downsample(self, downsampling_factor, **kwargs):
         """
         Downsample the data of a signal.
-        This function is a wrapper of scipy.signal.decimate and accepts the same set of keyword arguments,
-        except for specifying the axis of resampling, which is fixed to the first axis here.
+        This function is a wrapper of scipy.signal.decimate and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling, which is fixed to the first axis here.
 
         Parameters:
         -----------
         downsampling_factor: integer
-            Factor used for decimation of samples. Scipy recommends to call decimate multiple times for downsampling
-            factors higher than 13 when using IIR downsampling (default).
+            Factor used for decimation of samples. Scipy recommends to call decimate multiple times
+            for downsampling factors higher than 13 when using IIR downsampling (default).
 
         Returns:
         --------
@@ -573,7 +573,8 @@ class AnalogSignal(BaseSignal):
         if 'axis' in kwargs:
             kwargs.pop('axis')
 
-        downsampled_data = scipy.signal.decimate(self.magnitude, downsampling_factor, axis=0, **kwargs)
+        downsampled_data = scipy.signal.decimate(self.magnitude, downsampling_factor, axis=0,
+                                                 **kwargs)
         downsampled_signal = self.duplicate_with_new_data(downsampled_data)
 
         # since the number of channels stays the same, we can also copy array annotations here
@@ -585,14 +586,15 @@ class AnalogSignal(BaseSignal):
     def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
-        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword arguments,
-        except for specifying the axis of resampling which is fixed to the first axis here, and the sample positions. .
+        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
 
         Parameters:
         -----------
         sample_count: integer
-            Number of desired samples. The resulting signal starts at the same sample as the original and is sampled
-            regularly.
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
 
         Returns:
         --------
@@ -610,8 +612,8 @@ class AnalogSignal(BaseSignal):
         if 't' in kwargs:
             kwargs.pop('t')
 
-        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count, t=self.times, axis=0,
-                                                                **kwargs)
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times, axis=0, **kwargs)
 
         resampled_signal = self.duplicate_with_new_data(resampled_data)
         resampled_signal.sampling_rate = (sample_count / self.shape[0]) * self.sampling_rate
