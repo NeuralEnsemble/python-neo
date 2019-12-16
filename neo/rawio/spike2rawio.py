@@ -375,8 +375,8 @@ class Spike2RawIO(BaseRawIO):
             data_blocks = self._by_seg_data_blocks[chan_id][seg_index]
 
             # loop over data blocks and get chunks
-            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='left')
-            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='left')
+            bl0 = np.searchsorted(data_blocks['cumsum'], i_start, side='right') - 1
+            bl1 = np.searchsorted(data_blocks['cumsum'], i_stop, side='right')
             ind = 0
             for bl in range(bl0, bl1):
                 ind0 = data_blocks[bl]['pos']
