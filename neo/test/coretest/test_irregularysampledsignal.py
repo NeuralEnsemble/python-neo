@@ -718,8 +718,9 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
     def test_resample(self):
         factors = [1, 2, 10]
         for factor in factors:
-            result = self.signal1.resample(self.signal1.shape[0]*factor)
-            np.testing.assert_allclose(self.signal1.magnitude, result.magnitude[::factor], rtol=1e-7, atol=0)
+            result = self.signal1.resample(self.signal1.shape[0] * factor)
+            np.testing.assert_allclose(self.signal1.magnitude, result.magnitude[::factor],
+                                       rtol=1e-7, atol=0)
 
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
