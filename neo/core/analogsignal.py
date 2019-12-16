@@ -551,7 +551,8 @@ class AnalogSignal(BaseSignal):
         """
         Downsample the data of a signal.
         This function is a wrapper of scipy.signal.decimate and accepts the same set of keyword
-        arguments, except for specifying the axis of resampling, which is fixed to the first axis here.
+        arguments, except for specifying the axis of resampling, which is fixed to the first axis
+        here.
 
         Parameters:
         -----------
