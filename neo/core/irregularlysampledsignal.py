@@ -358,6 +358,8 @@ class IrregularlySampledSignal(BaseSignal):
     def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
         This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
         arguments, except for specifying the axis of resampling which is fixed to the first axis
         here, and the sample positions. .

@@ -550,7 +550,9 @@ class AnalogSignal(BaseSignal):
     def downsample(self, downsampling_factor, **kwargs):
         """
         Downsample the data of a signal.
-        This function is a wrapper of scipy.signal.decimate and accepts the same set of keyword
+        This method reduces the number of samples of the AnalogSignal to a fraction of the
+        original number of samples, defined by `downsampling_factor`.
+        This method is a wrapper of scipy.signal.decimate and accepts the same set of keyword
         arguments, except for specifying the axis of resampling, which is fixed to the first axis
         here.
 
@@ -565,6 +567,10 @@ class AnalogSignal(BaseSignal):
         downsampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the resampled data points.
             The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For resampling the signal with a fixed number of samples, see `resample` method.
         """
 
         if not HAVE_SCIPY:
@@ -587,7 +593,9 @@ class AnalogSignal(BaseSignal):
     def resample(self, sample_count, **kwargs):
         """
         Resample the data points of the signal.
-        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
+        This method is a wrapper of scipy.signal.resample and accepts the same set of keyword
         arguments, except for specifying the axis of resampling which is fixed to the first axis
         here, and the sample positions. .
 
@@ -602,6 +610,10 @@ class AnalogSignal(BaseSignal):
         resampled_signal: :class:`AnalogSignal`
             New instance of a :class:`AnalogSignal` object containing the resampled data points.
             The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For reducing the number of samples to a fraction of the original, see `downsample` method
         """
 
         if not HAVE_SCIPY:
