@@ -24,11 +24,20 @@ the old object.
 from __future__ import absolute_import, division, print_function
 
 from copy import deepcopy, copy
+
+try:
+    import scipy.signal
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 import numpy as np
 import quantities as pq
 
 from neo.core.baseneo import BaseNeo, MergeError, merge_annotations
 from neo.core.basesignal import BaseSignal
+from neo.core.analogsignal import AnalogSignal
 from neo.core.channelindex import ChannelIndex
 from neo.core.dataobject import DataObject
 
@@ -346,21 +355,51 @@ class IrregularlySampledSignal(BaseSignal):
         else:
             raise NotImplementedError
 
-    def resample(self, at=None, interpolation=None):
-        '''
-        Resample the signal, returning either an :class:`AnalogSignal` object
-        or another :class:`IrregularlySampledSignal` object.
+    def resample(self, sample_count, **kwargs):
+        """
+        Resample the data points of the signal.
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
+        This function is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
 
-        Arguments:
-            :at: either a :class:`Quantity` array containing the times at
-                 which samples should be created (times must be within the
-                 signal duration, there is no extrapolation), a sampling rate
-                 with dimensions (1/Time) or a sampling interval
-                 with dimensions (Time).
-            :interpolation: one of: None, 'linear'
-        '''
-        # further interpolation methods could be added
-        raise NotImplementedError
+        Parameters:
+        -----------
+        sample_count: integer
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Resampling requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+        if 't' in kwargs:
+            kwargs.pop('t')
+
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times.magnitude,
+                                                                axis=0, **kwargs)
+
+        new_sampling_rate = (sample_count - 1) / self.duration
+        resampled_signal = AnalogSignal(resampled_data, units=self.units, dtype=self.dtype,
+                                        t_start=self.t_start,
+                                        sampling_rate=new_sampling_rate,
+                                        array_annotations=self.array_annotations.copy(),
+                                        **self.annotations.copy())
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        resampled_signal.array_annotations = self.array_annotations.copy()
+        return resampled_signal
 
     def time_slice(self, t_start, t_stop):
         '''

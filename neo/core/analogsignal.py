@@ -23,6 +23,13 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
+try:
+    import scipy.signal
+except ImportError as err:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 import numpy as np
 import quantities as pq
 
@@ -539,3 +546,92 @@ class AnalogSignal(BaseSignal):
         else:
             self[i:j, :] = signal
             return self
+
+    def downsample(self, downsampling_factor, **kwargs):
+        """
+        Downsample the data of a signal.
+        This method reduces the number of samples of the AnalogSignal to a fraction of the
+        original number of samples, defined by `downsampling_factor`.
+        This method is a wrapper of scipy.signal.decimate and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling, which is fixed to the first axis
+        here.
+
+        Parameters:
+        -----------
+        downsampling_factor: integer
+            Factor used for decimation of samples. Scipy recommends to call decimate multiple times
+            for downsampling factors higher than 13 when using IIR downsampling (default).
+
+        Returns:
+        --------
+        downsampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For resampling the signal with a fixed number of samples, see `resample` method.
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Decimating requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+
+        downsampled_data = scipy.signal.decimate(self.magnitude, downsampling_factor, axis=0,
+                                                 **kwargs)
+        downsampled_signal = self.duplicate_with_new_data(downsampled_data)
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        downsampled_signal.array_annotations = self.array_annotations.copy()
+        downsampled_signal.sampling_rate = self.sampling_rate / downsampling_factor
+
+        return downsampled_signal
+
+    def resample(self, sample_count, **kwargs):
+        """
+        Resample the data points of the signal.
+        This method interpolates the signal and returns a new signal with a fixed number of
+        samples defined by `sample_count`.
+        This method is a wrapper of scipy.signal.resample and accepts the same set of keyword
+        arguments, except for specifying the axis of resampling which is fixed to the first axis
+        here, and the sample positions. .
+
+        Parameters:
+        -----------
+        sample_count: integer
+            Number of desired samples. The resulting signal starts at the same sample as the
+            original and is sampled regularly.
+
+        Returns:
+        --------
+        resampled_signal: :class:`AnalogSignal`
+            New instance of a :class:`AnalogSignal` object containing the resampled data points.
+            The original :class:`AnalogSignal` is not modified.
+
+        Note:
+        -----
+        For reducing the number of samples to a fraction of the original, see `downsample` method
+        """
+
+        if not HAVE_SCIPY:
+            raise ImportError('Resampling requires availability of scipy.signal')
+
+        # Resampling is only permitted along the time axis (axis=0)
+        if 'axis' in kwargs:
+            kwargs.pop('axis')
+        if 't' in kwargs:
+            kwargs.pop('t')
+
+        resampled_data, resampled_times = scipy.signal.resample(self.magnitude, sample_count,
+                                                                t=self.times, axis=0, **kwargs)
+
+        resampled_signal = self.duplicate_with_new_data(resampled_data)
+        resampled_signal.sampling_rate = (sample_count / self.shape[0]) * self.sampling_rate
+
+        # since the number of channels stays the same, we can also copy array annotations here
+        resampled_signal.array_annotations = self.array_annotations.copy()
+
+        return resampled_signal

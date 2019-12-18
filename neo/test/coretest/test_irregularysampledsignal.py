@@ -23,6 +23,13 @@ except ImportError as err:
 else:
     HAVE_IPYTHON = True
 
+try:
+    import scipy
+except ImportError:
+    HAVE_SCIPY = False
+else:
+    HAVE_SCIPY = True
+
 from neo.core.irregularlysampledsignal import IrregularlySampledSignal
 from neo.core import Segment, ChannelIndex
 from neo.core.baseneo import MergeError
@@ -351,9 +358,6 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
 
     def test_mean_interpolation_NotImplementedError(self):
         self.assertRaises(NotImplementedError, self.signal1.mean, True)
-
-    def test_resample_NotImplementedError(self):
-        self.assertRaises(NotImplementedError, self.signal1.resample, True)
 
     def test__rescale_same(self):
         result = self.signal1.copy()
@@ -709,6 +713,14 @@ class TestIrregularlySampledSignalArrayMethods(unittest.TestCase):
         result = self.signal1.copy()
         self.assertIs(result.segment, self.signal1.segment)
         self.assertIs(result.channel_index, self.signal1.channel_index)
+
+    @unittest.skipUnless(HAVE_SCIPY, "requires Scipy")
+    def test_resample(self):
+        factors = [1, 2, 10]
+        for factor in factors:
+            result = self.signal1.resample(self.signal1.shape[0] * factor)
+            np.testing.assert_allclose(self.signal1.magnitude, result.magnitude[::factor],
+                                       rtol=1e-7, atol=0)
 
 
 class TestIrregularlySampledSignalCombination(unittest.TestCase):
