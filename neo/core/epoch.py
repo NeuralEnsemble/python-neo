@@ -5,7 +5,6 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 '''
 
-import sys
 from copy import deepcopy, copy
 
 import numpy as np
@@ -13,8 +12,6 @@ import quantities as pq
 
 from neo.core.baseneo import BaseNeo, merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
-
-PY_VER = sys.version_info[0]
 
 
 def _new_epoch(cls, times=None, durations=None, labels=None, units=None, name=None,
@@ -165,11 +162,8 @@ class Epoch(DataObject):
         '''
         Returns a string representing the :class:`Epoch`.
         '''
-        # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
+        # need to convert labels to unicode or repr is messed up
+        labels = self.labels.astype('U')
 
         objs = ['%s@%s for %s' % (label, time, dur) for label, time, dur in
                 zip(labels, self.times, self.durations)]

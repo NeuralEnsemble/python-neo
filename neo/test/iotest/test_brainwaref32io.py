@@ -3,7 +3,6 @@ Tests of neo.io.brainwaref32io
 """
 
 import os.path
-import sys
 
 import unittest
 
@@ -16,8 +15,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
-
-PY_VER = sys.version_info[0]
 
 
 def proc_f32(filename):
@@ -109,8 +106,8 @@ class BrainwareF32IOTestCase(BaseTestIO, unittest.TestCase):
                      'random_500ms_12rep_noclust_part_ch2.f32',
                      'sequence_500ms_5rep_ch2.f32']
 
-    # add the appropriate suffix depending on the python version
-    suffix = '_f32_py%s.npz' % PY_VER
+    # add the appropriate suffix
+    suffix = '_f32_py3.npz'
     files_to_download = files_to_test[:]
 
     # add the reference files to the list of files to download

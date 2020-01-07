@@ -35,7 +35,6 @@ from datetime import datetime, timedelta
 from itertools import chain
 import logging
 import os.path
-import sys
 
 # numpy and quantities are already required by neo
 import numpy as np
@@ -49,8 +48,6 @@ from neo.core import (Block, Event,
 from neo.io.baseio import BaseIO
 
 LOGHANDLER = logging.StreamHandler()
-
-PY_VER = sys.version_info[0]
 
 
 class BrainwareSrcIO(BaseIO):
@@ -645,14 +642,10 @@ class BrainwareSrcIO(BaseIO):
     def __read_str(self, numchars=1, utf=None):
         """
         Read a string of a specific length.
-
-        This is compatible with python 2 and python 3.
         """
         rawstr = np.asscalar(np.fromfile(self._fsrc,
                                          dtype='S%s' % numchars, count=1))
-        if utf or (utf is None and PY_VER == 3):
-            return rawstr.decode('utf-8')
-        return rawstr
+        return rawstr.decode('utf-8')
 
     def __read_annotations(self):
         """

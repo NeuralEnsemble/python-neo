@@ -210,7 +210,7 @@ Coding standards and style
 --------------------------
 
 All code should conform as much as possible to `PEP 8`_, and should run with
-Python 2.7, and 3.5 or newer.
+Python 3.5 or newer.
 
 You can use the `pep8`_ program to check the code for PEP 8 conformity.
 You can also use `flake8`_, which combines pep8 and pyflakes.

@@ -1781,10 +1781,6 @@ class NeuralynxIO(BaseIO):
         text_header = codecs.open(self.sessiondir + sep + filename, 'r',
                                   'latin-1').read(16384)
 
-        # necessary text encoding depends on Python version
-        if sys.version_info.major < 3:
-            text_header = text_header.encode('latin-1')
-
         parameter_dict['cheetah_version'] = \
             self.__get_cheetah_version_from_txt_header(text_header, filename)
 

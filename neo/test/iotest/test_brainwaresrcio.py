@@ -4,7 +4,6 @@ Tests of neo.io.brainwaresrcio
 
 import logging
 import os.path
-import sys
 
 import unittest
 
@@ -18,8 +17,6 @@ from neo.test.iotest.common_io_test import BaseTestIO
 from neo.test.tools import (assert_same_sub_schema,
                             assert_neo_object_is_compliant)
 from neo.test.iotest.tools import create_generic_reader
-
-PY_VER = sys.version_info[0]
 
 FILES_TO_TEST = ['block_300ms_4rep_1clust_part_ch1.src',
                  'block_500ms_5rep_empty_fullclust_ch1.src',
@@ -279,10 +276,10 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     # these are reference files to compare to
     files_to_compare = FILES_TO_COMPARE
 
-    # add the appropriate suffix depending on the python version
+    # add the suffix
     for i, fname in enumerate(files_to_compare):
         if fname:
-            files_to_compare[i] += '_src_py%s.npz' % PY_VER
+            files_to_compare[i] += '_src_py3.npz'
 
     # Will fetch from g-node if they don't already exist locally
     # How does it know to do this before any of the other tests?

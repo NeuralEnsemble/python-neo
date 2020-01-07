@@ -4,7 +4,6 @@
 """
 
 
-import sys
 import logging
 import pickle
 import numpy as np
@@ -322,24 +321,17 @@ class NeoHdf5IO(BaseIO):
                 attributes[name] = node.attrs[name]
         for name in ('rec_datetime', 'file_datetime'):
             if name in node.attrs:
-                if sys.version_info.major > 2:
-                    attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
-                else:  # Python 2 doesn't have the encoding argument
-                    attributes[name] = pickle.loads(node.attrs[name])
-        if sys.version_info.major > 2:
-            annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
-        else:
-            annotations = pickle.loads(node.attrs['annotations'])
+                attributes[name] = pickle.loads(node.attrs[name], encoding='bytes')
+        annotations = pickle.loads(node.attrs['annotations'], encoding='bytes')
         attributes.update(annotations)
         # avoid "dictionary changed size during iteration" error
         attribute_names = list(attributes.keys())
-        if sys.version_info.major > 2:
-            for name in attribute_names:
-                if isinstance(attributes[name], (bytes, np.bytes_)):
-                    attributes[name] = attributes[name].decode('utf-8')
-                if isinstance(name, bytes):
-                    attributes[name.decode('utf-8')] = attributes[name]
-                    attributes.pop(name)
+        for name in attribute_names:
+            if isinstance(attributes[name], (bytes, np.bytes_)):
+                attributes[name] = attributes[name].decode('utf-8')
+            if isinstance(name, bytes):
+                attributes[name.decode('utf-8')] = attributes[name]
+                attributes.pop(name)
         return attributes
 
     def _resolve_channel_indexes(self, block):

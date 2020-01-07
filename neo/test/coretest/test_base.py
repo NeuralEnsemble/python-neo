@@ -23,14 +23,6 @@ from neo.core.baseneo import (BaseNeo, _check_annotations,
                               merge_annotations, merge_annotation)
 from neo.test.tools import assert_arrays_equal
 
-if sys.version_info[0] >= 3:
-    _bytes = bytes
-
-    long = int
-
-    def bytes(s):
-        return _bytes(s, encoding='ascii')
-
 
 class Test_check_annotations(unittest.TestCase):
     '''
@@ -417,14 +409,6 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
         self.assertEqual(value, self.base.annotations['data'])
         self.assertDictEqual(result, self.base.annotations)
 
-    def test_python_long(self):
-        '''test to make sure long type data is accepted'''
-        value = long(7)
-        self.base.annotate(data=value)
-        result = {'data': value}
-        self.assertEqual(value, self.base.annotations['data'])
-        self.assertDictEqual(result, self.base.annotations)
-
     def test_python_float(self):
         '''test to make sure float type data is accepted'''
         value = 9.2
@@ -459,7 +443,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
 
     def test_python_bytes(self):
         '''test to make sure bytes type data is accepted'''
-        value = bytes('1,2,3,4,5')
+        value = bytes('1,2,3,4,5', encoding='ascii')
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -540,7 +524,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
     def test_python_list(self):
         '''test to make sure list type data is accepted'''
         value = [None, 10, 9.2, complex(23, 11),
-                 ['this is a test', bytes('1,2,3,4,5')],
+                 ['this is a test', bytes('1,2,3,4,5', encoding='ascii')],
                  [Fraction(13, 21), Decimal("3.14")]]
         self.base.annotate(data=value)
         result = {'data': value}
@@ -550,7 +534,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
     def test_python_tuple(self):
         '''test to make sure tuple type data is accepted'''
         value = (None, 10, 9.2, complex(23, 11),
-                 ('this is a test', bytes('1,2,3,4,5')),
+                 ('this is a test', bytes('1,2,3,4,5', encoding='ascii')),
                  (Fraction(13, 21), Decimal("3.14")))
         self.base.annotate(data=value)
         result = {'data': value}
@@ -562,7 +546,7 @@ class TestBaseNeoContainerTypes(unittest.TestCase):
         value = {'NoneType': None, 'int': 10, 'float': 9.2,
                  'complex': complex(23, 11),
                  'dict1': {'string': 'this is a test',
-                           'bytes': bytes('1,2,3,4,5')},
+                           'bytes': bytes('1,2,3,4,5', encoding='ascii')},
                  'dict2': {'Fraction': Fraction(13, 21),
                            'Decimal': Decimal("3.14")}}
         self.base.annotate(data=value)
@@ -774,11 +758,7 @@ class TestBaseNeoNumpyArrayTypes(unittest.TestCase):
 
     def test_numpy_array_string0(self):
         '''test to make sure string0 type numpy arrays are accepted'''
-        if sys.version_info[0] >= 3:
-            dtype = np.str0
-        else:
-            dtype = np.string0
-        value = np.array([1, 2, 3, 4, 5], dtype=dtype)
+        value = np.array([1, 2, 3, 4, 5], dtype=np.str0)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
@@ -972,11 +952,7 @@ class TestBaseNeoNumpyScalarTypes(unittest.TestCase):
 
     def test_numpy_scalar_string0(self):
         '''test to make sure string0 type numpy scalars are rejected'''
-        if sys.version_info[0] >= 3:
-            dtype = np.str0
-        else:
-            dtype = np.string0
-        value = np.array(99, dtype=dtype)
+        value = np.array(99, dtype=np.str0)
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertDictEqual(result, self.base.annotations)
