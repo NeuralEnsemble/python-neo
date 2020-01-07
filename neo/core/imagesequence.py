@@ -181,8 +181,8 @@ class ImageSequence(BaseSignal):
             with pp.group(indent=1):
                 pp.text(line)
 
-        for line in ["sampling rate: {0}".format(self.sampling_rate),
-                     "spatial_scale: {0}".format(self.spatial_scale)]:
+        for line in ["sampling rate: {}".format(self.sampling_rate),
+                     "spatial_scale: {}".format(self.spatial_scale)]:
             _pp(line)
 
     def _check_consistency(self, other):

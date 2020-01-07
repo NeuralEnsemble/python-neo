@@ -1,4 +1,3 @@
-
 import unittest
 import os
 from PIL import Image

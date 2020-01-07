@@ -216,5 +216,5 @@ latex_documents = [('index', 'neo.tex', u'Neo Documentation',
 todo_include_todos = True  # set to False before releasing documentation
 
 rst_epilog = """
-.. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{0}.zip
+.. |neo_github_url| replace:: https://github.com/NeuralEnsemble/python-neo/archive/neo-{}.zip
 """.format(neo_release)
