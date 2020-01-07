@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
-import sys
-
 import unittest
 
 from neo.io import RawMCSIO

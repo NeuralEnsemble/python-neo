@@ -6,13 +6,6 @@ object inherit from.  It provides shared methods for all container types.
 :class:`Container` is derived from :class:`BaseNeo`
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-try:
-    basestring
-except NameError:
-    basestring = str
-
 from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 
@@ -410,7 +403,7 @@ class Container(BaseNeo):
             >>> obj.filter(targdict={'myannotation':3})
         """
 
-        if isinstance(targdict, basestring):
+        if isinstance(targdict, str):
             raise TypeError("filtering is based on key-value pairs."
                             " Only a single string was provided.")
 

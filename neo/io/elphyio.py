@@ -72,9 +72,6 @@ Author: Thierry Brizzi
         Domenico Guarino
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 # python commons:
 from datetime import datetime
 from fractions import gcd

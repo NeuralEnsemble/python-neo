@@ -3,9 +3,6 @@
 Tests of neo.io.neuroshareio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
 import sys
 import os
 import tarfile

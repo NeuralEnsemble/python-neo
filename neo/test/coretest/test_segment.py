@@ -3,9 +3,6 @@
 Tests of the neo.core.segment.Segment class
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy
 
 from datetime import datetime

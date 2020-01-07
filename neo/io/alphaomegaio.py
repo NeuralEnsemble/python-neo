@@ -63,21 +63,11 @@ Supported : Read
 #   this IO very painful and long).
 
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
 # specific imports
 import datetime
 import os
 import struct
 
-# file no longer exists in Python3
-try:
-    file
-except NameError:
-    import io
-
-    file = io.BufferedReader
 
 # note neo.core need only numpy and quantities
 import numpy as np

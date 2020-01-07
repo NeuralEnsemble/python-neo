@@ -6,9 +6,6 @@ This module defines :class:`Epoch`, an array of epochs.
 :module:`neo.core.baseneo`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import sys
 from copy import deepcopy, copy
 

@@ -3,9 +3,6 @@
 Tests of neo.io.bci2000io
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
 import unittest
 
 from neo.io import BCI2000IO

@@ -20,9 +20,6 @@ created by slicing. This is where attributes are copied over from
 the old object.
 '''
 
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from copy import deepcopy, copy
 
 try:

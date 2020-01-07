@@ -6,10 +6,6 @@ This module defines :class:`Event`, an array of events.
 :module:`neo.core.baseneo`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import sys
 from copy import deepcopy, copy
 
 import numpy as np
@@ -18,8 +14,6 @@ import quantities as pq
 from neo.core.baseneo import merge_annotations
 from neo.core.dataobject import DataObject, ArrayDict
 from neo.core.epoch import Epoch
-
-PY_VER = sys.version_info[0]
 
 
 def _new_event(cls, times=None, labels=None, units=None, name=None, file_origin=None,
@@ -149,10 +143,7 @@ class Event(DataObject):
         Returns a string representing the :class:`Event`.
         '''
         # need to convert labels to unicode for python 3 or repr is messed up
-        if PY_VER == 3:
-            labels = self.labels.astype('U')
-        else:
-            labels = self.labels
+        labels = self.labels.astype('U')
         objs = ['%s@%s' % (label, time) for label, time in zip(labels, self.times)]
         return '<Event: %s>' % ', '.join(objs)
 

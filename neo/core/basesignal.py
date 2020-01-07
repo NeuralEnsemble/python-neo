@@ -15,9 +15,6 @@ Only child objects :class:`AnalogSignal` and :class:`IrregularlySampledSignal`
 can be created.
 '''
 
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import copy
 import logging
 from copy import deepcopy

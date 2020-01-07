@@ -2,7 +2,6 @@
 """
 Tests of neo.io.nixio_fr
 """
-from __future__ import absolute_import
 import numpy as np
 import unittest
 from quantities import s

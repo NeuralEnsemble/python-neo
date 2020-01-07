@@ -3,9 +3,6 @@
 Tests of the neo.core.analogsignal.AnalogSignal class and related functions
 """
 
-# needed for python 3 compatibility
-from __future__ import division
-
 import os
 import pickle
 import copy

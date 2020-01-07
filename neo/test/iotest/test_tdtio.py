@@ -3,8 +3,6 @@
 Tests of neo.io.tdtio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
 import unittest
 from neo.io import TdtIO
 from neo.test.iotest.common_io_test import BaseTestIO

@@ -3,9 +3,6 @@
 Tests of neo.io.axographio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 from datetime import datetime
 import unittest
 

@@ -8,9 +8,6 @@ used by all :module:`neo.core` classes.
 from :module:`neo.core.container`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from datetime import datetime
 
 from neo.core.container import Container, unique_objs

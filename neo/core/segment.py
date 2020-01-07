@@ -7,9 +7,6 @@ time basis.
 from :module:`neo.core.container`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from datetime import datetime
 
 import numpy as np

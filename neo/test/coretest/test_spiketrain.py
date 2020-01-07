@@ -3,9 +3,6 @@
 Tests of the neo.core.spiketrain.SpikeTrain class and related functions
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 import sys
 
 import unittest

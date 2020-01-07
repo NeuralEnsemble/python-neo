@@ -30,9 +30,6 @@ Classes:
 
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 from neo.core.block import Block
 from neo.core.segment import Segment
 from neo.core.channelindex import ChannelIndex

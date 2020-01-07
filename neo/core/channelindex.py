@@ -7,9 +7,6 @@ data channels.
 from :module:`neo.core.container`.
 '''
 
-# needed for Python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import numpy as np
 import quantities as pq
 

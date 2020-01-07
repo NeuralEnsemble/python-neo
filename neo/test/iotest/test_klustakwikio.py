@@ -3,9 +3,6 @@
 Tests of neo.io.klustakwikio
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import
-
 import glob
 import os.path
 import sys

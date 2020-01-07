@@ -3,9 +3,6 @@
 Tests of the neo.core.unit.Unit class
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import unittest
 from copy import deepcopy
 

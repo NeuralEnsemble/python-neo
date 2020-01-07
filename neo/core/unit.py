@@ -7,11 +7,6 @@ from a unit.
 from :module:`neo.core.container`.
 '''
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
-import numpy as np
-
 from neo.core.container import Container
 
 

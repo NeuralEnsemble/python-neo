@@ -16,9 +16,6 @@ data repo.
 
 '''
 
-# needed for python 3 compatibility
-from __future__ import unicode_literals, print_function, division, absolute_import
-
 __test__ = False
 
 import os

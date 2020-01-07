@@ -3,9 +3,6 @@
 Tests of neo.io.brainwaref32io
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division, print_function
-
 import os.path
 import sys
 

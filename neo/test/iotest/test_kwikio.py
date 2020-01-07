@@ -3,10 +3,6 @@
 Tests of neo.io.kwikio
 """
 
-# needed for python 3 compatibility
-from __future__ import division
-
-import sys
 import unittest
 
 try:

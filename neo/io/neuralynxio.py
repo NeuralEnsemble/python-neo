@@ -10,9 +10,6 @@ Supported: Read
 Author: Julia Sprenger, Carlos Canova
 """
 
-# needed for python 3 compatibility
-from __future__ import absolute_import, division
-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.neuralynxrawio import NeuralynxRawIO
 
