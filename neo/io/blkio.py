@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from .baseio import BaseIO
 from neo.core import ImageSequence, Segment, Block
 import numpy as np

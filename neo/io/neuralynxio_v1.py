@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.
@@ -1195,7 +1194,7 @@ class NeuralynxIO(BaseIO):
 
         # If already associated, disassociate first
         if self.associated:
-            raise IOError(
+            raise OSError(
                 "Trying to associate an already associated NeuralynxIO "
                 "object.")
 
@@ -1284,7 +1283,7 @@ class NeuralynxIO(BaseIO):
                 if os.path.exists(parameterfile):
                     parameters_read = pickle.load(open(parameterfile, 'rb'))
                 else:
-                    raise IOError('Inconsistent cache files.')
+                    raise OSError('Inconsistent cache files.')
 
                 for IOdict, dictname in [(self.parameters_global, 'global'),
                                          (self.parameters_ncs, 'ncs'),

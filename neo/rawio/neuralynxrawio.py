@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV, NSE and NTT file formats.
@@ -17,7 +16,6 @@ NCS files need to be read entirely to detect that gaps.... too bad....
 
 Author: Julia Sprenger, Carlos Canova, Samuel Garcia
 """
-from __future__ import print_function, division, absolute_import
 # from __future__ import unicode_literals is not compatible with numpy.dtype both py2 py3
 
 

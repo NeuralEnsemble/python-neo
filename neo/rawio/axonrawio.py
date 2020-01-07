@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from pCLAMP and AxoScope
 files (.abf version 1 and 2), developed by Molecular device/Axon technologies.
@@ -314,7 +313,7 @@ class AxonRawIO(BaseRawIO):
         info = self._axon_info
 
         if info['fFileVersionNumber'] < 2.:
-            raise IOError("Protocol section is only present in ABF2 files.")
+            raise OSError("Protocol section is only present in ABF2 files.")
 
         nADC = info['sections']['ADCSection'][
             'llNumEntries']  # Number of ADC channels

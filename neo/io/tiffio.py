@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Neo IO module for optical imaging data stored as a folder of TIFF images.
 """

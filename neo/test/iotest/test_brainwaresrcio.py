@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.brainwaresrcio
 """
@@ -290,7 +289,7 @@ class BrainwareSrcIOTestCase(BaseTestIO, unittest.TestCase):
     files_to_download = files_to_test + files_to_compare
 
     def setUp(self):
-        super(BrainwareSrcIOTestCase, self).setUp()
+        super().setUp()
 
     def test_reading_same(self):
         for ioobj, path in self.iter_io_objects(return_path=True):

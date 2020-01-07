@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.stimfitio
 """
 
 # needed for python 3 compatibility
-from __future__ import absolute_import
 
 import sys
 

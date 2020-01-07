@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Tools for use with neo tests.
 '''

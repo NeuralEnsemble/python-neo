@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """
 This is an example for creating simple plots from various Neo structures.
 It includes a function that generates toy data.
 """
-from __future__ import division  # Use same division in Python 2 and 3
 
 import numpy as np
 import quantities as pq

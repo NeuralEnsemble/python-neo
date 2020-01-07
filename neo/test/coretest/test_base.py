@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.baseneo.BaseNeo class and related functions
 """
@@ -452,7 +451,7 @@ class TestBaseNeoCoreTypes(unittest.TestCase):
 
     def test_python_unicode(self):
         '''test to make sure unicode type data is accepted'''
-        value = u'this is also a test'
+        value = 'this is also a test'
         self.base.annotate(data=value)
         result = {'data': value}
         self.assertEqual(value, self.base.annotations['data'])
@@ -1074,7 +1073,7 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
     def test_my_class(self):
         '''test to make sure user defined class type data is rejected'''
 
-        class Foo(object):
+        class Foo:
             pass
 
         value = Foo()
@@ -1083,7 +1082,7 @@ class TestBaseNeoUserDefinedTypes(unittest.TestCase):
     def test_my_class_list(self):
         '''test to make sure user defined class type data is rejected'''
 
-        class Foo(object):
+        class Foo:
             pass
 
         value = [Foo(), Foo(), Foo()]

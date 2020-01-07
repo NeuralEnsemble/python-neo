@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Class for reading data from Alpha Omega .map files.

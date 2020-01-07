@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 baseio
 ======
@@ -31,7 +30,7 @@ read_error = "This type is not supported by this file format for reading"
 write_error = "This type is not supported by this file format for writing"
 
 
-class BaseIO(object):
+class BaseIO:
     """
     Generic class to handle all the file read/write methods for the key objects
     of the core class. This template is file-reading/writing oriented but it

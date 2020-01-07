@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :mod:`neo.io` provides classes for reading and/or writing
 electrophysiological data files.
@@ -334,4 +333,4 @@ def get_io(filename, *args, **kwargs):
         if extension in io.extensions:
             return io(filename, *args, **kwargs)
 
-    raise IOError("File extension %s not registered" % extension)
+    raise OSError("File extension %s not registered" % extension)

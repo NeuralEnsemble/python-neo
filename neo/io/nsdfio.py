@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Module for reading and writing NSDF files
 
@@ -9,7 +7,6 @@ This module support both reading and writing NDSF files.
 Note: Read file must be written using this IO
 """
 
-from __future__ import absolute_import
 
 import numpy as np
 import quantities as pq

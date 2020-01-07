@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 AxographRawIO
 =============
@@ -1336,7 +1335,7 @@ class StructFile(BufferedReader):
         else:
             # unspecified
             self.utf_16_decoder = 'utf-16'
-        super(StructFile, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def read_and_unpack(self, fmt):
         """

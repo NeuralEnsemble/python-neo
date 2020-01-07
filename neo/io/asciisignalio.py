@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading/writing analog signals in a text file.
 Each column represents an AnalogSignal. All AnalogSignals have the same sampling rate.

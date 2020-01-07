@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.neomatlabio
 """

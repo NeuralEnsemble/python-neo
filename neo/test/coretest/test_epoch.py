@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.epoch.Epoch class
 """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 neo.io have been split in 2 level API:
   * neo.io: this API give neo object

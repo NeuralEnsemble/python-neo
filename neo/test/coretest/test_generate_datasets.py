@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Test to  make sure generated datasets are sane.
 '''

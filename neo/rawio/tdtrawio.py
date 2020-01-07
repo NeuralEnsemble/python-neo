@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from from Tucker Davis TTank format.
 Terminology:
@@ -125,7 +124,7 @@ class TdtRawIO(BaseRawIO):
                             break
                 except OSError:
                     pass
-                except IOError:
+                except OSError:
                     pass
 
         # Re-order segments according to their start times

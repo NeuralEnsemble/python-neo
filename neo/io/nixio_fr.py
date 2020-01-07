@@ -17,7 +17,7 @@ class NixIO(NIXRawIO, BaseFromRaw):
 
     def read_block(self, block_index=0, lazy=False, signal_group_mode=None,
                    units_group_mode=None, load_waveforms=False):
-        bl = super(NixIO, self).read_block(block_index, lazy,
+        bl = super().read_block(block_index, lazy,
                                            signal_group_mode,
                                            units_group_mode,
                                            load_waveforms)

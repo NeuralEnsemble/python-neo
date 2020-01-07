@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.rawio.bci2000rawio
 """

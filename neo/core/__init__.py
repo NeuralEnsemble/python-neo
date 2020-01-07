@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 :mod:`neo.core` provides classes for storing common electrophysiological data
 types.  Some of these classes contain raw data, such as spike trains or

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data created by IGOR Pro
 (WaveMetrics, Inc., Portland, OR, USA)
@@ -12,7 +11,6 @@ Also contributing: Rick Gerkin
 
 """
 
-from __future__ import absolute_import
 from warnings import warn
 import numpy as np
 import quantities as pq
@@ -101,7 +99,7 @@ class IgorIO(BaseIO):
             data = bw.load(self.filename)
             version = data['version']
             if version > 5:
-                raise IOError("Igor binary wave file format version {} "
+                raise OSError("Igor binary wave file format version {} "
                                "is not supported.".format(version))
         elif self.extension == 'pxp':
             assert type(path) is str, \

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module implements :class:`ImageSequence`, a 3D array.
 

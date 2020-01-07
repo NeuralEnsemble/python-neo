@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading data from files in the Blackrock in raw format.
 
@@ -57,7 +56,6 @@ TODO:
     (file spec 2.1 and 2.2)
 """
 
-from __future__ import absolute_import, division, print_function
 
 import datetime
 import os
@@ -173,7 +171,7 @@ class BlackrockRawIO(BaseRawIO):
                     self._avail_nsx.append(int(ext[-1]))
 
         if not self._avail_files['nev'] and not self._avail_nsx:
-            raise IOError("No Blackrock files found in specified path")
+            raise OSError("No Blackrock files found in specified path")
 
         # These dictionaries are used internally to map the file specification
         # revision of the nsx and nev files to one of the reading routines
@@ -803,7 +801,7 @@ class BlackrockRawIO(BaseRawIO):
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
-            raise IOError('Unsupported NSX file type.')
+            raise OSError('Unsupported NSX file type.')
 
         return spec
 
@@ -824,7 +822,7 @@ class BlackrockRawIO(BaseRawIO):
             spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise IOError('NEV file type {} is not supported'.format(
+            raise OSError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec

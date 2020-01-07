@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from BrainVision product.
 
@@ -7,7 +6,6 @@ S. More.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)
@@ -186,7 +184,7 @@ class BrainVisionRawIO(BaseRawIO):
 
 
 def read_brainvsion_soup(filename):
-    with io.open(filename, 'r', encoding='utf8') as f:
+    with open(filename, 'r', encoding='utf8') as f:
         section = None
         all_info = {}
         for line in f:

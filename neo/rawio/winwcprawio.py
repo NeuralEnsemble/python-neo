@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from WinWCP, a software tool written by
 John Dempster.

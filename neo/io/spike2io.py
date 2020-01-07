@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from neo.io.basefromrawio import BaseFromRaw
 from neo.rawio.spike2rawio import Spike2RawIO
 

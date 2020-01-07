@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Module for reading data from files in the Blackrock format.
 
@@ -48,7 +47,6 @@ TODO:
     (file spec 2.1 and 2.2)
 """
 
-from __future__ import division
 import datetime
 import os
 import re
@@ -271,7 +269,7 @@ class BlackrockIO(BaseIO):
 
         # check if there are any files present
         if not any(list(self._avail_files.values())):
-            raise IOError(
+            raise OSError(
                 'No Blackrock files present at {}'.format(filename))
 
         # check if manually specified files were found
@@ -386,7 +384,7 @@ class BlackrockIO(BaseIO):
             spec = '{}.{}'.format(
                 nsx_file_id['ver_major'], nsx_file_id['ver_minor'])
         else:
-            raise IOError('Unsupported NSX file type.')
+            raise OSError('Unsupported NSX file type.')
 
         return spec
 
@@ -407,7 +405,7 @@ class BlackrockIO(BaseIO):
             spec = '{}.{}'.format(
                 nev_file_id['ver_major'], nev_file_id['ver_minor'])
         else:
-            raise IOError('NEV file type {} is not supported'.format(
+            raise OSError('NEV file type {} is not supported'.format(
                 nev_file_id['file_id']))
 
         return spec

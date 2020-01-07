@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of the neo.core.spiketrain.SpikeTrain class and related functions
 """

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data in a raw binary interleaved compact file.
 Sampling rate, units, number of channel and dtype must be externally known.
@@ -17,7 +16,6 @@ Important release note:
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)

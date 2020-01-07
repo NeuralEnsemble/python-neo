@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from "Raw" Multi Channel System (MCS) format.
 This format is NOT the native MCS format (*.mcd).
@@ -14,7 +13,6 @@ could be written instead of this ersatz.
 
 Author: Samuel Garcia
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Class for reading data from Neuralynx files.
 This IO supports NCS, NEV and NSE file formats.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Reading from neuroscope format files.
 Ref: http://neuroscope.sourceforge.net/
@@ -16,7 +15,6 @@ This should be done (but maybe never will):
 Author: Samuel Garcia
 
 """
-from __future__ import unicode_literals, print_function, division, absolute_import
 
 from .baserawio import (BaseRawIO, _signal_channel_dtype, _unit_channel_dtype,
                         _event_channel_dtype)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 This module defines :class:`BaseNeo`, the abstract base class
 used by all :module:`neo.core` classes.
@@ -142,7 +141,7 @@ def _container_name(class_name):
     return name_map.get(class_name, _reference_name(class_name) + 's')
 
 
-class BaseNeo(object):
+class BaseNeo:
     """
     This is the base class from which all Neo objects inherit.
 

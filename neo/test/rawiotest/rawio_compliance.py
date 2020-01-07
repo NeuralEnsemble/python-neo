@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Here a list for testing neo.rawio API compliance.
 This is called automatically by `BaseTestRawIO`

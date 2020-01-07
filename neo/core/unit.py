@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 This module defines :class:`Unit`, a container of :class:`SpikeTrain` objects
 from a unit.
@@ -63,7 +62,7 @@ class Unit(Container):
         '''
         Initialize a new :clas:`Unit` instance (spike source)
         '''
-        super(Unit, self).__init__(name=name, description=description,
+        super().__init__(name=name, description=description,
                                    file_origin=file_origin, **annotations)
         self.channel_index = None
 

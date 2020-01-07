@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Common tests for IOs:
  * check presence of all necessary attr
@@ -46,7 +45,7 @@ from neo.test.generate_datasets import generate_from_supported_objects
 url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
-class BaseTestIO(object):
+class BaseTestIO:
     '''
     This class make common tests for all IOs.
 
@@ -122,7 +121,7 @@ class BaseTestIO(object):
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
                                self.local_test_dir, url)
-        except IOError as exc:
+        except OSError as exc:
             raise unittest.TestCase.failureException(exc)
 
     download_test_files_if_not_present.__test__ = False

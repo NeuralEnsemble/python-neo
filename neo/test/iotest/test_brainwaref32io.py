@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tests of neo.io.brainwaref32io
 """
@@ -57,7 +56,7 @@ def proc_f32(filename):
     try:
         with np.load(filename, allow_pickle=True) as f32obj:
             f32file = list(f32obj.items())[0][1].flatten()
-    except IOError as exc:
+    except OSError as exc:
         if 'as a pickle' in exc.message:
             block.create_many_to_one_relationship()
             return block

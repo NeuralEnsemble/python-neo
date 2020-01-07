@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 '''
 Common tests for RawIOs:
 
@@ -32,7 +31,7 @@ from neo.test.rawiotest import rawio_compliance as compliance
 url_for_tests = "https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data/raw/master/"
 
 
-class BaseTestRawIO(object):
+class BaseTestRawIO:
     '''
     This class make common tests for all IOs.
 
@@ -85,7 +84,7 @@ class BaseTestRawIO(object):
             make_all_directories(self.files_to_download, self.local_test_dir)
             download_test_file(self.files_to_download,
                                self.local_test_dir, url)
-        except IOError as exc:
+        except OSError as exc:
             raise unittest.SkipTest(exc)
 
     download_test_files_if_not_present.__test__ = False

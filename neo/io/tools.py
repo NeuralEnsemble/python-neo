@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Tools for IO coder:
   * Creating RecordingChannel and making links with AnalogSignals and

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Common tools that are useful for neo.io object tests
 """
