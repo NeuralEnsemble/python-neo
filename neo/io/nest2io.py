@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Class for reading output files from NEST simulations
+using NEST versions 2.x
 ( http://www.nest-simulator.org/ ).
 Tested with NEST2.10.0
 
@@ -30,7 +31,7 @@ value_type_dict = {'V': pq.mV,
                    'no type': pq.dimensionless}
 
 
-class NestIO(BaseIO):
+class Nest2IO(BaseIO):
     """
     Class for reading NEST output files. GDF files for the spike data and DAT
     files for analog signals are possible.
