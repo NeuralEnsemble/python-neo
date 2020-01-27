@@ -52,6 +52,24 @@ class TestNWBIO(unittest.TestCase, ):
         self.assertTrue(obj_nwb, AnalogSignal)
         self.assertTrue(obj_nwb, sig_neo)
 
+    def test_spiketrains_neo(self, **kargs):
+        train = SpikeTrain(times=[1, 2, 3]*pq.s, t_start=1.0, t_stop=10.0) 
+        self.assertTrue(isinstance(train, SpikeTrain))
+        r = NWBIO(filename=self.files_to_download[0], mode='r')
+        obj_nwb = r.read()
+        self.assertTrue(obj_nwb, SpikeTrain)
+        self.assertTrue(obj_nwb, train)
+
+    def test_epochs_neo(self, **kargs):
+        epc = Epoch(times=np.arange(0, 30, 10)*pq.s,
+                    durations=[10, 5, 7]*pq.ms,
+                    labels=np.array(['btn0', 'btn1', 'btn2'], dtype='S'))
+        self.assertTrue(isinstance(epc, Epoch))
+        r = NWBIO(filename=self.files_to_download[0], mode='r')
+        obj_nwb = r.read()
+        self.assertTrue(obj_nwb, Epoch)
+        self.assertTrue(obj_nwb, epc)
+
     def test_read_irregularlysampledsignal(self, **kargs):
         irsig0 = IrregularlySampledSignal([0.0, 1.23, 6.78], [1, 2, 3], units='mV', time_units='ms')
         irsig1 = IrregularlySampledSignal([0.01, 0.03, 0.12]*pq.s, [[4, 5], [5, 4], [6, 3]]*pq.nA)
