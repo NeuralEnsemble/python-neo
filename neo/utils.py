@@ -50,8 +50,8 @@ def get_events(container, **properties):
     Example:
     --------
         >>> event = neo.Event(times=[0.5, 10.0, 25.2] * pq.s)
-        >>> event.annotate(event_type='trial start',
-                           trial_id=[1, 2, 3])
+        >>> event.annotate(event_type='trial start')
+        >>> event.array_annotate(trial_id=[1, 2, 3])
         >>> seg = neo.Segment()
         >>> seg.events = [event]
 
@@ -218,38 +218,8 @@ def _event_epoch_slice_by_valid_ids(obj, valid_ids):
     """
     Internal function
     """
-    # modify annotations
-    sparse_annotations = _get_valid_annotations(obj, valid_ids)
-
-    # modify array annotations
-    sparse_array_annotations = {key: value[valid_ids]
-                                for key, value in obj.array_annotations.items() if len(value)}
-
-    if obj.labels is not None and obj.labels.size > 0:
-        labels = obj.labels[valid_ids]
-    else:
-        labels = obj.labels
-    if type(obj) is neo.Event:
-        sparse_obj = neo.Event(
-            times=copy.deepcopy(obj.times[valid_ids]),
-            labels=copy.deepcopy(labels),
-            units=copy.deepcopy(obj.units),
-            name=copy.deepcopy(obj.name),
-            description=copy.deepcopy(obj.description),
-            file_origin=copy.deepcopy(obj.file_origin),
-            array_annotations=sparse_array_annotations,
-            **sparse_annotations)
-    elif type(obj) is neo.Epoch:
-        sparse_obj = neo.Epoch(
-            times=copy.deepcopy(obj.times[valid_ids]),
-            durations=copy.deepcopy(obj.durations[valid_ids]),
-            labels=copy.deepcopy(labels),
-            units=copy.deepcopy(obj.units),
-            name=copy.deepcopy(obj.name),
-            description=copy.deepcopy(obj.description),
-            file_origin=copy.deepcopy(obj.file_origin),
-            array_annotations=sparse_array_annotations,
-            **sparse_annotations)
+    if type(obj) is neo.Event or type(obj) is neo.Epoch:
+        sparse_obj = copy.deepcopy(obj[valid_ids])
     else:
         raise TypeError('Can only slice Event and Epoch objects by valid IDs.')
 
@@ -260,77 +230,24 @@ def _get_valid_ids(obj, annotation_key, annotation_value):
     """
     Internal function
     """
-    # wrap annotation value to be list
-    if not type(annotation_value) in [list, np.ndarray]:
-        annotation_value = [annotation_value]
 
-    # get all real attributes of object
-    attributes = inspect.getmembers(obj)
-    attributes_names = [t[0] for t in attributes if not(
-        t[0].startswith('__') and t[0].endswith('__'))]
-    attributes_ids = [i for i, t in enumerate(attributes) if not(
-        t[0].startswith('__') and t[0].endswith('__'))]
+    valid_mask = np.zeros(obj.shape)
 
-    # check if annotation is present
-    value_avail = False
-    if annotation_key in obj.annotations:
-        check_value = obj.annotations[annotation_key]
-        value_avail = True
+    if annotation_key in obj.annotations and obj.annotations[annotation_key] == annotation_value:
+        valid_mask = np.ones(obj.shape)
+
     elif annotation_key in obj.array_annotations:
-        check_value = obj.array_annotations[annotation_key]
-        value_avail = True
-    elif annotation_key in attributes_names:
-        check_value = attributes[attributes_ids[
-            attributes_names.index(annotation_key)]][1]
-        value_avail = True
+        # wrap annotation value to be list
+        if not type(annotation_value) in [list, np.ndarray]:
+            annotation_value = [annotation_value]
+        valid_mask = np.in1d(obj.array_annotations[annotation_key], annotation_value)
 
-    if value_avail:
-        # check if annotation is list and fits to length of object list
-        if not _is_annotation_list(check_value, len(obj)):
-            # check if annotation is single value and fits to requested value
-            if check_value in annotation_value:
-                valid_mask = np.ones(obj.shape)
-            else:
-                valid_mask = np.zeros(obj.shape)
-                if type(check_value) != str:
-                    warnings.warn(
-                        'Length of annotation "%s" (%s) does not fit '
-                        'to length of object list (%s)' % (
-                            annotation_key, len(check_value), len(obj)))
-
-        # extract object entries, which match requested annotation
-        else:
-            valid_mask = np.zeros(obj.shape)
-            for obj_id in range(len(obj)):
-                if check_value[obj_id] in annotation_value:
-                    valid_mask[obj_id] = True
-    else:
-        valid_mask = np.zeros(obj.shape)
+    elif hasattr(obj, annotation_key) and getattr(obj, annotation_key) == annotation_value:
+        valid_mask = np.ones(obj.shape)
 
     valid_ids = np.where(valid_mask)[0]
 
     return valid_ids
-
-
-def _get_valid_annotations(obj, valid_ids):
-    """
-    Internal function
-    """
-    sparse_annotations = copy.deepcopy(obj.annotations)
-    for key in sparse_annotations:
-        if _is_annotation_list(sparse_annotations[key], len(obj)):
-            sparse_annotations[key] = list(np.array(sparse_annotations[key])[
-                valid_ids])
-    return sparse_annotations
-
-
-def _is_annotation_list(value, exp_length):
-    """
-    Internal function
-    """
-    return (
-        (isinstance(value, list) or (
-            isinstance(value, np.ndarray) and value.ndim > 0)) and (len(value) == exp_length))
 
 
 def add_epoch(
@@ -517,10 +434,10 @@ def cut_block_by_epochs(block, properties=None, reset_time=False):
         Contains the Segments to cut according to the Epoch criteria provided
     properties: dictionary
         A dictionary that contains the Epoch keys and values to filter for.
-        Each key of the dictionary is matched to an attribute or an an
-        annotation of the Event. The value of each dictionary entry corresponds
-        to a valid entry or a list of valid entries of the attribute or
-        annotation.
+        Each key of the dictionary is matched to an attribute or an
+        annotation or an array_annotation of the Event.
+        The value of each dictionary entry corresponds to a valid entry or a
+        list of valid entries of the attribute or (array) annotation.
 
         If the value belonging to the key is a list of entries of the same
         length as the number of epochs in the Epoch object, the list entries
@@ -620,13 +537,7 @@ def cut_segment_by_epoch(seg, epoch, reset_time=False):
                                 epoch.times[ep_id] + epoch.durations[ep_id],
                                 reset_time=reset_time)
 
-        # Add annotations of Epoch
-        for a in epoch.annotations:
-            if type(epoch.annotations[a]) is list \
-                    and len(epoch.annotations[a]) == len(epoch):
-                subseg.annotations[a] = copy.copy(epoch.annotations[a][ep_id])
-            else:
-                subseg.annotations[a] = copy.copy(epoch.annotations[a])
+        subseg.annotate(**copy.copy(epoch.annotations))
 
         # Add array-annotations of Epoch
         for key, val in epoch.array_annotations.items():
