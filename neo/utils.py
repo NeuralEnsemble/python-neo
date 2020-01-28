@@ -421,6 +421,7 @@ def add_epoch(
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
 
     ep.annotate(**event1.annotations)
+    ep.array_annotate(**event1.array_annotations)
 
     if attach_result:
         segment.epochs.append(ep)
