@@ -116,9 +116,7 @@ class AnalogSignalProxy(BaseProxy):
                                                     np.all(sig_chans['offset'] == 0.)
 
         if support_raw_magnitude:
-            sig_chans['units'][0]
             str_units = ensure_signal_units(sig_chans['units'][0]).units.dimensionality.string
-            
             self._raw_units = pq.CompoundUnit('{}*{}'.format(sig_chans['gain'][0], str_units))
         else:
             self._raw_units = None
