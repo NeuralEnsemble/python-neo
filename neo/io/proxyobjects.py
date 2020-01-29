@@ -20,6 +20,7 @@ from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
 from neo.core.dataobject import ArrayDict
 
+import logging
 
 class BaseProxy(BaseNeo):
     def __init__(self, array_annotations=None, **annotations):
@@ -115,7 +116,9 @@ class AnalogSignalProxy(BaseProxy):
                                                     np.all(sig_chans['offset'] == 0.)
 
         if support_raw_magnitude:
+            sig_chans['units'][0]
             str_units = ensure_signal_units(sig_chans['units'][0]).units.dimensionality.string
+            
             self._raw_units = pq.CompoundUnit('{}*{}'.format(sig_chans['gain'][0], str_units))
         else:
             self._raw_units = None
@@ -522,6 +525,7 @@ def ensure_signal_units(units):
         logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
                         'instead'.format(units))
         units = ''
+        units = pq.Quantity(1, units)
     return units
 
 
