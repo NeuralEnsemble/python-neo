@@ -20,6 +20,7 @@ from neo.core import (AnalogSignal,
                       Epoch, Event, SpikeTrain)
 from neo.core.dataobject import ArrayDict
 
+import logging
 
 class BaseProxy(BaseNeo):
     def __init__(self, array_annotations=None, **annotations):
@@ -522,6 +523,7 @@ def ensure_signal_units(units):
         logging.warning('Units "{}" can not be converted to a quantity. Using dimensionless '
                         'instead'.format(units))
         units = ''
+        units = pq.Quantity(1, units)
     return units
 
 
