@@ -22,7 +22,7 @@ from neo.core import Block, Segment, AnalogSignal
 try:
     import igor.binarywave as bw
     import igor.packed as pxp
-
+    from igor.record.wave import WaveRecord
     HAVE_IGOR = True
 except ImportError:
     HAVE_IGOR = False
@@ -73,6 +73,7 @@ class IgorIO(BaseIO):
         self.filename = filename
         self.extension = filename.split('.')[-1]
         self.parse_notes = parse_notes
+        self._filesystem = None
 
     def read_block(self, lazy=False):
         assert not lazy, 'Do not support lazy'
@@ -84,11 +85,23 @@ class IgorIO(BaseIO):
 
     def read_segment(self, lazy=False):
         assert not lazy, 'Do not support lazy'
-
         segment = Segment(file_origin=self.filename)
-        segment.analogsignals.append(
-            self.read_analogsignal(lazy=lazy))
-        segment.analogsignals[-1].segment = segment
+
+        if self.extension == 'pxp':
+            if not self._filesystem:
+                _, self.filesystem = pxp.load(self.filename)
+
+            def callback(dirpath, key, value):
+                if isinstance(value, WaveRecord):
+                    signal = self._wave_to_analogsignal(value.wave['wave'])
+                    signal.segment = segment
+                    segment.analogsignals.append(signal)
+
+            pxp.walk(self.filesystem, callback)
+        else:
+            segment.analogsignals.append(
+                self.read_analogsignal(lazy=lazy))
+            segment.analogsignals[-1].segment = segment
         return segment
 
     def read_analogsignal(self, path=None, lazy=False):
@@ -106,14 +119,18 @@ class IgorIO(BaseIO):
         elif self.extension == 'pxp':
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."
-            _, filesystem = pxp.load(self.filename)
-            path = path.split(':')
-            location = filesystem['root']
-            for element in path:
-                if element != 'root':
-                    location = location[element.encode('utf8')]
+            if not self._filesystem:
+                _, self.filesystem = pxp.load(self.filename)
+                path = path.split(':')
+                location = self.filesystem['root']
+                for element in path:
+                    if element != 'root':
+                        location = location[element.encode('utf8')]
             data = location.wave
-        content = data['wave']
+
+        return self._wave_to_analogsignal(data['wave'])
+
+    def _wave_to_analogsignal(self, content):
         if "padding" in content:
             assert content['padding'].size == 0, \
                 "Cannot handle non-empty padding"
