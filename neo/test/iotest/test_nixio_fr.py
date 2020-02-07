@@ -5,10 +5,12 @@ Tests of neo.io.nixio_fr
 from __future__ import absolute_import
 import numpy as np
 import unittest
+from quantities import s
 from neo.io.nixio_fr import NixIO as NixIOfr
 import quantities as pq
 from neo.io.nixio import NixIO
 from neo.test.iotest.common_io_test import BaseTestIO
+from neo.core import Block, Segment, AnalogSignal, SpikeTrain, Event
 from neo.test.iotest.tools import get_test_file_full_path
 try:
     import nixio as nix
@@ -16,6 +18,7 @@ try:
     HAVE_NIX = True
 except ImportError:
     HAVE_NIX = False
+import os
 
 
 @unittest.skipUnless(HAVE_NIX, "Requires NIX")
@@ -98,6 +101,42 @@ class TestNixfr(BaseTestIO, unittest.TestCase, ):
         assert len(epoch1.durations) == len(epoch1.times)
         assert np.all(epoch1.durations == epoch2.durations)
         assert np.all(epoch1.labels == epoch2.labels)
+
+    def test_annotations(self):
+        self.testfilename = self.get_filename_path('nixio_fr_ann.nix')
+        with NixIO(filename=self.testfilename, mode='ow') as io:
+            annotations = {'my_custom_annotation': 'hello block'}
+            bl = Block(**annotations)
+            annotations = {'something': 'hello hello000'}
+            seg = Segment(**annotations)
+            an =AnalogSignal([[1, 2, 3], [4, 5, 6]], units='V',
+                                        sampling_rate=1*pq.Hz)
+            an.annotations['ansigrandom'] = 'hello chars'
+            sp = SpikeTrain([3, 4, 5]* s, t_stop=10.0)
+            sp.annotations['railway'] = 'hello train'
+            ev = Event(np.arange(0, 30, 10)*pq.Hz,
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+            ev.annotations['venue'] = 'hello event'
+            ev2 = Event(np.arange(0, 30, 10) * pq.Hz,
+                       labels=np.array(['trig0', 'trig1', 'trig2'], dtype='S'))
+            ev2.annotations['evven'] = 'hello ev'
+            seg.spiketrains.append(sp)
+            seg.events.append(ev)
+            seg.events.append(ev2)
+            seg.analogsignals.append(an)
+            bl.segments.append(seg)
+            io.write_block(bl)
+            io.close()
+        with NixIOfr(filename=self.testfilename) as frio:
+            frbl = frio.read_block()
+            assert 'my_custom_annotation' in frbl.annotations
+            assert 'something' in frbl.segments[0].annotations
+            # assert 'ansigrandom' in frbl.segments[0].analogsignals[0].annotations
+            assert 'railway' in frbl.segments[0].spiketrains[0].annotations
+            assert 'venue' in frbl.segments[0].events[0].annotations
+            assert 'evven' in frbl.segments[0].events[1].annotations
+        os.remove(self.testfilename)
+
 
 
 if __name__ == '__main__':

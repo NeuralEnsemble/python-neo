@@ -2,15 +2,13 @@
 Neo 0.6.0 release notes
 =======================
 
-XXth March 2018
-
-This is a draft.
+23rd March 2018
 
 Major changes:
   * Introduced :mod:`neo.rawio`: a low-level reader for various data formats
   * Added continuous integration for all IOs using CircleCI
     (previously only :mod:`neo.core` was tested, using Travis CI)
-  * Moved the test file repository to https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+  * Moved the test file repository to https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
     - this makes it easier for people to contribute new files for testing.
 
 Other important changes:
@@ -37,6 +35,9 @@ Deprecated IO classes:
 
 Thanks to Björn Müller, Andrew Davison, Achilleas Koutsou, Chadwick Boulay, Julia Sprenger,
  Matthieu Senoville, Michael Denker and especially Samuel Garcia for their contributions to this release.
+
+
+.. note:: version 0.6.1 was released immediately following 0.6.0 to fix a minor problem with the documentation.
 
 
 .. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.6.0+is%3Aclosed

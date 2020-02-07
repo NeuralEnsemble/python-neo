@@ -5,7 +5,10 @@ Tools for IO coder:
     SPikeTrains
 """
 
-import collections
+try:
+    from collections.abc import MutableSequence
+except ImportError:
+    from collections import MutableSequence
 
 import numpy as np
 
@@ -79,14 +82,14 @@ from neo.core import (AnalogSignal, Block,
 #        return D.items()  # Python 3
 
 
-class LazyList(collections.MutableSequence):
+class LazyList(MutableSequence):
     """ An enhanced list that can load its members on demand. Behaves exactly
     like a regular list for members that are Neo objects. Each item should
     contain the information that ``load_lazy_cascade`` needs to load the
     respective object.
     """
-    _container_objects = set(
-        [Block, Segment, ChannelIndex, Unit])
+    _container_objects = {
+        Block, Segment, ChannelIndex, Unit}
     _neo_objects = _container_objects.union(
         [AnalogSignal, Epoch, Event,
          IrregularlySampledSignal, SpikeTrain])

@@ -2,7 +2,7 @@
 
 .. image:: images/neologo.png
     :width: 600 px
-    
+
 Neo is a Python package for working with electrophysiology data in Python, together
 with support for reading a wide range of neurophysiology file formats, including
 Spike2, NeuroExplorer, AlphaOmega, Axon, Blackrock, Plexon, Tdt, Igor Pro, and support for
@@ -14,7 +14,7 @@ shared object model. In order to be as lightweight a dependency as possible,
 Neo is deliberately limited to represention of data, with no functions for data
 analysis or visualization.
 
-Neo is used by a number of other software tools, including 
+Neo is used by a number of other software tools, including
 SpykeViewer_ (data analysis and visualization), Elephant_ (data analysis),
 the G-node_ suite (databasing), PyNN_ (simulations), tridesclous_ (spike sorting)
 and ephyviewer_ (data visualization).
@@ -36,7 +36,7 @@ Documentation
 
 .. toctree::
    :maxdepth: 1
-   
+
    install
    core
    usecases
@@ -82,11 +82,11 @@ Citation
 .. _Elephant: http://neuralensemble.org/elephant
 .. _G-node: http://www.g-node.org/
 .. _Neuroshare: http://neuroshare.org/
-.. _SpykeViewer: https://spyke-viewer.readthedocs.org/en/latest/
-.. _NiBabel: http://nipy.sourceforge.net/nibabel/
+.. _SpykeViewer: https://spyke-viewer.readthedocs.io/en/latest/
+.. _NiBabel: https://nipy.org/nibabel/
 .. _PyNN: http://neuralensemble.org/PyNN
-.. _quantities: http://pypi.python.org/pypi/quantities
-.. _`NeuralEnsemble mailing list`: http://groups.google.com/group/neuralensemble
+.. _quantities: https://pypi.org/project/quantities/
+.. _`NeuralEnsemble mailing list`: https://groups.google.com/forum/#!forum/neuralensemble
 .. _`issue tracker`: https://github.com/NeuralEnsemble/python-neo/issues
 .. _tridesclous: https://github.com/tridesclous/tridesclous
 .. _ephyviewer: https://github.com/NeuralEnsemble/ephyviewer

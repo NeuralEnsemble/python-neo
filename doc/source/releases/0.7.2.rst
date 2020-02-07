@@ -1,0 +1,15 @@
+=======================
+Neo 0.7.2 release notes
+=======================
+
+10th July 2019
+
+
+New RawIO class:
+  * AxographRawIO
+
+Bug fixes:
+  * Various CI fixes
+
+Thanks to Andrew Davison, Samuel Garcia, Jeffrey Gill and Julia Sprenger for
+their contributions to this release.

@@ -95,14 +95,14 @@ class IgorIO(BaseIO):
         assert not lazy, 'Do not support lazy'
 
         if not HAVE_IGOR:
-            raise Exception(("`igor` package not installed. "
-                             "Try `pip install igor`"))
+            raise Exception("`igor` package not installed. "
+                             "Try `pip install igor`")
         if self.extension == 'ibw':
             data = bw.load(self.filename)
             version = data['version']
             if version > 5:
-                raise IOError(("Igor binary wave file format version {0} "
-                               "is not supported.".format(version)))
+                raise IOError("Igor binary wave file format version {} "
+                               "is not supported.".format(version))
         elif self.extension == 'pxp':
             assert type(path) is str, \
                 "A colon-separated Igor-style path must be provided."

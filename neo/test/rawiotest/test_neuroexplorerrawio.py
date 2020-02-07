@@ -7,7 +7,7 @@ import unittest
 
 from neo.rawio.neuroexplorerrawio import NeuroExplorerRawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestNeuroExplorerRawIO(BaseTestRawIO, unittest.TestCase, ):

@@ -6,7 +6,7 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 import unittest
 
 from neo.rawio.rawbinarysignalrawio import RawBinarySignalRawIO
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestRawBinarySignalRawIO(BaseTestRawIO, unittest.TestCase, ):

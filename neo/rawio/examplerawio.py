@@ -27,7 +27,7 @@ Rules for creating a new class:
 
   3. Step 3 : Create the neo.io class with the wrapper
     * Create a file in neo/io/ that endith with "io.py"
-    * Create a that hinerits bot yrou RawIO class and BaseFromRaw class
+    * Create a that inherits both your RawIO class and BaseFromRaw class
     * copy/paste from neo/io/exampleio.py
 
   4.Step 4 : IO test
@@ -56,8 +56,8 @@ class ExampleRawIO(BaseRawIO):
     to develop a new IO module.
 
     Two rules for developers:
-      * Respect the Neo RawIO API (:ref:`_neo_rawio_API`)
-      * Follow :ref:`_io_guiline`
+      * Respect the :ref:`neo_rawio_API`
+      * Follow the :ref:`io_guiline`
 
     This fake IO:
         * have 2 blocks

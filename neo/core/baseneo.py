@@ -72,7 +72,7 @@ def merge_annotation(a, b):
         For strings: concatenate with ';'
         Otherwise: fail if the annotations are not equal
     """
-    assert type(a) == type(b), 'type(%s) %s != type(%s) %s' % (a, type(a),
+    assert type(a) == type(b), 'type({}) {} != type({}) {}'.format(a, type(a),
                                                                b, type(b))
     if isinstance(a, dict):
         return merge_annotations(a, b)
@@ -86,7 +86,7 @@ def merge_annotation(a, b):
         else:
             return a + ";" + b
     else:
-        assert a == b, '%s != %s' % (a, b)
+        assert a == b, '{} != {}'.format(a, b)
         return a
 
 
@@ -244,6 +244,8 @@ class BaseNeo(object):
     # specified in each child class
     # Parent objects whose children can have a single parent
     _single_parent_objects = ()
+    # Attribute names corresponding to _single_parent_objects
+    _single_parent_attrs = ()
     # Parent objects whose children can have multiple parents
     _multi_parent_objects = ()
 
@@ -306,7 +308,7 @@ class BaseNeo(object):
                 else:
                     pp.breakable()
                 with pp.group(indent=1):
-                    pp.text("{0}: ".format(key))
+                    pp.text("{}: ".format(key))
                     pp.pretty(value)
 
     def _repr_pretty_(self, pp, cycle):
@@ -390,3 +392,15 @@ class BaseNeo(object):
         See :meth:`merge_annotations` for details of the merge operation.
         """
         self.merge_annotations(other)
+
+    def set_parent(self, obj):
+        """
+        Set the appropriate "parent" attribute of this object
+        according to the type of "obj"
+        """
+        if obj.__class__.__name__ not in self._single_parent_objects:
+            raise TypeError("{} can only have parents of type {}, not {}".format(
+                self.__class__.__name__, self._single_parent_objects, obj.__class__.__name__))
+        loc = self._single_parent_objects.index(obj.__class__.__name__)
+        parent_attr = self._single_parent_attrs[loc]
+        setattr(self, parent_attr, obj)

@@ -22,11 +22,16 @@ Neo: https://github.com/G-Node/python-neo/wiki
 
 from __future__ import absolute_import
 
-import time
-from datetime import datetime
-from collections import Iterable, OrderedDict
+from datetime import date, time, datetime
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
+from collections import OrderedDict
 import itertools
 from uuid import uuid4
+import warnings
+from distutils.version import LooseVersion as Version
 
 import quantities as pq
 import numpy as np
@@ -34,6 +39,7 @@ import numpy as np
 from .baseio import BaseIO
 from ..core import (Block, Segment, ChannelIndex, AnalogSignal,
                     IrregularlySampledSignal, Epoch, Event, SpikeTrain, Unit)
+from ..io.proxyobjects import BaseProxy
 from ..version import version as neover
 
 try:
@@ -48,7 +54,18 @@ try:
 except NameError:
     string_types = str
 
+datetime_types = (date, time, datetime)
+
 EMPTYANNOTATION = "EMPTYLIST"
+ARRAYANNOTATION = "ARRAYANNOTATION"
+DATETIMEANNOTATION = "DATETIME"
+DATEANNOTATION = "DATE"
+TIMEANNOTATION = "TIME"
+MIN_NIX_VER = Version("1.5.0")
+
+datefmt = "%Y-%m-%d"
+timefmt = "%H:%M:%S.%f"
+datetimefmt = datefmt + "T" + timefmt
 
 
 def stringify(value):
@@ -74,10 +91,70 @@ def units_to_string(pqunit):
     return dim
 
 
-def calculate_timestamp(dt):
+def dt_to_nix(dt):
+    """
+    Converts date, time, and datetime objects to an ISO string representation
+    appropriate for storing in NIX. Returns the converted value and the
+    annotation type definition for converting back to the original value
+    type.
+    """
     if isinstance(dt, datetime):
-        return int(time.mktime(dt.timetuple()))
-    return int(dt)
+        return dt.strftime(datetimefmt), DATETIMEANNOTATION
+    if isinstance(dt, date):
+        return dt.strftime(datefmt), DATEANNOTATION
+    if isinstance(dt, time):
+        return dt.strftime(timefmt), TIMEANNOTATION
+    # Unknown: returning as is
+    return dt
+
+
+def dt_from_nix(nixdt, annotype):
+    """
+    Inverse function of 'dt_to_nix()'. Requires the stored annotation type to
+    distinguish between the three source types (date, time, and datetime).
+    """
+    if annotype == DATEANNOTATION:
+        dt = datetime.strptime(nixdt, datefmt)
+        return dt.date()
+    if annotype == TIMEANNOTATION:
+        dt = datetime.strptime(nixdt, timefmt)
+        return dt.time()
+    if annotype == DATETIMEANNOTATION:
+        dt = datetime.strptime(nixdt, datetimefmt)
+        return dt
+    # Unknown type: older (or newer) IO version?
+    # Returning as is to avoid data loss.
+    return nixdt
+
+
+def check_nix_version():
+    if not HAVE_NIX:
+        raise Exception(
+            "Failed to import NIX. "
+            "The NixIO requires the Python package for NIX "
+            "(nixio on PyPi). Try `pip install nixio`."
+
+        )
+
+    # nixio version numbers have a 'v' prefix which breaks the comparison
+    nixverstr = nix.__version__.lstrip("v")
+    try:
+        nixver = Version(nixverstr)
+    except ValueError:
+        warnings.warn(
+            "Could not understand NIX Python version {}. "
+            "The NixIO requires version {} of the Python package for NIX. "
+            "The IO may not work correctly.".format(nixverstr,
+                                                    str(MIN_NIX_VER))
+        )
+        return
+
+    if nixver < MIN_NIX_VER:
+        raise Exception(
+            "NIX version not supported. "
+            "The NixIO requires version {} or higher of the Python package "
+            "for NIX. Found version {}".format(str(MIN_NIX_VER), nixverstr)
+        )
 
 
 class NixIO(BaseIO):
@@ -98,20 +175,13 @@ class NixIO(BaseIO):
     extensions = ["h5", "nix"]
     mode = "file"
 
-    nix_version = nix.__version__ if HAVE_NIX else "NIX NOT FOUND"
-
     def __init__(self, filename, mode="rw"):
         """
         Initialise IO instance and NIX file.
 
         :param filename: Full path to the file
         """
-
-        if not HAVE_NIX:
-            raise Exception("Failed to import NIX. "
-                            "The NixIO requires the Python bindings for NIX "
-                            "(nixio on PyPi). Try `pip install nixio`.")
-
+        check_nix_version()
         BaseIO.__init__(self, filename)
         self.filename = filename
         if mode == "ro":
@@ -259,6 +329,9 @@ class NixIO(BaseIO):
             # parent reference
             newchx.block = neo_block
 
+        # create object links
+        neo_block.create_relationship()
+
         # reset maps
         self._neo_map = dict()
         self._ref_map = dict()
@@ -272,7 +345,6 @@ class NixIO(BaseIO):
         neo_segment.rec_datetime = datetime.fromtimestamp(
             nix_group.created_at
         )
-
         self._neo_map[nix_group.name] = neo_segment
 
         # this will probably get all the DAs anyway, but if we change any part
@@ -428,6 +500,7 @@ class NixIO(BaseIO):
         signaldata = create_quantity(signaldata, unit)
         timedim = self._get_time_dimension(nix_da_group[0])
         times = create_quantity(timedim.ticks, timedim.unit)
+
         neo_signal = IrregularlySampledSignal(
             signal=signaldata, times=times, **neo_attrs
         )
@@ -456,6 +529,7 @@ class NixIO(BaseIO):
         times = create_quantity(nix_mtag.positions, time_unit)
         durations = create_quantity(nix_mtag.extents,
                                     nix_mtag.extents.unit)
+
         if len(nix_mtag.positions.dimensions[0].labels) > 0:
             labels = np.array(nix_mtag.positions.dimensions[0].labels,
                               dtype="U")
@@ -470,6 +544,7 @@ class NixIO(BaseIO):
         neo_attrs = self._nix_attr_to_neo(nix_mtag)
         time_unit = nix_mtag.positions.unit
         times = create_quantity(nix_mtag.positions, time_unit)
+
         neo_spiketrain = SpikeTrain(times=times, **neo_attrs)
         if nix_mtag.features:
             wfda = nix_mtag.features[0].data
@@ -544,12 +619,12 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixblock.definition = block.description
         if block.rec_datetime:
-            nixblock.force_created_at(
-                calculate_timestamp(block.rec_datetime)
-            )
+            nix_rec_dt = int(block.rec_datetime.strftime("%s"))
+            nixblock.force_created_at(nix_rec_dt)
         if block.file_datetime:
-            fdt = calculate_timestamp(block.file_datetime)
-            metadata["file_datetime"] = fdt
+            fdt, annotype = dt_to_nix(block.file_datetime)
+            fdtprop = metadata.create_property("file_datetime", fdt)
+            fdtprop.definition = annotype
         if block.annotations:
             for k, v in block.annotations.items():
                 self._write_property(metadata, k, v)
@@ -591,6 +666,11 @@ class NixIO(BaseIO):
             for k, v in chx.annotations.items():
                 self._write_property(metadata, k, v)
 
+        coordinates = chx.coordinates
+        if coordinates is not None and np.ndim(coordinates) == 1:
+            # support 1D coordinates for single ChannelIndex
+            coordinates = [coordinates]
+
         for idx, channel in enumerate(chx.index):
             channame = "{}.ChannelIndex{}".format(nix_name, idx)
             nixchan = nixsource.create_source(channame, "neo.channelindex")
@@ -606,8 +686,8 @@ class NixIO(BaseIO):
             if len(chx.channel_ids):
                 chanid = chx.channel_ids[idx]
                 chanmd["channel_id"] = chanid
-            if chx.coordinates is not None:
-                coords = chx.coordinates[idx]
+            if coordinates is not None:
+                coords = coordinates[idx]
                 coordunits = stringify(coords[0].dimensionality)
                 nixcoords = tuple(c.magnitude.item() for c in coords)
                 chanprop = chanmd.create_property("coordinates", nixcoords)
@@ -640,12 +720,12 @@ class NixIO(BaseIO):
         metadata["neo_name"] = neoname
         nixgroup.definition = segment.description
         if segment.rec_datetime:
-            nixgroup.force_created_at(
-                calculate_timestamp(segment.rec_datetime)
-            )
+            nix_rec_dt = int(segment.rec_datetime.strftime("%s"))
+            nixgroup.force_created_at(nix_rec_dt)
         if segment.file_datetime:
-            fdt = calculate_timestamp(segment.file_datetime)
-            metadata["file_datetime"] = fdt
+            fdt, annotype = dt_to_nix(segment.file_datetime)
+            fdtprop = metadata.create_property("file_datetime", fdt)
+            fdtprop.definition = annotype
         if segment.annotations:
             for k, v in segment.annotations.items():
                 self._write_property(metadata, k, v)
@@ -692,7 +772,11 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(anasig[:].magnitude)
+        if isinstance(anasig, BaseProxy):
+            data = np.transpose(anasig.load()[:].magnitude)
+        else:
+            data = np.transpose(anasig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(nix_name,
                                            "neo.analogsignal.metadata")
@@ -705,9 +789,7 @@ class NixIO(BaseIO):
             da.definition = anasig.description
             da.unit = units_to_string(anasig.units)
 
-            timedim = da.append_sampled_dimension(
-                anasig.sampling_period.magnitude.item()
-            )
+            timedim = da.append_sampled_dimension(anasig.sampling_period.magnitude.item())
             timedim.unit = units_to_string(anasig.sampling_period.units)
             tstart = anasig.t_start
             metadata["t_start"] = tstart.magnitude.item()
@@ -724,6 +806,10 @@ class NixIO(BaseIO):
         if anasig.annotations:
             for k, v in anasig.annotations.items():
                 self._write_property(metadata, k, v)
+        if anasig.array_annotations:
+            for k, v in anasig.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -759,7 +845,11 @@ class NixIO(BaseIO):
             nixgroup.data_arrays.extend(dalist)
             return
 
-        data = np.transpose(irsig[:].magnitude)
+        if isinstance(irsig, BaseProxy):
+            data = np.transpose(irsig.load()[:].magnitude)
+        else:
+            data = np.transpose(irsig[:].magnitude)
+
         parentmd = nixgroup.metadata if nixgroup else nixblock.metadata
         metadata = parentmd.create_section(
             nix_name, "neo.irregularlysampledsignal.metadata"
@@ -787,6 +877,10 @@ class NixIO(BaseIO):
         if irsig.annotations:
             for k, v in irsig.annotations.items():
                 self._write_property(metadata, k, v)
+        if irsig.array_annotations:
+            for k, v in irsig.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         self._signal_map[nix_name] = nixdas
 
@@ -811,8 +905,12 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(event, BaseProxy):
+            event = event.load()
+
         times = event.times.magnitude
         units = units_to_string(event.times.units)
+        labels = event.labels
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.event.times", data=times
         )
@@ -826,7 +924,7 @@ class NixIO(BaseIO):
         metadata = nixmt.metadata
 
         labeldim = timesda.append_set_dimension()
-        labeldim.labels = event.labels
+        labeldim.labels = labels
 
         neoname = event.name if event.name is not None else ""
         metadata["neo_name"] = neoname
@@ -834,6 +932,10 @@ class NixIO(BaseIO):
         if event.annotations:
             for k, v in event.annotations.items():
                 self._write_property(metadata, k, v)
+        if event.array_annotations:
+            for k, v in event.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -863,10 +965,13 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(epoch, BaseProxy):
+            epoch = epoch.load()
         times = epoch.times.magnitude
         tunits = units_to_string(epoch.times.units)
         durations = epoch.durations.magnitude
         dunits = units_to_string(epoch.durations.units)
+
 
         timesda = nixblock.create_data_array(
             "{}.times".format(nix_name), "neo.epoch.times", data=times
@@ -896,6 +1001,10 @@ class NixIO(BaseIO):
         if epoch.annotations:
             for k, v in epoch.annotations.items():
                 self._write_property(metadata, k, v)
+        if epoch.array_annotations:
+            for k, v in epoch.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         nixgroup.multi_tags.append(nixmt)
 
@@ -925,12 +1034,15 @@ class NixIO(BaseIO):
             nixgroup.multi_tags.append(mt)
             return
 
+        if isinstance(spiketrain, BaseProxy):
+            spiketrain = spiketrain.load()
+
         times = spiketrain.times.magnitude
         tunits = units_to_string(spiketrain.times.units)
+        waveforms = spiketrain.waveforms
 
-        timesda = nixblock.create_data_array(
-            "{}.times".format(nix_name), "neo.spiketrain.times", data=times
-        )
+        timesda = nixblock.create_data_array("{}.times".format(nix_name),
+                                             "neo.spiketrain.times", data=times)
         timesda.unit = tunits
         nixmt = nixblock.create_multi_tag(nix_name, "neo.spiketrain",
                                           positions=timesda)
@@ -950,11 +1062,15 @@ class NixIO(BaseIO):
         if spiketrain.annotations:
             for k, v in spiketrain.annotations.items():
                 self._write_property(metadata, k, v)
+        if spiketrain.array_annotations:
+            for k, v in spiketrain.array_annotations.items():
+                p = self._write_property(metadata, k, v)
+                p.definition = ARRAYANNOTATION
 
         if nixgroup:
             nixgroup.multi_tags.append(nixmt)
 
-        if spiketrain.waveforms is not None:
+        if waveforms is not None:
             wfdata = list(wf.magnitude for wf in
                           list(wfgroup for wfgroup in
                                spiketrain.waveforms))
@@ -978,9 +1094,9 @@ class NixIO(BaseIO):
             wftime.unit = units_to_string(spiketrain.sampling_period.units)
             wftime.label = "time"
 
-        if spiketrain.left_sweep is not None:
-            self._write_property(wfda.metadata, "left_sweep",
-                                 spiketrain.left_sweep)
+            if spiketrain.left_sweep is not None:
+                self._write_property(wfda.metadata, "left_sweep",
+                                     spiketrain.left_sweep)
 
     def _write_unit(self, neounit, nixchxsource):
         """
@@ -1036,13 +1152,13 @@ class NixIO(BaseIO):
         for chx in neoblock.channel_indexes:
             signames = []
             for asig in chx.analogsignals:
-                if not ("nix_name" in asig.annotations and
-                        asig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in asig.annotations
+                        and asig.annotations["nix_name"] in self._signal_map):
                     self._write_analogsignal(asig, nixblock, None)
                 signames.append(asig.annotations["nix_name"])
             for isig in chx.irregularlysampledsignals:
-                if not ("nix_name" in isig.annotations and
-                        isig.annotations["nix_name"] in self._signal_map):
+                if not ("nix_name" in isig.annotations
+                        and isig.annotations["nix_name"] in self._signal_map):
                     self._write_irregularlysampledsignal(isig, nixblock, None)
                 signames.append(isig.annotations["nix_name"])
             chxsource = nixblock.sources[chx.annotations["nix_name"]]
@@ -1053,10 +1169,11 @@ class NixIO(BaseIO):
             for unit in chx.units:
                 unitsource = chxsource.sources[unit.annotations["nix_name"]]
                 for st in unit.spiketrains:
-                    if not ("nix_name" in st.annotations and
-                            st.annotations["nix_name"] in nixblock.multi_tags):
+                    mtags = nixblock.multi_tags
+                    if not ("nix_name" in st.annotations
+                            and st.annotations["nix_name"] in mtags):
                         self._write_spiketrain(st, nixblock, None)
-                    stmt = nixblock.multi_tags[st.annotations["nix_name"]]
+                    stmt = mtags[st.annotations["nix_name"]]
                     stmt.sources.append(chxsource)
                     stmt.sources.append(unitsource)
 
@@ -1081,8 +1198,10 @@ class NixIO(BaseIO):
             else:
                 section.create_property(name, v.magnitude.item())
             section.props[name].unit = str(v.dimensionality)
-        elif isinstance(v, datetime):
-            section.create_property(name, calculate_timestamp(v))
+        elif isinstance(v, datetime_types):
+            value, annotype = dt_to_nix(v)
+            prop = section.create_property(name, value)
+            prop.definition = annotype
         elif isinstance(v, string_types):
             if len(v):
                 section.create_property(name, v)
@@ -1121,8 +1240,7 @@ class NixIO(BaseIO):
                     values.append(item)
             section.create_property(name, values)
             section.props[name].unit = unit
-            if definition:
-                section.props[name].definition = definition
+            section.props[name].definition = definition
         elif type(v).__module__ == "numpy":
             section.create_property(name, v.item())
         else:
@@ -1146,7 +1264,7 @@ class NixIO(BaseIO):
         neo_attrs["description"] = stringify(nix_obj.definition)
         if nix_obj.metadata:
             for prop in nix_obj.metadata.inherited_properties():
-                values = prop.values
+                values = list(prop.values)
                 if prop.unit:
                     units = prop.unit
                     values = create_quantity(values, units)
@@ -1157,15 +1275,20 @@ class NixIO(BaseIO):
                         values = ""
                 elif len(values) == 1:
                     values = values[0]
+                if prop.definition in (DATEANNOTATION, TIMEANNOTATION,
+                                       DATETIMEANNOTATION):
+                    values = dt_from_nix(values, prop.definition)
+                if prop.definition == ARRAYANNOTATION:
+                    if 'array_annotations' in neo_attrs:
+                        neo_attrs['array_annotations'][prop.name] = values
+                    else:
+                        neo_attrs['array_annotations'] = {prop.name: values}
                 else:
-                    values = list(values)
-                neo_attrs[prop.name] = values
-        neo_attrs["name"] = stringify(neo_attrs.get("neo_name"))
+                    neo_attrs[prop.name] = values
+        # since the 'neo_name' NIX property becomes the actual object's name,
+        # there's no reason to keep it in the annotations
+        neo_attrs["name"] = stringify(neo_attrs.pop("neo_name", None))
 
-        if "file_datetime" in neo_attrs:
-            neo_attrs["file_datetime"] = datetime.fromtimestamp(
-                neo_attrs["file_datetime"]
-            )
         return neo_attrs
 
     @staticmethod
@@ -1197,9 +1320,7 @@ class NixIO(BaseIO):
         return None
 
     def _use_obj_names(self, blocks):
-
         errmsg = "use_obj_names enabled: found conflict or anonymous object"
-
         allobjs = []
 
         def check_unique(objs):
@@ -1281,8 +1402,8 @@ class NixIO(BaseIO):
         """
         Closes the open nix file and resets maps.
         """
-        if (hasattr(self, "nix_file") and
-                self.nix_file and self.nix_file.is_open()):
+        if (hasattr(self, "nix_file")
+                and self.nix_file and self.nix_file.is_open()):
             self.nix_file.close()
             self.nix_file = None
             self._neo_map = None

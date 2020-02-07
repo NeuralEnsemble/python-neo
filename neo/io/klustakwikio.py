@@ -203,8 +203,8 @@ class KlustaKwikIO(BaseIO):
             names = ['fet%d' % n for n in range(nbFeatures)]
             names.append('spike_time')
 
-            # Load into recarray
-            data = mlab.csv2rec(f, names=names, skiprows=1, delimiter=' ')
+        # Load into recarray
+        data = np.recfromtxt(fetfilename, names=names, skip_header=1, delimiter=' ')
 
         # get features
         features = np.array([data['fet%d' % n] for n in range(nbFeatures)])
@@ -448,7 +448,7 @@ class FilenameParser:
         for v in all_filenames:
             # Test whether matches format, ie ends with digits
             split_fn = os.path.split(v)[1]
-            m = glob.re.search(('^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
+            m = glob.re.search((r'^(\w+)\.%s\.(\d+)$' % typestring), split_fn)
             if m is not None:
                 # get basename from first hit if not specified
                 if self.basename is None:

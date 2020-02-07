@@ -114,7 +114,7 @@ class TdtRawIO(BaseRawIO):
 
             # If there exists an external sortcode in ./sort/[sortname]/*.SortResult
             #  (generated after offline sorting)
-            if self.sortname is not '':
+            if self.sortname != '':
                 try:
                     for file in os.listdir(os.path.join(path, 'sort', sortname)):
                         if file.endswith(".SortResult"):

@@ -8,7 +8,12 @@ object inherit from.  It provides shared methods for all container types.
 
 # needed for python 3 compatibility
 from __future__ import absolute_import, division, print_function
+try:
+    basestring
+except NameError:
+    basestring = str
 
+from copy import deepcopy
 from neo.core.baseneo import BaseNeo, _reference_name, _container_name
 
 
@@ -369,8 +374,8 @@ class Container(BaseNeo):
         Get dictionary containing the names of child containers in the current
         object as keys and the number of children of that type as values.
         """
-        return dict((name, len(getattr(self, name)))
-                    for name in self._child_containers)
+        return {name: len(getattr(self, name))
+                    for name in self._child_containers}
 
     def filter(self, targdict=None, data=True, container=False, recursive=True,
                objects=None, **kwargs):
@@ -404,6 +409,11 @@ class Container(BaseNeo):
             >>> obj.filter(objects=neo.SpikeTrain)
             >>> obj.filter(targdict={'myannotation':3})
         """
+
+        if isinstance(targdict, basestring):
+            raise TypeError("filtering is based on key-value pairs."
+                            " Only a single string was provided.")
+
         # if objects are specified, get the classes
         if objects:
             data = True
@@ -515,6 +525,33 @@ class Container(BaseNeo):
                 child.create_relationship(force=force, append=append,
                                           recursive=True)
 
+    def __deepcopy__(self, memo):
+        """
+        Creates a deep copy of the container.
+        All contained objects will also be deep copied and relationships
+        between all objects will be identical to the original relationships.
+        Attributes and annotations of the container are deep copied as well.
+
+        :param memo: (dict) Objects that have been deep copied already
+        :return: (Container) Deep copy of input Container
+        """
+        cls = self.__class__
+        necessary_attrs = {}
+        for k in self._necessary_attrs:
+            necessary_attrs[k[0]] = getattr(self, k[0], None)
+        new_container = cls(**necessary_attrs)
+        new_container.__dict__.update(self.__dict__)
+        memo[id(self)] = new_container
+        for k, v in self.__dict__.items():
+            try:
+                setattr(new_container, k, deepcopy(v, memo))
+            except TypeError:
+                setattr(new_container, k, v)
+
+        new_container.create_relationship()
+
+        return new_container
+
     def merge(self, other):
         """
         Merge the contents of another object into this one.
@@ -525,11 +562,14 @@ class Container(BaseNeo):
 
         Annotations are merged such that only items not present in the current
         annotations are added.
+
+        Note that the other object will be linked inconsistently to other Neo objects
+        after the merge operation and should not be used further.
         """
         # merge containers with the same name
         for container in (self._container_child_containers +
                               self._multi_child_containers):
-            lookup = dict((obj.name, obj) for obj in getattr(self, container))
+            lookup = {obj.name: obj for obj in getattr(self, container)}
             ids = [id(obj) for obj in getattr(self, container)]
             for obj in getattr(other, container):
                 if id(obj) in ids:
@@ -544,12 +584,12 @@ class Container(BaseNeo):
         # for data objects, ignore the name and just add them
         for container in self._data_child_containers:
             objs = getattr(self, container)
-            lookup = dict((obj.name, i) for i, obj in enumerate(objs))
+            lookup = {obj.name: i for i, obj in enumerate(objs)}
             ids = [id(obj) for obj in objs]
             for obj in getattr(other, container):
                 if id(obj) in ids:
-                    continue
-                if hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
+                    pass
+                elif hasattr(obj, 'merge') and obj.name is not None and obj.name in lookup:
                     ind = lookup[obj.name]
                     try:
                         newobj = getattr(self, container)[ind].merge(obj)
@@ -561,6 +601,7 @@ class Container(BaseNeo):
                     lookup[obj.name] = obj
                     ids.append(id(obj))
                     getattr(self, container).append(obj)
+                obj.set_parent(self)
 
         # use the BaseNeo merge as well
         super(Container, self).merge(other)
@@ -576,7 +617,7 @@ class Container(BaseNeo):
         for container in self._child_containers:
             objs = getattr(self, container)
             if objs:
-                vals.append('%s %s' % (len(objs), container))
+                vals.append('{} {}'.format(len(objs), container))
         pp.text(', '.join(vals))
 
         if self._has_repr_pretty_attrs_():
@@ -586,7 +627,7 @@ class Container(BaseNeo):
         for container in self._repr_pretty_containers:
             pp.breakable()
             objs = getattr(self, container)
-            pp.text("# %s (N=%s)" % (container, len(objs)))
+            pp.text("# {} (N={})".format(container, len(objs)))
             for (i, obj) in enumerate(objs):
                 pp.breakable()
                 pp.text("%s: " % i)

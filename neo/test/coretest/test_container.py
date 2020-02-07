@@ -26,7 +26,7 @@ class Test_unique_objs(unittest.TestCase):
         a = 1
         b = np.array([3.14159265, 3.1415])
         c = [1, '1', 2.3, '5 8']
-        d = set([1, '2', 'spam'])
+        d = {1, '2', 'spam'}
 
         objs = [a, b, b, b, c, b, a, d, b, b, a, d, d, d, c, d, b, d, c, a]
         targ = [a, b, c, d]
@@ -101,6 +101,10 @@ class TestContainerNeo(unittest.TestCase):
         container.create_many_to_many_relationship()
         container.create_relationship()
 
+    def test_filter(self):
+        container = Container()
+        self.assertRaises(TypeError, container.filter, "foo")
+
 
 class Test_Container_merge(unittest.TestCase):
     '''
@@ -171,7 +175,7 @@ class Test_pprint(unittest.TestCase):
         description = 'this is a test'
         obj = Container(name=name, description=description)
         res = pretty(obj)
-        targ = "Container with  name: '%s' description: '%s'" % (name,
+        targ = "Container with  name: '{}' description: '{}'".format(name,
                                                                  description)
         self.assertEqual(res, targ)
 
