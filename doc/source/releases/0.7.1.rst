@@ -1,0 +1,14 @@
+=======================
+Neo 0.7.1 release notes
+=======================
+
+13th December 2019
+
+
+* Add alias `duplicate_with_new_array` for `duplicate_with_new_data`, for
+  backwards compatibility
+* Update `NeuroshareapiIO` and `NeurosharectypesIO` to Neo 0.6
+* Create basic and compatibility test for `nixio_fr`
+
+Thanks to Chek Yin Choi, Andrew Davison and Julia Sprenger for their
+contributions to this release.

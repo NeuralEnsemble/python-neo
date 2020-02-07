@@ -30,7 +30,7 @@ import unittest
 
 from neo.rawio.examplerawio import ExampleRawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestExampleRawIO(BaseTestRawIO, unittest.TestCase, ):

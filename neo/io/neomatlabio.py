@@ -379,7 +379,7 @@ class NeoMatlabIO(BaseIO):
             item = getattr(struct, attrname)
 
             attributes = cl._necessary_attrs + cl._recommended_attrs
-            dict_attributes = dict([(a[0], a[1:]) for a in attributes])
+            dict_attributes = {a[0]: a[1:] for a in attributes}
             if attrname in dict_attributes:
                 attrtype = dict_attributes[attrname][0]
                 if attrtype == datetime:

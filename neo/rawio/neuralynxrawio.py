@@ -65,13 +65,13 @@ class NeuralynxRawIO(BaseRawIO):
         unit_channels = []
         event_channels = []
 
-        self.ncs_filenames = OrderedDict()  # chan_id: filename
-        self.nse_ntt_filenames = OrderedDict()  # chan_id: filename
+        self.ncs_filenames = OrderedDict()  # (chan_name, chan_id): filename
+        self.nse_ntt_filenames = OrderedDict()  # (chan_name, chan_id): filename
         self.nev_filenames = OrderedDict()  # chan_id: filename
 
         self._nev_memmap = {}
         self._spike_memmap = {}
-        self.internal_unit_ids = []  # channel_index > (channel_id, unit_id)
+        self.internal_unit_ids = []  # channel_index > ((channel_name, channel_id), unit_id)
         self.internal_event_ids = []
         self._empty_ncs = []  # this list contains filenames of empty records
         self._empty_nse_ntt = []
@@ -101,6 +101,8 @@ class NeuralynxRawIO(BaseRawIO):
 
             for idx, chan_id in enumerate(chan_ids):
                 chan_name = chan_names[idx]
+
+                chan_uid = (chan_name, chan_id)
                 if ext == 'ncs':
                     # a signal channels
                     units = 'uV'
@@ -111,7 +113,7 @@ class NeuralynxRawIO(BaseRawIO):
                     group_id = 0
                     sig_channels.append((chan_name, chan_id, info['sampling_rate'],
                                          'int16', units, gain, offset, group_id))
-                    self.ncs_filenames[chan_id] = filename
+                    self.ncs_filenames[chan_uid] = filename
                     keys = [
                         'DspFilterDelay_µs',
                         'recording_opened',
@@ -142,7 +144,7 @@ class NeuralynxRawIO(BaseRawIO):
                     # a file can contain several unit_id (so several unit channel)
                     assert chan_id not in self.nse_ntt_filenames, \
                         'Several nse or ntt files have the same unit_id!!!'
-                    self.nse_ntt_filenames[chan_id] = filename
+                    self.nse_ntt_filenames[chan_uid] = filename
 
                     dtype = get_nse_or_ntt_dtype(info, ext)
 
@@ -152,14 +154,14 @@ class NeuralynxRawIO(BaseRawIO):
                     else:
                         data = np.memmap(filename, dtype=dtype, mode='r', offset=HEADER_SIZE)
 
-                    self._spike_memmap[chan_id] = data
+                    self._spike_memmap[chan_uid] = data
 
                     unit_ids = np.unique(data['unit_id'])
                     for unit_id in unit_ids:
                         # a spike channel for each (chan_id, unit_id)
-                        self.internal_unit_ids.append((chan_id, unit_id))
+                        self.internal_unit_ids.append((chan_uid, unit_id))
 
-                        unit_name = "ch{}#{}".format(chan_id, unit_id)
+                        unit_name = "ch{}#{}#{}".format(chan_name, chan_id, unit_id)
                         unit_id = '{}'.format(unit_id)
                         wf_units = 'uV'
                         wf_gain = info['bit_to_microVolt'][idx]
@@ -207,7 +209,7 @@ class NeuralynxRawIO(BaseRawIO):
         # so need to scan all spike and event to
         ts0, ts1 = None, None
         for _data_memmap in (self._spike_memmap, self._nev_memmap):
-            for chan_id, data in _data_memmap.items():
+            for _, data in _data_memmap.items():
                 ts = data['timestamp']
                 if ts.size == 0:
                     continue
@@ -300,19 +302,21 @@ class NeuralynxRawIO(BaseRawIO):
 
         if channel_indexes is None:
             channel_indexes = slice(None)
+
         channel_ids = self.header['signal_channels'][channel_indexes]['id']
+        channel_names = self.header['signal_channels'][channel_indexes]['name']
 
         sigs_chunk = np.zeros((i_stop - i_start, len(channel_ids)), dtype='int16')
-        for i, chan_id in enumerate(channel_ids):
-            data = self._sigs_memmap[seg_index][chan_id]
+        for i, chan_uid in enumerate(zip(channel_names, channel_ids)):
+            data = self._sigs_memmap[seg_index][chan_uid]
             sub = data[block_start:block_stop]
             sigs_chunk[:, i] = sub['samples'].flatten()[sl0:sl1]
 
         return sigs_chunk
 
     def _spike_count(self, block_index, seg_index, unit_index):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -322,8 +326,8 @@ class NeuralynxRawIO(BaseRawIO):
         return nb_spike
 
     def _get_spike_timestamps(self, block_index, seg_index, unit_index, t_start, t_stop):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -344,8 +348,8 @@ class NeuralynxRawIO(BaseRawIO):
 
     def _get_spike_raw_waveforms(self, block_index, seg_index, unit_index,
                                  t_start, t_stop):
-        chan_id, unit_id = self.internal_unit_ids[unit_index]
-        data = self._spike_memmap[chan_id]
+        chan_uid, unit_id = self.internal_unit_ids[unit_index]
+        data = self._spike_memmap[chan_uid]
         ts = data['timestamp']
 
         ts0, ts1 = self._timestamp_limits[seg_index]
@@ -430,51 +434,73 @@ class NeuralynxRawIO(BaseRawIO):
             return
 
         good_delta = int(BLOCK_SIZE * 1e6 / self._sigs_sampling_rate)
-        chan_id0 = list(ncs_filenames.keys())[0]
-        filename0 = ncs_filenames[chan_id0]
+        chan_uid0 = list(ncs_filenames.keys())[0]
+        filename0 = ncs_filenames[chan_uid0]
 
         data0 = np.memmap(filename0, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
 
         gap_indexes = None
+        lost_indexes = None
+
         if self.use_cache:
             gap_indexes = self._cache.get('gap_indexes')
+            lost_indexes = self._cache.get('lost_indexes')
 
         # detect gaps on first file
-        if gap_indexes is None:
+        if (gap_indexes is None) or (lost_indexes is None):
+
             # this can be long!!!!
             timestamps0 = data0['timestamp']
             deltas0 = np.diff(timestamps0)
 
             # It should be that:
             # gap_indexes, = np.nonzero(deltas0!=good_delta)
-            # but for a file I have found many deltas0==15999 deltas0==16000
+            # but for a file I have found many deltas0==15999, 16000, 16001 (for sampling at 32000)
             # I guess this is a round problem
             # So this is the same with a tolerance of 1 or 2 ticks
-            mask = deltas0 != good_delta
-            for tolerance in (1, 2):
-                mask &= (deltas0 != good_delta - tolerance)
-                mask &= (deltas0 != good_delta + tolerance)
+            max_tolerance = 2
+            mask = np.abs((deltas0 - good_delta).astype('int64')) > max_tolerance
+
             gap_indexes, = np.nonzero(mask)
 
             if self.use_cache:
                 self.add_in_cache(gap_indexes=gap_indexes)
 
-        gap_bounds = [0] + (gap_indexes + 1).tolist() + [data0.size]
-        self._nb_segment = len(gap_bounds) - 1
+            # update for lost_indexes
+            # Sometimes NLX writes a faulty block, but it then validates how much samples it wrote
+            # the validation field is in delta0['nb_valid'], it should be equal to BLOCK_SIZE
 
+            lost_indexes, = np.nonzero(data0['nb_valid'] < BLOCK_SIZE)
+
+            if self.use_cache:
+                self.add_in_cache(lost_indexes=lost_indexes)
+
+        gap_candidates = np.unique([0]
+                                   + [data0.size]
+                                   + (gap_indexes + 1).tolist()
+                                   + lost_indexes.tolist())  # linear
+
+        gap_pairs = np.vstack([gap_candidates[:-1], gap_candidates[1:]]).T  # 2D (n_segments, 2)
+
+        # construct proper gap ranges free of lost samples artifacts
+        minimal_segment_length = 1  # in blocks
+        goodpairs = np.diff(gap_pairs, 1).reshape(-1) > minimal_segment_length
+        gap_pairs = gap_pairs[goodpairs]  # ensures a segment is at least a block wide
+
+        self._nb_segment = len(gap_pairs)
         self._sigs_memmap = [{} for seg_index in range(self._nb_segment)]
         self._sigs_t_start = []
         self._sigs_t_stop = []
         self._sigs_length = []
         self._timestamp_limits = []
+
         # create segment with subdata block/t_start/t_stop/length
-        for chan_id, ncs_filename in self.ncs_filenames.items():
+        for chan_uid, ncs_filename in self.ncs_filenames.items():
+
             data = np.memmap(ncs_filename, dtype=ncs_dtype, mode='r', offset=HEADER_SIZE)
             assert data.size == data0.size, 'ncs files do not have the same data length'
 
-            for seg_index in range(self._nb_segment):
-                i0 = gap_bounds[seg_index]
-                i1 = gap_bounds[seg_index + 1]
+            for seg_index, (i0, i1) in enumerate(gap_pairs):
 
                 assert data[i0]['timestamp'] == data0[i0][
                     'timestamp'], 'ncs files do not have the same gaps'
@@ -482,12 +508,12 @@ class NeuralynxRawIO(BaseRawIO):
                     'timestamp'], 'ncs files do not have the same gaps'
 
                 subdata = data[i0:i1]
-                self._sigs_memmap[seg_index][chan_id] = subdata
+                self._sigs_memmap[seg_index][chan_uid] = subdata
 
-                if chan_id == chan_id0:
+                if chan_uid == chan_uid0:
                     ts0 = subdata[0]['timestamp']
-                    ts1 = subdata[-1]['timestamp'] + \
-                          np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
+                    ts1 = subdata[-1]['timestamp'] \
+                            + np.uint64(BLOCK_SIZE / self._sigs_sampling_rate * 1e6)
                     self._timestamp_limits.append((ts0, ts1))
                     t_start = ts0 / 1e6
                     self._sigs_t_start.append(t_start)
@@ -542,12 +568,12 @@ txt_header_keys = [
     (r'Feature \w+ \d+', '', None),
     ('SessionUUID', '', None),
     ('FileUUID', '', None),
-    ('CheetahRev', 'version', None),  # used  possibilty 1 for version
+    ('CheetahRev', '', None),  # only for old version
     ('ProbeName', '', None),
     ('OriginalFileName', '', None),
     ('TimeCreated', '', None),
     ('TimeClosed', '', None),
-    ('ApplicationName Cheetah', 'version', None),  # used  possibilty 2 for version
+    ('ApplicationName', '', None),  # also include version number
     ('AcquisitionSystem', '', None),
     ('ReferenceChannel', '', None),
 ]
@@ -598,9 +624,19 @@ def read_txt_header(filename):
             'Number of channel ids does not match channel names.'
     else:
         info['channel_names'] = [name] * len(info['channel_ids'])
-    if 'version' in info:
-        version = info['version'].replace('"', '')
-        info['version'] = distutils.version.LooseVersion(version)
+
+    # version and application name
+    if 'CheetahRev' in info:
+        assert 'ApplicationName' not in info
+        info['ApplicationName'] = 'Cheetah'
+        app_version = info['CheetahRev']
+    else:
+        assert 'ApplicationName' in info
+        pattern = r'(\S*) "([\S ]*)"'
+        match = re.findall(pattern, info['ApplicationName'])
+        assert len(match) == 1, 'impossible to find application name and version'
+        info['ApplicationName'], app_version = match[0]
+    info['ApplicationVersion'] = distutils.version.LooseVersion(app_version)
 
     # convert bit_to_microvolt
     if 'bit_to_microVolt' in info:
@@ -620,8 +656,17 @@ def read_txt_header(filename):
         assert len(info['InputRange']) == len(chid_entries), \
             'Number of channel ids does not match input range values.'
 
-    # filename and datetime
-    if info['version'] <= distutils.version.LooseVersion('5.6.4'):
+    # filename and datetime depend on app name and its version
+    if info['ApplicationName'] == 'Cheetah':
+        if info['ApplicationVersion'] <= '5.6.4':
+            old_date_format = True
+        else:
+            old_date_format = False
+    else:
+        # for other version (pegasus, ..) I don't known the rules
+        old_date_format = (r'## Time Opened' in txt_header)
+
+    if old_date_format:
         datetime1_regex = r'## Time Opened \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         datetime2_regex = r'## Time Closed \(m/d/y\): (?P<date>\S+)  \(h:m:s\.ms\) (?P<time>\S+)'
         filename_regex = r'## File Name (?P<filename>\S+)'

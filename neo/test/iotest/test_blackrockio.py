@@ -314,7 +314,7 @@ class CommonTests(BaseTestIO, unittest.TestCase):
                 matlab_spikes = ts_ml[np.nonzero(
                     np.logical_and(elec_ml == channelid, unit_ml == unitid))]
                 # Going sure that unit is really seconds and not 1/30000 seconds
-                if (not st_i.units == pq.CompoundUnit("1.0/{0} * s".format(30000))) and \
+                if (not st_i.units == pq.CompoundUnit("1.0/{} * s".format(30000))) and \
                         st_i.units == pq.s:
                     st_i = np.round(st_i.base * 30000).astype(int)
                 assert_equal(st_i, matlab_spikes)

@@ -7,6 +7,7 @@ Tests of the neo.core.unit.Unit class
 from __future__ import absolute_import, division, print_function
 
 import unittest
+from copy import deepcopy
 
 import numpy as np
 
@@ -31,8 +32,8 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = {str(x): TEST_ANNOTATIONS[x] for x in
+                                 range(len(TEST_ANNOTATIONS))}
 
     def test__get_fake_values(self):
         self.annotations['seed'] = 0
@@ -134,7 +135,6 @@ class TestUnit(unittest.TestCase):
         unit1a.annotate(seed=self.seed2)
         unit1a.spiketrains.append(self.trains2[0])
         unit1a.merge(self.unit2)
-        self.check_creation(self.unit2)
 
         assert_same_sub_schema(self.trains1a + self.trains2,
                                unit1a.spiketrains)
@@ -550,6 +550,19 @@ class TestUnit(unittest.TestCase):
         #
         #     self.assertEqual(res, targ)
 
+    def test__deepcopy(self):
+        childconts = ('spiketrains',)
+
+        unit1_copy = deepcopy(self.unit1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(unit1_copy, self.unit1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        # No need to cascade, all children are leaves, i.e. don't have any children
+        for childtype in childconts:
+            for child in getattr(unit1_copy, childtype, []):
+                self.assertEqual(id(child.unit), id(unit1_copy))
 
 if __name__ == "__main__":
     unittest.main()

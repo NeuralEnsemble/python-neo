@@ -7,7 +7,7 @@ of Neo. The institutional affiliations are those at the time of the contribution
 and may not be the current affiliation of a contributor.
 
 * Samuel Garcia [1]
-* Andrew Davison [2]
+* Andrew Davison [2, 21]
 * Chris Rodgers [3]
 * Pierre Yger [2]
 * Yann Mahnoun [4]
@@ -43,8 +43,14 @@ and may not be the current affiliation of a contributor.
 * Jeffrey Gill [18]
 * Lucas (lkoelman@github)
 * Mark Histed
-* Mike Sintsov
-* Scott W Harden [19]
+* Mike Sintsov [19]
+* Scott W Harden [20]
+* Chek Yin Choi (hkchekc@github)
+* Corentin Fragnaud [21]
+* Alexander Kleinjohann
+* Christian Kothe
+* rishidhingra@github
+* Hugo van Kemenade
 
 1. Centre de Recherche en Neuroscience de Lyon, CNRS UMR5292 - INSERM U1028 - Universite Claude Bernard Lyon 1
 2. Unité de Neuroscience, Information et Complexité, CNRS UPR 3293, Gif-sur-Yvette, France
@@ -52,7 +58,7 @@ and may not be the current affiliation of a contributor.
 4. Laboratoire de Neurosciences Intégratives et Adaptatives, CNRS UMR 6149 - Université de Provence, Marseille, France
 5. G-Node, Ludwig-Maximilians-Universität, Munich, Germany
 6. Institut de Neurosciences de la Timone, CNRS UMR 7289 - Université d'Aix-Marseille, Marseille, France
-7. Centre de Neurosciences Integratives et Cignitives, UMR 5228 - CNRS - Université Bordeaux I - Université Bordeaux II
+7. Centre de Neurosciences Integratives et Cognitives, UMR 5228 - CNRS - Université Bordeaux I - Université Bordeaux II
 8. Neural Information Processing Group, TU Berlin, Germany
 9. Department of Neurobiology & Anatomy, Drexel University College of Medicine, Philadelphia, PA, USA
 10. University of Konstanz, Konstanz, Germany
@@ -64,6 +70,22 @@ and may not be the current affiliation of a contributor.
 16. Ottawa Hospital Research Institute, Canada
 17. Swinburne University of Technology, Australia
 18. Case Western Reserve University (CWRU) · Department of Biology
-19. Harden Technologies, LLC
+19. IAL Developmental Neurobiology, Kazan Federal University, Kazan, Russia
+20. Harden Technologies, LLC
+21. Institut des Neurosciences Paris-Saclay, CNRS UMR 9197 - Université Paris-Sud, Gif-sur-Yvette, France
 
 If we've somehow missed you off the list we're very sorry - please let us know.
+
+
+Acknowledgements
+----------------
+
+.. image:: https://www.braincouncil.eu/wp-content/uploads/2018/11/wsi-imageoptim-EU-Logo.jpg
+   :alt: "EU Logo"
+   :height: 104px
+   :width: 156px
+   :align: right
+
+Neo was developed in part in the Human Brain Project,
+funded from the European Union's Horizon 2020 Framework Programme for Research and Innovation
+under Specific Grant Agreements No. 720270 and No. 785907 (Human Brain Project SGA1 and SGA2).

@@ -8,7 +8,7 @@ Major changes:
   * Introduced :mod:`neo.rawio`: a low-level reader for various data formats
   * Added continuous integration for all IOs using CircleCI
     (previously only :mod:`neo.core` was tested, using Travis CI)
-  * Moved the test file repository to https://web.gin.g-node.org/NeuralEnsemble/ephy_testing_data
+  * Moved the test file repository to https://gin.g-node.org/NeuralEnsemble/ephy_testing_data
     - this makes it easier for people to contribute new files for testing.
 
 Other important changes:

@@ -7,7 +7,7 @@ To cite Neo in publications, please use:
 
 A BibTeX entry for LaTeX users is::
 
-    @article{neo09,
+    @article{neo14,
         author = {Garcia S. and Guarino D. and Jaillet F. and Jennings T.R. and Pröpper R. and
                   Rautenberg P.L. and Rodgers C. and Sobolev A. and Wachtler T. and Yger P.
                   and Davison A.P.},

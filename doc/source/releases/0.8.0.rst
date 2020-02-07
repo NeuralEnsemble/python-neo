@@ -1,0 +1,111 @@
+=======================
+Neo 0.8.0 release notes
+=======================
+
+30th September 2019
+
+Lazy loading
+------------
+
+Neo 0.8 sees a major new feature, the ability to selectively load only parts of a data file
+(for supported file formats) into memory, for example only a subset of the signals
+in a segment, a subset of the channels in a signal, or even only a certain time slice of a given signal.
+
+This can lead to major savings in time and memory consumption, or can allow files that are too
+large to be loaded into memory in their entirety to be processed one section at a time.
+
+Here is an example, loading only certain sections of a signal::
+
+    lim0, lim1 = -500*pq.ms, +1500*pq.ms
+    seg = reader.read_segment(lazy=True)    # this loads only the segment structure and metadata
+                                            #    but all data objects are replaced by proxies
+    triggers = seg.events[0].load()         # this loads all triggers in memory
+    sigproxy = seg.analogsignals[0]         # this is a proxy object
+    all_sig_chunks = []
+    for t in triggers.times:
+        t0, t1 = (t + lim0), (t + lim1)
+        sig_chunk = sigproxy.load(time_slice=(t0, t1))  # here the actual data are loaded
+        all_sig_chunks.append(sig_chunk)
+
+Not all IO modules support lazy loading (but many do). To know whether a given IO class supports lazy mode,
+use ``SomeIO.support_lazy``.
+
+For more details,  see :ref:`section-lazy`.
+
+Image sequence data
+-------------------
+
+Another new feature, although one that is more experimental, is support for image sequence data,
+coming from calcium imaging of neuronal activity, voltage-sensitive dye imaging, etc.
+
+The new :class:`ImageSequence` object contains a sequence of image frames as a 3D array.
+As with other Neo data objects, the object also holds metadata such as the sampling rate/frame duration
+and the spatial scale (physical size represented by one pixel).
+
+Three new IO modules, :class:`TiffIO`, :class:`AsciiImageIO` and :class:`BlkIO`, allow
+reading such data from file, e.g.::
+
+    from quantities import Hz, mm, dimensionless
+    from neo.io import TiffIO
+
+    data = TiffIO(data_path).read(units=dimensionless, sampling_rate=25 * Hz,
+                                  spatial_scale=0.05 * mm)
+    images = data[0].segments[0].imagesequences[0]
+
+:class:`ImageSequence` is a subclass of the NumPy :class:`ndarray`, and
+so can be manipulated in the same ways, e.g.::
+
+    images /= images.max()
+    background = np.mean(images, axis=0)
+    preprocessed_images = images - background
+
+Since a common operation with image sequences is to extract time series from regions of interest,
+Neo also provides various region-of-interest classes which perform this operation,
+returning an :class:`AnalogSignal` object::
+
+    roi = CircularRegionOfInterest(x=50, y=50, radius=10)
+    signal = preprocessed_images.signal_from_region(roi)[0]
+
+
+Other new features
+------------------
+
+  * new neo.utils module
+  * Numpy 1.16+ compatibility
+  * :meth:`time_shift()` method for :class:`Epoch`/:class:`Event`/:class:`AnalogSignal`
+  * :meth:`time_slice()` method is now more robust
+  * dropped support for Python 3.4
+
+See all `pull requests`_ included in this release and the `list of closed issues`_.
+
+Bug fixes and improvements in IO modules
+----------------------------------------
+
+  * Blackrock
+  * Neuroshare
+  * NixIOFr
+  * NixIO (array annotation + 1d coordinates)
+  * AsciiSignal (fix + json metadata + IrregularlySampledSignals + write proxy)
+  * Spike2 (group same sampling rate)
+  * Brainvision
+  * NeuralynxIO
+
+.. Warning:: Some IOs (based on rawio) when loading can choose to split each
+    channel into its own 1-channel :class:`AnalogSignal` or to group them
+    in a multi-channel :class:`AnalogSignal`.
+    The default behavior (either ``signal_group_mode='split-all'``
+    or ``'group-same-units'``) is not the same for all IOs for backwards
+    compatibility reasons. In the next release, all IOs will have the default
+    ``signal_group_mode='group-same-units'``
+
+Acknowledgements
+----------------
+
+Thanks to Achileas Koutsou, Chek Yin Choi, Richard C. Gerkin, Hugo van Kemenade,
+Alexander Kleinjohann, Björn Müller, Jeffrey Gill, Christian Kothe,
+Mike Sintsov, @rishidhingra, Michael Denker, Julia Sprenger, Corentin Fragnaud,
+Andrew Davison and Samuel Garcia for their contributions to this release.
+
+
+.. _`list of closed issues`: https://github.com/NeuralEnsemble/python-neo/issues?q=is%3Aissue+milestone%3A0.8.0+is%3Aclosed
+.. _`pull requests`: https://github.com/NeuralEnsemble/python-neo/pulls?q=is%3Apr+is%3Aclosed+merged%3A%3E2018-11-27+milestone%3A0.8.0

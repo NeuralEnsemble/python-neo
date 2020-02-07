@@ -7,7 +7,7 @@ import unittest
 
 from neo.rawio.spike2rawio import Spike2RawIO
 
-from neo.rawio.tests.common_rawio_test import BaseTestRawIO
+from neo.test.rawiotest.common_rawio_test import BaseTestRawIO
 
 
 class TestSpike2RawIO(BaseTestRawIO, unittest.TestCase, ):

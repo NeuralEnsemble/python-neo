@@ -175,13 +175,13 @@ class Test_array_annotations(unittest.TestCase):
 
         # Slice as index
         ann_slice = datobj.array_annotations_at_index(slice(1, 3))
-        self.assert_((ann_slice['anno1'] == np.array([4, 5])).all())
-        self.assert_((ann_slice['anno2'] == np.array(['DEF', 'GHI'])).all())
+        self.assertTrue((ann_slice['anno1'] == np.array([4, 5])).all())
+        self.assertTrue((ann_slice['anno2'] == np.array(['DEF', 'GHI'])).all())
 
         # Slice from beginning to end
         ann_slice_all = datobj.array_annotations_at_index(slice(0, None))
-        self.assert_((ann_slice_all['anno1'] == np.array([3, 4, 5, 6])).all())
-        self.assert_((ann_slice_all['anno2'] == np.array(['ABC', 'DEF', 'GHI', 'JKL'])).all())
+        self.assertTrue((ann_slice_all['anno1'] == np.array([3, 4, 5, 6])).all())
+        self.assertTrue((ann_slice_all['anno2'] == np.array(['ABC', 'DEF', 'GHI', 'JKL'])).all())
 
         # Make sure that original object is edited when editing extracted array_annotations
         ann_slice_all['anno1'][2] = 10

@@ -64,13 +64,15 @@ class TestAsciiSignalIO(unittest.TestCase):
                 writer.writerow(row)
 
         io = AsciiSignalIO(filename, usecols=(0, 1, 3), timecolumn=2,
-                           # note that timecolumn applies to the remaining columns after applying usecols
+                           # note that timecolumn applies to the remaining columns
+                           # after applying usecols
                            time_units="ms", delimiter=',', units="mV", method='csv',
                            signal_group_mode='all-in-one', t_start=0.5)
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols and timecolumn applied
+        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
+                                                # and timecolumn applied
         assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude,
                                   np.array(sample_data)[:, 1],
                                   decimal=5)
@@ -99,7 +101,8 @@ class TestAsciiSignalIO(unittest.TestCase):
 
         block = io.read_block()
         signal = block.segments[0].analogsignals[0]
-        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols and timecolumn applied
+        self.assertEqual(signal.shape, (4, 2))  # two columns remaining after usecols
+                                                # and timecolumn applied
         assert_array_almost_equal(signal[:, 1].reshape(-1).magnitude,
                                   np.array(sample_data)[:, 1],
                                   decimal=5)
@@ -283,13 +286,53 @@ class TestAsciiSignalIO(unittest.TestCase):
         assert len(block2.segments[0].analogsignals) == 3
         signal2 = block2.segments[0].analogsignals[1]
 
-        assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1), decimal=7)
+        assert_array_almost_equal(signal1.magnitude[:, 1], signal2.magnitude.reshape(-1),
+                                  decimal=7)
         self.assertEqual(signal1.units, signal2.units)
         self.assertEqual(signal1.sampling_rate, signal2.sampling_rate)
         assert_array_equal(signal1.times, signal2.times)
 
         os.remove(filename)
         os.remove(metadata_filename)
+
+    def test_genfromtxt_irregular_expect_success(self):
+        sample_data = np.random.uniform(size=(200, 3))
+        sample_data[:, 0] = np.sort(sample_data[:, 0])  # make column 0 the time column
+        filename = "test_genfromtxt_irregular_expect_success.txt"
+        np.savetxt(filename, sample_data, delimiter=' ')
+
+        io = AsciiSignalIO(filename, delimiter=' ', timecolumn=0,
+                           units='mV', method='genfromtxt', signal_group_mode='split-all')
+        block = io.read_block()
+
+        signal1 = block.segments[0].irregularlysampledsignals[1]
+        assert_array_almost_equal(signal1.reshape(-1).magnitude, sample_data[:, 2],
+                                  decimal=6)
+        self.assertEqual(len(block.segments[0].analogsignals), 0)
+        self.assertEqual(len(block.segments[0].irregularlysampledsignals), 2)
+        self.assertEqual(signal1.units, pq.mV)
+
+        os.remove(filename)
+
+    def test_irregular_multichannel(self):
+        sample_data = np.random.uniform(size=(200, 3))
+        sample_data[:, 0] = np.sort(sample_data[:, 0])  # make column 0 the time column
+        filename = "test_irregular_multichannel.txt"
+        np.savetxt(filename, sample_data, delimiter=' ')
+
+        io = AsciiSignalIO(filename, delimiter=' ', timecolumn=0,
+                           units='mV', method='genfromtxt', signal_group_mode='all-in-one')
+        block = io.read_block()
+
+        signal = block.segments[0].irregularlysampledsignals[0]
+        assert_array_almost_equal(signal.magnitude, sample_data[:, 1:3],
+                                  decimal=6)
+        self.assertEqual(len(block.segments[0].analogsignals), 0)
+        self.assertEqual(len(block.segments[0].irregularlysampledsignals), 1)
+        self.assertEqual(signal.shape, (200, 2))
+        self.assertEqual(signal.units, pq.mV)
+
+        os.remove(filename)
 
 
 if __name__ == "__main__":

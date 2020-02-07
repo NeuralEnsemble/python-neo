@@ -49,6 +49,7 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig.t_start == 2. * pq.s
         assert anasig.duration == 3. * pq.s
         assert anasig.shape == (30000, 16)
+        assert_same_attributes(proxy_anasig.time_slice(2. * pq.s, 5 * pq.s), anasig)
 
         # ceil next sample when slicing
         anasig = proxy_anasig.load(time_slice=(1.99999 * pq.s, 5.000001 * pq.s))
@@ -82,6 +83,12 @@ class TestAnalogSignalProxy(BaseProxyTest):
         assert anasig_int.units == pq.CompoundUnit('0.0152587890625*uV')
 
         assert_arrays_almost_equal(anasig_float, anasig_int.rescale('uV'), 1e-9)
+
+        # test array_annotations
+        assert 'info' in proxy_anasig.array_annotations
+        assert proxy_anasig.array_annotations['info'].size == 16
+        assert 'info' in anasig_float.array_annotations
+        assert anasig_float.array_annotations['info'].size == 16
 
     def test_global_local_channel_indexes(self):
         proxy_anasig = AnalogSignalProxy(rawio=self.reader,
@@ -119,6 +126,7 @@ class TestSpikeTrainProxy(BaseProxyTest):
         assert sptr.t_start == .25 * pq.s
         assert sptr.t_stop == .5 * pq.s
         assert sptr.shape == (6,)
+        assert_same_attributes(proxy_sptr.time_slice(250 * pq.ms, 500 * pq.ms), sptr)
 
         # buggy time slice
         with self.assertRaises(AssertionError):
@@ -172,6 +180,7 @@ class TestEventProxy(BaseProxyTest):
         event = proxy_event.load(time_slice=(1 * pq.s, 2 * pq.s))
         assert event.shape == (2,)
         assert event.labels.shape == (2,)
+        assert_same_attributes(proxy_event.time_slice(1 * pq.s, 2 * pq.s), event)
 
         # buggy time slice
         with self.assertRaises(AssertionError):
@@ -198,6 +207,7 @@ class TestEpochProxy(BaseProxyTest):
         assert epoch.shape == (3,)
         assert epoch.labels.shape == (3,)
         assert epoch.durations.shape == (3,)
+        assert_same_attributes(proxy_epoch.time_slice(1 * pq.s, 4 * pq.s), epoch)
 
         # buggy time slice
         with self.assertRaises(AssertionError):

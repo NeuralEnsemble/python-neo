@@ -7,6 +7,7 @@ Tests of the neo.core.channelindex.ChannelIndex class
 from __future__ import absolute_import, division, print_function
 
 import unittest
+from copy import deepcopy
 
 import numpy as np
 
@@ -31,8 +32,8 @@ from neo.test.generate_datasets import (fake_neo, get_fake_value,
 class Test__generate_datasets(unittest.TestCase):
     def setUp(self):
         np.random.seed(0)
-        self.annotations = dict([(str(x), TEST_ANNOTATIONS[x]) for x in
-                                 range(len(TEST_ANNOTATIONS))])
+        self.annotations = {str(x): TEST_ANNOTATIONS[x] for x in
+                                 range(len(TEST_ANNOTATIONS))}
 
     # def test__get_fake_values(self):
     #     self.annotations['seed'] = 0
@@ -206,7 +207,6 @@ class TestChannelIndex(unittest.TestCase):
         chx1a.annotate(seed=self.seed2)
         chx1a.analogsignals.append(self.sigarrs2[0])
         chx1a.merge(self.chx2)
-        self.check_creation(self.chx2)
 
         assert_same_sub_schema(self.sigarrs1a + self.sigarrs2,
                                chx1a.analogsignals,
@@ -681,6 +681,25 @@ class TestChannelIndex(unittest.TestCase):
         #
         #     self.assertEqual(res, targ)
 
+    def test__deepcopy(self):
+        leaf_childconts = ('analogsignals',
+                      'irregularlysampledsignals')
+
+        chx1_copy = deepcopy(self.chx1)
+
+        # Same structure top-down, i.e. links from parents to children are correct
+        assert_same_sub_schema(chx1_copy, self.chx1)
+
+        # Correct structure bottom-up, i.e. links from children to parents are correct
+        for childtype in leaf_childconts:
+            for child in getattr(chx1_copy, childtype, []):
+                self.assertEqual(id(child.channel_index), id(chx1_copy))
+
+        for unit in chx1_copy.units:
+            self.assertEqual(id(unit.channel_index), id(chx1_copy))
+            # Cascade to leaves
+            for sptr in unit.spiketrains:
+                self.assertEqual(id(sptr.unit), id(unit))
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,12 +7,14 @@ Neo RawIO
 
 .. _neo_rawio_API:
 
+Neo RawIO API
+=============
 
 For performance and memory consumption reasons a new layer has been added to Neo.
 
 In brief:
     * **neo.io** is the user-oriented read/write layer. Reading consists of getting a tree
-      of Neo objects from a data source (file, url, or directory). 
+      of Neo objects from a data source (file, url, or directory).
       When  reading, all Neo objects are correctly scaled to the correct units.
       Writing consists of making a set of Neo objects persistent in a file format.
     * **neo.rawio** is a low-level layer for reading data only. Reading consists of getting
@@ -21,7 +23,7 @@ In brief:
       Here the underlying objects must be consistent across Blocks and Segments for a given
       data source.
 
-      
+
 The neo.rawio API has been added for developers.
 The neo.rawio is close to what could be a C API for reading data but in Python/NumPy.
 
@@ -47,14 +49,14 @@ The :mod:`neo.rawio` API is less flexible than :mod:`neo.io` and has some limita
   * Units must have SpikeTrain event if empty across all Block and Segment
   * Epoch and Event are processed the same way (with ``durations=None`` for Event).
 
-    
+
 For an intuitive comparison of :mod:`neo.io` and :mod:`neo.rawio` see:
   * :file:`example/read_file_neo_io.py`
   * :file:`example/read_file_neo_rawio.py`
 
-  
-One speculative benefit of the :mod:`neo.rawio` API should be that a developer 
-should be able to code a new RawIO class with little knowledge of the Neo tree of 
+
+One speculative benefit of the :mod:`neo.rawio` API should be that a developer
+should be able to code a new RawIO class with little knowledge of the Neo tree of
 objects or of the :mod:`quantities` package.
 
 
@@ -97,7 +99,7 @@ All this information is internally available in the *header* dict::
 Read signal chunks of data and scale them::
 
     >>> channel_indexes = None  #could be channel_indexes = [0]
-    >>> raw_sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0, 
+    >>> raw_sigs = reader.get_analogsignal_chunk(block_index=0, seg_index=0,
                         i_start=1024, i_stop=2048, channel_indexes=channel_indexes)
     >>> float_sigs = reader.rescale_signal_raw_to_float(raw_sigs, dtype='float64')
     >>> sampling_rate = reader.get_signal_sampling_rate()
@@ -147,7 +149,7 @@ sorting. So the nb_unit could be more than physical channel or signal channels.
     unit_index 8 nb_spike 33
     ...
 
-    
+
 Get spike timestamps only between 0 and 10 seconds and convert them to spike times::
 
     >>> spike_timestamps = reader.spike_timestamps(block_index=0, seg_index=0, unit_index=0,
@@ -187,7 +189,7 @@ Count events per channel::
     chan_index 3 nb_event 0
     ...
 
-   
+
 
 Read event timestamps and times for chanindex=0 and with time limits (t_start=None, t_stop=None)::
 
@@ -198,6 +200,14 @@ Read event timestamps and times for chanindex=0 and with time limits (t_start=No
     >>> ev_times = reader.rescale_event_timestamp(ev_timestamps, dtype='float64')
     >>> print(ev_times)
     [ 0.0317]
+
+
+
+
+List of implemented formats
+===========================
+
+.. automodule:: neo.rawio
 
 
 

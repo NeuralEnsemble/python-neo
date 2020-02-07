@@ -132,4 +132,4 @@ Other changes
 .. https://github.com/NeuralEnsemble/python-neo/issues?utf8=✓&q=is%3Aissue%20is%3Aclosed%20created%3A%3E2014-02-01%20
 
 .. _`about the NIX format`: https://github.com/G-Node/nix/wiki
-.. _`NEST simulator`: http://nest-simulator.org
+.. _`NEST simulator`: https://www.nest-simulator.org/
