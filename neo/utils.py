@@ -4,7 +4,6 @@ This module defines multiple utility functions for filtering, creation, slicing,
 etc. of neo.core objects.
 '''
 
-from __future__ import unicode_literals
 import neo
 import copy
 import warnings
@@ -330,7 +329,7 @@ def add_epoch(
     if 'name' not in kwargs:
         kwargs['name'] = 'epoch'
     if 'labels' not in kwargs:
-        kwargs['labels'] = ['{}_{}'.format(kwargs['name'], i)
+        kwargs['labels'] = [u'{}_{}'.format(kwargs['name'], i)
                             for i in range(len(times))]
 
     ep = neo.Epoch(times=times, durations=durations, **kwargs)
