@@ -709,7 +709,8 @@ class SpikeTrain(DataObject):
             # write attr into kwargs dict
             kwargs[name] = attr
 
-        merged_annotations = merge_annotations(self.annotations, other.annotations)
+        merged_annotations = merge_annotations(*(st.annotations for st in
+                                                 all_spiketrains))
         kwargs.update(merged_annotations)
 
         train = SpikeTrain(stack, units=self.units, dtype=self.dtype, copy=False,
