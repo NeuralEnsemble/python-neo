@@ -7,7 +7,7 @@ from __future__ import unicode_literals, print_function, division, absolute_impo
 import unittest
 from neo.io.nwbio import NWBIO
 from neo.test.iotest.common_io_test import BaseTestIO
-from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Unit, Block, ChannelIndex
+from neo.core import AnalogSignal, SpikeTrain, Event, Epoch, IrregularlySampledSignal, Segment, Unit, Block, ChannelIndex, ImageSequence
 import pynwb
 from pynwb import *
 import quantities as pq
@@ -23,7 +23,8 @@ class TestNWBIO(unittest.TestCase, ):
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-4.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.29.141.11.21.01.nwb'
 #        File created from Neo (Jupyter notebook "test_nwbio_class_from_Neo.ipynb")
-              '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo9.nwb'
+###              '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo9.nwb'
+              '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo10.nwb'
     ]
     entities_to_test = files_to_download
 
@@ -51,6 +52,25 @@ class TestNWBIO(unittest.TestCase, ):
         obj_nwb = r.read()
         self.assertTrue(obj_nwb, AnalogSignal)
         self.assertTrue(obj_nwb, sig_neo)
+
+    def test_ImageSequence_neo(self, **kargs):
+        img_sequence_array = [[[column for column in range(2)]for row in range(3)] for frame in range(4)]
+        image_neo = ImageSequence(img_sequence_array, units='V', sampling_rate=1*pq.Hz, spatial_scale=1*pq.micrometer)
+        self.assertTrue(isinstance(image_neo, ImageSequence))
+        r = NWBIO(filename=self.files_to_download[0], mode='r')
+        obj_nwb = r.read()
+        self.assertTrue(obj_nwb, ImageSequence)
+        self.assertTrue(obj_nwb, image_neo)
+
+
+#    def test_calcium_imaging_data_neo(self, **kargs):
+#        self.assertTrue(isinstance(image_neo, ImageSequence))
+#        r = NWBIO(filename=self.files_to_download[0], mode='r')
+#        cid_nwb = r.read()
+
+
+
+
 
     def test_spiketrains_neo(self, **kargs):
         train = SpikeTrain(times=[1, 2, 3]*pq.s, t_start=1.0, t_stop=10.0) 
