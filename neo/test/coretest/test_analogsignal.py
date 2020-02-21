@@ -1253,12 +1253,12 @@ class TestAnalogSignalArrayMethods(unittest.TestCase):
 
         array_anno = {'anno1': [0, 1, 2], 'anno2': ['C', 'P', 'F']}
 
-        signal = AnalogSignal(data*pq.mV,
+        signal = AnalogSignal(data * pq.mV,
                               sampling_rate=30000 * pq.Hz,
                               units=pq.mV,
                               array_annotations=array_anno)
 
-        target_signal = AnalogSignal(target_data*pq.mV,
+        target_signal = AnalogSignal(target_data * pq.mV,
                                      sampling_rate=30000 * pq.Hz,
                                      units=pq.mV,
                                      array_annotations=array_anno)
