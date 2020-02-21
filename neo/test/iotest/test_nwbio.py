@@ -62,15 +62,14 @@ class TestNWBIO(unittest.TestCase, ):
         self.assertTrue(obj_nwb, ImageSequence)
         self.assertTrue(obj_nwb, image_neo)
 
-
-#    def test_calcium_imaging_data_neo(self, **kargs):
-#        self.assertTrue(isinstance(image_neo, ImageSequence))
-#        r = NWBIO(filename=self.files_to_download[0], mode='r')
-#        cid_nwb = r.read()
-
-
-
-
+    def test_calcium_imaging_data_neo(self, **kargs):
+        img_sequence_array = [[[column for column in range(2)]for row in range(3)] for frame in range(4)]
+        calcium_imaging_data_neo = ImageSequence(img_sequence_array, units='V', sampling_rate=1*pq.Hz, spatial_scale=1*pq.micrometer)
+        self.assertTrue(isinstance(calcium_imaging_data_neo, ImageSequence))
+        r = NWBIO(filename=self.files_to_download[0], mode='r')
+        cid_nwb = r.read()
+        self.assertTrue(cid_nwb, ImageSequence)
+        self.assertTrue(cid_nwb, calcium_imaging_data_neo)
 
     def test_spiketrains_neo(self, **kargs):
         train = SpikeTrain(times=[1, 2, 3]*pq.s, t_start=1.0, t_stop=10.0) 
