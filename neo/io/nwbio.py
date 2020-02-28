@@ -136,7 +136,7 @@ class NWBIO(BaseIO):
             self._handle_stimulus_group(lazy, _file, block)
             self._handle_processing_group(_file, block)
             self._handle_analysis_group(block)
-            self._handle_calcium_imaging_data(_file, block) # Calcium imaging data
+            self._handle_calcium_imaging_data(_file, block)
         self._lazy = False
         return block
 
@@ -206,7 +206,6 @@ class NWBIO(BaseIO):
         for i, segment in enumerate(block.segments):
             self._write_segment(nwbfile, block, segment)
             segment_name = segment.name
-#            print("segment_name = ", segment_name)
             tS_seg = TimeSeries(
                         name=segment_name,
                         data=[segment],
@@ -270,11 +269,8 @@ class NWBIO(BaseIO):
         """
         Function to read calcium imaging data.
         """
-#        print("*** def _handle_calcium_imaging_data ***")
         pass
 
-
-#############################
     def write_calcium_imaging_data(self, nwbfile, block, i):
         """
         Function to write calcium imaging data. This involves three main steps:
@@ -321,7 +317,6 @@ class NWBIO(BaseIO):
                                                'manifold unit', # unit
                                                'A frame to refer to' # reference_frame
                                               )
-#        print("imaging_plane = ", imaging_plane)
 
         """
         Adding two-photon image data
@@ -337,7 +332,6 @@ class NWBIO(BaseIO):
                                        starting_time=0.0,
                                        rate=1.0
                                       )
-#        print("image_series = ", image_series)
 
         nwbfile.add_acquisition(image_series)
 
@@ -360,7 +354,6 @@ class NWBIO(BaseIO):
                                                name = name_plane_segmentation,
                                                reference_images = image_series # link to TwoPhotonSeries
                                               )
-#        print("ps = ", ps)
 
         """
         Add the resulting ROIs
@@ -371,16 +364,13 @@ class NWBIO(BaseIO):
         img_mask1[0][0] = 1.1
         img_mask1[1][1] = 1.2
         img_mask1[2][2] = 1.3
-
         ps.add_roi(pixel_mask=pix_mask1, image_mask=img_mask1)
 
         pix_mask2 = [(0, 0, 2.1), (1, 1, 2.2)]
         img_mask2 = [[0.0 for x in range(w)] for y in range(h)]
         img_mask2[0][0] = 2.1
         img_mask2[1][1] = 2.2
-
         ps.add_roi(pixel_mask=pix_mask2, image_mask=img_mask2)
-
 
         """
         Storing fluorescence measurements
@@ -405,18 +395,14 @@ class NWBIO(BaseIO):
                                             unit='lumens',
                                             timestamps=timestamps
                                            )
-#        print("rrs = ", rrs)
-#############################
-
 
     def _write_segment(self, nwbfile, block, segment):
         block_name = block.name or  "blocks %d" % i
         segment_name = segment.name
 
-        for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)): # analogsignals
+        for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
             self._write_signal(nwbfile, block, signal, i, segment)
             analogsignal_name = signal.name or ("analogsignal %s %s %d" % (block_name, segment_name, i))
-#            print("analogsignal_name = ", analogsignal_name)
             tS_signal = TimeSeries(
                                     name=analogsignal_name,
                                     data=signal,
@@ -424,10 +410,8 @@ class NWBIO(BaseIO):
                                     description="",
                                    )
 
-#############################
             if ImageSequence:
                 imagesequence_name = ("ImageSequence %s %s %d" % (block_name, segment_name, i))
-#                print("imagesequence_name = ", imagesequence_name)
                 sampling_rate = signal.sampling_rate.rescale("Hz")
                 image = pynwb.image.ImageSeries(
                                               name=imagesequence_name,
@@ -448,8 +432,6 @@ class NWBIO(BaseIO):
                                               control=None,
                                               control_description=None
                                             )
-#                print("image 2 = ", image)
-#############################
 
         for i, train in enumerate(segment.spiketrains):
             self._write_spiketrains(nwbfile, train, i, segment)
@@ -479,7 +461,7 @@ class NWBIO(BaseIO):
         nwbfile.add_acquisition(tS_epc) # For Neo segment (Neo epoch)
         nwbfile.add_acquisition(image) # for ImageSequence
 
-    def _write_signal(self, nwbfile, block, signal, i, segment): # analogsignals
+    def _write_signal(self, nwbfile, block, signal, i, segment):
         block_name = block.name  or  "blocks %d" % i
         segment_name = segment.name
         signal_name = signal.name or ("signal %s %s %d" % (block_name, segment_name, i))
@@ -493,15 +475,12 @@ class NWBIO(BaseIO):
             signal.sampling_rate = sampling_rate
             # All signals should go in /acquisition
             tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=segment.analogsignals, rate=float(sampling_rate))
-            #ts = nwbfile.add_acquisition(tS)
             return [segment.analogsignals]
 
-#########################   # ImageSequence
-        elif isinstance(signal, ImageSequence): # ImageSequence
+        elif isinstance(signal, ImageSequence):
             imagesequence_name = "ImageSequence %d" % i
             sampling_rate = signal.sampling_rate.rescale("Hz")
             signal.sampling_rate = sampling_rate
-            # All signals should go in /acquisition
            
             image = pynwb.image.ImageSeries(
                   name=imagesequence_name,
@@ -516,26 +495,22 @@ class NWBIO(BaseIO):
                   conversion=float(1*pq.micrometer),
                   timestamps=None,
                   starting_time=None, 
-                  rate=float(sampling_rate), #sampling_rate
+                  rate=float(sampling_rate),
                   comments='no comments', 
                   description='no description', 
                   control=None, 
                   control_description=None
               )
-#            print("image = ", image)
-######################### 
-
 
         elif isinstance(signal, IrregularlySampledSignal):
             tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, timestamps=signal.times.rescale('second').magnitude)
             return [segment.irregularlysampledsignals]
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(signal.__class__.__name__))
-        ####ts = nwbfile.add_acquisition(tS)
 
-    def _write_spiketrains(self, nwbfile, spiketrains, i, segment): # spiketrains
+    def _write_spiketrains(self, nwbfile, spiketrains, i, segment):
         spiketrain = segment.spiketrains
-        for i, train in enumerate(segment.spiketrains): # spiketrains
+        for i, train in enumerate(segment.spiketrains):
             spiketrains_name = train.name or "spiketrains %d" % i
             ts_name = "{0}".format(spiketrains_name)
             tS_train = TimeSeries(
@@ -556,8 +531,8 @@ class NWBIO(BaseIO):
                         description=event.description or "",
                         )
 
-    def _write_neo_epoch(self, nwbfile, neo_epoch, i, segment): # epochs
-        for i, epoch in enumerate(segment.epochs): # epochs
+    def _write_neo_epoch(self, nwbfile, neo_epoch, i, segment):
+        for i, epoch in enumerate(segment.epochs):
             epochs_name = epoch.name or "epochs %d" % i
             ts_name = "{0}".format(epochs_name)
             tS_epc = TimeSeries(
@@ -567,7 +542,6 @@ class NWBIO(BaseIO):
                         description="",
                         )
             return [segment.epochs]
-
 
 def time_in_seconds(t):
     return float(t.rescale("second"))

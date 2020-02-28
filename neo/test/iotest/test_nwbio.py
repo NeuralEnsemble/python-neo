@@ -22,8 +22,7 @@ class TestNWBIO(unittest.TestCase, ):
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-3.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-4.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.29.141.11.21.01.nwb'
-#        File created from Neo (Jupyter notebook "test_nwbio_class_from_Neo.ipynb")
-###              '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo9.nwb'
+#        File created from Neo (Jupyter notebook)
               '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo10.nwb'
     ]
     entities_to_test = files_to_download
