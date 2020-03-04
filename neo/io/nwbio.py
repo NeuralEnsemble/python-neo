@@ -8,8 +8,8 @@ Documentation : https://neurodatawithoutborders.github.io
 Depends on: h5py, nwb, dateutil
 Supported: Read, Write
 Specification - https://github.com/NeurodataWithoutBorders/specification
-Python APIs - (1) https://github.com/AllenInstitute/nwb-api/tree/master/ainwb 
-	          (2) https://github.com/AllenInstitute/AllenSDK/blob/master/allensdk/core/nwb_data_set.py 
+Python APIs - (1) https://github.com/AllenInstitute/nwb-api/tree/master/ainwb
+	          (2) https://github.com/AllenInstitute/AllenSDK/blob/master/allensdk/core/nwb_data_set.py
               (3) https://github.com/NeurodataWithoutBorders/api-python
 Sample datasets from CRCNS - https://crcns.org/NWB
 Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
@@ -22,6 +22,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from os.path import join
+import json
 import dateutil.parser
 import numpy as np
 import random
@@ -36,25 +37,33 @@ from collections import OrderedDict
 from tempfile import NamedTemporaryFile
 import os
 import glob
-from scipy.io import loadmat
 
 # PyNWB imports
-import pynwb
-from pynwb import *
-from pynwb import NWBFile,TimeSeries, get_manager
-from pynwb.base import ProcessingModule
-from pynwb.ecephys import ElectricalSeries, Device, EventDetection
-from pynwb.behavior import SpatialSeries
-from pynwb import image
-from pynwb.image import ImageSeries
-from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, NWBNamespaceBuilder
-from pynwb.device import Device
-from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence # For calcium imaging data
+try:
+    import pynwb
+    from pynwb import *
+    from pynwb import NWBFile, TimeSeries, get_manager
+    from pynwb.base import ProcessingModule
+    from pynwb.ecephys import ElectricalSeries, Device, EventDetection
+    from pynwb.behavior import SpatialSeries
+    from pynwb.misc import AnnotationSeries
+    from pynwb import image
+    from pynwb.image import ImageSeries
+    from pynwb.spec import NWBAttributeSpec, NWBDatasetSpec, NWBGroupSpec, NWBNamespace, NWBNamespaceBuilder
+    from pynwb.device import Device
+    from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence # For calcium imaging data
+    have_pynwb = True
+except ImportError:
+    have_pynwb = False
 
 # hdmf imports
-from hdmf.spec import LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,\
-                       NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
-from hdmf import *
+try:
+    from hdmf.spec import LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,\
+                           NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
+    from hdmf import *
+    have_hdmf = True
+except ImportError:
+    have_hdmf = False
 
 
 class NWBIO(BaseIO):
@@ -75,32 +84,57 @@ class NWBIO(BaseIO):
 
     is_readable = True
     is_writable = True
-    is_streameable = False    
+    is_streameable = False
 
-    def __init__(self, filename, mode):
+    def __init__(self, filename, mode='r'):
         """
         Arguments:
             filename : the filename
         """
-        if not pynwb:
+        if not have_pynwb:
             raise Exception("Please install the pynwb package to use NWBIO")
-        if not hdmf:
-            raise Exception("Please install the hdmf package to use NWBIO")        
+        if not have_hdmf:
+            raise Exception("Please install the hdmf package to use NWBIO")
         BaseIO.__init__(self, filename=filename)
         self.filename = filename
-   
-    def read_all_blocks(self, lazy=False, **kwargs):        
+        self.blocks_written = 0
+
+    def read_all_blocks(self, lazy=False, **kwargs):
         """
-        Loads all blocks in the file that are attached to the root.
-        Here, we assume that a neo block is a sub-part of a branch, into a NWB file;
+
         """
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         self._file = io.read()
 
-        blocks = []
-        for node in (self._file.acquisition, self._file.units, self._file.epochs):
-            blocks.append(self._read_block(self._file, node, blocks))
-        return blocks
+        file_access_dates = self._file.file_create_date
+        identifier = self._file.identifier
+        if identifier == '_neo':
+            identifier = None
+        description = self._file.session_description
+        if description == "no description":
+            description = None
+
+        self._blocks = {}
+        self._handle_acquisition_group(lazy=lazy)
+        self._handle_units(lazy=lazy)
+        self._handle_epochs_group(lazy)
+
+        # block = Block(name=identifier,
+        #               description=description,
+        #               file_origin=self.filename,
+        #               file_datetime=file_access_dates,
+        #               rec_datetime=_file.session_start_time,
+        #               file_access_dates=file_access_dates,
+        #               file_read_log='')
+        # self._handle_general_group(block)
+
+        # self._handle_acquisition_group(lazy, _file, block)
+        # self._handle_stimulus_group(lazy, _file, block)
+        # self._handle_processing_group(_file, block)
+        # self._handle_analysis_group(block)
+        # self._handle_calcium_imaging_data(_file, block)
+        # self._lazy = False
+        return list(self._blocks.values())
 
     def read_block(self, lazy=False, **kargs):
         """
@@ -108,47 +142,16 @@ class NWBIO(BaseIO):
         """
         return self.read_all_blocks(lazy=lazy)[0]
 
-    def _read_block(self, _file, node, blocks, lazy=False, cascade=True, **kwargs):
-        """
-        Main method to load a block
-        """
-        self._lazy = lazy
-
-        file_access_dates = _file.file_create_date
-        identifier = _file.identifier
-        if identifier == '_neo':
-            identifier = None
-        description = _file.session_description
-        if description == "no description":
-            description = None
-
-        block = Block(name=identifier,
-                      description=description,
-                      file_origin=self.filename,
-                      file_datetime=file_access_dates,
-                      rec_datetime=_file.session_start_time,
-                      file_access_dates=file_access_dates,
-                      file_read_log='')
-        if cascade:
-            self._handle_general_group(block)
-            self._handle_epochs_group(_file, block)
-            self._handle_acquisition_group(lazy, _file, block)
-            self._handle_stimulus_group(lazy, _file, block)
-            self._handle_processing_group(_file, block)
-            self._handle_analysis_group(block)
-            self._handle_calcium_imaging_data(_file, block)
-        self._lazy = False
-        return block
-
     def write_all_blocks(self, blocks, **kwargs):
         """
         Write list of blocks to the file
         """
+        # todo: allow metadata in NWBFile constructor to be taken from kwargs
         start_time = datetime.now()
         nwbfile = NWBFile(self.filename,
                                session_start_time=start_time,
                                identifier='',
-                               file_create_date=None,
+                               file_create_date=None,  # use current date?
                                timestamps_reference_time=None,
                                experimenter=None,
                                experiment_description=None,
@@ -186,13 +189,20 @@ class NWBIO(BaseIO):
                                )
         io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
 
-        if Block in self.writeable_objects:
-            for i, block in enumerate(blocks):
-                block_name = block.name or  "blocks%d" % i
-                self.write_block(nwbfile, block)
-                self.write_calcium_imaging_data(nwbfile, block, i)
-            io_nwb.write(nwbfile)
-            return list(block.segments)
+        nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
+        #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
+        nwbfile.add_unit_column('segment', 'the name of the Neo Segment to which the SpikeTrain belongs')
+        nwbfile.add_unit_column('block', 'the name of the Neo Block to which the SpikeTrain belongs')
+
+        nwbfile.add_epoch_column('_name', 'the name attribute of the Epoch')
+        #nwbfile.add_unit_column('_description', 'the description attribute of the SpikeTrain')
+        nwbfile.add_epoch_column('segment', 'the name of the Neo Segment to which the Epoch belongs')
+        nwbfile.add_epoch_column('block', 'the name of the Neo Block to which the Epoch belongs')
+
+        for i, block in enumerate(blocks):
+            self.write_block(nwbfile, block)
+            #self.write_calcium_imaging_data(nwbfile, block, i)
+        io_nwb.write(nwbfile)
         io_nwb.close()
 
     def write_block(self, nwbfile, block, **kwargs):
@@ -200,67 +210,129 @@ class NWBIO(BaseIO):
         Write a Block to the file
             :param block: Block to be written
         """
-        self._write_block_children(nwbfile, block)
-
-    def _write_block_children(self, nwbfile, block=None, **kwargs):
+        if not block.name:
+            block.name = "block%d" % self.blocks_written
         for i, segment in enumerate(block.segments):
-            self._write_segment(nwbfile, block, segment)
-            segment_name = segment.name
-            tS_seg = TimeSeries(
-                        name=segment_name,
-                        data=[segment],
-                        timestamps=[1],
-                        description="",
-                        )
+            assert segment.block is block
+            if not segment.name:
+                segment.name = "%s : segment%d" % (block.name, i)
+            self._write_segment(nwbfile, segment)
+        self.blocks_written += 1
 
-    def _handle_general_group(self, block):
-        pass
+    def _get_segment(self, block_name, segment_name):
+        # If we've already created a Block with the given name return it,
+        #   otherwise create it now and store it in self._blocks.
+        # If we've already created a Segment in the given block, return it,
+        #   otherwise create it now and return it.
+        if block_name in self._blocks:
+            block = self._blocks[block_name]
+        else:
+            block = Block(name=block_name)
+            self._blocks[block_name] = block
+        segment = None
+        for seg in block.segments:
+            if segment_name == seg.name:
+                segment = seg
+                break
+        if segment is None:
+            segment = Segment(name=segment_name)
+            segment.block = block
+            block.segments.append(segment)
+        return segment
 
-    def _handle_epochs_group(self, _file, block):
-        """
-        Note that an NWB Epoch corresponds to a Neo Segment, not to a Neo Epoch.
-        """
-        epochs = _file.epochs
-        timeseries=[]
-        segment = Segment(name=self.name)
-        segment.epochs.append(Epoch)
+    def _handle_epochs_group(self, lazy):
+        start_times = self._file.epochs.start_time[:]
+        stop_times = self._file.epochs.stop_time[:]
+        durations = stop_times - start_times
+        labels = self._file.epochs.tags[:]
+        segment_names = self._file.epochs.segment[:]
+        block_names = self._file.epochs.block[:]
+        epoch_names = self._file.epochs._name[:]
 
-        for obj in timeseries:
-            obj.segment = segment
-            if isinstance(obj, AnalogSignal):
-                segment.analogsignals.append(obj)
-                segment.epochs.append(obj)
-            elif isinstance(obj, IrregularlySampledSignal):
-                segment.irregularlysampledsignals.append(obj)
-            elif isinstance(obj, Event):
-                segment.events.append(obj)
-            elif isinstance(obj, Epoch):
-                segment.epochs.append(obj)
-        segment.block = block
-        block.segments.append(segment)
+        unique_epoch_names = np.unique(epoch_names)
+        for epoch_name in unique_epoch_names:
+            index = (epoch_names == epoch_name)
+            epoch = Epoch(times=start_times[index] * pq.s,
+                          durations=durations[index] * pq.s,
+                          labels=labels[index],
+                          name=epoch_name)
+                          # todo: handle annotations, array_annotations
+            segment_name = np.unique(segment_names[index])
+            block_name = np.unique(block_names[index])
+            assert segment_name.size == block_name.size == 1
+            segment = self._get_segment(block_name[0], segment_name[0])
+            segment.epochs.append(epoch)
+            epoch.segment = segment
 
-    def _handle_acquisition_group(self, lazy, _file, block):
-        acq = _file.acquisition
+    def _handle_acquisition_group(self, lazy):
+        acq = self._file.acquisition
+        for timeseries in acq.values():
+            hierarchy = json.loads(timeseries.comments)
+            block_name = hierarchy["block"]
+            segment_name = hierarchy["segment"]
+            segment = self._get_segment(block_name, segment_name)
+            if isinstance(timeseries, AnnotationSeries):
+                event = Event(timeseries.timestamps[:] * pq.s,
+                              labels=timeseries.data[:],
+                              name=timeseries.name,
+                              description=timeseries.description)
+                segment.events.append(event)
+                event.segment = segment
+            elif timeseries.rate:
+                signal = AnalogSignal(
+                            timeseries.data[:],
+                            units=timeseries.unit,
+                            t_start=timeseries.starting_time * pq.s,  # use timeseries.starting_time_units
+                            sampling_rate=timeseries.rate * pq.Hz,
+                            name=timeseries.name,
+                            file_origin=self._file.session_description,
+                            description=timeseries.description,
+                            array_annotations=None)  # todo: timeseries.control / control_description
+                segment.analogsignals.append(signal)
+                signal.segment = segment
+            else:
+                signal = IrregularlySampledSignal(
+                            timeseries.timestamps[:] * pq.s,
+                            timeseries.data[:],
+                            units=timeseries.unit,
+                            name=timeseries.name,
+                            file_origin=self._file.session_description,
+                            description=timeseries.description,
+                            array_annotations=None)  # todo: timeseries.control / control_description
+                segment.irregularlysampledsignals.append(signal)
+                signal.segment = segment
+
+    def _handle_units(self, lazy):
+        for id in self._file.units.id[:]:
+            spike_times = self._file.units.get_unit_spike_times(id)
+            t_start, t_stop = self._file.units.get_unit_obs_intervals(id)[0]
+            name = self._file.units._name[id]
+            segment_name = self._file.units.segment[id]
+            block_name = self._file.units.block[id]
+            segment = self._get_segment(block_name, segment_name)
+            spiketrain = SpikeTrain(
+                            spike_times,
+                            t_stop * pq.s,
+                            units='s',
+                            #sampling_rate=array(1.) * Hz,
+                            t_start=t_start * pq.s,
+                            #waveforms=None,
+                            #left_sweep=None,
+                            name=name,
+                            #file_origin=None,
+                            #description=None,
+                            #array_annotations=None,
+                            #**annotations
+                            )
+            segment.spiketrains.append(spiketrain)
+            spiketrain.segment = segment
+
 
     def _handle_stimulus_group(self, lazy, _file, block):
-        sti = _file.stimulus
-        for name in sti:
-            segment_name_sti = _file.epochs
-            desc_sti = _file.get_stimulus(name).unit
-            segment_sti = segment_name_sti
-            if lazy==True:
-                times = np.array(())
-                lazy_shape = _file.get_stimulus(name).data.shape
-            else:
-                current_shape = _file.get_stimulus(name).data.shape[0]
-                times = np.zeros(current_shape)
-                for j in range(0, current_shape):
-                    times[j]=1./_file.get_stimulus(name).rate*j+_file.get_acquisition(name).starting_time # times = 1./frequency [Hz] + t_start [s]
-                spiketrain = SpikeTrain(times, units=pq.second,
-                                         t_stop=times[-1]*pq.second)
+        pass
 
     def _handle_processing_group(self, _file, block):
-        segment = Segment(name=self.name)
+        pass
 
     def _handle_analysis_group(self, block):
         pass
@@ -396,155 +468,115 @@ class NWBIO(BaseIO):
                                             timestamps=timestamps
                                            )
 
-    def _write_segment(self, nwbfile, block, segment):
-        block_name = block.name or  "blocks %d" % i
-        segment_name = segment.name
+            # if ImageSequence:
+            #     imagesequence_name = ("ImageSequence %s %s %d" % (block.name, segment.name, i))
+            #     sampling_rate = signal.sampling_rate.rescale("Hz")
+            #     image = pynwb.image.ImageSeries(
+            #                                   name=imagesequence_name,
+            #                                   data=[[[column for column in range(2)]for row in range(3)] for frame in range(4)],
+            #                                   unit=None,
+            #                                   format=None,
+            #                                   external_file=None,
+            #                                   starting_frame=None,
+            #                                   bits_per_pixel=None,
+            #                                   dimension=None,
+            #                                   resolution=-1.0,
+            #                                   conversion=float(1*pq.micrometer),
+            #                                   timestamps=None,
+            #                                   starting_time=None,
+            #                                   rate=float(sampling_rate),
+            #                                   comments='no comments',
+            #                                   description='no description',
+            #                                   control=None,
+            #                                   control_description=None
+            #                                 )
+
+    def _write_segment(self, nwbfile, segment):
+        # maybe use NWB trials to store Segment metadata?
 
         for i, signal in enumerate(chain(segment.analogsignals, segment.irregularlysampledsignals)):
-            self._write_signal(nwbfile, block, signal, i, segment)
-            analogsignal_name = signal.name or ("analogsignal %s %s %d" % (block_name, segment_name, i))
-            tS_signal = TimeSeries(
-                                    name=analogsignal_name,
-                                    data=signal,
-                                    timestamps=[1],
-                                    description="",
-                                   )
-
-            if ImageSequence:
-                imagesequence_name = ("ImageSequence %s %s %d" % (block_name, segment_name, i))
-                sampling_rate = signal.sampling_rate.rescale("Hz")
-                image = pynwb.image.ImageSeries(
-                                              name=imagesequence_name,
-                                              data=[[[column for column in range(2)]for row in range(3)] for frame in range(4)],
-                                              unit=None,
-                                              format=None,
-                                              external_file=None,
-                                              starting_frame=None,
-                                              bits_per_pixel=None,
-                                              dimension=None,
-                                              resolution=-1.0,
-                                              conversion=float(1*pq.micrometer),
-                                              timestamps=None,
-                                              starting_time=None,
-                                              rate=float(sampling_rate),
-                                              comments='no comments',
-                                              description='no description',
-                                              control=None,
-                                              control_description=None
-                                            )
+            assert signal.segment is segment
+            if not signal.name:
+                signal.name = "%s : analogsignal%d" % (segment.name, i)
+            self._write_signal(nwbfile, signal)
 
         for i, train in enumerate(segment.spiketrains):
-            self._write_spiketrains(nwbfile, train, i, segment)
-            spiketrains_name = train.name or ("spiketrains %s %s %d" % (block_name, segment_name, i))
-            ts_name = "{0}".format(spiketrains_name)
-            tS_train = TimeSeries(
-                        name=spiketrains_name,
-                        data=train,
-                        timestamps=[1],
-                        description="",
-                        )
+            assert train.segment is segment
+            if not train.name:
+                train.name = "%s : spiketrain%d" % (segment.name, i)
+            self._write_spiketrain(nwbfile, train)
+
         for i, event in enumerate(segment.events):
-            self._write_event(nwbfile, event, nwb_epoch, i)
-        for i, neo_epoch in enumerate(segment.epochs):
-            self._write_neo_epoch(nwbfile, neo_epoch, i, segment)
-            epochs_name = neo_epoch.name or ("neo epochs %s %s %d" % (block_name, segment_name, i))
-            ts_name = "{0}".format(epochs_name)
-            tS_epc = TimeSeries(
-                        name=epochs_name,
-                        data=neo_epoch,
-                        timestamps=neo_epoch.times.rescale('second').magnitude,
-                        description=neo_epoch.description or "",
-                        )
+            assert event.segment is segment
+            if not event.name:
+                event.name = "%s : event%d" % (segment.name, i)
+            self._write_event(nwbfile, event)
 
-        nwbfile.add_acquisition(tS_signal) # For analogsignals
-        nwbfile.add_acquisition(tS_train) # For spiketrains
-        nwbfile.add_acquisition(tS_epc) # For Neo segment (Neo epoch)
-        nwbfile.add_acquisition(image) # for ImageSequence
+        for i, epoch in enumerate(segment.epochs):
+            if not epoch.name:
+                epoch.name = "%s : epoch%d" % (segment.name, i)
+            self._write_epoch(nwbfile, epoch)
 
-    def _write_signal(self, nwbfile, block, signal, i, segment):
-        block_name = block.name  or  "blocks %d" % i
-        segment_name = segment.name
-        signal_name = signal.name or ("signal %s %s %d" % (block_name, segment_name, i))
-        ts_name = "{0}".format(signal_name)
-        conversion = _decompose_unit(signal.units)
-        attributes = {"conversion": conversion,
-                      "resolution": float('nan')}
-
+    def _write_signal(self, nwbfile, signal):
+        hierarchy = {'block': signal.segment.block.name, 'segment': signal.segment.name}
         if isinstance(signal, AnalogSignal):
             sampling_rate = signal.sampling_rate.rescale("Hz")
-            signal.sampling_rate = sampling_rate
-            # All signals should go in /acquisition
-            tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=segment.analogsignals, rate=float(sampling_rate))
-            return [segment.analogsignals]
-
-        elif isinstance(signal, ImageSequence):
-            imagesequence_name = "ImageSequence %d" % i
-            sampling_rate = signal.sampling_rate.rescale("Hz")
-            signal.sampling_rate = sampling_rate
-           
-            image = pynwb.image.ImageSeries(
-                  name=imagesequence_name,
-                  data=[[[column for column in range(2)]for row in range(3)] for frame in range(4)],
-                  unit=None,
-                  format=None, 
-                  external_file=None, 
-                  starting_frame=None, 
-                  bits_per_pixel=None, 
-                  dimension=None,
-                  resolution=-1.0,
-                  conversion=float(1*pq.micrometer),
-                  timestamps=None,
-                  starting_time=None, 
-                  rate=float(sampling_rate),
-                  comments='no comments', 
-                  description='no description', 
-                  control=None, 
-                  control_description=None
-              )
-
+            tS = TimeSeries(name=signal.name,
+                            starting_time=time_in_seconds(signal.t_start),
+                            data=signal,
+                            unit=signal.units.dimensionality.string,
+                            rate=float(sampling_rate),
+                            comments=json.dumps(hierarchy))
+                            # todo: try to add array_annotations via "control" attribute
         elif isinstance(signal, IrregularlySampledSignal):
-            tS = TimeSeries(name=ts_name, starting_time=time_in_seconds(signal.t_start), data=signal, timestamps=signal.times.rescale('second').magnitude)
-            return [segment.irregularlysampledsignals]
+            tS = TimeSeries(name=signal.name,
+                            data=signal,
+                            unit=signal.units.dimensionality.string,
+                            timestamps=signal.times.rescale('second').magnitude,
+                            comments=json.dumps(hierarchy))
         else:
             raise TypeError("signal has type {0}, should be AnalogSignal or IrregularlySampledSignal".format(signal.__class__.__name__))
+        nwbfile.add_acquisition(tS)
+        return tS
 
-    def _write_spiketrains(self, nwbfile, spiketrains, i, segment):
-        spiketrain = segment.spiketrains
-        for i, train in enumerate(segment.spiketrains):
-            spiketrains_name = train.name or "spiketrains %d" % i
-            ts_name = "{0}".format(spiketrains_name)
-            tS_train = TimeSeries(
-                        name=spiketrains_name,
-                        data=train,
-                        timestamps=[1],
-                        description="",
-                        )
-            return [segment.spiketrains]
+    def _write_spiketrain(self, nwbfile, spiketrain):
+        nwbfile.add_unit(spike_times=spiketrain.rescale('s').magnitude,
+                         obs_intervals=[[float(spiketrain.t_start.rescale('s')),
+                                         float(spiketrain.t_stop.rescale('s'))]],
+                         _name=spiketrain.name,
+                         #_description=spiketrain.description,
+                         segment=spiketrain.segment.name,
+                         block=spiketrain.segment.block.name)
+        # todo: handle annotations (using add_unit_column()?)
+        # todo: handle Neo Units
+        # todo: handle spike waveforms, if any (see SpikeEventSeries)
+        return nwbfile.units
 
-    def _write_event(self, nwbfile, event, nwb_epoch, i):
-        event_name = event.name or "event{0}".format(i)
-        ts_name = "{0}".format(event_name)
-        tS = TimeSeries(
-                        name=ts_name,
-                        data=event, 
+    def _write_event(self, nwbfile, event):
+        hierarchy = {'block': event.segment.block.name, 'segment': event.segment.name}
+        tS_evt = AnnotationSeries(
+                        name=event.name,
+                        data=event.labels,
                         timestamps=event.times.rescale('second').magnitude,
                         description=event.description or "",
-                        )
+                        comments=json.dumps(hierarchy))
+        nwbfile.add_acquisition(tS_evt)
+        return tS_evt
 
-    def _write_neo_epoch(self, nwbfile, neo_epoch, i, segment):
-        for i, epoch in enumerate(segment.epochs):
-            epochs_name = epoch.name or "epochs %d" % i
-            ts_name = "{0}".format(epochs_name)
-            tS_epc = TimeSeries(
-                        name=epochs_name,
-                        data=epoch,
-                        timestamps=[1],
-                        description="",
-                        )
-            return [segment.epochs]
+    def _write_epoch(self, nwbfile, epoch):
+        for t_start, duration, label in zip(epoch.rescale('s').magnitude,
+                                            epoch.durations.rescale('s').magnitude,
+                                            epoch.labels):
+            nwbfile.add_epoch(t_start, t_start + duration, [label], [],
+                              _name=epoch.name,
+                              segment=epoch.segment.name,
+                              block=epoch.segment.block.name)
+        return nwbfile.epochs
+
 
 def time_in_seconds(t):
     return float(t.rescale("second"))
+
 
 def _decompose_unit(unit):
     assert isinstance(unit, pq.quantity.Quantity)
@@ -553,12 +585,19 @@ def _decompose_unit(unit):
     def _decompose(unit):
         dim = unit.dimensionality
         if len(dim) != 1:
-            raise NotImplementedError("Compound units not yet supported")
+            raise NotImplementedError("Compound units not yet supported")  # e.g. volt-metre
         uq, n = dim.items()[0]
         if n != 1:
-            raise NotImplementedError("Compound units not yet supported")
+            raise NotImplementedError("Compound units not yet supported")  # e.g. volt^2
         uq_def = uq.definition
         return float(uq_def.magnitude), uq_def
+    conv, unit2 = _decompose(unit)
+    while conv != 1:
+        conversion *= conv
+        unit = unit2
+        conv, unit2 = _decompose(unit)
+    return conversion, unit.dimensionality.keys()[0].name
+
 
 prefix_map = {
     1e-3: 'milli',
