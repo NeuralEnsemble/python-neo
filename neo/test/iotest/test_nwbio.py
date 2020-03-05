@@ -15,12 +15,13 @@ import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
 
 
-class TestNWBIO(unittest.TestCase, ):
+class TestNWBIO(unittest.TestCase):
     ioclass = NWBIO
     files_to_download =  [
 #        Files from Allen Institute :
 #        NWB files downloadable from http://download.alleninstitute.org/informatics-archive/prerelease/
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-2.nwb'
+              '/Users/andrew/Data/NWB/Allen/H19.28.012.11.05-2.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-3.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.28.012.11.05-4.nwb'
 #              '/home/elodie/NWB_Files/NWB_org/H19.29.141.11.21.01.nwb'
@@ -28,6 +29,11 @@ class TestNWBIO(unittest.TestCase, ):
 #              '/home/elodie/env_NWB_py3/my_notebook/My_first_dataset_neo10.nwb'
     ]
     entities_to_test = files_to_download
+
+    def test_read(self):
+        for path in self.entities_to_test:
+            io = NWBIO(path, 'r')
+            blocks = io.read()
 
     def test_roundtrip(self):
 
