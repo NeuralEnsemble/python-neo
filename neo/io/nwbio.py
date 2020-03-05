@@ -26,6 +26,7 @@ from collections import defaultdict
 import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
+from neo.io.proxyobjects import AnalogSignalProxy as BaseAnalogSignalProxy
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, Event, AnalogSignal,
                       IrregularlySampledSignal, ChannelIndex, Block, ImageSequence)
 
@@ -84,6 +85,7 @@ class NWBIO(BaseIO):
     writeable_objects = supported_objects
 
     has_header = False
+    support_lazy = True
 
     name = 'NeoNWB IO'
     description = 'This IO reads/writes experimental data from/to an .nwb dataset'
@@ -232,16 +234,9 @@ class NWBIO(BaseIO):
                 segment.events.append(event)
                 event.segment = segment
             elif timeseries.rate:
-                signal = AnalogSignal(
-                            timeseries.data[:],
-                            units=timeseries.unit,
-                            t_start=timeseries.starting_time * pq.s,  # use timeseries.starting_time_units
-                            sampling_rate=timeseries.rate * pq.Hz,
-                            name=timeseries.name,
-                            file_origin=self._file.session_description,
-                            description=description,
-                            array_annotations=None,
-                            **annotations)  # todo: timeseries.control / control_description
+                signal = AnalogSignalProxy(timeseries, group_name)
+                if not lazy:
+                    signal = signal.load()
                 segment.analogsignals.append(signal)
                 signal.segment = segment
             else:
@@ -250,7 +245,6 @@ class NWBIO(BaseIO):
                             timeseries.data[:],
                             units=timeseries.unit,
                             name=timeseries.name,
-                            file_origin=self._file.session_description,
                             description=description,
                             array_annotations=None,
                             **annotations)  # todo: timeseries.control / control_description
@@ -471,3 +465,44 @@ prefix_map = {
     1e-6: 'micro',
     1e-9: 'nano'
 }
+
+
+class AnalogSignalProxy(BaseAnalogSignalProxy):
+
+    def __init__(self, timeseries, nwb_group):
+        self._timeseries = timeseries
+        self.units = timeseries.unit
+        self.t_start = timeseries.starting_time * pq.s  # use timeseries.starting_time_units
+        self.sampling_rate = timeseries.rate * pq.Hz
+        self.name = timeseries.name
+        self.annotations = {"nwb_group" : nwb_group}
+        self.description = try_json_field(timeseries.description)
+        if isinstance(self.description, dict):
+            self.annotations.update(self.description)
+            self.description = None
+        self.shape = self._timeseries.data.shape
+
+    def load(self, time_slice=None, strict_slicing=True):
+        """
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire signal.
+            :strict_slicing: True by default.
+                Control if an error is raise or not when one of  time_slice member
+                (t_start or t_stop) is outside the real time range of the segment.
+        """
+        if time_slice:
+            i_start, i_stop, sig_t_start = self._time_slice_indices(time_slice, strict_slicing=strict_slicing)
+            signal = self._timeseries.data[i_start: i_stop]
+        else:
+            signal = self._timeseries.data[:]
+            sig_t_start = self.t_start
+        return AnalogSignal(
+                    signal,
+                    units=self.units,
+                    t_start=sig_t_start,
+                    sampling_rate=self.sampling_rate,
+                    name=self.name,
+                    description=self.description,
+                    array_annotations=None,
+                    **self.annotations)  # todo: timeseries.control / control_description

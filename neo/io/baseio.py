@@ -114,7 +114,7 @@ class BaseIO(object):
     ######## General read/write methods #######################
     def read(self, lazy=False, **kargs):
         if lazy:
-            assert self.support_lazy, 'This IO do not support lazy loading'
+            assert self.support_lazy, 'This IO does not support lazy loading'
         if Block in self.readable_objects:
             if (hasattr(self, 'read_all_blocks') and
                     callable(getattr(self, 'read_all_blocks'))):
