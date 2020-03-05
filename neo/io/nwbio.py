@@ -15,35 +15,23 @@ Sample datasets from CRCNS - https://crcns.org/NWB
 Sample datasets from Allen Institute - http://alleninstitute.github.io/AllenSDK/cell_types.html#neurodata-without-borders
 """
 
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
+
 from itertools import chain
-import shutil
-import tempfile
 from datetime import datetime
-from os.path import join
 import json
 from json.decoder import JSONDecodeError
 from collections import defaultdict
-import dateutil.parser
-import numpy as np
-import random
 
+import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, Event, AnalogSignal,
                       IrregularlySampledSignal, ChannelIndex, Block, ImageSequence)
-from collections import OrderedDict
-
-# Standard Python imports
-from tempfile import NamedTemporaryFile
-import os
-import glob
 
 # PyNWB imports
 try:
     import pynwb
-    from pynwb import *
     from pynwb import NWBFile, TimeSeries, get_manager
     from pynwb.base import ProcessingModule
     from pynwb.ecephys import ElectricalSeries, Device, EventDetection
@@ -61,8 +49,7 @@ except ImportError:
 # hdmf imports
 try:
     from hdmf.spec import LinkSpec, GroupSpec, DatasetSpec, SpecNamespace,\
-                           NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
-    from hdmf import *
+                          NamespaceBuilder, AttributeSpec, DtypeSpec, RefSpec
     have_hdmf = True
 except ImportError:
     have_hdmf = False
