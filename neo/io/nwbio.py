@@ -130,10 +130,10 @@ class NWBIO(BaseIO):
             self.global_block_metadata["file_datetime"] = self.global_block_metadata["file_create_date"]
 
         self._blocks = {}
-        self._handle_acquisition_group(lazy=lazy)
-        self._handle_stimulus_group(lazy)
-        self._handle_units(lazy=lazy)
-        self._handle_epochs_group(lazy)
+        self._read_acquisition_group(lazy=lazy)
+        self._read_stimulus_group(lazy)
+        self._read_units(lazy=lazy)
+        self._read_epochs_group(lazy)
 
         return list(self._blocks.values())
 
@@ -142,6 +142,161 @@ class NWBIO(BaseIO):
         Load the first block in the file.
         """
         return self.read_all_blocks(lazy=lazy)[0]
+
+    def _get_segment(self, block_name, segment_name):
+        # If we've already created a Block with the given name return it,
+        #   otherwise create it now and store it in self._blocks.
+        # If we've already created a Segment in the given block, return it,
+        #   otherwise create it now and return it.
+        if block_name in self._blocks:
+            block = self._blocks[block_name]
+        else:
+            block = Block(name=block_name, **self.global_block_metadata)
+            self._blocks[block_name] = block
+        segment = None
+        for seg in block.segments:
+            if segment_name == seg.name:
+                segment = seg
+                break
+        if segment is None:
+            segment = Segment(name=segment_name)
+            segment.block = block
+            block.segments.append(segment)
+        return segment
+
+    def _read_epochs_group(self, lazy):
+        if self._file.epochs is not None:
+            start_times = self._file.epochs.start_time[:]
+            stop_times = self._file.epochs.stop_time[:]
+            durations = stop_times - start_times
+            labels = self._file.epochs.tags[:]
+            try:
+                # NWB files created by Neo store the segment, block and epoch names as extra columns
+                segment_names = self._file.epochs.segment[:]
+                block_names = self._file.epochs.block[:]
+                epoch_names = self._file.epochs._name[:]
+            except AttributeError:
+                epoch_names = None
+
+            if epoch_names is not None:
+                unique_epoch_names = np.unique(epoch_names)
+                for epoch_name in unique_epoch_names:
+                    index = (epoch_names == epoch_name)
+                    epoch = Epoch(times=start_times[index] * pq.s,
+                                durations=durations[index] * pq.s,
+                                labels=labels[index],
+                                name=epoch_name)
+                                # todo: handle annotations, array_annotations
+                    segment_name = np.unique(segment_names[index])
+                    block_name = np.unique(block_names[index])
+                    assert segment_name.size == block_name.size == 1
+                    segment = self._get_segment(block_name[0], segment_name[0])
+                    segment.epochs.append(epoch)
+                    epoch.segment = segment
+            else:
+                epoch = Epoch(times=start_times * pq.s,
+                            durations=durations * pq.s,
+                            labels=labels)
+                segment = self._get_segment("default", "default")
+                segment.epochs.append(epoch)
+                epoch.segment = segment
+
+    def _read_timeseries_group(self, group_name, lazy):
+        group = getattr(self._file, group_name)
+        for timeseries in group.values():
+            try:
+                # NWB files created by Neo store the segment and block names in the comments field
+                hierarchy = json.loads(timeseries.comments)
+            except JSONDecodeError:
+                # For NWB files created with other applications, we put everything in a single
+                # segment in a single block
+                # todo: investigate whether there is a reliable way to create multiple segments,
+                #       e.g. using Trial information
+                block_name = "default"
+                segment_name = "default"
+            else:
+                block_name = hierarchy["block"]
+                segment_name = hierarchy["segment"]
+            segment = self._get_segment(block_name, segment_name)
+            annotations = {"nwb_group" : group_name}
+            description = try_json_field(timeseries.description)
+            if isinstance(description, dict):
+                annotations.update(description)
+                description = None
+            if isinstance(timeseries, AnnotationSeries):
+                event = Event(timeseries.timestamps[:] * pq.s,
+                              labels=timeseries.data[:],
+                              name=timeseries.name,
+                              description=description,
+                              **annotations)
+                segment.events.append(event)
+                event.segment = segment
+            elif timeseries.rate:
+                signal = AnalogSignal(
+                            timeseries.data[:],
+                            units=timeseries.unit,
+                            t_start=timeseries.starting_time * pq.s,  # use timeseries.starting_time_units
+                            sampling_rate=timeseries.rate * pq.Hz,
+                            name=timeseries.name,
+                            file_origin=self._file.session_description,
+                            description=description,
+                            array_annotations=None,
+                            **annotations)  # todo: timeseries.control / control_description
+                segment.analogsignals.append(signal)
+                signal.segment = segment
+            else:
+                signal = IrregularlySampledSignal(
+                            timeseries.timestamps[:] * pq.s,
+                            timeseries.data[:],
+                            units=timeseries.unit,
+                            name=timeseries.name,
+                            file_origin=self._file.session_description,
+                            description=description,
+                            array_annotations=None,
+                            **annotations)  # todo: timeseries.control / control_description
+                segment.irregularlysampledsignals.append(signal)
+                signal.segment = segment
+
+    def _read_units(self, lazy):
+        if self._file.units:
+            for id in self._file.units.id[:]:
+                spike_times = self._file.units.get_unit_spike_times(id)
+                t_start, t_stop = self._file.units.get_unit_obs_intervals(id)[0]
+                try:
+                    # NWB files created by Neo store the segment and block names as extra columns
+                    name = self._file.units._name[id]
+                    segment_name = self._file.units.segment[id]
+                    block_name = self._file.units.block[id]
+                except AttributeError:
+                    # For NWB files created with other applications, we put everything in a single
+                    # segment in a single block
+                    name = None
+                    segment_name = "default"
+                    block_name = "default"
+                segment = self._get_segment(block_name, segment_name)
+                spiketrain = SpikeTrain(
+                                spike_times,
+                                t_stop * pq.s,
+                                units='s',
+                                #sampling_rate=array(1.) * Hz,
+                                t_start=t_start * pq.s,
+                                #waveforms=None,
+                                #left_sweep=None,
+                                name=name,
+                                #file_origin=None,
+                                #description=None,
+                                #array_annotations=None,
+                                #**annotations
+                                nwb_group="acquisition"
+                                )
+                segment.spiketrains.append(spiketrain)
+                spiketrain.segment = segment
+
+    def _read_acquisition_group(self, lazy):
+        self._read_timeseries_group("acquisition", lazy)
+
+    def _read_stimulus_group(self, lazy):
+        self._read_timeseries_group("stimulus", lazy)
 
     def write_all_blocks(self, blocks, **kwargs):
         """
@@ -202,161 +357,6 @@ class NWBIO(BaseIO):
                 segment.name = "%s : segment%d" % (block.name, i)
             self._write_segment(nwbfile, segment)
         self.blocks_written += 1
-
-    def _get_segment(self, block_name, segment_name):
-        # If we've already created a Block with the given name return it,
-        #   otherwise create it now and store it in self._blocks.
-        # If we've already created a Segment in the given block, return it,
-        #   otherwise create it now and return it.
-        if block_name in self._blocks:
-            block = self._blocks[block_name]
-        else:
-            block = Block(name=block_name, **self.global_block_metadata)
-            self._blocks[block_name] = block
-        segment = None
-        for seg in block.segments:
-            if segment_name == seg.name:
-                segment = seg
-                break
-        if segment is None:
-            segment = Segment(name=segment_name)
-            segment.block = block
-            block.segments.append(segment)
-        return segment
-
-    def _handle_epochs_group(self, lazy):
-        if self._file.epochs is not None:
-            start_times = self._file.epochs.start_time[:]
-            stop_times = self._file.epochs.stop_time[:]
-            durations = stop_times - start_times
-            labels = self._file.epochs.tags[:]
-            try:
-                # NWB files created by Neo store the segment, block and epoch names as extra columns
-                segment_names = self._file.epochs.segment[:]
-                block_names = self._file.epochs.block[:]
-                epoch_names = self._file.epochs._name[:]
-            except AttributeError:
-                epoch_names = None
-
-            if epoch_names is not None:
-                unique_epoch_names = np.unique(epoch_names)
-                for epoch_name in unique_epoch_names:
-                    index = (epoch_names == epoch_name)
-                    epoch = Epoch(times=start_times[index] * pq.s,
-                                durations=durations[index] * pq.s,
-                                labels=labels[index],
-                                name=epoch_name)
-                                # todo: handle annotations, array_annotations
-                    segment_name = np.unique(segment_names[index])
-                    block_name = np.unique(block_names[index])
-                    assert segment_name.size == block_name.size == 1
-                    segment = self._get_segment(block_name[0], segment_name[0])
-                    segment.epochs.append(epoch)
-                    epoch.segment = segment
-            else:
-                epoch = Epoch(times=start_times * pq.s,
-                            durations=durations * pq.s,
-                            labels=labels)
-                segment = self._get_segment("default", "default")
-                segment.epochs.append(epoch)
-                epoch.segment = segment
-
-    def _handle_timeseries_group(self, group_name, lazy):
-        group = getattr(self._file, group_name)
-        for timeseries in group.values():
-            try:
-                # NWB files created by Neo store the segment and block names in the comments field
-                hierarchy = json.loads(timeseries.comments)
-            except JSONDecodeError:
-                # For NWB files created with other applications, we put everything in a single
-                # segment in a single block
-                # todo: investigate whether there is a reliable way to create multiple segments,
-                #       e.g. using Trial information
-                block_name = "default"
-                segment_name = "default"
-            else:
-                block_name = hierarchy["block"]
-                segment_name = hierarchy["segment"]
-            segment = self._get_segment(block_name, segment_name)
-            annotations = {"nwb_group" : group_name}
-            description = try_json_field(timeseries.description)
-            if isinstance(description, dict):
-                annotations.update(description)
-                description = None
-            if isinstance(timeseries, AnnotationSeries):
-                event = Event(timeseries.timestamps[:] * pq.s,
-                              labels=timeseries.data[:],
-                              name=timeseries.name,
-                              description=description,
-                              **annotations)
-                segment.events.append(event)
-                event.segment = segment
-            elif timeseries.rate:
-                signal = AnalogSignal(
-                            timeseries.data[:],
-                            units=timeseries.unit,
-                            t_start=timeseries.starting_time * pq.s,  # use timeseries.starting_time_units
-                            sampling_rate=timeseries.rate * pq.Hz,
-                            name=timeseries.name,
-                            file_origin=self._file.session_description,
-                            description=description,
-                            array_annotations=None,
-                            **annotations)  # todo: timeseries.control / control_description
-                segment.analogsignals.append(signal)
-                signal.segment = segment
-            else:
-                signal = IrregularlySampledSignal(
-                            timeseries.timestamps[:] * pq.s,
-                            timeseries.data[:],
-                            units=timeseries.unit,
-                            name=timeseries.name,
-                            file_origin=self._file.session_description,
-                            description=description,
-                            array_annotations=None,
-                            **annotations)  # todo: timeseries.control / control_description
-                segment.irregularlysampledsignals.append(signal)
-                signal.segment = segment
-
-    def _handle_units(self, lazy):
-        if self._file.units:
-            for id in self._file.units.id[:]:
-                spike_times = self._file.units.get_unit_spike_times(id)
-                t_start, t_stop = self._file.units.get_unit_obs_intervals(id)[0]
-                try:
-                    # NWB files created by Neo store the segment and block names as extra columns
-                    name = self._file.units._name[id]
-                    segment_name = self._file.units.segment[id]
-                    block_name = self._file.units.block[id]
-                except AttributeError:
-                    # For NWB files created with other applications, we put everything in a single
-                    # segment in a single block
-                    name = None
-                    segment_name = "default"
-                    block_name = "default"
-                segment = self._get_segment(block_name, segment_name)
-                spiketrain = SpikeTrain(
-                                spike_times,
-                                t_stop * pq.s,
-                                units='s',
-                                #sampling_rate=array(1.) * Hz,
-                                t_start=t_start * pq.s,
-                                #waveforms=None,
-                                #left_sweep=None,
-                                name=name,
-                                #file_origin=None,
-                                #description=None,
-                                #array_annotations=None,
-                                #**annotations
-                                nwb_group="acquisition"
-                                )
-                segment.spiketrains.append(spiketrain)
-                spiketrain.segment = segment
-
-    def _handle_acquisition_group(self, lazy):
-        self._handle_timeseries_group("acquisition", lazy)
-
-    def _handle_stimulus_group(self, lazy):
-        self._handle_timeseries_group("stimulus", lazy)
 
     def _write_segment(self, nwbfile, segment):
         # maybe use NWB trials to store Segment metadata?
