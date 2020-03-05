@@ -24,6 +24,7 @@ from datetime import datetime
 from os.path import join
 import json
 from json.decoder import JSONDecodeError
+from collections import defaultdict
 import dateutil.parser
 import numpy as np
 import random
@@ -67,6 +68,25 @@ except ImportError:
     have_hdmf = False
 
 
+GLOBAL_ANNOTATIONS = (
+    "session_start_time", "identifier", "timestamps_reference_time", "experimenter",
+    "experiment_description", "session_id", "institution", "keywords", "notes",
+    "pharmacology", "protocol", "related_publications", "slices", "source_script",
+    "source_script_file_name", "data_collection", "surgery", "virus", "stimulus_notes",
+    "lab", "session_description"
+)
+POSSIBLE_JSON_FIELDS = (
+    "source_script", "description"
+)
+
+
+def try_json_field(content):
+    try:
+        return json.loads(content)
+    except JSONDecodeError:
+        return content
+
+
 class NWBIO(BaseIO):
     """
     Class for "reading" experimental data from a .nwb file, and "writing" a .nwb file from Neo
@@ -107,34 +127,28 @@ class NWBIO(BaseIO):
         io = pynwb.NWBHDF5IO(self.filename, mode='r') # Open a file with NWBHDF5IO
         self._file = io.read()
 
-        file_access_dates = self._file.file_create_date
-        identifier = self._file.identifier
-        if identifier == '_neo':
-            identifier = None
-        description = self._file.session_description
-        if description == "no description":
-            description = None
+        self.global_block_metadata = {}
+        for annotation_name in GLOBAL_ANNOTATIONS:
+            value = getattr(self._file, annotation_name, None)
+            if value is not None:
+                if annotation_name in POSSIBLE_JSON_FIELDS:
+                    value = try_json_field(value)
+                self.global_block_metadata[annotation_name] = value
+        if "session_description" in self.global_block_metadata:
+            self.global_block_metadata["description"] = self.global_block_metadata["session_description"]
+        self.global_block_metadata["file_origin"] = self.filename
+        if "session_start_time" in self.global_block_metadata:
+            self.global_block_metadata["rec_datetime"] = self.global_block_metadata["session_start_time"]
+        if "file_create_date" in self.global_block_metadata:
+            self.global_block_metadata["file_datetime"] = self.global_block_metadata["file_create_date"]
 
         self._blocks = {}
         self._handle_acquisition_group(lazy=lazy)
+        self._handle_stimulus_group(lazy)
         self._handle_units(lazy=lazy)
         self._handle_epochs_group(lazy)
 
-        # block = Block(name=identifier,
-        #               description=description,
-        #               file_origin=self.filename,
-        #               file_datetime=file_access_dates,
-        #               rec_datetime=_file.session_start_time,
-        #               file_access_dates=file_access_dates,
-        #               file_read_log='')
-        # self._handle_general_group(block)
-
-        # self._handle_acquisition_group(lazy, _file, block)
-        # self._handle_stimulus_group(lazy, _file, block)
-        # self._handle_processing_group(_file, block)
-        # self._handle_analysis_group(block)
         # self._handle_calcium_imaging_data(_file, block)
-        # self._lazy = False
         return list(self._blocks.values())
 
     def read_block(self, lazy=False, **kargs):
@@ -149,45 +163,29 @@ class NWBIO(BaseIO):
         """
         # todo: allow metadata in NWBFile constructor to be taken from kwargs
         start_time = datetime.now()
-        nwbfile = NWBFile(self.filename,
-                               session_start_time=start_time,
-                               identifier='',
-                               file_create_date=None,  # use current date?
-                               timestamps_reference_time=None,
-                               experimenter=None,
-                               experiment_description=None,
-                               session_id=None,
-                               institution=None,
-                               keywords=None,
-                               notes=None,
-                               pharmacology=None,
-                               protocol=None,
-                               related_publications=None,
-                               slices=None,
-                               source_script=None,
-                               source_script_file_name=None,
-                               data_collection=None,
-                               surgery=None,
-                               virus=None,
-                               stimulus_notes=None,
-                               lab=None,
-                               acquisition=None,
-                               stimulus=None,
-                               stimulus_template=None,
-                               epochs=None,
-                               epoch_tags=set(),
-                               trials=None,
-                               invalid_times=None,
-                               units=None,
-                               electrodes=None,
-                               electrode_groups=None,
-                               ic_electrodes=None,
-                               sweep_table=None,
-                               imaging_planes=None,
-                               ogen_sites=None,
-                               devices=None,
-                               subject=None
-                               )
+        annotations = defaultdict(set)
+        for annotation_name in GLOBAL_ANNOTATIONS:
+            if annotation_name in kwargs:
+                annotations[annotation_name] = kwargs[annotation_name]
+            else:
+                for block in blocks:
+                    if annotation_name in block.annotations:
+                        annotations[annotation_name].add(block.annotations[annotation_name])
+                if annotation_name in annotations:
+                    if len(annotations[annotation_name]) > 1:
+                        raise NotImplementedError("We don't yet support multiple values for {}".format(annotation_name))
+                    annotations[annotation_name], = annotations[annotation_name]  # take single value from set
+        if "identifier" not in annotations:
+            annotations["identifier"] = self.filename
+        if "session_description" not in annotations:
+            annotations["session_description"] = blocks[0].description or self.filename
+            # todo: concatenate descriptions of multiple blocks if different
+        if "session_start_time" not in annotations:
+            annotations["session_start_time"] = datetime.now()
+        # todo: handle subject
+        # todo: store additional Neo annotations somewhere in NWB file
+        nwbfile = NWBFile(**annotations)
+
         io_nwb = pynwb.NWBHDF5IO(self.filename, manager=get_manager(), mode='w')
 
         nwbfile.add_unit_column('_name', 'the name attribute of the SpikeTrain')
@@ -228,7 +226,7 @@ class NWBIO(BaseIO):
         if block_name in self._blocks:
             block = self._blocks[block_name]
         else:
-            block = Block(name=block_name)
+            block = Block(name=block_name, **self.global_block_metadata)
             self._blocks[block_name] = block
         segment = None
         for seg in block.segments:
@@ -278,9 +276,9 @@ class NWBIO(BaseIO):
                 segment.epochs.append(epoch)
                 epoch.segment = segment
 
-    def _handle_acquisition_group(self, lazy):
-        acq = self._file.acquisition
-        for timeseries in acq.values():
+    def _handle_timeseries_group(self, group_name, lazy):
+        group = getattr(self._file, group_name)
+        for timeseries in group.values():
             try:
                 # NWB files created by Neo store the segment and block names in the comments field
                 hierarchy = json.loads(timeseries.comments)
@@ -295,11 +293,17 @@ class NWBIO(BaseIO):
                 block_name = hierarchy["block"]
                 segment_name = hierarchy["segment"]
             segment = self._get_segment(block_name, segment_name)
+            annotations = {"nwb_group" : group_name}
+            description = try_json_field(timeseries.description)
+            if isinstance(description, dict):
+                annotations.update(description)
+                description = None
             if isinstance(timeseries, AnnotationSeries):
                 event = Event(timeseries.timestamps[:] * pq.s,
                               labels=timeseries.data[:],
                               name=timeseries.name,
-                              description=timeseries.description)
+                              description=description,
+                              **annotations)
                 segment.events.append(event)
                 event.segment = segment
             elif timeseries.rate:
@@ -310,8 +314,9 @@ class NWBIO(BaseIO):
                             sampling_rate=timeseries.rate * pq.Hz,
                             name=timeseries.name,
                             file_origin=self._file.session_description,
-                            description=timeseries.description,
-                            array_annotations=None)  # todo: timeseries.control / control_description
+                            description=description,
+                            array_annotations=None,
+                            **annotations)  # todo: timeseries.control / control_description
                 segment.analogsignals.append(signal)
                 signal.segment = segment
             else:
@@ -321,8 +326,9 @@ class NWBIO(BaseIO):
                             units=timeseries.unit,
                             name=timeseries.name,
                             file_origin=self._file.session_description,
-                            description=timeseries.description,
-                            array_annotations=None)  # todo: timeseries.control / control_description
+                            description=description,
+                            array_annotations=None,
+                            **annotations)  # todo: timeseries.control / control_description
                 segment.irregularlysampledsignals.append(signal)
                 signal.segment = segment
 
@@ -356,20 +362,18 @@ class NWBIO(BaseIO):
                                 #description=None,
                                 #array_annotations=None,
                                 #**annotations
+                                nwb_group="acquisition"
                                 )
                 segment.spiketrains.append(spiketrain)
                 spiketrain.segment = segment
 
-    def _handle_stimulus_group(self, lazy, _file, block):
-        pass
+    def _handle_acquisition_group(self, lazy):
+        self._handle_timeseries_group("acquisition", lazy)
 
-    def _handle_processing_group(self, _file, block):
-        pass
+    def _handle_stimulus_group(self, lazy):
+        self._handle_timeseries_group("stimulus", lazy)
 
-    def _handle_analysis_group(self, block):
-        pass
-
-    def _handle_calcium_imaging_data(self, _file, block):
+    def _handle_calcium_imaging_data(self):
         """
         Function to read calcium imaging data.
         """
