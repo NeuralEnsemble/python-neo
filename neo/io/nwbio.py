@@ -26,7 +26,12 @@ from collections import defaultdict
 import numpy as np
 import quantities as pq
 from neo.io.baseio import BaseIO
-from neo.io.proxyobjects import AnalogSignalProxy as BaseAnalogSignalProxy
+from neo.io.proxyobjects import (
+    AnalogSignalProxy as BaseAnalogSignalProxy,
+    EventProxy as BaseEventProxy,
+    EpochProxy as BaseEpochProxy,
+    SpikeTrainProxy as BaseSpikeTrainProxy
+)
 from neo.core import (Segment, SpikeTrain, Unit, Epoch, Event, AnalogSignal,
                       IrregularlySampledSignal, ChannelIndex, Block, ImageSequence)
 
@@ -168,10 +173,6 @@ class NWBIO(BaseIO):
 
     def _read_epochs_group(self, lazy):
         if self._file.epochs is not None:
-            start_times = self._file.epochs.start_time[:]
-            stop_times = self._file.epochs.stop_time[:]
-            durations = stop_times - start_times
-            labels = self._file.epochs.tags[:]
             try:
                 # NWB files created by Neo store the segment, block and epoch names as extra columns
                 segment_names = self._file.epochs.segment[:]
@@ -184,11 +185,9 @@ class NWBIO(BaseIO):
                 unique_epoch_names = np.unique(epoch_names)
                 for epoch_name in unique_epoch_names:
                     index = (epoch_names == epoch_name)
-                    epoch = Epoch(times=start_times[index] * pq.s,
-                                durations=durations[index] * pq.s,
-                                labels=labels[index],
-                                name=epoch_name)
-                                # todo: handle annotations, array_annotations
+                    epoch = EpochProxy(self._file.epochs, epoch_name, index)
+                    if not lazy:
+                        epoch = epoch.load()
                     segment_name = np.unique(segment_names[index])
                     block_name = np.unique(block_names[index])
                     assert segment_name.size == block_name.size == 1
@@ -196,9 +195,9 @@ class NWBIO(BaseIO):
                     segment.epochs.append(epoch)
                     epoch.segment = segment
             else:
-                epoch = Epoch(times=start_times * pq.s,
-                            durations=durations * pq.s,
-                            labels=labels)
+                epoch = EpochProxy(self._file.epochs)
+                if not lazy:
+                    epoch = epoch.load()
                 segment = self._get_segment("default", "default")
                 segment.epochs.append(epoch)
                 epoch.segment = segment
@@ -226,63 +225,40 @@ class NWBIO(BaseIO):
                 annotations.update(description)
                 description = None
             if isinstance(timeseries, AnnotationSeries):
-                event = Event(timeseries.timestamps[:] * pq.s,
-                              labels=timeseries.data[:],
-                              name=timeseries.name,
-                              description=description,
-                              **annotations)
+                event = EventProxy(timeseries, group_name)
+                if not lazy:
+                    event = event.load()
                 segment.events.append(event)
                 event.segment = segment
-            elif timeseries.rate:
+            elif timeseries.rate:  # AnalogSignal
                 signal = AnalogSignalProxy(timeseries, group_name)
                 if not lazy:
                     signal = signal.load()
                 segment.analogsignals.append(signal)
                 signal.segment = segment
-            else:
-                signal = IrregularlySampledSignal(
-                            timeseries.timestamps[:] * pq.s,
-                            timeseries.data[:],
-                            units=timeseries.unit,
-                            name=timeseries.name,
-                            description=description,
-                            array_annotations=None,
-                            **annotations)  # todo: timeseries.control / control_description
+            else:  # IrregularlySampledSignal
+                signal = AnalogSignalProxy(timeseries, group_name)
+                if not lazy:
+                    signal = signal.load()
                 segment.irregularlysampledsignals.append(signal)
                 signal.segment = segment
 
     def _read_units(self, lazy):
         if self._file.units:
             for id in self._file.units.id[:]:
-                spike_times = self._file.units.get_unit_spike_times(id)
-                t_start, t_stop = self._file.units.get_unit_obs_intervals(id)[0]
                 try:
                     # NWB files created by Neo store the segment and block names as extra columns
-                    name = self._file.units._name[id]
                     segment_name = self._file.units.segment[id]
                     block_name = self._file.units.block[id]
                 except AttributeError:
                     # For NWB files created with other applications, we put everything in a single
                     # segment in a single block
-                    name = None
                     segment_name = "default"
                     block_name = "default"
                 segment = self._get_segment(block_name, segment_name)
-                spiketrain = SpikeTrain(
-                                spike_times,
-                                t_stop * pq.s,
-                                units='s',
-                                #sampling_rate=array(1.) * Hz,
-                                t_start=t_start * pq.s,
-                                #waveforms=None,
-                                #left_sweep=None,
-                                name=name,
-                                #file_origin=None,
-                                #description=None,
-                                #array_annotations=None,
-                                #**annotations
-                                nwb_group="acquisition"
-                                )
+                spiketrain = SpikeTrainProxy(self._file.units, id)
+                if not lazy:
+                    spiketrain = spiketrain.load()
                 segment.spiketrains.append(spiketrain)
                 spiketrain.segment = segment
 
@@ -472,8 +448,14 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
     def __init__(self, timeseries, nwb_group):
         self._timeseries = timeseries
         self.units = timeseries.unit
-        self.t_start = timeseries.starting_time * pq.s  # use timeseries.starting_time_units
-        self.sampling_rate = timeseries.rate * pq.Hz
+        if timeseries.starting_time:
+            self.t_start = timeseries.starting_time * pq.s  # use timeseries.starting_time_units
+        else:
+            self.t_start = timeseries.timestamps[0] * pq.s
+        if timeseries.rate:
+            self.sampling_rate = timeseries.rate * pq.Hz
+        else:
+            self.sampling_rate = None
         self.name = timeseries.name
         self.annotations = {"nwb_group" : nwb_group}
         self.description = try_json_field(timeseries.description)
@@ -488,7 +470,7 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
             :time_slice: None or tuple of the time slice expressed with quantities.
                             None is the entire signal.
             :strict_slicing: True by default.
-                Control if an error is raise or not when one of  time_slice member
+                Control if an error is raised or not when one of the time_slice members
                 (t_start or t_stop) is outside the real time range of the segment.
         """
         if time_slice:
@@ -497,12 +479,135 @@ class AnalogSignalProxy(BaseAnalogSignalProxy):
         else:
             signal = self._timeseries.data[:]
             sig_t_start = self.t_start
-        return AnalogSignal(
-                    signal,
+        if self.sampling_rate is None:
+            return IrregularlySampledSignal(
+                        self._timeseries.timestamps[:] * pq.s,
+                        signal,
+                        units=self.units,
+                        t_start=sig_t_start,
+                        sampling_rate=self.sampling_rate,
+                        name=self.name,
+                        description=self.description,
+                        array_annotations=None,
+                        **self.annotations)  # todo: timeseries.control / control_description
+
+        else:
+            return AnalogSignal(
+                        signal,
+                        units=self.units,
+                        t_start=sig_t_start,
+                        sampling_rate=self.sampling_rate,
+                        name=self.name,
+                        description=self.description,
+                        array_annotations=None,
+                        **self.annotations)  # todo: timeseries.control / control_description
+
+
+class EventProxy(BaseEventProxy):
+
+    def __init__(self, timeseries, nwb_group):
+        self._timeseries = timeseries
+        self.name = timeseries.name
+        self.annotations = {"nwb_group" : nwb_group}
+        self.description = try_json_field(timeseries.description)
+        if isinstance(self.description, dict):
+            self.annotations.update(self.description)
+            self.description = None
+        self.shape = self._timeseries.data.shape
+
+    def load(self, time_slice=None, strict_slicing=True):
+        """
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire signal.
+            :strict_slicing: True by default.
+                Control if an error is raised or not when one of the time_slice members
+                (t_start or t_stop) is outside the real time range of the segment.
+        """
+        if time_slice:
+            raise NotImplementedError("todo")
+        else:
+            times = self._timeseries.timestamps[:]
+            labels = self._timeseries.data[:]
+        return Event(times * pq.s,
+                     labels=labels,
+                     name=self.name,
+                     description=self.description,
+                     **self.annotations)
+
+
+class EpochProxy(BaseEpochProxy):
+
+    def __init__(self, epochs_table, epoch_name=None, index=None):
+        self._epochs_table = epochs_table
+        if index is not None:
+            self._index = index
+            self.shape = (index.sum(),)
+        else:
+            self._index = slice(None)
+            self.shape = epochs_table.n_rows  # untested, just guessed that n_rows exists
+        self.name = epoch_name
+
+    def load(self, time_slice=None, strict_slicing=True):
+        """
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is all of the intervals.
+            :strict_slicing: True by default.
+                Control if an error is raised or not when one of the time_slice members
+                (t_start or t_stop) is outside the real time range of the segment.
+        """
+        start_times = self._epochs_table.start_time[self._index]
+        stop_times = self._epochs_table.stop_time[self._index]
+        durations = stop_times - start_times
+        labels = self._epochs_table.tags[self._index]
+
+        return Epoch(times=start_times * pq.s,
+                     durations=durations * pq.s,
+                     labels=labels,
+                     name=self.name)
+
+
+class SpikeTrainProxy(BaseSpikeTrainProxy):
+
+    def __init__(self,  units_table, id):
+        self._units_table = units_table
+        self.id = id
+        self.units = pq.s
+        t_start, t_stop = units_table.get_unit_obs_intervals(id)[0]
+        self.t_start = t_start * pq.s
+        self.t_stop = t_stop * pq.s
+        self.annotations = {"nwb_group": "acquisition"}
+        try:
+            # NWB files created by Neo store the name as an extra column
+            self.name = units_table._name[id]
+        except AttributeError:
+            self.name = None
+        self.shape = None   # no way to get this without reading the data
+
+    def load(self, time_slice=None, strict_slicing=True):
+        """
+        *Args*:
+            :time_slice: None or tuple of the time slice expressed with quantities.
+                            None is the entire spike train.
+            :strict_slicing: True by default.
+                Control if an error is raised or not when one of the time_slice members
+                (t_start or t_stop) is outside the real time range of the segment.
+        """
+        interval = None
+        if time_slice:
+            interval = (float(t) for t in time_slice)  # convert from quantities
+        spike_times = self._units_table.get_unit_spike_times(self.id, in_interval=interval)
+        return SpikeTrain(
+                    spike_times * self.units,
+                    self.t_stop,
                     units=self.units,
-                    t_start=sig_t_start,
-                    sampling_rate=self.sampling_rate,
+                    #sampling_rate=array(1.) * Hz,
+                    t_start=self.t_start,
+                    #waveforms=None,
+                    #left_sweep=None,
                     name=self.name,
-                    description=self.description,
-                    array_annotations=None,
-                    **self.annotations)  # todo: timeseries.control / control_description
+                    #file_origin=None,
+                    #description=None,
+                    #array_annotations=None,
+                    **self.annotations)
