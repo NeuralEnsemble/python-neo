@@ -20,7 +20,10 @@ from __future__ import absolute_import, division
 from itertools import chain
 from datetime import datetime
 import json
-from json.decoder import JSONDecodeError
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:  # Python 2
+    JSONDecodeError = ValueError
 from collections import defaultdict
 
 import numpy as np
