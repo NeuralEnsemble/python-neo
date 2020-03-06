@@ -171,7 +171,11 @@ Classes:
 
 .. autoclass:: neo.io.NSDFIO
 
+    .. autoattribute:: extensions
+
 .. autoclass:: neo.io.NWBIO
+
+    .. autoattribute:: extensions
 
 .. autoclass:: neo.io.OpenEphysIO
 
